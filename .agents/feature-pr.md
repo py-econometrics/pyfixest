@@ -10,8 +10,10 @@ checklists, house style, and commands this workflow assumes. This file defines t
 process. Stay inside its bounded loops — no unbounded retrying.
 
 Inputs: a feature issue, or an existing PR to clean (`gh pr checkout <n>`,
-`gh pr diff <n>`). Always work on a feature branch; a pre-commit hook blocks
-commits to `master`.
+`gh pr diff <n>`). To *audit* a contributor PR against the guide — review
+findings or targeted repairs rather than building the feature out — use
+`.agents/align-pr.md` instead. Always work on a feature branch; a pre-commit
+hook blocks commits to `master`.
 
 ## Phase 1 — Discovery (run once)
 
@@ -29,6 +31,14 @@ commits to `master`.
    BASE_REF=origin/<base-branch>
    MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
    ```
+
+   Then check staleness before planning: if `git rev-list --count
+   HEAD..$BASE_REF` is large (rule of thumb: more than ~15 commits) or
+   `git merge-tree --write-tree HEAD "$BASE_REF"` reports conflicts, record both
+   under a `## Staleness` heading in the plan first. A large distance with real
+   conflicts means the diff may need re-deriving after a merge, not just
+   re-running against a stale base — say so up front rather than discovering it
+   at Phase 4.
 
 2. Collect the change surface. PR cleanup: `gh pr diff <n> --name-only` and the
    PR description. New feature: the issue plus the subsystems you expect to
@@ -79,7 +89,9 @@ the touched subsystem (e.g. changes to `vcov_utils.py` implicate
 `tests/test_predict_resid_fixef.py`). `--no-cov` skips the coverage report that
 pytest addopts otherwise force on every run; coverage comes with the broader
 runs in Phase 4. Fix what the traceback says. Three failed iterations on the
-same slice → Escalation.
+same slice → Escalation. Stop too when reality contradicts the plan — the
+analogue does not fit, a wiring point does not exist: present expected vs.
+found vs. options rather than silently re-planning.
 
 While implementing, enforce the AGENTS.md rules that PRs most often break:
 - Bulky logic never lands in model classes; the class method validates,
@@ -113,11 +125,8 @@ strongest reference available, in this order of preference:
 5. Seeded Monte Carlo properties (`np.random.default_rng(seed)`): empirical
    size near nominal under the null, power against a fixed alternative.
 
-Dependency rule for reference packages (full version: AGENTS.md → "Testing"):
-on conda-forge → add as a dependency and mark `against_r_core` (runs in CI);
-not on conda-forge → CRAN via `r_test_requirements.R` (repo root) with the test
-marked `against_r_extended` (runs locally only), or commit a generator script
-and hard-code its values into the test. Both are acceptable.
+For where a reference package goes and how to mark its test, see AGENTS.md →
+"Testing".
 
 Prefer a few heavily parametrized integration tests through the public API — the
 `tests/test_vs_fixest.py` shape (formulas × vcov × weights × ssc vs R `fixest`) —
@@ -132,9 +141,9 @@ is expected.
 
 ## Phase 4 — Review loop (at most 2 passes)
 
-Recompute or restore `BASE_REF` and `MERGE_BASE` from the Phase 1 plan if the
-shell session changed. Self-review everything that would ship, not only committed
-changes:
+Restore `BASE_REF` and `MERGE_BASE` from the Phase 1 plan if the shell session
+changed — later phases assume them. Self-review everything that would ship, not
+only committed changes:
 
 ```bash
 git status --short
@@ -158,8 +167,10 @@ for those. Review the full change against AGENTS.md:
    AGENTS.md → "Docs"): `pyfixest/__init__.py` (`__all__`, `_lazy_imports`); the
    Parameters docstring in each of `feols`/`fepois`/`feglm`/`quantreg` that gained
    an option (they do not share docstrings); quartodoc `contents` in
-   `docs/_quarto.yml` for a new class or function; and a `docs/how-to/*.qmd`
-   vignette (navbar entry in `_quarto.yml`) when the feature warrants a guide.
+   `docs/_quarto.yml` for a new class or function; a changelog entry in
+   `docs/changelog.qmd` under the "(In Development)" heading; and a
+   `docs/how-to/*.qmd` vignette (navbar entry in `_quarto.yml`) when the
+   feature warrants a guide.
 5. Run in order: targeted tests → the three lint hooks on changed files, one at
    a time — `pixi run -e lint prek run ruff-format --files <changed>`, then the
    same command with `ruff-check`, then with `mypy` → `pixi run test-py` if
@@ -168,8 +179,7 @@ for those. Review the full change against AGENTS.md:
 
 ## Phase 5 — Commit history rewrite (before handing off)
 
-Recompute or restore `MERGE_BASE` from the Phase 1 plan if the shell session
-changed. Inspect `git log --oneline "$MERGE_BASE"..HEAD`. If it is not a short
+Inspect `git log --oneline "$MERGE_BASE"..HEAD`. If it is not a short
 sequence of coherent commits, rewrite it. Interactive `git rebase -i` is
 unavailable in some agent sandboxes; the soft-reset recipe below works — but it
 collapses all committed work onto the index, so verify every precondition first:
@@ -209,12 +219,12 @@ Stop and report instead of widening the change when:
 The report names the exact files, the exact commands run, the observed output,
 and your best hypothesis — nothing vaguer.
 
-## Command reference
+One case is not a failure and is not reported this way: **the codebase changed
+shape under you** — a large upstream merge, a landed refactor touching the same
+files (see the Phase 1 staleness check). Re-enter Phase 1 with the new state,
+write a fresh plan, and confirm it before resuming Phase 2. This is a bigger
+jolt than the Phase 2 plan-mismatch stop, which is one slice's analogue not
+fitting; distinguish the two.
 
-All commands are defined once, in AGENTS.md → "Commands" — look them up there
-rather than copying them here. The only workflow-specific form is the Phase 2
-inner loop:
-
-```bash
-pixi run -e py312-r pytest <test files> -x -q --no-cov
-```
+Commands live in AGENTS.md → "Commands"; look them up there rather than copying
+them here.

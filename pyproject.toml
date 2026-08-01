@@ -120,6 +120,9 @@ select = [
     "SIM", # flake8-simplify
     "RUF", # ruff,
     "TRY", # tryceratops
+    "NPY", # numpy: NPY002 bans the legacy np.random.* API in favor of default_rng
+    # "N" (pep8-naming) is deliberately NOT enabled: econometric paper notation
+    # (X, tZX, IV_Diag, test_HC1_vs_CRV1) is house style, see AGENTS.md.
 ]
 
 ignore = [
@@ -150,6 +153,18 @@ ignore = [
 "pyfixest/visualize.py" = ["D103"]
 "scripts/*.py" = ["D103"]
 "benchmarks/modular/*.py" = ["D101", "D102", "D103"]
+# NPY002 grandfathering: these files predate the rule and their exact legacy
+# RNG streams are load-bearing (stored reference values, frozen doc output).
+# Do not extend this list — new code uses np.random.default_rng.
+"pyfixest/utils/dgps.py" = ["NPY002"]
+"tests/test_i.py" = ["NPY002"]
+"tests/test_wald_test.py" = ["NPY002"]
+"tests/test_iv.py" = ["NPY002"]
+"tests/test_demean.py" = ["NPY002"]
+"tests/test_errors.py" = ["NPY002"]
+"tests/test_poisson.py" = ["NPY002"]
+# Benchmarks time kernels; the RNG stream carries no correctness weight.
+"benchmarks/**" = ["NPY002"]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 88
@@ -215,6 +230,7 @@ test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or a
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
 test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
+check-style = { cmd = "python scripts/check_house_style.py --diff origin/master", description = "House-style checks over the branch diff (deleted tests, docs wiring, churn)" }
 
 [tool.pixi.tasks._setup]
 cmd = "python scripts/setup_maturin_hook.py"
