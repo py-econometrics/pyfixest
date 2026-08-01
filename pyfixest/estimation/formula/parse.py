@@ -21,6 +21,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_structured_formula,
+    terms_without_intercept,
 )
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
@@ -100,13 +101,13 @@ class Formula:
                 f"Received {n_multistage_blocks} multistage blocks:\n "
                 f"{self._formula}"
             )
-        if len(self.endogenous.required_variables) > 1:
+        if len(self.endogenous) > 1:
             raise FormulaSyntaxError(
                 "Multiple endogenous variables are currently not supported. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
             )
-        underdetermined = len(self.endogenous.required_variables) > len(
-            self.instruments.required_variables
+        underdetermined = len(self.endogenous) > len(
+            tuple(terms_without_intercept(self.instruments))
         )
         if underdetermined:
             raise UnderDeterminedIVError(
@@ -185,13 +186,12 @@ class Formula:
         if self.is_instrumental_variable:
             exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
 
-        if self.is_fixed_effects and exogenous.required_variables:
-            # drop intercept for fixed effects regressions
-            # unless for specifications without required_variables,
-            # e.g., `Y ~ 1 | f1`; this can be used to demean dependenent variabels
-            exogenous = formulaic.formula.SimpleFormula(
-                [term for term in exogenous if term != "1"]
-            )
+        exogenous_terms = tuple(terms_without_intercept(exogenous))
+        if self.is_fixed_effects and exogenous_terms:
+            # Drop the intercept for fixed effects regressions, except for
+            # intercept-only specifications such as `Y ~ 1 | f1`; these can be
+            # used to demean dependent variables.
+            exogenous = formulaic.formula.SimpleFormula(exogenous_terms)
 
         return exogenous
 
@@ -219,7 +219,7 @@ class Formula:
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
         return formulaic.formula.SimpleFormula(
-            [term for term in self._formula.rhs[1] if term != "1"]
+            terms_without_intercept(self._formula.rhs[1])
         )
 
     @property
