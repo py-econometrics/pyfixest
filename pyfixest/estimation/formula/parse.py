@@ -128,6 +128,29 @@ class FixedEffectSpecification:
         )
 
 
+def _merge_fixed_effect_specifications(
+    specifications: tuple[FixedEffectSpecification, ...],
+) -> tuple[FixedEffectSpecification, ...]:
+    """Merge specifications sharing a level term in their original order."""
+    merged: dict[Term, tuple[bool, list[Term]]] = {}
+    for specification in specifications:
+        intercept, slopes = merged.setdefault(specification.levels, (False, []))
+        slopes.extend(slope for slope in specification.slopes if slope not in slopes)
+        merged[specification.levels] = (
+            intercept or specification.intercept,
+            slopes,
+        )
+
+    return tuple(
+        FixedEffectSpecification(
+            levels=levels,
+            intercept=intercept,
+            slopes=tuple(slopes),
+        )
+        for levels, (intercept, slopes) in merged.items()
+    )
+
+
 def _term_from_ast(node: ast.expr) -> Term:
     """Parse one extracted Python expression as one Formulaic term."""
     expression = ast.unparse(node)
@@ -345,8 +368,10 @@ class Formula:
         """Fixed effects represented as symbolic `within::Effect` terms."""
         if not self.is_fixed_effects:
             return ()
-        return tuple(
-            FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+        return _merge_fixed_effect_specifications(
+            tuple(
+                FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+            )
         )
 
     @property

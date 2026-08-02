@@ -83,6 +83,21 @@ def test_shared_level_and_slope_columns_are_materialized_once(varying_slope_data
     assert formulaic_matrix["fe_slopes"].columns.tolist() == ["z1", "z2"]
 
 
+def test_materializes_multicolumn_slope_terms(varying_slope_data):
+    varying_slope_data["g"] = ["a", "b", "c", "a"]
+    formula = Formula.parse("y ~ x | f1 + f1[[z1, C(g)]] + f2[z2] + f1[[z1]]")[0]
+
+    model_matrix = create_model_matrix(formula, varying_slope_data)
+
+    assert model_matrix.fixed_effect_slopes.columns.tolist() == [
+        "z1",
+        "C(g)[a]",
+        "C(g)[b]",
+        "C(g)[c]",
+        "z2",
+    ]
+
+
 def test_slope_terms_share_missing_row_handling(varying_slope_data):
     varying_slope_data.loc[1, "z1"] = np.nan
     formula = Formula.parse("y ~ x | f1[z1] + f2")[0]
@@ -92,6 +107,19 @@ def test_slope_terms_share_missing_row_handling(varying_slope_data):
     expected_index = pd.Index([0, 2, 3])
     assert model_matrix.dependent.index.equals(expected_index)
     assert model_matrix.fixed_effects.index.equals(expected_index)
+    assert model_matrix.fixed_effect_slopes.index.equals(expected_index)
+
+
+def test_slope_only_effect_retains_global_intercept(varying_slope_data):
+    slope_only = create_model_matrix(
+        Formula.parse("y ~ x | f1[[z1]]")[0], varying_slope_data
+    )
+    with_intercept = create_model_matrix(
+        Formula.parse("y ~ x | f1[z1]")[0], varying_slope_data
+    )
+
+    assert "Intercept" in slope_only.independent
+    assert "Intercept" not in with_intercept.independent
 
 
 def test_formulaic_materializes_slope_transforms(varying_slope_data):

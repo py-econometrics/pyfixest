@@ -99,6 +99,39 @@ def test_varying_slopes_rejected_during_estimation(data):
         feols("Y ~ X1 | f1[X2]", data=data)
 
 
+@pytest.mark.parametrize(
+    "demeaner",
+    [
+        pf.MapDemeaner(backend="rust"),
+        pf.MapDemeaner(backend="numba"),
+        pf.LsmrDemeaner(backend="torch"),
+        pf.LsmrDemeaner(backend="cupy"),
+    ],
+)
+def test_varying_slopes_reject_unsupported_demeaners(data, demeaner):
+    with pytest.raises(NotImplementedError, match="Varying slopes not supported"):
+        feols("Y ~ X1 | f1[X2]", data=data, demeaner=demeaner)
+
+
+def test_varying_slopes_reject_dummy_reconstruction_paths(data):
+    fit = feols(
+        "Y ~ X1 | f1[X2]",
+        data=data,
+        demeaner=pf.LsmrDemeaner(backend="within"),
+    )
+
+    with pytest.raises(NotImplementedError, match="Fixed-effect recovery"):
+        fit.fixef()
+    with pytest.raises(NotImplementedError, match="Out-of-sample prediction"):
+        fit.predict(newdata=fit._data)
+    with pytest.raises(NotImplementedError, match="Randomization inference"):
+        fit.ritest("X1", reps=2)
+    with pytest.raises(NotImplementedError, match="Wild cluster bootstrap"):
+        fit.wildboottest(reps=2, param="X1")
+    with pytest.raises(NotImplementedError, match="One-hot model-matrix"):
+        fit.decompose(decomp_var="X1", only_coef=True)
+
+
 def test_iv_errors():
     data = get_data()
 

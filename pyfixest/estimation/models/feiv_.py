@@ -227,11 +227,12 @@ class Feiv(Feols):
     def demean(self) -> None:
         "Demean instruments and endogeneous variable."
         super().demean()
-        if self._has_fixef:
+        design = self._make_demeaning_design()
+        if design is not None:
             self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
                 self._endogvar,
                 self._Z,
-                self._fe,
+                design,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
@@ -286,7 +287,8 @@ class Feiv(Feols):
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
         if self._has_fixef and fml_first_stage is not None:
-            fml_first_stage += f" | {self._fixef}"
+            fixef_formula = str(self.FixestFormula.fixed_effects).replace(" ", "")
+            fml_first_stage += f" | {fixef_formula}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: dict[str, str] | str
@@ -312,6 +314,7 @@ class Feiv(Feols):
             collin_tol=self._collin_tol,
             solver=self._solver,
             demeaner=demeaner,
+            fixef_rm="singleton" if self._drop_singletons else "none",
         )
 
         # Ensure model1 is of type Feols
