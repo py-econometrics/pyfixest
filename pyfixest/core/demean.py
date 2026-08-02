@@ -2,14 +2,16 @@ from typing import Literal, get_args
 
 import numpy as np
 from numpy.typing import NDArray
-from within import LsmrOptions, Preconditioner, PreconditionerConfig, Solver
+from within import Effect, LsmrOptions, Preconditioner, PreconditionerConfig, Solver
 
 from ._core_impl import _demean_rs
 
 WithinPreconditionerName = Literal["additive", "off", "diagonal"]
+WithinDesign = NDArray[np.uint32] | list[Effect]
 
 __all__ = [
     "Preconditioner",
+    "WithinDesign",
     "WithinPreconditionerName",
     "demean",
     "demean_within",
@@ -106,7 +108,7 @@ def demean(
 
 def demean_within(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint32],
+    flist: WithinDesign,
     weights: NDArray[np.float64] | None = None,
     tol: float = 1e-08,
     maxiter: int = 1_000,
@@ -120,16 +122,17 @@ def demean_within(
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
-    For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the sparse iterative solver is designed for multi-way FE problems.
+    For one ordinary intercept-only fixed effect, falls back to alternating
+    projections (``_demean_rs``). A slope-bearing single effect uses `within`.
 
     Parameters
     ----------
     x : numpy.ndarray
         Input array of shape (n_samples, n_features).
-    flist : numpy.ndarray
-        Array of shape (n_samples, n_factors) specifying the fixed effects
-        (integer-encoded).
+    flist : numpy.ndarray or list[within.Effect]
+        The fixed-effect design. An integer-encoded array represents ordinary
+        intercept-only fixed effects. A list of `within.Effect` objects may
+        additionally contain varying slopes.
     weights : numpy.ndarray or None, optional
         Array of shape (n_samples,) specifying observation weights.
     tol : float, optional
@@ -152,9 +155,8 @@ def demean_within(
         Preconditioner choice for `within`'s LSMR solver. ``"additive"``
         (default) uses additive Schwarz preconditioning; ``"off"`` disables
         preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
-        Preconditioners are only computed and applied
-        for two or more fixed-effect factors; single-factor problems use
-        MAP and do not use a preconditioner. Alternatively, you can
+        Preconditioners are only computed and applied for two or more
+        fixed-effect factors. Alternatively, you can
         pass a previously-built :class:`Preconditioner` and reuse it for
         the current problem.
         If the computation of the pre-conditioner takes a long time, this can
@@ -168,7 +170,7 @@ def demean_within(
         diagonal for ``"diagonal"``, or an equivalent object for a
         user-supplied preconditioner). The preconditioner is ``None`` when
         none was constructed or applied —
-        i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
+        i.e. when ``preconditioner="off"`` or the single-effect MAP fallback
         path was taken.
     """
     _valid_names = get_args(WithinPreconditionerName)
@@ -185,21 +187,25 @@ def demean_within(
             f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
-    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
-    if flist_2d.shape[1] == 1:
-        demeaned, success = _demean_rs(
-            x.astype(np.float64, copy=False),
-            flist_2d.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False)
-            if weights is not None
-            else np.ones(x.shape[0], dtype=np.float64),
-            tol,
-            maxiter,
-        )
-        return demeaned, success, None
+    if isinstance(flist, np.ndarray):
+        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+        if flist_2d.shape[1] == 1:
+            demeaned, success = _demean_rs(
+                x.astype(np.float64, copy=False),
+                flist_2d.astype(np.uint64, copy=False),
+                weights.astype(np.float64, copy=False)
+                if weights is not None
+                else np.ones(x.shape[0], dtype=np.float64),
+                tol,
+                maxiter,
+            )
+            return demeaned, success, None
+        design: WithinDesign = np.asfortranarray(flist_2d, dtype=np.uint32)
+    else:
+        design = flist
 
     solver = Solver(
-        np.asfortranarray(flist_2d, dtype=np.uint32),
+        design,
         weights=(
             weights.astype(np.float64, copy=False) if weights is not None else None
         ),

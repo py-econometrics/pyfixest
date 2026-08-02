@@ -1580,6 +1580,126 @@ def get_data_r(fml, data):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
+    ("estimator", "fml", "weights"),
+    [
+        ("feols", "Y ~ X1 | f1[X2]", None),
+        ("feols", "Y ~ X1 | f1[[X2]]", "weights"),
+        ("feols", "Y ~ Z2 | f1[X2] | X1 ~ Z1", None),
+        ("fepois", "Y ~ X1 | f1[X2]", None),
+        ("feglm", "Y_bin ~ X1 | f1[X2]", None),
+    ],
+)
+def test_varying_slopes_against_fixest(data_fepois, estimator, fml, weights):
+    """Compare OLS, IV, Poisson, and logit effects with R fixest."""
+    data = data_fepois.copy()
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    data.loc[3, "X2"] = np.nan
+    inference = {"CRV1": "f1"}
+    demeaner = pf.LsmrDemeaner(
+        backend="within",
+        fixef_atol=1e-10,
+        fixef_btol=1e-10,
+        fixef_maxiter=10_000,
+    )
+    py_kwargs = {
+        "fml": fml,
+        "data": data,
+        "vcov": inference,
+        "demeaner": demeaner,
+        "weights": weights,
+        "fixef_rm": "none",
+    }
+    r_kwargs = {
+        "data": data,
+        "vcov": ro.Formula("~f1"),
+        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        "fixef_rm": "none",
+    }
+    if weights is not None:
+        r_kwargs["weights"] = ro.Formula(f"~{weights}")
+
+    if estimator == "feols":
+        py_fit = pf.feols(**py_kwargs)
+        r_fit = fixest.feols(ro.Formula(fml), **r_kwargs)
+    elif estimator == "fepois":
+        py_fit = pf.fepois(**py_kwargs, iwls_tol=1e-10, iwls_maxiter=100)
+        r_fit = fixest.fepois(ro.Formula(fml), **r_kwargs, glm_tol=1e-10, glm_iter=100)
+    else:
+        py_fit = pf.feglm(
+            **py_kwargs,
+            family="logit",
+            iwls_tol=1e-10,
+            iwls_maxiter=100,
+        )
+        r_fit = fixest.feglm(
+            ro.Formula(fml),
+            **r_kwargs,
+            family=stats.binomial(link="logit"),
+            glm_tol=1e-10,
+            glm_iter=100,
+        )
+
+    ro.globalenv["varying_slope_r_fit"] = r_fit
+    r_df_k = int(ro.r('attr(varying_slope_r_fit$cov.scaled, "df.K")')[0])
+    assert int(stats.nobs(r_fit)[0]) == py_fit._N
+    if py_fit._is_iv:
+        assert py_fit._model_1st_stage._N == py_fit._N
+    tolerance = 1e-5 if estimator in {"fepois", "feglm"} else 1e-7
+    r_names = list(ro.r("names(coef(varying_slope_r_fit))"))
+    endogenous = (
+        {str(term) for term in py_fit.FixestFormula.endogenous}
+        if py_fit._is_iv
+        else set()
+    )
+    expected_r_names = [
+        (
+            f"fit_{name}"
+            if name in endogenous
+            else "(Intercept)"
+            if name == "Intercept"
+            else name
+        )
+        for name in py_fit._coefnames
+    ]
+    r_indices = [r_names.index(name) for name in expected_r_names]
+    r_coef = np.asarray(stats.coef(r_fit))[r_indices]
+    r_vcov = np.asarray(stats.vcov(r_fit))[np.ix_(r_indices, r_indices)]
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        r_coef,
+        rtol=tolerance,
+        atol=tolerance,
+    )
+    assert int(py_fit._df_k) == r_df_k
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        r_vcov,
+        rtol=tolerance,
+        atol=tolerance,
+    )
+
+
+def test_repeated_varying_slope_levels_match_merged_specification(data_feols):
+    """Repeated level specifications merge intercepts and ordered slopes."""
+    demeaner = pf.LsmrDemeaner(backend="within")
+    repeated = pf.feols(
+        "Y ~ X1 | f1[X2] + f1[[Z1]] + f1[[X2]]",
+        data_feols,
+        demeaner=demeaner,
+    )
+    merged = pf.feols("Y ~ X1 | f1[X2, Z1]", data_feols, demeaner=demeaner)
+
+    np.testing.assert_allclose(repeated.coef(), merged.coef(), rtol=1e-9, atol=1e-9)
+    assert tuple(
+        map(str, repeated.FixestFormula.fixed_effect_specifications[0].slopes)
+    ) == (
+        "X2",
+        "Z1",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
     "fml",
     [
         # ("dep_var ~ treat"),

@@ -12,8 +12,9 @@ import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
+from within import Effect
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, WithinDesign
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrDemeaner,
@@ -347,6 +348,7 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
+        self._k_fe_intercept = pd.Series(dtype=np.int64)
         # self._coefnames = None
         self._icovars = None
 
@@ -439,6 +441,7 @@ class Feols(ResultAccessorMixin):
         self._Y_untransformed = self._Y.copy()
         self._X = model_matrix.independent
         self._fe = model_matrix.fixed_effects
+        self._fe_slopes = model_matrix.fixed_effect_slopes
         self._endogvar = model_matrix.endogenous
         self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
@@ -461,14 +464,15 @@ class Feols(ResultAccessorMixin):
         self._depvar = self._Y.columns[0]
 
         self._has_fixef = self._fe is not None
-        self._fixef = (
-            str(self.FixestFormula.fixed_effects).replace(" ", "")
-            if self.FixestFormula.is_fixed_effects
-            else None
-        )
+        if self.FixestFormula.is_fixed_effects:
+            self._fixef = "+".join(
+                str(specification.levels)
+                for specification in self.FixestFormula.fixed_effect_specifications
+            )
+        else:
+            self._fixef = None
 
-        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
+        self._set_fixef_counts()
 
         # an empty drop still rebuilds the whole frame, so guard it
         if self._na_index:
@@ -476,6 +480,79 @@ class Feols(ResultAccessorMixin):
 
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()
+
+    def _set_fixef_counts(self) -> None:
+        """Count nominal coefficients and intercept normalizations by effect."""
+        levels = self._fe
+        if levels is None:
+            self._k_fe = pd.Series(dtype=np.int64)
+            self._k_fe_intercept = pd.Series(dtype=np.int64)
+            self._n_fe = 0
+            self._n_fe_intercept = 0
+            return
+
+        specifications = self.FixestFormula.fixed_effect_specifications
+        slope_term_indices = (
+            self._model_spec[_ModelMatrixKey.fixed_effect_slopes].term_indices
+            if any(specification.slopes for specification in specifications)
+            else {}
+        )
+        self._k_fe = pd.Series(
+            [
+                levels.iloc[:, level].nunique()
+                * (
+                    int(specification.intercept)
+                    + sum(
+                        len(slope_term_indices[slope]) for slope in specification.slopes
+                    )
+                )
+                for level, specification in enumerate(specifications)
+            ],
+            index=levels.columns,
+            dtype=np.int64,
+        )
+        self._k_fe_intercept = pd.Series(
+            [
+                levels.iloc[:, level].nunique() * int(specification.intercept)
+                for level, specification in enumerate(specifications)
+            ],
+            index=self._k_fe.index,
+            dtype=np.int64,
+        )
+        self._n_fe = len(specifications)
+        self._n_fe_intercept = sum(
+            specification.intercept for specification in specifications
+        )
+
+    def _make_demeaning_design(self) -> WithinDesign | None:
+        """Build the numerical fixed-effect design immediately before demeaning."""
+        levels = self._fe
+        if levels is None:
+            return None
+
+        specifications = self.FixestFormula.fixed_effect_specifications
+        levels_array = np.asarray(levels, dtype=np.uint32)
+        if not any(specification.slopes for specification in specifications):
+            return levels_array
+        if self._fe_slopes is None:
+            raise RuntimeError("Varying-slope columns were not materialized.")
+
+        slope_term_indices = self._model_spec[
+            _ModelMatrixKey.fixed_effect_slopes
+        ].term_indices
+        slopes_array = np.asarray(self._fe_slopes, dtype=np.float64)
+        return [
+            Effect(
+                levels=levels_array[:, level],
+                intercept=specification.intercept,
+                slopes=[
+                    slopes_array[:, index]
+                    for slope in specification.slopes
+                    for index in slope_term_indices[slope]
+                ],
+            )
+            for level, specification in enumerate(specifications)
+        ]
 
     def _set_nobs(self) -> tuple[int, int]:
         """
@@ -517,11 +594,12 @@ class Feols(ResultAccessorMixin):
 
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
-        if self._has_fixef:
+        design = self._make_demeaning_design()
+        if design is not None:
             self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
                 self._Y,
                 self._X,
-                self._fe,
+                design,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
@@ -534,7 +612,7 @@ class Feols(ResultAccessorMixin):
         """The within preconditioner used during demeaning, if any.
 
         ``None`` when no preconditioner participated in the solve —
-        ``preconditioner='off'``, single-FE designs (MAP fallback), or any
+        ``preconditioner='off'``, fewer than two resolved effects, or any
         non-within backend. Otherwise the instance built on the first solve
         for this model's row sample. Pass it back via
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
@@ -726,6 +804,11 @@ class Feols(ResultAccessorMixin):
                 fixef=self._fixef,
                 fe=self._fe,
                 k_fe=self._k_fe,
+                k_fe_intercept=self._k_fe_intercept,
+                fe_intercepts=tuple(
+                    specification.intercept
+                    for specification in self.FixestFormula.fixed_effect_specifications
+                ),
             )
             self._cluster_df = prep.cluster_df
             self._G = prep.G
@@ -754,7 +837,13 @@ class Feols(ResultAccessorMixin):
             "ssc_dict": self._ssc_dict,
             "N": self._N,
             "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "k_fe": (
+                self._k_fe.sum()
+                + max(self._n_fe - 1, 0)
+                - max(self._n_fe_intercept - 1, 0)
+                if self._has_fixef
+                else 0
+            ),
             "n_fe": self._n_fe,
             "vcov_type": vcov_type,
             "G": G,
@@ -990,7 +1079,11 @@ class Feols(ResultAccessorMixin):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        k_fe = (
+            np.sum(self._k_fe.values) - max(self._n_fe_intercept - 1, 0)
+            if self._has_fixef
+            else 0
+        )
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -1125,6 +1218,10 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
+        if self.FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "Wild cluster bootstrap is not supported for varying slopes."
+            )
         if param is not None and param not in self._coefnames:
             raise ValueError(
                 f"Parameter {param} not found in the model's coefficients."
@@ -1442,6 +1539,10 @@ class Feols(ResultAccessorMixin):
         Tuple[np.ndarray, np.ndarray, list[str]]
             A tuple with the dependent variable, the model matrix, and the column names.
         """
+        if self.FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "One-hot model-matrix reconstruction is not supported for varying slopes."
+            )
         if self._has_fixef:
             fml_linear, fixef = self._fml.split("|")
             fixef_vars = fixef.split("+")
@@ -1700,6 +1801,11 @@ class Feols(ResultAccessorMixin):
         if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
+        if self.FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "Fixed-effect recovery is not supported for varying slopes."
+            )
+
         if self._is_iv:
             raise NotImplementedError(
                 "The fixef() method is currently not supported for IV models."
@@ -1836,6 +1942,11 @@ class Feols(ResultAccessorMixin):
         if self._is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
+            )
+
+        if newdata is not None and self.FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "Out-of-sample prediction is not supported for varying slopes."
             )
 
         if interval == "prediction" or se_fit:
@@ -2015,6 +2126,10 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
+        if self.FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "Randomization inference is not supported for varying slopes."
+            )
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
