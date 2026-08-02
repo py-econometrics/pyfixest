@@ -60,6 +60,11 @@ class FixedEffectSpecification:
     intercept: bool
     slopes: tuple[Term, ...] = ()
 
+    @property
+    def encoded_levels(self) -> str:
+        """Formulaic term that integer-encodes this effect's levels."""
+        return f"__fixed_effect__{self.levels.factors}"
+
     @classmethod
     def from_term(cls, term: Term) -> "FixedEffectSpecification":
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
@@ -121,6 +126,29 @@ class FixedEffectSpecification:
             intercept=intercept,
             slopes=tuple(_term_from_ast(node) for node in slope_nodes),
         )
+
+
+def _merge_fixed_effect_specifications(
+    specifications: tuple[FixedEffectSpecification, ...],
+) -> tuple[FixedEffectSpecification, ...]:
+    """Merge specifications sharing a level term in their original order."""
+    merged: dict[Term, tuple[bool, list[Term]]] = {}
+    for specification in specifications:
+        intercept, slopes = merged.setdefault(specification.levels, (False, []))
+        slopes.extend(slope for slope in specification.slopes if slope not in slopes)
+        merged[specification.levels] = (
+            intercept or specification.intercept,
+            slopes,
+        )
+
+    return tuple(
+        FixedEffectSpecification(
+            levels=levels,
+            intercept=intercept,
+            slopes=tuple(slopes),
+        )
+        for levels, (intercept, slopes) in merged.items()
+    )
 
 
 def _term_from_ast(node: ast.expr) -> Term:
@@ -340,15 +368,29 @@ class Formula:
         """Fixed effects represented as symbolic `within::Effect` terms."""
         if not self.is_fixed_effects:
             return ()
-        return tuple(
-            FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+        return _merge_fixed_effect_specifications(
+            tuple(
+                FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+            )
+        )
+
+    @property
+    def has_varying_slopes(self) -> bool:
+        """Whether any fixed effect includes varying slopes."""
+        return any(
+            specification.slopes for specification in self.fixed_effect_specifications
         )
 
     @property
     def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
+            list(
+                dict.fromkeys(
+                    fixed_effect.encoded_levels
+                    for fixed_effect in self.fixed_effect_specifications
+                )
+            ),
             _parser=_PARSER_NO_INTERCEPT,
         )
 

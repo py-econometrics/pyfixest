@@ -83,6 +83,9 @@ from `newdata` with different encodings than the one it was fitted on.
 
 The required `formulaic` version is now `>=1.2.0,<1.3`.
 
+Varying-slope fixed-effect syntax is now parsed and materialized internally.
+Estimation with varying slopes remains disabled until backend support is available.
+
 Behaviour that changed as a result:
 
 - **Model names are canonical `formulaic` formulas.** They now carry an explicit
