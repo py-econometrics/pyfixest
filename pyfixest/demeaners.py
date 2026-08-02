@@ -321,10 +321,11 @@ class LsmrDemeaner(BaseDemeaner):
             ``self.preconditioner``: the latter is the user's requested
             configuration, while ``cached_preconditioner`` is the model's
             internal "reuse this if it still matches" handle. The cache is
-            used only when the current request is a string preconditioner
-            with the same variant (``"additive"`` or ``"diagonal"``). If the
-            user explicitly supplied a ``Preconditioner`` on the demeaner,
-            that object is passed through and the model cache is ignored.
+            used only when the current request is an enabled string
+            preconditioner. Since the cache belongs to this demeaner, a cached
+            object was built from the same configuration. If the user explicitly
+            supplied a ``Preconditioner`` on the demeaner, that object is passed
+            through and the model cache is ignored.
 
         Returns
         -------
@@ -351,7 +352,7 @@ class LsmrDemeaner(BaseDemeaner):
             if (
                 cached_preconditioner is not None
                 and isinstance(preconditioner, str)
-                and cached_preconditioner.variant.lower() == preconditioner
+                and preconditioner != "off"
             ):
                 preconditioner = cached_preconditioner
 

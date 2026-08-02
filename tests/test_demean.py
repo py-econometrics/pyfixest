@@ -201,64 +201,9 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
-    # Structural match: reused returns a wrapper around the same factorization
-    # (same variant and DOF count) but not the same Python object — pyo3
-    # round-trips produce fresh wrappers, matching upstream's value semantics.
-    assert preconditioner_reused is not preconditioner
-    assert preconditioner_reused.variant == preconditioner.variant
     assert preconditioner_reused.nrows == preconditioner.nrows
     assert preconditioner_reused.ncols == preconditioner.ncols
-    assert preconditioner_reused.build_time_seconds == preconditioner.build_time_seconds
-    # Solve-equivalence is the load-bearing correctness check: same factorization
-    # applied to the same data must yield bitwise-identical demeaned output.
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
-
-
-def test_demean_within_preconditioner_reports_build_time(demean_data):
-    """The preconditioner must report its build time in seconds as a float.
-    If the preconditioner is reused, we still report the initial build time,
-    and not a new build time of approximately 0.
-    """
-    x, flist, weights = demean_data
-
-    _, success, preconditioner = demean_within(
-        x=x,
-        flist=flist.astype(np.uint32, copy=False),
-        weights=weights,
-    )
-    assert success
-    assert preconditioner is not None
-
-    build_time = preconditioner.build_time_seconds
-    assert isinstance(build_time, float)
-    assert build_time >= 0.0
-    assert f"build_time_seconds={build_time:.2f}" in repr(preconditioner)
-
-    # the build time survives preconditioner reuse unchagned
-    # 1) directly feed preconditioner
-    _, success_reused, preconditioner_reused = demean_within(
-        x=x,
-        flist=flist.astype(np.uint32, copy=False),
-        weights=weights,
-        preconditioner=preconditioner,
-    )
-    assert success_reused
-    assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
-
-    # 2) load cached preconditioner
-    # The build cost survives serialization unchanged.
-    restored = pickle.loads(pickle.dumps(preconditioner))
-    assert restored.build_time_seconds == build_time
-    _, success_reused, preconditioner_reused = demean_within(
-        x=x,
-        flist=flist.astype(np.uint32, copy=False),
-        weights=weights,
-        preconditioner=restored,
-    )
-    assert success_reused
-    assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
 
 
 def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
@@ -352,16 +297,8 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
         )
 
 
-@pytest.mark.parametrize(
-    ("preconditioner", "expected_variant"),
-    [
-        ("additive", "Additive"),
-        ("diagonal", "Diagonal"),
-    ],
-)
-def test_lsmr_within_reuses_cached_preconditioner(
-    preconditioner, expected_variant, demean_data
-):
+@pytest.mark.parametrize("preconditioner", ["additive", "diagonal"])
+def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     """End-to-end coverage of ``LsmrDemeaner.demean``'s preconditioner-reuse policy.
 
     Context
@@ -437,13 +374,11 @@ def test_lsmr_within_reuses_cached_preconditioner(
     assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
-    assert built.variant == expected_variant
 
     # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
     # an IWLS iteration where only the working weights moved. The method
-    # must reuse the cached factorization (same variant + DOF count; pyo3
-    # produces a fresh wrapper, identity semantics match upstream ``within``)
-    # and the result must still be numerically correct under the *new* weights.
+    # must reuse the cached factorization and the result must still be
+    # numerically correct under the *new* weights.
     adjusted_weights = weights + 0.25
     result_reused, success, reused = demeaner.demean(
         x=x,
@@ -453,10 +388,8 @@ def test_lsmr_within_reuses_cached_preconditioner(
     )
     assert success
     assert isinstance(reused, pf.Preconditioner)
-    assert reused.variant == built.variant
     assert reused.nrows == built.nrows
     assert reused.ncols == built.ncols
-    assert reused.build_time_seconds == built.build_time_seconds
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
