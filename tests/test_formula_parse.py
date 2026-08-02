@@ -15,7 +15,11 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
-from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+from pyfixest.estimation.formula.parse import (
+    FixedEffectSpecification,
+    Formula,
+    _expand_all_multiple_estimation,
+)
 from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
     _preprocess_fixed_effect_interactions,
@@ -547,6 +551,110 @@ class TestFixedEffectInteractions:
 
         assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
         assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+
+
+class TestVaryingSlopeParsing:
+    """Tests for fixed-effect specs shaped like `within.Effect` terms."""
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1", [("f1", True, ())]),
+            ("f1:f2", [("f1:f2", True, ())]),
+            ("f1[z]", [("f1", True, ("z",))]),
+            ("f1[z1, z2]", [("f1", True, ("z1", "z2"))]),
+            ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
+            ("f1:f2[z]", [("f1:f2", True, ("z",))]),
+            ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
+            ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
+        ],
+    )
+    def test_fixed_effect_specs(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert all(
+            isinstance(spec, FixedEffectSpecification)
+            for spec in parsed.fixed_effect_specifications
+        )
+        assert [
+            (
+                str(spec.levels),
+                spec.intercept,
+                tuple(str(slope) for slope in spec.slopes),
+            )
+            for spec in parsed.fixed_effect_specifications
+        ] == expected
+
+    def test_no_fixed_effects_have_no_specs(self):
+        parsed = Formula.parse("Y ~ X1")[0]
+
+        assert parsed.fixed_effect_specifications == ()
+
+    def test_distinct_terms_with_shared_levels_remain_distinct(self):
+        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for spec in parsed.fixed_effect_specifications
+        ] == [
+            ("f1", True, ()),
+            ("f1", False, ("z",)),
+        ]
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        ["f1 + f1", "f1[[z]] + f1[[z]]"],
+    )
+    def test_formulaic_deduplicates_identical_terms(self, fixed_effects):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert len(parsed.fixed_effect_specifications) == 1
+
+    def test_effect_and_slope_order_follow_formulaic(self):
+        parsed = Formula.parse("Y ~ X1 | f2[z2, z1] + f1[[z3]]")[0]
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for spec in parsed.fixed_effect_specifications
+        ] == [
+            ("f2", True, ("z2", "z1")),
+            ("f1", False, ("z3",)),
+        ]
+
+    def test_formulaic_transform_is_preserved_as_a_slope_term(self):
+        parsed = Formula.parse("Y ~ X1 | f1[log(z)]")[0]
+
+        assert tuple(map(str, parsed.fixed_effect_specifications[0].slopes)) == (
+            "log(z)",
+        )
+
+    def test_stepwise_varying_slopes(self):
+        parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
+
+        assert [
+            (
+                str(model.fixed_effect_specifications[0].levels),
+                model.fixed_effect_specifications[0].intercept,
+            )
+            for model in parsed
+        ] == [("f1", True), ("f2", False)]
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        [
+            "f1[[]]",
+            "f1[z][z2]",
+            "f1[z1 + z2]",
+            "f1[z]:f2",
+            "f1:f2[z]:f3",
+            "f1[z1]:f2[z2]",
+        ],
+    )
+    def test_invalid_varying_slope_terms(self, fixed_effects):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        with pytest.raises(FormulaSyntaxError):
+            _ = parsed.fixed_effect_specifications
 
 
 class TestValidation:
