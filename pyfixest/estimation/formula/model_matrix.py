@@ -20,6 +20,7 @@ from pyfixest.utils.utils import capture_context
 class _ModelMatrixKey:
     main: str = "second_stage"
     fixed_effects: str = "fe"
+    fixed_effect_slopes: str = "fe_slopes"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
@@ -384,10 +385,18 @@ def _get_formulaic_formula(
     offset: str | None = None,
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
-    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
+    formula_kwargs: dict[str, Any] = {_ModelMatrixKey.main: formula.second_stage}
     if formula.is_fixed_effects:
-        formula_kwargs.update(
-            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
+        formula_kwargs[_ModelMatrixKey.fixed_effects] = formula.fixed_effects_wrapped
+        slopes = list(
+            dict.fromkeys(
+                slope
+                for specification in formula.fixed_effect_specifications
+                for slope in specification.slopes
+            )
+        )
+        formula_kwargs[_ModelMatrixKey.fixed_effect_slopes] = (
+            formulaic.formula.SimpleFormula(slopes)
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(
