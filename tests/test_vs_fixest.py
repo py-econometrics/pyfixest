@@ -1584,6 +1584,10 @@ def get_data_r(fml, data):
     [
         ("feols", "Y ~ X1 | f1[X2]", None),
         ("feols", "Y ~ X1 | f1[[X2]]", "weights"),
+        ("feols", "Y ~ X1 | f1[Z1, Z2]", None),
+        ("feols", "Y ~ X1 | f1[Z1, Z2] + f2[X2]", None),
+        ("feols", "Y ~ X1 | f1[Z1, Z2]", "weights"),
+        ("feols", "Y ~ X1 | f1[[Z1, Z2]]", None),
         ("feols", "Y ~ Z2 | f1[X2] | X1 ~ Z1", None),
         ("fepois", "Y ~ X1 | f1[X2]", None),
         ("feglm", "Y_bin ~ X1 | f1[X2]", None),
