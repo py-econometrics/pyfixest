@@ -11,6 +11,7 @@ import numpy as np
 
 from pyfixest.core.demean import (
     Preconditioner,
+    WithinDesign,
     WithinPreconditionerName,
     demean_within,
 )
@@ -151,7 +152,7 @@ class MapDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: WithinDesign,
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
@@ -163,6 +164,10 @@ class MapDemeaner(BaseDemeaner):
         """
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
+        if not isinstance(flist, np.ndarray):
+            raise NotImplementedError(
+                "Varying slopes require `LsmrDemeaner(backend='within')`."
+            )
 
         if self.backend == "numba":
             demean_func = _get_numba_demean()
@@ -231,10 +236,10 @@ class LsmrDemeaner(BaseDemeaner):
     - A :class:`pyfixest.Preconditioner` instance: a previously built
       preconditioner (typically obtained via `fit.preconditioner` or
       pickled across sessions). Only supported by `backend='within'`;
-      preconditioners are only computed and applied for two or more
-      fixed-effect factors because single-factor problems run MAP as the within algo
-      provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
-      at construction time.
+      preconditioners are only computed and applied for two or more resolved
+      effects. One ordinary intercept-only effect runs MAP; one slope-bearing
+      effect uses `within` without a preconditioner. Passing a preconditioner
+      to any other backend raises `ValueError`.
 
     If a *string* value is incompatible with the chosen backend, a
     `UserWarning` is emitted at solve time and the backend's default is
@@ -307,7 +312,7 @@ class LsmrDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: WithinDesign,
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
@@ -333,8 +338,8 @@ class LsmrDemeaner(BaseDemeaner):
             The demeaned array, a convergence flag, and the within
             preconditioner actually used during the solve. The third element
             is ``None`` for non-within backends, when
-            ``preconditioner='off'`` was requested, or when the single-FE MAP
-            fallback path was taken inside ``demean_within`` — in those cases
+            ``preconditioner='off'`` was requested, or when fewer than two
+            effects were supplied — in those cases
             no preconditioner participated in the solve. Callers (e.g. the
             ``DemeanCache``) can cache the returned instance to amortise
             setup across subsequent solves on the same design.
@@ -358,7 +363,11 @@ class LsmrDemeaner(BaseDemeaner):
 
             return demean_within(
                 x=x,
-                flist=flist.astype(np.uint32, copy=False),
+                flist=(
+                    flist.astype(np.uint32, copy=False)
+                    if isinstance(flist, np.ndarray)
+                    else flist
+                ),
                 weights=weights,
                 tol=max(self.fixef_atol, self.fixef_btol),
                 maxiter=self.fixef_maxiter,
@@ -368,6 +377,10 @@ class LsmrDemeaner(BaseDemeaner):
 
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
+        if not isinstance(flist, np.ndarray):
+            raise NotImplementedError(
+                "Varying slopes require `LsmrDemeaner(backend='within')`."
+            )
 
         # Non-within branches never produce a Preconditioner, so their
         # third return value is always None.
@@ -437,8 +450,7 @@ AnyDemeaner = MapDemeaner | LsmrDemeaner
 
 def _supports_varying_slopes(demeaner: AnyDemeaner) -> bool:
     """Return whether a demeaner backend supports varying slopes."""
-    # return isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within"
-    return False
+    return isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within"
 
 
 __all__ = [

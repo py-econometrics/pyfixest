@@ -138,6 +138,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _has_weights: bool
     _is_iv: bool
     _k_fe: pd.Series
+    _n_fe: int
+    _n_fe_intercept: int
     _N: int
     _k: int
     _df_t: int
@@ -309,7 +311,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         has_intercept = not self._drop_intercept
 
         if self._has_fixef:
-            k_fe = np.sum(self._k_fe - 1) + 1
+            k_fe = np.sum(self._k_fe) - max(self._n_fe_intercept - 1, 0)
             adj_factor = (self._N - has_intercept) / (self._N - self._k - k_fe)
             adj_factor_within = (self._N - k_fe) / (self._N - self._k - k_fe)
         else:

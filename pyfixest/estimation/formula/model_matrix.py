@@ -50,6 +50,8 @@ class ModelMatrix:
         The independent variable(s) (right-hand side of the main equation).
     fixed_effects : pd.DataFrame or None
         Fixed effects variables, encoded as integers.
+    fixed_effect_slopes : pd.DataFrame
+        Materialized loading columns used by varying fixed effects.
     endogenous : pd.DataFrame or None
         Endogenous variables in instrumental variable specifications.
     instruments : pd.DataFrame or None
@@ -66,6 +68,7 @@ class ModelMatrix:
         self,
         model_matrix: formulaic.ModelMatrix,
         drop_rows: set[int],
+        absorbs_intercept: bool = False,
         drop_singletons: bool = True,
         drop_intercept: bool = False,
     ) -> None:
@@ -73,7 +76,11 @@ class ModelMatrix:
         self._model_spec = model_matrix.model_spec
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
-        self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
+        self._process(
+            dropped_rows=drop_rows,
+            drop_singletons=drop_singletons,
+            absorbs_intercept=absorbs_intercept,
+        )
 
     @staticmethod
     def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
@@ -92,6 +99,9 @@ class ModelMatrix:
         self._fixed_effects = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
+        self._fixed_effect_slopes = self._get_columns(
+            model_matrix, _ModelMatrixKey.fixed_effect_slopes
+        )
         self._endogenous = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
         )
@@ -108,7 +118,12 @@ class ModelMatrix:
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 
-    def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
+    def _process(
+        self,
+        dropped_rows: set[int],
+        drop_singletons: bool = False,
+        absorbs_intercept: bool = False,
+    ) -> None:
         if self.dependent.shape[1] != 1:
             # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
             # creating multiple columns for the dependent variable
@@ -132,7 +147,7 @@ class ModelMatrix:
             self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
                 "int32"
             )
-        if self.fixed_effects is not None or self._drop_intercept:
+        if absorbs_intercept or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [
                     col for col in self._independent if col != "Intercept"
@@ -200,6 +215,11 @@ class ModelMatrix:
             return None
         else:
             return self._data.loc[:, self._fixed_effects]
+
+    @property
+    def fixed_effect_slopes(self) -> pd.DataFrame:
+        """Get the materialized varying-slope loading columns."""
+        return self._data.loc[:, self._fixed_effect_slopes or []]
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
@@ -373,6 +393,10 @@ def create_model_matrix(
     return ModelMatrix(
         model_matrix,
         drop_rows=drop_rows,
+        absorbs_intercept=any(
+            specification.intercept
+            for specification in formula.fixed_effect_specifications
+        ),
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
     )

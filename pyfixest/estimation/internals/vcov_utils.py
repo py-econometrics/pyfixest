@@ -38,6 +38,8 @@ def prepare_cluster_state(
     fixef: str | None,
     fe: pd.DataFrame | np.ndarray | None,
     k_fe: np.ndarray | pd.Series,
+    k_fe_intercept: np.ndarray | pd.Series | None = None,
+    fe_intercepts: tuple[bool, ...] | None = None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
@@ -59,7 +61,7 @@ def prepare_cluster_state(
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
-        k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
+        k_fe_nested_flag, _ = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
             cluster_data=cluster_arr_int.astype(np.uintp),
@@ -67,7 +69,16 @@ def prepare_cluster_state(
             if isinstance(fe, pd.DataFrame)
             else fe.astype(np.uintp),
         )
-        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+        if fe_intercepts is None:
+            n_fe_fully_nested = int(np.sum(k_fe_nested_flag))
+        else:
+            n_fe_fully_nested = int(
+                np.sum(k_fe_nested_flag & np.asarray(fe_intercepts))
+            )
+        nested_counts = k_fe if k_fe_intercept is None else k_fe_intercept
+        k_fe_nested = (
+            np.sum(nested_counts[k_fe_nested_flag]) if k_fe_nested_flag.any() else 0
+        )
 
     return ClusterPrep(
         cluster_df=cluster_df,

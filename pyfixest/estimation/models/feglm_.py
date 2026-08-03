@@ -148,6 +148,7 @@ class Feglm(Feols):
             self._Y.drop(na_separation, axis=0, inplace=True)
             self._X.drop(na_separation, axis=0, inplace=True)
             self._fe.drop(na_separation, axis=0, inplace=True)
+            self._fe_slopes.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
@@ -155,13 +156,13 @@ class Feglm(Feols):
                 self._offset_df.drop(na_separation, axis=0, inplace=True)
             self._N = self._Y.shape[0]
             self._N_rows = self._N
+            self._na_index = self._na_index.union(na_separation)
             # Re-set weights after dropping rows (handles both weighted and unweighted)
             self._weights = self._set_weights()
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._set_fixef_counts()
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -176,6 +177,7 @@ class Feglm(Feols):
             self._fe = self._fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
+            self._fe_slopes = self._fe_slopes.to_numpy()
 
     def get_fit(self):
         "Fit the GLM via IRLS and write results onto self.* attributes."
@@ -184,7 +186,7 @@ class Feglm(Feols):
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
         ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
+            return self.residualize(v=v, X=X, weights=weights, tol=tol)
 
         fit = fit_glm_irls(
             X=self._X,
@@ -278,18 +280,18 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        "Residualize v and X by flist using weights."
-        if flist is None:
+        "Residualize v and X by the fixed effects using weights."
+        design = self._make_demeaning_design()
+        if design is None:
             return v, X
 
         effective_demeaner = self._demeaner.with_tol(tol)
         vX_tilde = self._demean_cache.demean_array(
             x=np.c_[v, X],
-            flist=flist,
+            design=design,
             weights=weights.flatten(),
             na_index=self._na_index,
             demeaner=effective_demeaner,
