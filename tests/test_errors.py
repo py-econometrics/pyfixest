@@ -91,6 +91,14 @@ def test_depvar_numeric():
         feols(fml="Y ~ X1", data=data)
 
 
+def test_varying_slopes_rejected_during_estimation(data):
+    with pytest.raises(
+        NotImplementedError,
+        match="Varying slopes not supported for",
+    ):
+        feols("Y ~ X1 | f1[X2]", data=data)
+
+
 def test_iv_errors():
     data = get_data()
 
