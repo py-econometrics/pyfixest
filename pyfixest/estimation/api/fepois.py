@@ -22,7 +22,7 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
-    weights: None | str = None,
+    weights: str | None = None,
     weights_type: WeightsTypeOptions = "aweights",
     offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
