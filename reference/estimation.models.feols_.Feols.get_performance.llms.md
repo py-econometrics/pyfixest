@@ -31,6 +31,6 @@ fit.get_performance()
 fit._r2, fit._adj_r2, fit._r2_within
 ```
 
-    (np.float64(0.48899390828215983),
-     np.float64(0.4725781685482189),
+    (np.float64(0.4889939082821597),
+     np.float64(0.47257816854821877),
      np.float64(0.23875790489544113))
