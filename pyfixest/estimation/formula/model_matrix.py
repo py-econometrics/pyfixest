@@ -158,7 +158,7 @@ class ModelMatrix:
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._na_index |= frozenset(self._data.index[is_dropped].tolist())
+        self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
