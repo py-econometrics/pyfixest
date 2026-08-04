@@ -424,7 +424,7 @@ class Feols(ResultAccessorMixin):
         )
 
         self._Y = model_matrix.dependent
-        self._Y_untransformed = model_matrix.dependent.copy()
+        self._Y_untransformed = self._Y.copy()
         self._X = model_matrix.independent
         self._fe = model_matrix.fixed_effects
         self._endogvar = model_matrix.endogenous
@@ -441,7 +441,7 @@ class Feols(ResultAccessorMixin):
             if is_icovar is not None and is_icovar.any()
             else None
         )
-        self._X_is_empty = not model_matrix.independent.shape[0] > 0
+        self._X_is_empty = self._X.shape[0] == 0
         self._model_spec = model_matrix.model_spec
 
         self._coefnames = self._X.columns.tolist()
@@ -458,11 +458,9 @@ class Feols(ResultAccessorMixin):
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        # update data
-        self._data.drop(
-            self._data.index[~self._data.index.isin(model_matrix.dependent.index)],
-            inplace=True,
-        )
+        # an empty drop still rebuilds the whole frame, so guard it
+        if self._na_index:
+            self._data.drop(index=list(self._na_index), inplace=True)
 
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()
