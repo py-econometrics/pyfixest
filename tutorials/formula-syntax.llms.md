@@ -391,12 +391,12 @@ for dgp_name in ["simple", "difficult"]:
 
 |     | DGP       | Demeaner      | Separate fits (s) | Multiple estimation (s) | Speedup |
 |-----|-----------|---------------|-------------------|-------------------------|---------|
-| 0   | simple    | MAP (rust)    | 1.451             | 1.060                   | 1.37x   |
-| 1   | simple    | LSMR diagonal | 1.863             | 1.083                   | 1.72x   |
-| 2   | simple    | LSMR additive | 2.841             | 1.178                   | 2.41x   |
-| 3   | difficult | MAP (rust)    | 63.108            | 15.161                  | 4.16x   |
-| 4   | difficult | LSMR diagonal | 7.351             | 2.176                   | 3.38x   |
-| 5   | difficult | LSMR additive | 3.072             | 1.243                   | 2.47x   |
+| 0   | simple    | MAP (rust)    | 1.217             | 0.832                   | 1.46x   |
+| 1   | simple    | LSMR diagonal | 1.659             | 0.888                   | 1.87x   |
+| 2   | simple    | LSMR additive | 2.743             | 0.976                   | 2.81x   |
+| 3   | difficult | MAP (rust)    | 63.027            | 16.165                  | 3.90x   |
+| 4   | difficult | LSMR diagonal | 7.053             | 1.994                   | 3.54x   |
+| 5   | difficult | LSMR additive | 3.059             | 1.084                   | 2.82x   |
 
 Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids recomputing the same within-transform work for every formula.
 

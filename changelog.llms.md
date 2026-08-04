@@ -550,26 +550,26 @@ We can inspect results as a `pd.DataFrame`
 gb.tidy()
 ```
 
-|  | coefficients | ci_lower | ci_upper | panels |
-|----|----|----|----|----|
-| direct_effect | 1.412165 | 0.551811 | 1.992067 | Levels (units) |
-| full_effect | 1.041753 | 0.959561 | 1.103253 | Levels (units) |
-| explained_effect | 0.370412 | -0.407782 | 0.902397 | Levels (units) |
-| unexplained_effect | 1.041753 | 0.959561 | 1.103253 | Levels (units) |
-| x22 | 0.061930 | -0.425522 | 0.413288 | Levels (units) |
-| x23 | 0.308483 | 0.017740 | 0.489109 | Levels (units) |
-| direct_effect | 1.000000 | 1.000000 | 1.000000 | Share of Full Effect |
-| full_effect | 0.737699 | 0.548861 | 1.889762 | Share of Full Effect |
-| explained_effect | 0.262301 | -0.889762 | 0.451139 | Share of Full Effect |
-| unexplained_effect | 0.737699 | 0.548861 | 1.889762 | Share of Full Effect |
-| x22 | 0.043855 | -0.903036 | 0.205121 | Share of Full Effect |
-| x23 | 0.218446 | 0.013275 | 0.254280 | Share of Full Effect |
-| direct_effect | 3.812414 | -9.758886 | 30.888655 | Share of Explained Effect |
-| full_effect | 2.812414 | -10.758886 | 29.888655 | Share of Explained Effect |
-| explained_effect | 1.000000 | 1.000000 | 1.000000 | Share of Explained Effect |
-| unexplained_effect | 2.812414 | -10.758886 | 29.888655 | Share of Explained Effect |
-| x22 | 0.167192 | -4.424397 | 2.091354 | Share of Explained Effect |
-| x23 | 0.832808 | -1.091354 | 5.424397 | Share of Explained Effect |
+|                    | coefficients | ci_lower  | ci_upper | panels                    |
+|--------------------|--------------|-----------|----------|---------------------------|
+| direct_effect      | 1.412165     | 0.915872  | 2.473724 | Levels (units)            |
+| full_effect        | 1.041753     | 0.928605  | 1.091235 | Levels (units)            |
+| explained_effect   | 0.370412     | -0.135415 | 1.407925 | Levels (units)            |
+| unexplained_effect | 1.041753     | 0.928605  | 1.091235 | Levels (units)            |
+| x22                | 0.061930     | -0.281360 | 0.717574 | Levels (units)            |
+| x23                | 0.308483     | 0.138293  | 0.739350 | Levels (units)            |
+| direct_effect      | 1.000000     | 1.000000  | 1.000000 | Share of Full Effect      |
+| full_effect        | 0.737699     | 0.431147  | 1.186924 | Share of Full Effect      |
+| explained_effect   | 0.262301     | -0.186924 | 0.568853 | Share of Full Effect      |
+| unexplained_effect | 0.737699     | 0.431147  | 1.186924 | Share of Full Effect      |
+| x22                | 0.043855     | -0.336947 | 0.288611 | Share of Full Effect      |
+| x23                | 0.218446     | 0.135044  | 0.326621 | Share of Full Effect      |
+| direct_effect      | 3.812414     | -2.101176 | 4.177387 | Share of Explained Effect |
+| full_effect        | 2.812414     | -3.101176 | 3.177387 | Share of Explained Effect |
+| explained_effect   | 1.000000     | 1.000000  | 1.000000 | Share of Explained Effect |
+| unexplained_effect | 2.812414     | -3.101176 | 3.177387 | Share of Explained Effect |
+| x22                | 0.167192     | -0.036919 | 1.197568 | Share of Explained Effect |
+| x23                | 0.832808     | -0.197568 | 1.036919 | Share of Explained Effect |
 
 or produce a `GT` table:
 
@@ -585,24 +585,24 @@ gb.etable(
 |  | Initial Difference | Adjusted Difference | Explained Difference |
 | Levels (units) |  |  |  |
 | x1 | 1.412 | 1.042 | 0.370 |
-|  | \[0.552, 1.992\] | \[0.960, 1.103\] | \[-0.408, 0.902\] |
+|  | \[0.916, 2.474\] | \[0.929, 1.091\] | \[-0.135, 1.408\] |
 | x22 | \- | \- | 0.062 |
-|  | \- | \- | \[-0.426, 0.413\] |
+|  | \- | \- | \[-0.281, 0.718\] |
 | x23 | \- | \- | 0.308 |
-|  | \- | \- | \[0.018, 0.489\] |
+|  | \- | \- | \[0.138, 0.739\] |
 | Share of Full Effect |  |  |  |
 | x1 | 1.000 | 0.738 | 0.262 |
-|  | \- | \[0.549, 1.890\] | \[-0.890, 0.451\] |
+|  | \- | \[0.431, 1.187\] | \[-0.187, 0.569\] |
 | x22 | \- | \- | 0.044 |
-|  | \- | \- | \[-0.903, 0.205\] |
+|  | \- | \- | \[-0.337, 0.289\] |
 | x23 | \- | \- | 0.218 |
-|  | \- | \- | \[0.013, 0.254\] |
+|  | \- | \- | \[0.135, 0.327\] |
 | Share of Explained Effect |  |  |  |
 | x1 | \- | \- | 1.000 |
 | x22 | \- | \- | 0.167 |
-|  | \- | \- | \[-4.424, 2.091\] |
+|  | \- | \- | \[-0.037, 1.198\] |
 | x23 | \- | \- | 0.833 |
-|  | \- | \- | \[-1.091, 5.424\] |
+|  | \- | \- | \[-0.198, 1.037\] |
 | Decomposition variable: x1. Control Variables: x21. CIs are computed using B = 10 bootstrap replications using iid sampling.Col 1: Adjusted Difference (by x21) - Coefficient on x1 in short regression. Col 2: Adjusted Difference - Coefficient on x1 in long regression. Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression. Panel 1: Levels (units). Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression. Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression. |  |  |  |
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
@@ -663,8 +663,8 @@ toc = time.time()
 print(f"Rust backend took {toc-tic}.")
 ```
 
-    Numba backend took 3.8646109104156494.
-    Rust backend took 4.304249286651611.
+    Numba backend took 2.687312602996826.
+    Rust backend took 2.8686397075653076.
 
 Results are also matching =)
 
@@ -989,9 +989,9 @@ fit2.coef()[0:8]
 
   |           | 2.5%      | 97.5%     |
   |-----------|-----------|-----------|
-  | Intercept | 0.383987  | 1.173711  |
-  | D         | -1.755648 | -1.049585 |
-  | f1        | -0.013913 | 0.023462  |
+  | Intercept | 0.380227  | 1.177471  |
+  | D         | -1.759011 | -1.046223 |
+  | f1        | -0.014091 | 0.023640  |
 
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017) for OLS via the `.ccv()` method.
 
@@ -1001,7 +1001,7 @@ fit2.coef()[0:8]
 
   |      | Estimate            | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
   |------|---------------------|------------|-----------|-------------|-----------|-----------|
-  | CCV  | -1.4026168622179935 | 0.311484   | -4.50302  | 0.000275    | -2.05702  | -0.748214 |
+  | CCV  | -1.4026168622179935 | 0.305932   | -4.584737 | 0.00023     | -2.045356 | -0.759878 |
   | CRV1 | -1.402617           | 0.205132   | -6.837621 | 0.000002    | -1.833584 | -0.97165  |
 
 ## PyFixest 0.16.0
