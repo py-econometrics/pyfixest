@@ -164,6 +164,7 @@ We also removed:
 
 ### Bug Fixes
 
+- IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
   different from the model order. Previously, intervals could be associated
   with the wrong coefficient labels, including for simultaneous confidence
