@@ -218,6 +218,8 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
 
 ## Docs
 
+Always update `docs/changelog.qmd` with a concise entry for each change.
+
 Docs ship in the same PR as the feature — a reviewer treats missing docs as an
 incomplete change. What to touch depends on the surface:
 
@@ -317,6 +319,8 @@ once.
 ## Git and PRs
 
 - Never commit to `master` (a pre-commit hook blocks it); branch first.
+- Do not start branch names with `codex/`; use a conventional prefix such as
+  `bug/`, `feat/`, or `chore/`.
 - Run lint and type checks on the changed files before each commit: `ruff-format`,
   then `ruff-check`, then `mypy` (commands under "Commands"). The same hooks gate
   the PR in CI, so a red check blocks the merge. `ruff-format` and `ruff-check
