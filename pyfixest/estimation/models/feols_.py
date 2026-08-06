@@ -1374,6 +1374,7 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
+                demeaner=self._demeaner,
             )
             vcov_splits += vcov_ccv
 
