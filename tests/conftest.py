@@ -15,6 +15,7 @@ _rpy2_test_files = [
     "test_quantreg.py",
     "test_vs_fixest.py",
     "test_wald_test.py",
+    "test_weighting_bootstrap_vs_r.py",
 ]
 try:
     import pytest

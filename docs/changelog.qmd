@@ -29,6 +29,27 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
 
+### Weighting Bootstraps
+
+- Fitted OLS, fixed-effect OLS, IV, and Gaussian, Poisson, logit, and probit GLMs
+  now provide `bayesian_bootstrap()` and `pairs_bootstrap()` methods. The methods
+  reweight fixed rowwise model matrices and support observation-level or one-way
+  cluster weights, including original analytic weights.
+- Bayesian output reports the original estimate, posterior mean, posterior SD,
+  equal-tail credible limits, and posterior tail probability. Pairs output
+  reports the original estimate, bootstrap SE, percentile confidence limits,
+  and an unstudentized centered p-value.
+- Frequency weights, quantile regression, offsets, multiway clustering, and
+  models fit with `lean=True` or `store_data=False` are not supported. Weighting
+  bootstraps require many independent observations or clusters and are not a
+  few-cluster replacement for the wild cluster bootstrap.
+
+```{python}
+bootstrap_fit = pf.feols("Y ~ X1 + X2 | f1", data=df)
+bootstrap_fit.bayesian_bootstrap(reps=19, seed=42)
+bootstrap_fit.pairs_bootstrap(reps=19, seed=42)
+```
+
 ### Deprecations and Removals
 
 As previously announced, we removed:
