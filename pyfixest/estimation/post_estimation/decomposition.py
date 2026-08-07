@@ -9,6 +9,7 @@ from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
+from scipy.stats import t
 from tqdm import tqdm
 
 # Panel name mappings for consistent API
@@ -17,6 +18,7 @@ PANEL_ALIASES = {
     "share_full": "Share of Full Effect",
     "share_explained": "Share of Explained Effect",
 }
+SUPPORTED_INFERENCE = ("analytic", "bootstrap")
 
 
 @dataclass
@@ -95,6 +97,18 @@ class GelbachResults:
 
 
 @dataclass
+class GelbachComputation:
+    """Intermediate Gelbach quantities shared by point estimates and inference."""
+
+    beta_short: np.ndarray
+    beta_full: np.ndarray
+    beta2: np.ndarray
+    x1_inv: np.ndarray | None
+    gamma_matrix: np.ndarray | None
+    results: GelbachResults
+
+
+@dataclass
 class GelbachDecomposition:
     """
     Gelbach Decomposition (equivalent to a Linear Mediation Model).
@@ -130,7 +144,11 @@ class GelbachDecomposition:
     agg_first : bool, optional
         Whether to use aggregate-first algorithm for high-dimensional mediators, by default False.
     only_coef : bool, optional
-        If True, skip bootstrap inference and only compute point estimates, by default True.
+        If True, skip inference and only compute point estimates, by default False.
+    inference : str, optional
+        Inference method. One of "analytic" or "bootstrap", by default "analytic".
+    weights_type : str, optional
+        Type of weights from the parent model, by default None.
     atol : float, optional
         Absolute tolerance for linear solver, by default None.
     btol : float, optional
@@ -158,21 +176,28 @@ class GelbachDecomposition:
     cluster_df: pd.Series | None = None
     combine_covariates: dict[str, list[str]] | None = None
     agg_first: bool | None = False
-    only_coef: bool = True
+    only_coef: bool = False
+    inference: str = "analytic"
+    weights_type: str | None = None
     atol: float | None = None
     btol: float | None = None
 
     # Define attributes initialized post-creation
-    cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
     unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
     mediator_names: list[str] = field(init=False)
+    _combine_covariate_indices: dict[str, list[int]] = field(
+        init=False, default_factory=dict
+    )
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
-    X1_dict: dict[Any, Any] = field(init=False, default_factory=dict)
-    X2_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
     def __post_init__(self):
+        if self.inference not in SUPPORTED_INFERENCE:
+            raise ValueError(
+                f"'inference' must be one of {SUPPORTED_INFERENCE}. Got '{self.inference}'."
+            )
+
         x1_variables = (
             [self.decomp_var]
             if self.x1_vars is None
@@ -188,16 +213,15 @@ class GelbachDecomposition:
             name for name in self.coefnames if self.mask[self.coefnames.index(name)]
         ]
 
-        # Handle clustering setup if cluster_df is provided
-        if self.cluster_df is not None and not self.only_coef:
+        # Handle clustering setup if cluster bootstrap is requested
+        if (
+            self.cluster_df is not None
+            and not self.only_coef
+            and self.inference == "bootstrap"
+        ):
             self.unique_clusters = self.cluster_df.unique()
-            self.cluster_dict = {
-                cluster: self.cluster_df[self.cluster_df == cluster].index
-                for cluster in self.unique_clusters
-            }
         else:
             self.unique_clusters = None
-            self.cluster_dict = None
 
         if self.combine_covariates is None:
             self.combine_covariates_dict = {
@@ -208,11 +232,18 @@ class GelbachDecomposition:
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
-                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs)."
+                "You have provided combine_covariates, but agg_first is False. "
+                "We recommend setting agg_first=True as this might massively "
+                "decrease the computation time (in particular when "
+                "bootstrapping CIs)."
             )
 
         self._check_covariates()
         self._check_combine_covariates()
+        self._combine_covariate_indices = {
+            name: [self.mediator_names.index(cov) for cov in covariates]
+            for name, covariates in self.combine_covariates_dict.items()
+        }
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
@@ -230,7 +261,7 @@ class GelbachDecomposition:
                 f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
             )
 
-        # Check x1_vars don't overlap with combine_covariates keys
+        # Check x1_vars don't overlap with combine_covariates values
         if self.x1_vars is not None and self.combine_covariates is not None:
             combine_values = set(
                 list(itertools.chain.from_iterable(self.combine_covariates.values()))
@@ -239,7 +270,8 @@ class GelbachDecomposition:
             overlap = x1_set & combine_values
             if overlap:
                 raise ValueError(
-                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates keys."
+                    f"Variables {sorted(overlap)} cannot be in both x1_vars "
+                    "and combine_covariates values."
                 )
 
     def _check_combine_covariates(self):
@@ -283,21 +315,25 @@ class GelbachDecomposition:
             self.X2 = self.X[:, self.mask]
 
             if weights is not None:
-                weights_sqrt = np.sqrt(weights.flatten())
-                S = diags(weights_sqrt, 0)
+                self._weights_sqrt = np.sqrt(weights.flatten())
+                S = diags(self._weights_sqrt, 0)
                 self.X = S @ self.X
                 self.X1 = S @ self.X1
                 self.X2 = S @ self.X2
-                self.Y = self.Y * weights_sqrt
-                # treat weights as frequency weights
-                N = np.sum(weights)
-                if N.is_integer():
-                    self.N = int(N)
+                self.Y = self.Y * self._weights_sqrt
+                if self.weights_type == "fweights":
+                    N = float(np.sum(weights))
+                    if N.is_integer():
+                        self.N = int(N)
+                    else:
+                        raise ValueError(
+                            "The sum of weights is not an integer, which is not "
+                            "supported with frequency weights."
+                        )
                 else:
-                    raise ValueError(
-                        "The sum of weights is not an integer, which is not supported with frequency weights."
-                    )
+                    self.N = X.shape[0]
             else:
+                self._weights_sqrt = np.ones(X.shape[0])
                 self.N = X.shape[0]
 
             self.names_X1 = ["Intercept", self.decomp_var]
@@ -307,26 +343,46 @@ class GelbachDecomposition:
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
             self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
 
+            compute_analytic_internals = (
+                store and not self.only_coef and self.inference == "analytic"
+            )
             results = self.compute_gelbach(
                 X1=self.X1,
                 X2=self.X2,
                 Y=self.Y,
                 X=self.X,
                 agg_first=self.agg_first,
+                compute_analytic_internals=compute_analytic_internals,
             )
 
             (
-                self.direct_effect,
+                self.beta_short,
                 self.beta_full,
                 self.beta2,
+                self.x1_inv,
+                self.gamma_matrix,
                 self.results,
-            ) = results
+            ) = (
+                results.beta_short,
+                results.beta_full,
+                results.beta2,
+                results.x1_inv,
+                results.gamma_matrix,
+                results.results,
+            )
+
+            if not self.only_coef and self.inference == "analytic":
+                self._compute_analytic_inference()
 
             # Prepare cluster bootstrap if relevant
             self.X_dict = {}
             self.Y_dict = {}
 
-            if self.unique_clusters is not None and not self.only_coef:
+            if (
+                self.unique_clusters is not None
+                and not self.only_coef
+                and self.inference == "bootstrap"
+            ):
                 for g in self.unique_clusters:
                     cluster_idx = np.where(self.cluster_df == g)[0]
                     self.X_dict[g] = self.X[cluster_idx]
@@ -346,16 +402,10 @@ class GelbachDecomposition:
                 Y=Y,
                 X=X,
                 agg_first=self.agg_first,
+                compute_analytic_internals=False,
             )
 
-            (
-                _,
-                _,
-                _,
-                bootstrap_results,
-            ) = results
-
-            return bootstrap_results
+            return results.results
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
         "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
@@ -378,16 +428,20 @@ class GelbachDecomposition:
         ) = self._unpack_bootstrap_results(_bootstrapped)
 
         # compute ci
-        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
-        self._relative_explained_ci = self._compute_ci(
+        self._absolute_ci = self._compute_bootstrap_ci(
+            self._bootstrap_absolute_df, alpha
+        )
+        self._relative_explained_ci = self._compute_bootstrap_ci(
             self._bootstrap_relative_explained_df, alpha
         )
-        self._relative_direct_ci = self._compute_ci(
+        self._relative_direct_ci = self._compute_bootstrap_ci(
             self._bootstrap_relative_direct_df, alpha
         )
 
-    def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
-        """Compute confidence intervals from bootstrap DataFrame.
+    def _compute_bootstrap_ci(
+        self, bootstrap_df: pd.DataFrame, alpha: float
+    ) -> pd.DataFrame:
+        """Compute percentile confidence intervals from bootstrap replications.
 
         Parameters
         ----------
@@ -409,6 +463,136 @@ class GelbachDecomposition:
             index=bootstrap_df.columns,
         )
         return ci_df.astype(float)
+
+    def _compute_analytic_inference(self) -> None:
+        """Compute HC1 delta-method influence functions for Gelbach effects."""
+        if self.x1_inv is None or self.gamma_matrix is None:
+            raise RuntimeError("Analytic inference internals were not computed.")
+
+        Y = np.asarray(self.Y, dtype=float).reshape(-1)
+        nobs = self.X.shape[0]
+
+        x_crossprod = self.X.T @ self.X
+        if hasattr(x_crossprod, "toarray"):
+            x_crossprod = x_crossprod.toarray()
+        x_inv = np.linalg.pinv(np.asarray(x_crossprod, dtype=float))
+
+        beta_short = np.asarray(self.beta_short, dtype=float)
+        beta_full = np.asarray(self.beta_full, dtype=float)
+        beta2 = np.asarray(self.beta2, dtype=float)
+        gamma = self.gamma_matrix[self.decomp_var_in_X1_idx, :]
+        # Frequency weights represent replicated rows; analytical weights use
+        # the WLS score contributions directly.
+        influence_scale = (
+            np.asarray(self._weights_sqrt, dtype=float)
+            if self.weights_type == "fweights"
+            else np.ones(nobs)
+        )
+
+        short_resid = Y - np.asarray(self.X1 @ beta_short).reshape(-1)
+        full_resid = Y - np.asarray(self.X @ beta_full).reshape(-1)
+
+        short_weight = np.asarray(
+            self.X1 @ self.x1_inv[:, self.decomp_var_in_X1_idx]
+        ).reshape(-1)
+        direct_if = short_weight * short_resid / influence_scale
+
+        full_weight = np.asarray(self.X @ x_inv[:, self.decomp_var_in_X_idx]).reshape(
+            -1
+        )
+        full_if = full_weight * full_resid / influence_scale
+
+        beta2_indices = np.flatnonzero(self.mask)
+
+        mediator_group_if = {}
+        for name, variable_idx in self._combine_covariate_indices.items():
+            group_gamma = gamma[variable_idx]
+            group_beta2 = beta2[variable_idx]
+
+            group_beta2_weight = x_inv[:, beta2_indices[variable_idx]] @ group_gamma
+            beta2_if = np.asarray(self.X @ group_beta2_weight).reshape(-1) * full_resid
+
+            group_auxiliary_fit = self.gamma_matrix[:, variable_idx] @ group_beta2
+            group_h = np.asarray(self.X2[:, variable_idx] @ group_beta2).reshape(-1)
+            group_auxiliary_resid = group_h - np.asarray(
+                self.X1 @ group_auxiliary_fit
+            ).reshape(-1)
+            gamma_if = short_weight * group_auxiliary_resid
+
+            mediator_group_if[name] = (beta2_if + gamma_if) / influence_scale
+
+        explained_if = (
+            np.sum(np.column_stack(list(mediator_group_if.values())), axis=1)
+            if mediator_group_if
+            else np.zeros(nobs)
+        )
+
+        absolute_if = {
+            "direct_effect": direct_if,
+            "full_effect": full_if,
+            "explained_effect": explained_if,
+            "unexplained_effect": direct_if - explained_if,
+            **mediator_group_if,
+        }
+        self._absolute_influence_df = pd.DataFrame(absolute_if)
+
+        self._relative_explained_influence_df = self._relative_influence_df(
+            self.results.absolute,
+            self._absolute_influence_df,
+            denominator_name="explained_effect",
+        )
+        self._relative_direct_influence_df = self._relative_influence_df(
+            self.results.absolute,
+            self._absolute_influence_df,
+            denominator_name="direct_effect",
+        )
+
+        rank = np.linalg.matrix_rank(np.asarray(x_crossprod, dtype=float))
+        self._analytic_df = max(self.N - rank, 1)
+        self._analytic_hc1_factor = self.N / self._analytic_df
+
+    def _relative_influence_df(
+        self,
+        estimates: dict[str, float],
+        influence_df: pd.DataFrame,
+        denominator_name: str,
+    ) -> pd.DataFrame:
+        """Apply the delta method to relative Gelbach effects."""
+        denominator = estimates[denominator_name]
+        if denominator == 0:
+            return pd.DataFrame(
+                np.nan, index=influence_df.index, columns=influence_df.columns
+            )
+
+        denominator_if = influence_df[denominator_name]
+        relative_if = {}
+        for name, estimate in estimates.items():
+            relative_if[name] = (
+                influence_df[name] * denominator - estimate * denominator_if
+            ) / denominator**2
+
+        return pd.DataFrame(relative_if, index=influence_df.index)
+
+    def _analytic_inference_df(
+        self,
+        estimates: dict[str, float],
+        influence_df: pd.DataFrame,
+        alpha: float,
+    ) -> pd.DataFrame:
+        """Create analytical SE and CI columns from influence functions."""
+        estimates_series = pd.Series(estimates, dtype=float)
+        variance = self._analytic_hc1_factor * np.square(influence_df).sum(axis=0)
+        std_error = np.sqrt(variance).reindex(estimates_series.index)
+        crit = np.abs(t.ppf(alpha / 2, self._analytic_df))
+
+        return pd.DataFrame(
+            {
+                "std_error": std_error,
+                "ci_lower": estimates_series - crit * std_error,
+                "ci_upper": estimates_series + crit * std_error,
+            },
+            index=estimates_series.index,
+        )
 
     def _unpack_bootstrap_results(
         self, bootstrapped: list
@@ -458,44 +642,48 @@ class GelbachDecomposition:
         Y: np.ndarray,
         X: spmatrix,
         agg_first: bool | None,
-    ) -> tuple[
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        GelbachResults,
-    ]:
+        compute_analytic_internals: bool = False,
+    ) -> GelbachComputation:
         "Run the Gelbach decomposition."
-        N = X1.shape[0]
-
         # Compute direct effect
-        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
-        direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
+        beta_short = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
 
         # Compute beta_full and beta2
         beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
         beta2 = beta_full[self.mask]
 
-        mediator_effects = {}
+        x1_inv = None
+        gamma_matrix = None
+        delta = None
+        group_delta = None
 
-        if agg_first:
-            # Compute H and Hg
-            H = X2.multiply(beta2).tocsc()  # csc better for slicing columns than csr
-            Hg = np.zeros((N, len(self.combine_covariates_dict)))
+        if compute_analytic_internals:
+            x1_crossprod = X1.T @ X1
+            if hasattr(x1_crossprod, "toarray"):
+                x1_crossprod = x1_crossprod.toarray()
+            x1_inv = np.linalg.pinv(np.asarray(x1_crossprod, dtype=float))
 
-            for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
-                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
+            x1_x2 = X1.T @ X2
+            if hasattr(x1_x2, "toarray"):
+                x1_x2 = x1_x2.toarray()
+            gamma_matrix = x1_inv @ np.asarray(x1_x2, dtype=float)
+            gamma = gamma_matrix[self.decomp_var_in_X1_idx, :]
+
+            delta = gamma * beta2
+        elif agg_first:
+            N = X1.shape[0]
+            H = X2.multiply(beta2).tocsc()
+            Hg = np.zeros((N, len(self._combine_covariate_indices)))
+
+            for i, variable_idx in enumerate(self._combine_covariate_indices.values()):
                 Hg[:, i] = np.sum(H[:, variable_idx], axis=1).flatten()
 
-            # Compute delta
-            delta = np.array(
+            group_delta = np.array(
                 [
                     lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
                     for j in range(Hg.shape[1])
                 ]
             )
-
-            for i, (name, _) in enumerate(self.combine_covariates_dict.items()):
-                mediator_effects[name] = float(delta[i])
         else:
             gamma = np.array(
                 [
@@ -506,11 +694,20 @@ class GelbachDecomposition:
 
             delta = gamma * beta2
 
-            for name, covariates in self.combine_covariates_dict.items():
-                variable_idx = [self.mediator_names.index(cov) for cov in covariates]
-                mediator_effects[name] = float(np.sum(delta[variable_idx]))
+        if group_delta is not None:
+            mediator_effects = {
+                name: float(group_delta[i])
+                for i, name in enumerate(self._combine_covariate_indices)
+            }
+        else:
+            if delta is None:
+                raise RuntimeError("Gelbach mediator deltas were not computed.")
+            mediator_effects = {
+                name: float(np.sum(delta[variable_idx]))
+                for name, variable_idx in self._combine_covariate_indices.items()
+            }
 
-        direct_effect = float(direct_effect_array[0])
+        direct_effect = float(beta_short[self.decomp_var_in_X1_idx])
         full_effect = float(beta_full[self.decomp_var_in_X_idx])
         explained_effect = sum(mediator_effects.values())
         unexplained_effect = direct_effect - explained_effect
@@ -523,11 +720,13 @@ class GelbachDecomposition:
             mediator_effects=mediator_effects,
         )
 
-        results = (
-            direct_effect_array,
-            beta_full,
-            beta2,
-            gelbach_results,
+        results = GelbachComputation(
+            beta_short=beta_short,
+            beta_full=beta_full,
+            beta2=beta2,
+            x1_inv=x1_inv,
+            gamma_matrix=gamma_matrix,
+            results=gelbach_results,
         )
 
         return results
@@ -567,14 +766,49 @@ class GelbachDecomposition:
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
-            relative_explained_df = pd.concat(
-                [relative_explained_df, self._relative_explained_ci],
-                axis=1,
-            )
-            relative_direct_df = pd.concat(
-                [relative_direct_df, self._relative_direct_ci], axis=1
-            )
+            if self.inference == "analytic":
+                absolute_df = pd.concat(
+                    [
+                        absolute_df,
+                        self._analytic_inference_df(
+                            self.results.absolute,
+                            self._absolute_influence_df,
+                            alpha,
+                        ),
+                    ],
+                    axis=1,
+                )
+                relative_explained_df = pd.concat(
+                    [
+                        relative_explained_df,
+                        self._analytic_inference_df(
+                            self.results.relative_to_explained,
+                            self._relative_explained_influence_df,
+                            alpha,
+                        ),
+                    ],
+                    axis=1,
+                )
+                relative_direct_df = pd.concat(
+                    [
+                        relative_direct_df,
+                        self._analytic_inference_df(
+                            self.results.relative_to_direct,
+                            self._relative_direct_influence_df,
+                            alpha,
+                        ),
+                    ],
+                    axis=1,
+                )
+            else:
+                absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+                relative_explained_df = pd.concat(
+                    [relative_explained_df, self._relative_explained_ci],
+                    axis=1,
+                )
+                relative_direct_df = pd.concat(
+                    [relative_direct_df, self._relative_direct_ci], axis=1
+                )
 
         absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))
         relative_explained_df["panels"] = np.repeat(
@@ -615,6 +849,12 @@ class GelbachDecomposition:
 
         summary_data[self.decomp_var] = self._format_main_effects_row(panel_df, digits)
 
+        has_se = "std_error" in panel_df.columns
+        if has_se:
+            summary_data[f"{self.decomp_var}_se"] = self._format_main_effects_se_row(
+                panel_df, digits
+            )
+
         if not self.only_coef:
             summary_data[f"{self.decomp_var}_ci"] = self._format_main_effects_ci_row(
                 panel_df, digits
@@ -625,6 +865,10 @@ class GelbachDecomposition:
                 summary_data[mediator] = self._format_mediator_row(
                     panel_df, mediator, digits
                 )
+                if has_se:
+                    summary_data[f"{mediator}_se"] = self._format_mediator_se_row(
+                        panel_df, mediator, digits
+                    )
                 if not self.only_coef and "ci_lower" in panel_df.columns:
                     summary_data[f"{mediator}_ci"] = self._format_mediator_ci_row(
                         panel_df, mediator, digits
@@ -640,6 +884,15 @@ class GelbachDecomposition:
         """Format the main decomp_var effects row."""
         return {
             effect: self._format_effect_value(panel_df, effect, digits)
+            for effect in ["direct_effect", "full_effect", "explained_effect"]
+        }
+
+    def _format_main_effects_se_row(
+        self, panel_df: pd.DataFrame, digits: int
+    ) -> dict[str, str]:
+        """Format the standard error row for main effects."""
+        return {
+            effect: self._format_se_value(panel_df, effect, digits)
             for effect in ["direct_effect", "full_effect", "explained_effect"]
         }
 
@@ -663,6 +916,17 @@ class GelbachDecomposition:
             "explained_effect": f"{coef:.{digits}f}",
         }
 
+    def _format_mediator_se_row(
+        self, panel_df: pd.DataFrame, mediator: str, digits: int
+    ) -> dict[str, str]:
+        """Format a mediator standard error row."""
+        se_str = self._format_se_value(panel_df, mediator, digits)
+        return {
+            "direct_effect": "-",
+            "full_effect": "-",
+            "explained_effect": se_str,
+        }
+
     def _format_mediator_ci_row(
         self, panel_df: pd.DataFrame, mediator: str, digits: int
     ) -> dict[str, str]:
@@ -683,6 +947,13 @@ class GelbachDecomposition:
             return f"{coef:.{digits}f}"
         return "-"
 
+    def _format_se_value(self, panel_df: pd.DataFrame, effect: str, digits: int) -> str:
+        """Format a standard error value."""
+        if effect in panel_df.index and "std_error" in panel_df.columns:
+            se = panel_df.loc[effect, "std_error"]
+            return f"({se:.{digits}f})"
+        return "-"
+
     def _format_ci_value(self, panel_df: pd.DataFrame, effect: str, digits: int) -> str:
         """Format a confidence interval value."""
         if (
@@ -699,12 +970,16 @@ class GelbachDecomposition:
         """Apply panel-specific formatting rules."""
         if panel_name == "Share of Full Effect" and not self.only_coef:
             # Don't print CIs as they are [1,1]
-            summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
+            if f"{self.decomp_var}_se" in summary_data:
+                summary_data[f"{self.decomp_var}_se"]["direct_effect"] = "-"
+            if f"{self.decomp_var}_ci" in summary_data:
+                summary_data[f"{self.decomp_var}_ci"]["direct_effect"] = "-"
         elif panel_name == "Share of Explained Effect":
             summary_data[self.decomp_var]["direct_effect"] = "-"
             summary_data[self.decomp_var]["full_effect"] = "-"
-            # Remove CIs entirely
+            # Remove inference rows entirely
             if not self.only_coef:
+                summary_data.pop(f"{self.decomp_var}_se", None)
                 summary_data.pop(f"{self.decomp_var}_ci", None)
 
         return summary_data
@@ -714,8 +989,13 @@ class GelbachDecomposition:
         df = pd.DataFrame(summary_data).T
         df.columns = ["direct_effect", "full_effect", "explained_effect"]
 
-        # Clean up CI row names
-        df.index = pd.Index(["" if name.endswith("_ci") else name for name in df.index])
+        # Clean up inference row names
+        df.index = pd.Index(
+            [
+                "" if name.endswith("_ci") or name.endswith("_se") else name
+                for name in df.index
+            ]
+        )
 
         return df
 
@@ -889,13 +1169,18 @@ class GelbachDecomposition:
             """
 
         if not self.only_coef:
-            notes += f"""
-                CIs are computed using B = {self.B} bootstrap replications
-            """
-            if self.cluster_df is None:
-                notes += " using iid sampling."
+            if self.inference == "analytic":
+                notes += """
+                Standard errors and CIs use HC1 delta-method analytical inference.
+                """
             else:
-                notes += f" using clustered sampling by {self.cluster_df.name}."
+                notes += f"""
+                    CIs are computed using B = {self.B} bootstrap replications
+                """
+                if self.cluster_df is None:
+                    notes += " using iid sampling."
+                else:
+                    notes += f" using clustered sampling by {self.cluster_df.name}."
 
         notes += "\n".join(default_model_notes)
 
@@ -1028,6 +1313,8 @@ def _decompose_arg_check(
     is_iv: bool,
     method: str,
     only_coef: bool,
+    inference: str,
+    has_cluster: bool,
 ) -> None:
     "Check arguments for decomposition."
     supported_decomposition_types = ["gelbach"]
@@ -1037,13 +1324,25 @@ def _decompose_arg_check(
             f"'type' {type} is not in supported types {supported_decomposition_types}."
         )
 
-    if has_weights and weights_type != "fweights":
-        raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights."
+    if inference not in SUPPORTED_INFERENCE:
+        raise ValueError(
+            f"'inference' must be one of {SUPPORTED_INFERENCE}. Got '{inference}'."
         )
-    if has_weights and not only_coef:
+
+    if has_weights and weights_type not in {"aweights", "fweights"}:
         raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights when only_coef is False."
+            "Decomposition is currently only supported for models with analytical "
+            "or frequency weights."
+        )
+    if has_weights and inference == "bootstrap" and not only_coef:
+        raise NotImplementedError(
+            "Bootstrap decomposition inference is currently not supported for weighted models."
+        )
+
+    if has_cluster and inference == "analytic" and not only_coef:
+        raise NotImplementedError(
+            "Analytical decomposition inference is currently not supported with "
+            "clustered models. Use inference='bootstrap' or only_coef=True."
         )
 
     if is_iv:
