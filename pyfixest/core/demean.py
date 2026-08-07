@@ -2,8 +2,9 @@ from typing import Literal, get_args
 
 import numpy as np
 from numpy.typing import NDArray
+from within import LsmrOptions, Preconditioner, PreconditionerConfig, Solver
 
-from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
+from ._core_impl import _demean_rs
 
 WithinPreconditionerName = Literal["additive", "off", "diagonal"]
 
@@ -13,6 +14,19 @@ __all__ = [
     "demean",
     "demean_within",
 ]
+
+
+def _within_preconditioner(
+    preconditioner: WithinPreconditionerName | Preconditioner,
+) -> PreconditionerConfig | Preconditioner:
+    """Translate pyfixest's preconditioner input to `within`."""
+    if isinstance(preconditioner, Preconditioner):
+        return preconditioner
+    return {
+        "additive": PreconditionerConfig.Additive,
+        "off": PreconditionerConfig.Off,
+        "diagonal": PreconditionerConfig.Diagonal,
+    }[preconditioner]
 
 
 def demean(
@@ -152,9 +166,8 @@ def demean_within(
         The demeaned array, a convergence flag, and the preconditioner used
         during the solve (additive Schwarz for ``preconditioner="additive"``,
         diagonal for ``"diagonal"``, or an equivalent object for a
-        user-supplied preconditioner). This low-level helper does not
-        preserve Python object identity for user-supplied preconditioners.
-        The preconditioner is ``None`` when none was constructed or applied —
+        user-supplied preconditioner). The preconditioner is ``None`` when
+        none was constructed or applied —
         i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
         path was taken.
     """
@@ -172,8 +185,8 @@ def demean_within(
             f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
-    if flist.ndim == 1 or flist.shape[1] == 1:
-        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+    if flist_2d.shape[1] == 1:
         demeaned, success = _demean_rs(
             x.astype(np.float64, copy=False),
             flist_2d.astype(np.uint64, copy=False),
@@ -185,12 +198,15 @@ def demean_within(
         )
         return demeaned, success, None
 
-    return _demean_within_rs(
-        x.astype(np.float64, copy=False),
-        np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False) if weights is not None else None,
-        tol,
-        maxiter,
-        local_size,
-        preconditioner,
+    solver = Solver(
+        np.asfortranarray(flist_2d, dtype=np.uint32),
+        weights=(
+            weights.astype(np.float64, copy=False) if weights is not None else None
+        ),
+        preconditioner=_within_preconditioner(preconditioner),
     )
+    result = solver.solve_batch(
+        np.asfortranarray(x, dtype=np.float64),
+        options=LsmrOptions(tol=tol, maxiter=maxiter, local_size=local_size),
+    )
+    return result.demeaned, all(result.converged), solver.preconditioner

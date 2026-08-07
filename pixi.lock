@@ -436,6 +436,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/af/aa/ead46a88f9ec3a432a4832dfedb84092fc35af2d0ba40cd04aea3889f247/wrapt-2.1.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/08/8a/0861bec20485572fbddf3dfba2910e38fe249796cb73ecdeb74e07eeb8d3/zipp-3.23.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -859,6 +860,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a2/16/9b02a6b99c09227c93cd4b73acc3678114154ec38da53043c0ddc1fba0dc/wrapt-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -1258,6 +1260,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/b2/feecfe29f28483d888d76a48f03c4c4d8afea944dbee2b0cd3380f9df032/wrapt-2.1.2-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   default:
     channels:
@@ -1502,6 +1505,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/2f/60c51304fbdf47ce992d9eefa61fbd2c0e64feee60aaa439baf42ea6f40b/wrapt-2.1.1-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -1726,6 +1730,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9d/33/5b8f89a82a9859ce82da4870c799ad11ce15648b6e1c820fec3e23f4a19f/wrapt-2.1.1-cp313-cp313-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -1942,6 +1947,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5f/66/6a09e0294c4fc8c26028a03a15191721c9271672467cc33e6617ee0d91d2/wrapt-2.1.1-cp313-cp313-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   docs:
     channels:
@@ -2462,6 +2468,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/af/aa/ead46a88f9ec3a432a4832dfedb84092fc35af2d0ba40cd04aea3889f247/wrapt-2.1.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -2985,6 +2992,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a2/16/9b02a6b99c09227c93cd4b73acc3678114154ec38da53043c0ddc1fba0dc/wrapt-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -3484,6 +3492,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/b2/feecfe29f28483d888d76a48f03c4c4d8afea944dbee2b0cd3380f9df032/wrapt-2.1.2-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   lint:
     channels:
@@ -3773,6 +3782,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/44/79/4c755b45df6ef30c0dd628ecfaa0c808854be147ca438429da70a162833c/wrapt-2.1.1-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -4019,6 +4029,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/25/e9/96dd77728b54a899d4ce2798d7b1296989ce687ed3c0cb917d6b3154bf5d/wrapt-2.1.1-cp310-cp310-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -4251,6 +4262,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/4e/661c7c76ecd85375b2bc03488941a3a1078642af481db24949e2b9de01f4/wrapt-2.1.1-cp310-cp310-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py310-r:
     channels:
@@ -4687,6 +4699,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/44/79/4c755b45df6ef30c0dd628ecfaa0c808854be147ca438429da70a162833c/wrapt-2.1.1-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -5122,6 +5135,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/25/e9/96dd77728b54a899d4ce2798d7b1296989ce687ed3c0cb917d6b3154bf5d/wrapt-2.1.1-cp310-cp310-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -5530,6 +5544,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/42/5a/4efc997bccadd3af5749c250b49412793bc41e13a83a486b2b54a33e240c/wrapt-2.1.2-cp310-cp310-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py311:
     channels:
@@ -5798,6 +5813,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/dc/72/957b51c56acca35701665878ad31626182199fc4afecfe67dea072210f95/wrapt-2.1.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -6042,6 +6058,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/a1/378579880cc7af226354054a2c255f69615b379d8adad482bfe2f22a0dc2/wrapt-2.1.1-cp311-cp311-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -6273,6 +6290,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6b/31/d29310ab335f71f00c50466153b3dc985aaf4a9fc03263e543e136859541/wrapt-2.1.1-cp311-cp311-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py311-r:
     channels:
@@ -6707,6 +6725,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/dc/72/957b51c56acca35701665878ad31626182199fc4afecfe67dea072210f95/wrapt-2.1.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -7140,6 +7159,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9e/a1/378579880cc7af226354054a2c255f69615b379d8adad482bfe2f22a0dc2/wrapt-2.1.1-cp311-cp311-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -7547,6 +7567,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/c3/2b1c7bd07a27b1db885a2fab469b707bdd35bddf30a113b4917a7e2139d2/wrapt-2.1.2-cp311-cp311-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py312:
     channels:
@@ -7815,6 +7836,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/60/a237a4e4a36f6d966061ccc9b017627d448161b19e0a3ab80a7c7c97f859/wrapt-2.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -8059,6 +8081,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/6f/07/7ed02daa35542023464e3c8b7cb937fa61f6c61c0361ecf8f5fecf8ad8da/wrapt-2.1.1-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -8290,6 +8313,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0a/c8/37625b643eea2849f10c3b90f69c7462faa4134448d4443234adaf122ae5/wrapt-2.1.1-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py312-r:
     channels:
@@ -8724,6 +8748,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/af/aa/ead46a88f9ec3a432a4832dfedb84092fc35af2d0ba40cd04aea3889f247/wrapt-2.1.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -9157,6 +9182,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a2/16/9b02a6b99c09227c93cd4b73acc3678114154ec38da53043c0ddc1fba0dc/wrapt-2.1.2-cp312-cp312-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -9564,6 +9590,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/b2/feecfe29f28483d888d76a48f03c4c4d8afea944dbee2b0cd3380f9df032/wrapt-2.1.2-cp312-cp312-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py313:
     channels:
@@ -9829,6 +9856,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1e/2f/60c51304fbdf47ce992d9eefa61fbd2c0e64feee60aaa439baf42ea6f40b/wrapt-2.1.1-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -10072,6 +10100,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9d/33/5b8f89a82a9859ce82da4870c799ad11ce15648b6e1c820fec3e23f4a19f/wrapt-2.1.1-cp313-cp313-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -10302,6 +10331,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5f/66/6a09e0294c4fc8c26028a03a15191721c9271672467cc33e6617ee0d91d2/wrapt-2.1.1-cp313-cp313-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
   py314:
     channels:
@@ -10568,6 +10598,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/db/56/073989deb4b5d7d6e7ea424476a4ae4bda02140f2dbeaafb14ba4864dd60/wrapt-2.1.1-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: ./
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -10812,6 +10843,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b0/9a/d2faba7e61072a7507b5722db63562fdb22f5a24e237d460d18755627f15/wrapt-2.1.1-cp314-cp314-macosx_11_0_arm64.whl
+      - pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
       - pypi: ./
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
@@ -11043,6 +11075,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/75/419e54d92b1b97128a12f8dcd53b40b5144a33a69026496287a3ab7557e4/wildboottest-0.3.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/db/19/5bed84f9089ed2065f6aeda5dfc4f043743f642bc871454b261c3d7d322b/wrapt-2.1.1-cp314-cp314-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
       - pypi: ./
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
@@ -27845,7 +27878,7 @@ packages:
 - pypi: ./
   name: pyfixest
   version: 0.60.0
-  sha256: 75cfd97fdaf1d3534094deb3a8080d8afe14714e69eb59d249ec1400db556db8
+  sha256: d6ac53aca930393b7e026d44a8a8f5057ac853177a33720271dd0d6ce0f439ef
   requires_dist:
   - formulaic>=1.2.0,<1.3
   - joblib>=1.4.2
@@ -27857,6 +27890,7 @@ packages:
   - seaborn>=0.13.2
   - tabulate>=0.9.0
   - tqdm>=4.0.0
+  - within-py>=0.3.0,<0.4
   - linearmodels ; extra == 'benchmarks'
   - pyarrow ; extra == 'benchmarks'
   - statsmodels ; extra == 'benchmarks'
@@ -38817,6 +38851,27 @@ packages:
   license_family: MIT
   purls: []
   size: 1176306
+- pypi: https://files.pythonhosted.org/packages/48/0d/405633d65017662ad5517ef1a91156cc8a6f588c80e981ca885095800ec9/within_py-0.3.0-cp39-abi3-macosx_11_0_arm64.whl
+  name: within-py
+  version: 0.3.0
+  sha256: 41191ad8fa1fefc9d92bc73b1400dbe7aa57e55ecab58dba86183905361f21ed
+  requires_dist:
+  - numpy>=1.24
+  requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/76/da/e23689d032c949edbe3fb1dd43ea6451a99a5671b71d272f6063fb95b8ee/within_py-0.3.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+  name: within-py
+  version: 0.3.0
+  sha256: bc9bfad335dbca99140a32c42c0c66f500e6f9da3da40de8be176eb7a8cb2b13
+  requires_dist:
+  - numpy>=1.24
+  requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/a9/65/771ee4fe1ec570998bcacbfa5e61019a0d728a12c28dc238926018bca011/within_py-0.3.0-cp39-abi3-win_amd64.whl
+  name: within-py
+  version: 0.3.0
+  sha256: 61616253a68107e9f0752fd8a28eb884c2322595fc2e3b064d8aeec1d6d753c8
+  requires_dist:
+  - numpy>=1.24
+  requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/0a/c8/37625b643eea2849f10c3b90f69c7462faa4134448d4443234adaf122ae5/wrapt-2.1.1-cp312-cp312-win_amd64.whl
   name: wrapt
   version: 2.1.1
