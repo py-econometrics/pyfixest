@@ -1,10 +1,22 @@
 cff-version: 1.2.0
-message: "If you use pyfixest in your research, please cite it as below."
+message: >-
+  If you use pyfixest in your research, please cite it as below,
+  and also cite fixest (Bergé, Butts & McDermott, 2026), whose design,
+  interface, and defaults pyfixest reimplements in Python.
 title: "pyfixest: Fast high-dimensional fixed effect estimation in Python"
 type: software
 authors:
   - name: "The PyFixest Authors"
-
+doi: 10.5281/zenodo.15814089
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.15814089
+    description: Concept DOI (always resolves to the latest version)
+  - type: doi
+    value: 10.5281/zenodo.18674882
+    description: DOI for version v0.50.0alpha1
+version: v0.50.0alpha1
+date-released: "2026-02-17"
 repository-code: 'https://github.com/py-econometrics/pyfixest'
 url: 'https://pyfixest.org/'
 abstract: "A Python package for fast high-dimensional fixed effect estimation, inspired by the syntax of the popular R package `fixest`. It provides a familiar and intuitive interface for economists and other social scientists to estimate complex regression models with multiple fixed effects efficiently."
@@ -17,3 +29,18 @@ keywords:
   - 'regression'
   - 'python'
 license: MIT
+references:
+  - type: article
+    title: "fixest: A fast and feature-rich framework for econometric estimations in R"
+    authors:
+      - family-names: Bergé
+        given-names: Laurent R
+      - family-names: Butts
+        given-names: Kyle
+      - family-names: McDermott
+        given-names: Grant
+    year: 2026
+    journal: "arXiv preprint arXiv:2601.21749"
+    notes: >-
+      Please cite fixest alongside pyfixest. PyFixest reimplements
+      fixest's design, interface, and defaults in Python.

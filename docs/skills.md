@@ -22,18 +22,24 @@ This page provides a ready-to-use skill file for analytics projects that use PyF
 
 ## Formula Syntax
 
-Formulas follow fixest syntax and are split into 1–3 parts by `|`:
+Formulas use Formulaic syntax. Fixed effects follow the right-hand side after
+`|`, while IV specifications use a bracketed multistage term:
 
 - One-part: `"Y ~ X1 + X2"` (no fixed effects, no IV)
 - Two-part: `"Y ~ X1 + X2 | FE1 + FE2"` (fixed effects)
-- Two-part IV: `"Y ~ X1 + X2 | X_endog ~ Z1 + Z2"` (IV without fixed effects)
-- Three-part IV: `"Y ~ X1 + X2 | FE1 + FE2 | X_endog ~ Z1 + Z2"` (IV with fixed effects)
+- IV without fixed effects: `"Y ~ X1 + X2 + [X_endog ~ Z1 + Z2]"`
+- IV with fixed effects: `"Y ~ X1 + X2 + [X_endog ~ Z1 + Z2] | FE1 + FE2"`
 
 IV behavior:
-- The IV part must be `endogenous ~ instruments`.
+- The bracketed IV term must be `[endogenous ~ instruments]`.
 - Exogenous variables from the second-stage RHS are automatically added to the first stage.
 - Endogenous variables are automatically added to the second stage.
 - Multiple endogenous variables are not supported.
+
+The legacy fixest-style IV forms using a final `| endogenous ~ instruments`
+segment are deprecated in PyFixest 0.70. They raise a `DeprecationWarning` and
+will become an error in a future release. See the
+[formula-parsing changelog](/changelog.qmd#formula-parsing-on-formulaic).
 
 Other syntax:
 - Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
