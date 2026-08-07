@@ -104,6 +104,32 @@ def _select_order_coefs(
     return res
 
 
+def _select_coefnames_and_indices(
+    coefnames_all: list,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
+    exact_match: bool | None = False,
+) -> tuple[list[str], list[int]]:
+    if keep is None:
+        keep = []
+    if drop is None:
+        drop = []
+
+    if keep or drop:
+        if isinstance(keep, str):
+            keep = [keep]
+        if isinstance(drop, str):
+            drop = [drop]
+        selected = _select_order_coefs(coefnames_all, keep, drop, bool(exact_match))
+    else:
+        selected = coefnames_all
+
+    indices = [coefnames_all.index(name) for name in selected]
+    if not indices:
+        raise ValueError("No coefficients match the keep/drop patterns.")
+    return selected, indices
+
+
 def docstring_from(func, custom_doc=""):
     """Copy the docstring of another function."""
 
@@ -153,7 +179,7 @@ def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
         return _data
 
 
-def _extract_variable_level(fe_string: str):
+def _extract_variable_level(fe_string: str) -> tuple[str, str]:
     """
     Extract the variable and level from a given string.
 
@@ -168,12 +194,9 @@ def _extract_variable_level(fe_string: str):
         A tuple containing the extracted variable and level for the fixed
         effect.
     """
-    pattern = r"C\(([^)]*)\)\[(?:T\.)?(.*)\]$"
+    pattern = re.compile(r"^C\((?P<variable>.+?)\)\[(?:T\.)?(?P<value>.+?)\]$")
     match = re.search(pattern, fe_string)
     if not match:
         raise ValueError(f"Cannot parse: {fe_string}")
 
-    variable = match.group(1)
-    level = match.group(2)
-
-    return f"C({variable})", level
+    return match.group("variable"), match.group("value")

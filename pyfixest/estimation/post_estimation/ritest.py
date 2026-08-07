@@ -368,7 +368,7 @@ def _get_ritest_pvalue(
     method: str,
     level: float,
     h0_value: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.float64, np.float64, np.ndarray]:
     """
     Compute the p-value of the test statistic and
     standard error and CI of the p-value.

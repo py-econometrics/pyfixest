@@ -17,7 +17,6 @@ __all__ = [
     "coefplot",
     "did",
     "did2s",
-    "dtable",
     "errors",
     "estimation",
     "etable",
@@ -35,6 +34,7 @@ __all__ = [
     "get_worker_panel",
     "iplot",
     "lpdid",
+    "optimal_mixture_precision",
     "panelview",
     "qplot",
     "quantreg",
@@ -64,6 +64,7 @@ _lazy_imports = {
     "Preconditioner": "pyfixest.core.demean",
     # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
+    "optimal_mixture_precision": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",
     "wyoung": "pyfixest.estimation",
     # did
@@ -74,7 +75,6 @@ _lazy_imports = {
     "SaturatedEventStudy": "pyfixest.did",
     # report
     "etable": "pyfixest.report",
-    "dtable": "pyfixest.report",
     "summary": "pyfixest.report",
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
@@ -93,7 +93,12 @@ _lazy_imports = {
 }
 
 # Functions that have their own dedicated module (can be imported directly)
-_direct_module_imports = {"feols", "fepois", "feglm", "quantreg"}
+_direct_module_imports = {
+    "feglm",
+    "feols",
+    "fepois",
+    "quantreg",
+}
 
 
 def __getattr__(name: str):

@@ -14,7 +14,7 @@
 [chat-badge]: https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square
 [chat-url]: https://discord.gg/gBAydeDMVK
 
-[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/quickstart.html) · [Function & API Reference](https://pyfixest.org/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
+[Docs](https://pyfixest.org/pyfixest.html) · [Quickstart](https://pyfixest.org/getting-started.html) · [Function & API Reference](https://pyfixest.org/reference/) · [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) · [Benchmarks](https://github.com/py-econometrics/pyfixest/tree/master/benchmarks) · [Contributing](https://pyfixest.org/contributing.html) · [Changelog](https://pyfixest.org/changelog.html)
 
 `PyFixest` is a Python package for fast high-dimensional fixed effects regression.
 
@@ -37,6 +37,9 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - **Multiple hypothesis corrections** and simultaneous confidence intervals
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
+  - **Safe anytime-valid inference (SAVI)** for sequential monitoring, with
+    anytime-valid p-values, e-values, and confidence sequences following
+    [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052)
 - **Post-Estimation & Reporting**
   - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
@@ -122,7 +125,7 @@ fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"
 fit.etable()
 ```
 
-For more examples, see the [quickstart](https://pyfixest.org/quickstart.html), the [formula syntax tutorial](https://pyfixest.org/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/poisson-glm.html).
+For more examples, see the [quickstart](https://pyfixest.org/getting-started.html), the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/tutorials/poisson-glm.html).
 
 ## Benchmarks
 
@@ -134,10 +137,10 @@ Runtime comparisons are hardware-dependent, especially for GPU backends. For the
 
 ## Learn More
 
-- [Quickstart](https://pyfixest.org/quickstart.html)
+- [Quickstart](https://pyfixest.org/getting-started.html)
 - [Function & API Reference](https://pyfixest.org/reference/)
-- [Difference-in-Differences](https://pyfixest.org/difference-in-differences.html)
-- [Quantile Regression](https://pyfixest.org/quantile-regression.html)
+- [Difference-in-Differences](https://pyfixest.org/tutorials/difference-in-differences.html)
+- [Quantile Regression](https://pyfixest.org/tutorials/quantile-regression.html)
 - [Changelog](https://pyfixest.org/changelog.html)
 - [Contributing](https://pyfixest.org/contributing.html)
 
@@ -260,6 +263,8 @@ Thanks goes to these wonderful people:
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/buddejul"><img src="https://avatars.githubusercontent.com/u/66945206?v=4?s=40" width="40px;" alt="Julian Budde"/><br /><sub><b>Julian Budde</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Abuddejul" title="Bug reports">🐛</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/felixschmitz"><img src="https://avatars.githubusercontent.com/u/33942086?v=4?s=40" width="40px;" alt="Felix Schmitz"/><br /><sub><b>Felix Schmitz</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=felixschmitz" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://www.lazizbek.us/"><img src="https://avatars.githubusercontent.com/u/65546555?v=4?s=40" width="40px;" alt="Lazizbek Ravshanov"/><br /><sub><b>Lazizbek Ravshanov</b></sub></a><br /><a href="#infra-lazizbekravshanov" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://michaellindon.github.io/about/"><img src="https://avatars.githubusercontent.com/u/4892846?v=4?s=40" width="40px;" alt="Michael Lindon"/><br /><sub><b>Michael Lindon</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=michaellindon" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>

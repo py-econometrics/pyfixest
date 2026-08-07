@@ -4,15 +4,18 @@ on:
   push:
     branches:
       - master
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
 
 jobs:
   test-extended:
     name: "Tests Python Extended"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.9.6
+      - uses: prefix-dev/setup-pixi@v0.10.0
         with:
           pixi-version: v0.62.2
           cache: true
@@ -26,8 +29,22 @@ jobs:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           flags: tests-extended
+
+      - name: Run no-JIT tests (numba coverage)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: pixi run -e py312 test-py-nojit
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+
+      - name: Upload no-JIT coverage to Codecov
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-nojit.xml
+          flags: tests-nojit

@@ -218,3 +218,34 @@ def run_crv3_poisson():
         vcov={"CRV3": "f1"},
         ssc=ssc(k_adj=False, G_adj=False),
     )
+
+
+@pytest.mark.parametrize("vcov", ["NW", "DK"])
+def test_hac_rejects_fweights(vcov):
+    """HAC does not support frequency weights."""
+    data = get_data().dropna().reset_index(drop=True)
+    data["t"] = np.arange(len(data))
+    data["unit"] = np.repeat(np.arange(len(data) // 10 + 1), 10)[: len(data)]
+    kwargs = {"time_id": "t", "lag": 2}
+    if vcov == "DK":
+        kwargs["panel_id"] = "unit"
+
+    with pytest.raises(NotImplementedError, match="fweights"):
+        feols(
+            "Y ~ X1",
+            data=data,
+            vcov=vcov,
+            vcov_kwargs=kwargs,
+            weights="weights",
+            weights_type="fweights",
+        )
+
+    # aweights remain supported
+    feols(
+        "Y ~ X1",
+        data=data,
+        vcov=vcov,
+        vcov_kwargs=kwargs,
+        weights="weights",
+        weights_type="aweights",
+    )

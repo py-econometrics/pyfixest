@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import re
 import warnings
+from functools import partial
 from importlib import import_module
 from typing import Protocol
 
 import numpy as np
 import pandas as pd
+
+from pyfixest.demeaners import AnyDemeaner
 
 
 def check_for_separation(
@@ -15,6 +18,7 @@ def check_for_separation(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
+    demeaner: AnyDemeaner,
     methods: list[str] | None = None,
 ) -> list[int]:
     """
@@ -35,6 +39,8 @@ def check_for_separation(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    demeaner : AnyDemeaner
+        Demeaner configuration used by the estimated model.
     methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
@@ -46,7 +52,7 @@ def check_for_separation(
     """
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
-        "ir": _check_for_separation_ir,
+        "ir": partial(_check_for_separation_ir, demeaner=demeaner),
     }
     if methods is None:
         methods = list(valid_methods)
@@ -138,7 +144,7 @@ def _check_for_separation_fe(
             null_column = ctab.xs(0)
             # sep_candidate if
             # fixed effect level has only observations with Y > 0
-            sep_candidate = (np.sum(ctab > 0, axis=0).values == 1) & (
+            sep_candidate = ((ctab > 0).sum(axis=0).to_numpy() == 1) & (
                 null_column > 0
             ).to_numpy().flatten()
             # droplist: list of levels to drop
@@ -159,6 +165,7 @@ def _check_for_separation_ir(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
+    demeaner: AnyDemeaner,
     tol: float = 1e-4,
     maxiter: int = 100,
 ) -> set[int]:
@@ -178,6 +185,8 @@ def _check_for_separation_ir(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    demeaner : AnyDemeaner
+        Demeaner configuration used by the estimated model.
     tol : float
         Tolerance to detect separated observation. Defaults to 1e-4.
     maxiter : int
@@ -229,7 +238,7 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = feols(fml_separation, data=tmp, weights="omega")
+        fitted = feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
         tmp["Uhat"] = pd.Series(
             data=fitted.predict(), index=fitted._data.index, name="Uhat"
         )

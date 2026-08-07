@@ -68,7 +68,16 @@ fn demean_impl(
 ) -> (Array2<f64>, bool) {
     let (n_samples, n_features) = x.dim();
     let n_factors = flist.ncols();
-    let n_groups = flist.iter().cloned().max().unwrap() + 1;
+    // No observations or no fixed-effects: nothing to demean. Return the input unchanged
+    if n_samples == 0 || n_factors == 0 {
+        return (x.to_owned(), true);
+    }
+    let n_groups = flist
+        .iter()
+        .cloned()
+        .max()
+        .expect("flist is non-empty after guard")
+        + 1;
 
     let sample_weights: Vec<f64> = weights.iter().cloned().collect();
     let group_ids: Vec<usize> = flist.iter().cloned().collect();
@@ -133,7 +142,6 @@ fn demean_impl(
     let success = not_converged.load(Ordering::SeqCst) == 0;
     (res, success)
 }
-
 
 /// Demean a 2D array x by a set of fixed effects using the alternating
 /// projection algorithm.
@@ -211,8 +219,7 @@ pub fn _demean_rs(
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
 
-    let (out, success) =
-        py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
+    let (out, success) = py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
     let pyarray = PyArray2::from_owned_array(py, out);
     Ok((pyarray.into(), success))
