@@ -60,6 +60,11 @@ class FixedEffectSpecification:
     intercept: bool
     slopes: tuple[Term, ...] = ()
 
+    @property
+    def encoded_levels(self) -> str:
+        """Formulaic term that integer-encodes this effect's levels."""
+        return f"__fixed_effect__{self.levels.factors}"
+
     @classmethod
     def from_term(cls, term: Term) -> "FixedEffectSpecification":
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
@@ -345,10 +350,22 @@ class Formula:
         )
 
     @property
+    def has_varying_slopes(self) -> bool:
+        """Whether any fixed effect includes varying slopes."""
+        return any(
+            specification.slopes for specification in self.fixed_effect_specifications
+        )
+
+    @property
     def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
+            list(
+                dict.fromkeys(
+                    fixed_effect.encoded_levels
+                    for fixed_effect in self.fixed_effect_specifications
+                )
+            ),
             _parser=_PARSER_NO_INTERCEPT,
         )
 

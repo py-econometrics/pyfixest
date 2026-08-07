@@ -14,7 +14,12 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import (
+    AnyDemeaner,
+    LsmrDemeaner,
+    MapDemeaner,
+    _supports_varying_slopes,
+)
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -413,6 +418,13 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         "Prepare model matrices for estimation."
+        if self.FixestFormula.has_varying_slopes and not _supports_varying_slopes(
+            self._demeaner
+        ):
+            raise NotImplementedError(
+                f"Varying slopes not supported for `{self._demeaner}`."
+            )
+
         model_matrix = model_matrix_fixest.create_model_matrix(
             formula=self.FixestFormula,
             data=self._data,
