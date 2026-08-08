@@ -59,6 +59,7 @@ readme.ipynb
 benchmarks/data/
 
 # Local dev files
-.claude/
+.claude/settings.local.json
+.claude/plans/
 .serena/
 SKILL.md
