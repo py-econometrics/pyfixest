@@ -75,6 +75,43 @@ pf.etable(
 
 [TABLE]
 
+### Accessing fitted-model results
+
+Regression tables are useful for presentation, but fitted `Feols` objects also let you access results directly for downstream analysis. Coefficients, standard errors, and the full tidy coefficient table are available through public methods:
+
+``` python
+fit_naive.coef()
+fit_naive.se()
+fit_naive.tidy()
+```
+
+|             | Estimate | Std. Error | t value   | Pr(\>\|t\|) | 2.5%     | 97.5%    |
+|-------------|----------|------------|-----------|-------------|----------|----------|
+| Coefficient |          |            |           |             |          |          |
+| Intercept   | 1.112642 | 0.098141   | 11.337130 | 0.0         | 0.919820 | 1.305463 |
+| educ        | 0.114213 | 0.006975   | 16.374676 | 0.0         | 0.100509 | 0.127917 |
+| experience  | 0.019266 | 0.001527   | 12.618671 | 0.0         | 0.016266 | 0.022265 |
+
+Common model-level fit statistics are stored on the fitted object:
+
+``` python
+fit_naive._N        # number of observations
+fit_naive._rmse     # root mean squared error
+fit_naive._r2       # R-squared
+fit_naive._adj_r2   # adjusted R-squared
+```
+
+    np.float64(0.28155300963422947)
+
+For models with fixed effects, within R-squared measures are also available:
+
+``` python
+fit_fe._r2_within
+fit_fe._adj_r2_within
+```
+
+    np.float64(0.33726588467888985)
+
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
 Now, what if we had the unobserved confounder at hand? In this case, we could simply control for it in our regression model. In real life, we likely wouldn’t be so lucky to have it, but alas, here we have access to it as we are working with synthetic data:

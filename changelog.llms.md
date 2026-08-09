@@ -116,6 +116,8 @@ We also removed:
 
 ### Bug Fixes
 
+- CCV auxiliary fits now retain the original demeaner configuration.
+- IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order different from the model order. Previously, intervals could be associated with the wrong coefficient labels, including for simultaneous confidence intervals.
 - `did2s()` now raises an informative error when some fixed effect levels cannot be estimated in the first stage regression (e.g. for always-treated units, which have no not-yet-treated observations), instead of failing later with an opaque broadcasting `ValueError` in the vcov computation ([\#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
 
@@ -550,26 +552,26 @@ We can inspect results as a `pd.DataFrame`
 gb.tidy()
 ```
 
-|                    | coefficients | ci_lower  | ci_upper | panels                    |
-|--------------------|--------------|-----------|----------|---------------------------|
-| direct_effect      | 1.412165     | 0.915872  | 2.473724 | Levels (units)            |
-| full_effect        | 1.041753     | 0.928605  | 1.091235 | Levels (units)            |
-| explained_effect   | 0.370412     | -0.135415 | 1.407925 | Levels (units)            |
-| unexplained_effect | 1.041753     | 0.928605  | 1.091235 | Levels (units)            |
-| x22                | 0.061930     | -0.281360 | 0.717574 | Levels (units)            |
-| x23                | 0.308483     | 0.138293  | 0.739350 | Levels (units)            |
-| direct_effect      | 1.000000     | 1.000000  | 1.000000 | Share of Full Effect      |
-| full_effect        | 0.737699     | 0.431147  | 1.186924 | Share of Full Effect      |
-| explained_effect   | 0.262301     | -0.186924 | 0.568853 | Share of Full Effect      |
-| unexplained_effect | 0.737699     | 0.431147  | 1.186924 | Share of Full Effect      |
-| x22                | 0.043855     | -0.336947 | 0.288611 | Share of Full Effect      |
-| x23                | 0.218446     | 0.135044  | 0.326621 | Share of Full Effect      |
-| direct_effect      | 3.812414     | -2.101176 | 4.177387 | Share of Explained Effect |
-| full_effect        | 2.812414     | -3.101176 | 3.177387 | Share of Explained Effect |
-| explained_effect   | 1.000000     | 1.000000  | 1.000000 | Share of Explained Effect |
-| unexplained_effect | 2.812414     | -3.101176 | 3.177387 | Share of Explained Effect |
-| x22                | 0.167192     | -0.036919 | 1.197568 | Share of Explained Effect |
-| x23                | 0.832808     | -0.197568 | 1.036919 | Share of Explained Effect |
+|  | coefficients | ci_lower | ci_upper | panels |
+|----|----|----|----|----|
+| direct_effect | 1.412165 | 0.776344 | 1.742039 | Levels (units) |
+| full_effect | 1.041753 | 0.969068 | 1.063203 | Levels (units) |
+| explained_effect | 0.370412 | -0.261792 | 0.735865 | Levels (units) |
+| unexplained_effect | 1.041753 | 0.969068 | 1.063203 | Levels (units) |
+| x22 | 0.061930 | -0.348749 | 0.297432 | Levels (units) |
+| x23 | 0.308483 | 0.072237 | 0.438433 | Levels (units) |
+| direct_effect | 1.000000 | 1.000000 | 1.000000 | Share of Full Effect |
+| full_effect | 0.737699 | 0.583271 | 1.338253 | Share of Full Effect |
+| explained_effect | 0.262301 | -0.338253 | 0.416729 | Share of Full Effect |
+| unexplained_effect | 0.737699 | 0.583271 | 1.338253 | Share of Full Effect |
+| x22 | 0.043855 | -0.450756 | 0.166540 | Share of Full Effect |
+| x23 | 0.218446 | 0.090092 | 0.254835 | Share of Full Effect |
+| direct_effect | 3.812414 | -9.575265 | 26.761681 | Share of Explained Effect |
+| full_effect | 2.812414 | -10.575265 | 25.761681 | Share of Explained Effect |
+| explained_effect | 1.000000 | 1.000000 | 1.000000 | Share of Explained Effect |
+| unexplained_effect | 2.812414 | -10.575265 | 25.761681 | Share of Explained Effect |
+| x22 | 0.167192 | -3.118877 | 2.668513 | Share of Explained Effect |
+| x23 | 0.832808 | -1.668513 | 4.118877 | Share of Explained Effect |
 
 or produce a `GT` table:
 
@@ -585,24 +587,24 @@ gb.etable(
 |  | Initial Difference | Adjusted Difference | Explained Difference |
 | Levels (units) |  |  |  |
 | x1 | 1.412 | 1.042 | 0.370 |
-|  | \[0.916, 2.474\] | \[0.929, 1.091\] | \[-0.135, 1.408\] |
+|  | \[0.776, 1.742\] | \[0.969, 1.063\] | \[-0.262, 0.736\] |
 | x22 | \- | \- | 0.062 |
-|  | \- | \- | \[-0.281, 0.718\] |
+|  | \- | \- | \[-0.349, 0.297\] |
 | x23 | \- | \- | 0.308 |
-|  | \- | \- | \[0.138, 0.739\] |
+|  | \- | \- | \[0.072, 0.438\] |
 | Share of Full Effect |  |  |  |
 | x1 | 1.000 | 0.738 | 0.262 |
-|  | \- | \[0.431, 1.187\] | \[-0.187, 0.569\] |
+|  | \- | \[0.583, 1.338\] | \[-0.338, 0.417\] |
 | x22 | \- | \- | 0.044 |
-|  | \- | \- | \[-0.337, 0.289\] |
+|  | \- | \- | \[-0.451, 0.167\] |
 | x23 | \- | \- | 0.218 |
-|  | \- | \- | \[0.135, 0.327\] |
+|  | \- | \- | \[0.090, 0.255\] |
 | Share of Explained Effect |  |  |  |
 | x1 | \- | \- | 1.000 |
 | x22 | \- | \- | 0.167 |
-|  | \- | \- | \[-0.037, 1.198\] |
+|  | \- | \- | \[-3.119, 2.669\] |
 | x23 | \- | \- | 0.833 |
-|  | \- | \- | \[-0.198, 1.037\] |
+|  | \- | \- | \[-1.669, 4.119\] |
 | Decomposition variable: x1. Control Variables: x21. CIs are computed using B = 10 bootstrap replications using iid sampling.Col 1: Adjusted Difference (by x21) - Coefficient on x1 in short regression. Col 2: Adjusted Difference - Coefficient on x1 in long regression. Col 3: Explained Difference - Difference in coefficients of x1 in short and long regression. Panel 1: Levels (units). Panel 2: Share of Full Effect: Levels normalized by coefficient of the short regression. Panel 3: Share of Explained Effect: Levels normalized by coefficient of the long regression. |  |  |  |
 
 As can be seen, we by default now return normalized (and not just absolute) effects.
@@ -663,8 +665,8 @@ toc = time.time()
 print(f"Rust backend took {toc-tic}.")
 ```
 
-    Numba backend took 2.687312602996826.
-    Rust backend took 2.8686397075653076.
+    Numba backend took 2.6412527561187744.
+    Rust backend took 2.835991382598877.
 
 Results are also matching =)
 
@@ -989,9 +991,9 @@ fit2.coef()[0:8]
 
   |           | 2.5%      | 97.5%     |
   |-----------|-----------|-----------|
-  | Intercept | 0.380227  | 1.177471  |
-  | D         | -1.759011 | -1.046223 |
-  | f1        | -0.014091 | 0.023640  |
+  | Intercept | 0.376643  | 1.181055  |
+  | D         | -1.762214 | -1.043019 |
+  | f1        | -0.014261 | 0.023809  |
 
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017) for OLS via the `.ccv()` method.
 
@@ -1001,7 +1003,7 @@ fit2.coef()[0:8]
 
   |      | Estimate            | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%     |
   |------|---------------------|------------|-----------|-------------|-----------|-----------|
-  | CCV  | -1.4026168622179935 | 0.305932   | -4.584737 | 0.00023     | -2.045356 | -0.759878 |
+  | CCV  | -1.4026168622179935 | 0.316251   | -4.435141 | 0.00032     | -2.067035 | -0.738199 |
   | CRV1 | -1.402617           | 0.205132   | -6.837621 | 0.000002    | -1.833584 | -0.97165  |
 
 ## PyFixest 0.16.0
