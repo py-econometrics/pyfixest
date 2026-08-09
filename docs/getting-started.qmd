@@ -101,8 +101,6 @@ fit_fe._r2_within
 fit_fe._adj_r2_within
 ```
 
-The leading underscore indicates that these model-level attributes are internal attributes rather than part of the stable public method API. See the [Function Reference](reference/index.qmd) for the full set of model methods and attributes.
-
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
 Now, what if we had the unobserved confounder at hand? In this case, we could simply control for it in our regression model. In real life, we likely wouldn't be so lucky to have it, but alas, here we have access to it as we are working with synthetic data:
