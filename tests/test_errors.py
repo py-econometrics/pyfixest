@@ -91,6 +91,40 @@ def test_depvar_numeric():
         feols(fml="Y ~ X1", data=data)
 
 
+@pytest.mark.parametrize(
+    "fml,categorical_endogenous,error_message",
+    [
+        (
+            "two_columns(Y) ~ X1",
+            False,
+            "exactly one dependent variable",
+        ),
+        (
+            "Y ~ X1 + [X2 ~ Z1]",
+            True,
+            "endogenous variable must be numeric",
+        ),
+        (
+            "Y ~ X1 + [two_columns(X2) ~ Z1]",
+            False,
+            "exactly one endogenous variable",
+        ),
+    ],
+)
+def test_dependent_and_endogenous_model_matrix_errors(
+    fml, categorical_endogenous, error_message
+):
+    data = get_data().dropna().copy()
+    if categorical_endogenous:
+        data["X2"] = pd.Categorical(data["X2"] > 0)
+
+    def two_columns(x):
+        return np.column_stack((x, x))
+
+    with pytest.raises(TypeError, match=error_message):
+        feols(fml=fml, data=data, context={"two_columns": two_columns})
+
+
 def test_iv_errors():
     data = get_data()
 
