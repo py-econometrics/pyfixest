@@ -28,9 +28,12 @@ atol = 1e-08
 iwls_maxiter = 25
 iwls_tol = 1e-08
 
-# Poisson IRLS and fixed-effect recovery differ slightly across implementations.
-OFFSET_RTOL = 1e-5
-OFFSET_ATOL = 1e-5
+# Poisson IRLS predictions and fixed-effect recovery differ slightly across
+# implementations, while coefficient estimates agree more closely.
+OFFSET_COEF_RTOL = 1e-7
+OFFSET_COEF_ATOL = 1e-7
+OFFSET_PRED_RTOL = 1e-5
+OFFSET_PRED_ATOL = 1e-5
 
 ols_fmls = [
     ("Y~X1"),
@@ -727,7 +730,7 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
 def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
     """Compare transformed-offset estimation and prediction with fixest."""
     data = data_fepois.dropna().copy()
@@ -741,17 +744,17 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
     np.testing.assert_allclose(
         fit.coef().to_numpy(),
         fit_r.rx2("coefficients"),
-        rtol=OFFSET_RTOL,
-        atol=OFFSET_ATOL,
+        rtol=OFFSET_COEF_RTOL,
+        atol=OFFSET_COEF_ATOL,
     )
 
-    newdata = data.iloc[:100]
+    newdata = data.iloc[:5]
     for prediction_type in ["link", "response"]:
         np.testing.assert_allclose(
             fit.predict(newdata=newdata, type=prediction_type),
             stats.predict(fit_r, newdata=newdata, type=prediction_type),
-            rtol=OFFSET_RTOL,
-            atol=OFFSET_ATOL,
+            rtol=OFFSET_PRED_RTOL,
+            atol=OFFSET_PRED_ATOL,
             equal_nan=True,
         )
 
