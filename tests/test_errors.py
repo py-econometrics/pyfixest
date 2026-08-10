@@ -180,27 +180,31 @@ def test_poisson_errors():
 def test_poisson_offset_errors():
     data = pf.get_data(model="Fepois").dropna()
 
-    # offset column does not exist in the data
-    with pytest.raises(ValueError, match="not found in data"):
+    # offset expression references a variable not present in the data
+    with pytest.raises(FactorEvaluationError, match="does_not_exist"):
         pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
 
-    # offset column is not numeric
+    # offset expression is not numeric
     data_str = data.copy()
     data_str["offset_str"] = "a"
-    with pytest.raises(ValueError, match="must be numeric"):
+    with pytest.raises(TypeError, match="must be numeric"):
         pf.fepois("Y ~ X1", data=data_str, offset="offset_str")
 
-    # predict(newdata=...) with offset column missing in newdata
+    # offset expression must evaluate to one column
+    with pytest.raises(ValueError, match="exactly one column"):
+        pf.fepois("Y ~ X1", data=data, offset="X1 + X2")
+
+    # predict(newdata=...) with offset variable missing in newdata
     data = data.copy()
     data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
     mod = pf.fepois("Y ~ X1", data=data, offset="off")
-    with pytest.raises(ValueError, match="not found in newdata"):
+    with pytest.raises(FactorEvaluationError, match="off"):
         mod.predict(newdata=data.drop(columns=["off"]))
 
-    # predict(newdata=...) with NaN in offset column
+    # predict(newdata=...) with NaN in the offset variable
     nd_nan = data.copy()
     nd_nan.loc[nd_nan.index[0], "off"] = np.nan
-    with pytest.raises(ValueError, match="NaN or non-numeric"):
+    with pytest.raises(ValueError, match="evaluates to missing values"):
         mod.predict(newdata=nd_nan)
 
 

@@ -59,6 +59,8 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson offsets now accept Formulaic transformations such as
+  `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
   `family="poisson"`. Previously `weights` was silently ignored and `offset`
   was unavailable; Poisson required calling `fepois()` directly.

@@ -110,13 +110,21 @@ class ModelMatrix:
         self._data = data.loc[:, ~data.columns.duplicated()]
 
     def _process(self, drop_singletons: bool = False) -> None:
-        if self._dependent is None or len(self._dependent) != 1:
-            # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
-            # creating multiple columns for the dependent variable
-            # TODO: Make this check more explicit?
+        if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
-        if self._endogenous is not None and len(self._endogenous) != 1:
-            raise TypeError("The endogenous variable must be numeric.")
+        elif self._dependent is None or len(self._dependent) != 1:
+            raise TypeError("The model must contain exactly one dependent variable.")
+
+        if self._endogenous is not None:
+            if self.model_spec[
+                _ModelMatrixKey.instrumental_variable
+            ].lhs.factor_contrasts:
+                raise TypeError("The endogenous variable must be numeric.")
+            elif len(self._endogenous) != 1:
+                raise TypeError(
+                    "The model must contain exactly one endogenous variable."
+                )
+
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
         self._drop(
@@ -128,6 +136,13 @@ class ModelMatrix:
             self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
                 "int32"
             )
+
+        if self._offset is not None:
+            if self.model_spec[_ModelMatrixKey.offset].factor_contrasts:
+                raise TypeError("The offset must be numeric.")
+            elif len(self._offset) != 1:
+                raise ValueError("The offset must evaluate to exactly one column.")
+
         if self._fixed_effects is not None or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [
@@ -256,14 +271,14 @@ class ModelMatrix:
     @property
     def offset(self) -> pd.DataFrame | None:
         """
-        Get the offset variable for GLM estimation (currently supported only for Fepois).
+        Get the evaluated offset for GLM estimation.
 
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the offset variable (added to the linear
-            predictor with a fixed coefficient of 1), or None if no offset
-            is specified.
+            DataFrame containing the evaluated offset expression, which is
+            added to the linear predictor with a fixed coefficient of 1, or
+            None if no offset is specified.
         """
         if self._offset is None:
             return None
@@ -318,9 +333,10 @@ def create_model_matrix(
         Column name in data to use as observation weights. Weights must be
         non-negative numeric values. If None, no weighting is applied.
     offset : str or None, default=None
-        Column name in data to use as an offset (added to the linear predictor
-        with a fixed coefficient of 1). Rows with NaN in the offset column are
-        dropped together with NaN rows in the rest of the formula.
+        Formulaic expression that evaluates to one numeric offset column. The
+        offset is added to the linear predictor with a fixed coefficient of 1.
+        Rows with missing offset values are dropped together with missing rows
+        in the rest of the formula.
     drop_singletons : bool, default=False
         If True, observations that are singletons in any fixed effect category
         are dropped from the model.
@@ -411,13 +427,7 @@ def _get_formulaic_formula(
         data[weights] = _get_weights(data, weights)
         formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
     if offset is not None:
-        if offset not in data.columns:
-            raise ValueError(f"Offset variable '{offset}' not found in data.")
-        try:
-            data[offset] = pd.to_numeric(data[offset], errors="raise")
-        except ValueError:
-            raise ValueError(f"The offset column '{offset}' must be numeric.")
-        formula_kwargs.update({_ModelMatrixKey.offset: f"{offset}-1"})
+        formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
     formula_formulaic = formulaic.Formula(
         formula_kwargs,
         _parser=DefaultFormulaParser(
@@ -431,4 +441,5 @@ def _get_formulaic_formula(
             include_intercept=formula.is_fixed_effects,
         ),
     )
+
     return formula_formulaic
