@@ -467,7 +467,7 @@ def feols(
     res.etable()
 
     # group covariates via regex
-    res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
+    res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
     ```
 
     Objects of type `Feols` support a range of other methods to conduct inference.
