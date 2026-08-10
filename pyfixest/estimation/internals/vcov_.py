@@ -158,11 +158,7 @@ def vcov_crv1(
     tZX: np.ndarray,
 ) -> np.ndarray:
     "Unscaled CRV1 cluster-robust vcov."
-    meat = crv1_meat_loop(
-        scores=scores.astype(np.float64),
-        clustid=clustid.astype(np.uintp),
-        cluster_col=cluster_col.astype(np.uintp),
-    )
+    meat = crv1_meat(scores=scores, clustid=clustid, cluster_col=cluster_col)
 
     return _sandwich(
         meat=meat,
@@ -171,6 +167,17 @@ def vcov_crv1(
         tXZ=tXZ,
         tZZinv=tZZinv,
         tZX=tZX,
+    )
+
+
+def crv1_meat(
+    scores: np.ndarray, clustid: np.ndarray, cluster_col: np.ndarray
+) -> np.ndarray:
+    "Aggregate scores within one cluster dimension."
+    return crv1_meat_loop(
+        scores=np.ascontiguousarray(scores, dtype=np.float64),
+        clustid=np.ascontiguousarray(clustid, dtype=np.uintp),
+        cluster_col=np.ascontiguousarray(cluster_col, dtype=np.uintp),
     )
 
 

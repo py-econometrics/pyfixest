@@ -42,9 +42,10 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    SscContext,
     _compute_bread,
+    assemble_crv_vcov,
     prepare_cluster_state,
-    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -74,10 +75,7 @@ from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
 )
-from pyfixest.utils.utils import (
-    capture_context,
-    get_ssc,
-)
+from pyfixest.utils.utils import capture_context
 
 decomposition_type = Literal["gelbach"]
 decomposition_inference = Literal["analytic", "bootstrap"]
@@ -674,17 +672,18 @@ class Feols(ResultAccessorMixin):
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
+        ssc_context = self._ssc_context()
 
         if self._vcov_type == "iid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="iid", G=1)
+            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+                vcov_type="iid", G=1
             )
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
             # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+                vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_hetero()
 
@@ -693,17 +692,15 @@ class Feols(ResultAccessorMixin):
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
             self._panel_id = kw.get("panel_id")
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
-                )  # number of unique time periods T used
+            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+                vcov_type="HAC",
+                G=np.unique(self._data[self._time_id]).shape[0],
             )
             self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+                vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_nid()
 
@@ -718,10 +715,10 @@ class Feols(ResultAccessorMixin):
             )
             self._cluster_df = prep.cluster_df
             self._G = prep.G
-            self._vcov, self._ssc, self._df_k, self._df_t = run_crv_loop(
+            self._vcov, self._ssc, self._df_k, self._df_t = assemble_crv_vcov(
                 prep=prep,
                 k=self._k,
-                make_ssc_kwargs=self._make_ssc_kwargs,
+                ssc_context=ssc_context,
                 cluster_vcov=self._vcov_crv_cluster,
             )
         # update p-value, t-stat, standard error, confint
@@ -729,28 +726,15 @@ class Feols(ResultAccessorMixin):
 
         return self
 
-    def _make_ssc_kwargs(
-        self,
-        *,
-        vcov_type: str,
-        G: int | list[int],
-        vcov_sign: int = 1,
-        k_fe_nested: int = 0,
-        n_fe_fully_nested: int = 0,
-    ) -> dict:
-        "Bundle model-level and vcov-type-specific args for get_ssc()."
-        return {
-            "ssc_dict": self._ssc_dict,
-            "N": self._N,
-            "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
-            "n_fe": self._n_fe,
-            "vcov_type": vcov_type,
-            "G": G,
-            "vcov_sign": vcov_sign,
-            "k_fe_nested": k_fe_nested,
-            "n_fe_fully_nested": n_fe_fully_nested,
-        }
+    def _ssc_context(self) -> SscContext:
+        "Bundle model quantities shared across small-sample corrections."
+        return SscContext(
+            ssc_dict=self._ssc_dict,
+            N=int(self._N),
+            k=self._k,
+            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
+            n_fe=self._n_fe,
+        )
 
     def _vcov_crv_cluster(
         self, clustid: np.ndarray, cluster_col: np.ndarray
