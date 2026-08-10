@@ -199,6 +199,8 @@ note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narratio
 - Style: module-level formula lists fed to `pytest.mark.parametrize`; seeded
   DGP fixtures (module-scoped when expensive); explicit `rtol`/`atol` constants
   at the top of the file with a comment justifying them.
+- For prediction comparisons, assert on a small deterministic subset (for
+  example, the first five values), never the full prediction vector.
 - The bar for new econometrics is higher than "runs and has the right shape":
   exact known-value or brute-force cross-checks, edge cases (singleton
   clusters, collinearity, tiny samples), invalid-input tests, and at least one
