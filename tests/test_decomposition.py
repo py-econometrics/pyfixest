@@ -1,12 +1,15 @@
 import re
+from contextlib import nullcontext
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.stats import t
+from scipy.sparse import csc_matrix
+from scipy.stats import norm, t
 
 import pyfixest as pf
+from pyfixest.estimation.post_estimation.decomposition import _sparse_grouped_values
 from pyfixest.utils.dgps import gelbach_data
 
 # Set matplotlib backend for headless testing
@@ -26,8 +29,16 @@ def gelbach_decomposition():
     """Fixture providing a standard Gelbach decomposition for testing."""
     data = gelbach_data(nobs=200)
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-    gb = fit.decompose(param="x1", seed=98765, reps=25)
+    gb = fit.decompose(decomp_var="x1", seed=98765, reps=25)
     return gb
+
+
+def _expected_agg_first_warning(agg_first: bool):
+    return (
+        nullcontext()
+        if agg_first
+        else pytest.warns(UserWarning, match="agg_first is False")
+    )
 
 
 def _weighted_gelbach_data() -> pd.DataFrame:
@@ -272,7 +283,7 @@ def test_against_stata_b1x2(b1x2_results, combine_covariates, se, agg_first):
     def decompose_and_compare(
         fit,
         b1x2_results,
-        param,
+        decomp_var,
         combine_covariates,
         seed,
         reps,
@@ -281,44 +292,44 @@ def test_against_stata_b1x2(b1x2_results, combine_covariates, se, agg_first):
         cluster=None,
         agg_first=True,
     ):
-        fit.decompose(
-            param=param,
-            combine_covariates=combine_covariates,
-            seed=seed,
-            reps=reps,
-            cluster=cluster,
-            agg_first=agg_first,
-            inference="bootstrap" if cluster is not None else "analytic",
-        )
+        with _expected_agg_first_warning(agg_first):
+            fit.decompose(
+                decomp_var=decomp_var,
+                combine_covariates=combine_covariates,
+                seed=seed,
+                reps=reps,
+                cluster=cluster,
+                agg_first=agg_first,
+                inference="analytic",
+            )
 
         results = fit.GelbachDecompositionResults.tidy()
         results = results.query("panels == 'Levels (units)'")
         coefficients = results.coefficients
-        ci_lower = results.ci_lower
-        ci_upper = results.ci_upper
+        std_error = results.std_error
 
         filtered_df = b1x2_results.query(f"model == '{model}' and se == '{se}'")
 
         for g in ["g1", "g2", "explained_effect"]:
             coef_diff = filtered_df.xs(g).Coefficient - coefficients.xs(g)
-            lower_diff = filtered_df.xs(g)["CI Lower"] - ci_lower.xs(g)
-            upper_diff = filtered_df.xs(g)["CI Upper"] - ci_upper.xs(g)
 
             assert np.all(np.abs(coef_diff) < 1e-6), (
                 f"Failed for {g} with values from Stata of {filtered_df.xs(g).Coefficient} and Python of {coefficients.xs(g)}"
             )
-            if False:
-                assert np.all(np.abs(lower_diff) < 1e-4), (
-                    f"Failed for {g} with values {filtered_df.xs(g)['CI Lower']} and {ci_lower.xs(g)}"
-                )
-                assert np.all(np.abs(upper_diff) < 1e-4), (
-                    f"Failed for {g} with values {filtered_df.xs(g)['CI Upper']} and {ci_upper.xs(g)}"
-                )
+            stata_std_error = (
+                filtered_df.xs(g)["CI Upper"] - filtered_df.xs(g)["CI Lower"]
+            ) / (2 * norm.ppf(0.975))
+            np.testing.assert_allclose(
+                std_error.xs(g),
+                stata_std_error,
+                rtol=5e-3,
+                err_msg=f"Standard error mismatch for {g}",
+            )
 
     decompose_and_compare(
         fit=fit,
         b1x2_results=b1x2_results,
-        param="x1",
+        decomp_var="x1",
         combine_covariates=combine_covariates,
         seed=3,
         reps=100,
@@ -336,20 +347,23 @@ def test_regex():
     data = gelbach_data(nobs=100)
     fit1 = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
     fit2 = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    regex_groups = {"g1": re.compile(r"x2[1-2]"), "g2": ["x23"]}
 
     fit1.decompose(
-        param="x1",
+        decomp_var="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         seed=3,
         reps=100,
     )
 
     fit2.decompose(
-        param="x1",
-        combine_covariates={"g1": re.compile(r"x2[1-2]"), "g2": ["x23"]},
+        decomp_var="x1",
+        combine_covariates=regex_groups,
         seed=3,
         reps=100,
     )
+
+    assert isinstance(regex_groups["g1"], re.Pattern)
 
     for key, value in fit1.GelbachDecompositionResults.results.absolute.items():
         np.testing.assert_allclose(
@@ -363,20 +377,21 @@ def test_agg_first():
     fit1 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
     fit2 = pf.feols("Y ~ X1 + C(f1) + C(f2)", data=data)
 
-    fit1.decompose(
-        param="X1",
-        combine_covariates={
-            "f1": re.compile(r"\b\w*f1\w*\b"),
-            "f2": re.compile(r"\b\w*f2\w*\b"),
-        },
-        nthreads=2,
-        agg_first=False,
-        reps=3,
-        seed=123,
-    )
+    with _expected_agg_first_warning(False):
+        fit1.decompose(
+            decomp_var="X1",
+            combine_covariates={
+                "f1": re.compile(r"\b\w*f1\w*\b"),
+                "f2": re.compile(r"\b\w*f2\w*\b"),
+            },
+            nthreads=2,
+            agg_first=False,
+            reps=3,
+            seed=123,
+        )
 
     fit2.decompose(
-        param="X1",
+        decomp_var="X1",
         combine_covariates={
             "f1": re.compile(r"\b\w*f1\w*\b"),
             "f2": re.compile(r"\b\w*f2\w*\b"),
@@ -404,7 +419,7 @@ def test_cluster():
 
     # cluster set in feols call
     fit1.decompose(
-        param="x1",
+        decomp_var="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         digits=6,
         inference="bootstrap",
@@ -413,7 +428,7 @@ def test_cluster():
     )
     # cluster set in decompose
     fit2.decompose(
-        param="x1",
+        decomp_var="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         digits=6,
         cluster="cluster",
@@ -438,13 +453,13 @@ def test_fixef():
     fit2 = pf.feols("y ~ x1 + x21 + x22 + x23 + C(cluster)", data=df)
 
     fit1.decompose(
-        param="x1",
+        decomp_var="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         digits=6,
         only_coef=True,
     )
     fit2.decompose(
-        param="x1",
+        decomp_var="x1",
         combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
         digits=6,
         only_coef=True,
@@ -490,7 +505,8 @@ def test_agg_first_equivalence(combine_config, x1_vars):
         if x1_vars is not None:
             decomp_kwargs["x1_vars"] = x1_vars
 
-        fit.decompose(**decomp_kwargs)
+        with _expected_agg_first_warning(agg_first):
+            fit.decompose(**decomp_kwargs)
         results[agg_first] = fit.GelbachDecompositionResults.tidy()
 
     pd.testing.assert_frame_equal(
@@ -506,7 +522,7 @@ def test_agg_first_equivalence(combine_config, x1_vars):
 def smoke_test_only_coef():
     data = pf.get_data()
     fit = pf.feols("Y~X1 + X2 | f1", data=data)
-    fit.decompose(param="X1", only_coef=True)
+    fit.decompose(decomp_var="X1", only_coef=True)
 
 
 @pytest.mark.parametrize("agg_first", [True, False])
@@ -516,39 +532,42 @@ def test_x1_vars(agg_first):
 
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-    fit.decompose(
-        param="x1",
-        x1_vars=["x21"],
-        seed=3,
-        only_coef=True,
-        agg_first=agg_first,
-        combine_covariates={"ALL": ["x22", "x23"]},
-    )
+    with _expected_agg_first_warning(agg_first):
+        fit.decompose(
+            decomp_var="x1",
+            x1_vars=["x21"],
+            seed=3,
+            only_coef=True,
+            agg_first=agg_first,
+            combine_covariates={"ALL": ["x22", "x23"]},
+        )
     # test that param ALL is .5024257
     np.testing.assert_allclose(
         fit.GelbachDecompositionResults.results.absolute["ALL"], 0.5024257
     )
 
-    fit.decompose(
-        param="x1",
-        x1_vars=["x21", "x22"],
-        combine_covariates={"ALL": ["x23"]},
-        seed=3,
-        agg_first=agg_first,
-        only_coef=True,
-    )
+    with _expected_agg_first_warning(agg_first):
+        fit.decompose(
+            decomp_var="x1",
+            x1_vars=["x21", "x22"],
+            combine_covariates={"ALL": ["x23"]},
+            seed=3,
+            agg_first=agg_first,
+            only_coef=True,
+        )
     np.testing.assert_allclose(
         fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
     )
 
-    fit.decompose(
-        param="x1",
-        x1_vars="x21+x22",
-        combine_covariates={"ALL": ["x23"]},
-        seed=3,
-        agg_first=agg_first,
-        only_coef=True,
-    )
+    with _expected_agg_first_warning(agg_first):
+        fit.decompose(
+            decomp_var="x1",
+            x1_vars="x21+x22",
+            combine_covariates={"ALL": ["x23"]},
+            seed=3,
+            agg_first=agg_first,
+            only_coef=True,
+        )
     np.testing.assert_allclose(
         fit.GelbachDecompositionResults.results.absolute["ALL"], 0.3149754
     )
@@ -559,9 +578,10 @@ def test_tidy_snapshot(gelbach_decomposition):
     tidy_result = gelbach_decomposition.tidy(alpha=0.05).query(
         "panels == 'Levels (units)'"
     )
-    tidy_result.round(6).to_string()
-
-    return tidy_result
+    assert not tidy_result.empty
+    assert {"coefficients", "std_error", "ci_lower", "ci_upper"}.issubset(
+        tidy_result.columns
+    )
 
 
 def test_decompose_defaults_to_analytic_inference():
@@ -574,6 +594,232 @@ def test_decompose_defaults_to_analytic_inference():
     assert gb.inference == "analytic"
     assert {"std_error", "ci_lower", "ci_upper"}.issubset(tidy.columns)
     assert np.all(np.isfinite(tidy["std_error"]))
+
+
+def test_hetero_and_hc1_are_equivalent_aliases():
+    data = gelbach_data(nobs=150)
+    groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
+
+    results = {}
+    for vcov in ["hetero", "HC1"]:
+        results[vcov] = pf.feols("y ~ x1 + x21 + x22 + x23", data=data).decompose(
+            decomp_var="x1", combine_covariates=groups, vcov=vcov
+        )
+
+    assert results["hetero"].vcov == "HC1"
+    assert results["HC1"].vcov == "HC1"
+    pd.testing.assert_frame_equal(
+        results["hetero"].tidy(),
+        results["HC1"].tidy(),
+        check_exact=True,
+    )
+
+
+def test_grouped_parameter_storage_is_sparse_and_linear_size():
+    n_mediators = 1_000
+    grouped = _sparse_grouped_values(
+        np.arange(1, n_mediators + 1, dtype=float),
+        [[idx] for idx in range(n_mediators)],
+    )
+
+    assert isinstance(grouped, csc_matrix)
+    assert grouped.shape == (n_mediators, n_mediators)
+    assert grouped.nnz == n_mediators
+
+
+@pytest.mark.parametrize(
+    "vcov",
+    ["hetero", "iid", {"CRV1": "cluster + cluster2"}],
+)
+def test_partial_group_covariance_includes_unreported_mediators(vcov):
+    data = gelbach_data(nobs=180)
+    data["cluster"] = np.arange(len(data)) % 18
+    data["cluster2"] = np.arange(len(data)) % 13
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    partial = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"reported": ["x21"]},
+        vcov=vcov,
+    )
+    exhaustive = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={
+            "reported": ["x21"],
+            "remainder": ["x22", "x23"],
+        },
+        vcov=vcov,
+    )
+
+    exhaustive_names = list(exhaustive.results.absolute)
+    partial_names = list(partial.results.absolute)
+    transform = np.zeros((len(partial_names), len(exhaustive_names)))
+    exhaustive_idx = {name: idx for idx, name in enumerate(exhaustive_names)}
+    partial_idx = {name: idx for idx, name in enumerate(partial_names)}
+    for name in ["direct_effect", "full_effect", "reported"]:
+        transform[partial_idx[name], exhaustive_idx[name]] = 1.0
+    transform[partial_idx["explained_effect"], exhaustive_idx["reported"]] = 1.0
+    transform[partial_idx["unexplained_effect"], exhaustive_idx["full_effect"]] = 1.0
+    transform[partial_idx["unexplained_effect"], exhaustive_idx["remainder"]] = 1.0
+
+    expected_vcov = (
+        transform
+        @ exhaustive._absolute_vcov.loc[exhaustive_names, exhaustive_names].to_numpy()
+        @ transform.T
+    )
+    np.testing.assert_allclose(
+        partial._absolute_vcov.loc[partial_names, partial_names],
+        expected_vcov,
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        partial.results.unexplained_effect,
+        exhaustive.results.full_effect
+        + exhaustive.results.mediator_effects["remainder"],
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
+def test_iid_full_effect_matches_parent_model_inference():
+    data = pd.read_stata("tests/data/gelbach.dta")
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, vcov="iid")
+
+    gb = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        vcov="iid",
+    )
+    levels = gb.tidy(panels="levels")
+
+    assert gb.vcov == "iid"
+    assert gb._analytic_df == fit._df_t
+    np.testing.assert_allclose(
+        levels.loc[["full_effect", "unexplained_effect"], "std_error"],
+        fit.se().loc["x1"],
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
+@pytest.mark.parametrize(
+    "vcov",
+    [{"CRV1": "cluster"}, {"CRV1": "cluster + cluster2"}],
+)
+def test_crv1_full_effect_matches_parent_model_inference(vcov):
+    data = pd.read_stata("tests/data/gelbach.dta")
+    data["cluster2"] = np.arange(len(data)) % 13
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, vcov=vcov)
+
+    gb = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        vcov=vcov,
+    )
+    levels = gb.tidy(panels="levels")
+
+    assert gb.vcov == "CRV1"
+    assert gb._analytic_df == fit._df_t
+    np.testing.assert_allclose(
+        levels.loc[["full_effect", "unexplained_effect"], "std_error"],
+        fit.se().loc["x1"],
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
+def test_crv1_inherits_cluster_specification_from_parent_model():
+    data = pd.read_stata("tests/data/gelbach.dta")
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23",
+        data=data,
+        vcov={"CRV1": "cluster"},
+    )
+
+    gb = fit.decompose(decomp_var="x1")
+
+    assert gb.vcov == "CRV1"
+    assert gb._analytic_df == fit._df_t
+
+
+def test_analytic_inference_respects_parent_small_sample_corrections():
+    data = pd.read_stata("tests/data/gelbach.dta")
+    data["cluster2"] = np.arange(len(data)) % 13
+    ssc_config = pf.ssc(k_adj=False, G_adj=False, G_df="conventional")
+    groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
+
+    for vcov in ["iid", "hetero", {"CRV1": "cluster + cluster2"}]:
+        fit = pf.feols(
+            "y ~ x1 + x21 + x22 + x23",
+            data=data,
+            vcov=vcov,
+            ssc=ssc_config,
+        )
+        gb = fit.decompose(
+            decomp_var="x1",
+            combine_covariates=groups,
+            vcov=vcov,
+        )
+
+        assert gb._analytic_df == fit._df_t
+        np.testing.assert_allclose(
+            gb.tidy(panels="levels").loc[
+                ["full_effect", "unexplained_effect"], "std_error"
+            ],
+            fit.se().loc["x1"],
+            rtol=1e-10,
+            atol=1e-12,
+        )
+
+
+@pytest.mark.parametrize("vcov", ["iid", {"CRV1": "cluster"}])
+def test_analytic_full_effect_with_fixed_effects_matches_parent(vcov):
+    data = pd.read_stata("tests/data/gelbach.dta")
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23 | cluster",
+        data=data,
+        vcov=vcov,
+    )
+
+    gb = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        vcov=vcov,
+    )
+
+    assert gb._analytic_df == fit._df_t
+    np.testing.assert_allclose(
+        gb.tidy(panels="levels").loc["full_effect", "std_error"],
+        fit.se().loc["x1"],
+        rtol=1e-9,
+        atol=1e-11,
+    )
+
+
+def test_singleton_cluster_crv1_standard_errors_equal_hc1():
+    data = gelbach_data(nobs=150)
+    data["cluster"] = np.arange(len(data))
+    groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
+
+    hetero = (
+        pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        .decompose(decomp_var="x1", combine_covariates=groups, vcov="hetero")
+        .tidy(panels="levels")
+    )
+    clustered = (
+        pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        .decompose(
+            decomp_var="x1",
+            combine_covariates=groups,
+            vcov={"CRV1": "cluster"},
+        )
+        .tidy(panels="levels")
+    )
+
+    np.testing.assert_allclose(
+        clustered["std_error"], hetero["std_error"], rtol=1e-10, atol=1e-12
+    )
 
 
 def test_decompose_bootstrap_inference_preserved():
@@ -635,12 +881,13 @@ def test_analytic_inference_with_x1_vars_and_combine_covariates(agg_first):
     data = pd.read_csv("tests/data/gelbach.csv")
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-    gb = fit.decompose(
-        decomp_var="x1",
-        x1_vars=["x21"],
-        combine_covariates={"ALL": ["x22", "x23"]},
-        agg_first=agg_first,
-    )
+    with _expected_agg_first_warning(agg_first):
+        gb = fit.decompose(
+            decomp_var="x1",
+            x1_vars=["x21"],
+            combine_covariates={"ALL": ["x22", "x23"]},
+            agg_first=agg_first,
+        )
     tidy = gb.tidy().query("panels == 'Levels (units)'")
 
     assert {"std_error", "ci_lower", "ci_upper"}.issubset(tidy.columns)
@@ -653,11 +900,12 @@ def test_analytic_agg_first_equivalent_standard_errors():
 
     for agg_first in [True, False]:
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-        results[agg_first] = fit.decompose(
-            decomp_var="x1",
-            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
-            agg_first=agg_first,
-        ).tidy()
+        with _expected_agg_first_warning(agg_first):
+            results[agg_first] = fit.decompose(
+                decomp_var="x1",
+                combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+                agg_first=agg_first,
+            ).tidy()
 
     pd.testing.assert_frame_equal(
         results[True],
@@ -824,16 +1072,16 @@ def test_weights(fml):
     np.testing.assert_allclose(fit.coef(), fit_agg.coef())
 
     # decomposition without combine_covariates:
-    decompse_kwargs_1 = {"param": "x1", "only_coef": True}
+    decompse_kwargs_1 = {"decomp_var": "x1", "only_coef": True}
     # with combine covariates 1:
     decompse_kwargs_2 = {
-        "param": "x1",
+        "decomp_var": "x1",
         "only_coef": True,
         "combine_covariates": {"g1": ["x21"], "g2": ["x22"], "g3": re.compile("x23")},
     }
     # with combine covariates 2:
     decompse_kwargs_3 = {
-        "param": "x1",
+        "decomp_var": "x1",
         "only_coef": True,
         "combine_covariates": {"g1": ["x21", "x22"], "g2": re.compile("x23")},
     }
@@ -852,9 +1100,6 @@ def test_weights(fml):
 @pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 def test_weighted_point_estimates_against_stata_b1x2(weights_type):
     reference_path = Path("tests/data/gelbach_b1x2_weighted.csv")
-    if not reference_path.exists():
-        pytest.skip("Run tests/data/gelbach_b1x2_weighted.do in Stata first.")
-
     data = pd.read_stata("tests/data/gelbach.dta")
     observation = np.arange(1, data.shape[0] + 1)
     data["aw"] = 0.75 + np.mod(observation, 7) / 4
@@ -867,21 +1112,22 @@ def test_weighted_point_estimates_against_stata_b1x2(weights_type):
 
     results = {}
     for agg_first in [True, False]:
-        results[agg_first] = (
-            pf.feols(
-                "y ~ x1 + x21 + x22 + x23",
-                data=data,
-                weights=weight_column,
-                weights_type=weights_type,
+        with _expected_agg_first_warning(agg_first):
+            results[agg_first] = (
+                pf.feols(
+                    "y ~ x1 + x21 + x22 + x23",
+                    data=data,
+                    weights=weight_column,
+                    weights_type=weights_type,
+                )
+                .decompose(
+                    decomp_var="x1",
+                    combine_covariates=groups,
+                    agg_first=agg_first,
+                    only_coef=True,
+                )
+                .tidy(panels="levels")["coefficients"]
             )
-            .decompose(
-                decomp_var="x1",
-                combine_covariates=groups,
-                agg_first=agg_first,
-                only_coef=True,
-            )
-            .tidy(panels="levels")["coefficients"]
-        )
 
         np.testing.assert_allclose(
             results[agg_first].reindex(reference.index),
@@ -908,33 +1154,9 @@ def _assert_valid_analytic_levels(result: pd.DataFrame) -> None:
     assert (result["coefficients"] <= result["ci_upper"]).all()
 
 
-def test_analytic_weighted_point_estimates_match_manual_wls_reference():
-    data = _weighted_gelbach_data()
-    assert not float(data["w"].sum()).is_integer()
-    groups = {"x21": ["x21"], "x22": ["x22"], "x23": ["x23"]}
-
-    fit = pf.feols(
-        fml="Y ~ x1 + x21 + x22 + x23",
-        data=data,
-        weights="w",
-        weights_type="aweights",
-    )
-    result = fit.decompose(
-        decomp_var="x1",
-        only_coef=True,
-    ).tidy(panels="levels")
-
-    reference = _manual_aweighted_gelbach_levels(data, groups)
-    np.testing.assert_allclose(
-        result["coefficients"],
-        reference["coefficients"],
-        rtol=1e-9,
-        atol=1e-10,
-    )
-
-
 def test_analytic_weighted_inference_matches_manual_wls_reference():
     data = _weighted_gelbach_data()
+    assert not float(data["w"].sum()).is_integer()
     groups = {"g1": ["x21"], "g2": ["x22", "x23"]}
 
     fit = pf.feols(
@@ -957,52 +1179,58 @@ def test_analytic_weighted_inference_matches_manual_wls_reference():
     )
 
 
-def test_analytic_weighted_inference_with_fixed_effects_returns_finite_results():
-    data = _weighted_gelbach_data()
-
-    fit = pf.feols(
-        fml="Y ~ x1 + x21 + x22 | f1",
-        data=data,
-        weights="w",
-        weights_type="aweights",
-    )
-    result = fit.decompose(
-        decomp_var="x1",
-        combine_covariates={"g1": ["x21"], "g2": ["x22"]},
-    ).tidy(panels="levels")
-
-    numeric = result[["coefficients", "std_error", "ci_lower", "ci_upper"]]
-    assert np.isfinite(numeric.to_numpy()).all()
-
-
 @pytest.mark.parametrize(
     "fml", ["Y ~ x1 + x21 + x22 + x23", "Y ~ x1 + x21 + x22 | x23"]
 )
 @pytest.mark.parametrize("agg_first", [True, False])
-def test_frequency_weighted_analytic_inference_matches_expanded_data(fml, agg_first):
-    rng = np.random.default_rng(123)
-    nobs = 1000
+@pytest.mark.parametrize(
+    "vcov",
+    [
+        "hetero",
+        "iid",
+        {"CRV1": "cluster"},
+        {"CRV1": "cluster + cluster2"},
+    ],
+)
+def test_frequency_weighted_inference_matches_expanded_data(fml, agg_first, vcov):
+    rng = np.random.default_rng(20260806)
+    nobs = 600
     data = pd.DataFrame(
         {
-            "Y": rng.choice(range(10), nobs),
+            "Y": rng.choice(range(8), nobs),
             "x1": rng.choice(range(2), nobs),
-            "x21": rng.choice(range(2), nobs),
+            "x21": rng.choice(range(3), nobs),
             "x22": rng.choice(range(2), nobs),
             "x23": rng.choice(range(5), nobs),
+            "cluster": rng.choice(range(20), nobs),
+            "cluster2": rng.choice(range(13), nobs),
         }
     )
-    aggregate_columns = ["Y", "x1", "x21", "x22", "x23"]
+    aggregate_columns = [
+        "Y",
+        "x1",
+        "x21",
+        "x22",
+        "x23",
+        "cluster",
+        "cluster2",
+    ]
     compressed_data = data.groupby(aggregate_columns).size().reset_index(name="count")
 
     def decompose(fit):
-        return fit.decompose(
-            decomp_var="x1",
-            combine_covariates={
+        kwargs = {
+            "decomp_var": "x1",
+            "combine_covariates": {
                 "g1": ["x21", "x22"],
                 "g2": re.compile("x23"),
             },
-            agg_first=agg_first,
-        ).tidy()
+            "agg_first": agg_first,
+            "vcov": vcov,
+        }
+        if agg_first:
+            return fit.decompose(**kwargs).tidy()
+        with pytest.warns(UserWarning, match="agg_first is False"):
+            return fit.decompose(**kwargs).tidy()
 
     expanded = (
         decompose(pf.feols(fml=fml, data=data)).rename_axis("effect").reset_index()
@@ -1036,17 +1264,25 @@ def test_frequency_weighted_analytic_inference_matches_expanded_data(fml, agg_fi
     )
 
 
-def test_constant_aweights_match_unweighted_point_estimates():
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+def test_constant_weights_match_unweighted_or_expanded_reference(weights_type):
     data = _weighted_gelbach_data()
-    data["constant_aw"] = 2.5
     groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
+    weight_column = f"constant_{weights_type}"
+    constant_weight = 2.5 if weights_type == "aweights" else 3
+    data[weight_column] = constant_weight
+    reference_data = (
+        data
+        if weights_type == "aweights"
+        else data.loc[data.index.repeat(data[weight_column])].reset_index(drop=True)
+    )
 
-    unweighted = (
-        pf.feols("Y ~ x1 + x21 + x22 + x23", data=data)
+    reference = (
+        pf.feols("Y ~ x1 + x21 + x22 + x23", data=reference_data)
         .decompose(
             decomp_var="x1",
             combine_covariates=groups,
-            only_coef=True,
+            only_coef=weights_type == "aweights",
         )
         .tidy(panels="levels")
     )
@@ -1054,8 +1290,8 @@ def test_constant_aweights_match_unweighted_point_estimates():
         pf.feols(
             "Y ~ x1 + x21 + x22 + x23",
             data=data,
-            weights="constant_aw",
-            weights_type="aweights",
+            weights=weight_column,
+            weights_type=weights_type,
         )
         .decompose(
             decomp_var="x1",
@@ -1064,51 +1300,15 @@ def test_constant_aweights_match_unweighted_point_estimates():
         .tidy(panels="levels")
     )
 
+    columns = (
+        ["coefficients"]
+        if weights_type == "aweights"
+        else ["coefficients", "std_error", "ci_lower", "ci_upper"]
+    )
     np.testing.assert_allclose(
-        weighted["coefficients"],
-        unweighted["coefficients"],
-        rtol=1e-9,
-        atol=1e-10,
+        weighted[columns], reference[columns], rtol=1e-8, atol=1e-9
     )
     _assert_valid_analytic_levels(weighted)
-
-
-def test_constant_fweights_match_expanded_analytic_results():
-    data = _weighted_gelbach_data()
-    data["constant_fw"] = 3
-    expanded_data = data.loc[data.index.repeat(data["constant_fw"])].reset_index(
-        drop=True
-    )
-    groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
-
-    expanded = (
-        pf.feols("Y ~ x1 + x21 + x22 + x23", data=expanded_data)
-        .decompose(
-            decomp_var="x1",
-            combine_covariates=groups,
-        )
-        .tidy(panels="levels")
-    )
-    compressed = (
-        pf.feols(
-            "Y ~ x1 + x21 + x22 + x23",
-            data=data,
-            weights="constant_fw",
-            weights_type="fweights",
-        )
-        .decompose(
-            decomp_var="x1",
-            combine_covariates=groups,
-        )
-        .tidy(panels="levels")
-    )
-
-    np.testing.assert_allclose(
-        compressed[["coefficients", "std_error", "ci_lower", "ci_upper"]],
-        expanded[["coefficients", "std_error", "ci_lower", "ci_upper"]],
-        rtol=1e-8,
-        atol=1e-9,
-    )
 
 
 @pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
@@ -1178,22 +1378,58 @@ def test_grouped_mediator_effects_equal_individual_sums(weights_type):
 
 
 @pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
-def test_weighted_analytic_inference_is_well_formed(weights_type):
+@pytest.mark.parametrize("vcov", ["hetero", "iid", {"CRV1": "f1"}])
+@pytest.mark.parametrize(
+    "fml, groups",
+    [
+        (
+            "Y ~ x1 + x21 + x22 + x23",
+            {"g1": ["x21", "x22"], "g2": ["x23"]},
+        ),
+        ("Y ~ x1 + x21 + x22 | f1", {"g1": ["x21"], "g2": ["x22"]}),
+    ],
+)
+def test_weighted_analytic_inference_is_well_formed(weights_type, vcov, fml, groups):
     data = _weighted_gelbach_data()
     weight_column = "w" if weights_type == "aweights" else "fw"
 
     result = (
         pf.feols(
-            "Y ~ x1 + x21 + x22 + x23",
+            fml,
             data=data,
             weights=weight_column,
             weights_type=weights_type,
         )
         .decompose(
             decomp_var="x1",
-            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+            combine_covariates=groups,
+            vcov=vcov,
         )
         .tidy(panels="levels")
     )
 
     _assert_valid_analytic_levels(result)
+
+
+def test_analytic_inference_clips_only_roundoff_negative_variance(
+    gelbach_decomposition,
+):
+    estimates = {"effect": 1.0}
+    tiny_negative = pd.DataFrame(
+        [[-np.finfo(float).eps]], index=estimates, columns=estimates
+    )
+    material_negative = pd.DataFrame([[-1e-4]], index=estimates, columns=estimates)
+
+    tiny_result = gelbach_decomposition._analytic_inference_df(
+        estimates=estimates,
+        vcov=tiny_negative,
+        alpha=0.05,
+    )
+    material_result = gelbach_decomposition._analytic_inference_df(
+        estimates=estimates,
+        vcov=material_negative,
+        alpha=0.05,
+    )
+
+    assert tiny_result.loc["effect", "std_error"] == 0
+    assert np.isnan(material_result.loc["effect", "std_error"])

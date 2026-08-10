@@ -727,18 +727,23 @@ def test_gelbach_errors():
     with pytest.raises(
         ValueError, match=r"The variable 'x32' is not in the mediator names."
     ):
-        fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
+        fit.decompose(decomp_var="x1", combine_covariates={"g1": ["x32"]})
 
     with pytest.raises(
         ValueError, match=r"Variables {'x21'} are in both 'g1' and 'g2' groups."
     ):
-        fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
+        fit.decompose(
+            decomp_var="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]}
+        )
 
     with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
-        fit.decompose(param="x1", combine_covariates={"g1": "x21"})
+        fit.decompose(decomp_var="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"not in list"):
-        fit.decompose(param="x99")
+    with pytest.raises(
+        ValueError,
+        match=r"The decomposition variable 'x99' is not in the coefficient names\.",
+    ):
+        fit.decompose(decomp_var="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
@@ -750,26 +755,26 @@ def test_gelbach_errors():
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
         )
 
-    med = fit.decompose(param="x1", only_coef=True)
+    med = fit.decompose(decomp_var="x1", only_coef=True)
     with pytest.raises(ValueError, match=r"relative_to must be None"):
         med.results.to_dict(relative_to="bogus")
 
     with pytest.raises(NotImplementedError):
         pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
-            param="x1", combine_covariates={"g1": ["x21"]}
+            decomp_var="x1", combine_covariates={"g1": ["x21"]}
         )
 
     with pytest.raises(
         ValueError, match=r"The variable 'x21' is not in the mediator names."
     ):
         pf.feols("y ~ x1", data=data, weights="weights").decompose(
-            param="x1", combine_covariates={"g1": ["x21"]}
+            decomp_var="x1", combine_covariates={"g1": ["x21"]}
         )
 
     with pytest.raises(NotImplementedError):
         dt = pf.get_data(model="Fepois")
         pf.fepois("Y ~ X1", data=dt).decompose(
-            param="X1", combine_covariates={"g1": ["x21"]}
+            decomp_var="X1", combine_covariates={"g1": ["x21"]}
         )
 
     with pytest.raises(
@@ -804,15 +809,60 @@ def test_gelbach_errors():
     with pytest.raises(ValueError, match=r"'inference' must be one of"):
         fit.decompose(decomp_var="x1", inference="none")
 
-    with pytest.raises(
-        NotImplementedError,
-        match=r"Analytical decomposition inference is currently not supported with clustered models",
-    ):
-        fit.decompose(
-            decomp_var="x1",
-            combine_covariates={"g1": ["x21"]},
-            cluster="f1",
+    clustered = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21"]},
+        cluster="f1",
+    )
+    assert clustered.vcov == "CRV1"
+
+    for unsupported_vcov in [
+        "HC2",
+        "HC3",
+        {"CRV2": "f1"},
+        {"CRV3": "f1"},
+    ]:
+        with pytest.raises(
+            VcovTypeNotSupportedError,
+            match=r"Supported estimators are IID, HC1, and CRV1",
+        ):
+            fit.decompose(decomp_var="x1", vcov=unsupported_vcov)
+
+    with pytest.raises(ValueError, match=r"either 'cluster' or 'vcov'"):
+        fit.decompose(decomp_var="x1", cluster="f1", vcov={"CRV1": "f1"})
+
+    with pytest.raises(ValueError, match=r"are not in the data"):
+        fit.decompose(decomp_var="x1", vcov={"CRV1": "missing_cluster"})
+
+    one_cluster_data = data.copy()
+    one_cluster_data["one_cluster"] = 1
+    with pytest.raises(ValueError, match=r"requires at least two clusters"):
+        pf.feols("y ~ x1 + x21 + x22 + x23", data=one_cluster_data).decompose(
+            decomp_var="x1", vcov={"CRV1": "one_cluster"}
         )
+
+    with pytest.raises(ValueError, match=r"only used with inference='analytic'"):
+        fit.decompose(decomp_var="x1", inference="bootstrap", vcov="iid", reps=2)
+
+    crv3_fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, vcov={"CRV3": "f1"})
+    with pytest.raises(VcovTypeNotSupportedError, match=r"does not support CRV3"):
+        crv3_fit.decompose(decomp_var="x1")
+    crv3_fit.decompose(decomp_var="x1", vcov="iid")
+
+    no_data_fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, store_data=False)
+    no_data_fit.decompose(decomp_var="x1", vcov="iid")
+    with pytest.raises(AttributeError, match=r"store_data=True"):
+        no_data_fit.decompose(decomp_var="x1", vcov={"CRV1": "f1"})
+
+    fixed_effect_fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23 | f1", data=data, store_data=False
+    )
+    with pytest.raises(AttributeError, match=r"requires stored model data"):
+        fixed_effect_fit.decompose(decomp_var="x1", vcov="iid")
+
+    lean_fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, lean=True)
+    with pytest.raises(AttributeError, match=r"lean=True"):
+        lean_fit.decompose(decomp_var="x1")
 
     # aweights are supported with analytical inference
     fit = pf.feols(

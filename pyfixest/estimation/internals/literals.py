@@ -2,6 +2,10 @@ from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
 VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+DecompositionVcovTypeOptions = Literal["iid", "hetero", "HC1"]
+DecompositionVcovFamily = Literal["iid", "hetero", "CRV"]
+DecompositionVcovDetail = Literal["iid", "HC1", "CRV1"]
+DecompositionInference = Literal["analytic", "bootstrap"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
