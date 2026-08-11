@@ -1894,19 +1894,20 @@ class Feols(ResultAccessorMixin):
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
             if self._offset_name is not None:
-                if self._offset_name not in newdata.columns:
+                offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
+                    newdata,
+                    context=context,
+                    na_action="drop",
+                    output="pandas",
+                )
+                if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
-                        f"Offset variable '{self._offset_name}' not found in newdata."
+                        f"Offset expression '{self._offset_name}' evaluates to missing "
+                        "values in `newdata`."
                     )
-                offset = pd.to_numeric(
-                    newdata[self._offset_name], errors="coerce"
-                ).to_numpy()
-                if np.isnan(offset).any():
-                    raise ValueError(
-                        f"Offset column '{self._offset_name}' in newdata contains "
-                        "NaN or non-numeric values."
-                    )
-                y_hat = y_hat + offset
+
+                y_hat += offset_mm.iloc[:, 0].to_numpy()
+
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
