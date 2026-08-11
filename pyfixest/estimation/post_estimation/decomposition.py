@@ -226,7 +226,7 @@ def prepare_decomposition_vcov(
         )
 
     family = _DECOMPOSITION_VCOV_FAMILIES[detail]
-    ssc, _, df = ssc_context.get_ssc(
+    ssc, _, df = ssc_context.compute(
         vcov_type=family,
         G=1 if family == "iid" else ssc_context.N,
     )

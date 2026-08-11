@@ -19,7 +19,7 @@ from pyfixest.core.nw import (
 )
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
-from pyfixest.utils.utils import get_ssc as _get_ssc
+from pyfixest.utils.utils import get_ssc
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +57,7 @@ class SscContext:
     k_fe: int
     n_fe: int
 
-    def get_ssc(
+    def compute(
         self,
         *,
         vcov_type: str,
@@ -66,8 +66,8 @@ class SscContext:
         k_fe_nested: int = 0,
         n_fe_fully_nested: int = 0,
     ) -> tuple[np.ndarray, int, int]:
-        "Compute a small-sample correction from the model context."
-        return _get_ssc(
+        "Compute a small-sample correction using the stored model quantities."
+        return get_ssc(
             ssc_dict=self.ssc_dict,
             N=self.N,
             k=self.k,
@@ -154,7 +154,7 @@ def assemble_crv_vcov(
         cluster_col = prep.cluster_arr_int[:, x]
         clustid = np.unique(cluster_col)
 
-        ssc, df_k, df_t = ssc_context.get_ssc(
+        ssc, df_k, df_t = ssc_context.compute(
             vcov_type="CRV",
             G=prep.G[x],
             vcov_sign=vcov_sign_list[x],

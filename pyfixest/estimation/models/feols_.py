@@ -678,14 +678,14 @@ class Feols(ResultAccessorMixin):
         ssc_context = self._ssc_context()
 
         if self._vcov_type == "iid":
-            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
                 vcov_type="iid", G=1
             )
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
             # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
                 vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_hetero()
@@ -695,14 +695,14 @@ class Feols(ResultAccessorMixin):
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
             self._panel_id = kw.get("panel_id")
-            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
                 vcov_type="HAC",
                 G=np.unique(self._data[self._time_id]).shape[0],
             )
             self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
-            self._ssc, self._df_k, self._df_t = ssc_context.get_ssc(
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
                 vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_nid()

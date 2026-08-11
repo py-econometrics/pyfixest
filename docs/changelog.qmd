@@ -67,6 +67,8 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
   equivalent aliases. Inference for partial mediator groupings now includes
   the unreported mediators in the unexplained effect, while sparse grouping
   and shared CRV orchestration reduce memory use and duplicated bookkeeping.
+- Internal SSC context calls now use `compute()` so they are distinct from the
+  public `get_ssc()` calculation they delegate to.
 
 ### GLM API and Behavior
 
