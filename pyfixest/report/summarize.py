@@ -1,10 +1,9 @@
-import warnings
-
 import maketables
 import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -64,8 +63,8 @@ def etable(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
@@ -278,7 +277,11 @@ def etable(
     return None
 
 
-def summary(models: ModelInputType, digits: int = 3) -> None:
+def summary(
+    models: ModelInputType,
+    digits: int = 3,
+    inference_type: InferenceType = "regular",
+) -> None:
     """
     Print a summary of estimation results for each estimated model.
 
@@ -288,10 +291,13 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
+    inference_type : {"regular"}, optional
+        Type of coefficient-wise inference to report, handled the same way as in
+        `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`.
 
     Returns
     -------
@@ -316,7 +322,7 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
     for fxst in list(models):
         depvar = fxst._depvar
 
-        df = fxst.tidy().round(digits)
+        df = fxst.tidy(inference_type=inference_type).round(digits)
 
         estimation_method = _get_estimation_method_name(fxst)
         print("###")
@@ -348,116 +354,3 @@ def summary(models: ModelInputType, digits: int = 3) -> None:
             to_print += f"Deviance: {np.round(deviance_value, digits)} "
 
         print(to_print)
-
-
-def dtable(
-    df: pd.DataFrame,
-    vars: list,
-    stats: list | None = None,
-    bycol: list[str] | None = None,
-    byrow: str | None = None,
-    type: str = "gt",
-    labels: dict | None = None,
-    stats_labels: dict | None = None,
-    digits: int = 2,
-    notes: str = "",
-    counts_row_below: bool = False,
-    hide_stats: bool = False,
-    **kwargs,
-):
-    r"""
-    Generate descriptive statistics tables and create a booktab style table in
-    the desired format (gt or tex).
-
-    .. deprecated:: 0.41.0
-        This function is deprecated and will be removed in a future version.
-        Please use `maketables.DTable()` directly instead.
-        See https://py-econometrics.github.io/maketables/ for documentation.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame containing the table to be displayed.
-    vars : list
-        List of variables to be included in the table.
-    stats : list, optional
-        List of statistics to be calculated. The default is None, that sets ['count','mean', 'std'].
-        All pandas aggregation functions are supported.
-    bycol : list, optional
-        List of variables to be used to group the data by columns. The default is None.
-    byrow : str, optional
-        Variable to be used to group the data by rows. The default is None.
-    type : str, optional
-        Type of table to be created. The default is 'gt'.
-        Type can be 'gt' for great_tables, 'tex' for LaTeX or 'df' for dataframe.
-    labels : dict, optional
-        Dictionary containing the labels for the variables. The default is None.
-    stats_labels : dict, optional
-        Dictionary containing the labels for the statistics. The default is None.
-        The function uses a default labeling which will be replaced by the labels
-        in the dictionary.
-    digits : int, optional
-        Number of decimal places to round the statistics to. The default is 2.
-    notes : str
-        Table notes to be displayed at the bottom of the table.
-    counts_row_below : bool
-        Whether to display the number of observations at the bottom of the table.
-        Will only be carried out when each var has the same number of obs and when
-        byrow is None. The default is False
-    hide_stats : bool
-        Whether to hide the names of the statistics in the table header. When stats
-        are hidden and the user provides no notes string the labels of the stats are
-        listed in the table notes. The default is False.
-    kwargs : dict
-        Additional arguments to be passed to maketables.DTable.
-
-    Returns
-    -------
-    A table in the specified format.
-
-    Examples
-    --------
-    For more examples, take a look at the [regression tables and summary statistics vignette](https://pyfixest.org/table-layout.html).
-
-    ```{python}
-    import pyfixest as pf
-
-    # load data
-    df = pf.get_data()
-    pf.dtable(df, vars = ["Y", "X1", "X2", "f1"])
-    ```
-    """
-    warnings.warn(
-        "pf.dtable() is deprecated and will be removed in a future version. "
-        "Please use maketables.DTable() directly. "
-        "See https://py-econometrics.github.io/maketables/ for documentation.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
-    table = maketables.DTable(
-        df=df,
-        vars=vars,
-        stats=stats,
-        bycol=bycol,
-        byrow=byrow,
-        labels=labels,
-        stats_labels=stats_labels,
-        digits=digits,
-        notes=notes,
-        counts_row_below=counts_row_below,
-        hide_stats=hide_stats,
-        **kwargs,
-    )
-
-    # Handle output based on type parameter
-    if type == "df":
-        return table.df
-    elif type == "gt":
-        return table.make(type="gt")
-    elif type == "tex":
-        return table.make(type="tex")
-    elif type == "html":
-        return table.make(type="html")
-
-    return table.make(type="gt")

@@ -22,9 +22,9 @@ def event_study(
     Estimate Event Study Model.
 
     This function allows for the estimation of treatment effects using different
-    estimators. Currently, it supports "twfe" for the two-way fixed effects
-    estimator and "did2s" for Gardner's two-step DID2S estimator. Other estimators
-    are in development.
+    estimators. It supports "twfe" for the two-way fixed effects estimator,
+    "did2s" for Gardner's two-step DID2S estimator, and "saturated" for a
+    saturated event-study specification with cohort-specific effects.
 
     Parameters
     ----------
@@ -354,7 +354,7 @@ def lpdid(
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
         If True, estimates the pooled average treatment effect on the treated (ATT).
-        Default is False.
+        Default is True.
     xfml : str, optional
         Formula for the covariates. Not yet supported.
 

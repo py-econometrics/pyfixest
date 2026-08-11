@@ -1,4 +1,5 @@
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -29,21 +30,69 @@ def test_confint():
 
     # simultaneous CIs: simultaneous CIs always wider
     for _ in range(5):
-        assert np.all(
-            confint.loc[:, "2.5%"] > fit.confint(alpha=0.05, joint=True).loc[:, "2.5%"]
-        )
-        assert np.all(
-            confint.loc[:, "97.5%"]
-            < fit.confint(alpha=0.05, joint=True).loc[:, "97.5%"]
-        )
+        simult = fit.confint(alpha=0.05, inference_type="simult")
+        assert np.all(confint.loc[:, "2.5%"] > simult.loc[:, "2.5%"])
+        assert np.all(confint.loc[:, "97.5%"] < simult.loc[:, "97.5%"])
 
     # test seeds
-    confint1 = fit.confint(joint=True, seed=1)
-    confint2 = fit.confint(joint=True, seed=1)
-    confint3 = fit.confint(joint=True, seed=2)
+    confint1 = fit.confint(inference_type="simult", seed=1)
+    confint2 = fit.confint(inference_type="simult", seed=1)
+    confint3 = fit.confint(inference_type="simult", seed=2)
 
     assert np.all(confint1 == confint2)
     assert np.all(confint1 != confint3)
+
+    # Preserve the legacy positional seed and reps arguments.
+    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+        legacy_positional = fit.confint(0.05, None, None, False, True, 1, 100)
+    keyword_args = fit.confint(
+        alpha=0.05,
+        inference_type="simult",
+        seed=1,
+        reps=100,
+    )
+    pd.testing.assert_frame_equal(legacy_positional, keyword_args)
+
+
+def test_joint_confint_preserves_keep_order():
+    fit = feols("Y ~ X1 + X2", data=get_data())
+    regular = fit.confint(keep=["X2", "X1"], exact_match=True)
+    confint = fit.confint(
+        keep=["X2", "X1"],
+        exact_match=True,
+        inference_type="simult",
+        seed=1,
+        reps=100,
+    )
+
+    assert regular.index.tolist() == ["X2", "X1"]
+    assert confint.index.tolist() == ["X2", "X1"]
+    np.testing.assert_allclose(
+        confint.mean(axis=1).to_numpy(),
+        fit.coef().loc[["X2", "X1"]].to_numpy(),
+    )
+
+
+def test_confint_joint_maps_to_simult():
+    """The deprecated `joint=True` path matches `inference_type="simult"`."""
+    fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())
+
+    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+        deprecated = fit.confint(joint=True, seed=1)
+    simult = fit.confint(inference_type="simult", seed=1)
+    pd.testing.assert_frame_equal(deprecated, simult)
+
+    # The new spellings emit no FutureWarning.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        fit.confint(inference_type="simult", seed=1)
+        fit.confint(inference_type="regular")
+
+
+def test_tidy_inference_type_regular():
+    """`tidy(inference_type="regular")` matches the default `tidy()` output."""
+    fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())
+    pd.testing.assert_frame_equal(fit.tidy(), fit.tidy(inference_type="regular"))
 
 
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason="requires python3.11 or lower.")
@@ -75,6 +124,6 @@ def test_against_doubleml():
         df,
         vcov="hetero",
     )
-    pyfixest_res = m.confint(keep="X_.$", reps=10_000, joint=True)
+    pyfixest_res = m.confint(keep="X_.$", reps=10_000, inference_type="simult")
 
     assert np.all(np.abs(dml_res.values - pyfixest_res.values) < 1e-2)

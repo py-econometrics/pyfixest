@@ -58,10 +58,9 @@ def feglm(
     """
     Estimate GLM regression models with fixed effects.
 
-    Supported families: [logit](/reference/estimation.models.felogit_.Felogit.qmd),
-    [probit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-    [gaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd),
-    and [poisson](/reference/estimation.models.fepois_.Fepois.qmd).
+    Supported families: `logit`, `probit`, and `gaussian` (see
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd)), and `poisson`
+    (see [Fepois](/reference/estimation.models.fepois_.Fepois.qmd)).
 
     References
     ----------
@@ -86,7 +85,7 @@ def feglm(
         - Cumulative stepwise regression (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
-        - Interacted fixed effects (fe1^fe2)
+        - Interacted fixed effects (fe1:fe2)
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
@@ -120,10 +119,11 @@ def feglm(
         Type of weights variable. Either "aweights" (analytic / precision
         weights) or "fweights" (frequency weights). Defaults to "aweights".
 
-    offset : Union[None, str], optional
-        Default is None. Name of a numeric column in `data` to use as an offset
-        on the link scale. Only supported with `family='poisson'`. For exposure
-        adjustments, pass the exposure on the log scale.
+    offset : str | None, optional
+        Default is None. Formulaic expression that evaluates to one numeric
+        offset column on the link scale. Only supported with
+        `family='poisson'`. For exposure adjustments, use an expression such as
+        `offset="log(population)"`.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -222,10 +222,22 @@ def feglm(
     -------
     object
         An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
-        (or one of its subclasses: [Felogit](/reference/estimation.models.felogit_.Felogit.qmd),
-        [Feprobit](/reference/estimation.models.feprobit_.Feprobit.qmd),
-        [Fegaussian](/reference/estimation.models.fegaussian_.Fegaussian.qmd)) or an instance of
-        class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+        (a family-specific subclass for `logit`, `probit`, or `gaussian`) or an
+        instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+
+    Notes
+    -----
+    `Feglm` inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A GLM fit therefore
+    supports the same post-estimation methods as an OLS fit, among them
+    `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with
+    `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`.
+    See the Post-Estimation Methods section of the function reference for the
+    full list.
+
+    `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
+    link scale. For effects on the response scale, see the
+    [marginal effects guide](/how-to/marginaleffects.qmd).
 
     Examples
     --------

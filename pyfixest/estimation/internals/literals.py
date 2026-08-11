@@ -14,6 +14,7 @@ SolverOptions = Literal[
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
+InferenceType = Literal["regular", "simult", "savi"]
 
 
 def _validate_literal_argument(arg: Any, literal: Any) -> None:

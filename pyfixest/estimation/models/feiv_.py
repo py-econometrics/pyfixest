@@ -132,6 +132,28 @@ class Feiv(Feols):
     ValueError
         If Z is not a two-dimensional array.
 
+    Examples
+    --------
+    `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
+    when the formula includes an IV part, i.e.
+    `depvar ~ exog | fe | endog ~ instrument`.
+
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.tidy()
+    ```
+
+    The first stage F-statistic is stored on the fitted object.
+
+    ```{python}
+    fit._f_stat_1st_stage
+    ```
+
+    See the
+    [instrumental variables tutorial](/tutorials/instrumental-variables.qmd) for
+    details.
     """
 
     # Constructor and methods implementation...

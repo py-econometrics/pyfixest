@@ -19,6 +19,7 @@ dist/
 # Unit test / coverage reports
 .coverage*
 coverage.xml
+coverage-nojit.xml
 htmlcov/
 .pytest_cache/
 
