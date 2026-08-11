@@ -24,7 +24,7 @@ This function constructs model matrices for econometric estimation by parsing fo
 | formula | Formula | A Formula object specifying the model structure, including dependent and independent variables, fixed effects, and instrumental variables. | *required* |
 | data | pd.DataFrame | The input data containing all variables referenced in the formula. The index will be reset during processing. | *required* |
 | weights | str or None | Column name in data to use as observation weights. Weights must be non-negative numeric values. If None, no weighting is applied. | `None` |
-| offset | str or None | Column name in data to use as an offset (added to the linear predictor with a fixed coefficient of 1). Rows with NaN in the offset column are dropped together with NaN rows in the rest of the formula. | `None` |
+| offset | str or None | Formulaic expression that evaluates to one numeric offset column. The offset is added to the linear predictor with a fixed coefficient of 1. Rows with missing offset values are dropped together with missing rows in the rest of the formula. | `None` |
 | drop_singletons | bool | If True, observations that are singletons in any fixed effect category are dropped from the model. | `False` |
 | drop_intercept | bool | If True, the intercept column is removed from the independent variables and instruments matrices. The intercept is always removed when fixed effects are present, regardless of this parameter. | `False` |
 | ensure_full_rank | bool | If True, formulaic will ensure the design matrix is full rank by dropping collinear columns. | `True` |

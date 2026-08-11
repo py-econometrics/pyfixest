@@ -845,8 +845,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 10%">
-<col style="width: 78%">
+<col style="width: 9%">
+<col style="width: 80%">
 <col style="width: 4%">
 </colgroup>
 <thead>
@@ -879,7 +879,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>offset</td>
 <td>str or None</td>
-<td>Column name in data to use as an offset (added to the linear predictor with a fixed coefficient of 1). Rows with NaN in the offset column are dropped together with NaN rows in the rest of the formula.</td>
+<td>Formulaic expression that evaluates to one numeric offset column. The offset is added to the linear predictor with a fixed coefficient of 1. Rows with missing offset values are dropped together with missing rows in the rest of the formula.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
@@ -935,7 +935,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="7abb1c68" class="cell" data-execution_count="1">
+<div id="87b99ae0" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.model_matrix <span class="im">import</span> create_model_matrix</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.parse <span class="im">import</span> Formula</span>
@@ -945,7 +945,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>model_matrix <span class="op">=</span> create_model_matrix(formula<span class="op">=</span>formula, data<span class="op">=</span>data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="J8DJxg"></div>
+        <div id="2wpECq"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -969,9 +969,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("J8DJxg").appendChild(div);
+                    document.getElementById("2wpECq").appendChild(div);
                 };
-                var e = document.getElementById("J8DJxg");
+                var e = document.getElementById("2wpECq");
                 e.appendChild(script);
             })()
         </script>
@@ -979,7 +979,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="oNOxbs"></div>
+        <div id="pF9vha"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1003,9 +1003,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("oNOxbs").appendChild(div);
+                    document.getElementById("pF9vha").appendChild(div);
                 };
-                var e = document.getElementById("oNOxbs");
+                var e = document.getElementById("pF9vha");
                 e.appendChild(script);
             })()
         </script>

@@ -39,7 +39,7 @@ Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algori
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress. | `None` |
 | weights | Union\[None, str\], optional. | Default is None. Weights for weighted Poisson regression. If None, all observations are weighted equally. If a string, the name of the column in `data` that contains the weights. | `None` |
 | weights_type | WeightsTypeOptions | Options include `aweights` or `fweights`. `aweights` implement analytic or precision weights, while `fweights` implement frequency weights. Frequency weights are useful for compressed count data where identical observations are aggregated. For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/. | `'aweights'` |
-| offset | str | Default is None. Name of a numeric column in `data` to use as an offset in the Poisson regression. The offset is added to the linear predictor with its coefficient fixed at 1. This is useful for modeling rates when exposure differs across observations; pass the exposure on the log scale, e.g. `offset="log_population"`. | `None` |
+| offset | str \| None | Default is None. Formulaic expression that evaluates to one numeric column in `data`. The offset is added to the linear predictor with its coefficient fixed at 1. This is useful for modeling rates when exposure differs across observations, e.g. `offset="log(population)"`. | `None` |
 | ssc | str | A ssc object specifying the small sample correction for inference. | `None` |
 | fixef_rm | FixedRmOptions | Specifies whether to drop singleton fixed effects. Can be equal to “singletons” (default) or “none”. “singletons” will drop singleton fixed effects. This will not impact point estimates but it will impact standard errors. | `'singleton'` |
 | iwls_tol | Optional\[float\] | Tolerance for IWLS convergence, by default 1e-08. | `1e-08` |
@@ -116,12 +116,10 @@ import numpy as np
 data["population"] = np.random.default_rng(123).integers(
     50_000, 500_000, size=len(data)
 )
-data["log_population"] = np.log(data["population"])
-
 fit_rate = pf.fepois(
     "Y ~ X1 + X2 | f1 + f2",
     data=data,
-    offset="log_population",
+    offset="log(population)",
 )
 fit_rate.tidy()
 ```
