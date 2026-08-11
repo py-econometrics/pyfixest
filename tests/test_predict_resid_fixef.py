@@ -7,7 +7,6 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.utils.dev_utils import _extract_variable_level
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -79,7 +78,7 @@ def test_poisson_prediction_internally(data, weights, fml):
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        # "Y~ X1 | X3^X4",
+        "Y~ X1 | f1:f2",
     ],
 )
 def test_vs_fixest(data, fml):
@@ -93,14 +92,15 @@ def test_vs_fixest(data, fml):
     fepois_mod.fixef(atol=1e-12, btol=1e-12)
 
     # fixest estimation
+    r_fml = fml.replace("f1:f2", "f1^f2")
     r_fixest_ols = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )
 
     r_fixest_pois = fixest.fepois(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )
@@ -142,6 +142,7 @@ def test_vs_fixest(data, fml):
     if not np.allclose(
         feols_mod.predict(newdata=data2)[0:5],
         stats.predict(r_fixest_ols, newdata=data2)[0:5],
+        equal_nan=True,
     ):
         raise ValueError("Predictions for OLS are not equal with newdata.")
 
@@ -173,7 +174,7 @@ def test_vs_fixest(data, fml):
     data_off["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data_off)))
     fepois_mod_off = pf.fepois(fml=fml, data=data_off, offset="off")
     r_fixest_pois_off = fixest.fepois(
-        ro.Formula(fml), data=data_off, offset=ro.Formula("~off")
+        ro.Formula(r_fml), data=data_off, offset=ro.Formula("~off")
     )
     data2_off = data_off.copy()[1:500]
     if not np.allclose(
@@ -251,7 +252,7 @@ def test_predict_nas():
     [
         "Y~ X1 | f1",
         "Y~ X1 | f1 + f2",
-        # "Y~ X1 | X3^X4",
+        "Y~ X1 | f1:f2",
     ],
 )
 def test_new_fixef_level(data, fml):
@@ -259,8 +260,9 @@ def test_new_fixef_level(data, fml):
 
     feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
     # fixest estimation
+    r_fml = fml.replace("f1:f2", "f1^f2")
     r_fixest_ols = fixest.feols(
-        ro.Formula(fml),
+        ro.Formula(r_fml),
         data=data,
         se="hetero",
     )
@@ -340,18 +342,6 @@ def test_specific_categorical_prediction():
     np.testing.assert_almost_equal(prediction[0], expected_prediction, decimal=3)
 
 
-def test_extract_variable_level():
-    """Verify the correct extracation of lists, floats, and integers."""
-    var = "C(SHOPPER_PLATFORM)[T.['ios', 'android']]"
-    assert _extract_variable_level(var) == ("C(SHOPPER_PLATFORM)", "['ios', 'android']")
-    var = "C(f3)[T.1.0]"
-    assert _extract_variable_level(var) == ("C(f3)", "1.0")
-    var = "C(f4)[T.1]"
-    assert _extract_variable_level(var) == ("C(f4)", "1")
-    var = "C(f5)[1.0]"
-    assert _extract_variable_level(var) == ("C(f5)", "1.0")
-
-
 def _lspline(series: pd.Series, knots: list[float]) -> np.array:
     """Generate a linear spline design matrix for the input series based on knots."""
     vector = series.values
@@ -374,14 +364,14 @@ def test_context_capture_with_out_of_sample_predict():
 
     spline_split = _lspline(data["X2"], [0, 1])
     data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
+    data["X2_0_1"] = spline_split[:, 1]
+    data["X2_1"] = spline_split[:, 2]
 
     # Split data to training and testing
     data_train = data.iloc[:1000]
     data_test = data.iloc[1000:]
 
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data_train)
+    explicit_fit = pf.feols("Y ~ X2_0 + X2_0_1 + X2_1 | f1 + f2", data=data_train)
     context_captured_fit = pf.feols(
         "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
     )

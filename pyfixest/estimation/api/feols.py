@@ -31,7 +31,7 @@ def feols(
     data: DataFrameType,  # type: ignore
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
-    weights: None | str = None,
+    weights: str | None = None,
     ssc: dict[str, str | bool] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     collin_tol: float = 1e-09,
@@ -62,7 +62,7 @@ def feols(
         Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
         fixed effects, and instruments. Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables,
-        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1^fe2).
+        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
@@ -188,6 +188,23 @@ def feols(
         An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class,
         [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) class (when using instrumental variables), or
         [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+
+    Notes
+    -----
+    Post-estimation methods are defined on
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). All other model
+    classes inherit from it:
+    [Feiv](/reference/estimation.models.feiv_.Feiv.qmd),
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) and
+    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd). The same
+    methods are therefore available independently of which estimation function
+    was called. Exceptions are documented with the respective function.
+
+    See the Post-Estimation Methods section of the function reference for the
+    full list. Commonly used are `vcov()`, `tidy()`, `coef()`, `se()`,
+    `confint()`, `predict()`, `fixef()`, `wildboottest()`, `ritest()` and
+    `decompose()`.
 
     Examples
     --------

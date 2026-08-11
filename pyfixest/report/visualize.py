@@ -104,8 +104,8 @@ def iplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -292,8 +292,8 @@ def coefplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -444,8 +444,8 @@ def qplot(
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
@@ -459,6 +459,23 @@ def qplot(
     -------
     object
         A matplotplit figure.
+
+    Examples
+    --------
+    Plots the coefficients of a quantile regression across quantiles, the
+    counterpart of `coefplot()` for `quantreg()`.
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.25, 0.5, 0.75, 0.9])
+
+    pf.qplot(fit)
+    ```
+
+    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
+    for details.
     """
     if rename_models is None:
         rename_models = {}

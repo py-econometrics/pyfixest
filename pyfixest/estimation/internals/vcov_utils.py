@@ -60,7 +60,7 @@ def prepare_cluster_state(
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-            all_fixef_array=np.array(fixef.replace("^", "_").split("+"), dtype=str),
+            all_fixef_array=np.array(fixef.split("+"), dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
             cluster_data=cluster_arr_int.astype(np.uintp),
             fe_data=fe.to_numpy().astype(np.uintp)

@@ -92,6 +92,40 @@ def test_depvar_numeric():
         feols(fml="Y ~ X1", data=data)
 
 
+@pytest.mark.parametrize(
+    "fml,categorical_endogenous,error_message",
+    [
+        (
+            "two_columns(Y) ~ X1",
+            False,
+            "exactly one dependent variable",
+        ),
+        (
+            "Y ~ X1 + [X2 ~ Z1]",
+            True,
+            "endogenous variable must be numeric",
+        ),
+        (
+            "Y ~ X1 + [two_columns(X2) ~ Z1]",
+            False,
+            "exactly one endogenous variable",
+        ),
+    ],
+)
+def test_dependent_and_endogenous_model_matrix_errors(
+    fml, categorical_endogenous, error_message
+):
+    data = get_data().dropna().copy()
+    if categorical_endogenous:
+        data["X2"] = pd.Categorical(data["X2"] > 0)
+
+    def two_columns(x):
+        return np.column_stack((x, x))
+
+    with pytest.raises(TypeError, match=error_message):
+        feols(fml=fml, data=data, context={"two_columns": two_columns})
+
+
 def test_iv_errors():
     data = get_data()
 
@@ -181,27 +215,31 @@ def test_poisson_errors():
 def test_poisson_offset_errors():
     data = pf.get_data(model="Fepois").dropna()
 
-    # offset column does not exist in the data
-    with pytest.raises(ValueError, match="not found in data"):
+    # offset expression references a variable not present in the data
+    with pytest.raises(FactorEvaluationError, match="does_not_exist"):
         pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
 
-    # offset column is not numeric
+    # offset expression is not numeric
     data_str = data.copy()
     data_str["offset_str"] = "a"
-    with pytest.raises(ValueError, match="must be numeric"):
+    with pytest.raises(TypeError, match="must be numeric"):
         pf.fepois("Y ~ X1", data=data_str, offset="offset_str")
 
-    # predict(newdata=...) with offset column missing in newdata
+    # offset expression must evaluate to one column
+    with pytest.raises(ValueError, match="exactly one column"):
+        pf.fepois("Y ~ X1", data=data, offset="X1 + X2")
+
+    # predict(newdata=...) with offset variable missing in newdata
     data = data.copy()
     data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
     mod = pf.fepois("Y ~ X1", data=data, offset="off")
-    with pytest.raises(ValueError, match="not found in newdata"):
+    with pytest.raises(FactorEvaluationError, match="off"):
         mod.predict(newdata=data.drop(columns=["off"]))
 
-    # predict(newdata=...) with NaN in offset column
+    # predict(newdata=...) with NaN in the offset variable
     nd_nan = data.copy()
     nd_nan.loc[nd_nan.index[0], "off"] = np.nan
-    with pytest.raises(ValueError, match="NaN or non-numeric"):
+    with pytest.raises(ValueError, match="evaluates to missing values"):
         mod.predict(newdata=nd_nan)
 
 
@@ -271,13 +309,37 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
-def test_predict_dtype_error():
+def test_predict_fe_dtype_mismatch():
+    """FE dtype handling in predict(newdata=...).
+
+    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
+    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
+    numeric-numeric differences predict fine; fully unmatched FE levels warn.
+    """
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
 
-    data["f1"] = data["f1"].fillna(0).astype(int)
-    with pytest.warns(UserWarning):
-        fit.predict(newdata=data.iloc[0:100])
+    # numeric-numeric dtype difference (float fit vs int newdata): no complaint
+    newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata["f1"] = newdata["f1"].astype(int)
+    pred = fit.predict(newdata=newdata)
+    assert np.isfinite(pred).any()
+
+    # numeric fit data vs string newdata: clear pyfixest error
+    newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_str["f1"] = newdata_str["f1"].astype(str)
+    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
+        fit.predict(newdata=newdata_str)
+
+    # no matching FE level at all: warning + all-NaN predictions
+    newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_shift["f1"] = newdata_shift["f1"] + 1000
+    with pytest.warns(
+        UserWarning,
+        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level",
+    ):
+        pred_shift = fit.predict(newdata=newdata_shift)
+    assert np.all(np.isnan(pred_shift))
 
 
 def test_wildboottest_errors():

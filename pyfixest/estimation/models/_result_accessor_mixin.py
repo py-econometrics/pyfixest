@@ -26,19 +26,94 @@ class TidyColumnAccessors:
         raise NotImplementedError
 
     def coef(self) -> pd.Series:
-        """Estimated coefficients as a pandas Series."""
+        """
+        Estimated coefficients as a pandas Series.
+
+        Returns the `Estimate` column of `tidy()`.
+
+        Returns
+        -------
+        pandas.Series
+            Point estimates, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.coef()
+        ```
+        """
         return self.tidy()["Estimate"]
 
     def se(self) -> pd.Series:
-        """Coefficient standard errors as a pandas Series."""
+        """
+        Coefficient standard errors as a pandas Series.
+
+        Returns the `Std. Error` column of `tidy()`. The values depend on the
+        variance estimator of the model, which can be changed via `vcov()`.
+
+        Returns
+        -------
+        pandas.Series
+            Standard errors, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.se()
+        ```
+        """
         return self.tidy()["Std. Error"]
 
     def tstat(self) -> pd.Series:
-        """Coefficient t-statistics as a pandas Series."""
+        """
+        Coefficient t-statistics as a pandas Series.
+
+        Returns the `t value` column of `tidy()`, i.e. each estimate divided by
+        its standard error.
+
+        Returns
+        -------
+        pandas.Series
+            t-statistics, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.tstat()
+        ```
+        """
         return self.tidy()["t value"]
 
     def pvalue(self) -> pd.Series:
-        """Coefficient p-values as a pandas Series."""
+        """
+        Coefficient p-values as a pandas Series.
+
+        Returns the `Pr(>|t|)` column of `tidy()`, for the two-sided null that a
+        coefficient is zero.
+
+        Returns
+        -------
+        pandas.Series
+            p-values, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.pvalue()
+        ```
+        """
         return self.tidy()["Pr(>|t|)"]
 
 
@@ -206,14 +281,27 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         None
+            The measures are stored on the model object rather than returned.
 
-        Creates the following instances:
-        - r2 (float): R-squared of the regression model.
-        - adj_r2 (float): Adjusted R-squared of the regression model.
-        - r2_within (float): R-squared of the regression model, computed on
-        demeaned dependent variable.
-        - adj_r2_within (float): Adjusted R-squared of the regression model,
-        computed on demeaned dependent variable.
+        Notes
+        -----
+        Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
+        `_adj_r2_within`. The `_within` variants are computed on the demeaned
+        dependent variable and are only defined for models with fixed effects.
+
+        Examples
+        --------
+        The estimation functions call this during fitting, so the measures are
+        available on any fitted model.
+
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.get_performance()
+
+        fit._r2, fit._adj_r2, fit._r2_within
+        ```
         """
         Y_within = self._Y
         Y = self._Y_untransformed.to_numpy()
@@ -263,6 +351,22 @@ class ResultAccessorMixin(TidyColumnAccessors):
         tidy_df : pd.DataFrame
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.tidy()
+        ```
+
+        Changing the variance estimator changes the standard errors, t-values
+        and p-values reported by `tidy()`.
+
+        ```{python}
+        fit.vcov("hetero").tidy()
+        ```
         """
         inference_type = self._normalize_inference_type(inference_type)
         if inference_type == "simult":
@@ -463,9 +567,21 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Fitted model residuals.
 
+        For weighted models the residuals are rescaled by the square root of the
+        weights, so they are on the scale of the original dependent variable.
+
         Returns
         -------
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.resid()[:5]
+        ```
         """
         return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
