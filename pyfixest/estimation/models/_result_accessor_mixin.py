@@ -151,23 +151,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
-        _module = import_module("pyfixest.report")
 
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
-        self.summary.__doc__ = _tmp.__doc__
+        def _call_report_method(name: str, *args, **kwargs):
+            module = import_module("pyfixest.report")
+            method = getattr(module, name)
+            return method([self], *args, **kwargs)
 
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
-        self.coefplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
-        self.iplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
-        self.etable.__doc__ = _tmp.__doc__
+        self.summary = functools.partial(_call_report_method, "summary")
+        self.coefplot = functools.partial(_call_report_method, "coefplot")
+        self.iplot = functools.partial(_call_report_method, "iplot")
+        self.etable = functools.partial(_call_report_method, "etable")
 
     def evalue(
         self,

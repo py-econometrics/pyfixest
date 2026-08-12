@@ -1,5 +1,23 @@
-import matplotlib.pyplot as plt
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
+
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
+
+
+def _import_matplotlib():
+    """Import matplotlib only when a DiD plot is requested."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError(
+            "DiD plotting requires matplotlib. "
+            "Install it with `pip install matplotlib`."
+        ) from None
+    return plt
 
 
 def panelview(
@@ -251,6 +269,7 @@ def _plot_panelview_output_plot(
     ylim: tuple[float, float] | None = None,
     figsize: tuple | None = (11, 3),
 ) -> plt.Axes:
+    plt = _import_matplotlib()
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     for unit_id in data_pivot.index:
@@ -350,6 +369,7 @@ def _plot_panelview(
     noticks: bool | None = False,
     title: str | None = None,
 ) -> plt.Axes:
+    plt = _import_matplotlib()
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")

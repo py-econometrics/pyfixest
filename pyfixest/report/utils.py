@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import re
 import warnings
 from collections import Counter
 from collections.abc import ValuesView
+from typing import TYPE_CHECKING, TypeAlias
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+if TYPE_CHECKING:
+    from pyfixest.estimation.FixestMulti_ import FixestMulti
+    from pyfixest.estimation.models.feiv_ import Feiv
+    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.models.fepois_ import Fepois
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+    ModelInputType: TypeAlias = (
+        FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+    )
+else:
+    ModelInputType: TypeAlias = object
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -242,6 +250,11 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
+    from pyfixest.estimation.FixestMulti_ import FixestMulti
+    from pyfixest.estimation.models.feiv_ import Feiv
+    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.models.fepois_ import Fepois
+
     models_list: list[Feols | Fepois | Feiv] = []
 
     if isinstance(models, (Feols, Fepois, Feiv)):

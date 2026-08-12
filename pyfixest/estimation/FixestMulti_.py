@@ -74,20 +74,15 @@ class FixestMulti(TidyColumnAccessors):
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
-        # set functions inherited from other modules
-        _module = import_module("pyfixest.report")
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.iplot.__doc__ = _tmp.__doc__
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.summary.__doc__ = _tmp.__doc__
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.etable.__doc__ = _tmp.__doc__
+        def _call_report_method(name: str, *args, **kwargs):
+            module = import_module("pyfixest.report")
+            method = getattr(module, name)
+            return method(self.all_fitted_models.values(), *args, **kwargs)
+
+        self.coefplot = functools.partial(_call_report_method, "coefplot")
+        self.iplot = functools.partial(_call_report_method, "iplot")
+        self.summary = functools.partial(_call_report_method, "summary")
+        self.etable = functools.partial(_call_report_method, "etable")
 
     @property
     def _is_iv(self) -> bool:

@@ -1,4 +1,3 @@
-import maketables
 import numpy as np
 import pandas as pd
 
@@ -177,6 +176,13 @@ def etable(
     pf.etable([fit1, fit2])
     ```
     """
+    try:
+        import maketables
+    except ImportError:
+        raise ImportError(
+            "`etable()` requires maketables. Install it with `pip install maketables`."
+        ) from None
+
     # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
@@ -338,7 +344,7 @@ def summary(
         print("Inference: ", fxst._vcov_type_detail)
         print("Observations: ", fxst._N)
         print("")
-        print(df.to_markdown(floatfmt=f".{digits}f"))
+        print(df.to_string(float_format=lambda value: f"{value:.{digits}f}"))
         print("---")
 
         to_print = ""
