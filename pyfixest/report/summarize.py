@@ -180,7 +180,8 @@ def etable(
         import maketables
     except ImportError:
         raise ImportError(
-            "`etable()` requires maketables. Install it with `pip install maketables`."
+            "`etable()` requires the optional `tables` dependencies. "
+            "Install them with `pip install 'pyfixest[tables]'`."
         ) from None
 
     # Apply pyfixest default for signif_code (different from maketables default)

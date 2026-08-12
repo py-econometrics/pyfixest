@@ -774,8 +774,8 @@ class GelbachDecomposition:
             from maketables import MTable
         except ImportError:
             raise ImportError(
-                "`etable()` requires maketables. "
-                "Install it with `pip install maketables`."
+                "`etable()` requires the optional `tables` dependencies. "
+                "Install them with `pip install 'pyfixest[tables]'`."
             ) from None
 
         if column_heads is not None and len(column_heads) != 3:

@@ -58,7 +58,7 @@ def _import_matplotlib():
     except ImportError:
         raise ImportError(
             "The matplotlib backend requires matplotlib. "
-            "Install it with `pip install matplotlib`."
+            "Install it with `pip install 'pyfixest[plots]'`."
         ) from None
     return plt
 
@@ -88,7 +88,8 @@ def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int
         if not _HAS_LETS_PLOT:
             raise ImportError(
                 "The 'lets_plot' package is required for the 'lets_plot' backend. "
-                "Please install it with 'pip install lets-plot' or use the 'matplotlib' backend."
+                "Install it with `pip install 'pyfixest[plots]'` or use the "
+                "matplotlib backend."
             )
         return (500, 300)
     else:
@@ -534,7 +535,8 @@ def _coefplot(plot_backend, *, figsize, **plot_kwargs):
         if not _HAS_LETS_PLOT:
             raise ImportError(
                 "The 'lets_plot' package is required for the 'lets_plot' backend. "
-                "Please install it with 'pip install lets-plot' or use the 'matplotlib' backend."
+                "Install it with `pip install 'pyfixest[plots]'` or use the "
+                "matplotlib backend."
             )
         return _coefplot_lets_plot(figsize=figsize, **plot_kwargs)
     elif plot_backend == "matplotlib":
