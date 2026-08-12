@@ -1786,6 +1786,10 @@ class Feols(ResultAccessorMixin):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            The fixed effects are cached after they are first computed. Passing an
+            `atol` or `btol` below the cached one recomputes them at the tighter
+            tolerance; a looser one reuses the cached values rather than degrading
+            them.
         type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
