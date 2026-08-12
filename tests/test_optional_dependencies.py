@@ -37,14 +37,14 @@ def test_core_estimation_without_reporting_dependencies():
         try:
             fit.etable()
         except ImportError as exc:
-            assert "maketables" in str(exc)
+            assert "pyfixest[tables]" in str(exc)
         else:
-            raise AssertionError("etable() should require maketables")
+            raise AssertionError("etable() should require the tables extra")
 
         try:
             fit.coefplot()
         except ImportError as exc:
-            assert "matplotlib" in str(exc)
+            assert "pyfixest[plots]" in str(exc)
         else:
             raise AssertionError("coefplot() should require a plotting backend")
         """

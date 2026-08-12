@@ -116,8 +116,9 @@ def create_decomposition_plot(
         import matplotlib.pyplot as plt
     except ImportError:
         raise ImportError(
-            "matplotlib is required for coefplot. Install with: pip install matplotlib"
-        )
+            "Decomposition plotting requires matplotlib. "
+            "Install it with `pip install 'pyfixest[plots]'`."
+        ) from None
 
     # Create configuration
     config = PlotConfig(figsize=figsize or (12, 8))
@@ -675,7 +676,10 @@ def _finalize_plot(
     try:
         import matplotlib.pyplot as plt
     except ImportError:
-        raise ImportError("matplotlib is required for coefplot")
+        raise ImportError(
+            "Decomposition plotting requires matplotlib. "
+            "Install it with `pip install 'pyfixest[plots]'`."
+        ) from None
 
     bar_data = plot_data["bar_data"]
 

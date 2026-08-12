@@ -38,14 +38,10 @@ urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 dependencies = [
     "formulaic>=1.2.0,<1.3",
     "joblib>=1.4.2",
-    "maketables>=0.1.0",
-    "narwhals>=1.13.3",
+    "narwhals>=1.17",
     "numpy>=1.25.2",
-    "pandas>=1.1.0",
+    "pandas>=1.3",
     "scipy>=1.6",
-    "seaborn>=0.13.2",
-    "tabulate>=0.9.0",
-    "tqdm>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -56,7 +52,20 @@ torch = [
     "torch>=2.0",
 ]
 plots = [
+    "matplotlib>=3.7.0",
     "lets-plot>=4.0.0",
+]
+tables = [
+    "maketables>=0.1.0",
+    "tabulate>=0.9.0",
+]
+all = [
+    "lets-plot>=4.0.0",
+    "maketables>=0.1.0",
+    "matplotlib>=3.7.0",
+    "numba>=0.58.0",
+    "tabulate>=0.9.0",
+    "torch>=2.0",
 ]
 benchmarks = [
     "linearmodels",
@@ -172,10 +181,8 @@ module = [
     "lets_plot.*",
     "formulaic.*",
     "wildboottest.*",
-    "tabulate.*",
     "joblib.*",
     "narwhals.*",
-    "tqdm.*",
 ]
 ignore_missing_imports = true
 
@@ -205,7 +212,7 @@ doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
 
 [tool.pixi.pypi-dependencies]
-pyfixest = { path = ".", editable = true, extras = ["plots", "numba"] }
+pyfixest = { path = ".", editable = true, extras = ["plots", "tables", "numba"] }
 wildboottest = ">=0.3.2"
 maturin-import-hook = ">=0.2.0"
 maturin = ">=1.8"

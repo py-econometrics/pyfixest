@@ -23,6 +23,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   plain-text formatter. Table and plotting packages are imported only when their
   corresponding features are called. Internal progress bars and the seaborn-only
   plotting path have been removed.
+- Install publication tables with `pip install "pyfixest[tables]"`, plotting
+  backends with `pip install "pyfixest[plots]"`, or every end-user feature with
+  `pip install "pyfixest[all]"`. NumPy, pandas, Formulaic, SciPy, Narwhals, and
+  Joblib remain in the base installation.
 
 ### Inference Types
 

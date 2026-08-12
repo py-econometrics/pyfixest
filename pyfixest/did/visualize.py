@@ -15,7 +15,7 @@ def _import_matplotlib():
     except ImportError:
         raise ImportError(
             "DiD plotting requires matplotlib. "
-            "Install it with `pip install matplotlib`."
+            "Install it with `pip install 'pyfixest[plots]'`."
         ) from None
     return plt
 

@@ -424,7 +424,7 @@ def _plot_ritest_pvalue(
         except ImportError:
             raise ImportError(
                 "The matplotlib backend requires matplotlib. "
-                "Install it with `pip install matplotlib`."
+                "Install it with `pip install 'pyfixest[plots]'`."
             ) from None
 
         stats = np.asarray(ri_stats, dtype=float)

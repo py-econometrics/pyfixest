@@ -13,6 +13,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test-minimal-install:
+    name: "Test minimal installation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install base package
+        run: |
+          python -m venv /tmp/pyfixest-minimal
+          /tmp/pyfixest-minimal/bin/python -m pip install .
+
+      - name: Check core API without optional dependencies
+        run: |
+          /tmp/pyfixest-minimal/bin/python - <<'PY'
+          from importlib.util import find_spec
+
+          optional = [
+              "great_tables",
+              "lets_plot",
+              "maketables",
+              "matplotlib",
+              "seaborn",
+              "tabulate",
+              "tqdm",
+          ]
+          installed = [package for package in optional if find_spec(package) is not None]
+          assert not installed, f"Unexpected optional dependencies: {installed}"
+
+          import pyfixest as pf
+
+          fit = pf.feols("Y ~ X1", pf.get_data(N=100))
+          fit.summary()
+
+          try:
+              fit.etable()
+          except ImportError as exc:
+              assert "pyfixest[tables]" in str(exc)
+          else:
+              raise AssertionError("etable() should require the tables extra")
+
+          try:
+              fit.coefplot(plot_backend="matplotlib")
+          except ImportError as exc:
+              assert "pyfixest[plots]" in str(exc)
+          else:
+              raise AssertionError("coefplot() should require the plots extra")
+          PY
+
   test-python:
     name: "Tests Python (${{ matrix.environment }}, ${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
