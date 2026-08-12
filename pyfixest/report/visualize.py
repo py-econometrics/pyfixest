@@ -1,8 +1,13 @@
-import math
+from __future__ import annotations
 
-import matplotlib.pyplot as plt
+import math
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
 
 # Make lets-plot an optional dependency
 try:
@@ -44,6 +49,18 @@ ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Fei
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
     LetsPlot.setup_html()
+
+
+def _import_matplotlib():
+    """Import matplotlib only when its plotting backend is requested."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError(
+            "The matplotlib backend requires matplotlib. "
+            "Install it with `pip install matplotlib`."
+        ) from None
+    return plt
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -521,6 +538,7 @@ def _coefplot(plot_backend, *, figsize, **plot_kwargs):
             )
         return _coefplot_lets_plot(figsize=figsize, **plot_kwargs)
     elif plot_backend == "matplotlib":
+        _import_matplotlib()
         return _coefplot_matplotlib(figsize=figsize, **plot_kwargs)
     else:
         raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
@@ -673,6 +691,7 @@ def _coefplot_matplotlib(
     matplotlib.figure.Figure
         A matplotlib Figure object.
     """
+    plt = _import_matplotlib()
     labels_dict = {} if labels is None else labels
 
     if not labels_dict or cat_template is not None:
@@ -798,6 +817,7 @@ def _qplot(
     (Figure, ndarray[Axes])
         Handle to the created figure and axes.
     """
+    plt = _import_matplotlib()
     if nrow is None and ncol is None:
         nrow = 1
     if (nrow is not None) and (ncol is not None):

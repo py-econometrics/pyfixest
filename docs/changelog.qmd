@@ -17,6 +17,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Lighter Core Imports
+
+- `summary()` remains available in the base installation and now uses pandas'
+  plain-text formatter. Table and plotting packages are imported only when their
+  corresponding features are called. Internal progress bars and the seaborn-only
+  plotting path have been removed.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import re
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -10,6 +11,18 @@ from pyfixest.estimation import feols
 from pyfixest.estimation.models.feols_ import Feols
 
 from .did2s import DID
+
+
+def _import_matplotlib():
+    """Import matplotlib only when an event-study plot is requested."""
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        raise ImportError(
+            "Event-study plotting requires matplotlib. "
+            "Install it with `pip install matplotlib`."
+        ) from None
+    return plt
 
 
 class SaturatedEventStudy(DID):
@@ -137,6 +150,7 @@ class SaturatedEventStudy(DID):
 
     def iplot(self):
         """Plot DID estimates."""
+        plt = _import_matplotlib()
         cmp = plt.get_cmap("Set1")
 
         _, ax = plt.subplots(figsize=(10, 6))
@@ -284,6 +298,7 @@ class SaturatedEventStudy(DID):
         None
         """
         df_agg = self.aggregate(agg=agg, weighting=weighting)
+        plt = _import_matplotlib()
 
         time = np.array(df_agg.index, dtype=float).astype(float)
         est = df_agg["Estimate"].values.astype(float)

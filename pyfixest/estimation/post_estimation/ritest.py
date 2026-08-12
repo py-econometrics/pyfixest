@@ -1,9 +1,7 @@
 from importlib import import_module
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
 # Make lets-plot an optional dependency
 try:
@@ -23,8 +21,7 @@ try:
 except ImportError:
     _HAS_LETS_PLOT = False
 
-from scipy.stats import norm
-from tqdm import tqdm
+from scipy.stats import gaussian_kde, norm
 
 # Numba is an optional dependency. The fast randomization-inference path uses it;
 # the slow path does not. We import lazily so the module loads cleanly even when
@@ -107,7 +104,7 @@ def _get_ritest_stats_slow(
 
     ri_stats = np.zeros(reps)
 
-    for i in tqdm(range(reps)):
+    for i in range(reps):
         D_treat = _resample(
             resampvar_arr=resampvar_arr,
             clustervar_arr=clustervar_arr,
@@ -407,7 +404,6 @@ def _plot_ritest_pvalue(
 
     if plot_backend == "lets_plot":
         if not _HAS_LETS_PLOT:
-            print("lets-plot is not installed. Falling back to matplotlib.")
             plot_backend = "matplotlib"
         else:
             plot = (
@@ -420,19 +416,33 @@ def _plot_ritest_pvalue(
                 + ylab(y_lab)
             )
 
-        return plot.show()
+            return plot.show()
 
-    elif plot_backend == "matplotlib":
-        plt.figure(figsize=(10, 6))
-        sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
-        plt.axvline(x=sample_stat, color="red", linestyle="--")
-        plt.title(title)
-        plt.xlabel(x_lab)
-        plt.ylabel(y_lab)
+    if plot_backend == "matplotlib":
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError(
+                "The matplotlib backend requires matplotlib. "
+                "Install it with `pip install matplotlib`."
+            ) from None
+
+        stats = np.asarray(ri_stats, dtype=float)
+        _, ax = plt.subplots(figsize=(10, 6))
+        if np.ptp(stats) == 0:
+            ax.hist(stats, density=True, color="blue", alpha=0.5)
+        else:
+            x_grid = np.linspace(stats.min(), stats.max(), 200)
+            density = gaussian_kde(stats)(x_grid)
+            ax.fill_between(x_grid, density, color="blue", alpha=0.5)
+        ax.axvline(x=sample_stat, color="red", linestyle="--")
+        ax.set_title(title)
+        ax.set_xlabel(x_lab)
+        ax.set_ylabel(y_lab)
         plt.show()
+        return None
 
-    else:
-        raise ValueError(f"Unsupported plot backend: {plot_backend}")
+    raise ValueError(f"Unsupported plot backend: {plot_backend}")
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:

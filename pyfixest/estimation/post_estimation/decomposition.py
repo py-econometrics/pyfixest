@@ -9,7 +9,6 @@ from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
-from tqdm import tqdm
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -367,7 +366,7 @@ class GelbachDecomposition:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            delayed(self._bootstrap)(rng=rng) for _ in range(B)
         )
 
         # unpack
@@ -771,7 +770,13 @@ class GelbachDecomposition:
         ```{python}
         gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
         """
-        from maketables import MTable
+        try:
+            from maketables import MTable
+        except ImportError:
+            raise ImportError(
+                "`etable()` requires maketables. "
+                "Install it with `pip install maketables`."
+            ) from None
 
         if column_heads is not None and len(column_heads) != 3:
             raise ValueError("The 'column_heads' parameter must be a list of length 3.")
