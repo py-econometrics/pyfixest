@@ -10,7 +10,6 @@ categories: [Panel, AB Testing]
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from tqdm import tqdm
 
 import pyfixest as pf
 from pyfixest.utils.dgps import get_sharkfin
@@ -314,7 +313,7 @@ def _run_simulation(N, sigma_unit, n_sim=100):
     cuped_se_arr = np.zeros(n_sim)
     panel_se_arr = np.zeros(n_sim)
 
-    for i in tqdm(range(n_sim)):
+    for i in range(n_sim):
         data = get_sharkfin(
             num_units=N,
             num_periods=30,
@@ -361,7 +360,7 @@ def _power(nobs, n_sim):
         cuped_reject_null_arr = np.zeros(n_sim)
         panel_reject_null_arr = np.zeros(n_sim)
 
-        for i in tqdm(range(n_sim)):
+        for i in range(n_sim):
             data = get_sharkfin(
                 num_units=N,
                 num_periods=30,

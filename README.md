@@ -61,21 +61,24 @@ python -m pip install git+https://github.com/py-econometrics/pyfixest
 <details>
 <summary>Optional dependencies</summary>
 
-For visualization features using the `lets-plot` backend, install:
+The base installation includes estimation, inference, `tidy()`, and `summary()`.
+Install the feature extras you need:
 
 ```bash
-python -m pip install pyfixest[plots]
+python -m pip install "pyfixest[tables]"  # etable and publication-ready tables
+python -m pip install "pyfixest[plots]"   # matplotlib and lets-plot backends
+python -m pip install "pyfixest[numba]"   # optional accelerated algorithms
+python -m pip install "pyfixest[torch]"   # PyTorch demeaner backends
+python -m pip install "pyfixest[all]"     # all end-user features above
 ```
 
-`matplotlib` is included by default, so plotting works without this extra.
+The `tables` extra installs maketables, Great Tables, and Markdown table support.
+The `plots` extra installs both supported plotting backends. Calling an optional
+feature without its extra raises an installation message; importing PyFixest and
+fitting or summarizing a model do not require these packages.
 
-To run the LSMR demeaner via `PyTorch` (CPU and GPU), you need to install `PyTorch`, which you can do via
-
-```bash
-python -m pip install pyfixest[torch]
-```
-
-For GPU acceleration on CUDA, you additionally need to install a CUDA-enabled torch build. See the [PyTorch installation guide](https://pytorch.org/get-started/locally/) for details.
+For GPU acceleration on CUDA, install a CUDA-enabled torch build. See the
+[PyTorch installation guide](https://pytorch.org/get-started/locally/) for details.
 
 Then use the typed `demeaner` API:
 
