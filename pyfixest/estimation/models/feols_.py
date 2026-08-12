@@ -217,6 +217,8 @@ class Feols(ResultAccessorMixin):
         A DataFrame with the estimated fixed effects.
     _sumFE : np.ndarray
         Sum of all fixed effects for each observation.
+    _fixef_lsqr_tol : tuple[float, float] | None
+        The (atol, btol) pair used to compute the cached fixed effects.
     _rmse : float
         Root mean squared error of the model.
     _r2 : float
@@ -379,6 +381,7 @@ class Feols(ResultAccessorMixin):
         self._fixef_coefficients: dict[str, FixedEffect] = {}
         self._alpha = None
         self._sumFE = None
+        self._fixef_lsqr_tol: tuple[float, float] | None = None
 
         # set in get_performance()
         self._rmse = np.nan
@@ -1745,6 +1748,7 @@ class Feols(ResultAccessorMixin):
         )
         self._alpha = alpha
         self._sumFE = D2.dot(alpha)
+        self._fixef_lsqr_tol = (atol, btol)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 
@@ -1878,8 +1882,13 @@ class Feols(ResultAccessorMixin):
                 warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
-                if self._sumFE is None:
+                cached_tol = self._fixef_lsqr_tol
+                if self._sumFE is None or cached_tol is None:
                     self.fixef(atol, btol)
+                elif atol < cached_tol[0] or btol < cached_tol[1]:
+                    # cached fixed effects are looser than requested; recompute at
+                    # the tighter tolerance of the two so accuracy never degrades
+                    self.fixef(min(atol, cached_tol[0]), min(btol, cached_tol[1]))
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
                     coefficients=self._fixef_coefficients,
