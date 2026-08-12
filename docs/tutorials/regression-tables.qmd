@@ -21,6 +21,15 @@ The `pf.etable()` API remains unchanged and `pf.make_table()` has been removed (
 
 Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
 
+Table rendering is optional. Install it before following this guide:
+
+```bash
+python -m pip install "pyfixest[tables]"
+```
+
+The base installation still provides `fit.summary()` for a plain-text model
+summary without the table-rendering packages.
+
 To begin, we load some libraries and fit a set of regression models.
 
 ```{python}
