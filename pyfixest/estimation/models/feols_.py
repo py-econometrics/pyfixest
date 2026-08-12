@@ -1791,6 +1791,7 @@ class Feols(ResultAccessorMixin):
             alpha=alpha,
             # Fixed-effect contribution per observation, in the units of Y.
             sumFE=D.dot(alpha),
+            lsqr_tol=(atol, btol),
         )
 
         return fixed_effects_to_frame(self.fixef_estimates.coefficients)
@@ -1924,6 +1925,11 @@ class Feols(ResultAccessorMixin):
                 if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
+                else:
+                    cached_atol, cached_btol = self.fixef_estimates.lsqr_tol
+                    if atol < cached_atol or btol < cached_btol:
+                        require_retained(self, "predict", "_data")
+                        self.fixef(min(atol, cached_atol), min(btol, cached_btol))
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
                     coefficients=self.fixef_estimates.coefficients,
