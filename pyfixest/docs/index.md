@@ -1,0 +1,47 @@
+# PyFixest documentation for agents
+
+This corpus is bundled with PyFixest 0.60.0 and matches that release.
+For API entries not bundled here, follow links to the rendered website.
+
+## Narrative pages
+
+- [PyFixest overview](pages/pyfixest.md)
+  Package capabilities, installation, quickstart, benchmarks, and project links.
+- [Getting started](pages/getting-started.md)
+  A first fixed-effects regression and the main result-accessor workflow.
+- [Tutorial index](pages/tutorials/index.md)
+  Entry points for PyFixest's estimation, inference, and reporting tutorials.
+- [OLS with fixed effects](pages/tutorials/ols-fixed-effects.md)
+  OLS estimation, fixed effects, demeaning, and common model specifications.
+- [Formula syntax](pages/tutorials/formula-syntax.md)
+  Formulaic syntax, fixed effects, IVs, interactions, multiple estimation, and sample splitting.
+- [Instrumental variables](pages/tutorials/instrumental-variables.md)
+  Identification, fixed-effects IV syntax, diagnostics, and weak-instrument checks.
+- [Poisson and generalized linear models](pages/tutorials/poisson-glm.md)
+  Poisson, logit, probit, and Gaussian GLM estimation workflows.
+- [Regression tables](pages/tutorials/regression-tables.md)
+  Comparing models and producing publication-ready tables.
+- [Difference in differences](pages/tutorials/difference-in-differences.md)
+  TWFE, event studies, DID2S, local projections, and saturated estimators.
+- [Quantile regression](pages/tutorials/quantile-regression.md)
+  Conditional-quantile estimation, inference, and performance guidance.
+- [How-to index](pages/how-to/index.md)
+  Task-oriented guides for specialized PyFixest workflows.
+- [Choosing a demeaner backend](pages/how-to/demeaner-backends.md)
+  MAP and LSMR selection, configuration, preconditioners, and performance.
+- [Marginal effects and hypothesis tests](pages/how-to/marginaleffects.md)
+  Post-estimation workflows using the marginaleffects package.
+- [Anytime-valid inference](pages/how-to/anytime-valid-inference.md)
+  Sequential monitoring with e-values, p-values, and confidence sequences.
+- [Regression decomposition](pages/how-to/regression_decomposition.md)
+  Gelbach decomposition of changes in regression coefficients.
+- [Translating Stata to PyFixest](pages/how-to/stata-2-pyfixest.md)
+  Syntax and inference mappings between Stata and PyFixest.
+- [Panel variance reduction](pages/how-to/panel_variance_reduction.md)
+  Regression adjustment and panel methods for A/B tests.
+- [Difficult fixed-effects problems](pages/explanation/difficult-fixed-effects.md)
+  How fixed-effect graph structure affects demeaning performance.
+- [Small-sample corrections](pages/explanation/ssc.md)
+  Degrees of freedom and small-sample adjustments for covariance estimators.
+- [Comparing fixest and PyFixest](pages/explanation/compare-fixest-pyfixest.md)
+  Behavioral compatibility and known differences from R's fixest.
