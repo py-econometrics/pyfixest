@@ -70,6 +70,7 @@ features = ["pyo3/extension-module"]
 python-source = "."
 include = [
     { path = "pyfixest/docs/**/*", format = ["wheel", "sdist"] },
+    { path = "skills/pyfixest/**/*", format = ["wheel", "sdist"] },
 ]
 exclude = [
     "tests/**",

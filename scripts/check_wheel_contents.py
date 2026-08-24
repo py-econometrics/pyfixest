@@ -13,11 +13,28 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 _DOCS_PREFIX = PurePosixPath("pyfixest/docs")
+_SKILL_PREFIX = PurePosixPath("skills/pyfixest")
 _MAX_DOCS_BYTES = 1024 * 1024
 _REQUIRED_DOCS = {
     (_DOCS_PREFIX / "index.md").as_posix(),
     (_DOCS_PREFIX / "llms.txt").as_posix(),
     (_DOCS_PREFIX / "manifest.json").as_posix(),
+}
+_SKILL_REFERENCES = {
+    "core-api.md",
+    "demeaners.md",
+    "formula-syntax.md",
+    "inference.md",
+    "reporting.md",
+    "specialized-estimators.md",
+    "troubleshooting.md",
+}
+_REQUIRED_SKILL = {
+    (_SKILL_PREFIX / "SKILL.md").as_posix(),
+    *{
+        (_SKILL_PREFIX / "references" / reference).as_posix()
+        for reference in _SKILL_REFERENCES
+    },
 }
 _FORBIDDEN_SUFFIXES = {
     ".gif",
@@ -173,6 +190,66 @@ def _check_internal_links(archive: zipfile.ZipFile, names: set[str]) -> None:
                 raise WheelDocsError(f"Broken bundled link in {name}: {target}")
 
 
+def _skill_frontmatter(text: str) -> dict[str, str]:
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        raise WheelDocsError("Bundled SKILL.md must start with YAML frontmatter.")
+    try:
+        end = lines.index("---", 1)
+    except ValueError as exc:
+        raise WheelDocsError("Bundled SKILL.md frontmatter is not closed.") from exc
+
+    metadata: dict[str, str] = {}
+    for line in lines[1:end]:
+        if not line.strip():
+            continue
+        if ":" not in line:
+            raise WheelDocsError(f"Malformed bundled skill frontmatter: {line}")
+        key, value = line.split(":", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        metadata[key.strip()] = value
+    return metadata
+
+
+def _check_skill(archive: zipfile.ZipFile, names: set[str]) -> None:
+    actual = {name for name in names if name.startswith(_SKILL_PREFIX.as_posix() + "/")}
+    if actual != _REQUIRED_SKILL:
+        raise WheelDocsError(
+            "Bundled skill inventory mismatch; "
+            f"extra={sorted(actual - _REQUIRED_SKILL)}, "
+            f"missing={sorted(_REQUIRED_SKILL - actual)}."
+        )
+
+    main_name = (_SKILL_PREFIX / "SKILL.md").as_posix()
+    main_text = archive.read(main_name).decode()
+    metadata = _skill_frontmatter(main_text)
+    if metadata.get("name") != "pyfixest" or not metadata.get("description"):
+        raise WheelDocsError("Bundled SKILL.md needs name: pyfixest and a description.")
+
+    expected_references = {f"references/{reference}" for reference in _SKILL_REFERENCES}
+    actual_references = {
+        target
+        for target in _link_targets(main_text)
+        if target.startswith("references/")
+    }
+    if actual_references != expected_references:
+        raise WheelDocsError("Bundled SKILL.md must link all seven references.")
+
+    for name in sorted(actual):
+        source = PurePosixPath(name)
+        for target in _link_targets(archive.read(name).decode()):
+            parsed = urlsplit(target)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            resolved = PurePosixPath(
+                posixpath.normpath(str(source.parent / unquote(parsed.path)))
+            ).as_posix()
+            if resolved not in names:
+                raise WheelDocsError(f"Broken bundled skill link in {name}: {target}")
+
+
 def _check_retrieval_cases(
     archive: zipfile.ZipFile, names: set[str], cases_path: Path
 ) -> None:
@@ -207,6 +284,7 @@ def check_wheel(*, wheel: Path, cases_path: Path) -> None:
         _check_docs_files(archive, names)
         _check_manifest(archive, names, package_version)
         _check_internal_links(archive, names)
+        _check_skill(archive, names)
         _check_retrieval_cases(archive, names, cases_path)
 
 

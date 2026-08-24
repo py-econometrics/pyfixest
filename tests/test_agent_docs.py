@@ -56,6 +56,18 @@ def test_agent_docs_rejects_broken_internal_link(tmp_path: Path) -> None:
         check_agent_docs(site=site, cases_path=_write_cases(tmp_path / "cases.json"))
 
 
+def test_agent_docs_ignores_links_shown_in_fenced_code(tmp_path: Path) -> None:
+    site = tmp_path / "site"
+    _write_site(site)
+    (site / "guide.llms.md").write_text(
+        "The needle is here.\n\n````markdown\n"
+        "[Example](missing.llms.md)\n\n```python\npass\n```\n````\n",
+        encoding="utf-8",
+    )
+
+    check_agent_docs(site=site, cases_path=_write_cases(tmp_path / "cases.json"))
+
+
 def test_agent_docs_rejects_failed_retrieval_case(tmp_path: Path) -> None:
     site = tmp_path / "site"
     _write_site(site)

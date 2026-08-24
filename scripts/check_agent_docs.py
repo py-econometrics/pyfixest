@@ -16,6 +16,7 @@ _MARKDOWN_LINK_RE = re.compile(
 )
 _HTML_LINK_RE = re.compile(r"<a\s+[^>]*href=[\"'](?P<target>[^\"']+)[\"']", re.I)
 _QUARTO_EXCLUDE_RE = re.compile(r"^\s*-\s*[\"']!(?P<path>.+?)[\"']\s*$")
+_FENCE_RE = re.compile(r"^\s*(?P<fence>`{3,}|~{3,})")
 _LOCAL_HOSTS = {"pyfixest.org", "www.pyfixest.org"}
 
 
@@ -34,9 +35,32 @@ class RetrievalCase:
 
 
 def _markdown_targets(text: str) -> list[str]:
+    text = _without_fenced_code(text)
     targets = [match.group("target") for match in _MARKDOWN_LINK_RE.finditer(text)]
     targets.extend(match.group("target") for match in _HTML_LINK_RE.finditer(text))
     return [target.strip("<>") for target in targets]
+
+
+def _without_fenced_code(text: str) -> str:
+    lines: list[str] = []
+    fence_char: str | None = None
+    fence_length = 0
+    for line in text.splitlines(keepends=True):
+        match = _FENCE_RE.match(line)
+        if fence_char is None:
+            if match is None:
+                lines.append(line)
+                continue
+            fence = match.group("fence")
+            fence_char = fence[0]
+            fence_length = len(fence)
+            continue
+        if match is not None:
+            fence = match.group("fence")
+            if fence[0] == fence_char and len(fence) >= fence_length:
+                fence_char = None
+                fence_length = 0
+    return "".join(lines)
 
 
 def _load_retrieval_cases(path: Path) -> list[RetrievalCase]:
