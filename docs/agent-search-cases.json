@@ -18,10 +18,10 @@
     "id": "clustered_inference",
     "question": "How do I request one-way or two-way clustered standard errors?",
     "authoritative_sources": [
-      "reference/estimation.api.feols.feols.llms.md"
+      "tutorials/standard-errors.llms.md"
     ],
     "package_sources": [
-      "pyfixest/estimation/api/feols.py"
+      "pyfixest/docs/pages/tutorials/standard-errors.md"
     ],
     "terms": [
       "CRV1",
@@ -33,10 +33,10 @@
     "id": "hac_inference",
     "question": "How do I configure Newey-West or Driscoll-Kraay standard errors?",
     "authoritative_sources": [
-      "reference/estimation.api.feols.feols.llms.md"
+      "tutorials/standard-errors.llms.md"
     ],
     "package_sources": [
-      "pyfixest/estimation/api/feols.py"
+      "pyfixest/docs/pages/tutorials/standard-errors.md"
     ],
     "terms": [
       "Newey-West",

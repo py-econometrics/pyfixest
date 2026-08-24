@@ -15,6 +15,8 @@ For API entries not bundled here, follow links to the rendered website.
   OLS estimation, fixed effects, demeaning, and common model specifications.
 - [Formula syntax](pages/tutorials/formula-syntax.md)
   Formulaic syntax, fixed effects, IVs, interactions, multiple estimation, and sample splitting.
+- [Standard errors and inference](pages/tutorials/standard-errors.md)
+  IID, HC, clustered, HAC, bootstrap, randomization inference, and small-sample corrections.
 - [Instrumental variables](pages/tutorials/instrumental-variables.md)
   Identification, fixed-effects IV syntax, diagnostics, and weak-instrument checks.
 - [Poisson and generalized linear models](pages/tutorials/poisson-glm.md)

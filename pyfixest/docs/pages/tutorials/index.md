@@ -16,6 +16,10 @@ Twin studies and ‘AKM’ regressions in worker-firm panels: two cases studies 
 
 In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators.
 
+##### Standard Errors & Inference
+
+Choose and configure IID, heteroskedasticity-robust, clustered, HAC, bootstrap, and randomization-based inference.
+
 ##### Instrumental Variables
 
 IV estimation with fixed effects, first-stage diagnostics, and the effective F-statistic.

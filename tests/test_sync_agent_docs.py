@@ -16,7 +16,7 @@ def _write_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
         "# Guide\n\n![Diagram](plot.png)\n\n"
         "[Details](nested/details.llms.md)\n\n"
         "[API](reference/api.llms.md)\n\n"
-        "``` python\nprint('kept')\n```\n\n```\nkept output\n```\n",
+        "``` python\nprint('kept')\n```\n\n```\nkept output   \n```\n",
         encoding="utf-8",
     )
     (site / "nested").mkdir()
@@ -69,6 +69,7 @@ def test_generate_bundle_rewrites_links_and_images(tmp_path: Path) -> None:
     assert "[API](https://pyfixest.org/reference/api.llms.md)" in guide
     assert "print('kept')" in guide
     assert "kept output" in guide
+    assert "kept output   " not in guide
     assert "PyFixest 1.2.3" in (output / "index.md").read_text(encoding="utf-8")
 
     generate_bundle(

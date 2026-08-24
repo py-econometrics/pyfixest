@@ -1,14 +1,14 @@
 {
   "files": [
     {
-      "bytes": 2897,
+      "bytes": 3060,
       "path": "index.md",
-      "sha256": "1e4cbbe0789ce2d9bc62cda356a8624899ba08562cac7727e786b7c2295a7a41"
+      "sha256": "7317d6efb41ef37aeaa2f0cde5d23604140b7611d1cea942eb2e6acdf08792d3"
     },
     {
-      "bytes": 2763,
+      "bytes": 2925,
       "path": "llms.txt",
-      "sha256": "f7f3ee9ace1c199b54cff1d90a1dcc9aafae9a57e8b86cd08f7334b04615625a"
+      "sha256": "56da0f98a2d1e3b8d76e7ef3352596aa8def77c0d9613b215330ce6dd3242d86"
     },
     {
       "bytes": 5577,
@@ -26,9 +26,9 @@
       "sha256": "a178b6a9994eadd561b607ca0a838bdc9cf429539b4bd1d6d3b44538ba0bef97"
     },
     {
-      "bytes": 6597,
+      "bytes": 7779,
       "path": "pages/getting-started.md",
-      "sha256": "ddab57c947748c40d61c58d1d2d82bc6903b2648dcee2aaa844621b35ad3a487"
+      "sha256": "4ef99fcbec054610377d2b25b59da895456b2a08fde916f931068d8967c4db3b"
     },
     {
       "bytes": 71626,
@@ -81,14 +81,14 @@
       "sha256": "25be3ca9c14de7e1fb32fc2cacbf581c3fc9228adad36cb0bc70be573a3c5951"
     },
     {
-      "bytes": 1646,
+      "bytes": 1797,
       "path": "pages/tutorials/index.md",
-      "sha256": "0a08df828613a9da511fb0617403c62b894b0ff038a2b0247634b393c8d8137b"
+      "sha256": "5f05dcd479f2d3eaa39b8e3f288c1280e6f123c4f68db7d7358c00a302516953"
     },
     {
-      "bytes": 18235,
+      "bytes": 20893,
       "path": "pages/tutorials/instrumental-variables.md",
-      "sha256": "091ed01ef1a8af146528df98bca07527afa38596ae6073fc2d4568f0f3c57849"
+      "sha256": "e07aed31aba177bcb384ec56b46024566c7e6652e7ad71e55ef80b2197df8197"
     },
     {
       "bytes": 6279,
@@ -96,9 +96,9 @@
       "sha256": "835f065f20800e2ae42fbf32906d64d06510e67a05536f66562afee060f508ac"
     },
     {
-      "bytes": 7783,
+      "bytes": 10309,
       "path": "pages/tutorials/poisson-glm.md",
-      "sha256": "3a89ec72c5fa758911e0c712961042b6697f5c2161a5336bbf9ac29c7b90c667"
+      "sha256": "f34d96d5dba2842f7b6d530e050b15fe7bc40e7f847bb16f3ed104e3e2246a43"
     },
     {
       "bytes": 6534,
@@ -109,9 +109,14 @@
       "bytes": 18352,
       "path": "pages/tutorials/regression-tables.md",
       "sha256": "4a454a83b15516e2a11c414f5544385a5a4f17b561bee0e69877ed508c3cc776"
+    },
+    {
+      "bytes": 13129,
+      "path": "pages/tutorials/standard-errors.md",
+      "sha256": "6eb59a5b59bad577202abac5ad1e8407b64d201b6557e7e3fef0622151e490b8"
     }
   ],
   "package_version": "0.60.0",
-  "page_count": 20,
+  "page_count": 21,
   "schema_version": 1
 }

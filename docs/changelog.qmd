@@ -27,6 +27,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   documentation corpus generated from Quarto's `.llms.md` output.
 - A canonical PyFixest skill now gives AI agents a short entry point into the
   bundled docs, with focused references for common analysis workflows.
+- The Standard Errors tutorial now documents robust, clustered, HAC, bootstrap,
+  and randomization-based inference with executable examples and support limits.
 
 ### Inference Types
 

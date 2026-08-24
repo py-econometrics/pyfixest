@@ -146,7 +146,7 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
       <td style="border: 1px solid #d0d7de; padding: 8px;">We explain <code>PyFixest</code>'s formula interface in all of its detail, including special operators as <code>i()</code> for interactions and multiple estimation syntax.</td>
     </tr>
     <tr>
-      <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="reference/estimation.models.feols_.Feols.vcov.qmd">Standard Errors &amp; Inference</a></td>
+      <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/standard-errors.qmd">Standard Errors &amp; Inference</a></td>
       <td style="border: 1px solid #d0d7de; padding: 8px;">Here we showcase different options to conduct inference with <code>PyFixest</code>, via iid, heteroskedastic, cluster robust errors, and more.</td>
     </tr>
     <tr>

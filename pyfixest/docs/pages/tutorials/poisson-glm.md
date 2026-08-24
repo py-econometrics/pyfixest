@@ -60,6 +60,14 @@ trade = make_trade_data()
 trade.head()
 ```
 
+|     | year | exporter | importer | distance    | fta | trade |
+|-----|------|----------|----------|-------------|-----|-------|
+| 0   | 2010 | E0       | I0       | 6204.696397 | 0   | 0     |
+| 1   | 2010 | E0       | I1       | 1822.471934 | 0   | 4     |
+| 2   | 2010 | E0       | I2       | 4714.140006 | 0   | 1     |
+| 3   | 2010 | E0       | I3       | 6724.910060 | 0   | 1     |
+| 4   | 2010 | E0       | I4       | 7232.301132 | 0   | 0     |
+
 ``` python
 fit_trade = pf.fepois(
     "trade ~ np.log(distance) + fta | exporter + importer + year",
@@ -68,6 +76,21 @@ fit_trade = pf.fepois(
 )
 fit_trade.summary()
 ```
+
+    ###
+
+    Estimation:  Poisson
+    Dep. var.: trade, Fixed effects: exporter+importer+year
+    sample: None = all
+    Inference:  CRV1
+    Observations:  1350
+
+    | Coefficient      |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:-----------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | np.log(distance) |     -0.356 |        0.018 |   -19.858 |      0.000 | -0.391 |  -0.321 |
+    | fta              |      0.192 |        0.059 |     3.269 |      0.001 |  0.077 |   0.307 |
+    ---
+    Deviance: 1533.899
 
 This is the basic PPML gravity workflow in `pyfixest`.
 
@@ -85,6 +108,8 @@ Quick contrast:
 share_zeros = (trade["trade"] == 0).mean()
 share_zeros
 ```
+
+    np.float64(0.32)
 
 With PPML, zero observations are naturally part of the likelihood through the mean function.
 
@@ -128,6 +153,20 @@ fit_did_pois = pf.fepois(
 fit_did_pois.summary()
 ```
 
+    ###
+
+    Estimation:  Poisson
+    Dep. var.: y_count, Fixed effects: state+year
+    sample: None = all
+    Inference:  CRV1
+    Observations:  240
+
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | did           |      0.199 |        0.109 |     1.820 |      0.069 | -0.015 |   0.413 |
+    ---
+    Deviance: 233.836
+
 If your outcome is nonnegative and has many zeros, this can be a practical alternative to log-linear OLS DiD.
 
 ## 5. Logit/Probit for Doubly Debiased AB Testing with Propensity Scores
@@ -163,6 +202,14 @@ ab = make_ab_data()
 ab.head()
 ```
 
+|     | y         | t   | x1        | x2        | segment |
+|-----|-----------|-----|-----------|-----------|---------|
+| 0   | 1.403683  | 1   | 0.247452  | 0.620339  | 9       |
+| 1   | -0.698392 | 1   | 0.710294  | 1.163892  | 10      |
+| 2   | 0.504507  | 0   | -0.650713 | -0.347768 | 15      |
+| 3   | 1.283318  | 0   | -0.229100 | 0.122556  | 19      |
+| 4   | -0.181560 | 0   | -0.781772 | 0.866387  | 0       |
+
 ### Propensity via logit/probit (with fixed effects)
 
 ``` python
@@ -194,6 +241,8 @@ ate_aipw_logit = ab["score_aipw_logit"].mean()
 ate_aipw_logit
 ```
 
+    np.float64(0.2504501667751913)
+
 This is the basic doubly debiased pattern: estimate treatment propensities with `feglm` (logit/probit), combine with outcome models, and form an orthogonal score.
 
 ## 6. GLMs with Marginal Effects
@@ -206,6 +255,23 @@ from marginaleffects import avg_slopes
 avg_slopes(ps_logit, variables="x1")
 avg_slopes(ps_logit, variables="x1", by="segment")
 ```
+
+shape: (20, 4)
+
+| segment | term | contrast | estimate |
+|---------|------|----------|----------|
+| i64     | str  | str      | f64      |
+| 0       | "x1" | "dY/dX"  | 0.764503 |
+| 1       | "x1" | "dY/dX"  | 0.764503 |
+| 2       | "x1" | "dY/dX"  | 0.764503 |
+| 3       | "x1" | "dY/dX"  | 0.764503 |
+| 4       | "x1" | "dY/dX"  | 0.764503 |
+| …       | …    | …        | …        |
+| 15      | "x1" | "dY/dX"  | 0.764503 |
+| 16      | "x1" | "dY/dX"  | 0.764503 |
+| 17      | "x1" | "dY/dX"  | 0.764503 |
+| 18      | "x1" | "dY/dX"  | 0.764503 |
+| 19      | "x1" | "dY/dX"  | 0.764503 |
 
 This reports the change in the predicted treatment probability associated with `x1`, averaged either over the full sample or within groups.
 
@@ -223,5 +289,5 @@ That shared syntax makes it easy to move between linear, Poisson, and binary-res
 ## Where to Go Next
 
 - [Difference-in-Differences](difference-in-differences.md): richer DiD estimators and event studies.
-- [Standard Errors & Inference](https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.llms.md): robust and clustered inference.
+- [Standard Errors & Inference](standard-errors.md): robust and clustered inference.
 - [How-To: Variance Reduction in AB Tests](../how-to/panel_variance_reduction.md): AB testing workflows with controls and panel structure.

@@ -28,6 +28,11 @@
       "description": "Formulaic syntax, fixed effects, IVs, interactions, multiple estimation, and sample splitting."
     },
     {
+      "source": "tutorials/standard-errors.qmd",
+      "title": "Standard errors and inference",
+      "description": "IID, HC, clustered, HAC, bootstrap, randomization inference, and small-sample corrections."
+    },
+    {
       "source": "tutorials/instrumental-variables.qmd",
       "title": "Instrumental variables",
       "description": "Identification, fixed-effects IV syntax, diagnostics, and weak-instrument checks."

@@ -194,7 +194,8 @@ def _rewrite_page(*, text: str, page: PageSpec, inventory: Inventory) -> str:
         )
         return match.group("prefix") + rewritten + match.group("suffix")
 
-    return _HTML_LINK_RE.sub(replace_html, text).rstrip() + "\n"
+    text = _HTML_LINK_RE.sub(replace_html, text)
+    return "\n".join(line.rstrip() for line in text.splitlines()).rstrip() + "\n"
 
 
 def _index_text(inventory: Inventory, version: str) -> str:

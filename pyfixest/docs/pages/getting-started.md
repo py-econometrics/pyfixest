@@ -23,6 +23,14 @@ twins = pf.get_twin_data(N_pairs=500, seed=42)
 twins.head()
 ```
 
+|     | twin_pair_id | twin_id | ability   | educ      | age  | experience | log_wage |
+|-----|--------------|---------|-----------|-----------|------|------------|----------|
+| 0   | 1            | 1       | 0.304717  | 14.880083 | 38.0 | 17.119917  | 3.241823 |
+| 1   | 1            | 2       | 0.304717  | 13.942729 | 49.0 | 29.057271  | 3.379130 |
+| 2   | 2            | 1       | -1.039984 | 10.041047 | 33.0 | 16.958953  | 2.303006 |
+| 3   | 2            | 2       | -1.039984 | 8.475001  | 32.0 | 17.524999  | 2.057258 |
+| 4   | 3            | 1       | 0.750451  | 8.000000  | 35.0 | 21.000000  | 3.449381 |
+
 `pf.get_twin_data()` returns a simulated twin-pair dataset where each row is one individual twin and `twin_pair_id` identifies a pair of twins. We have these other relevant variables:
 
 - `educ`: years of education completed
@@ -65,6 +73,8 @@ pf.etable(
 )
 ```
 
+[TABLE]
+
 ### Accessing fitted-model results
 
 Regression tables are useful for presentation, but fitted `Feols` objects also let you access results directly for downstream analysis. Coefficients, standard errors, and the full tidy coefficient table are available through public methods:
@@ -75,6 +85,13 @@ fit_naive.se()
 fit_naive.tidy()
 ```
 
+|             | Estimate | Std. Error | t value   | Pr(\>\|t\|) | 2.5%     | 97.5%    |
+|-------------|----------|------------|-----------|-------------|----------|----------|
+| Coefficient |          |            |           |             |          |          |
+| Intercept   | 1.112642 | 0.098141   | 11.337130 | 0.0         | 0.919820 | 1.305463 |
+| educ        | 0.114213 | 0.006975   | 16.374676 | 0.0         | 0.100509 | 0.127917 |
+| experience  | 0.019266 | 0.001527   | 12.618671 | 0.0         | 0.016266 | 0.022265 |
+
 Common model-level fit statistics are stored on the fitted object:
 
 ``` python
@@ -84,12 +101,16 @@ fit_naive._r2       # R-squared
 fit_naive._adj_r2   # adjusted R-squared
 ```
 
+    np.float64(0.2815530096342296)
+
 For models with fixed effects, within R-squared measures are also available:
 
 ``` python
 fit_fe._r2_within
 fit_fe._adj_r2_within
 ```
+
+    np.float64(0.33726588467888985)
 
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
@@ -120,7 +141,7 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
 |----|----|
 | [OLS with Fixed Effects](tutorials/ols-fixed-effects.md) | We provide more examples of fixed effects designs, including twin studies, worker-firm panels, and difference-in-differences models. We also provide some intuition on how the demeaning behind `PyFixest` works via the Frisch-Waugh-Lovell Theorem. |
 | [Formula Syntax](tutorials/formula-syntax.md) | We explain `PyFixest`’s formula interface in all of its detail, including special operators as `i()` for interactions and multiple estimation syntax. |
-| [Standard Errors & Inference](https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.llms.md) | Here we showcase different options to conduct inference with `PyFixest`, via iid, heteroskedastic, cluster robust errors, and more. |
+| [Standard Errors & Inference](tutorials/standard-errors.md) | Here we showcase different options to conduct inference with `PyFixest`, via iid, heteroskedastic, cluster robust errors, and more. |
 | [Regression Tables](tutorials/regression-tables.md) | We show how to produce publication-ready tables via the `pf.etable()` function and `maketables`. |
 | [Difference-in-Differences](tutorials/difference-in-differences.md) | TWFE, Gardner’s two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects. |
 | [Quantile Regression](tutorials/quantile-regression.md) | Interior-point quantile regression: model the full conditional distribution, not just the mean, with an example from software observability (p99 latency). |

@@ -57,6 +57,14 @@ ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
+|     | earnings  | num_children | ivf_success |
+|-----|-----------|--------------|-------------|
+| 0   | 7.394832  | 1.159067     | 0           |
+| 1   | 12.714616 | 1.166081     | 0           |
+| 2   | 9.621299  | 2.129572     | 1           |
+| 3   | 11.543746 | 1.931092     | 0           |
+| 4   | 9.333634  | 1.185489     | 0           |
+
 We create a synthetic dataset with \\N = 2{,}000\\ observations. The **true causal effect** of `num_children` on `earnings` is \\\beta = -0.15\\ — this is the treatment effect the IV estimator should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
 
 ### Naive OLS
@@ -67,6 +75,21 @@ Without accounting for endogeneity, OLS overstates the penalty because career am
 fit_ols = pf.feols("earnings ~ num_children", data=ivf_df)
 fit_ols.summary()
 ```
+
+    ###
+
+    Estimation:  OLS
+    Dep. var.: earnings
+    sample: None = all
+    Inference:  iid
+    Observations:  2000
+
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | Intercept     |     10.764 |        0.059 |   181.787 |      0.000 | 10.648 |  10.880 |
+    | num_children  |     -0.631 |        0.034 |   -18.441 |      0.000 | -0.698 |  -0.564 |
+    ---
+    RMSE: 1.126 R2: 0.145
 
 ### IV Estimation
 
@@ -97,6 +120,8 @@ pf.etable([
 )
 ```
 
+[TABLE]
+
 The IV estimate is closer to the true effect of -0.15. The “naive” OLS estimate is downward biased: it overstates the penalty due to omitted-variable bias from career ambition.
 
 ### First-Stage Diagnostics
@@ -112,11 +137,29 @@ fit_iv.first_stage()
 fit_iv._model_1st_stage.summary()
 ```
 
+    ###
+
+    Estimation:  OLS
+    Dep. var.: num_children
+    sample: None = all
+    Inference:  iid
+    Observations:  2000
+
+    | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
+    |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
+    | Intercept     |      1.207 |        0.019 |    64.106 |      0.000 |  1.171 |   1.244 |
+    | ivf_success   |      0.791 |        0.028 |    28.286 |      0.000 |  0.736 |   0.846 |
+    ---
+    RMSE: 0.622 R2: 0.286
+
 ``` python
 fit_iv.IV_Diag()
 print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
 print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
 ```
+
+    First-stage F-statistic : 800.12
+    Effective F-statistic   : 793.48
 
 Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggests that for reliable inference, the effective F-statistic should be significantly higher.
 
@@ -142,6 +185,14 @@ If all assumptions hold, the IV estimate recovers the **Local Average Treatment 
 ab_df = pf.get_encouragement_data()
 ab_df.head()
 ```
+
+|     | revenue  | assigned_treatment | adopted_feature | user_type |
+|-----|----------|--------------------|-----------------|-----------|
+| 0   | 6.791617 | 1                  | 1               | 2         |
+| 1   | 7.995041 | 1                  | 1               | 2         |
+| 2   | 8.204051 | 0                  | 1               | 2         |
+| 3   | 4.264271 | 0                  | 0               | 1         |
+| 4   | 7.980713 | 1                  | 1               | 0         |
 
 We first create a synthetic data set with \\N = 4{,}000\\ users. The **true LATE** of `adopted_feature` on `revenue` is \\2.0\\ — this is what the IV estimate should recover.
 
@@ -178,6 +229,8 @@ pf.etable(
 )
 ```
 
+[TABLE]
+
 The coefficient plot compares the ITT effect of encouragement on revenue with the IV (LATE) estimate of actual feature adoption. Because not all encouraged users adopt, the LATE is larger than the ITT — scaled up by the complier share.
 
 ``` python
@@ -195,6 +248,9 @@ fit_late.IV_Diag()
 print(f"First-stage F-statistic : {fit_late._f_stat_1st_stage:.2f}")
 print(f"Effective F-statistic   : {fit_late._eff_F:.2f}")
 ```
+
+    First-stage F-statistic : 1820.73
+    Effective F-statistic   : 1832.97
 
 ## Application 3: Shift-Share (Bartik) Instruments
 
@@ -214,6 +270,14 @@ where \\s\_{rk}\\ is region \\r\\’s historical share of immigrants from origin
 bartik_df = pf.get_bartik_data()
 bartik_df.head()
 ```
+
+|     | wages    | immigration | log_population | bartik_instrument |
+|-----|----------|-------------|----------------|-------------------|
+| 0   | 9.364518 | -1.905364   | 1.871830       | -1.184597         |
+| 1   | 7.444654 | 0.160571    | 2.003176       | -0.354516         |
+| 2   | 7.095284 | 3.199375    | 1.985372       | 1.367312          |
+| 3   | 8.220384 | 1.830628    | 1.937449       | 1.700122          |
+| 4   | 8.270462 | -0.135936   | 1.690355       | -1.879589         |
 
 We create a synthetic data set with \\N = 300\\ regions. The **true causal effect** of `immigration` on `wages` is \\\beta = -0.3\\ — this is what the IV estimate should recover.
 
@@ -245,6 +309,8 @@ pf.etable(
 )
 ```
 
+[TABLE]
+
 OLS attenuates the negative wage effect (or may even show a positive coefficient) because local demand is a positive confounder. The IV estimate is closer to the true effect of -0.3.
 
 ## IV Diagnostics in PyFixest
@@ -267,6 +333,9 @@ print(f"First-stage F-statistic: {fit_iv._f_stat_1st_stage:.1f}")
 print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
 ```
 
+    First-stage F-statistic: 800.1
+    First-stage p-value:     0.0000
+
 ### The Effective F-Statistic
 
 The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The **effective F-statistic** (Montiel Olea and Pflueger ([2013](#ref-oleapflueger2013))) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
@@ -284,9 +353,12 @@ print(f"Standard F-statistic:  {fit_iv._f_stat_1st_stage:.1f}")
 print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
 ```
 
+    Standard F-statistic:  800.1
+    Effective F-statistic: 793.5
+
 > **TIP:**
 >
-> - [Standard Errors & Inference](https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.llms.md) — learn about robust and cluster-robust inference.
+> - [Standard Errors & Inference](standard-errors.md) — learn about robust and cluster-robust inference.
 > - [Regression Tables](regression-tables.md) — customize publication-ready output tables.
 > - [`Feiv` API Reference](https://pyfixest.org/reference/estimation.models.feiv_.Feiv.llms.md) — full documentation of the IV estimator class.
 
