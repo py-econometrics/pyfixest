@@ -17,6 +17,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Documentation
+
+- The rendered `llms.txt` documentation now has deterministic link and retrieval
+  checks for common agent questions.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.

@@ -378,7 +378,7 @@ print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
 
 ::: {.callout-tip}
 ## Next Steps
-- [Standard Errors & Inference](standard-errors.qmd) --- learn about robust, cluster-robust, and bootstrap inference.
+- [Standard Errors & Inference](/reference/estimation.models.feols_.Feols.vcov.qmd) --- learn about robust and cluster-robust inference.
 - [Regression Tables](regression-tables.qmd) --- customize publication-ready output tables.
 - [`Feiv` API Reference](../reference/estimation.models.feiv_.Feiv.qmd) --- full documentation of the IV estimator class.
 :::

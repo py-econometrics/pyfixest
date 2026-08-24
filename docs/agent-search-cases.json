@@ -1,0 +1,90 @@
+[
+  {
+    "id": "formula_iv",
+    "question": "How do I specify fixed effects and an instrumental-variable model?",
+    "authoritative_sources": [
+      "tutorials/formula-syntax.llms.md"
+    ],
+    "terms": [
+      "Fixed Effects Syntax",
+      "Instrumental Variables (IV) Syntax",
+      "endogenous ~ instruments"
+    ]
+  },
+  {
+    "id": "clustered_inference",
+    "question": "How do I request one-way or two-way clustered standard errors?",
+    "authoritative_sources": [
+      "reference/estimation.api.feols.feols.llms.md"
+    ],
+    "terms": [
+      "CRV1",
+      "CRV3",
+      "f1 + f2"
+    ]
+  },
+  {
+    "id": "hac_inference",
+    "question": "How do I configure Newey-West or Driscoll-Kraay standard errors?",
+    "authoritative_sources": [
+      "reference/estimation.api.feols.feols.llms.md"
+    ],
+    "terms": [
+      "Newey-West",
+      "Driscoll-Kraay",
+      "time_id",
+      "panel_id"
+    ]
+  },
+  {
+    "id": "multiple_estimation",
+    "question": "How do I fit stepwise specifications or split a sample?",
+    "authoritative_sources": [
+      "tutorials/formula-syntax.llms.md",
+      "reference/estimation.api.feols.feols.llms.md"
+    ],
+    "terms": [
+      "Multiple Estimation Syntax",
+      "csw()",
+      "split",
+      "fsplit"
+    ]
+  },
+  {
+    "id": "reduced_model_state",
+    "question": "Which post-estimation operations are unavailable with lean or discarded data?",
+    "authoritative_sources": [
+      "reference/estimation.api.feols.feols.llms.md"
+    ],
+    "terms": [
+      "store_data",
+      "lean",
+      "post-estimation"
+    ]
+  },
+  {
+    "id": "demeaners",
+    "question": "When should I choose the MAP or LSMR demeaner?",
+    "authoritative_sources": [
+      "how-to/demeaner-backends.llms.md"
+    ],
+    "terms": [
+      "MapDemeaner",
+      "LsmrDemeaner",
+      "fixed effects"
+    ]
+  },
+  {
+    "id": "difference_in_differences",
+    "question": "Which difference-in-differences estimators does PyFixest provide?",
+    "authoritative_sources": [
+      "tutorials/difference-in-differences.llms.md"
+    ],
+    "terms": [
+      "event_study",
+      "did2s",
+      "lpdid",
+      "Saturated Event Study"
+    ]
+  }
+]
