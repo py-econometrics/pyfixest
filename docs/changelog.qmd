@@ -23,6 +23,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   checks for common agent questions.
 - The package, README, and contributor guide now direct AI agents to the
   machine-readable documentation and repository instructions.
+- Release artifacts now carry a deterministic, version-matched narrative
+  documentation corpus generated from Quarto's `.llms.md` output.
 
 ### Inference Types
 

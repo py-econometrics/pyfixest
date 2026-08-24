@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "site_url": "https://pyfixest.org/",
+  "pages": [
+    {
+      "source": "pyfixest.md",
+      "title": "PyFixest overview",
+      "description": "Package capabilities, installation, quickstart, benchmarks, and project links."
+    },
+    {
+      "source": "getting-started.qmd",
+      "title": "Getting started",
+      "description": "A first fixed-effects regression and the main result-accessor workflow."
+    },
+    {
+      "source": "tutorials/index.qmd",
+      "title": "Tutorial index",
+      "description": "Entry points for PyFixest's estimation, inference, and reporting tutorials."
+    },
+    {
+      "source": "tutorials/ols-fixed-effects.qmd",
+      "title": "OLS with fixed effects",
+      "description": "OLS estimation, fixed effects, demeaning, and common model specifications."
+    },
+    {
+      "source": "tutorials/formula-syntax.qmd",
+      "title": "Formula syntax",
+      "description": "Formulaic syntax, fixed effects, IVs, interactions, multiple estimation, and sample splitting."
+    },
+    {
+      "source": "tutorials/instrumental-variables.qmd",
+      "title": "Instrumental variables",
+      "description": "Identification, fixed-effects IV syntax, diagnostics, and weak-instrument checks."
+    },
+    {
+      "source": "tutorials/poisson-glm.qmd",
+      "title": "Poisson and generalized linear models",
+      "description": "Poisson, logit, probit, and Gaussian GLM estimation workflows."
+    },
+    {
+      "source": "tutorials/regression-tables.qmd",
+      "title": "Regression tables",
+      "description": "Comparing models and producing publication-ready tables."
+    },
+    {
+      "source": "tutorials/difference-in-differences.qmd",
+      "title": "Difference in differences",
+      "description": "TWFE, event studies, DID2S, local projections, and saturated estimators."
+    },
+    {
+      "source": "tutorials/quantile-regression.qmd",
+      "title": "Quantile regression",
+      "description": "Conditional-quantile estimation, inference, and performance guidance."
+    },
+    {
+      "source": "how-to/index.qmd",
+      "title": "How-to index",
+      "description": "Task-oriented guides for specialized PyFixest workflows."
+    },
+    {
+      "source": "how-to/demeaner-backends.qmd",
+      "title": "Choosing a demeaner backend",
+      "description": "MAP and LSMR selection, configuration, preconditioners, and performance."
+    },
+    {
+      "source": "how-to/marginaleffects.qmd",
+      "title": "Marginal effects and hypothesis tests",
+      "description": "Post-estimation workflows using the marginaleffects package."
+    },
+    {
+      "source": "how-to/anytime-valid-inference.qmd",
+      "title": "Anytime-valid inference",
+      "description": "Sequential monitoring with e-values, p-values, and confidence sequences."
+    },
+    {
+      "source": "how-to/regression_decomposition.qmd",
+      "title": "Regression decomposition",
+      "description": "Gelbach decomposition of changes in regression coefficients."
+    },
+    {
+      "source": "how-to/stata-2-pyfixest.qmd",
+      "title": "Translating Stata to PyFixest",
+      "description": "Syntax and inference mappings between Stata and PyFixest."
+    },
+    {
+      "source": "how-to/panel_variance_reduction.qmd",
+      "title": "Panel variance reduction",
+      "description": "Regression adjustment and panel methods for A/B tests."
+    },
+    {
+      "source": "explanation/difficult-fixed-effects.md",
+      "title": "Difficult fixed-effects problems",
+      "description": "How fixed-effect graph structure affects demeaning performance."
+    },
+    {
+      "source": "explanation/ssc.qmd",
+      "title": "Small-sample corrections",
+      "description": "Degrees of freedom and small-sample adjustments for covariance estimators."
+    },
+    {
+      "source": "explanation/compare-fixest-pyfixest.qmd",
+      "title": "Comparing fixest and PyFixest",
+      "description": "Behavioral compatibility and known differences from R's fixest."
+    }
+  ]
+}
