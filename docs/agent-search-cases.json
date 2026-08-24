@@ -5,6 +5,9 @@
     "authoritative_sources": [
       "tutorials/formula-syntax.llms.md"
     ],
+    "package_sources": [
+      "pyfixest/docs/pages/tutorials/formula-syntax.md"
+    ],
     "terms": [
       "Fixed Effects Syntax",
       "Instrumental Variables (IV) Syntax",
@@ -17,6 +20,9 @@
     "authoritative_sources": [
       "reference/estimation.api.feols.feols.llms.md"
     ],
+    "package_sources": [
+      "pyfixest/estimation/api/feols.py"
+    ],
     "terms": [
       "CRV1",
       "CRV3",
@@ -28,6 +34,9 @@
     "question": "How do I configure Newey-West or Driscoll-Kraay standard errors?",
     "authoritative_sources": [
       "reference/estimation.api.feols.feols.llms.md"
+    ],
+    "package_sources": [
+      "pyfixest/estimation/api/feols.py"
     ],
     "terms": [
       "Newey-West",
@@ -43,6 +52,10 @@
       "tutorials/formula-syntax.llms.md",
       "reference/estimation.api.feols.feols.llms.md"
     ],
+    "package_sources": [
+      "pyfixest/docs/pages/tutorials/formula-syntax.md",
+      "pyfixest/estimation/api/feols.py"
+    ],
     "terms": [
       "Multiple Estimation Syntax",
       "csw()",
@@ -56,6 +69,9 @@
     "authoritative_sources": [
       "reference/estimation.api.feols.feols.llms.md"
     ],
+    "package_sources": [
+      "pyfixest/estimation/api/feols.py"
+    ],
     "terms": [
       "store_data",
       "lean",
@@ -68,6 +84,9 @@
     "authoritative_sources": [
       "how-to/demeaner-backends.llms.md"
     ],
+    "package_sources": [
+      "pyfixest/docs/pages/how-to/demeaner-backends.md"
+    ],
     "terms": [
       "MapDemeaner",
       "LsmrDemeaner",
@@ -79,6 +98,9 @@
     "question": "Which difference-in-differences estimators does PyFixest provide?",
     "authoritative_sources": [
       "tutorials/difference-in-differences.llms.md"
+    ],
+    "package_sources": [
+      "pyfixest/docs/pages/tutorials/difference-in-differences.md"
     ],
     "terms": [
       "event_study",

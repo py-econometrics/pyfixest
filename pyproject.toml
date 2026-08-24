@@ -68,6 +68,9 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+include = [
+    { path = "pyfixest/docs/**/*", format = ["wheel", "sdist"] },
+]
 exclude = [
     "tests/**",
     "docs/**",

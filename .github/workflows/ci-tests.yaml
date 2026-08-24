@@ -109,6 +109,14 @@ jobs:
       - name: Check agent-readable docs
         run: pixi run -e docs python scripts/check_agent_docs.py
 
+      - name: Check bundled docs are current
+        run: pixi run -e docs python scripts/sync_agent_docs.py --check
+
+      - name: Build and inspect release wheel
+        run: |
+          pixi run -e docs maturin build --release --out dist-agent-docs
+          pixi run -e docs python scripts/check_wheel_contents.py --wheel-dir dist-agent-docs
+
       - name: Save docs artifact
         uses: actions/upload-artifact@v7
         with:
