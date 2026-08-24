@@ -15,6 +15,8 @@ This will launch a github codespace (there is a free tier for 60h a month, thank
 
 Please refer to the [contributing section](https://pyfixest.org/contributing.html) of our documentation to get started with local development.
 
+When working offline or with a coding agent, start with [`AGENTS.md`](AGENTS.md). It contains the repository map, development workflow, testing commands, and documentation requirements used in this checkout.
+
 For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
 
 We look forward to your contributions!

@@ -1,3 +1,10 @@
+"""Fast high-dimensional fixed-effects estimation for Python.
+
+For machine-readable documentation, start with https://pyfixest.org/llms.txt.
+Reusable agent instructions are published at https://pyfixest.org/skills.html,
+and the source repository is https://github.com/py-econometrics/pyfixest.
+"""
+
 import importlib as _importlib
 from importlib.metadata import PackageNotFoundError, version
 

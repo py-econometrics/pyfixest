@@ -22,6 +22,10 @@ The package aims to mimic the syntax and functionality of [Laurent Bergé's](htt
 
 For questions on `PyFixest`, head over to our [GitHub discussions](https://github.com/py-econometrics/pyfixest/discussions), or join our [Discord server](https://discord.gg/gBAydeDMVK).
 
+## Using PyFixest with AI agents
+
+Point coding agents at the machine-readable [documentation index](https://pyfixest.org/llms.txt). For reusable task instructions and focused documentation links, use the [PyFixest skill](https://pyfixest.org/skills.html).
+
 ## Features
 
 - **Estimation**
