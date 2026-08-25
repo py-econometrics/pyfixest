@@ -730,6 +730,81 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
+def test_feglm_gaussian_reference_behavior():
+    """Lock in pyfixest's Gaussian-GLM compatibility decision."""
+    data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
+    fml = "Y ~ X1 + X2"
+    py_ssc = pf.ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_glm = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        vcov="iid",
+        ssc=py_ssc,
+        iwls_tol=1e-10,
+    )
+    py_ols = pf.feols(fml=fml, data=data, vcov="iid", ssc=py_ssc)
+    r_lm = stats.lm(ro.Formula(fml), data=data)
+    r_glm = stats.glm(ro.Formula(fml), data=data, family=stats.gaussian())
+    r_feols = fixest.feols(ro.Formula(fml), data=data, vcov="iid", ssc=r_ssc)
+    r_feglm = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.gaussian(),
+        vcov="iid",
+        ssc=r_ssc,
+    )
+
+    pd.testing.assert_frame_equal(py_glm.tidy(), py_ols.tidy(), rtol=0, atol=1e-10)
+    np.testing.assert_allclose(
+        py_glm._vcov,
+        py_ols._vcov,
+        rtol=0,
+        atol=1e-10,
+        err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
+    )
+
+    for r_fit, label in (
+        (r_lm, "base R lm"),
+        (r_glm, "base R glm"),
+        (r_feols, "R fixest::feols"),
+    ):
+        np.testing.assert_allclose(
+            py_glm.coef(),
+            np.asarray(stats.coef(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM coefficients differ from {label}",
+        )
+        np.testing.assert_allclose(
+            py_glm._vcov,
+            np.asarray(stats.vcov(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM covariance differs from {label}",
+        )
+        assert py_glm._df_t == int(stats.df_residual(r_fit)[0]), (
+            f"Gaussian-GLM residual degrees of freedom differ from {label}"
+        )
+
+    np.testing.assert_allclose(
+        py_glm.coef(),
+        np.asarray(stats.coef(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="Gaussian-GLM coefficients differ from R fixest::feglm",
+    )
+    assert not np.allclose(
+        py_glm._vcov,
+        np.asarray(stats.vcov(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+    ), "expected fixest::feglm covariance divergence was not observed"
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
 def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
     """Compare transformed-offset estimation and prediction with fixest."""

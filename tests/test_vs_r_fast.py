@@ -1,28 +1,100 @@
 import numpy as np
-import pandas as pd
 import pytest
 import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
 
-broom = importr("broom")
 fixest = importr("fixest")
 quantreg_r = importr("quantreg")
 stats = importr("stats")
 
-FEOLS_FORMULAS = ["Y ~ X1 + X2", "Y ~ X1 + X2 | f1 + f2"]
-FEPOIS_FORMULAS = ["Y ~ X1 + X2", "Y ~ X1 + X2 | f1"]
-FEGLM_FORMULAS = ["Y ~ X1 + X2", "Y ~ X1 + X2 | f1"]
-QUANTREG_FORMULAS = ["Y ~ X1", "Y ~ X1 + X2"]
-INFERENCE_TYPES = [
-    pytest.param("iid", id="iid"),
-    pytest.param("hetero", id="hetero"),
-    pytest.param({"CRV1": "group_id"}, id="CRV1"),
-]
-# Match the comprehensive fixest matrix for every named coefficient.
-COEFFICIENT_RTOL = 1e-8
+pytestmark = [pytest.mark.against_r_core, pytest.mark.fast_r]
+
+# Keep these representative bounds aligned with the estimator-specific
+# contracts in test_vs_fixest.py: coefficients are strict, while IRLS and
+# derived inference allow the slightly larger numerical differences documented
+# by the canonical matrix.
 COEFFICIENT_ATOL = 1e-8
+FEOLS_INFERENCE_ATOL = 1e-7
+GLM_INFERENCE_ATOL = 1e-6
+
+FIXEST_CASES = [
+    pytest.param("feols", "Y ~ X1 + X2", None, "iid", None, id="feols-iid"),
+    pytest.param(
+        "feols",
+        "Y ~ X1 + X2 | f1 + f2",
+        None,
+        "hetero",
+        "weights",
+        id="feols-fe-hetero-weighted",
+    ),
+    pytest.param(
+        "feols",
+        "Y ~ X1 + X2 | f1 + f2",
+        None,
+        {"CRV1": "group_id"},
+        None,
+        id="feols-fe-clustered",
+    ),
+    pytest.param("fepois", "Y ~ X1 + X2", None, "iid", None, id="fepois-iid"),
+    pytest.param(
+        "fepois",
+        "Y ~ X1 + X2 | f1",
+        None,
+        "hetero",
+        "weights",
+        id="fepois-fe-hetero-weighted",
+    ),
+    pytest.param(
+        "fepois",
+        "Y ~ X1 + X2 | f1",
+        None,
+        {"CRV1": "group_id"},
+        None,
+        id="fepois-fe-clustered",
+    ),
+    pytest.param(
+        "feglm", "Y_bin ~ X1 + X2", "logit", "iid", None, id="feglm-logit-iid"
+    ),
+    pytest.param(
+        "feglm",
+        "Y_bin ~ X1 + X2 | f1",
+        "probit",
+        "hetero",
+        "weights",
+        id="feglm-probit-fe-weighted",
+    ),
+    pytest.param(
+        "feglm",
+        "Y ~ X1 + X2 | f1",
+        "poisson",
+        {"CRV1": "group_id"},
+        None,
+        id="feglm-poisson-fe-clustered",
+    ),
+]
+FIXEST_TOLERANCES = {
+    "feols": (FEOLS_INFERENCE_ATOL, 1e-6, 1e-6, {"link": 1e-6}),
+    "fepois": (
+        GLM_INFERENCE_ATOL,
+        1e-6,
+        1e-7,
+        {"link": 1e-6, "response": 1e-5},
+    ),
+    "feglm": (
+        GLM_INFERENCE_ATOL,
+        1e-6,
+        1e-7,
+        {"link": 1e-6, "response": 1e-5},
+    ),
+}
+QUANTREG_CASES = [
+    pytest.param("Y ~ X1", 0.02, "fn", id="fn-low"),
+    pytest.param("Y ~ X1 + X2", 0.35, "pfn", id="pfn-two-regressors"),
+    pytest.param("Y ~ X1", 0.5, "pfn", id="pfn-median"),
+    pytest.param("Y ~ X1 + X2", 0.9, "fn", id="fn-high-two-regressors"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -35,18 +107,26 @@ def count_data():
     data = pf.get_data(N=500, seed=7651, model="Fepois").dropna()
     rng = np.random.default_rng(20260825)
     latent = 0.5 + 0.8 * data["X1"] - 0.4 * data["X2"]
-    probability = 1 / (1 + np.exp(-latent))
-    data["Y_bin"] = rng.binomial(1, probability)
+    data["Y_bin"] = rng.binomial(1, 1 / (1 + np.exp(-latent)))
     return data
 
 
 @pytest.fixture(scope="module")
 def quantile_data():
+    data = pf.get_data(N=5_000, seed=3131)
     rng = np.random.default_rng(3993)
-    x1 = rng.normal(size=800)
-    x2 = rng.normal(size=800)
-    y = 1 + 2 * x1 + 3 * x2 + rng.normal(size=800)
-    return pd.DataFrame({"Y": y, "X1": x1, "X2": x2})
+    data["Y"] = 1 + 2 * data["X1"] + 3 * data["X2"] + rng.normal(size=len(data))
+    return data
+
+
+def _assert_close(actual, reference, *, atol, quantity, rtol=0):
+    np.testing.assert_allclose(
+        np.asarray(actual),
+        np.asarray(reference),
+        rtol=rtol,
+        atol=atol,
+        err_msg=f"{quantity} differ from the R reference",
+    )
 
 
 def _r_coefficient_names(r_fit) -> list[str]:
@@ -55,95 +135,59 @@ def _r_coefficient_names(r_fit) -> list[str]:
     return ["Intercept" if name == "(Intercept)" else str(name) for name in names]
 
 
-def _r_tidy_fixest(r_fit) -> pd.DataFrame:
-    tidy = pd.DataFrame(broom.tidy_fixest(r_fit, conf_int=ro.BoolVector([True]))).T
-    tidy.columns = [
-        "term",
-        "estimate",
-        "std.error",
-        "statistic",
-        "p.value",
-        "conf.low",
-        "conf.high",
-    ]
-    tidy["term"] = tidy["term"].replace({"(Intercept)": "Intercept"})
-    numeric_columns = [column for column in tidy.columns if column != "term"]
-    tidy[numeric_columns] = tidy[numeric_columns].astype(np.float64)
-    return tidy.set_index("term")
-
-
 def _r_inference(inference):
     if isinstance(inference, dict):
         return ro.Formula(f"~{inference['CRV1']}")
     return inference
 
 
-def _r_ssc(k_adj, G_adj):
-    return fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min")
+def _r_ssc():
+    return fixest.ssc(True, "nonnested", False, True, "min", "min")
 
 
-def _compare_fixest_fit(
-    py_fit,
-    r_fit,
-    data,
-    *,
-    inference_rtol,
-    inference_atol,
-    residual_rtol,
-    residual_atol,
-    prediction_rtol,
-    prediction_atol,
-    prediction_types,
-):
-    """Compare the same core fit and inference outputs as test_vs_fixest.py."""
+def _assert_fixest_contract(py_fit, r_fit, *, inference_atol, derived_atol):
     r_names = _r_coefficient_names(r_fit)
-    r_tidy = _r_tidy_fixest(r_fit).loc[r_names]
+    r_table = np.asarray(r_fit.rx2("coeftable"))
     py_positions = [py_fit.coef().index.get_loc(name) for name in r_names]
 
     assert set(py_fit.coef().index) == set(r_names), (
         "estimated coefficient names differ from R fixest"
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.coef().loc[r_names],
-        r_tidy["estimate"],
-        rtol=COEFFICIENT_RTOL,
+        r_table[:, 0],
         atol=COEFFICIENT_ATOL,
-        err_msg="coefficient estimates differ from R fixest",
+        quantity="coefficient estimates",
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit._vcov[np.ix_(py_positions, py_positions)],
-        np.asarray(stats.vcov(r_fit)),
-        rtol=inference_rtol,
+        stats.vcov(r_fit),
         atol=inference_atol,
-        err_msg="covariance matrix differs from R fixest",
+        quantity="covariance matrices",
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.se().loc[r_names],
-        r_tidy["std.error"],
-        rtol=inference_rtol,
+        r_table[:, 1],
         atol=inference_atol,
-        err_msg="standard errors differ from R fixest",
+        quantity="standard errors",
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.tstat().loc[r_names],
-        r_tidy["statistic"],
-        rtol=inference_rtol,
-        atol=inference_atol,
-        err_msg="test statistics differ from R fixest",
+        r_table[:, 2],
+        atol=derived_atol,
+        quantity="test statistics",
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.pvalue().loc[r_names],
-        r_tidy["p.value"],
-        rtol=inference_rtol,
-        atol=inference_atol,
-        err_msg="p-values differ from R fixest",
+        r_table[:, 3],
+        atol=derived_atol,
+        quantity="p-values",
     )
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.confint().loc[r_names],
-        r_tidy[["conf.low", "conf.high"]],
-        rtol=inference_rtol,
-        atol=inference_atol,
-        err_msg="confidence intervals differ from R fixest",
+        np.asarray(stats.confint(r_fit)).T,
+        atol=derived_atol,
+        quantity="confidence intervals",
     )
 
     ro.globalenv[".pyfixest_fast_fit"] = r_fit
@@ -157,241 +201,89 @@ def _compare_fixest_fit(
         "observation count differs from R fixest"
     )
 
-    np.testing.assert_allclose(
+
+def _assert_fit_samples(
+    py_fit, r_fit, *, residual_atol, prediction_atols: dict[str, float]
+):
+    _assert_close(
         py_fit.resid()[:5],
         np.asarray(stats.residuals(r_fit))[:5],
-        rtol=residual_rtol,
         atol=residual_atol,
-        err_msg="first five residuals differ from R fixest",
+        quantity="first five residuals",
     )
-    for prediction_type in prediction_types:
-        np.testing.assert_allclose(
-            py_fit.predict(newdata=data.iloc[:5], type=prediction_type),
-            stats.predict(r_fit, newdata=data.iloc[:5], type=prediction_type),
-            rtol=prediction_rtol,
+    for prediction_type, prediction_atol in prediction_atols.items():
+        _assert_close(
+            py_fit.predict(type=prediction_type)[:5],
+            np.asarray(stats.predict(r_fit, type=prediction_type))[:5],
             atol=prediction_atol,
-            err_msg=f"first five {prediction_type} predictions differ from R fixest",
+            quantity=f"first five {prediction_type} predictions",
         )
 
 
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", FEOLS_FORMULAS)
-@pytest.mark.parametrize("inference", INFERENCE_TYPES)
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("k_adj", [True])
-@pytest.mark.parametrize("G_adj", [True])
-def test_feols_fast_against_fixest(linear_data, fml, inference, weights, k_adj, G_adj):
-    py_fit = pf.feols(
-        fml=fml,
-        data=linear_data,
-        vcov=inference,
-        weights=weights,
-        ssc=pf.ssc(k_adj=k_adj, G_adj=G_adj),
-    )
-    r_kwargs = {
-        "data": linear_data,
-        "vcov": _r_inference(inference),
-        "ssc": _r_ssc(k_adj, G_adj),
+def _fit_fixest_pair(estimator, fml, family, inference, weights, data):
+    py_kwargs = {
+        "fml": fml,
+        "data": data,
+        "vcov": inference,
+        "weights": weights,
+        "ssc": pf.ssc(k_adj=True, G_adj=True),
     }
+    r_kwargs = {
+        "data": data,
+        "vcov": _r_inference(inference),
+        "ssc": _r_ssc(),
+    }
+    if estimator in ("fepois", "feglm"):
+        py_kwargs.update(iwls_tol=1e-10, iwls_maxiter=100)
+        r_kwargs.update(glm_tol=1e-10, glm_iter=100)
+    if family is not None:
+        py_kwargs["family"] = family
+        r_kwargs["family"] = {
+            "logit": stats.binomial(link="logit"),
+            "probit": stats.binomial(link="probit"),
+            "poisson": stats.poisson(),
+        }[family]
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
-    r_fit = fixest.feols(ro.Formula(fml), **r_kwargs)
-
-    _compare_fixest_fit(
-        py_fit,
-        r_fit,
-        linear_data,
-        inference_rtol=1e-7,
-        inference_atol=1e-8,
-        # Recovered fixed effects follow different iterative paths.
-        residual_rtol=1e-6,
-        residual_atol=1e-8,
-        prediction_rtol=1e-6,
-        prediction_atol=1e-8,
-        prediction_types=("link",),
-    )
+    py_fit = getattr(pf, estimator)(**py_kwargs)
+    r_fit = getattr(fixest, estimator)(ro.Formula(fml), **r_kwargs)
+    return py_fit, r_fit
 
 
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", FEPOIS_FORMULAS)
-@pytest.mark.parametrize("inference", INFERENCE_TYPES)
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("k_adj", [True])
-@pytest.mark.parametrize("G_adj", [True])
-def test_fepois_fast_against_fixest(count_data, fml, inference, weights, k_adj, G_adj):
-    py_fit = pf.fepois(
+@pytest.mark.parametrize(
+    ("estimator", "fml", "family", "inference", "weights"), FIXEST_CASES
+)
+def test_fast_against_fixest(request, estimator, fml, family, inference, weights):
+    data_fixture = "linear_data" if estimator == "feols" else "count_data"
+    data = request.getfixturevalue(data_fixture)
+    py_fit, r_fit = _fit_fixest_pair(
+        estimator=estimator,
         fml=fml,
-        data=count_data,
-        vcov=inference,
-        weights=weights,
-        ssc=pf.ssc(k_adj=k_adj, G_adj=G_adj),
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
-    )
-    r_kwargs = {
-        "data": count_data,
-        "vcov": _r_inference(inference),
-        "ssc": _r_ssc(k_adj, G_adj),
-        "glm_tol": 1e-10,
-        "glm_iter": 100,
-    }
-    if weights is not None:
-        r_kwargs["weights"] = ro.Formula(f"~{weights}")
-    r_fit = fixest.fepois(ro.Formula(fml), **r_kwargs)
-
-    _compare_fixest_fit(
-        py_fit,
-        r_fit,
-        count_data,
-        inference_rtol=1e-4,
-        inference_atol=1e-6,
-        # IRLS stopping and fixed-effect recovery agree less tightly than coefs.
-        residual_rtol=1e-4,
-        residual_atol=1e-6,
-        prediction_rtol=1e-4,
-        prediction_atol=1e-6,
-        prediction_types=("link", "response"),
-    )
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", FEGLM_FORMULAS)
-@pytest.mark.parametrize("inference", INFERENCE_TYPES)
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("family", ["logit", "probit", "poisson"])
-@pytest.mark.parametrize("k_adj", [True])
-@pytest.mark.parametrize("G_adj", [True])
-def test_feglm_fast_against_fixest(
-    count_data, fml, inference, weights, family, k_adj, G_adj
-):
-    py_fml = fml.replace("Y", "Y_bin", 1) if family in ("logit", "probit") else fml
-    py_fit = pf.feglm(
-        fml=py_fml,
-        data=count_data,
         family=family,
-        vcov=inference,
+        inference=inference,
         weights=weights,
-        ssc=pf.ssc(k_adj=k_adj, G_adj=G_adj),
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
+        data=data,
     )
-    r_family = {
-        "logit": stats.binomial(link="logit"),
-        "probit": stats.binomial(link="probit"),
-        "poisson": stats.poisson(),
-    }[family]
-    r_kwargs = {
-        "data": count_data,
-        "family": r_family,
-        "vcov": _r_inference(inference),
-        "ssc": _r_ssc(k_adj, G_adj),
-        "glm_tol": 1e-10,
-        "glm_iter": 100,
-    }
-    if weights is not None:
-        r_kwargs["weights"] = ro.Formula(f"~{weights}")
-    r_fit = fixest.feglm(ro.Formula(py_fml), **r_kwargs)
-
-    # IRLS-derived inference and fitted values need family-specific tolerances;
-    # named coefficients remain subject to the 1e-8 contract above.
-    tolerance = 1e-4 if family == "poisson" else 1e-5
-    _compare_fixest_fit(
+    inference_atol, derived_atol, residual_atol, prediction_atols = FIXEST_TOLERANCES[
+        estimator
+    ]
+    if weights is not None and estimator != "feols":
+        derived_atol = 1e-5
+    _assert_fixest_contract(
+        py_fit, r_fit, inference_atol=inference_atol, derived_atol=derived_atol
+    )
+    _assert_fit_samples(
         py_fit,
         r_fit,
-        count_data,
-        inference_rtol=tolerance,
-        inference_atol=1e-6,
-        residual_rtol=tolerance,
-        residual_atol=1e-6,
-        prediction_rtol=tolerance,
-        prediction_atol=1e-6,
-        prediction_types=("link", "response"),
+        residual_atol=residual_atol,
+        prediction_atols=prediction_atols,
     )
 
 
-@pytest.mark.against_r_core
-def test_feglm_gaussian_reference_behavior(linear_data):
-    """Lock in pyfixest's documented Gaussian-GLM compatibility decision."""
-    fml = "Y ~ X1 + X2"
-    py_ssc = pf.ssc(k_adj=True, G_adj=True)
-    r_ssc = _r_ssc(k_adj=True, G_adj=True)
-    py_glm = pf.feglm(
-        fml=fml,
-        data=linear_data,
-        family="gaussian",
-        vcov="iid",
-        ssc=py_ssc,
-        iwls_tol=1e-10,
-    )
-    py_ols = pf.feols(fml=fml, data=linear_data, vcov="iid", ssc=py_ssc)
-    r_lm = stats.lm(ro.Formula(fml), data=linear_data)
-    r_glm = stats.glm(ro.Formula(fml), data=linear_data, family=stats.gaussian())
-    r_feols = fixest.feols(ro.Formula(fml), data=linear_data, vcov="iid", ssc=r_ssc)
-    r_feglm = fixest.feglm(
-        ro.Formula(fml),
-        data=linear_data,
-        family=stats.gaussian(),
-        vcov="iid",
-        ssc=r_ssc,
-    )
-
-    pd.testing.assert_frame_equal(py_glm.tidy(), py_ols.tidy(), rtol=0, atol=1e-10)
-    np.testing.assert_allclose(
-        py_glm._vcov,
-        py_ols._vcov,
-        rtol=0,
-        atol=1e-10,
-        err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
-    )
-    _compare_fixest_fit(
-        py_glm,
-        r_feols,
-        linear_data,
-        inference_rtol=1e-8,
-        inference_atol=1e-8,
-        residual_rtol=1e-8,
-        residual_atol=1e-8,
-        prediction_rtol=1e-8,
-        prediction_atol=1e-8,
-        prediction_types=("link", "response"),
-    )
-
-    for r_fit in (r_lm, r_glm):
-        np.testing.assert_allclose(
-            py_glm.coef(),
-            np.asarray(stats.coef(r_fit)),
-            rtol=1e-8,
-            atol=1e-8,
-            err_msg="Gaussian-GLM coefficients differ from base R",
-        )
-        np.testing.assert_allclose(
-            py_glm._vcov,
-            np.asarray(stats.vcov(r_fit)),
-            rtol=1e-8,
-            atol=1e-8,
-            err_msg="Gaussian-GLM covariance differs from base R",
-        )
-        assert py_glm._df_t == int(stats.df_residual(r_fit)[0]), (
-            "Gaussian-GLM residual degrees of freedom differ from base R"
-        )
-
-    np.testing.assert_allclose(
-        py_glm.coef(),
-        np.asarray(stats.coef(r_feglm)),
-        rtol=1e-8,
-        atol=1e-8,
-        err_msg="Gaussian-GLM coefficients differ from R fixest::feglm",
-    )
-    assert not np.allclose(
-        py_glm._vcov, np.asarray(stats.vcov(r_feglm)), rtol=1e-8, atol=1e-8
-    ), "expected fixest::feglm covariance divergence was not observed"
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", QUANTREG_FORMULAS)
-@pytest.mark.parametrize("quantile", [0.02, 0.35, 0.5, 0.9])
-@pytest.mark.parametrize("method", ["fn", "pfn"])
+@pytest.mark.parametrize(("fml", "quantile", "method"), QUANTREG_CASES)
 def test_quantreg_fast_against_r_quantreg(quantile_data, fml, quantile, method):
+    # Match the solver-specific contract in test_quantreg.py rather than the
+    # tighter absolute-error contract used for fixest estimators above.
     py_fit = pf.quantreg(
         fml=fml,
         data=quantile_data,
@@ -413,38 +305,35 @@ def test_quantreg_fast_against_r_quantreg(quantile_data, fml, quantile, method):
     assert set(py_fit.coef().index) == set(r_names), (
         "estimated coefficient names differ from R quantreg"
     )
-
-    # Mirror the solver-specific contract in tests/test_quantreg.py.
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.coef().loc[r_names],
-        np.asarray(r_fit.rx2("coefficients")),
+        r_fit.rx2("coefficients"),
         rtol=1e-3,
         atol=1e-6,
-        err_msg="quantile-regression coefficients differ from R quantreg",
+        quantity="quantile-regression coefficients",
     )
     r_summary = ro.r["summary"](r_fit, se="nid")
-    np.testing.assert_allclose(
+    _assert_close(
         py_fit.se().loc[r_names],
         np.asarray(r_summary.rx2("coefficients"))[:, 1],
         rtol=1e-3,
         atol=1e-6,
-        err_msg="quantile-regression standard errors differ from R quantreg",
+        quantity="quantile-regression standard errors",
     )
     if method == "fn":
-        py_residuals = py_fit.resid()
         r_residuals = np.asarray(r_fit.rx2("residuals"))
-        np.testing.assert_allclose(
-            py_residuals[:5],
+        _assert_close(
+            py_fit.resid()[:5],
             r_residuals[:5],
             rtol=1e-3,
             atol=1e-8,
-            err_msg="first five residuals differ from R quantreg",
+            quantity="first five quantile-regression residuals",
         )
         r_objective = np.sum(np.abs(r_residuals) * (quantile - (r_residuals < 0)))
-        np.testing.assert_allclose(
+        _assert_close(
             py_fit.objective_value,
             r_objective,
             rtol=1e-6,
             atol=1e-8,
-            err_msg="quantile-regression objective differs from R quantreg",
+            quantity="quantile-regression objective",
         )
