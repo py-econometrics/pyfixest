@@ -131,7 +131,11 @@ reimplementations are additional evidence, not substitutes. Prefer:
 If no external implementation is available, the estimator is not merge-ready.
 Numerical changes to existing estimators also require an external comparison
 where overlapping software exists. Record explicit tolerances and why they are
-appropriate.
+appropriate. Numerical assertions must identify the quantity being compared
+and use a tolerance chosen for that quantity; do not reuse a looser inference
+or prediction tolerance for coefficients. Follow `tests/test_vs_fixest.py` for
+`feols`/`fepois`/`feglm` comparisons and `tests/test_quantreg.py` for
+`quantreg`; `docs/developer/testing.md` defines the error criterion.
 
 R tests use strict markers: `against_r_core` for conda-forge dependencies and
 `against_r_extended` for CRAN-only extras. Add every new rpy2-importing test
@@ -148,7 +152,8 @@ may miss dependencies or the compiled extension.
 - PR baseline: `pixi run test-py` plus relevant lint/type checks.
 - Domain suites: R, HAC, no-JIT, docs, plots, Rust, or extended tests selected
   by the changed subsystem.
-- Exhaustive checks: `test-all`, platform CI, and relevant benchmarks.
+- Full available suite: `test-all`; exhaustive evidence also requires the
+  CRAN-only R dependencies, applicable platform CI, and relevant benchmarks.
 
 Long suites can take tens of minutes or more. Run narrow checks while editing,
 then required domain suites once the change stabilizes. Report every applicable

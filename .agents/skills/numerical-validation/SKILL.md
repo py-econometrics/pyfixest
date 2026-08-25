@@ -40,6 +40,13 @@ quantities the method promises: coefficients, vcov, standard errors, degrees of
 freedom, observations, dropped terms, convergence, or deterministic prediction
 subsets as applicable.
 
+Read the error and tolerance contract in `docs/developer/testing.md`. Name the
+quantity in every numerical assertion, use separate tolerances for coefficients,
+inference, residuals, and predictions, and compare discrete structure exactly.
+Use `tests/test_vs_fixest.py` as the current precedent for
+`feols`/`fepois`/`feglm` and `tests/test_quantreg.py` for `quantreg`; do not copy
+the loosest tolerance from either file into unrelated cases.
+
 Keep the permanent test parametrized through the public API where possible.
 Live R comparisons must run through rpy2 inside pytest. Register every
 rpy2-importing test file in `tests/conftest.py` and use the strict R marker

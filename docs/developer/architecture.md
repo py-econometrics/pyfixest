@@ -50,21 +50,26 @@ and a generic contract. Hypothetical future reuse is not sufficient.
 
 ## Estimation flow
 
-`feols()` builds an `EstimationConfig`. `parse_formula` expands
-multiple-estimation syntax. `runner.run_estimation` and `fit_one` prepare and
-fit each model:
+Each public estimator builds an `EstimationConfig`. `parse_formula` expands
+multiple-estimation syntax, and `runner.run_estimation` and `fit_one` prepare
+each model before dispatching to its estimator-specific fit path:
 
 ```text
 public API
   -> EstimationConfig
   -> parse_formula
   -> prepare_model_matrix
-  -> get_fit
-       -> demean
-       -> to_array
-       -> drop_multicol_vars
-       -> wls_transform
-       -> solve
+  -> estimator-specific get_fit
+       -> feols / feiv
+            -> demean
+            -> to_array
+            -> drop_multicol_vars
+            -> wls_transform
+            -> solve OLS / 2SLS
+       -> fepois / feglm
+            -> IRLS with weighted demeaning and solving inside each iteration
+       -> quantreg
+            -> Frisch-Newton solve (absorbed fixed effects are unsupported)
   -> vcov
   -> get_inference
   -> fitted result / FixestMulti

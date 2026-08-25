@@ -15,12 +15,18 @@ selection affect wall time.
 | Edit | Fast feedback on the changed seam | Seconds to a few minutes | targeted pytest, changed-file Ruff/mypy |
 | PR baseline | Broad Python regression check | Minutes | `pixi run test-py` |
 | Domain/special | Validate an affected environment or reference | May take tens of minutes | R, HAC, no-JIT, docs, plots, Rust |
-| Exhaustive | Release/platform confidence | Potentially substantially longer | `test-all`, platform CI, benchmarks |
+| Full available suite | All tests supported by the current environment | Potentially substantially longer | `test-all`, platform CI, benchmarks |
 
 Run edit checks repeatedly. Run required domain checks once the design is
 stable. A verification report records actual elapsed time and reports every
 applicable check as passed, failed, deferred, or not run. Deferred is never
 equivalent to passed.
+
+`test-all` collects every test supported by the current Pixi environment. It
+does not install the CRAN-only packages from `r_test_requirements.R`, so those
+tests can skip. Exhaustive release evidence requires installing those packages,
+running `test-r-extended`, and combining the available suite with the relevant
+platform CI and benchmarks.
 
 ## Commands
 
@@ -38,8 +44,12 @@ pixi run -e py312-r test-r-fixest-fast
 pixi run test-r-hac
 pixi run test-r-extended
 
-# Exhaustive
+# All tests available in the current environment
 pixi run test-all
+
+# CRAN-only reference tests require an explicit installation first
+pixi run -e py312-r Rscript r_test_requirements.R
+pixi run test-r-extended
 
 # Changed-file quality checks
 pixi run -e lint prek run ruff-format --files <changed files>
@@ -93,6 +103,35 @@ against R `fixest` for `feols`, `fepois`, and `feglm`, and R `quantreg` for
 one entry point while editing. Extend the larger permanent reference suites
 when the change needs coverage beyond this focused matrix.
 
+### Error and tolerance contract
+
+For an `assert_allclose(actual, reference, rtol, atol)` comparison, the tested
+elementwise error is
+
+```text
+abs(actual - reference) <= atol + rtol * abs(reference)
+```
+
+Thus `atol` governs values near zero and `rtol` governs differences at the
+scale of the reference value. Every numerical assertion must identify the
+quantity that failed in `err_msg`. Align named coefficients and covariance
+rows/columns before comparing them; compare observation counts, degrees of
+freedom, dropped-term sets, and other discrete structure exactly.
+
+Do not prescribe one tolerance for every estimator or copy the loosest
+tolerance in a test. Use separate, numerically justified tolerances for
+coefficients, vcov/standard errors and derived inference, residuals, and
+predictions. Coefficients normally receive the strictest tolerance. Iterative
+algorithms, fixed-effect recovery, and cluster inference may require looser
+tolerances, which must be explained next to the assertion.
+
+Treat `tests/test_vs_fixest.py` as the source of truth for the current
+`feols`, `fepois`, and `feglm` comparison standards, including the formulas,
+parameters, quantities, and tolerances being tested. Follow
+`tests/test_quantreg.py` for `quantreg`, whose solver-specific tolerances are
+different. The compact `tests/test_vs_r_fast.py` matrix should mirror those
+standards rather than establish a second policy.
+
 ## Test design
 
 Prefer a small number of heavily parametrized integration tests over many thin
@@ -100,7 +139,8 @@ wrapper tests. Extend an existing formula/vcov/weights/SSC matrix when the new
 case fits it. Unit-test internal seams only when the public API cannot exercise
 them cleanly.
 
-For predictions, compare a small deterministic subset rather than an entire
-vector. Cover singleton clusters, collinearity, tiny samples, invalid inputs,
-and every supported weights/FE/IV/multiple-estimation path. Unsupported paths
-must raise a specific informative error.
+For predictions and residuals, compare a small deterministic subset rather
+than an entire vector and give each quantity its own tolerance. Cover singleton
+clusters, collinearity, tiny samples, invalid inputs, and every supported
+weights/FE/IV/multiple-estimation path. Unsupported paths must raise a specific
+informative error.
