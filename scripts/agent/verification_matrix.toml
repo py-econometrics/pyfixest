@@ -1,0 +1,125 @@
+# Commands are argument arrays and always enter through Pixi. Runtime labels are
+# qualitative; the verification report records observed wall time.
+
+[[check]]
+id = "agent-tests"
+description = "Run deterministic agent-workflow tests"
+tier = "edit"
+runtime = "seconds-to-minutes"
+domains = ["agent"]
+command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_agent_workflow.py", "-x", "-q", "--no-cov"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "ruff-format"
+description = "Format changed Python files"
+tier = "edit"
+runtime = "seconds"
+domains = ["api", "agent", "numerical", "python", "reference", "tests"]
+file_scope = "python"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "ruff-format", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "ruff-check"
+description = "Lint changed Python files"
+tier = "edit"
+runtime = "seconds"
+domains = ["api", "agent", "numerical", "python", "reference", "tests"]
+file_scope = "python"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "ruff-check", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "mypy"
+description = "Type-check changed package files"
+tier = "edit"
+runtime = "seconds-to-minutes"
+domains = ["api", "numerical", "python"]
+file_scope = "package-python"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "mypy", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "test-py"
+description = "Run the Python PR baseline"
+tier = "pr"
+runtime = "minutes"
+domains = ["api", "agent", "numerical", "packaging", "python", "rust", "tests", "unknown"]
+command = ["pixi", "run", "test-py"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "docs-build"
+description = "Build generated API documentation"
+tier = "domain"
+runtime = "minutes-to-tens-of-minutes"
+domains = ["api", "docs"]
+command = ["pixi", "run", "docs-build"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "test-r-core"
+description = "Run live conda-forge R reference tests"
+tier = "domain"
+runtime = "tens-of-minutes"
+domains = ["api", "numerical", "reference"]
+command = ["pixi", "run", "-e", "py312-r", "test-r-core"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "test-r-fixest"
+description = "Run the full fixest comparison matrix"
+tier = "domain"
+runtime = "tens-of-minutes"
+domains = ["api", "numerical", "reference"]
+command = ["pixi", "run", "-e", "py312-r", "test-r-fixest"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "test-r-hac"
+description = "Run single-threaded HAC reference tests"
+tier = "domain"
+runtime = "tens-of-minutes"
+domains = ["hac"]
+command = ["pixi", "run", "-e", "py312-r", "test-r-hac"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "test-py-nojit"
+description = "Run selected Numba paths without JIT"
+tier = "domain"
+runtime = "tens-of-minutes"
+domains = ["numba"]
+command = ["pixi", "run", "test-py-nojit"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "test-all"
+description = "Run the exhaustive Python and R suite"
+tier = "exhaustive"
+runtime = "potentially-hours"
+domains = ["always"]
+command = ["pixi", "run", "-e", "py312-r", "test-all"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "benchmark"
+description = "Run the cross-language benchmark suite"
+tier = "exhaustive"
+runtime = "potentially-hours"
+domains = ["performance"]
+command = ["pixi", "run", "-e", "benchmark", "benchmark"]
+required_local = false
+ci_allowed = true
