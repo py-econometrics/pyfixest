@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
@@ -81,10 +82,16 @@ def classify_path(path: str) -> set[str]:
     """Map one repository path to verification domains."""
     domains: set[str] = set()
 
-    if path.startswith(".agents/") or path.startswith("scripts/agent/"):
+    if (
+        path == "AGENTS.md"
+        or path.startswith(".agents/")
+        or path.startswith("scripts/agent/")
+    ):
         domains.add("agent")
     if path.startswith(".github/"):
         domains.add("ci")
+    if path.startswith("benchmarks/"):
+        domains.add("performance")
     if path.startswith("docs/") or path in {"CONTRIBUTING.md", "README.md"}:
         domains.add("docs")
     if path.startswith("scripts/reference/"):
@@ -145,11 +152,57 @@ def risk_flags(path: str) -> set[str]:
     return risks
 
 
+def content_risk_flags(path: str, changed_content: str) -> set[str]:
+    """Return high-risk flags implied by changed package-code lines."""
+    if not path.startswith("pyfixest/") or not path.endswith((".py", ".pyi")):
+        return set()
+
+    risks: set[str] = set()
+    if re.search(r"(?m)^\s*(?:async\s+)?def\s+[A-Za-z]\w*\s*\(", changed_content):
+        risks.add("public-signature")
+    if re.search(r"\b(?:aweights|fweights|weight(?:s|ed|ing)?)\b", changed_content):
+        risks.add("weights")
+    if re.search(
+        r"\b(?:EstimationConfig|prepare_model_matrix|get_fit|fit_one|run_estimation)\b",
+        changed_content,
+    ):
+        risks.add("estimation-flow")
+    if re.search(r"\b(?:vcov|ssc|inference|standard_errors?)\b", changed_content):
+        risks.add("inference")
+    if re.search(r"\b(?:formula|fml|model_matrix)\b", changed_content):
+        risks.add("formula-semantics")
+    return risks
+
+
+def _changed_content(path: str, merge_base: str, cwd: Path) -> str:
+    """Return added and removed lines for one changed path."""
+    diff = _git(
+        ["diff", "--unified=0", "--no-color", merge_base, "--", path],
+        cwd=cwd,
+    )
+    lines = [
+        line[1:]
+        for line in diff.splitlines()
+        if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+    ]
+    if lines:
+        return "\n".join(lines)
+
+    candidate = cwd / path
+    if candidate.is_file():
+        try:
+            return candidate.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return ""
+    return ""
+
+
 def classify_changes(
     *,
     base: str,
     merge_base: str,
     files: Sequence[str],
+    changed_content: dict[str, str] | None = None,
 ) -> ChangeScope:
     """Build a deterministic scope from changed paths."""
     domains: set[str] = set()
@@ -157,6 +210,8 @@ def classify_changes(
     for path in files:
         domains.update(classify_path(path))
         risks.update(risk_flags(path))
+        if changed_content is not None:
+            risks.update(content_risk_flags(path, changed_content.get(path, "")))
     return ChangeScope(
         base=base,
         merge_base=merge_base,
@@ -169,7 +224,16 @@ def classify_changes(
 def get_change_scope(base: str, cwd: Path) -> ChangeScope:
     """Inspect Git and return the classified change scope."""
     merge_base, files = changed_files(base=base, cwd=cwd)
-    return classify_changes(base=base, merge_base=merge_base, files=files)
+    changed_content = {
+        path: _changed_content(path=path, merge_base=merge_base, cwd=cwd)
+        for path in files
+    }
+    return classify_changes(
+        base=base,
+        merge_base=merge_base,
+        files=files,
+        changed_content=changed_content,
+    )
 
 
 def _format_scope(scope: ChangeScope) -> str:

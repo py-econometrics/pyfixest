@@ -198,6 +198,9 @@ pixi run test-r-fixest
 pixi run test-r-hac
 pixi run test-all
 
+pixi run agent-scope --base <immediate-parent>
+pixi run agent-verify --base <immediate-parent> --tier pr
+
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
 pixi run -e lint prek run mypy --files <changed files>

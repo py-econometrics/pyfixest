@@ -70,6 +70,15 @@ baseline, then required domain suites. Long suites run after the design
 stabilizes. Record commands, results, and durations; identify deferred checks
 and where they will run.
 
+Preview the deterministic selection with:
+
+```bash
+pixi run agent-verify --base <immediate-parent> --tier pr --dry-run
+```
+
+Then run the required tier without `--dry-run`. Use `--tier domain` after
+numerical, docs, HAC, Rust, or reference changes stabilize.
+
 Review the diff twice at most for:
 
 - estimator-specific logic leaking into the core;

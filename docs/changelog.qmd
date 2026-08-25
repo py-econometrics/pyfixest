@@ -24,7 +24,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   for multi-layer work, requires curated commit histories, and reserves merging
   for human maintainers. Repository-local skills route implementation,
   numerical validation, verification, review, history curation, and PR handoff
-  to authoritative local developer documentation.
+  to authoritative local developer documentation. A deterministic verifier now
+  maps changed paths to quick, domain-specific, and exhaustive checks and
+  records exact statuses and elapsed time.
 
 ### Inference Types
 

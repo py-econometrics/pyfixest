@@ -2,12 +2,89 @@
 # qualitative; the verification report records observed wall time.
 
 [[check]]
+id = "trailing-whitespace"
+description = "Remove trailing whitespace from changed files"
+tier = "edit"
+runtime = "seconds"
+domains = ["always"]
+file_scope = "all"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "trailing-whitespace", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "end-of-file"
+description = "Normalize final newlines in changed files"
+tier = "edit"
+runtime = "seconds"
+domains = ["always"]
+file_scope = "all"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "end-of-file-fixer", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "large-files"
+description = "Reject unexpectedly large changed files"
+tier = "edit"
+runtime = "seconds"
+domains = ["always"]
+file_scope = "all"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "check-added-large-files", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "check-toml"
+description = "Validate changed TOML files"
+tier = "edit"
+runtime = "seconds"
+domains = ["agent", "packaging"]
+file_scope = "toml"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "check-toml", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "check-yaml"
+description = "Validate changed YAML files"
+tier = "edit"
+runtime = "seconds"
+domains = ["ci"]
+file_scope = "yaml"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "check-yaml", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "check-github-workflows"
+description = "Validate changed GitHub Actions workflows"
+tier = "edit"
+runtime = "seconds"
+domains = ["ci"]
+file_scope = "workflow"
+command = ["pixi", "run", "-e", "lint", "prek", "run", "check-github-workflows", "--files", "{files}"]
+required_local = true
+ci_allowed = false
+
+[[check]]
 id = "agent-tests"
 description = "Run deterministic agent-workflow tests"
 tier = "edit"
 runtime = "seconds-to-minutes"
 domains = ["agent"]
 command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_agent_workflow.py", "-x", "-q", "--no-cov"]
+required_local = true
+ci_allowed = false
+
+[[check]]
+id = "targeted-tests"
+description = "Run changed test modules without long or external markers"
+tier = "edit"
+runtime = "seconds-to-minutes"
+domains = ["tests"]
+file_scope = "test-python"
+command = ["pixi", "run", "-e", "py312-r", "pytest", "{files}", "-m", "not (extended or against_r_core or against_r_extended or plots or hac)", "-x", "-q", "--no-cov"]
 required_local = true
 ci_allowed = false
 
@@ -50,7 +127,7 @@ description = "Run the Python PR baseline"
 tier = "pr"
 runtime = "minutes"
 domains = ["api", "agent", "numerical", "packaging", "python", "rust", "tests", "unknown"]
-command = ["pixi", "run", "test-py"]
+command = ["pixi", "run", "-e", "py312-r", "test-py"]
 required_local = true
 ci_allowed = false
 
@@ -60,7 +137,27 @@ description = "Build generated API documentation"
 tier = "domain"
 runtime = "minutes-to-tens-of-minutes"
 domains = ["api", "docs"]
-command = ["pixi", "run", "docs-build"]
+command = ["pixi", "run", "-e", "docs", "docs-build"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "docs-render"
+description = "Execute examples and render the complete documentation site"
+tier = "domain"
+runtime = "tens-of-minutes"
+domains = ["api", "docs"]
+command = ["pixi", "run", "-e", "docs", "docs-render"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "rust-kernel-tests"
+description = "Run reference and integration tests for existing Rust kernels"
+tier = "domain"
+runtime = "minutes-to-tens-of-minutes"
+domains = ["rust"]
+command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_demean.py", "tests/test_crv1.py", "tests/test_crv1_vcov.py", "tests/test_hac_meat.py", "tests/test_setup_maturin_hook.py", "-x", "-q", "--no-cov"]
 required_local = false
 ci_allowed = true
 
@@ -100,7 +197,7 @@ description = "Run selected Numba paths without JIT"
 tier = "domain"
 runtime = "tens-of-minutes"
 domains = ["numba"]
-command = ["pixi", "run", "test-py-nojit"]
+command = ["pixi", "run", "-e", "py312-r", "test-py-nojit"]
 required_local = false
 ci_allowed = true
 
