@@ -9,10 +9,12 @@ Use this skill after implementation stabilizes and before handoff.
 
 ## Select checks by risk
 
-Verify the actual PR base, inspect every changed path against it, and classify
-the change using the selection matrix in `docs/developer/testing.md`. Start
-with targeted tests and changed-file format/lint/type checks, then run the PR
-baseline and affected domain suites.
+Resolve and record the actual PR base and merge base as described in
+`docs/developer/git-and-pr-style.md`; do not assume local `master` is current.
+Inspect every changed path against that base and classify the change using the
+selection matrix in `docs/developer/testing.md`. Start with targeted tests and
+changed-file format/lint/type checks, then run the PR baseline and affected
+domain suites.
 
 - Numerical/API changes require the relevant public integration tests and
   external-reference suite.

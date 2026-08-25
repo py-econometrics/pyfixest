@@ -65,7 +65,7 @@ pixi run docs-render
 
 | Change | Required local evidence | Long or CI evidence |
 |---|---|---|
-| Documentation only | formatting/link checks; execute changed examples | `docs-build` and `docs-render` when applicable |
+| Documentation only | `git diff --check`; execute changed examples; `docs-build` | affected-page render or `docs-render` when applicable |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
 | Estimation or inference numerics | targeted integration and edge tests | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
@@ -97,11 +97,12 @@ data or seeds, formulas, weights, vcov/SSC, package versions, and explicit
 closed-form, and simulation tests as needed, but never substitute them for the
 external comparison required for a new estimator.
 
-`pixi run -e py312-r test-r-fixest-fast` runs a compact rpy2 matrix directly
-against R `fixest` for `feols`, `fepois`, and `feglm`, and R `quantreg` for
-`quantreg`. Use `-k feols`, `-k fepois`, `-k feglm`, or `-k quantreg` to select
-one entry point while editing. Extend the larger permanent reference suites
-when the change needs coverage beyond this focused matrix.
+`pixi run -e py312-r test-r-fixest-fast` runs representative rpy2 cases
+directly against R `fixest` for `feols`, `fepois`, and `feglm`, and R
+`quantreg` for `quantreg`. Use `-k feols`, `-k fepois`, `-k feglm`, or
+`-k quantreg` to select one entry point while editing. This is a focused edit
+check, not a second permanent reference framework; extend the canonical suites
+when a change needs new coverage.
 
 ### Error and tolerance contract
 
@@ -127,10 +128,11 @@ tolerances, which must be explained next to the assertion.
 
 Treat `tests/test_vs_fixest.py` as the source of truth for the current
 `feols`, `fepois`, and `feglm` comparison standards, including the formulas,
-parameters, quantities, and tolerances being tested. Follow
-`tests/test_quantreg.py` for `quantreg`, whose solver-specific tolerances are
-different. The compact `tests/test_vs_r_fast.py` matrix should mirror those
-standards rather than establish a second policy.
+parameters, quantities, and absolute-error tolerances being tested. Follow
+`tests/test_quantreg.py` for `quantreg`, whose solver-specific relative and
+absolute tolerances are different. The compact `tests/test_vs_r_fast.py` suite
+uses representative combinations from those contracts rather than duplicating
+their complete matrices.
 
 ## Test design
 
@@ -138,6 +140,25 @@ Prefer a small number of heavily parametrized integration tests over many thin
 wrapper tests. Extend an existing formula/vcov/weights/SSC matrix when the new
 case fits it. Unit-test internal seams only when the public API cannot exercise
 them cleanly.
+
+Every behavioral change needs regression evidence, but it does not necessarily
+need a new test. Control suite growth in this order:
+
+1. If an existing test already exercises the changed behavior, identify it and
+   do not duplicate it.
+2. If an existing parametrized matrix can represent the regression, add the
+   smallest case that would catch it.
+3. Add a test function only when the setup or assertion contract is genuinely
+   different.
+4. Add a test file only for a distinct subsystem, dependency marker, or fixture
+   lifecycle.
+
+Reuse seeded fixtures, external-reference adapters, and assertion helpers. A
+new test file or unusually large test diff must explain why an existing matrix
+cannot cover the behavior coherently and report the runtime impact. Do not add
+duplicate coverage merely to give one edge case its own test function. Avoid
+hard line-count limits: review whether the test remains legible and whether its
+maintenance and runtime cost are proportional to the regression it prevents.
 
 For predictions and residuals, compare a small deterministic subset rather
 than an entire vector and give each quantity its own tolerance. Cover singleton

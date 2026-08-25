@@ -1,30 +1,10 @@
-## Intent and behavior
+## Summary
 
-<!-- What changes for users or contributors, and why? -->
+<!-- Lead with the outcome, motivation, and important non-goals. -->
 
-## Architecture
+## Changes
 
-- Placement: <!-- add-on estimator / post-estimation / shared primitive / kernel / core -->
-- Nearest precedent:
-- Core expansion approved: <!-- not needed / link -->
-
-## Compatibility and support
-
-- `fixest` behavior or intentional deviation:
-- Weights (`aweights` / `fweights`):
-- Fixed effects:
-- IV:
-- Multiple estimation:
-- `lean=True` / `store_data=False`:
-- Backends:
-
-## Numerical reference
-
-- External software and version:
-- Formula/data/seed:
-- Vcov/SSC/weights:
-- Compared outputs:
-- `rtol` / `atol` and justification:
+<!-- Describe the coherent behavior or contributor-facing changes. -->
 
 ## Verification
 
@@ -34,16 +14,15 @@
 
 Deferred checks and where they will run:
 
-## Review narrative
+## Numerical or estimator changes (if applicable)
 
-- PR type: <!-- single / stack layer N of M -->
-- Immediate parent:
-- Commit sequence:
+- Architecture placement and nearest precedent:
+- `fixest` behavior or intentional deviation:
+- Weights / fixed effects / IV / multiple estimation / backends:
+- External reference, version, data or seed, and compared outputs:
+- Tolerances and justification:
+
+## Documentation and performance (if applicable)
+
 - Documentation and changelog:
-- Performance evidence or reason not applicable:
-
-## Human review
-
-- [ ] A human maintainer has reviewed this PR.
-- [ ] For a stack, every layer has human-maintainer approval.
-- [ ] The authoring agent will not merge this PR or stack.
+- Performance evidence:

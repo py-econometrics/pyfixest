@@ -40,12 +40,10 @@ quantities the method promises: coefficients, vcov, standard errors, degrees of
 freedom, observations, dropped terms, convergence, or deterministic prediction
 subsets as applicable.
 
-Read the error and tolerance contract in `docs/developer/testing.md`. Name the
-quantity in every numerical assertion, use separate tolerances for coefficients,
-inference, residuals, and predictions, and compare discrete structure exactly.
-Use `tests/test_vs_fixest.py` as the current precedent for
-`feols`/`fepois`/`feglm` and `tests/test_quantreg.py` for `quantreg`; do not copy
-the loosest tolerance from either file into unrelated cases.
+Read the error, tolerance, and suite-growth contracts in
+`docs/developer/testing.md`. Name the compared quantity, use its canonical
+estimator-specific tolerance, and extend the nearest permanent matrix before
+adding a new test function or file.
 
 Keep the permanent test parametrized through the public API where possible.
 Live R comparisons must run through rpy2 inside pytest. Register every
@@ -61,6 +59,5 @@ Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 pixi run -e py312-r test-r-fixest-fast
 ```
 
-Extend the existing permanent public-API matrix when a new case fits it. The
-fast matrix provides focused feedback but does not replace estimator-specific
-coverage needed for a change.
+The fast suite provides focused edit feedback. It does not replace or establish
+permanent estimator-specific coverage.

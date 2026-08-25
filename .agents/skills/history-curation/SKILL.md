@@ -6,7 +6,8 @@ description: Safely curate agent-owned pyfixest commits before first PR submissi
 # Curate commit history
 
 Use this skill after code and checks stabilize, before the first remote PR
-submission.
+submission. Read the branch and commit conventions in
+`docs/developer/git-and-pr-style.md`.
 
 ## Authorization and preconditions
 

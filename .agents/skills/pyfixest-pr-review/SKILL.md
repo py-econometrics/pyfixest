@@ -6,7 +6,8 @@ description: Review pyfixest diffs for compatibility, numerical correctness, uns
 # Review a pyfixest PR
 
 Use this skill for an explicit PR review or the final self-review before
-handoff. Review the complete diff against its actual base, including
+handoff. Resolve the actual base as described in
+`docs/developer/git-and-pr-style.md`, then review the complete diff, including
 uncommitted and untracked files.
 
 ## Review priorities
@@ -21,7 +22,10 @@ Prioritize findings that can produce silently wrong numbers:
 4. estimator-specific logic leaking into shared runners or model classes;
 5. input mutation, unstable RNG, unjustified tolerances, or missing convergence
    checks;
-6. optional-dependency failures, export/doc gaps, generated churn, and
+6. avoidable test-suite growth: one-off tests that belong in an existing matrix,
+   duplicated fixtures/adapters/assertions, redundant coverage, or
+   disproportionate runtime;
+7. optional-dependency failures, export/doc gaps, generated churn, and
    unmeasured performance claims.
 
 Check that a new estimator is an add-on and that every claimed support path is

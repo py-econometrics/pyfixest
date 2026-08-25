@@ -14,9 +14,6 @@ Preserve public behavior and numerical correctness while extending pyfixest.
 4. Model methods orchestrate. Standalone functions perform numerical work.
 5. Put only measured, non-vectorizable hot loops in Rust.
 
-The accepted decisions behind these principles are in
-[developer/decisions](decisions/).
-
 ## Stable core
 
 The stable core contains:
@@ -50,12 +47,14 @@ and a generic contract. Hypothetical future reuse is not sufficient.
 
 ## Estimation flow
 
-Each public estimator builds an `EstimationConfig`. `parse_formula` expands
-multiple-estimation syntax, and `runner.run_estimation` and `fit_one` prepare
-each model before dispatching to its estimator-specific fit path:
+Estimators using the shared estimation pipeline build an `EstimationConfig`.
+`parse_formula` expands multiple-estimation syntax, and
+`runner.run_estimation` and `fit_one` prepare each model before dispatching to
+its estimator-specific fit path. DiD estimators use their own domain-specific
+entry points and orchestration.
 
 ```text
-public API
+shared estimator API
   -> EstimationConfig
   -> parse_formula
   -> prepare_model_matrix

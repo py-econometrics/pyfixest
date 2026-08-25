@@ -27,9 +27,9 @@ Load the repository-local skill when its trigger applies:
 | [`pyfixest-pr-review`](.agents/skills/pyfixest-pr-review/SKILL.md) | PR review and final self-review |
 | [`pr-draft-summary`](.agents/skills/pr-draft-summary/SKILL.md) | Preparing a single or stacked draft PR |
 
-The authoritative architecture, test tiers, and compatibility ledger live in
-[`docs/developer/`](docs/developer/). Skills route work to those sources; do
-not copy their policy into ad hoc prompts.
+The authoritative architecture, test policy, compatibility ledger, and Git/PR
+style live in [`docs/developer/`](docs/developer/). Skills route work to those
+sources; do not copy their detailed policy into ad hoc prompts.
 
 ## Architecture strategy
 
@@ -121,26 +121,16 @@ root-relative `.qmd` links, and a linked paper for econometric methods.
 
 Every new estimator must be tested permanently against existing software. This
 rule always applies; simulation properties, shape checks, and internal
-reimplementations are additional evidence, not substitutes. Prefer:
+reimplementations are additional evidence, not substitutes. If no external
+implementation is available, the estimator is not merge-ready. Numerical
+changes to existing estimators also require an external comparison wherever
+overlapping software exists. Follow the `numerical-validation` skill and
+`docs/developer/testing.md` for reference selection, markers, and tolerances.
 
-1. R `fixest` or another established R package through rpy2;
-2. stored output from Stata or another established implementation, including
-   the generator script;
-3. another external package with its exact version recorded.
-
-If no external implementation is available, the estimator is not merge-ready.
-Numerical changes to existing estimators also require an external comparison
-where overlapping software exists. Record explicit tolerances and why they are
-appropriate. Numerical assertions must identify the quantity being compared
-and use a tolerance chosen for that quantity; do not reuse a looser inference
-or prediction tolerance for coefficients. Follow `tests/test_vs_fixest.py` for
-`feols`/`fepois`/`feglm` comparisons and `tests/test_quantreg.py` for
-`quantreg`; `docs/developer/testing.md` defines the error criterion.
-
-R tests use strict markers: `against_r_core` for conda-forge dependencies and
-`against_r_extended` for CRAN-only extras. Add every new rpy2-importing test
-file to `_rpy2_test_files` in `tests/conftest.py`. Extend existing
-parametrized public-API matrices instead of creating many narrow wrapper tests.
+Every behavioral change needs regression evidence, but not necessarily new test
+code. Extend the nearest existing parametrized matrix before creating a new
+test function or file. A new file needs a distinct subsystem, dependency, or
+fixture boundary.
 
 ## Verification and documentation
 
@@ -167,8 +157,9 @@ Never hand-edit generated `docs/reference/**`.
 
 ## Git, stacked PRs, and review
 
-- Never commit to `master`; use conventional `feat/`, `fix/`, `test/`,
-  `ci/`, `docs/`, or `chore/` branch names. Do not use a `codex/` prefix.
+- Follow `docs/developer/git-and-pr-style.md` for branch names, commit messages,
+  commit bodies, and outcome-first PR openings. Never commit to `master` or use
+  an agent identity as a branch prefix.
 - Prefer a GitHub stacked PR when work has two or more independently reviewable
   layers. Split by dependency and reviewer concern, not file count. Keep small,
   cohesive changes in one PR and unrelated work out of the stack.
@@ -185,8 +176,6 @@ Never hand-edit generated `docs/reference/**`.
   commits.
 - Never rewrite a contributor-owned branch. After review starts, do not rewrite
   silently; obtain maintainer approval and use stack-aware force-with-lease.
-- Commit subjects use a conventional prefix and a short imperative description.
-  Bodies explain non-obvious why, not mechanics visible in the diff.
 - Agents prepare draft PRs and respond to review. Agents never merge their own
   work or invoke `gh stack merge`.
 
