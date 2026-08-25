@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -75,6 +76,8 @@ class ReferenceCase:
     prediction_rows: int
     rtol: float
     atol: float
+    prediction_rtol: float
+    prediction_atol: float
     case_hash: str
     source_path: Path
 
@@ -94,6 +97,8 @@ class ReferenceCase:
             "prediction_rows": self.prediction_rows,
             "rtol": self.rtol,
             "atol": self.atol,
+            "prediction_rtol": self.prediction_rtol,
+            "prediction_atol": self.prediction_atol,
             "case_hash": self.case_hash,
             "source_path": str(self.source_path),
         }
@@ -224,6 +229,39 @@ def _positive_int(value: object, name: str) -> int:
     return value
 
 
+def _nonnegative_int(value: object, name: str) -> int:
+    """Validate and return a non-negative integer."""
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ReferenceError(f"{name} must be a non-negative integer")
+    return value
+
+
+def _boolean(value: object, name: str) -> bool:
+    """Validate and return a Boolean."""
+    if not isinstance(value, bool):
+        raise ReferenceError(f"{name} must be true or false")
+    return value
+
+
+def _choice(value: object, name: str, choices: set[str]) -> str:
+    """Validate and return one enumerated string."""
+    result = _string(value, name)
+    if result not in choices:
+        allowed = ", ".join(sorted(choices))
+        raise ReferenceError(f"{name} must be one of: {allowed}")
+    return result
+
+
+def _tolerance(value: object, name: str) -> float:
+    """Validate and return a finite non-negative tolerance."""
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        raise ReferenceError(f"{name} must be a number")
+    result = float(value)
+    if not math.isfinite(result) or result < 0:
+        raise ReferenceError(f"{name} must be finite and non-negative")
+    return result
+
+
 def load_case(path: Path) -> ReferenceCase:
     """Load and validate a versioned TOML comparison case."""
     try:
@@ -248,10 +286,14 @@ def load_case(path: Path) -> ReferenceCase:
     prediction_rows = _positive_int(
         payload.get("prediction_rows", 5), "prediction_rows"
     )
-    rtol = float(payload.get("rtol", 1e-8))
-    atol = float(payload.get("atol", 1e-8))
-    if rtol < 0 or atol < 0:
-        raise ReferenceError("rtol and atol must be non-negative")
+    rtol = _tolerance(payload.get("rtol", 1e-8), "rtol")
+    atol = _tolerance(payload.get("atol", 1e-8), "atol")
+    prediction_rtol = _tolerance(
+        payload.get("prediction_rtol", rtol), "prediction_rtol"
+    )
+    prediction_atol = _tolerance(
+        payload.get("prediction_atol", atol), "prediction_atol"
+    )
 
     return ReferenceCase(
         id=_string(payload.get("id"), "id"),
@@ -264,6 +306,8 @@ def load_case(path: Path) -> ReferenceCase:
         prediction_rows=prediction_rows,
         rtol=rtol,
         atol=atol,
+        prediction_rtol=prediction_rtol,
+        prediction_atol=prediction_atol,
         case_hash=hashlib.sha256(raw_bytes).hexdigest(),
         source_path=path.resolve(),
     )
@@ -275,7 +319,7 @@ def _load_data_spec(payload: Mapping[str, object], parent: Path) -> DataSpec:
     if source == "generated":
         return DataSpec(
             source="generated",
-            seed=_positive_int(payload.get("seed"), "data.seed"),
+            seed=_nonnegative_int(payload.get("seed"), "data.seed"),
             n=_positive_int(payload.get("n"), "data.n"),
             model=_string(payload.get("model"), "data.model"),
         )
@@ -299,11 +343,23 @@ def _load_vcov_spec(payload: Mapping[str, object]) -> VcovSpec:
 def _load_ssc(payload: Mapping[str, object]) -> SmallSampleCorrection:
     """Build the shared small-sample-correction specification."""
     return SmallSampleCorrection(
-        k_adj=bool(payload.get("k_adj", True)),
-        k_fixef=str(payload.get("k_fixef", "nonnested")),
-        g_adj=bool(payload.get("g_adj", True)),
-        g_df=str(payload.get("g_df", "min")),
-        t_df=str(payload.get("t_df", "min")),
+        k_adj=_boolean(payload.get("k_adj", True), "ssc.k_adj"),
+        k_fixef=_choice(
+            payload.get("k_fixef", "nonnested"),
+            "ssc.k_fixef",
+            {"none", "full", "nonnested"},
+        ),
+        g_adj=_boolean(payload.get("g_adj", True), "ssc.g_adj"),
+        g_df=_choice(
+            payload.get("g_df", "min"),
+            "ssc.g_df",
+            {"conventional", "min"},
+        ),
+        t_df=_choice(
+            payload.get("t_df", "min"),
+            "ssc.t_df",
+            {"conventional", "min"},
+        ),
     )
 
 
@@ -326,6 +382,16 @@ def load_case_data(case: ReferenceCase) -> pd.DataFrame:
         seed=case.data.seed,
         model=case.data.model,
     )
+
+
+def hash_dataframe(data: pd.DataFrame) -> str:
+    """Return a stable hash of values, dtypes, columns, and index."""
+    value_hash = pd.util.hash_pandas_object(data, index=True).to_numpy().tobytes()
+    schema = "\n".join(
+        f"{column}:{dtype}"
+        for column, dtype in zip(data.columns, data.dtypes, strict=True)
+    ).encode()
+    return hashlib.sha256(schema + value_hash).hexdigest()
 
 
 def normalize_term_name(name: str) -> str:
@@ -461,15 +527,21 @@ class RFixestAdapter:
             ro.Formula(translate_formula_for_fixest(case.formula)), **kwargs
         )
         coefficients = stats.coef(model)
-        names = tuple(normalize_term_name(str(name)) for name in coefficients.names)
+        ro.globalenv[".pyfixest_reference_model"] = model
+        r_names = ro.r("names(coef(.pyfixest_reference_model))")
+        names = tuple(normalize_term_name(str(name)) for name in r_names)
         predictions = np.asarray(
             stats.predict(model, newdata=newdata_r, type="response"),
             dtype=np.float64,
         ).reshape(-1)
-        df_t = ro.r["attr"](model.rx2("cov.scaled"), "df.t")
-        dropped = model.rx2("collin.var")
-        converged = (
-            bool(model.rx2("convStatus")[0]) if case.estimator == "fepois" else True
+        df_t = ro.r('attr(vcov(.pyfixest_reference_model), "df.t")')
+        dropped = ro.r(
+            "if (is.null(.pyfixest_reference_model$collin.var)) "
+            "character() else .pyfixest_reference_model$collin.var"
+        )
+        convergence = ro.r(
+            "if (is.null(.pyfixest_reference_model$convStatus)) "
+            "TRUE else .pyfixest_reference_model$convStatus"
         )
         return NormalizedResult(
             coefficient_names=names,
@@ -479,7 +551,7 @@ class RFixestAdapter:
             degrees_of_freedom=float(df_t[0]),
             nobs=int(stats.nobs(model)[0]),
             dropped_variables=tuple(normalize_term_name(str(name)) for name in dropped),
-            converged=converged,
+            converged=bool(convergence[0]),
             predictions=predictions,
         )
 
@@ -612,8 +684,8 @@ def compare_results(
                     "predictions",
                     pyfixest.predictions,
                     reference.predictions,
-                    rtol=case.rtol,
-                    atol=case.atol,
+                    rtol=case.prediction_rtol,
+                    atol=case.prediction_atol,
                 )
             )
 

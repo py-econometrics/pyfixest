@@ -43,3 +43,14 @@ subsets as applicable.
 Keep the permanent test parametrized through the public API where possible.
 Register rpy2 test files in `tests/conftest.py` and use the strict R marker
 matching dependency availability.
+
+For behavior shared with `feols` or `fepois`, use the fixest-first harness
+to diagnose a case before adding it permanently:
+
+```bash
+pixi run -e py312-r compare-fixest scripts/reference/cases/<case>.toml
+```
+
+The harness does not replace the permanent pytest comparison. Read
+`docs/developer/reference-harness.md` before adding a case or recording
+reference output.

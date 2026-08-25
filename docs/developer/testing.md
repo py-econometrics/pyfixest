@@ -115,6 +115,10 @@ data or seeds, formulas, weights, vcov/SSC, package versions, and explicit
 closed-form, and simulation tests as needed, but never substitute them for the
 external comparison required for a new estimator.
 
+Use the [fixest-first reference harness](reference-harness.md) to diagnose and
+record reproducible `feols`/`fepois` comparisons before placing the case in
+the permanent pytest matrix.
+
 ## Test design
 
 Prefer a small number of heavily parametrized integration tests over many thin

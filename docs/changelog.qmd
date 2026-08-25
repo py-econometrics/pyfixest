@@ -26,7 +26,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   numerical validation, verification, review, history curation, and PR handoff
   to authoritative local developer documentation. A deterministic verifier now
   maps changed paths to quick, domain-specific, and exhaustive checks and
-  records exact statuses and elapsed time.
+  records exact statuses and elapsed time. A fixest-first developer harness
+  compares named `feols` and `fepois` results, records reproducible
+  provenance, and fails on structural or numerical differences.
 
 ### Inference Types
 

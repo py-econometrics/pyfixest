@@ -111,6 +111,16 @@ required_local = true
 ci_allowed = false
 
 [[check]]
+id = "reference-unit"
+description = "Run fixest harness unit tests without R"
+tier = "edit"
+runtime = "seconds-to-minutes"
+domains = ["reference"]
+command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_fixest_reference.py", "-x", "-q", "--no-cov"]
+required_local = true
+ci_allowed = false
+
+[[check]]
 id = "mypy"
 description = "Type-check changed package files"
 tier = "edit"
@@ -158,6 +168,16 @@ tier = "domain"
 runtime = "minutes-to-tens-of-minutes"
 domains = ["rust"]
 command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_demean.py", "tests/test_crv1.py", "tests/test_crv1_vcov.py", "tests/test_hac_meat.py", "tests/test_setup_maturin_hook.py", "-x", "-q", "--no-cov"]
+required_local = false
+ci_allowed = true
+
+[[check]]
+id = "reference-live"
+description = "Run live feols and fepois harness smoke cases"
+tier = "domain"
+runtime = "minutes"
+domains = ["reference"]
+command = ["pixi", "run", "-e", "py312-r", "pytest", "tests/test_fixest_reference_r.py", "-m", "against_r_core", "-x", "-q", "--no-cov"]
 required_local = false
 ci_allowed = true
 

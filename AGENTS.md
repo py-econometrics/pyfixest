@@ -200,6 +200,7 @@ pixi run test-all
 
 pixi run agent-scope --base <immediate-parent>
 pixi run agent-verify --base <immediate-parent> --tier pr
+pixi run -e py312-r compare-fixest scripts/reference/cases/<case>.toml
 
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
