@@ -41,16 +41,19 @@ freedom, observations, dropped terms, convergence, or deterministic prediction
 subsets as applicable.
 
 Keep the permanent test parametrized through the public API where possible.
-Register rpy2 test files in `tests/conftest.py` and use the strict R marker
-matching dependency availability.
+Live R comparisons must run through rpy2 inside pytest. Register every
+rpy2-importing test file in `tests/conftest.py` and use the strict R marker
+matching dependency availability. Stored output is an exception only when the
+external software cannot be run reliably in the test environment; commit its
+generator and version alongside the values.
 
-For behavior shared with `feols` or `fepois`, use the fixest-first harness
-to diagnose a case before adding it permanently:
+Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
+Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 
 ```bash
-pixi run -e py312-r compare-fixest scripts/reference/cases/<case>.toml
+pixi run -e py312-r test-r-fixest-fast
 ```
 
-The harness does not replace the permanent pytest comparison. Read
-`docs/developer/reference-harness.md` before adding a case or recording
-reference output.
+Extend the existing permanent public-API matrix when a new case fits it. The
+fast matrix provides focused feedback but does not replace estimator-specific
+coverage needed for a change.

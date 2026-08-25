@@ -1,8 +1,7 @@
 # Pyfixest architecture
 
 This document is the authoritative overview for contributors and coding agents.
-Pyfixest is mature, widely used pre-1.0 software: preserve public behavior and
-numerical correctness while extending it.
+Preserve public behavior and numerical correctness while extending pyfixest.
 
 ## Design principles
 

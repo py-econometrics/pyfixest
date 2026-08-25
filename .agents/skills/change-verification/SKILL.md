@@ -7,18 +7,12 @@ description: Select, run, and report pyfixest checks before handing off code, te
 
 Use this skill after implementation stabilizes and before handoff.
 
-Classify the diff and preview the selected checks:
-
-```bash
-pixi run agent-scope --base <immediate-parent>
-pixi run agent-verify --base <immediate-parent> --tier pr --dry-run
-```
-
 ## Select checks by risk
 
-Inspect the diff against the actual PR base. Start with targeted tests and
-changed-file format/lint/type checks, then run the PR baseline and affected
-domain suites described in `AGENTS.md`.
+Verify the actual PR base, inspect every changed path against it, and classify
+the change using the selection matrix in `docs/developer/testing.md`. Start
+with targeted tests and changed-file format/lint/type checks, then run the PR
+baseline and affected domain suites.
 
 - Numerical/API changes require the relevant public integration tests and
   external-reference suite.
@@ -27,12 +21,9 @@ domain suites described in `AGENTS.md`.
 - Executable docstrings require their body and affected reference page.
 - Performance-sensitive changes require before/after evidence.
 
-Unknown paths select the conservative PR baseline.
-
-Run the required tier after reviewing the dry-run plan. Use `--tier domain`
-for applicable long suites. A CI-eligible check may be deferred explicitly with
-`--defer CHECK_ID=REASON`; a required local check still makes verification
-fail when deferred.
+Unknown paths require the conservative PR baseline. For a stack, repeat the
+selection for each layer against its immediate parent, then inspect the
+cumulative top against the trunk.
 
 ## Report truthfully
 
@@ -47,5 +38,5 @@ Run long domain suites after the design stabilizes. A deferred or CI-only check
 is not a pass. Do not claim completion while a mandatory local check is
 unreported or failing.
 
-Use `--json-output <explicit-path>` when a machine-readable handoff artifact
-is useful. The verifier writes nothing by default.
+Write this report directly in the handoff or PR body. Do not introduce a
+generated verification artifact unless the task specifically requires one.

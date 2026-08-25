@@ -30,6 +30,7 @@ the issue or decision record when the rationale is too large for the table.
 Compatibility work that restores parity should update or remove the ledger
 entry and retain a regression test.
 
-The [fixest-first reference harness](reference-harness.md) provides a normalized
-diagnostic comparison for overlapping `feols` and `fepois` behavior. Passing
-the harness does not replace the permanent test linked from this ledger.
+`pixi run -e py312-r test-r-fixest-fast` provides focused direct comparisons
+for `feols`, `fepois`, and `feglm` against R `fixest`, and for `quantreg`
+against R `quantreg`. It complements, but does not replace, the permanent test
+linked from this ledger.

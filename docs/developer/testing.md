@@ -22,35 +22,6 @@ stable. A verification report records actual elapsed time and reports every
 applicable check as passed, failed, deferred, or not run. Deferred is never
 equivalent to passed.
 
-## Deterministic change verification
-
-`scripts/agent/verification_matrix.toml` is the machine-readable source of
-check commands, domains, runtime tiers, and local/CI requirements.
-`change_scope.py` compares the worktree with a verified base and classifies
-the affected domains and risk flags. `verify.py` uses that scope to select and
-run checks without shell interpolation.
-
-```bash
-# Inspect paths, domains, and risks
-pixi run agent-scope --base <immediate-parent>
-
-# Preview the PR-tier commands
-pixi run agent-verify --base <immediate-parent> --tier pr --dry-run
-
-# Run them and optionally write a versioned JSON report
-pixi run agent-verify --base <immediate-parent> --tier pr \
-  --json-output /tmp/pyfixest-verification.json
-```
-
-For a stack, verify each layer against its immediate parent and verify the top
-layer cumulatively against `master`. The available tiers are `edit`, `pr`,
-`domain`, and `exhaustive`.
-
-A long check may be declared as CI work with
-`--defer CHECK_ID=REASON` only when its matrix entry allows CI deferral.
-Deferring a required local check produces a failing exit code. Invalid
-configuration and Git-scope errors exit with status 2.
-
 ## Commands
 
 ```bash
@@ -63,6 +34,7 @@ pixi run test-py
 # External references
 pixi run test-r-core
 pixi run test-r-fixest
+pixi run -e py312-r test-r-fixest-fast
 pixi run test-r-hac
 pixi run test-r-extended
 
@@ -115,9 +87,11 @@ data or seeds, formulas, weights, vcov/SSC, package versions, and explicit
 closed-form, and simulation tests as needed, but never substitute them for the
 external comparison required for a new estimator.
 
-Use the [fixest-first reference harness](reference-harness.md) to diagnose and
-record reproducible `feols`/`fepois` comparisons before placing the case in
-the permanent pytest matrix.
+`pixi run -e py312-r test-r-fixest-fast` runs a compact rpy2 matrix directly
+against R `fixest` for `feols`, `fepois`, and `feglm`, and R `quantreg` for
+`quantreg`. Use `-k feols`, `-k fepois`, `-k feglm`, or `-k quantreg` to select
+one entry point while editing. Extend the larger permanent reference suites
+when the change needs coverage beyond this focused matrix.
 
 ## Test design
 

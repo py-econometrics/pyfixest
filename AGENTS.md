@@ -1,11 +1,8 @@
 # pyfixest — guide for coding agents
 
-Pyfixest is mature, widely used pre-1.0 software with real downstream users. It
-ports R's `fixest` to Python: high-dimensional fixed-effects estimation
+pyfixest ports R's `fixest` to Python: high-dimensional fixed-effects estimation
 (OLS/WLS, IV, Poisson, GLM, quantile regression), fixest formula syntax,
-post-estimation tools, and Rust kernels for hot loops. Treat compatibility and
-numerical correctness as production concerns; a version below 1.0 is not
-permission for avoidable breakage.
+post-estimation tools, and Rust kernels for hot loops.
 
 Two rules beat everything else:
 
@@ -14,9 +11,8 @@ Two rules beat everything else:
 2. **Mirror the nearest existing implementation.** Find the in-repo precedent
    and copy its structure before writing new code.
 
-For feature work and contributor-PR cleanup, follow
-**`.agents/feature-pr.md`**. `CLAUDE.md` is a committed thin redirect to this
-file; do not duplicate these rules in tool-specific configuration.
+`CLAUDE.md` is a committed thin redirect to this file; do not duplicate these
+rules in tool-specific configuration.
 
 ## Required workflow skills
 
@@ -173,9 +169,15 @@ Never hand-edit generated `docs/reference/**`.
   cohesive changes in one PR and unrelated work out of the stack.
 - Every stack layer must be coherent, testable against its immediate parent,
   and reviewed by a human maintainer.
-- Before opening a PR, rewrite agent-owned local history into a few logical,
-  individually test-passing commits. Pair tests with behavior; remove WIP,
-  fixup, formatting-only, and accidental commits.
+- Before opening a PR, ask the user explicitly whether the proposed history
+  rewrite is approved. General permission to implement or open a PR is not
+  rewrite approval. State the exact branches, bases, pushed/review state,
+  dependent branches, and commands before asking.
+- With approval, rewrite only agent-owned local history into concise,
+  self-contained commits. Every commit must address one reviewer concern, pair
+  tests with behavior, pass its applicable checks, and remain small enough for
+  independent human review. Remove WIP, fixup, formatting-only, and accidental
+  commits.
 - Never rewrite a contributor-owned branch. After review starts, do not rewrite
   silently; obtain maintainer approval and use stack-aware force-with-lease.
 - Commit subjects use a conventional prefix and a short imperative description.
@@ -195,12 +197,9 @@ pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
 pixi run test-r-core
 pixi run test-r-extended
 pixi run test-r-fixest
+pixi run -e py312-r test-r-fixest-fast
 pixi run test-r-hac
 pixi run test-all
-
-pixi run agent-scope --base <immediate-parent>
-pixi run agent-verify --base <immediate-parent> --tier pr
-pixi run -e py312-r compare-fixest scripts/reference/cases/<case>.toml
 
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
