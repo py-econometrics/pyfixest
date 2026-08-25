@@ -22,7 +22,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Contributor and coding-agent guidance now treats public compatibility and
   numerical correctness as production concerns, prefers reviewable stacked PRs
   for multi-layer work, requires curated commit histories, and reserves merging
-  for human maintainers.
+  for human maintainers. Repository-local skills route implementation,
+  numerical validation, verification, review, history curation, and PR handoff
+  to authoritative local developer documentation.
 
 ### Inference Types
 

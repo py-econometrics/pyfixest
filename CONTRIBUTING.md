@@ -15,6 +15,12 @@ This will launch a github codespace (there is a free tier for 60h a month, thank
 
 Please refer to the [contributing section](https://pyfixest.org/contributing.html) of our documentation to get started with local development.
 
-For a comprehensive overview of the codebase architecture and internals, check out the [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest). While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!
+The repository's [architecture](docs/developer/architecture.md),
+[testing policy](docs/developer/testing.md), and
+[`fixest` compatibility ledger](docs/developer/fixest-compatibility.md) are
+the authoritative developer references.
+
+The [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) is a useful
+generated overview, but it may lag the repository and is not authoritative.
 
 We look forward to your contributions!

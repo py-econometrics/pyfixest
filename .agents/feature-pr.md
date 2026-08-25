@@ -21,6 +21,9 @@ check pass.
 7. Write a short plan containing the base, files, wiring, support matrix,
    external numerical reference, test tiers, and excluded churn.
 
+Use [`implementation-strategy`](skills/implementation-strategy/SKILL.md) for
+this classification.
+
 ## Phase 2 — Implement in reviewable slices
 
 Use at most three attempts per slice. A typical feature is divided into:
@@ -56,6 +59,9 @@ for a new estimator.
 If no existing software can validate a new estimator, stop: it is not
 merge-ready under project policy.
 
+Use [`numerical-validation`](skills/numerical-validation/SKILL.md) to choose
+and record the reference.
+
 ## Phase 4 — Verify and review
 
 Inspect committed, staged, uncommitted, and untracked work. Run checks from
@@ -74,6 +80,11 @@ Review the diff twice at most for:
 - generated or unrelated churn;
 - missing exports, executable examples, guides, and changelog entries;
 - unmeasured performance claims or Python hot loops that need a kernel.
+
+Use [`change-verification`](skills/change-verification/SKILL.md) for test
+selection and reporting, then
+[`pyfixest-pr-review`](skills/pyfixest-pr-review/SKILL.md) for the final
+diff review.
 
 ## Phase 5 — Curate commit history
 
@@ -114,6 +125,9 @@ add review-response commits rather than rewriting silently. A final cleanup
 requires maintainer approval, `gh stack push` (never raw
 `git push --force`), and renewed approval if GitHub dismisses stale reviews.
 
+Use [`history-curation`](skills/history-curation/SKILL.md) for this
+safety-sensitive phase.
+
 ## Phase 6 — Prepare the PR or stack
 
 Use one PR for a small cohesive change. Prefer `gh stack` when two or more
@@ -133,6 +147,9 @@ Before submission:
 
 Every layer requires human-maintainer approval. Agents stop at review handoff
 and never run `gh stack merge`.
+
+Use [`pr-draft-summary`](skills/pr-draft-summary/SKILL.md) to prepare the PR
+body and final handoff.
 
 ## Escalation
 

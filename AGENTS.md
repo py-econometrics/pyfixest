@@ -18,6 +18,23 @@ For feature work and contributor-PR cleanup, follow
 **`.agents/feature-pr.md`**. `CLAUDE.md` is a committed thin redirect to this
 file; do not duplicate these rules in tool-specific configuration.
 
+## Required workflow skills
+
+Load the repository-local skill when its trigger applies:
+
+| Skill | Trigger |
+|---|---|
+| [`implementation-strategy`](.agents/skills/implementation-strategy/SKILL.md) | Before estimator, public API, inference, formula, or shared-core work |
+| [`numerical-validation`](.agents/skills/numerical-validation/SKILL.md) | Any estimator or numerical-behavior change |
+| [`change-verification`](.agents/skills/change-verification/SKILL.md) | Before handing off code, tests, docs, CI, or metadata changes |
+| [`history-curation`](.agents/skills/history-curation/SKILL.md) | Before the first PR submission when agent-owned commits may need rewriting |
+| [`pyfixest-pr-review`](.agents/skills/pyfixest-pr-review/SKILL.md) | PR review and final self-review |
+| [`pr-draft-summary`](.agents/skills/pr-draft-summary/SKILL.md) | Preparing a single or stacked draft PR |
+
+The authoritative architecture, test tiers, and compatibility ledger live in
+[`docs/developer/`](docs/developer/). Skills route work to those sources; do
+not copy their policy into ad hoc prompts.
+
 ## Architecture strategy
 
 Keep the shared estimation core narrow and stable. Formula parsing, model-matrix
