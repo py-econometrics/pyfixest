@@ -22,8 +22,22 @@ domain suites.
   for edit feedback before the applicable canonical R suite.
 - HAC changes require the single-threaded HAC suite.
 - Rust changes require kernel/reference tests and platform CI.
-- Executable docstrings require their body and affected reference page.
 - Performance-sensitive changes require before/after evidence.
+
+Documentation commands are costly and opt-in. Do not run `docs-build` or
+`docs-render` merely because repository guidance, workflow metadata, or a PR
+template changed.
+
+- Run `docs-build` only when public Python docstrings, quartodoc registration,
+  or API-reference configuration changes.
+- For content under `docs/`, render only the affected page when practical.
+- Run `docs-render` only for site-wide configuration, navigation, templates, or
+  cross-page changes.
+- Changes limited to `AGENTS.md`, `.agents/`, `.github/` templates, or other
+  workflow metadata need direct validation and `git diff --check`, not a docs
+  build.
+- Executable docstrings and documentation examples still require executing the
+  changed example and checking the affected rendered page.
 
 Unknown paths require the conservative PR baseline. For a stack, repeat the
 selection for each layer against its immediate parent, then inspect the

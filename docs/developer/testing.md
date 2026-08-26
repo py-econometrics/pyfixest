@@ -61,7 +61,7 @@ pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
 pixi run -e lint prek run mypy --files <changed files>
 
-# Documentation
+# Documentation (costly; run only when selected below)
 pixi run docs-build
 pixi run docs-render
 ```
@@ -70,7 +70,9 @@ pixi run docs-render
 
 | Change | Required local evidence | Long or CI evidence |
 |---|---|---|
-| Documentation only | `git diff --check`; execute changed examples; `docs-build` | affected-page render or `docs-render` when applicable |
+| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
+| Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
+| Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
 | Estimation or inference numerics | targeted integration and edge tests | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
@@ -82,6 +84,12 @@ pixi run docs-render
 
 Unknown or cross-cutting paths receive the PR baseline rather than silently
 selecting no tests.
+
+Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
+it is not a general Markdown validator. Do not run it for changes limited to
+`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
+For prose under `docs/`, prefer an affected-page render. Reserve the full
+`docs-render` task for changes that can affect the site broadly.
 
 ## External numerical references
 
