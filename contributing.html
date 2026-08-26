@@ -77,7 +77,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-eb3f3667ffc7f694651b946ca6825714.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-13b6b3b40dd80034e3da90124acc42ea.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -350,7 +350,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>Thanks for showing interest in contributing to <code>pyfixest</code>! We appreciate all contributions and constructive feedback, whether that be reporting bugs, requesting new features, or suggesting improvements to documentation.</p>
 <p>If you’d like to get involved, but are not yet sure how, please feel free to send us an <a href="mailto:alexander-fischer1801@t-online.de">email</a>. Some familiarity with either Python or econometrics will help, but you really don’t need to be a <code>numpy</code> core developer or have published in <a href="https://onlinelibrary.wiley.com/journal/14680262">Econometrica</a> =) We’d be more than happy to invest time to help you get started!</p>
-<p>For a comprehensive overview of the codebase architecture and internals, check out the <a href="https://deepwiki.com/py-econometrics/pyfixest">DeepWiki</a>. While not perfect and correct in all regards, we think it is a pretty good starting point to learn about the codebase!</p>
+<p>The repository’s local developer guides are authoritative:</p>
+<ul>
+<li><a href="./developer/architecture.html">Architecture</a></li>
+<li><a href="./developer/testing.html">Testing and verification</a></li>
+<li><a href="./developer/fixest-compatibility.html"><code>fixest</code> compatibility</a></li>
+<li><a href="./developer/git-and-pr-style.html">Git and pull-request style</a></li>
+</ul>
+<p>The <a href="https://deepwiki.com/py-econometrics/pyfixest">DeepWiki</a> is a useful generated overview, but it may lag the repository and is secondary to these maintained guides.</p>
 </section>
 <section id="reporting-bugs" class="level2">
 <h2 class="anchored" data-anchor-id="reporting-bugs">Reporting bugs</h2>
@@ -398,9 +405,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># HAC standard error tests (runs with pinned thread counts)</span></span>
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> run test-r-hac</span>
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># run everything (all markers, all tests)</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># run every test supported by the current environment</span></span>
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="ex">pixi</span> run test-all</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Pixi will prompt you to pick a Python version for the R environment — any option works.</p>
+<p>Pixi will prompt you to pick a Python version for the R environment — any option works. CRAN-only reference tests can still skip unless you first run <code>pixi run -e py312-r Rscript r_test_requirements.R</code>; run <code>pixi run test-r-extended</code> to verify that extended environment explicitly.</p>
 </section>
 <section id="linting" class="level3">
 <h3 class="anchored" data-anchor-id="linting">Linting</h3>
