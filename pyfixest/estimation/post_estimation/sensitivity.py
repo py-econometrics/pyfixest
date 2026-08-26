@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,8 @@ from scipy.stats import t
 from pyfixest.utils.utils import get_ssc
 
 if TYPE_CHECKING:
+    from matplotlib.figure import Figure
+
     from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -561,6 +563,56 @@ class SensitivityAnalysis:
                     float_format=lambda value: f"{value:.{decimals}f}",
                 )
             )
+
+    def plot(
+        self,
+        *,
+        plot_type: str = "contour",
+        sensitivity_of: str = "estimate",
+        benchmark_covariates: str | Sequence[str] | None = None,
+        **kwargs: Any,
+    ) -> Figure:
+        """Plot contour or extreme omitted-confounding scenarios.
+
+        Parameters
+        ----------
+        plot_type : {"contour", "extreme"}, optional
+            Diagnostic plot type.
+        sensitivity_of : {"estimate", "t-value"}, optional
+            Contour target. Extreme plots currently support estimates only.
+        benchmark_covariates : str or sequence of str, optional
+            Fitted coefficients shown as benchmark markers or rugs.
+        **kwargs : object
+            Additional options passed to the selected plotting function.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Figure containing the requested diagnostic.
+        """
+        from pyfixest.report.visualize_sensitivity import (
+            ovb_contour_plot,
+            ovb_extreme_plot,
+        )
+
+        if plot_type == "contour":
+            return ovb_contour_plot(
+                self,
+                sensitivity_of=sensitivity_of,  # type: ignore[arg-type]
+                benchmark_covariates=benchmark_covariates,
+                **kwargs,
+            )
+        if plot_type == "extreme":
+            if sensitivity_of != "estimate":
+                raise NotImplementedError(
+                    "Extreme sensitivity plots currently support estimates only."
+                )
+            return ovb_extreme_plot(
+                self,
+                benchmark_covariates=benchmark_covariates,
+                **kwargs,
+            )
+        raise ValueError("plot_type must be 'contour' or 'extreme'.")
 
     def _iid_inference(self) -> _IidInference:
         ssc, _, degrees_of_freedom = get_ssc(

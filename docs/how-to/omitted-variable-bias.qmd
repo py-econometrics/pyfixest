@@ -106,6 +106,52 @@ associations from the prepared model matrix, transformed terms and absorbed
 fixed effects remain part of the conditioning set, and the calculation also
 works after fitting with `store_data=False`.
 
+## Visualize confounding scenarios
+
+A contour plot shows the adjusted estimate over treatment- and outcome-side
+partial-$R^2$ values. Passing the benchmark arguments adds the same scenarios
+from `ovb_bounds()` as diamond markers:
+
+```{python}
+#| fig-alt: "Contour plot of adjusted education estimates across omitted-confounding strengths, with experience benchmark markers."
+_ = sensitivity.plot(
+    plot_type="contour",
+    sensitivity_of="estimate",
+    benchmark_covariates="experience",
+    kd=[0.5, 1],
+    ky=[1, 2],
+)
+```
+
+Manual scenarios are accepted as paired values. Both coordinates are required,
+and every label corresponds to one plotted marker:
+
+```{python}
+#| fig-alt: "Contour plot with two manually specified omitted-confounding scenarios."
+_ = sensitivity.plot(
+    r2dz_x=[0.05, 0.10],
+    r2yz_dx=[0.10, 0.20],
+    manual_labels=["Plausible", "Severe"],
+)
+```
+
+Set `sensitivity_of="t-value"` to draw adjusted t-value contours relative to
+`h0`. The extreme plot instead traces the adjusted estimate as treatment-side
+confounding grows under several fixed outcome-side strengths:
+
+```{python}
+#| fig-alt: "Extreme-scenario curves for adjusted education estimates under three outcome-confounding strengths."
+_ = sensitivity.plot(
+    plot_type="extreme",
+    benchmark_covariates="experience",
+    r2yz_dx=[1, 0.75, 0.5],
+)
+```
+
+Both plot types return a Matplotlib figure and accept an existing `ax=` for
+composition. Extreme t-value plots are not currently implemented and raise an
+explicit error.
+
 ## Covariance estimators and supported models
 
 Like `sensemakr`, the sensitivity calculation uses IID standard errors and IID

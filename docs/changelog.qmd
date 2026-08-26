@@ -81,6 +81,7 @@ sensitivity = fit.sensitivity_analysis("X1")
 
 sensitivity.sensitivity_stats()
 sensitivity.ovb_bounds("X2", kd=[0.5, 1], ky=[1, 2])
+_ = sensitivity.plot(benchmark_covariates="X2", kd=[0.5, 1], ky=[1, 2])
 ```
 
 The implementation matches the numerical definitions in R's `sensemakr`
@@ -89,6 +90,8 @@ from the fitted model matrix. Sensitivity statistics always use IID standard
 errors and residual degrees of freedom; models fitted with robust, clustered,
 or HAC covariance estimators emit a warning before using those IID inputs.
 Weighted, IV, GLM, quantile, and `lean=True` fits are not yet supported.
+Contour and extreme-scenario plots can display benchmark or manually supplied
+partial-$R^2$ values without refitting the model.
 
 ### GLM API and Behavior
 
