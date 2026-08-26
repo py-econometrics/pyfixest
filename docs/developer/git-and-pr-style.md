@@ -59,6 +59,9 @@ For example:
 > weights and multiple estimation remain explicitly unsupported.
 
 After the opening, complete only the applicable sections of the repository PR
-template. Agent-authored PRs also report the commit narrative, immediate parent,
-verification status and duration, and deferred checks. Human approval is
-represented by GitHub review state, not by an author checkbox.
+template. Keep ordinary PR bodies under about 200 words. GitHub
+already shows the files, commits, branches, and base SHA; repeat them only when
+a non-obvious stack relationship affects review. Group successful checks and
+give detail to failures, deferred checks, numerical deviations, and support
+limits. Human approval is represented by GitHub review state, not by an author
+checkbox.

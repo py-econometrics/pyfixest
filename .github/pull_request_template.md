@@ -1,28 +1,9 @@
 ## Summary
 
-<!-- Lead with the outcome, motivation, and important non-goals. -->
-
-## Changes
-
-<!-- Describe the coherent behavior or contributor-facing changes. -->
+<!-- One short outcome-first paragraph. Add only material non-goals or risks. -->
 
 ## Verification
 
-| Status | Command | Duration | Notes |
-|---|---|---:|---|
-| <!-- passed / failed / deferred / not run --> | | | |
+<!-- Group passing checks. Give exact commands and reasons for failures or deferrals. -->
 
-Deferred checks and where they will run:
-
-## Numerical or estimator changes (if applicable)
-
-- Architecture placement and nearest precedent:
-- `fixest` behavior or intentional deviation:
-- Weights / fixed effects / IV / multiple estimation / backends:
-- External reference, version, data or seed, and compared outputs:
-- Tolerances and justification:
-
-## Documentation and performance (if applicable)
-
-- Documentation and changelog:
-- Performance evidence:
+<!-- Add a short Compatibility / risks section only for material deviations, support limits, failures, deferrals, or performance changes. -->
