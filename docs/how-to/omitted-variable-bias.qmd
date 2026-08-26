@@ -1,0 +1,140 @@
+---
+title: "Omitted-Variable-Bias Sensitivity Analysis"
+description: "Measure how strong unobserved confounding would need to be to change an OLS conclusion."
+categories: [Causal Inference, Post-Estimation]
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+## What question does sensitivity analysis answer?
+
+An OLS coefficient has a causal interpretation only when the regression has
+accounted for relevant confounding. Omitted-variable-bias (OVB) sensitivity
+analysis does not prove that this assumption holds. It asks a narrower,
+diagnostic question: how strongly would an omitted confounder need to relate to
+both the treatment and outcome, after conditioning on the fitted controls, to
+change the reported estimate or its significance?
+
+PyFixest implements the partial-$R^2$ framework of [Cinelli and Hazlett
+(2020)](https://doi.org/10.1111/rssb.12348) and follows the numerical definitions
+in the R package [`sensemakr`](https://github.com/carloscinelli/sensemakr).
+
+## Configure one treatment coefficient
+
+We use the synthetic twin-study data from the getting-started tutorial. The
+naive regression omits `ability`, which is deliberately correlated with both
+education and wages in this data-generating process.
+
+```{python}
+import pyfixest as pf
+
+twins = pf.get_twin_data(N_pairs=500, seed=42)
+fit = pf.feols(
+    "log_wage ~ educ + experience",
+    data=twins,
+    vcov="iid",
+)
+sensitivity = fit.sensitivity_analysis("educ")
+```
+
+Passing the treatment name at construction prevents an intercept or another
+coefficient from being selected implicitly. The analysis retains that choice
+for all subsequent calculations.
+
+## Read the sensitivity statistics
+
+```{python}
+stats = sensitivity.sensitivity_stats(q=1, alpha=0.05)
+stats
+```
+
+The fields answer related but distinct questions:
+
+- `partial_r2` is the share of residual outcome variation uniquely associated
+  with education, expressed as a partial $R^2$.
+- `robustness_value` is the minimum equal-strength association an omitted
+  confounder would need with treatment and outcome to reduce the point estimate
+  by the fraction `q`. With `q=1`, the target is zero.
+- `robustness_value_alpha` asks for the equal-strength association needed to
+  make the estimate statistically insignificant at `alpha`.
+- `estimate`, `standard_error`, `t_statistic`, and `degrees_of_freedom` are the
+  IID inputs used for the calculation.
+
+Robustness values are proportions between zero and one. For example, `0.08`
+means that an omitted confounder would need partial $R^2$ values of at least 8%
+with both treatment and outcome, under the equal-strength scenario used by the
+robustness-value definition. This is a calibration statement, not a probability
+that such a confounder exists.
+
+## Benchmark against observed covariates
+
+Abstract partial $R^2$ values are easier to interpret when compared with an
+observed covariate. The following scenarios make the omitted confounder's
+treatment-side association half as strong or equally strong as `experience`,
+and its outcome-side association equally or twice as strong:
+
+```{python}
+bounds = sensitivity.ovb_bounds(
+    "experience",
+    kd=[0.5, 1],
+    ky=[1, 2],
+    alpha=0.05,
+)
+bounds
+```
+
+`r2dz_x` and `r2yz_dx` are the implied treatment- and outcome-side partial
+$R^2$ values. The remaining columns show the estimate, standard error, t
+statistic, and confidence interval after adjusting for each scenario. Set
+`reduce=False` to examine confounding that moves the estimate away from zero,
+or pass `h0=` to evaluate a nonzero null value.
+
+Multiple observed coefficients can be benchmarked in one call:
+
+```{python}
+sensitivity.ovb_bounds(
+    ["experience"],
+    kd=[0.5, 1],
+    ky=[0.5, 1],
+    adjusted_estimates=False,
+)
+```
+
+Benchmark names are fitted coefficient names. Because PyFixest computes the
+associations from the prepared model matrix, transformed terms and absorbed
+fixed effects remain part of the conditioning set, and the calculation also
+works after fitting with `store_data=False`.
+
+## Covariance estimators and supported models
+
+Like `sensemakr`, the sensitivity calculation uses IID standard errors and IID
+residual degrees of freedom. If the fitted model displays heteroskedastic,
+cluster-robust, or HAC inference, `sensitivity_analysis()` emits a warning and
+computes the same sensitivity results that the equivalent IID fit would
+produce. The fitted model and its displayed inference are not mutated.
+
+Current support is intentionally narrow:
+
+| Fitted model configuration | Support |
+|---|---|
+| Unweighted `feols()` | Yes |
+| `feols()` with absorbed fixed effects | Yes |
+| `store_data=False` | Yes |
+| Robust, clustered, or HAC fitted inference | Yes; sensitivity inputs are IID and a warning is emitted |
+| Analytic or frequency weights | No |
+| IV, Poisson/GLM, or quantile regression | No |
+| `lean=True` | No; the required fitted matrices were discarded |
+| Multiple-estimation result | Fetch one model with `fetch_model()` first |
+
+Unsupported configurations raise an actionable `NotImplementedError` rather
+than silently applying OLS formulas to a different estimator.
+
+## Report the assumptions with the result
+
+A useful sensitivity report names the treatment and outcome, describes the
+conditioning set, states `q` and `alpha`, explains why each benchmark is
+substantively plausible, and reports both partial-$R^2$ dimensions. Avoid
+presenting one benchmark scenario as a definitive correction for bias. The
+method describes how conclusions move under stated confounding strengths; the
+choice of plausible strengths remains a domain judgment.

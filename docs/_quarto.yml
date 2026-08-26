@@ -84,6 +84,8 @@ website:
           file: how-to/marginaleffects.qmd
         - text: "When to Use Anytime-Valid Inference"
           file: how-to/anytime-valid-inference.qmd
+        - text: "Omitted-Variable-Bias Sensitivity"
+          file: how-to/omitted-variable-bias.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
         - text: "Compare Stata & PyFixest"
@@ -210,6 +212,14 @@ quartodoc:
         - estimation.models.feols_.Feols.update
         - estimation.models.feols_.Feols.evalue
         - estimation.models.feols_.Feols.pvalue_savi
+        - estimation.models.feols_.Feols.sensitivity_analysis
+    - title: Sensitivity Analysis
+      desc: |
+        Cinelli-Hazlett omitted-variable-bias sensitivity statistics and
+        benchmark bounds for a single fitted OLS coefficient.
+      contents:
+        - estimation.post_estimation.sensitivity.SensitivityAnalysis
+        - estimation.post_estimation.sensitivity.SensitivityStatistics
     - title: Summarize and Visualize
       desc: |
         Summary tables and coefficient plots for fitted models.
