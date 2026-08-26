@@ -20,6 +20,8 @@ domain suites.
   external-reference suite. `test-py` is a Python-only regression baseline and
   never substitutes for an external numerical comparison. Use the fast R suite
   for edit feedback before the applicable canonical R suite.
+- Run core and extended external-reference suites separately when their
+  dependency markers differ, and report each status independently.
 - HAC changes require the single-threaded HAC suite.
 - Rust changes require kernel/reference tests and platform CI.
 - Performance-sensitive changes require before/after evidence.
@@ -51,6 +53,10 @@ For every applicable check record:
 - exact command;
 - elapsed time;
 - reason and destination for a deferred check.
+
+For an unusually large test change, also report the approximate collected-test
+and runtime delta and perform a final redundancy pass against existing public
+integration and external-reference coverage.
 
 Run long domain suites after the design stabilizes. A deferred or CI-only check
 is not a pass. Do not claim completion while a mandatory local check is
