@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 
@@ -192,7 +192,7 @@ class FixestMulti(TidyColumnAccessors):
     def wildboottest(
         self,
         reps: int,
-        cluster: str | list[str] | None = None,
+        cluster: str | None = None,
         param: str | None = None,
         weights_type: str = "rademacher",
         impose_null: bool = True,
@@ -206,15 +206,16 @@ class FixestMulti(TidyColumnAccessors):
 
         Parameters
         ----------
-        reps : int
+        B : int
             The number of bootstrap iterations to run.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
             Default is None.
-        cluster : str | list[str] | None, optional
-            The name of the cluster variable. A one-element list is also accepted.
-            If None, uses the model's stored cluster variable; without one, a
-            heteroskedasticity-robust wild bootstrap is run. Defaults to None.
+        cluster : Union[str, None], optional
+            The name of the cluster variable. Default is None. If None, uses
+            the `self._clustervar` attribute as the cluster variable. If the
+            `self._clustervar` attribute is None, a heteroskedasticity-robust
+            wild bootstrap is run.
         weights_type : str, optional
             The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
             or 'normal'. Default is 'rademacher'.
@@ -239,7 +240,7 @@ class FixestMulti(TidyColumnAccessors):
             A pd.DataFrame with bootstrapped t-statistic and p-value.
             The index indicates which model the estimated statistic derives from.
         """
-        results = []
+        res_df = pd.DataFrame()
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
 
@@ -255,8 +256,8 @@ class FixestMulti(TidyColumnAccessors):
                 G_adj,
             )
 
-            pvalue = float(boot_res["Pr(>|t|)"])
-            tstat = float(boot_res["t value"])
+            pvalue = boot_res["Pr(>|t|)"]
+            tstat = boot_res["t value"]
 
             result_dict = {
                 "fml": x,
@@ -265,154 +266,11 @@ class FixestMulti(TidyColumnAccessors):
                 "Pr(>|t|)": pvalue,
             }
 
-            results.append(result_dict)
+            res_df = pd.concat([res_df, pd.DataFrame(result_dict)], axis=1)
 
-        return pd.DataFrame(results).set_index("fml")
+        res_df = res_df.T.set_index("fml")
 
-    def bayesian_bootstrap(
-        self,
-        reps: int,
-        *,
-        alpha: float = 1.0,
-        cluster: str | None = None,
-        ci_level: float = 0.95,
-        seed: int | None = None,
-    ) -> pd.DataFrame:
-        """Compute Rubin Bayesian-bootstrap summaries for every fitted model.
-
-        Each model generates Dirichlet posterior coefficient draws and reports a
-        posterior SD, equal-tail credible interval, and two-sided posterior tail
-        probability for zero. Fitted-model small-sample corrections and
-        wild-bootstrap `k_adj` or `G_adj` settings do not modify these raw draws.
-        See [Feols](/reference/estimation.models.feols_.Feols.qmd) for supported
-        estimators and assumptions, and the
-        [standard-errors guide](/tutorials/standard-errors.qmd) for usage guidance.
-
-        Parameters
-        ----------
-        reps : int
-            Number of retained posterior draws. Must be at least 2.
-        alpha : float, optional
-            Finite positive common Dirichlet concentration. Defaults to 1.0.
-        cluster : str | None, optional
-            Stored data column defining independent sampling units. If `None`, each
-            model uses its one-way covariance cluster when present, otherwise it
-            weights observations independently.
-        ci_level : float, optional
-            Equal-tail credible-interval level. Defaults to 0.95.
-        seed : int | None, optional
-            Random seed for reproducibility. Defaults to None.
-
-        Returns
-        -------
-        pd.DataFrame
-            Posterior summaries indexed by `fml` and coefficient name, with
-            `Original estimate`, `Posterior mean`, `Posterior SD`, `CI lower`,
-            `CI upper`, `Posterior tail probability`, and `interval` columns.
-
-        Examples
-        --------
-        ```{python}
-        import pyfixest as pf
-
-        data = pf.get_data(N=200, seed=1)
-        fits = pf.feols("Y ~ sw(X1, X2)", data)
-        fits.bayesian_bootstrap(reps=19, seed=2)
-        ```
-        """
-        return self._stack_weighting_bootstrap(
-            api_name="bayesian_bootstrap",
-            reps=reps,
-            cluster=cluster,
-            ci_level=ci_level,
-            seed=seed,
-            alpha=alpha,
-        )
-
-    def pairs_bootstrap(
-        self,
-        reps: int,
-        *,
-        cluster: str | None = None,
-        ci_level: float = 0.95,
-        seed: int | None = None,
-    ) -> pd.DataFrame:
-        """Compute pairs-bootstrap percentile inference for every fitted model.
-
-        Each model uses multinomial row or cluster counts and reports bootstrap SEs,
-        percentile confidence intervals, and finite-replication-corrected p-values
-        for an unstudentized centered test of `H0: beta = 0`. Fitted-model
-        small-sample corrections and wild-bootstrap `k_adj` or `G_adj` settings do
-        not modify these raw draws. See
-        [Feols](/reference/estimation.models.feols_.Feols.qmd) for supported
-        estimators and assumptions, and the
-        [standard-errors guide](/tutorials/standard-errors.qmd) for usage guidance.
-
-        Parameters
-        ----------
-        reps : int
-            Number of retained bootstrap draws. Must be at least 2.
-        cluster : str | None, optional
-            Stored data column defining independent sampling units. If `None`, each
-            model uses its one-way covariance cluster when present, otherwise it
-            samples rows independently.
-        ci_level : float, optional
-            Percentile confidence-interval level. Defaults to 0.95.
-        seed : int | None, optional
-            Random seed for reproducibility. Defaults to None.
-
-        Returns
-        -------
-        pd.DataFrame
-            Percentile inference indexed by `fml` and coefficient name, with
-            `Estimate`, `CI lower`, `CI upper`, `Bootstrap SE`, `P-value`, and
-            `interval` columns.
-
-        Examples
-        --------
-        ```{python}
-        import pyfixest as pf
-
-        data = pf.get_data(N=200, seed=1)
-        fits = pf.feols("Y ~ sw(X1, X2)", data)
-        fits.pairs_bootstrap(reps=19, seed=2)
-        ```
-        """
-        return self._stack_weighting_bootstrap(
-            api_name="pairs_bootstrap",
-            reps=reps,
-            cluster=cluster,
-            ci_level=ci_level,
-            seed=seed,
-        )
-
-    def _stack_weighting_bootstrap(
-        self,
-        *,
-        api_name: str,
-        reps: int,
-        cluster: str | None,
-        ci_level: float,
-        seed: int | None,
-        **kwargs: Any,
-    ) -> pd.DataFrame:
-        """Stack one weighting-bootstrap result from every fitted model."""
-        results = []
-        for formula, model in self.all_fitted_models.items():
-            inference = cast(
-                pd.DataFrame,
-                getattr(model, api_name)(
-                    reps=reps,
-                    cluster=cluster,
-                    ci_level=ci_level,
-                    seed=seed,
-                    **kwargs,
-                ),
-            ).reset_index(names="Coefficient")
-            inference["fml"] = formula
-            results.append(inference)
-        result = pd.concat(results, axis=0)
-        return result.set_index(["fml", "Coefficient"])
+        return res_df
 
     def fetch_model(
         self, i: int | str, print_fml: bool | None = True

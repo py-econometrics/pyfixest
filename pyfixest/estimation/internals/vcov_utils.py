@@ -30,6 +30,34 @@ class ClusterPrep:
     n_fe_fully_nested: int
 
 
+def factorize_cluster_data(
+    cluster_data: pd.DataFrame | np.ndarray,
+) -> np.ndarray:
+    """Factorize cluster columns in first-appearance order.
+
+    Parameters
+    ----------
+    cluster_data : pd.DataFrame | np.ndarray
+        One or more cluster columns with observations in rows.
+
+    Returns
+    -------
+    np.ndarray
+        Contiguous integer cluster codes with shape ``(N, n_clusters)``.
+    """
+    if isinstance(cluster_data, pd.DataFrame):
+        columns = [cluster_data[col].to_numpy() for col in cluster_data.columns]
+    else:
+        cluster_array = np.asarray(cluster_data)
+        if cluster_array.ndim == 1:
+            cluster_array = cluster_array.reshape(-1, 1)
+        if cluster_array.ndim != 2:
+            raise ValueError("Cluster data must be one- or two-dimensional.")
+        columns = [cluster_array[:, col] for col in range(cluster_array.shape[1])]
+
+    return np.column_stack([pd.factorize(column)[0] for column in columns])
+
+
 def prepare_cluster_state(
     *,
     data: DataFrameType,
@@ -50,9 +78,7 @@ def prepare_cluster_state(
 
     G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
 
-    cluster_arr_int = np.column_stack(
-        [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
-    )
+    cluster_arr_int = factorize_cluster_data(cluster_df)
 
     k_fe_nested = 0
     n_fe_fully_nested = 0

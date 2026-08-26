@@ -36,17 +36,3 @@ def test_crv1_equivalence(data, fml):
     ]
 
     np.testing.assert_allclose(tstat, boot_tstat)
-
-
-def test_one_element_cluster_list_is_supported(data):
-    fit = pf.feols("Y ~ X1", data=data, vcov={"CRV1": "group_id"})
-    string_result = fit.wildboottest(param="X1", reps=99, cluster="group_id", seed=1)
-    list_result = fit.wildboottest(param="X1", reps=99, cluster=["group_id"], seed=1)
-    np.testing.assert_allclose(string_result["Pr(>|t|)"], list_result["Pr(>|t|)"])
-
-
-def test_fixest_multi_supports_one_element_cluster_list(data):
-    fit = pf.feols("Y ~ X1 + sw(X2, Z1)", data=data, vcov={"CRV1": "group_id"})
-    string_result = fit.wildboottest(param="X1", reps=99, cluster="group_id", seed=1)
-    list_result = fit.wildboottest(param="X1", reps=99, cluster=["group_id"], seed=1)
-    np.testing.assert_allclose(string_result["Pr(>|t|)"], list_result["Pr(>|t|)"])

@@ -164,12 +164,6 @@ class Feglm(Feols):
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
-        # Separation changes the estimation sample, so refresh every bootstrap input.
-        self._Y_untransformed = self._Y.copy()
-        self._X_untransformed_df = self._X.copy()
-        self._fe_df = self._fe.copy() if self._fe is not None else None
-        self._user_weights = self._weights.flatten().copy()
-
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
         self._Y, self._X, self._Z = (

@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from numbers import Real
-from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -15,12 +14,11 @@ from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_ import fit_iv, fit_ols
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import (
-    BootstrapWeightDistribution,
     SolverOptions,
+    WeightingBootstrapDistribution,
+    WeightingBootstrapEstimator,
     _validate_literal_argument,
 )
-
-BootstrapEstimator = Literal["ols", "iv", "glm"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,7 +37,7 @@ class WeightingBootstrapInput:
         Original user estimation weights, shape (N,).
     coefnames : tuple[str, ...]
         Coefficient names, length k.
-    estimator : BootstrapEstimator
+    estimator : WeightingBootstrapEstimator
         Estimator used for each draw.
     solver : SolverOptions
         Linear solver used by the original model.
@@ -58,7 +56,7 @@ class WeightingBootstrapInput:
     beta_hat: np.ndarray
     user_weights: np.ndarray
     coefnames: tuple[str, ...]
-    estimator: BootstrapEstimator
+    estimator: WeightingBootstrapEstimator
     solver: SolverOptions
     Z: np.ndarray | None = None
     fe: np.ndarray | None = None
@@ -72,78 +70,56 @@ class WeightingBootstrapInput:
 
 @dataclass(frozen=True, slots=True)
 class WeightingBootstrapResult:
-    """Weighting-bootstrap inference and successful coefficient draws.
+    """Weighting-bootstrap inference and coefficient draws.
 
     Attributes
     ----------
     inference : pd.DataFrame
         Method-specific inference indexed by coefficient name.
     draws : np.ndarray
-        Retained coefficient draws, shape (reps, k).
+        Coefficient draws, shape (reps, k). Failed replicates are ``NaN``.
     failed_draws : int
-        Number of attempted draws discarded before `reps` fits were retained.
-    attempts : int
-        Total number of attempted draws.
+        Number of requested replicates that could not be estimated.
     """
 
     inference: pd.DataFrame
     draws: np.ndarray
     failed_draws: int
-    attempts: int
 
 
 def _validate_weighting_bootstrap_inputs(
     *,
     reps: int,
-    weight_distribution: BootstrapWeightDistribution,
-    alpha: float,
-    ci_level: float,
+    weight_distribution: WeightingBootstrapDistribution,
+    dirichlet_alpha: float,
+    level: float,
 ) -> None:
-    """Validate arguments shared by single- and multiple-model calls."""
+    """Validate arguments for an individual fitted-result bootstrap."""
     if isinstance(reps, bool) or not isinstance(reps, (int, np.integer)) or reps < 2:
         raise ValueError("`reps` must be an integer greater than or equal to 2.")
-    _validate_literal_argument(weight_distribution, BootstrapWeightDistribution)
+    _validate_literal_argument(weight_distribution, WeightingBootstrapDistribution)
     if (
-        isinstance(alpha, bool)
-        or not isinstance(alpha, Real)
-        or not np.isfinite(alpha)
-        or alpha <= 0
+        isinstance(dirichlet_alpha, bool)
+        or not isinstance(dirichlet_alpha, Real)
+        or not np.isfinite(dirichlet_alpha)
+        or dirichlet_alpha <= 0
     ):
-        raise ValueError("`alpha` must be a finite positive number.")
+        raise ValueError("`dirichlet_alpha` must be a finite positive number.")
     if (
-        isinstance(ci_level, bool)
-        or not isinstance(ci_level, Real)
-        or not np.isfinite(ci_level)
-        or not 0 < ci_level < 1
+        isinstance(level, bool)
+        or not isinstance(level, Real)
+        or not np.isfinite(level)
+        or not 0 < level < 1
     ):
-        raise ValueError("`ci_level` must be finite and strictly between 0 and 1.")
-
-
-def _factorize_bootstrap_cluster(cluster: np.ndarray, n_obs: int) -> np.ndarray:
-    """Validate and factorize one cluster variable in a row-order-stable way."""
-    cluster = np.asarray(cluster).reshape(-1)
-    if cluster.size != n_obs:
-        raise ValueError("The cluster variable must have one value per estimation row.")
-    if pd.isna(cluster).any():
-        raise ValueError("The cluster variable must not contain missing values.")
-
-    try:
-        codes, levels = pd.factorize(cluster, sort=True)
-    except TypeError as exc:
-        raise ValueError(
-            "The cluster variable must contain mutually comparable values."
-        ) from exc
-    if len(levels) < 2:
-        raise ValueError("The weighting bootstrap requires at least two clusters.")
-    return codes
+        raise ValueError("`level` must be finite and strictly between 0 and 1.")
 
 
 def _draw_bootstrap_weights(
     *,
     rng: np.random.Generator,
-    weight_distribution: BootstrapWeightDistribution,
+    weight_distribution: WeightingBootstrapDistribution,
     n_units: int,
-    alpha: float,
+    dirichlet_alpha: float,
 ) -> np.ndarray:
     """Draw unit weights for a multinomial or Rubin Bayesian bootstrap.
 
@@ -155,19 +131,18 @@ def _draw_bootstrap_weights(
     if weight_distribution == "multinomial":
         probabilities = np.full(n_units, 1 / n_units)
         return rng.multinomial(n_units, probabilities).astype(float)
-    return rng.dirichlet(np.full(n_units, alpha)) * n_units
+    return rng.dirichlet(np.full(n_units, dirichlet_alpha)) * n_units
 
 
 def _run_weighting_bootstrap(
     *,
     inputs: WeightingBootstrapInput,
     reps: int,
-    weight_distribution: BootstrapWeightDistribution,
-    alpha: float,
-    ci_level: float,
+    weight_distribution: WeightingBootstrapDistribution,
+    dirichlet_alpha: float,
+    level: float,
     seed: int | None,
     cluster_codes: np.ndarray | None,
-    max_attempts: int | None = None,
 ) -> WeightingBootstrapResult:
     """Generate, refit, and summarize weighting-bootstrap coefficient draws.
 
@@ -177,7 +152,7 @@ def _run_weighting_bootstrap(
     """
     n_obs, k = inputs.X.shape
     _validate_bootstrap_state(inputs=inputs, n_obs=n_obs, k=k)
-    inverse = np.arange(n_obs) if cluster_codes is None else cluster_codes
+    row_to_unit = np.arange(n_obs) if cluster_codes is None else cluster_codes
     if cluster_codes is not None and (
         cluster_codes.size != n_obs
         or cluster_codes.min() < 0
@@ -185,56 +160,52 @@ def _run_weighting_bootstrap(
     ):
         raise ValueError("Stored cluster codes are invalid or not row-aligned.")
     n_units = n_obs if cluster_codes is None else int(cluster_codes.max()) + 1
-    attempt_limit = 2 * reps if max_attempts is None else max_attempts
     rng = np.random.default_rng(seed)
-    draws = np.empty((reps, k))
-    n_success = 0
-    attempts = 0
+    draws = np.full((reps, k), np.nan)
 
-    while n_success < reps and attempts < attempt_limit:
-        attempts += 1
+    for rep in range(reps):
         unit_weights = _draw_bootstrap_weights(
             rng=rng,
             weight_distribution=weight_distribution,
             n_units=n_units,
-            alpha=alpha,
+            dirichlet_alpha=dirichlet_alpha,
         )
-        combined_weights = inputs.user_weights * unit_weights[inverse]
+        combined_weights = inputs.user_weights * unit_weights[row_to_unit]
         try:
-            draws[n_success] = _fit_bootstrap_draw(
+            draws[rep] = _fit_bootstrap_draw(
                 inputs=inputs, combined_weights=combined_weights
             )
         except (NonConvergenceError, np.linalg.LinAlgError, RuntimeError, ValueError):
             continue
-        n_success += 1
 
-    failed_draws = attempts - n_success
-    if n_success < reps:
+    valid_rows = np.isfinite(draws).all(axis=1)
+    n_success = int(valid_rows.sum())
+    failed_draws = reps - n_success
+    if n_success < 2:
         raise NonConvergenceError(
-            "Weighting bootstrap retained "
-            f"{n_success} of {reps} requested draws after {attempts} attempts; "
-            f"{failed_draws} draws failed convergence, finite-value, rank, or "
-            "identification checks."
+            "Weighting bootstrap produced "
+            f"{n_success} estimable draws of {reps}; at least 2 are required "
+            "for inference."
         )
     if failed_draws:
         warnings.warn(
-            f"Weighting bootstrap discarded {failed_draws} of {attempts} attempted "
-            f"draws. Inference is conditional on the {reps} successful draws.",
+            f"Weighting bootstrap could not estimate {failed_draws} of {reps} "
+            f"draws. Summaries use {n_success} estimable draws; failed rows are "
+            "`NaN` in returned draws.",
             UserWarning,
             stacklevel=2,
         )
     inference = _summarize_weighting_bootstrap(
-        draws=draws,
+        draws=draws[valid_rows],
         beta_hat=inputs.beta_hat,
         coefnames=inputs.coefnames,
         weight_distribution=weight_distribution,
-        ci_level=ci_level,
+        level=level,
     )
     return WeightingBootstrapResult(
         inference=inference,
         draws=draws,
         failed_draws=failed_draws,
-        attempts=attempts,
     )
 
 
@@ -243,23 +214,19 @@ def _summarize_weighting_bootstrap(
     draws: np.ndarray,
     beta_hat: np.ndarray,
     coefnames: tuple[str, ...],
-    weight_distribution: BootstrapWeightDistribution,
-    ci_level: float,
+    weight_distribution: WeightingBootstrapDistribution,
+    level: float,
 ) -> pd.DataFrame:
     """Summarize posterior draws or multinomial bootstrap replicates."""
-    q_lower = (1 - ci_level) / 2
+    q_lower = (1 - level) / 2
     ci_lower, ci_upper = np.quantile(draws, [q_lower, 1 - q_lower], axis=0)
     if weight_distribution == "dirichlet":
-        tail_probability = 2 * np.minimum(
-            np.mean(draws <= 0, axis=0), np.mean(draws >= 0, axis=0)
-        )
         summary: dict[str, np.ndarray | str] = {
             "Original estimate": beta_hat,
             "Posterior mean": draws.mean(axis=0),
             "Posterior SD": draws.std(axis=0, ddof=1),
             "CI lower": ci_lower,
             "CI upper": ci_upper,
-            "Posterior tail probability": np.minimum(tail_probability, 1),
             "interval": "equal-tail credible",
         }
     else:
@@ -305,19 +272,27 @@ def _validate_bootstrap_state(
 def _fit_bootstrap_draw(
     *, inputs: WeightingBootstrapInput, combined_weights: np.ndarray
 ) -> np.ndarray:
-    active = combined_weights > 0
-    weights = combined_weights[active]
-    if not active.any() or not np.isfinite(weights).all():
+    active_rows = combined_weights > 0
+    active_weights = combined_weights[active_rows]
+    if not active_rows.any() or not np.isfinite(active_weights).all():
         raise ValueError("The draw has no finite positive weights.")
 
     if inputs.estimator == "glm":
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-                return _fit_glm_draw(inputs=inputs, active=active, weights=weights)
+                return _fit_glm_draw(
+                    inputs=inputs,
+                    active_rows=active_rows,
+                    active_weights=active_weights,
+                )
 
-    Y, X, Z = _prepare_linear_arrays(inputs=inputs, active=active, weights=weights)
-    sqrt_weights = np.sqrt(weights)
+    Y, X, Z = _prepare_linear_arrays(
+        inputs=inputs,
+        active_rows=active_rows,
+        active_weights=active_weights,
+    )
+    sqrt_weights = np.sqrt(active_weights)
     Yw = Y * sqrt_weights[:, None]
     Xw = X * sqrt_weights[:, None]
     _check_full_column_rank(Xw, "the regressor matrix")
@@ -339,12 +314,12 @@ def _fit_bootstrap_draw(
 def _prepare_linear_arrays(
     *,
     inputs: WeightingBootstrapInput,
-    active: np.ndarray,
-    weights: np.ndarray,
+    active_rows: np.ndarray,
+    active_weights: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
-    Y = inputs.Y[active].reshape(-1, 1)
-    X = inputs.X[active]
-    Z = inputs.Z[active] if inputs.Z is not None else None
+    Y = inputs.Y[active_rows].reshape(-1, 1)
+    X = inputs.X[active_rows]
+    Z = inputs.Z[active_rows] if inputs.Z is not None else None
     if inputs.fe is None:
         return Y, X, Z
 
@@ -354,8 +329,8 @@ def _prepare_linear_arrays(
         arrays.append(Z)
     demeaned = DemeanCache().demean_array(
         x=np.column_stack(arrays),
-        flist=inputs.fe[active],
-        weights=weights,
+        flist=inputs.fe[active_rows],
+        weights=active_weights,
         na_index=frozenset(),
         demeaner=inputs.demeaner,
     )
@@ -366,30 +341,33 @@ def _prepare_linear_arrays(
 
 
 def _fit_glm_draw(
-    *, inputs: WeightingBootstrapInput, active: np.ndarray, weights: np.ndarray
+    *,
+    inputs: WeightingBootstrapInput,
+    active_rows: np.ndarray,
+    active_weights: np.ndarray,
 ) -> np.ndarray:
     family = inputs.family
     assert family is not None
-    Y = inputs.Y[active].reshape(-1)
-    X = inputs.X[active]
-    fe = inputs.fe[active] if inputs.fe is not None else None
+    Y = inputs.Y[active_rows].reshape(-1)
+    X = inputs.X[active_rows]
+    fixed_effects = inputs.fe[active_rows] if inputs.fe is not None else None
     if family.name in ("logit", "probit") and np.unique(Y).size != 2:
         raise ValueError("The binary outcome has one class in this draw.")
     if family.name == "poisson" and not np.any(Y > 0):
         raise ValueError("The Poisson outcome is zero for every active row.")
-    _check_finite(Y, X, weights)
+    _check_finite(Y, X, active_weights)
 
     cache = DemeanCache()
 
     def _demean(
         v: np.ndarray, design: np.ndarray, irls_weights: np.ndarray, tol: float
     ) -> tuple[np.ndarray, np.ndarray]:
-        if fe is None:
+        if fixed_effects is None:
             return v, design
         assert inputs.demeaner is not None
         residualized = cache.demean_array(
             x=np.column_stack([v, design]),
-            flist=fe,
+            flist=fixed_effects,
             weights=irls_weights,
             na_index=frozenset(),
             demeaner=inputs.demeaner.with_tol(tol),
@@ -404,7 +382,7 @@ def _fit_glm_draw(
         coefnames=list(inputs.coefnames),
         collin_tol=inputs.collin_tol,
         accelerate=False,
-        weights=weights,
+        weights=active_weights,
         solver=inputs.solver,
         maxiter=inputs.maxiter,
         tol=inputs.tol,
