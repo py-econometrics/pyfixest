@@ -188,8 +188,9 @@ quartodoc:
     - title: Post-Estimation Methods
       desc: |
         Methods available on a fitted model object, e.g. the result of a call to
-        `feols()`. Defined on `Feols` and shared by `Fepois`, `Feglm`, `Feiv`, and
-        `Quantreg` through inheritance.
+        `feols()`. Most are defined on `Feols` and shared by `Fepois`, `Feglm`,
+        `Feiv`, and `Quantreg` through inheritance; estimator-specific support is
+        documented per method.
       contents:
         - estimation.models.feols_.Feols.tidy
         - estimation.models.feols_.Feols.coef
@@ -203,6 +204,8 @@ quartodoc:
         - estimation.models.feols_.Feols.fixef
         - estimation.models.feols_.Feols.get_performance
         - estimation.models.feols_.Feols.wald_test
+        - estimation.models.feols_.Feols.bootstrap_bayesian
+        - estimation.models.feols_.Feols.bootstrap_pairs
         - estimation.models.feols_.Feols.wildboottest
         - estimation.models.feols_.Feols.ritest
         - estimation.models.feols_.Feols.ccv

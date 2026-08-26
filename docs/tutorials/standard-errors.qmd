@@ -190,29 +190,32 @@ few-cluster correction.
 
 Two procedures are available:
 
-- `bayesian_bootstrap()`: continuous Dirichlet weights give the posterior draws
+- `bootstrap_bayesian()`: continuous Dirichlet weights give the posterior draws
   of [Rubin's (1981) Bayesian bootstrap](https://doi.org/10.1214/aos/1176345338).
   The output distinguishes the original estimate from the posterior mean and
-  reports posterior SD, an equal-tail credible interval, and a two-sided
-  posterior tail probability for zero. `alpha=1` is Rubin's standard choice;
-  other finite positive values change the common Dirichlet concentration.
-- `pairs_bootstrap()`: integer counts implement a pairs bootstrap while the
+  reports posterior SD and an equal-tail credible interval.
+  `dirichlet_alpha=1` is Rubin's standard choice; other finite positive values
+  change the common Dirichlet concentration.
+- `bootstrap_pairs()`: integer counts implement a pairs bootstrap while the
   rowwise outcome, regressor, instrument, and fixed-effect matrices remain
   fixed. The output reports bootstrap SE, a percentile confidence interval,
-  and the finite-replication-corrected p-value `(1 + exceedances) / (reps + 1)`
-  for an unstudentized centered test of `H0: beta = 0`.
+  and the finite-replication-corrected p-value
+  `(1 + exceedances) / (estimable replicates + 1)` for an unstudentized
+  centered test of `H0: beta = 0`.
 
 ```python
 fit_weighting = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "f1"})
-bayesian_result = fit_weighting.bayesian_bootstrap(
+bayesian_result = fit_weighting.bootstrap_bayesian(
     reps=999,
-    alpha=1.0,
+    dirichlet_alpha=1.0,
     cluster="f1",
+    level=0.95,
     seed=42,
 )
-pairs_result = fit_weighting.pairs_bootstrap(
+pairs_result = fit_weighting.bootstrap_pairs(
     reps=999,
     cluster="f1",
+    level=0.95,
     seed=42,
 )
 ```
@@ -227,25 +230,31 @@ applications the justification relies on many independent clusters.
 Original analytic weights (`aweights`) are multiplied by each bootstrap draw.
 Frequency weights (`fweights`) are rejected because expanded-sample
 multinomial and aggregated-Dirichlet semantics differ. Quantile regression and
-offsets are also unsupported. The method needs the original model matrices and
-data, so fit with `lean=False` and `store_data=True`.
+offsets are also unsupported. DiD results require estimator-specific resampling
+and are rejected. The methods need stored estimation data, so fit with
+`lean=False` and `store_data=True`.
+
+The methods are available on individual fitted results only. Multiple-estimation
+syntax returns a `FixestMulti`; call `fetch_model()` first when one constituent
+model should be bootstrapped.
 
 The weighting bootstrap supports IV (2SLS) and Gaussian, Poisson, logit, and
 probit GLMs. IV inference assumes strong identification in the population and in
-every retained draw. GLM draws always combine bootstrap weights with the
-original user weights, not final IRLS working weights. A draw is discarded if
-estimator convergence, finite-value, rank, or IV identification checks fail.
-For binary GLMs, draws with one outcome class or a boundary solution are also
-discarded; this replicate guard does not rerun the model's configured
-`separation_check` procedure.
-The attempt count is bounded; a warning reports failures and states that the
-returned inference is conditional on the requested number of successful draws.
+every estimable draw. GLM draws always combine bootstrap weights with the
+original user weights, not final IRLS working weights. A replicate is undefined
+if estimator convergence, finite-value, rank, or IV identification checks fail.
+For binary GLMs, a replicate with one outcome class or a boundary solution is
+also undefined; this replicate guard does not rerun the model's configured
+`separation_check` procedure. Each requested replicate is sampled exactly once.
+An undefined replicate remains `NaN` in the returned draw matrix, and a warning
+reports that summaries use only the estimable replicates. At least two estimable
+replicates are required.
 
 Fitted-model small-sample corrections and wild-bootstrap `k_adj` or `G_adj`
 settings do not modify these raw coefficient draws. Bayesian output contains
 `Original estimate`, `Posterior mean`, `Posterior SD`, `CI lower`, `CI upper`,
-`Posterior tail probability`, and `interval`. Pairs output contains `Estimate`,
-`CI lower`, `CI upper`, `Bootstrap SE`, `P-value`, and `interval`.
+and `interval`. Pairs output contains `Estimate`, `CI lower`, `CI upper`,
+`Bootstrap SE`, `P-value`, and `interval`.
 
 The methods differ rather than forming substitutes for every design:
 
@@ -256,6 +265,10 @@ The methods differ rather than forming substitutes for every design:
 | Analytic weights | not supported | supported |
 | Multiway clustering | not supported | not supported |
 | Cluster requirement | can improve few-cluster OLS inference | many independent clusters |
+
+The standard Bayesian implementation (`dirichlet_alpha=1`) is numerically
+validated against R's `bayesboot` package. Pairs-bootstrap draws are validated
+against R's `boot` package.
 
 ## 10. Concluding Inference Workflow
 
