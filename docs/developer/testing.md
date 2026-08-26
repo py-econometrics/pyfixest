@@ -43,18 +43,18 @@ pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
 pixi run test-py
 
 # External references
-pixi run test-r-core
-pixi run test-r-fixest
+pixi run -e py312-r test-r-core
+pixi run -e py312-r test-r-fixest
 pixi run -e py312-r test-r-fixest-fast
-pixi run test-r-hac
-pixi run test-r-extended
+pixi run -e py312-r test-r-hac
+pixi run -e py312-r test-r-extended
 
 # All tests available in the current environment
-pixi run test-all
+pixi run -e py312-r test-all
 
 # CRAN-only reference tests require an explicit installation first
 pixi run -e py312-r Rscript r_test_requirements.R
-pixi run test-r-extended
+pixi run -e py312-r test-r-extended
 
 # Changed-file quality checks
 pixi run -e lint prek run ruff-format --files <changed files>

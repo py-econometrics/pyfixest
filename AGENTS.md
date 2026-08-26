@@ -207,11 +207,11 @@ qualitative and depends on hardware and caches; report the actual elapsed time.
 | `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov` | Test the changed seam without the repository coverage report | Seconds to a few minutes |
 | `pixi run -e py312-r test-r-fixest-fast` | Compare representative `feols`, `fepois`, and `feglm` cases with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
 | `pixi run test-py` | Run the broad Python-only regression suite; this is not an external numerical comparison | Minutes |
-| `pixi run test-r-fixest` | Run the canonical `tests/test_vs_fixest.py` comparison matrix | Minutes to tens of minutes |
-| `pixi run test-r-core` | Run all canonical comparisons with conda-forge R packages | May take tens of minutes |
-| `pixi run test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
-| `pixi run test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
-| `pixi run test-all` | Run every test supported by the current environment | Potentially substantially longer |
+| `pixi run -e py312-r test-r-fixest` | Run the canonical `tests/test_vs_fixest.py` comparison matrix | Minutes to tens of minutes |
+| `pixi run -e py312-r test-r-core` | Run all canonical comparisons with conda-forge R packages | May take tens of minutes |
+| `pixi run -e py312-r test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
+| `pixi run -e py312-r test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
+| `pixi run -e py312-r test-all` | Run every test supported by the current Python and R environment | Potentially substantially longer |
 | `pixi run -e lint prek run <ruff-format\|ruff-check\|mypy> --files <changed files>` | Format, lint, or type-check changed files | Seconds to a few minutes |
 | `pixi run lint` | Run all repository lint hooks | Minutes |
 | `pixi run docs-build` | Regenerate quartodoc reference inputs and navigation | Minutes |
