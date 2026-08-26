@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -78,6 +78,9 @@ from pyfixest.utils.utils import (
     capture_context,
     get_ssc,
 )
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.post_estimation.sensitivity import SensitivityAnalysis
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -915,6 +918,43 @@ class Feols(ResultAccessorMixin):
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
+
+    def sensitivity_analysis(self, treatment: str) -> SensitivityAnalysis:
+        """Analyze sensitivity to omitted-variable bias for one coefficient.
+
+        The analysis implements Cinelli and Hazlett (2020) and mirrors the
+        numerical definitions in the R package ``sensemakr``. It is available
+        for unweighted, non-IV OLS fits, including models with absorbed fixed
+        effects. Sensitivity statistics always use IID inference; a warning is
+        emitted when the fitted model uses another covariance estimator.
+
+        Parameters
+        ----------
+        treatment : str
+            Name of the non-intercept coefficient to analyze.
+
+        Returns
+        -------
+        SensitivityAnalysis
+            Configured analysis object with statistics and benchmark bounds.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+        sensitivity = fit.sensitivity_analysis("X1")
+        sensitivity.sensitivity_stats()
+        sensitivity.ovb_bounds("X2")
+        ```
+        """
+        from pyfixest.estimation.post_estimation.sensitivity import (
+            SensitivityAnalysis,
+        )
+
+        return SensitivityAnalysis(model=self, treatment=treatment)
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
