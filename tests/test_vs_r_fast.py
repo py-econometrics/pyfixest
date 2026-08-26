@@ -19,12 +19,22 @@ COEFFICIENT_ATOL = 1e-8
 FEOLS_INFERENCE_ATOL = 1e-7
 GLM_INFERENCE_ATOL = 1e-6
 
-# The compact fixest matrix covers no-FE/IID, weighted-FE/hetero, and FE/CRV1
-# paths across feols, fepois, and feglm. Quantreg separately covers both
-# supported solvers and low, interior, median, and high quantiles; it does not
-# support fixed effects.
+# Exercise no-FE and FE models under each supported inference path for every
+# fixest estimator. The weighted FE/hetero cases also cover weights without
+# doubling the full matrix.
 FIXEST_CASES = [
-    pytest.param("feols", "Y ~ X1 + X2", None, "iid", None, id="feols-iid"),
+    pytest.param("feols", "Y ~ X1 + X2", None, "iid", None, id="feols-no-fe-iid"),
+    pytest.param(
+        "feols", "Y ~ X1 + X2 | f1 + f2", None, "iid", None, id="feols-fe-iid"
+    ),
+    pytest.param(
+        "feols",
+        "Y ~ X1 + X2",
+        None,
+        "hetero",
+        None,
+        id="feols-no-fe-hetero",
+    ),
     pytest.param(
         "feols",
         "Y ~ X1 + X2 | f1 + f2",
@@ -35,13 +45,30 @@ FIXEST_CASES = [
     ),
     pytest.param(
         "feols",
+        "Y ~ X1 + X2",
+        None,
+        {"CRV1": "group_id"},
+        None,
+        id="feols-no-fe-crv1",
+    ),
+    pytest.param(
+        "feols",
         "Y ~ X1 + X2 | f1 + f2",
         None,
         {"CRV1": "group_id"},
         None,
-        id="feols-fe-clustered",
+        id="feols-fe-crv1",
     ),
-    pytest.param("fepois", "Y ~ X1 + X2", None, "iid", None, id="fepois-iid"),
+    pytest.param("fepois", "Y ~ X1 + X2", None, "iid", None, id="fepois-no-fe-iid"),
+    pytest.param("fepois", "Y ~ X1 + X2 | f1", None, "iid", None, id="fepois-fe-iid"),
+    pytest.param(
+        "fepois",
+        "Y ~ X1 + X2",
+        None,
+        "hetero",
+        None,
+        id="fepois-no-fe-hetero",
+    ),
     pytest.param(
         "fepois",
         "Y ~ X1 + X2 | f1",
@@ -52,14 +79,43 @@ FIXEST_CASES = [
     ),
     pytest.param(
         "fepois",
+        "Y ~ X1 + X2",
+        None,
+        {"CRV1": "group_id"},
+        None,
+        id="fepois-no-fe-crv1",
+    ),
+    pytest.param(
+        "fepois",
         "Y ~ X1 + X2 | f1",
         None,
         {"CRV1": "group_id"},
         None,
-        id="fepois-fe-clustered",
+        id="fepois-fe-crv1",
     ),
     pytest.param(
-        "feglm", "Y_bin ~ X1 + X2", "logit", "iid", None, id="feglm-logit-iid"
+        "feglm",
+        "Y_bin ~ X1 + X2",
+        "logit",
+        "iid",
+        None,
+        id="feglm-logit-no-fe-iid",
+    ),
+    pytest.param(
+        "feglm",
+        "Y_bin ~ X1 + X2 | f1",
+        "logit",
+        "iid",
+        None,
+        id="feglm-logit-fe-iid",
+    ),
+    pytest.param(
+        "feglm",
+        "Y_bin ~ X1 + X2",
+        "probit",
+        "hetero",
+        None,
+        id="feglm-probit-no-fe-hetero",
     ),
     pytest.param(
         "feglm",
@@ -71,11 +127,19 @@ FIXEST_CASES = [
     ),
     pytest.param(
         "feglm",
+        "Y ~ X1 + X2",
+        "poisson",
+        {"CRV1": "group_id"},
+        None,
+        id="feglm-poisson-no-fe-crv1",
+    ),
+    pytest.param(
+        "feglm",
         "Y ~ X1 + X2 | f1",
         "poisson",
         {"CRV1": "group_id"},
         None,
-        id="feglm-poisson-fe-clustered",
+        id="feglm-poisson-fe-crv1",
     ),
 ]
 FIXEST_TOLERANCES = {
