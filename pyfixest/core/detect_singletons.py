@@ -35,6 +35,26 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
 
     For performance reasons, the input array should be in column-major order.
     Operating on a row-major array can lead to significant performance losses.
+
+    Examples
+    --------
+    Each row is an observation, each column a fixed effect. Only the last
+    observation is alone in both of its groups.
+
+    ```{python}
+    import numpy as np
+    from pyfixest.core.detect_singletons import detect_singletons
+
+    ids = np.array([[0, 0], [0, 0], [1, 1], [1, 1], [2, 2]])
+    detect_singletons(ids)
+    ```
+
+    Dropping a singleton can create new singletons, so detection cascades across
+    columns. Here all observations are singletons.
+
+    ```{python}
+    detect_singletons(np.array([[0, 0], [0, 1], [1, 2], [2, 2]]))
+    ```
     """
     if not np.issubdtype(ids.dtype, np.integer):
         raise TypeError("Fixed effects must be integers")

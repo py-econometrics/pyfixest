@@ -26,7 +26,38 @@ from pyfixest.estimation.quantreg.vcov_ import (
 
 
 class Quantreg(Feols):
-    "Quantile regression model."
+    """
+    Quantile regression model.
+
+    Returned by
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd). Fits the
+    conditional quantile of the outcome instead of the conditional mean, which
+    allows the effect of a covariate to differ across the outcome distribution.
+    Estimated via the interior point algorithm of Portnoy and Koenker (1997),
+    [Statistical Science](https://doi.org/10.1214/ss/1030037960).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
+    fit.tidy()
+    ```
+
+    Several quantiles can be estimated in one call.
+    [qplot()](/reference/report.qplot.qmd) plots the resulting coefficients.
+
+    ```{python}
+    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.25, 0.5, 0.75])
+    pf.etable(fits)
+    ```
+
+    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
+    for details.
+    """
 
     def __init__(
         self,

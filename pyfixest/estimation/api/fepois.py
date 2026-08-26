@@ -22,7 +22,7 @@ def fepois(
     data: DataFrameType,  # type: ignore
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
-    weights: None | str = None,
+    weights: str | None = None,
     weights_type: WeightsTypeOptions = "aweights",
     offset: str | None = None,
     ssc: dict[str, str | bool] | None = None,
@@ -55,7 +55,7 @@ def fepois(
         - Cumulative stepwise regression (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
-        - Interacted fixed effects (fe1^fe2)
+        - Interacted fixed effects (fe1:fe2)
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
@@ -87,12 +87,11 @@ def fepois(
         are useful for compressed count data where identical observations are aggregated.
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
-    offset : str, optional
-        Default is None. Name of a numeric column in `data` to use as an offset
-        in the Poisson regression. The offset is added to the linear predictor
-        with its coefficient fixed at 1. This is useful for modeling rates when
-        exposure differs across observations; pass the exposure on the log scale,
-        e.g. `offset="log_population"`.
+    offset : str | None, optional
+        Default is None. Formulaic expression that evaluates to one numeric
+        column in `data`. The offset is added to the linear predictor with its
+        coefficient fixed at 1. This is useful for modeling rates when exposure
+        differs across observations, e.g. `offset="log(population)"`.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -186,6 +185,18 @@ def fepois(
         An instance of the [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) class
         or an instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
 
+    Notes
+    -----
+    `Fepois` inherits from
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd), which inherits from
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A Poisson fit
+    therefore supports the same post-estimation methods as an OLS fit, among
+    them `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()`, `fixef()`,
+    `wildboottest()` and `ritest()`. See the Post-Estimation Methods section of
+    the function reference for the full list.
+
+    `predict()` does not support `se_fit=True` for Poisson models.
+
     Examples
     --------
     The `fepois()` function estimates Poisson models with the same formula interface
@@ -216,12 +227,10 @@ def fepois(
     data["population"] = np.random.default_rng(123).integers(
         50_000, 500_000, size=len(data)
     )
-    data["log_population"] = np.log(data["population"])
-
     fit_rate = pf.fepois(
         "Y ~ X1 + X2 | f1 + f2",
         data=data,
-        offset="log_population",
+        offset="log(population)",
     )
     fit_rate.tidy()
     ```

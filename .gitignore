@@ -19,6 +19,7 @@ dist/
 # Unit test / coverage reports
 .coverage*
 coverage.xml
+coverage-nojit.xml
 htmlcov/
 .pytest_cache/
 
@@ -61,3 +62,8 @@ benchmarks/data/
 .claude/
 .serena/
 SKILL.md
+
+# Repository-local agent skills are shared project policy.
+!.agents/skills/
+!.agents/skills/*/
+!.agents/skills/*/SKILL.md

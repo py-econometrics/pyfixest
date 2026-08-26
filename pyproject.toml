@@ -36,7 +36,7 @@ urls.Documentation = "https://pyfixest.com"
 urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 
 dependencies = [
-    "formulaic>=1.1.0",
+    "formulaic>=1.2.0,<1.3",
     "joblib>=1.4.2",
     "maketables>=0.1.0",
     "narwhals>=1.13.3",
@@ -91,6 +91,7 @@ addopts = [
 markers = [
     "against_r_core: mark test to be part of the test suite that depends on conda available R modules",
     "against_r_extended: mark test to be part of the test suite that depends on other R modules",
+    "fast_r: marks tests in the fast R comparison suite",
     "extended: mark test to be part of the extended test suite",
     "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
     "hac: marks all tests for HAC SEs"
@@ -213,6 +214,7 @@ maturin = ">=1.8"
 [tool.pixi.tasks]
 test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
+test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
 [tool.pixi.tasks._setup]
@@ -271,10 +273,11 @@ description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
 
 [tool.pixi.feature.r.tasks]
-test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests (Python + R)" }
-test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R fixest (conda-forge packages)" }
+test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests available in the current Python + R environment" }
+test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core and not fast_r" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Canonical tests against R packages available on conda-forge" }
 test-r-extended = { cmd = 'pytest -rs -n auto tests -m "against_r_extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Tests against R (requires manual Rscript r_test_requirements.R)" }
 test-r-fixest = { cmd = "pytest -rs -n auto tests/test_vs_fixest.py --cov=pyfixest --cov-report=xml", depends-on = ["_setup"], description = "Run test_vs_fixest.py" }
+test-r-fixest-fast = { cmd = "pytest -rs -q tests/test_vs_r_fast.py --no-cov", depends-on = ["_setup"], description = "Fast direct comparisons with R fixest and quantreg" }
 
 # -- docs feature ----------------------------------------------------------------------
 
@@ -284,7 +287,7 @@ jupytext = "==1.16.1"
 watermark = "==2.4.3"
 pylatex = ">=1.4.2"
 quartodoc = ">=0.11.0"
-quarto = ">=1.8.25"
+quarto = ">=1.9.0"
 griffe = "<2"
 
 [tool.pixi.feature.docs.pypi-dependencies]
@@ -294,9 +297,11 @@ lets-plot = ">=4.0.0"
 
 [tool.pixi.feature.docs.tasks]
 # docs-build: Generate API reference .qmd files from docstrings via quartodoc.
+#   Clears the generated reference pages first so entries removed from the
+#   quartodoc `contents` list do not linger as orphan pages (and in llms.txt).
 # docs-render: Build the full static site (runs docs-build first, then quarto render).
 # docs-preview: Start a local dev server with live reload (does NOT run docs-build first).
-docs-build = { cmd = "quartodoc build --verbose --config docs/_quarto.yml", depends-on = ["_setup"], description = "Build API docs with quartodoc" }
+docs-build = { cmd = "cd docs && rm -rf reference && quartodoc build --verbose --config _quarto.yml", depends-on = ["_setup"], description = "Build API docs with quartodoc" }
 docs-render = { cmd = "quarto render docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
 docs-preview = { cmd = "quarto preview docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
 

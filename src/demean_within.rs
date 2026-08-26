@@ -124,7 +124,7 @@ fn resolve_precond_input(
         };
     }
 
-    if let Ok(pre) = preconditioner.downcast::<PyPreconditioner>() {
+    if let Ok(pre) = preconditioner.cast::<PyPreconditioner>() {
         let pre = pre.get();
         return Ok(PrecondInput::Prebuilt {
             inner: pre.inner.clone(),

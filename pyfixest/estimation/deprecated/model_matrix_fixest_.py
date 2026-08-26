@@ -452,7 +452,7 @@ def _get_ivars_dict(fml: str, pattern: str) -> list[dict]:
     return res
 
 
-def _get_icovars(_list_of_ivars_dict: None | list, X: pd.DataFrame) -> list[str] | None:
+def _get_icovars(_list_of_ivars_dict: list | None, X: pd.DataFrame) -> list[str] | None:
     """
     Get interacted variables.
 
