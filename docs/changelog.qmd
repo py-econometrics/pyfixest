@@ -19,9 +19,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Contributor Workflow
 
-- Contributor and coding-agent guidance now routes architecture, numerical
-  validation, verification, review, and PR handoff through maintained local
-  developer documentation and a compact R-reference edit check.
+- Repository-local skills and developer guides now define architecture,
+  numerical validation, change verification, history curation, review, and PR
+  preparation for contributors and coding agents.
+- A new `test-r-fixest-fast` task runs a compact edit-time comparison of
+  `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
+  `quantreg`. The existing estimator-specific R suites remain the authoritative
+  reference coverage.
 
 ### Inference Types
 

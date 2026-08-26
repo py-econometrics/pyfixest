@@ -23,7 +23,8 @@ results. Read the numerical-reference policy in `AGENTS.md`.
 
 Prefer, in order:
 
-1. live R `fixest` or another established package available on conda-forge;
+1. live R `fixest`, another established R package, or a well-established Python
+   package available in a maintained environment;
 2. a CRAN-only R package in the extended environment;
 3. stored output from Stata or other established software, with the generating
    script and version committed;
@@ -45,12 +46,14 @@ Read the error, tolerance, and suite-growth contracts in
 estimator-specific tolerance, and extend the nearest permanent matrix before
 adding a new test function or file.
 
-Keep the permanent test parametrized through the public API where possible.
-Live R comparisons must run through rpy2 inside pytest. Register every
-rpy2-importing test file in `tests/conftest.py` and use the strict R marker
-matching dependency availability. Stored output is an exception only when the
-external software cannot be run reliably in the test environment; commit its
-generator and version alongside the values.
+Keep the permanent test parametrized through the public API where possible and
+keep its runtime suitable for regular use. Live R comparisons must run through
+rpy2 inside pytest. Register every rpy2-importing test file in
+`tests/conftest.py` and use the strict R marker matching dependency
+availability. If the external implementation is too slow or cannot run
+reliably in the test environment, store a small deterministic result (for
+example, CSV) and commit the code that generates it plus the exact software
+version.
 
 Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
 Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
@@ -59,5 +62,5 @@ Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 pixi run -e py312-r test-r-fixest-fast
 ```
 
-The fast suite provides focused edit feedback. It does not replace or establish
-permanent estimator-specific coverage.
+Use the fast suite while editing. It does not replace or establish permanent
+estimator-specific coverage.

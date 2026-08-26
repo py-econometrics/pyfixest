@@ -78,8 +78,10 @@ container; post-estimation happens through fitted results.
 - **Vcov type:** literal in `internals/literals.py`, validation in the model,
   small dispatch method, math in `internals/vcov_utils.py` or Rust, and wiring
   through `FixestMulti`/quantreg where supported. Template: NW/DK HAC.
-- **Estimation-time option:** typed literal, early API validation,
-  `EstimationConfig`, and `plan_._build_model_kwargs`.
+- **Estimation-time option:** put the shared typed option alias in
+  `pyfixest/estimation/internals/literals.py`, validate it at the API boundary,
+  and thread it through `EstimationConfig` and
+  `plan_._build_model_kwargs`.
 - **Rust kernel:** `src/<topic>.rs`, registration in `src/lib.rs`, typed stub
   in `core/_core_impl.pyi`, and a clean wrapper in `core/`. Keep a NumPy
   reference implementation when feasible. Template: `src/nw.rs` →
@@ -90,19 +92,27 @@ preparation, `run_crv_loop`, and `_create_rng`; do not rederive them.
 
 ## Numerical and code conventions
 
-- Write for an econometrics practitioner. Use paper notation (`scores`, `meat`,
-  `bread`, `u_hat`, `clustid`) and cite the paper in the implementing
-  function.
-- Methods orchestrate; numbers happen in standalone functions operating on
-  arrays. Return small typed result dataclasses rather than tuples or dicts.
+- Write for an econometrics practitioner. Use econometrically meaningful names
+  such as `scores`, `meat`, `bread`, `u_hat`, and `clustid`; follow the paper's
+  notation where it makes the implementation easier to recognize. Cite the
+  paper in the implementing function.
+- Methods orchestrate; numerical computation happens in standalone functions
+  operating on arrays. Return small typed result dataclasses rather than tuples
+  or dicts.
 - Keep functions short and single-purpose. Solver iteration loops are the main
   exception when splitting would obscure the algorithm or hurt compilation.
 - Put measured, non-vectorizable hot loops in Rust. Keep everything else clear,
   ordinary NumPy rather than speculative micro-optimization.
-- Use `from __future__ import annotations`, PEP 604 unions, `Literal` aliases,
-  keyword arguments for internal calls, and `NDArray[np.float64]` in stubs.
+- Use `from __future__ import annotations`, PEP 604 unions, keyword arguments
+  for internal calls, and `NDArray[np.float64]` in stubs. Put shared typed
+  option aliases (`Literal`) in
+  `pyfixest/estimation/internals/literals.py`.
 - Validate at the API boundary. Bad option values raise `ValueError` with the
   allowed values; domain failures use the flat classes in `pyfixest/errors/`.
+- Every new or changed error and warning path needs a test that triggers it.
+  Extend `tests/test_errors.py` or the nearest subsystem suite, and assert the
+  exception or warning category plus stable message text with
+  `pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`.
 - Guard optional dependencies at import time and raise an actionable message
   naming the pip extra only when the optional path is used.
 - Use `np.random.default_rng(seed)`, never global seeding.
@@ -139,9 +149,12 @@ may miss dependencies or the compiled extension.
 
 - Edit loop: targeted tests with `-x -q --no-cov` and changed-file lint/type
   checks.
-- PR baseline: `pixi run test-py` plus relevant lint/type checks.
+- PR baseline: `pixi run test-py` plus relevant lint/type checks. This is a
+  Python-only regression suite; it does not establish numerical agreement with
+  R or other external software.
 - Domain suites: R, HAC, no-JIT, docs, plots, Rust, or extended tests selected
-  by the changed subsystem.
+  by the changed subsystem. Estimation and inference changes require the
+  applicable external-reference suite in addition to `test-py`.
 - Full available suite: `test-all`; exhaustive evidence also requires the
   CRAN-only R dependencies, applicable platform CI, and relevant benchmarks.
 
@@ -185,25 +198,25 @@ replace it.
 
 ## Commands
 
-```bash
-pixi run test-py
-pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
-pixi run test-r-core
-pixi run test-r-extended
-pixi run test-r-fixest
-pixi run -e py312-r test-r-fixest-fast
-pixi run test-r-hac
-pixi run test-all
+This is a quick reference. The `change-verification` skill and
+`docs/developer/testing.md` define which checks a change requires. Runtime is
+qualitative and depends on hardware and caches; report the actual elapsed time.
 
-pixi run -e lint prek run ruff-format --files <changed files>
-pixi run -e lint prek run ruff-check --files <changed files>
-pixi run -e lint prek run mypy --files <changed files>
-pixi run lint
-
-pixi run docs-build
-pixi run docs-render
-pixi task list
-```
+| Command | Purpose | Typical scale |
+|---|---|---|
+| `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov` | Test the changed seam without the repository coverage report | Seconds to a few minutes |
+| `pixi run -e py312-r test-r-fixest-fast` | Compare representative `feols`, `fepois`, and `feglm` cases with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
+| `pixi run test-py` | Run the broad Python-only regression suite; this is not an external numerical comparison | Minutes |
+| `pixi run test-r-fixest` | Run the canonical `tests/test_vs_fixest.py` comparison matrix | Minutes to tens of minutes |
+| `pixi run test-r-core` | Run all canonical comparisons with conda-forge R packages | May take tens of minutes |
+| `pixi run test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
+| `pixi run test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
+| `pixi run test-all` | Run every test supported by the current environment | Potentially substantially longer |
+| `pixi run -e lint prek run <ruff-format\|ruff-check\|mypy> --files <changed files>` | Format, lint, or type-check changed files | Seconds to a few minutes |
+| `pixi run lint` | Run all repository lint hooks | Minutes |
+| `pixi run docs-build` | Regenerate quartodoc reference inputs and navigation | Minutes |
+| `pixi run docs-render` | Build and render the complete documentation site | May take tens of minutes |
+| `pixi task list` | List the remaining Pixi tasks and their descriptions | Seconds |
 
 Rust sources rebuild through maturin-import-hook. If the extension fails after
 a Rust edit, run

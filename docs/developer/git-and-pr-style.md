@@ -1,8 +1,11 @@
 # Git and pull-request style
 
-This document is the authoritative style guide for presenting pyfixest changes
-to reviewers. History-rewrite authorization and safety remain in the
-`history-curation` skill.
+This document defines the style for presenting pyfixest changes to reviewers.
+Use the [`pr-draft-summary`](../../.agents/skills/pr-draft-summary/SKILL.md)
+skill to prepare the PR and the
+[`history-curation`](../../.agents/skills/history-curation/SKILL.md) skill before
+rewriting agent-owned commits. The skills define the procedures and safety
+gates; this document defines the branch, commit, and PR conventions they apply.
 
 ## Establish the base
 

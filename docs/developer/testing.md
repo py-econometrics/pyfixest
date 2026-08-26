@@ -22,6 +22,11 @@ stable. A verification report records actual elapsed time and reports every
 applicable check as passed, failed, deferred, or not run. Deferred is never
 equivalent to passed.
 
+`test-py` is the broad Python-only regression baseline. It does not compare
+results with R or another external implementation, so it cannot establish
+numerical parity for estimation or inference changes. Run the applicable
+external-reference suite as separate, stronger evidence.
+
 `test-all` collects every test supported by the current Pixi environment. It
 does not install the CRAN-only packages from `r_test_requirements.R`, so those
 tests can skip. Exhaustive release evidence requires installing those packages,
@@ -81,11 +86,15 @@ selecting no tests.
 ## External numerical references
 
 Every new estimator requires a permanent comparison with existing software.
-Prefer live R `fixest` or another established package. Use
+Prefer live R `fixest`, another established R package, or a well-established
+Python package. Use
 `against_r_core` when the reference is available on conda-forge and
 `against_r_extended` for CRAN-only dependencies. Stored Stata or other
 verified output is acceptable when its generator script and software version
-are committed.
+are committed. Keep reference tests fast enough for regular use. If the
+external implementation is too slow or cannot run reliably in the test
+environment, store a small deterministic result and commit the code that
+generates it plus the exact software version.
 
 Any test file importing rpy2 must be listed in `_rpy2_test_files` in
 `tests/conftest.py` so non-R environments skip it safely. HAC tests use
@@ -99,10 +108,22 @@ external comparison required for a new estimator.
 
 `pixi run -e py312-r test-r-fixest-fast` runs representative rpy2 cases
 directly against R `fixest` for `feols`, `fepois`, and `feglm`, and R
-`quantreg` for `quantreg`. Use `-k feols`, `-k fepois`, `-k feglm`, or
-`-k quantreg` to select one entry point while editing. This is a focused edit
-check, not a second permanent reference framework; extend the canonical suites
-when a change needs new coverage.
+`quantreg` for `quantreg`. To select one entry point while editing, run, for
+example,
+`pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols`.
+This is an edit check, not a second permanent reference framework; extend the
+canonical suites when a change needs new coverage.
+
+The compact matrix covers the main comparison axes at least once:
+
+| Entry point | Representative paths |
+|---|---|
+| `feols` and `fepois` | no fixed effects with IID inference; weighted fixed effects with heteroskedastic inference; fixed effects with CRV1 inference |
+| `feglm` | logit without fixed effects and IID inference; weighted probit with fixed effects and heteroskedastic inference; Poisson with fixed effects and CRV1 inference |
+| `quantreg` | `fn` and `pfn`; low, interior, median, and high quantiles; one and two regressors |
+
+`quantreg` does not support fixed effects, and its inference contract follows R
+`quantreg` rather than the `fixest` IID/heteroskedastic/CRV1 matrix.
 
 ### Error and tolerance contract
 
@@ -124,7 +145,10 @@ tolerance in a test. Use separate, numerically justified tolerances for
 coefficients, vcov/standard errors and derived inference, residuals, and
 predictions. Coefficients normally receive the strictest tolerance. Iterative
 algorithms, fixed-effect recovery, and cluster inference may require looser
-tolerances, which must be explained next to the assertion.
+tolerances. A looser tolerance must be explained next to the assertion with a
+specific numerical reason, such as solver stopping error, fixed-effect recovery
+error, or floating-point accumulation order in clustered reductions. Merely
+noting that two implementations differ is not a justification.
 
 Treat `tests/test_vs_fixest.py` as the source of truth for the current
 `feols`, `fepois`, and `feglm` comparison standards, including the formulas,

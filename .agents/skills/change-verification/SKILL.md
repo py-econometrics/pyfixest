@@ -17,7 +17,9 @@ changed-file format/lint/type checks, then run the PR baseline and affected
 domain suites.
 
 - Numerical/API changes require the relevant public integration tests and
-  external-reference suite.
+  external-reference suite. `test-py` is a Python-only regression baseline and
+  never substitutes for an external numerical comparison. Use the fast R suite
+  for edit feedback before the applicable canonical R suite.
 - HAC changes require the single-threaded HAC suite.
 - Rust changes require kernel/reference tests and platform CI.
 - Executable docstrings require their body and affected reference page.

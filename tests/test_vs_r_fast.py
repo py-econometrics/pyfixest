@@ -19,6 +19,10 @@ COEFFICIENT_ATOL = 1e-8
 FEOLS_INFERENCE_ATOL = 1e-7
 GLM_INFERENCE_ATOL = 1e-6
 
+# The compact fixest matrix covers no-FE/IID, weighted-FE/hetero, and FE/CRV1
+# paths across feols, fepois, and feglm. Quantreg separately covers both
+# supported solvers and low, interior, median, and high quantiles; it does not
+# support fixed effects.
 FIXEST_CASES = [
     pytest.param("feols", "Y ~ X1 + X2", None, "iid", None, id="feols-iid"),
     pytest.param(
