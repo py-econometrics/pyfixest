@@ -91,6 +91,40 @@ def test_depvar_numeric():
         feols(fml="Y ~ X1", data=data)
 
 
+@pytest.mark.parametrize(
+    "fml,categorical_endogenous,error_message",
+    [
+        (
+            "two_columns(Y) ~ X1",
+            False,
+            "exactly one dependent variable",
+        ),
+        (
+            "Y ~ X1 + [X2 ~ Z1]",
+            True,
+            "endogenous variable must be numeric",
+        ),
+        (
+            "Y ~ X1 + [two_columns(X2) ~ Z1]",
+            False,
+            "exactly one endogenous variable",
+        ),
+    ],
+)
+def test_dependent_and_endogenous_model_matrix_errors(
+    fml, categorical_endogenous, error_message
+):
+    data = get_data().dropna().copy()
+    if categorical_endogenous:
+        data["X2"] = pd.Categorical(data["X2"] > 0)
+
+    def two_columns(x):
+        return np.column_stack((x, x))
+
+    with pytest.raises(TypeError, match=error_message):
+        feols(fml=fml, data=data, context={"two_columns": two_columns})
+
+
 def test_iv_errors():
     data = get_data()
 
@@ -166,15 +200,6 @@ def test_feols_errors():
     with pytest.raises(TypeError):
         pf.feols(fml="Y ~ X1", data=data, lean=1)
 
-    with pytest.raises(TypeError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol="a")
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=1.0)
-
-    with pytest.raises(ValueError):
-        pf.feols(fml="Y ~ X1", data=data, fixef_tol=0.0)
-
     with pytest.raises(ValueError):
         pf.feols(fml="Y ~ X1", data=data, weights_type="qweights", weights="weights")
 
@@ -184,6 +209,37 @@ def test_poisson_errors():
     # iv not supported
     with pytest.raises(NotImplementedError):
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
+
+
+def test_poisson_offset_errors():
+    data = pf.get_data(model="Fepois").dropna()
+
+    # offset expression references a variable not present in the data
+    with pytest.raises(FactorEvaluationError, match="does_not_exist"):
+        pf.fepois("Y ~ X1", data=data, offset="does_not_exist")
+
+    # offset expression is not numeric
+    data_str = data.copy()
+    data_str["offset_str"] = "a"
+    with pytest.raises(TypeError, match="must be numeric"):
+        pf.fepois("Y ~ X1", data=data_str, offset="offset_str")
+
+    # offset expression must evaluate to one column
+    with pytest.raises(ValueError, match="exactly one column"):
+        pf.fepois("Y ~ X1", data=data, offset="X1 + X2")
+
+    # predict(newdata=...) with offset variable missing in newdata
+    data = data.copy()
+    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
+    mod = pf.fepois("Y ~ X1", data=data, offset="off")
+    with pytest.raises(FactorEvaluationError, match="off"):
+        mod.predict(newdata=data.drop(columns=["off"]))
+
+    # predict(newdata=...) with NaN in the offset variable
+    nd_nan = data.copy()
+    nd_nan.loc[nd_nan.index[0], "off"] = np.nan
+    with pytest.raises(ValueError, match="evaluates to missing values"):
+        mod.predict(newdata=nd_nan)
 
 
 def test_all_variables_multicollinear():
@@ -252,13 +308,37 @@ def test_rwolf_error():
         pf.rwolf(fit.to_list(), "X1", reps=9999, seed=123)
 
 
-def test_predict_dtype_error():
+def test_predict_fe_dtype_mismatch():
+    """FE dtype handling in predict(newdata=...).
+
+    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
+    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
+    numeric-numeric differences predict fine; fully unmatched FE levels warn.
+    """
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
 
-    data["f1"] = data["f1"].fillna(0).astype(int)
-    with pytest.warns(UserWarning):
-        fit.predict(newdata=data.iloc[0:100])
+    # numeric-numeric dtype difference (float fit vs int newdata): no complaint
+    newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata["f1"] = newdata["f1"].astype(int)
+    pred = fit.predict(newdata=newdata)
+    assert np.isfinite(pred).any()
+
+    # numeric fit data vs string newdata: clear pyfixest error
+    newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_str["f1"] = newdata_str["f1"].astype(str)
+    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
+        fit.predict(newdata=newdata_str)
+
+    # no matching FE level at all: warning + all-NaN predictions
+    newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
+    newdata_shift["f1"] = newdata_shift["f1"] + 1000
+    with pytest.warns(
+        UserWarning,
+        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level",
+    ):
+        pred_shift = fit.predict(newdata=newdata_shift)
+    assert np.all(np.isnan(pred_shift))
 
 
 def test_wildboottest_errors():
@@ -479,6 +559,9 @@ def test_wald_test_R_q_column_consistency():
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0]]), q="invalid type q")
 
+    with pytest.raises(ValueError, match="q must be a numeric scalar or array"):
+        fit.wald_test(R=np.eye(2), q="0")
+
     # Test with q being a one-dimensional array or a scalar.
     with pytest.raises(ValueError):
         fit.wald_test(R=np.array([[1, 0], [0, 1]]), q=np.array([[0, 1]]))
@@ -488,6 +571,14 @@ def test_wald_test_R_q_column_consistency():
         fit.wald_test(
             R=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), q=np.array([[0, 1]])
         )
+
+
+def test_wald_test_rejects_rank_deficient_restrictions():
+    data = pf.get_data()
+    fit = feols("Y ~ X1 + X2", data)
+
+    with pytest.raises(ValueError, match="full row rank"):
+        fit.wald_test(R=np.array([[0, 1, 0], [0, 2, 0]]))
 
 
 def setup_feiv_instance():
@@ -521,33 +612,22 @@ def test_IV_Diag_unsupported_statistics():
 def test_errors_compressed():
     data = pf.get_data()
 
-    # no more than two fixed effects
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1 + f2 + f3", data=data, use_compression=True)
+    with pytest.raises(
+        NotImplementedError,
+        match="`use_compression` argument is deprecated and no longer supported",
+    ):
+        pf.feols("Y ~ X1", data=data, use_compression=True)
 
-    # cluster variables not in model
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", vcov={"CRV1": "f1"}, data=data, use_compression=True)
-
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ C(f1)", vcov={"CRV1": "f1"}, data=data, use_compression=True)
-
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov={"CRV1": "f1+f2"})
-
-    # only CVR supported for Mundlak
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True, vcov="iid")
-
-    # crv3 inference:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", vcov={"CRV3": "f1"}, data=data, use_compression=True)
-
-    # prediction:
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1 | f1", data=data, use_compression=True).predict()
+    with pytest.raises(
+        NotImplementedError,
+        match="`use_compression` argument is deprecated and no longer supported",
+    ):
+        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
 
     # argument errors
+    with pytest.raises(TypeError):
+        pf.feols("Y ~ X1", data=data, use_compression=1)  # type: ignore[arg-type]
+
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
 
@@ -556,14 +636,6 @@ def test_errors_compressed():
 
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
-
-    # no support for IV
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ 1 | X1 ~ Z1", data=data, use_compression=True)
-
-    # no support for WLS
-    with pytest.raises(NotImplementedError):
-        pf.feols("Y ~ X1", data=data, weights="weights", use_compression=True)
 
 
 def test_errors_panelview():
@@ -703,7 +775,7 @@ def test_gelbach_errors():
     with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
         fit.decompose(param="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"'x99' is not in list"):
+    with pytest.raises(ValueError, match=r"not in list"):
         fit.decompose(param="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
@@ -805,6 +877,22 @@ def test_glm_errors():
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
+
+
+def test_feglm_offset_requires_poisson():
+    "Test that passing `offset` to feglm() with a non-Poisson family raises."
+    data = pf.get_data()
+    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
+    data["off"] = 0.1
+
+    msg = r"The `offset` argument is only supported with `family='poisson'`\."
+    for family in ("logit", "probit", "gaussian"):
+        with pytest.raises(ValueError, match=msg):
+            pf.feglm("Y_bin ~ X1", data=data, family=family, offset="off")
+
+    # offset with poisson must work (does not raise).
+    data["Y_p"] = np.where(data["Y"] > 0, 1, 0)
+    pf.feglm("Y_p ~ X1", data=data.dropna(), family="poisson", offset="off")
 
 
 def test_prediction_errors_glm():
@@ -1057,3 +1145,192 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
+
+
+def test_did2s_unestimated_first_stage_fixef():
+    "did2s raises an informative error when first-stage fixed effects cannot be estimated for some levels (#1244)."
+    rng = np.random.default_rng(42)
+
+    n_units, n_years = 6, 5
+    rows = []
+    for unit in range(1, n_units + 1):
+        if unit == 1:
+            treat_start = 1  # always treated: no not-yet-treated observations
+        elif unit <= 3:
+            treat_start = 4
+        else:
+            treat_start = n_years + 1  # never treated
+        for year in range(1, n_years + 1):
+            treat = year >= treat_start
+            dep_var = 0.5 * unit + 0.3 * year + float(treat) + rng.normal()
+            rows.append((unit, year, treat, dep_var))
+    data = pd.DataFrame(rows, columns=["unit", "year", "treat", "dep_var"])
+
+    with pytest.raises(
+        ValueError,
+        match=r"First-stage predictions contain NaN values because some fixed effect "
+        "levels were not observed in the not-yet-treated first-stage sample. "
+        "Drop those observations before calling did2s().",
+    ):
+        pf.did2s(
+            data,
+            yname="dep_var",
+            first_stage="~ 0 | unit + year",
+            second_stage="~ i(treat)",
+            treatment="treat",
+            cluster="unit",
+        )
+
+
+@pytest.fixture(params=["fepois", "feiv", "quantreg"])
+def unsupported_savi_model(request):
+    if request.param == "fepois":
+        return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois"))
+    if request.param == "quantreg":
+        return pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
+    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data())
+
+
+@pytest.fixture(scope="module", params=["fixef", "aweights", "fweights"])
+def unsupported_savi_design(request):
+    data = pf.get_data()
+    if request.param == "fixef":
+        return feols("Y ~ X1 | f1", data), "fixed effects"
+
+    data["savi_weights"] = np.ones(len(data), dtype=int)
+    fit = feols(
+        "Y ~ X1",
+        data,
+        weights="savi_weights",
+        weights_type=request.param,
+    )
+    return fit, "weighted feols"
+
+
+@pytest.fixture(scope="module", params=["hac", "crv", "multiway_crv"])
+def unsupported_savi_vcov(request):
+    if request.param == "hac":
+        rng = np.random.default_rng(123)
+        data = pd.DataFrame(
+            {
+                "time": np.arange(20),
+                "Y": rng.normal(0, 1, 20),
+                "X1": rng.normal(0, 1, 20),
+            }
+        )
+        fit = feols(
+            "Y ~ X1",
+            data=data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "time", "lag": 3},
+        )
+        return fit, "HAC"
+
+    data = pf.get_data().dropna(subset=["Y", "X1", "X2", "group_id", "f1"])
+    cluster = "group_id + f1" if request.param == "multiway_crv" else "group_id"
+    fit = feols("Y ~ X1 + X2", data, vcov={"CRV1": cluster})
+    return fit, "does not support vcov type 'CRV'"
+
+
+def test_savi_rejects_unsupported_models(unsupported_savi_model):
+    with pytest.raises(NotImplementedError, match="supported only for feols"):
+        unsupported_savi_model.evalue()
+
+
+def test_savi_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+def test_savi_rejects_hac_and_crv(unsupported_savi_vcov):
+    fit, match = unsupported_savi_vcov
+    with pytest.raises(NotImplementedError, match=match):
+        fit.evalue()
+
+
+def test_savi_confint_rejects_weights_and_fixed_effects(unsupported_savi_design):
+    fit, match = unsupported_savi_design
+    with pytest.raises(NotImplementedError, match=match):
+        fit.confint(inference_type="savi")
+
+
+def test_savi_input_validation():
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+    with pytest.raises(ValueError, match="mixture_precision must be positive"):
+        fit.evalue(mixture_precision=0)
+    with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+        fit.confint(alpha=0, inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("method", "kwargs", "error", "match"),
+    [
+        (
+            "tidy",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "summary",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "confint",
+            {"inference_type": "other"},
+            ValueError,
+            r"Invalid argument\. Expecting one of",
+        ),
+        (
+            "tidy",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        (
+            "summary",
+            {"inference_type": "simult"},
+            ValueError,
+            r"tidy\(\) does not support",
+        ),
+        ("tidy", {"inference_type": "savi"}, NotImplementedError, None),
+        ("summary", {"inference_type": "savi"}, NotImplementedError, None),
+        (
+            "confint",
+            {"joint": True, "inference_type": "savi"},
+            ValueError,
+            "cannot be combined",
+        ),
+    ],
+)
+def test_inference_type_validation(method, kwargs, error, match):
+    fit = feols("Y ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(error, match=match):
+        getattr(fit, method)(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "nobs, number_of_coefficients, alpha, match",
+    [
+        (0, 5, 0.05, "nobs must be positive"),
+        (10, 10, 0.05, "nobs must be greater than number_of_coefficients"),
+        (100, 5, 0, "alpha must be between 0 and 1"),
+        (2, 1, 0.05, "No finite optimal mixture precision exists"),
+    ],
+)
+def test_optimal_mixture_precision_validation(
+    nobs, number_of_coefficients, alpha, match
+):
+    with pytest.raises(ValueError, match=match):
+        pf.optimal_mixture_precision(nobs, number_of_coefficients, alpha)
+
+
+def test_fixest_multi_rejects_savi_tidy_argument():
+    fit = feols("Y + Y2 ~ X1 + X2", pf.get_data())
+
+    with pytest.raises(TypeError):
+        fit.tidy(inference_type="savi")

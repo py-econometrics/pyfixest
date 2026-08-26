@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
@@ -14,8 +13,6 @@ from pyfixest.estimation.post_estimation.multcomp import (
 )
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
-
-pandas2ri.activate()
 
 # Core R packages
 fixest = importr("fixest")

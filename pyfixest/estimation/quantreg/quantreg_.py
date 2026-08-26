@@ -1,56 +1,88 @@
 import warnings
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, cast
 
-import numba as nb
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
-from scipy.stats import norm
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.vcov_utils import bucket_argsort
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
-from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
+from pyfixest.estimation.quantreg.vcov_ import (
+    vcov_crv1_qreg,
+    vcov_hetero_qreg,
+    vcov_iid_qreg,
+    vcov_nid_qreg,
+)
 
 
 class Quantreg(Feols):
-    "Quantile regression model."
+    """
+    Quantile regression model.
+
+    Returned by
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd). Fits the
+    conditional quantile of the outcome instead of the conditional mean, which
+    allows the effect of a covariate to differ across the outcome distribution.
+    Estimated via the interior point algorithm of Portnoy and Koenker (1997),
+    [Statistical Science](https://doi.org/10.1214/ss/1030037960).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
+    fit.tidy()
+    ```
+
+    Several quantiles can be estimated in one call.
+    [qplot()](/reference/report.qplot.qmd) plots the resulting coefficients.
+
+    ```{python}
+    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.25, 0.5, 0.75])
+    pf.etable(fits)
+    ```
+
+    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
+    for details.
+    """
 
     def __init__(
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
-        demeaner_backend: Literal["numba", "jax"] = "numba",
+        demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
         quantile: float = 0.5,
         method: QuantregMethodOptions = "fn",
         quantile_tol: float = 1e-06,
-        quantile_maxiter: Optional[int] = None,
-        seed: Optional[int] = None,
+        quantile_maxiter: int | None = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -61,8 +93,6 @@ class Quantreg(Feols):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -71,7 +101,7 @@ class Quantreg(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
         )
 
         warnings.warn(
@@ -191,9 +221,9 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -248,12 +278,12 @@ class Quantreg(Feols):
         X: np.ndarray,
         Y: np.ndarray,
         q: float,
-        m: Optional[float] = None,
-        tol: Optional[float] = None,
-        maxiter: Optional[int] = None,
-        beta_init: Optional[np.ndarray] = None,
-        rng: Optional[np.random.Generator] = None,
-        eta: Optional[float] = None,
+        m: float | None = None,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
+        rng: np.random.Generator | None = None,
+        eta: float | None = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -362,50 +392,14 @@ class Quantreg(Feols):
         return fn_res
 
     def _vcov_iid(self):
-        "Implement the kernel-based sandwich estimator from Powell (1991)."
-        q = self._quantile
-        N = self._N
-        X = self._X
-        Y = self._Y
-        u_hat = self._u_hat
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-        # interquartile range of u_hat - this is what both quantreg and statsmodels use
-        # (all three logical lines below in fact)
-        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
-        sigma = np.std(Y)
-        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-
-        # uniform kernel
-        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
-
-        D = X.T @ X
-        Dinv = np.linalg.inv(D)
-
-        return 1 / (f**2) * q * (1 - q) * Dinv
+        return vcov_iid_qreg(
+            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+        )
 
     def _vcov_hetero(self):
-        "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
-        q = self._quantile
-        N = self._N
-        X = self._X
-        Y = self._Y
-        u_hat = self._u_hat
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-        # interquartile range of u_hat
-        rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
-        sigma = np.std(Y)
-        hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
-
-        # uniform kernel
-        f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
-
-        D = X.T @ X
-        C = f * D
-        Cinv = np.linalg.inv(C)
-
-        return q * (1 - q) * Cinv @ D @ Cinv
+        return vcov_hetero_qreg(
+            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+        )
 
     def _vcov_nid(self) -> np.ndarray:
         """
@@ -415,40 +409,15 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-        q = self._quantile
-        N = self._N
-        X = self._X
-
-        h = get_hall_sheather_bandwidth(q=q, N=N)
-
-        beta_hat_plus = self._fit(
+        return vcov_nid_qreg(
             X=self._X,
             Y=self._Y,
-            q=self._quantile + h,
-            beta_init=self._beta_hat if self._method == "pfn" else None,
-        )[0]
-        beta_hat_minus = self._fit(
-            X=self._X,
-            Y=self._Y,
-            q=self._quantile - h,
-            beta_init=self._beta_hat if self._method == "pfn" else None,
-        )[0]
-
-        # eps: small tolerance parameter to avoid division by zero
-        # when di = 0; set to sqrt of machine epsilon in quantreg
-        eps = np.finfo(float).eps ** 0.5
-        # equation (2)
-        di = X @ (beta_hat_plus - beta_hat_minus)
-        # equation (3)
-        Fplus = np.maximum(0, (2 * h) / (di - eps))
-
-        # general Huber structure, see page 74 in Koenker.
-        J = X.T @ X
-        XFplus = X * np.sqrt(Fplus[:, np.newaxis])
-        H = XFplus.T @ XFplus
-        Hinv = np.linalg.inv(H)
-
-        return q * (1 - q) * Hinv @ J @ Hinv
+            beta_hat=self._beta_hat,
+            q=self._quantile,
+            N=self._N,
+            method=cast(QuantregMethodOptions, self._method),
+            fit=self._fit,
+        )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """
@@ -460,21 +429,13 @@ class Quantreg(Feols):
                 "Multiway clustering is not (yet) supported for quantile regression."
             )
 
-        X = self._X
-        N, _ = X.shape
-        q = self._quantile
-        u_hat = self._u_hat
-
-        # kappa: median absolute deviation of the a-th quantile regression residuals
-        kappa = np.median(np.abs(u_hat - np.median(u_hat)))
-        h_G = get_hall_sheather_bandwidth(q=q, N=N)
-        delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
-
-        vcov = _crv1_vcov_loop(
-            X=X, clustid=clustid, cluster_col=cluster_col, q=q, u_hat=u_hat, delta=delta
+        return vcov_crv1_qreg(
+            X=self._X,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            clustid=clustid,
+            cluster_col=cluster_col,
         )
-
-        return vcov
 
     @property
     def objective_value(self):
@@ -486,45 +447,3 @@ class Quantreg(Feols):
         # self._pseudo_r2 = 1 -
         pass
         # self.objective_value
-
-
-@nb.njit(parallel=False)
-def _crv1_vcov_loop(
-    X: np.ndarray,
-    clustid: np.ndarray,
-    cluster_col: np.ndarray,
-    q: float,
-    u_hat: np.ndarray,
-    delta: float,
-) -> np.ndarray:
-    _, k = X.shape
-
-    A = np.zeros((k, k))
-    B = np.zeros((k, k))
-    g_indices, g_locs = bucket_argsort(cluster_col)
-
-    eps = 1e-7
-
-    for g in clustid:
-        start = g_locs[g]
-        end = g_locs[g + 1]
-        g_index = g_indices[start:end]
-
-        Xg = X[g_index, :]
-        ug = u_hat[g_index]
-
-        ng = g_index.size
-        for i in range(ng):
-            Xgi = Xg[i, :]
-            psi_i = q - 1.0 * (ug[i] <= eps)
-            for j in range(ng):
-                Xgj = Xg[j, :]
-                psi_j = q - 1.0 * (ug[j] <= eps)
-                A += np.outer(Xgi, Xgj) * psi_i * psi_j
-
-            mask_i = (np.abs(ug[i]) < delta) * 1.0
-            B += np.outer(Xgi, Xgi) * mask_i
-
-    B /= 2 * delta
-
-    return np.linalg.inv(B) @ A @ np.linalg.inv(B)

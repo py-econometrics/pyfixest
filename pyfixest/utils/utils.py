@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Mapping
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,30 +17,30 @@ def ssc(
     G_df: str = "min",
     *args: Any,
     **kwargs: Any,
-) -> dict[str, Union[str, bool]]:
+) -> dict[str, str | bool]:
     """
     Set the small sample correction factor applied in `get_ssc()`.
 
     Parameters
     ----------
-        k_adj : bool, default True
-            If True, applies a small sample correction of (N-1) / (N-k) where N
-            is the number of observations and k is the number of estimated
-            coefficients excluding any fixed effects projected out by either
-            `feols()` or `fepois()`.
-        k_fixef : str, default "none"
-            Equal to 'none': the fixed effects parameters are discarded when
-            calculating k in (N-1) / (N-k).
-        G_adj : bool, default True
-            If True, a cluster correction G/(G-1) is performed, with G the number
-            of clusters. This argument is only relevant for clustered errors.
-        G_df : str, default "conventional"
-            Controls how "G" is computed for multiway clustering if G_adj = True.
-            Note that the covariance matrix in the multiway clustering case is of
-            the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
-            is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-            all summands are multiplied with the same value, min(G) / (min(G) - 1).
-            This argument is only relevant for clustered errors.
+    k_adj : bool, default True
+        If True, applies a small sample correction of (N-1) / (N-k) where N
+        is the number of observations and k is the number of estimated
+        coefficients excluding any fixed effects projected out by either
+        `feols()` or `fepois()`.
+    k_fixef : str, default "none"
+        Equal to 'none': the fixed effects parameters are discarded when
+        calculating k in (N-1) / (N-k).
+    G_adj : bool, default True
+        If True, a cluster correction G/(G-1) is performed, with G the number
+        of clusters. This argument is only relevant for clustered errors.
+    G_df : str, default "conventional"
+        Controls how "G" is computed for multiway clustering if G_adj = True.
+        Note that the covariance matrix in the multiway clustering case is of
+        the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
+        is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
+        all summands are multiplied with the same value, min(G) / (min(G) - 1).
+        This argument is only relevant for clustered errors.
 
     Details
     -------
@@ -88,6 +88,25 @@ def ssc(
     -------
     dict
         A dictionary with encoded info on how to form small sample corrections
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+
+    # turn off both the k and the G adjustment
+    fit = pf.feols("Y ~ X1 | f1", data, vcov={"CRV1": "f1"})
+    fit_no_adj = pf.feols(
+        "Y ~ X1 | f1", data, vcov={"CRV1": "f1"}, ssc=pf.ssc(k_adj=False, G_adj=False)
+    )
+
+    pf.etable([fit, fit_no_adj])
+    ```
+
+    Defaults follow `fixest`. See
+    [On Small Sample Corrections](/explanation/ssc.qmd) for details.
     """
     deprecated_mapping = {
         "adj": "k_adj",
@@ -134,7 +153,7 @@ def ssc(
 
 def get_ssc(
     *,
-    ssc_dict: dict[str, Union[str, str | bool]],
+    ssc_dict: dict[str, str | (str | bool)],
     N: int,
     k: int,
     k_fe: int,
@@ -181,6 +200,34 @@ def get_ssc(
     ValueError
         If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither
         "conventional" nor "min".
+
+    Examples
+    --------
+    Called internally by the estimation functions. Use it directly to reproduce
+    an adjustment factor by hand.
+
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils.utils import get_ssc
+
+    # cluster-robust adjustment: 1000 observations, 3 coefficients, 20 clusters
+    adj, k_used, G_used = get_ssc(
+        ssc_dict=pf.ssc(),
+        N=1000,
+        k=3,
+        k_fe=0,
+        k_fe_nested=0,
+        n_fe=0,
+        n_fe_fully_nested=0,
+        G=20,
+        vcov_sign=1,
+        vcov_type="CRV",
+    )
+    adj, k_used, G_used
+    ```
+
+    Configure the behaviour with [ssc()](/reference/utils.utils.ssc.qmd). See
+    [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
     k_adj = ssc_dict["k_adj"]
     k_fixef = ssc_dict["k_fixef"]
@@ -258,6 +305,23 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     ValueError
         If beta_type is not '1', '2', or '3', or if error_type is not '1', '2', or '3',
         or if model is not 'Feols' or 'Fepois'.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    data.head()
+    ```
+
+    The data set contains a continuous outcome `Y`, covariates `X1` and `X2`,
+    fixed effects `f1`, `f2` and `f3`, an instrument `Z1`, and some missing
+    values. Set `model="Fepois"` for a count outcome.
+
+    ```{python}
+    pf.get_data(model="Fepois")["Y"].head()
+    ```
     """
     rng = np.random.default_rng(seed)
     G = rng.choice(list(range(10, 20))).astype("int64")
@@ -354,7 +418,7 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
 
 def simultaneous_crit_val(
-    C: np.ndarray, S: int, alpha: float = 0.05, seed: Optional[int] = None
+    C: np.ndarray, S: int, alpha: float = 0.05, seed: int | None = None
 ) -> float:
     """
     Simultaneous Critical Values.
@@ -391,7 +455,7 @@ def simultaneous_crit_val(
     return np.quantile(tmaxs, 1 - alpha)
 
 
-def capture_context(context: Union[int, Mapping[str, Any]]) -> Mapping[str, Any]:
+def capture_context(context: int | Mapping[str, Any]) -> Mapping[str, Any]:
     """
     Explicitly capture the context to be used by subsequent formula
     materialisations.

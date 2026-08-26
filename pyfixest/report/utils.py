@@ -2,16 +2,13 @@ import re
 import warnings
 from collections import Counter
 from collections.abc import ValuesView
-from typing import Optional, Union
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 
-ModelInputType = Union[
-    FixestMulti, Feols, Fepois, Feiv, list[Union[Feols, Fepois, Feiv]]
-]
+ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -61,7 +58,7 @@ def _relabel_expvar(
 
 
 def _rename_categorical(
-    col_name, template="{variable}::{value}", labels: Optional[dict] = None
+    col_name, template="{variable}::{value}", labels: dict | None = None
 ):
     """
     Rename categorical variables, optionally converting floats to ints in the category label.
@@ -119,7 +116,7 @@ def _rename_categorical(
 
 
 def rename_categoricals(
-    coef_names_list: list, template="{variable}::{value}", labels: Optional[dict] = None
+    coef_names_list: list, template="{variable}::{value}", labels: dict | None = None
 ) -> dict:
     """
     Rename the categorical variables in the coef_names_list.
@@ -216,8 +213,8 @@ def rename_event_study_coefs(coef_names_list: list):
 def _post_processing_input_checks(
     models: ModelInputType,
     check_duplicate_model_names: bool = False,
-    rename_models: Optional[dict[str, str]] = None,
-) -> list[Union[Feols, Fepois, Feiv]]:
+    rename_models: dict[str, str] | None = None,
+) -> list[Feols | Fepois | Feiv]:
     """
     Perform input checks for post-processing models.
 
@@ -245,7 +242,7 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    models_list: list[Union[Feols, Fepois, Feiv]] = []
+    models_list: list[Feols | Fepois | Feiv] = []
 
     if isinstance(models, (Feols, Fepois, Feiv)):
         models_list = [models]

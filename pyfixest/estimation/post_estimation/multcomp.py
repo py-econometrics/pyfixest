@@ -1,5 +1,4 @@
 import warnings
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = Union[FixestMulti, list[Union[Feols, Fepois, Feiv]]]
+ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
 
 def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
@@ -23,8 +22,8 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
     Parameters
     ----------
-    models : A supported model object (Feols, Fepois, Feiv, FixestMulti) or a list of
-            Feols, Fepois & Feiv models.
+    models : Feols, Fepois, Feiv, FixestMulti, or list
+        A fitted model object, or a list of Feols, Fepois, and Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -220,17 +219,15 @@ def wyoung(
     Examples
     --------
     ```{python}
-    from pyfixest.estimation import feols
-    from pyfixest.utils import get_data
-    from pyfixest.multcomp import wyoung
+    import pyfixest as pf
 
-    data = get_data().dropna()
-    fit = feols("Y ~ Y2 + X1 + X2", data=data)
-    wyoung(fit, "X1", reps=9999, seed=123)
+    data = pf.get_data().dropna()
+    fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
+    pf.wyoung(fit, "X1", reps=9999, seed=123)
 
-    fit1 = feols("Y ~ X1", data=data)
-    fit2 = feols("Y ~ X1 + X2", data=data)
-    wyoung_df = wyoung([fit1, fit2], "X1", reps=9999, seed=123)
+    fit1 = pf.feols("Y ~ X1", data=data)
+    fit2 = pf.feols("Y ~ X1 + X2", data=data)
+    wyoung_df = pf.wyoung([fit1, fit2], "X1", reps=9999, seed=123)
     wyoung_df
     ```
     """

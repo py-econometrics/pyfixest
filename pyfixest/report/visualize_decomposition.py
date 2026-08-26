@@ -6,7 +6,7 @@ from Gelbach decomposition data, separated from the main decomposition logic.
 """
 
 from dataclasses import dataclass
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -57,7 +57,7 @@ class BarData:
     value: float
     bar_type: str  # "initial", "mediator_green", "mediator_red", "final"
     color: str
-    name: Optional[str] = None  # For mediator bars
+    name: str | None = None  # For mediator bars
 
 
 class MediatorInfo(NamedTuple):
@@ -73,13 +73,13 @@ def create_decomposition_plot(
     depvarname: str,
     decomp_var: str,
     annotate_shares: bool = True,
-    title: Optional[str] = None,
-    figsize: Optional[tuple[int, int]] = None,
-    keep: Optional[Union[list, str]] = None,
-    drop: Optional[Union[list, str]] = None,
+    title: str | None = None,
+    figsize: tuple[int, int] | None = None,
+    keep: list | str | None = None,
+    drop: list | str | None = None,
     exact_match: bool = False,
-    labels: Optional[dict] = None,
-    notes: Optional[str] = None,
+    labels: dict | None = None,
+    notes: str | None = None,
 ) -> None:
     """
     Create a waterfall chart showing Gelbach decomposition results.
@@ -143,10 +143,10 @@ def create_decomposition_plot(
 
 def _prepare_plot_data(
     decomposition_data: pd.DataFrame,
-    keep: Optional[Union[list, str]],
-    drop: Optional[Union[list, str]],
+    keep: list | str | None,
+    drop: list | str | None,
     exact_match: bool,
-    labels: Optional[dict],
+    labels: dict | None,
 ) -> dict:
     """Prepare all data needed for plotting."""
     from pyfixest.utils.dev_utils import _select_order_coefs
@@ -198,8 +198,8 @@ def _prepare_plot_data(
 
 def _filter_and_order_mediators(
     levels: pd.DataFrame,
-    keep: Optional[Union[list, str]],
-    drop: Optional[Union[list, str]],
+    keep: list | str | None,
+    drop: list | str | None,
     exact_match: bool,
     select_order_coefs_func,
 ) -> list[str]:
@@ -224,7 +224,7 @@ def _filter_and_order_mediators(
     return mediators
 
 
-def _apply_labels(mediators: list[str], labels: Optional[dict]) -> dict[str, str]:
+def _apply_labels(mediators: list[str], labels: dict | None) -> dict[str, str]:
     """Apply custom labels to mediator names."""
     if labels:
         return {med: labels.get(med, med) for med in mediators}
@@ -667,9 +667,9 @@ def _finalize_plot(
     config: PlotConfig,
     depvarname: str,
     decomp_var: str,
-    title: Optional[str],
+    title: str | None,
     annotate_shares: bool,
-    notes: Optional[str],
+    notes: str | None,
 ) -> None:
     """Finalize the plot with titles, labels, and styling."""
     try:

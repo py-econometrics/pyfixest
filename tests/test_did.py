@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -15,7 +14,6 @@ from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
 from pyfixest.utils.check_r_install import check_r_install
 
-pandas2ri.activate()
 # Core Packages
 stats = importr("stats")
 broom = importr("broom")
@@ -76,7 +74,9 @@ def test_event_study(data):
         r_df = pd.DataFrame(r_df)
 
     np.testing.assert_allclose(fit_did2s.coef(), r_df[1], atol=1e-05, rtol=1e-05)
-    np.testing.assert_allclose(fit_did2s.se(), float(r_df[2]), atol=1e-05, rtol=1e-05)
+    np.testing.assert_allclose(
+        fit_did2s.se(), r_df[2].squeeze(), atol=1e-05, rtol=1e-05
+    )
 
 
 @pytest.mark.against_r_core
@@ -119,7 +119,7 @@ def test_did2s(data, weights):
     )
 
     np.testing.assert_allclose(
-        fit_did2s_py1.se(), float(fit_did2s_r1.iloc[:, 3]), atol=1e-05, rtol=1e-05
+        fit_did2s_py1.se(), fit_did2s_r1.iloc[:, 3].squeeze(), atol=1e-05, rtol=1e-05
     )
 
     # Model 2

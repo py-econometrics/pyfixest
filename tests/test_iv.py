@@ -9,9 +9,6 @@ from pyfixest.estimation import feols
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
 
-# Enable the automatic conversion between pandas DataFrame and R DataFrame
-pandas2ri.activate()
-
 # Extend R packages
 if import_check := check_r_install("ivDiag", strict=False):
     ivDiag = importr("ivDiag")

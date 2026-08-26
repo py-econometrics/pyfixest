@@ -1,5 +1,6 @@
-from typing import Optional, cast
+from typing import cast
 
+import formulaic
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -58,9 +59,9 @@ class DID2S(DID):
         tname: str,
         gname: str,
         cluster: str,
-        weights: Optional[str] = None,
+        weights: str | None = None,
         att: bool = True,
-        xfml: Optional[str] = None,
+        xfml: str | None = None,
     ):
         super().__init__(
             data=data,
@@ -128,8 +129,8 @@ class DID2S(DID):
         self,
         alpha: float = 0.05,
         figsize: tuple[int, int] = (500, 300),
-        yintercept: Optional[int] = None,
-        xintercept: Optional[int] = None,
+        yintercept: int | None = None,
+        xintercept: int | None = None,
         rotate_xticks: int = 0,
         title: str = "DID2S Event Study Estimate",
         coord_flip: bool = False,
@@ -158,7 +159,7 @@ def _did2s_estimate(
     _first_stage: str,
     _second_stage: str,
     treatment: str,
-    weights: Optional[str] = None,
+    weights: str | None = None,
 ):
     """
     Estimate the two-step DID2S model.
@@ -229,6 +230,14 @@ def _did2s_estimate(
 
     # demean data
     Y_hat = fit1.predict(newdata=data)
+    if np.isnan(Y_hat).any():
+        # levels present in the full data but absent from the first stage fit
+        # (fit on not-yet-treated observations only) predict to NaN
+        raise ValueError(
+            "First-stage predictions contain NaN values because some fixed effect "
+            "levels were not observed in the not-yet-treated first-stage sample. "
+            "Drop those observations before calling did2s()."
+        )
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 
@@ -257,7 +266,7 @@ def _did2s_vcov(
     first_u: np.ndarray,
     second_u: np.ndarray,
     cluster: str,
-    weights: Optional[str] = None,
+    weights: str | None = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -317,14 +326,16 @@ def _did2s_vcov(
     # fixed-effect levels). Removing `- 1` would cause formulaic to drop
     # reference levels, changing the GMM vcov standard errors.
     FML1 = Formula(
-        _second_stage=f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1",
+        _formula=formulaic.Formula(
+            f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1"
+        )
     )
     # Second stage: do NOT use `- 1`. Formulaic needs the intercept present
     # for full-rank encoding (dropping a reference level for factors like
     # i(treat)). The intercept column is then removed by drop_intercept=True
     # below, matching what feols does in _did2s_estimate.
     FML2 = Formula(
-        _second_stage=f"{yname} ~ {second_stage.replace('~', '').strip()}",
+        _formula=formulaic.Formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
     )
 
     mm_first_stage = model_matrix.create_model_matrix(

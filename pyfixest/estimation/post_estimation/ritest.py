@@ -1,8 +1,6 @@
 from importlib import import_module
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -28,7 +26,26 @@ except ImportError:
 from scipy.stats import norm
 from tqdm import tqdm
 
-from pyfixest.estimation.internals.demean_ import demean
+# Numba is an optional dependency. The fast randomization-inference path uses it;
+# the slow path does not. We import lazily so the module loads cleanly even when
+# numba is not installed, and surface a clear error only when the fast path is
+# actually requested.
+try:
+    import numba as nb
+
+    from pyfixest.estimation.numba.demean_nb import demean
+
+    _HAS_NUMBA = True
+except ImportError:
+    nb = None
+    demean = None
+    _HAS_NUMBA = False
+
+_NUMBA_RITEST_ERROR = (
+    "Fast randomization inference requires the optional `numba` extra. "
+    "Install it with `pip install pyfixest[numba]`, or pass "
+    "`choose_algorithm='slow'`."
+)
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -43,8 +60,8 @@ def _get_ritest_stats_slow(
     reps: int,
     model: str,
     rng: np.random.Generator,
-    vcov: Union[str, dict[str, str]],
-    clustervar_arr: Optional[np.ndarray] = None,
+    vcov: str | dict[str, str],
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (slow).
@@ -118,8 +135,8 @@ def _get_ritest_stats_fast(
     reps: int,
     rng: np.random.Generator,
     weights: np.ndarray,
-    clustervar_arr: Optional[np.ndarray] = None,
-    fval_df: Optional[pd.DataFrame] = None,
+    clustervar_arr: np.ndarray | None = None,
+    fval_df: pd.DataFrame | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (fast).
@@ -155,6 +172,9 @@ def _get_ritest_stats_fast(
         The test statistics. For this algorithm, regression coefficients are
         returned.
     """
+    if nb is None:
+        raise ImportError(_NUMBA_RITEST_ERROR)
+
     X_demean = X
     Y_demean = Y.flatten()
 
@@ -193,16 +213,15 @@ def _get_ritest_stats_fast(
     )
 
 
-@nb.njit()
 def _run_ri(
     reps: int,
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
-    fval: np.ndarray,
+    fval: np.ndarray | None,
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
-    clustervar_arr: Optional[np.ndarray] = None,
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Run the randomization inference.
@@ -253,12 +272,11 @@ def _run_ri(
     return ri_coefs
 
 
-@nb.njit
 def _resample(
     resampvar_arr: np.ndarray,
     rng: np.random.Generator,
     iterations: int = 1,
-    clustervar_arr: Optional[np.ndarray] = None,
+    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Random resampling of the treatment variable.
@@ -302,7 +320,6 @@ def _resample(
     return D_treat
 
 
-@nb.njit
 def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
     """
     Randomly sample from an array.
@@ -329,7 +346,6 @@ def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.nd
     return result
 
 
-@nb.njit()
 def lstsq_numba(A, B):
     """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
     U, s, VT = np.linalg.svd(A, full_matrices=False)
@@ -339,13 +355,20 @@ def lstsq_numba(A, B):
     return x
 
 
+if nb is not None:
+    random_choice = nb.njit(random_choice)
+    _resample = nb.njit(_resample)
+    lstsq_numba = nb.njit()(lstsq_numba)
+    _run_ri = nb.njit()(_run_ri)
+
+
 def _get_ritest_pvalue(
     sample_stat: np.ndarray,
     ri_stats: np.ndarray,
     method: str,
     level: float,
     h0_value: float,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.float64, np.float64, np.ndarray]:
     """
     Compute the p-value of the test statistic and
     standard error and CI of the p-value.

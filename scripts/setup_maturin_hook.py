@@ -1,0 +1,126 @@
+"""Install the maturin import hook for automatic Rust extension rebuilds.
+
+pyfixest includes a Rust extension (pyfixest.core._core_impl) built with maturin.
+During development, we use maturin-import-hook to automatically rebuild the
+extension whenever `import pyfixest` detects that .rs source files have changed.
+This avoids having to manually run `maturin develop` after every Rust change.
+
+How it works:
+  This script writes a sitecustomize.py into the environment's site-packages.
+  Python executes sitecustomize.py on startup (before any user code), so the
+  hook is active in every Python session without any manual setup.
+
+  The hook is configured to:
+  - Build in release mode with symbols stripped (for performance)
+  - Watch only Rust sources and build configuration for changes
+
+This script is run by the `_setup` pixi task for environments that import
+pyfixest. The task is intentionally idempotent so it can run safely in each
+environment without relying on a shared cache sentinel.
+
+See Also
+--------
+  - maturin-import-hook docs: https://github.com/PyO3/maturin-import-hook
+  - Python sitecustomize: https://docs.python.org/3/library/site.html
+"""
+
+import site
+from collections.abc import Iterator
+from pathlib import Path
+
+from maturin_import_hook.project_importer import DefaultProjectFileSearcher
+
+
+class PyfixestProjectFileSearcher(DefaultProjectFileSearcher):
+    """Restrict Maturin freshness checks to Rust build inputs."""
+
+    def __init__(self) -> None:
+        excluded_dirs = self.DEFAULT_SOURCE_EXCLUDED_DIR_NAMES | {".pixi"}
+        super().__init__(source_excluded_dir_names=excluded_dirs)
+
+    def get_source_paths(
+        self,
+        project_dir: Path,
+        all_path_dependencies: list[Path],
+        installed_package_root: Path,
+    ) -> Iterator[Path]:
+        """Yield Rust sources and build configuration files."""
+        source_paths = super().get_source_paths(
+            project_dir, all_path_dependencies, installed_package_root
+        )
+        for path in source_paths:
+            if path.suffix in {".rs", ".toml"} or path.name == "Cargo.lock":
+                yield path
+
+
+SITECUSTOMIZE_CONTENT = """\
+# <maturin_import_hook>
+try:
+    import maturin_import_hook
+    import os
+    import sys
+    from maturin_import_hook.settings import MaturinSettings
+    from scripts.setup_maturin_hook import PyfixestProjectFileSearcher
+
+    # maturin needs CONDA_PREFIX (or VIRTUAL_ENV) to locate the environment.
+    # When launched directly from PyCharm (not via pixi run), neither is set.
+    if not os.environ.get("CONDA_PREFIX") and not os.environ.get("VIRTUAL_ENV"):
+        os.environ["CONDA_PREFIX"] = sys.prefix
+
+    # Ensure the environment's bin directory is on PATH so that maturin can be found.
+    # PyCharm (via pixi-pycharm shim) may not include it.
+    env_bin = os.path.join(sys.prefix, "bin")
+    if env_bin not in os.environ.get("PATH", "").split(os.pathsep):
+        os.environ["PATH"] = env_bin + os.pathsep + os.environ.get("PATH", "")
+
+    file_searcher = PyfixestProjectFileSearcher()
+
+    maturin_import_hook.install(
+        settings=MaturinSettings(release=True, strip=True, color=True),
+        file_searcher=file_searcher,
+        lock_timeout_seconds=180,
+        enable_project_importer=True,
+        enable_rs_file_importer=True,
+    )
+except Exception as e:
+    raise RuntimeError(
+        f"{e}\\n>> ERROR in managed maturin_import_hook installation. "
+        "Remove the sitecustomize.py in your environment's site-packages.\\n",
+    )
+# </maturin_import_hook>
+"""
+
+
+def main() -> None:
+    site_packages = Path(site.getsitepackages()[0])
+    target = site_packages / "sitecustomize.py"
+
+    # Remove existing hook content if present
+    if target.exists():
+        content = target.read_text()
+        if "<maturin_import_hook>" in content:
+            import re
+
+            content = re.sub(
+                r"# <maturin_import_hook>.*?# </maturin_import_hook>\n?",
+                "",
+                content,
+                flags=re.DOTALL,
+            )
+            if content.strip():
+                target.write_text(content)
+            else:
+                target.unlink()
+
+    # Write new content
+    if target.exists():
+        with open(target, "a") as f:
+            f.write("\n" + SITECUSTOMIZE_CONTENT)
+    else:
+        target.write_text(SITECUSTOMIZE_CONTENT)
+
+    print(f"maturin import hook installed to {target}")
+
+
+if __name__ == "__main__":
+    main()

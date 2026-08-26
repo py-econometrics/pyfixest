@@ -1,7 +1,7 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -71,7 +71,7 @@ class GelbachResults:
         """All effect names (core + mediators)."""
         return list(self.absolute.keys())
 
-    def to_dict(self, relative_to: Optional[str] = None) -> dict[str, float]:
+    def to_dict(self, relative_to: str | None = None) -> dict[str, float]:
         """
         Convert to dictionary format.
 
@@ -154,17 +154,17 @@ class GelbachDecomposition:
     coefnames: list[str]
     depvarname: str
     nthreads: int = -1
-    x1_vars: Optional[list[str]] = None
-    cluster_df: Optional[pd.Series] = None
-    combine_covariates: Optional[dict[str, list[str]]] = None
-    agg_first: Optional[bool] = False
+    x1_vars: list[str] | None = None
+    cluster_df: pd.Series | None = None
+    combine_covariates: dict[str, list[str]] | None = None
+    agg_first: bool | None = False
     only_coef: bool = True
-    atol: Optional[float] = None
-    btol: Optional[float] = None
+    atol: float | None = None
+    btol: float | None = None
 
     # Define attributes initialized post-creation
-    cluster_dict: Optional[dict[Any, Any]] = field(init=False, default=None)
-    unique_clusters: Optional[np.ndarray] = field(init=False, default=None)
+    cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
+    unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
     mediator_names: list[str] = field(init=False)
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
@@ -270,7 +270,7 @@ class GelbachDecomposition:
         self,
         X: spmatrix,
         Y: np.ndarray,
-        weights: Optional[np.ndarray] = None,
+        weights: np.ndarray | None = None,
         store: bool = True,
     ):
         "Fit Linear Mediation Model."
@@ -457,7 +457,7 @@ class GelbachDecomposition:
         X2: spmatrix,
         Y: np.ndarray,
         X: spmatrix,
-        agg_first: Optional[bool],
+        agg_first: bool | None,
     ) -> tuple[
         np.ndarray,
         np.ndarray,
@@ -722,13 +722,13 @@ class GelbachDecomposition:
     def etable(
         self,
         panels: str = "all",
-        caption: Optional[str] = None,
-        column_heads: Optional[list[str]] = None,
-        panel_heads: Optional[list[str]] = None,
-        rgroup_sep: Optional[str] = None,
-        add_notes: Optional[str] = None,
+        caption: str | None = None,
+        column_heads: list[str] | None = None,
+        panel_heads: list[str] | None = None,
+        rgroup_sep: str | None = None,
+        add_notes: str | None = None,
         **kwargs,
-    ) -> Union[pd.DataFrame, str, None]:
+    ) -> pd.DataFrame | str | None:
         """
         Generate a table summarizing the Gelbach decomposition results.
 
@@ -934,13 +934,13 @@ class GelbachDecomposition:
     def coefplot(
         self,
         annotate_shares: bool = True,
-        title: Optional[str] = None,
-        figsize: Optional[tuple[int, int]] = None,
-        keep: Optional[Union[list, str]] = None,
-        drop: Optional[Union[list, str]] = None,
+        title: str | None = None,
+        figsize: tuple[int, int] | None = None,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
         exact_match: bool = False,
-        labels: Optional[dict] = None,
-        notes: Optional[str] = None,
+        labels: dict | None = None,
+        notes: str | None = None,
     ):
         """
         Create a waterfall chart showing Gelbach decomposition results.
@@ -1024,7 +1024,7 @@ class GelbachDecomposition:
 def _decompose_arg_check(
     type: str,
     has_weights: bool,
-    weights_type: Union[str, None],
+    weights_type: str | None,
     is_iv: bool,
     method: str,
     only_coef: bool,

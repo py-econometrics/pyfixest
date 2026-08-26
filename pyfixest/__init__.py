@@ -8,12 +8,15 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 __all__ = [
+    "BaseDemeaner",
+    "LsmrDemeaner",
+    "MapDemeaner",
+    "Preconditioner",
     "SaturatedEventStudy",
     "bonferroni",
     "coefplot",
     "did",
     "did2s",
-    "dtable",
     "errors",
     "estimation",
     "etable",
@@ -21,10 +24,17 @@ __all__ = [
     "feglm",
     "feols",
     "fepois",
+    "get_bartik_data",
     "get_data",
+    "get_encouragement_data",
+    "get_ivf_data",
+    "get_motherhood_event_study_data",
     "get_ssc",
+    "get_twin_data",
+    "get_worker_panel",
     "iplot",
     "lpdid",
+    "optimal_mixture_precision",
     "panelview",
     "qplot",
     "quantreg",
@@ -47,8 +57,14 @@ _lazy_imports = {
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
+    # demeaner configs
+    "BaseDemeaner": "pyfixest.demeaners",
+    "MapDemeaner": "pyfixest.demeaners",
+    "LsmrDemeaner": "pyfixest.demeaners",
+    "Preconditioner": "pyfixest.core.demean",
     # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
+    "optimal_mixture_precision": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",
     "wyoung": "pyfixest.estimation",
     # did
@@ -59,20 +75,30 @@ _lazy_imports = {
     "SaturatedEventStudy": "pyfixest.did",
     # report
     "etable": "pyfixest.report",
-    "dtable": "pyfixest.report",
     "summary": "pyfixest.report",
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
     "qplot": "pyfixest.report",
     "make_table": "pyfixest.report",
     # utils
+    "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
+    "get_encouragement_data": "pyfixest.utils",
+    "get_ivf_data": "pyfixest.utils",
+    "get_motherhood_event_study_data": "pyfixest.utils",
+    "get_twin_data": "pyfixest.utils",
+    "get_worker_panel": "pyfixest.utils",
     "ssc": "pyfixest.utils",
     "get_ssc": "pyfixest.utils",
 }
 
 # Functions that have their own dedicated module (can be imported directly)
-_direct_module_imports = {"feols", "fepois", "feglm", "quantreg"}
+_direct_module_imports = {
+    "feglm",
+    "feols",
+    "fepois",
+    "quantreg",
+}
 
 
 def __getattr__(name: str):

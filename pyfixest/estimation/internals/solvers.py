@@ -20,7 +20,7 @@ def solve_ols(
     tZX (array-like): Z'X.
     tZY (array-like): Z'Y.
     solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
-    "np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.lsqr" and "jax".
+    "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
 
     Returns
     -------
@@ -38,9 +38,5 @@ def solve_ols(
         return solve(tZX, tZY, assume_a="pos").flatten()
     elif solver == "scipy.sparse.linalg.lsqr":
         return lsqr(tZX, tZY)[0].flatten()
-    elif solver == "jax":
-        import jax.numpy as jnp
-
-        return jnp.linalg.lstsq(tZX, tZY, rcond=None)[0].flatten()
     else:
         raise ValueError(f"Solver {solver} not supported.")

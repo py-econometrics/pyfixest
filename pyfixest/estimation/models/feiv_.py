@@ -1,16 +1,18 @@
 import warnings
 from collections.abc import Mapping
+from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import Preconditioner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import demean_model
-from pyfixest.estimation.internals.literals import DemeanerBackendOptions
-from pyfixest.estimation.internals.solvers import solve_ols
-from pyfixest.estimation.models.feols_ import Feols, _drop_multicollinear_variables
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class Feiv(Feols):
@@ -42,11 +44,10 @@ class Feiv(Feols):
     collin_tol : float
         Tolerance for collinearity check.
     solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr", "jax"],
+        "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner_backend: DemeanerBackendOptions, optional
-        The backend to use for demeaning. Can be either "numba", "jax", or "rust".
-        Defaults to "numba".
+    demeaner : Optional[AnyDemeaner]
+        Resolved typed demeaner configuration.
     weights_name : Optional[str]
         Name of the weights variable.
     weights_type : Optional[str]
@@ -131,6 +132,28 @@ class Feiv(Feols):
     ValueError
         If Z is not a two-dimensional array.
 
+    Examples
+    --------
+    `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
+    when the formula includes an IV part, i.e.
+    `depvar ~ exog | fe | endog ~ instrument`.
+
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.tidy()
+    ```
+
+    The first stage F-statistic is stored on the fitted object.
+
+    ```{python}
+    fit._f_stat_1st_stage
+    ```
+
+    See the
+    [instrumental variables tutorial](/tutorials/instrumental-variables.qmd) for
+    details.
     """
 
     # Constructor and methods implementation...
@@ -138,29 +161,27 @@ class Feiv(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, Union[str, bool]],
+        ssc_dict: dict[str, str | bool],
         drop_singletons: bool,
         drop_intercept: bool,
-        weights: Optional[str],
-        weights_type: Optional[str],
+        weights: str | None,
+        weights_type: str | None,
         collin_tol: float,
-        fixef_tol: float,
-        fixef_maxiter: int,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: Literal[
             "np.linalg.lstsq",
             "np.linalg.solve",
             "scipy.linalg.solve",
             "scipy.sparse.linalg.lsqr",
-            "jax",
         ] = "scipy.linalg.solve",
-        demeaner_backend: DemeanerBackendOptions = "numba",
+        demeaner: AnyDemeaner | None = None,
+        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
-        context: Union[int, Mapping[str, Any]] = 0,
-        sample_split_var: Optional[str] = None,
-        sample_split_value: Optional[Union[str, int]] = None,
+        context: int | Mapping[str, Any] = 0,
+        sample_split_var: str | None = None,
+        sample_split_value: str | int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -171,8 +192,6 @@ class Feiv(Feols):
             weights=weights,
             weights_type=weights_type,
             collin_tol=collin_tol,
-            fixef_tol=fixef_tol,
-            fixef_maxiter=fixef_maxiter,
             lookup_demeaned_data=lookup_demeaned_data,
             solver=solver,
             store_data=store_data,
@@ -181,7 +200,8 @@ class Feiv(Feols):
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
             context=context,
-            demeaner_backend=demeaner_backend,
+            demeaner=demeaner,
+            lookup_preconditioner=lookup_preconditioner,
         )
 
         self._is_iv = True
@@ -208,16 +228,13 @@ class Feiv(Feols):
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd = demean_model(
+            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
                 self._endogvar,
                 self._Z,
                 self._fe,
                 self._weights.flatten(),
-                self._lookup_demeaned_data,
                 self._na_index,
-                self._fixef_tol,
-                self._fixef_maxiter,
-                self._demean_func,
+                self._demeaner,
             )
         else:
             self._endogvard = self._endogvar
@@ -231,11 +248,10 @@ class Feiv(Feols):
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
-        ) = _drop_multicollinear_variables(
+        ) = drop_multicollinear_variables(
             self._Z,
             self._coefnames_z,
             self._collin_tol,
-            self._find_collinear_variables_func,
         )
 
     def get_fit(self) -> None:
@@ -245,28 +261,18 @@ class Feiv(Feols):
         self.drop_multicol_vars()
         self.wls_transform()
 
-        # Start Second Stage
-        self._tZX = self._Z.T @ self._X
-        self._tXZ = self._X.T @ self._Z
-        self._tZy = self._Z.T @ self._Y
-        self._tZZinv = np.linalg.inv(self._Z.T @ self._Z)
+        # Second stage (2SLS) on prepared arrays
+        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
 
-        H = self._tXZ @ self._tZZinv
-        A = H @ self._tZX
-        B = H @ self._tZy
-        self._beta_hat = solve_ols(A, B, self._solver)
-
-        # residuals
-        self._u_hat = self._Y.flatten() - (self._X @ self._beta_hat).flatten()
+        self._tZX = fit.tZX
+        self._tXZ = fit.tXZ
+        self._tZy = fit.tZy
+        self._tZZinv = fit.tZZinv
+        self._beta_hat = fit.beta
+        self._u_hat = fit.residuals
         self._get_predictors()
-
-        # Compute scores and hessian
-        self._scores = self._Z * self._u_hat[:, None]
-        self._hessian = self._Z.T @ self._Z
-
-        # Compute bread matrix
-        D = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
-        self._bread = H.T @ D @ H
+        self._scores = fit.scores
+        self._hessian = fit.hessian
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
@@ -283,13 +289,18 @@ class Feiv(Feols):
             fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: Union[dict[str, str], str]
+        vcov_detail: dict[str, str] | str
 
         if self._is_clustered:
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
         else:
             vcov_detail = self._vcov_type_detail
+
+        demeaner = self._demeaner
+        cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
+        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
+            demeaner = replace(demeaner, preconditioner=cached_pre)
 
         # Do first stage regression
         model1 = fit_(
@@ -299,6 +310,8 @@ class Feiv(Feols):
             weights=self._weights_name,
             weights_type=self._weights_type,
             collin_tol=self._collin_tol,
+            solver=self._solver,
+            demeaner=demeaner,
         )
 
         # Ensure model1 is of type Feols
@@ -322,7 +335,7 @@ class Feiv(Feols):
 
         self.IV_weakness_test(["f_stat"])
 
-    def IV_Diag(self, statistics: Optional[list[str]] = None):
+    def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
 
         Notes
@@ -424,7 +437,7 @@ class Feiv(Feols):
 
         self.IV_weakness_test(iv_diag_stat)
 
-    def IV_weakness_test(self, iv_diag_statistics: Optional[list[str]] = None) -> None:
+    def IV_weakness_test(self, iv_diag_statistics: list[str] | None = None) -> None:
         """Implement IV weakness test (F-test).
 
         This method covers hetero-robust and clustered-robust F statistics.

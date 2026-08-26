@@ -1,6 +1,5 @@
 import re
 import warnings
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +37,42 @@ class SaturatedEventStudy(DID):
     display_warning: bool
         Whether to display (some) warning messages.
 
+    Notes
+    -----
+    Fits a fully saturated event study that interacts every treatment cohort
+    with every relative period. Each cohort has its own set of event time
+    effects, which avoids the comparisons between already-treated units that
+    bias static two-way fixed effects under heterogeneous treatment effects
+    (Sun and Abraham 2021,
+    [Journal of Econometrics](https://doi.org/10.1016/j.jeconom.2020.09.006)).
+
+    Examples
+    --------
+    Returned by [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"`. `aggregate()` aggregates the cohort-specific
+    effects by event time.
+
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_motherhood_event_study_data()
+
+    fit = pf.event_study(
+        data,
+        yname="log_earnings",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="saturated",
+    )
+    fit.aggregate().head()
+    ```
+
+    `iplot_aggregate()` plots the aggregated effects.
+
+    ```{python}
+    fit.iplot_aggregate()
+    ```
     """
 
     def __init__(
@@ -48,8 +83,8 @@ class SaturatedEventStudy(DID):
         tname: str,
         gname: str,
         att: bool = True,
-        cluster: Optional[str] = None,
-        xfml: Optional[str] = None,
+        cluster: str | None = None,
+        xfml: str | None = None,
         display_warning: bool = True,
     ):
         super().__init__(
@@ -150,9 +185,7 @@ class SaturatedEventStudy(DID):
             model=self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
 
-    def aggregate(
-        self, agg="period", weighting: Optional[str] = "shares"
-    ) -> pd.DataFrame:
+    def aggregate(self, agg="period", weighting: str | None = "shares") -> pd.DataFrame:
         """
         Aggregate the fully interacted event study estimates by relative time, cohort, and time.
 
@@ -231,7 +264,7 @@ class SaturatedEventStudy(DID):
 
         return df_agg
 
-    def iplot_aggregate(self, agg="period", weighting: Optional[str] = "shares"):
+    def iplot_aggregate(self, agg="period", weighting: str | None = "shares"):
         """
         Plot the aggregated estimates.
 
@@ -316,7 +349,7 @@ def _saturated_event_study(
     outcome: str,
     time_id: str,
     unit_id: str,
-    cluster: Optional[str] = None,
+    cluster: str | None = None,
 ):
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore

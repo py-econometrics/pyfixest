@@ -30,14 +30,12 @@ def test_solve_ols_identity():
         "np.linalg.lstsq",
         "np.linalg.solve",
         "scipy.sparse.linalg.lsqr",
-        "jax",
     ],
     ids=[
         "scipy.linalg.solve",
         "np.linalg.lstsq",
         "np.linalg.solve",
         "scipy.sparse.linalg.lsqr",
-        "jax",
     ],
 )
 def test_solve_ols_different_solvers(solver):

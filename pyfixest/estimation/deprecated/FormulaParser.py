@@ -1,7 +1,6 @@
 import re
 import warnings
 from itertools import product
-from typing import Optional, Union
 
 from pyfixest.errors import (
     DuplicateKeyError,
@@ -102,8 +101,8 @@ class FixestFormulaParser:
         depvar: str,
         covar: str,
         fval: str,
-        endogvar: Optional[str] = None,
-        instrument: Optional[str] = None,
+        endogvar: str | None = None,
+        instrument: str | None = None,
     ):
         """
         Add a FixestFormula object to the FixestFormulaDict.
@@ -280,9 +279,9 @@ class FixestFormula:
         self,
         depvar: str,
         covar: str,
-        fval: Optional[str] = None,
-        endogvars: Optional[str] = None,
-        instruments: Optional[str] = None,
+        fval: str | None = None,
+        endogvars: str | None = None,
+        instruments: str | None = None,
     ):
         self._depvar = depvar
         self._covar = covar
@@ -403,8 +402,8 @@ def _get_first_and_second_stage_fml(
     depvar: str,
     covar: str,
     fval: str,
-    endogvar: Optional[str] = None,
-    instruments: Optional[str] = None,
+    endogvar: str | None = None,
+    instruments: str | None = None,
 ) -> tuple:
     """
     Generate first and second stage formulas for OLS and IV regression models.
@@ -477,7 +476,7 @@ def collect_fml_dict(
 
 def _deparse_fml(
     fml: str,
-) -> tuple[str, str, str, Union[str, None], Union[str, None]]:
+) -> tuple[str, str, str, str | None, str | None]:
     """
     Decompose a formula string into its constituent parts.
 

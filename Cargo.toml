@@ -1,6 +1,6 @@
 [package]
 name = "pyfixest_core"
-version = "0.1.0"
+version = "0.60.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,15 +9,17 @@ name = "_core_impl"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.26.0", features = ["extension-module"] }
-ndarray = { version = "0.16.1", features = ["rayon"] }
+pyo3 = { version = "0.29.0", features = ["extension-module"] }
+ndarray = { version = "0.17.2", features = ["rayon"] }
 rayon   = "1.11.0"
-numpy = "0.26.0"
+numpy = "0.29.0"
 thiserror = "2.0.16"
+postcard = { version = "1", features = ["use-std"] }
+within = "0.3.0"
 
 [profile.release]
 opt-level = 3        # Maximize performance
 lto = "fat"          # Full link-time optimization
 codegen-units = 1    # Whole-program optimization
-panic = "abort"      # Smaller binary, no unwind support
-strip = true         # Remove symbol table
+panic = "abort"
+strip = true

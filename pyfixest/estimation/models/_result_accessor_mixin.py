@@ -1,18 +1,123 @@
 import functools
 import warnings
 from importlib import import_module
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm, t
 
 from pyfixest.errors import EmptyVcovError
-from pyfixest.utils.dev_utils import _select_order_coefs
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.internals.families import InferenceDist
+from pyfixest.estimation.internals.literals import (
+    InferenceType,
+    _validate_literal_argument,
+)
+from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
-class ResultAccessorMixin:
+class TidyColumnAccessors:
+    """Mixin: derive `coef/se/tstat/pvalue` from `tidy()` data frame."""
+
+    def tidy(self, *args, **kwargs) -> pd.DataFrame:
+        """Tidy DataFrame of results. Implemented by the host class."""
+        raise NotImplementedError
+
+    def coef(self) -> pd.Series:
+        """
+        Estimated coefficients as a pandas Series.
+
+        Returns the `Estimate` column of `tidy()`.
+
+        Returns
+        -------
+        pandas.Series
+            Point estimates, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.coef()
+        ```
+        """
+        return self.tidy()["Estimate"]
+
+    def se(self) -> pd.Series:
+        """
+        Coefficient standard errors as a pandas Series.
+
+        Returns the `Std. Error` column of `tidy()`. The values depend on the
+        variance estimator of the model, which can be changed via `vcov()`.
+
+        Returns
+        -------
+        pandas.Series
+            Standard errors, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.se()
+        ```
+        """
+        return self.tidy()["Std. Error"]
+
+    def tstat(self) -> pd.Series:
+        """
+        Coefficient t-statistics as a pandas Series.
+
+        Returns the `t value` column of `tidy()`, i.e. each estimate divided by
+        its standard error.
+
+        Returns
+        -------
+        pandas.Series
+            t-statistics, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.tstat()
+        ```
+        """
+        return self.tidy()["t value"]
+
+    def pvalue(self) -> pd.Series:
+        """
+        Coefficient p-values as a pandas Series.
+
+        Returns the `Pr(>|t|)` column of `tidy()`, for the two-sided null that a
+        coefficient is zero.
+
+        Returns
+        -------
+        pandas.Series
+            p-values, indexed by coefficient name.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.pvalue()
+        ```
+        """
+        return self.tidy()["Pr(>|t|)"]
+
+
+class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
@@ -30,15 +135,19 @@ class ResultAccessorMixin:
     _method: str
     _drop_intercept: bool
     _has_fixef: bool
+    _has_weights: bool
+    _is_iv: bool
     _k_fe: pd.Series
     _N: int
     _k: int
     _df_t: int
+    _inference_dist: "InferenceDist"
     _rmse: float
     _r2: float
     _adj_r2: float
     _r2_within: float
     _adj_r2_within: float
+    _vcov_type: str
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -59,6 +168,75 @@ class ResultAccessorMixin:
         _tmp = _module.etable
         self.etable = functools.partial(_tmp, models=[self])
         self.etable.__doc__ = _tmp.__doc__
+
+    def evalue(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI e-values.
+
+        Parameters
+        ----------
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series
+            One e-value per coefficient.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
+        for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)` while the R implementation in `avlm` does not.
+        Inference is pointwise / by coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        fit.evalue()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _evalue
+
+        return _evalue(model=self, mixture_precision=mixture_precision)
+
+    def pvalue_savi(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI sequential p-values.
+
+        The sequential-p-value analogue of `evalue`. See `evalue` for the
+        `mixture_precision` argument and the supported-model restrictions.
+
+        Returns
+        -------
+        pd.Series
+            One sequential p-value per coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
+        fit.pvalue_savi()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+
+        return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
@@ -85,13 +263,8 @@ class ResultAccessorMixin:
 
         self._se = np.sqrt(np.diagonal(self._vcov))
         self._tstat = self._beta_hat / self._se
-        # use t-dist for linear models, but normal for non-linear models
-        if self._method in ["fepois", "feglm-probit", "feglm-logit", "feglm-gaussian"]:
-            self._pvalue = 2 * (1 - norm.cdf(np.abs(self._tstat)))
-            z = np.abs(norm.ppf(alpha / 2))
-        else:
-            self._pvalue = 2 * (1 - t.cdf(np.abs(self._tstat), self._df_t))
-            z = np.abs(t.ppf(alpha / 2, self._df_t))
+        self._pvalue = self._inference_dist.pvalue(self._tstat, self._df_t)
+        z = self._inference_dist.crit_val(alpha, self._df_t)
 
         z_se = z * self._se
         self._conf_int = np.array([self._beta_hat - z_se, self._beta_hat + z_se])
@@ -108,14 +281,27 @@ class ResultAccessorMixin:
         Returns
         -------
         None
+            The measures are stored on the model object rather than returned.
 
-        Creates the following instances:
-        - r2 (float): R-squared of the regression model.
-        - adj_r2 (float): Adjusted R-squared of the regression model.
-        - r2_within (float): R-squared of the regression model, computed on
-        demeaned dependent variable.
-        - adj_r2_within (float): Adjusted R-squared of the regression model,
-        computed on demeaned dependent variable.
+        Notes
+        -----
+        Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
+        `_adj_r2_within`. The `_within` variants are computed on the demeaned
+        dependent variable and are only defined for models with fixed effects.
+
+        Examples
+        --------
+        The estimation functions call this during fitting, so the measures are
+        available on any fitted model.
+
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.get_performance()
+
+        fit._r2, fit._adj_r2, fit._r2_within
+        ```
         """
         Y_within = self._Y
         Y = self._Y_untransformed.to_numpy()
@@ -143,6 +329,7 @@ class ResultAccessorMixin:
     def tidy(
         self,
         alpha: float = 0.05,
+        inference_type: InferenceType = "regular",
     ) -> pd.DataFrame:
         """
         Tidy model outputs.
@@ -155,13 +342,43 @@ class ResultAccessorMixin:
         alpha: Optional[float]
             The significance level for the confidence intervals. If None,
             computes a 95% confidence interval (`alpha = 0.05`).
+        inference_type : {"regular"}, optional
+            Type of coefficient-wise inference to report. Only `"regular"` is
+            currently available. Defaults to `"regular"`.
 
         Returns
         -------
         tidy_df : pd.DataFrame
             A tidy pd.DataFrame containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.tidy()
+        ```
+
+        Changing the variance estimator changes the standard errors, t-values
+        and p-values reported by `tidy()`.
+
+        ```{python}
+        fit.vcov("hetero").tidy()
+        ```
         """
+        inference_type = self._normalize_inference_type(inference_type)
+        if inference_type == "simult":
+            raise ValueError(
+                "tidy() does not support inference_type='simult'. Use "
+                "confint(inference_type='simult') for simultaneous intervals."
+            )
+        if inference_type == "savi":
+            raise NotImplementedError(
+                "inference_type='savi' is not available in tidy() yet."
+            )
+
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
@@ -171,74 +388,56 @@ class ResultAccessorMixin:
                 UserWarning,
             )
 
-        tidy_df = pd.DataFrame(
-            {
-                "Coefficient": self._coefnames,
-                "Estimate": self._beta_hat,
-                "Std. Error": self._se,
-                "t value": self._tstat,
-                "Pr(>|t|)": self._pvalue,
-                # use slice because self._conf_int might be empty
-                f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
-                f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
-            }
-        )
+        data = {
+            "Coefficient": self._coefnames,
+            "Estimate": self._beta_hat,
+            "Std. Error": self._se,
+            "t value": self._tstat,
+            "Pr(>|t|)": self._pvalue,
+            # use slice because self._conf_int might be empty
+            f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
+            f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
+        }
+        if (
+            getattr(self, "_sample_split_var", None) is not None
+            and (sample := getattr(self, "_sample_split_value", None)) is not None
+        ):
+            data["Sample"] = sample
+        return pd.DataFrame(data).set_index("Coefficient")
 
-        return tidy_df.set_index("Coefficient")
+    def _normalize_inference_type(
+        self, inference_type: InferenceType, joint: bool = False
+    ) -> InferenceType:
+        """Validate `inference_type` and fold the deprecated `joint` flag into it."""
+        _validate_literal_argument(inference_type, InferenceType)
 
-    def coef(self) -> pd.Series:
-        """
-        Fitted model coefficents.
+        if joint:
+            warnings.warn(
+                "joint=True is deprecated. Use inference_type='simult' instead.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            if inference_type not in ("regular", "simult"):
+                raise ValueError(
+                    "joint=True cannot be combined with "
+                    f"inference_type={inference_type!r}."
+                )
+            inference_type = "simult"
 
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the estimated coefficients of the regression model.
-        """
-        return self.tidy()["Estimate"]
-
-    def se(self) -> pd.Series:
-        """
-        Fitted model standard errors.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with the standard errors of the estimated regression model.
-        """
-        return self.tidy()["Std. Error"]
-
-    def tstat(self) -> pd.Series:
-        """
-        Fitted model t-statistics.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with t-statistics of the estimated regression model.
-        """
-        return self.tidy()["t value"]
-
-    def pvalue(self) -> pd.Series:
-        """
-        Fitted model p-values.
-
-        Returns
-        -------
-        pd.Series
-            A pd.Series with p-values of the estimated regression model.
-        """
-        return self.tidy()["Pr(>|t|)"]
+        return inference_type
 
     def confint(
         self,
         alpha: float = 0.05,
-        keep: Optional[Union[list, str]] = None,
-        drop: Optional[Union[list, str]] = None,
-        exact_match: Optional[bool] = False,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool | None = False,
         joint: bool = False,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         reps: int = 10_000,
+        *,
+        inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
     ) -> pd.DataFrame:
         r"""
         Fitted model confidence intervals.
@@ -249,8 +448,9 @@ class ResultAccessorMixin:
             The significance level for confidence intervals. Defaults to 0.05.
             keep: str or list of str, optional
         joint : bool, optional
-            Whether to compute simultaneous confidence interval for joint null
-            of parameters selected by `keep` and `drop`. Defaults to False. See
+            Deprecated. Use `inference_type="simult"` instead. Whether to
+            compute simultaneous confidence intervals for the joint null of the
+            parameters selected by `keep` and `drop`. Defaults to False. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
             Remark 4.4.1 for details.
         keep: str or list of str, optional
@@ -274,14 +474,35 @@ class ResultAccessorMixin:
             The number of bootstrap iterations to run for joint confidence intervals.
             Defaults to 10_000. Only used if `joint` is True.
         seed : int, optional
-            The seed for the random number generator. Defaults to None. Only used if
-            `joint` is True.
+            The seed for the random number generator. Defaults to None. Only used
+            when `inference_type="simult"`.
+        inference_type : {"regular", "simult", "savi"}, optional
+            Type of confidence interval to compute. "regular" returns pointwise
+            intervals; "simult" returns simultaneous (joint) intervals for the
+            coefficients selected by `keep` and `drop`; "savi" returns
+            coefficient-wise asymptotic SAVI confidence sequences. Defaults to
+            "regular". Supersedes the deprecated `joint` argument.
+        mixture_precision: float, optional
+            Only relevant for `inference_type="savi"`. Controls the mixing weight of the
+            prior in the SAVI e-value. Larger values produce wider confidence
+            sequences early on but narrow faster as the sample grows. Defaults to 1. Use
+            `pyfixest.optimal_mixture_precision()`
+            to minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         pd.DataFrame
             A pd.DataFrame with confidence intervals of the estimated regression model
             for the selected coefficients.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
+        `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)`. You need to pass `ssc(k_adj=False)` to reproduce `avlm`,
+        which applies no such correction.
 
         Examples
         --------
@@ -296,46 +517,40 @@ class ResultAccessorMixin:
         data = get_data()
         fit = feols("Y ~ C(f1)", data=data)
         fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, joint=True, reps=9999).head()
+        fit.confint(alpha=0.10, inference_type="simult", reps=9999).head()
+
+        savi_fit = feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        savi_fit.confint(alpha=0.10, inference_type="savi").head()
         ```
         """
-        if keep is None:
-            keep = []
-        if drop is None:
-            drop = []
+        inference_type = self._normalize_inference_type(inference_type, joint=joint)
+        if inference_type == "savi":
+            from pyfixest.estimation.post_estimation.savi import _confint
 
-        tidy_df = self.tidy()
-        if keep or drop:
-            if isinstance(keep, str):
-                keep = [keep]
-            if isinstance(drop, str):
-                drop = [drop]
-            idxs = _select_order_coefs(tidy_df.index.tolist(), keep, drop, exact_match)
-            coefnames = tidy_df.loc[idxs, :].index.tolist()
+            return _confint(
+                model=self,
+                alpha=alpha,
+                mixture_precision=mixture_precision,
+                keep=keep,
+                drop=drop,
+                exact_match=exact_match,
+            )
+
+        coefnames, coef_indices = _select_coefnames_and_indices(
+            self._coefnames, keep, drop, exact_match
+        )
+
+        if inference_type == "regular":
+            crit_val = self._inference_dist.crit_val(alpha, self._df_t)
         else:
-            coefnames = self._coefnames
-
-        joint_indices = [i for i, x in enumerate(self._coefnames) if x in coefnames]
-        if not joint_indices:
-            raise ValueError("No coefficients match the keep/drop patterns.")
-
-        if not joint:
-            if self._method == "feols":
-                crit_val = np.abs(t.ppf(alpha / 2, self._df_t))
-            else:
-                crit_val = np.abs(norm.ppf(alpha / 2))
-        else:
+            joint_indices = sorted(coef_indices)
             D_inv = 1 / self._se[joint_indices]
             V = self._vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
-        ub = pd.Series(
-            self._beta_hat[joint_indices] + crit_val * self._se[joint_indices]
-        )
-        lb = pd.Series(
-            self._beta_hat[joint_indices] - crit_val * self._se[joint_indices]
-        )
+        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * self._se[coef_indices])
+        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * self._se[coef_indices])
 
         df = pd.DataFrame(
             {
@@ -352,9 +567,21 @@ class ResultAccessorMixin:
         """
         Fitted model residuals.
 
+        For weighted models the residuals are rescaled by the square root of the
+        weights, so they are on the scale of the original dependent variable.
+
         Returns
         -------
         np.ndarray
             A np.ndarray with the residuals of the estimated regression model.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+        fit.resid()[:5]
+        ```
         """
         return self._u_hat.flatten() / np.sqrt(self._weights.flatten())

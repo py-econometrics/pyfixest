@@ -1,23 +1,19 @@
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final, Optional, Union
+from typing import Any, Final
 
 import formulaic
 import numpy as np
 import pandas as pd
 from formulaic.parser import DefaultFormulaParser
+from numpy.typing import NDArray
 
-from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
-from pyfixest.estimation.formula.factor_interaction import factor_interaction
+from pyfixest.core.detect_singletons import detect_singletons
+from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
+from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.formula.utils import (
-    _encode_fixed_effects,
-    _factorize,
-    _get_weights,
-    log,
-)
-from pyfixest.estimation.internals.detect_singletons_ import detect_singletons
+from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
 
 
@@ -27,6 +23,7 @@ class _ModelMatrixKey:
     fixed_effects: str = "fe"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
+    offset: str = "offset"
 
 
 class ModelMatrix:
@@ -37,6 +34,13 @@ class ModelMatrix:
     extracting dependent and independent variables, fixed effects, instrumental
     variables, and weights. It handles missing data, singleton observations,
     and ensures proper formatting for estimation procedures.
+
+    An internal API. Instances are built by the `prepare_model_matrix` step of
+    the fit pipeline from a materialized `formulaic.ModelMatrix` and are not
+    constructed directly. There is therefore no standalone example. Formulas are
+    written as strings and passed to
+    [feols()](/reference/estimation.api.feols.feols.qmd). See the
+    [formula syntax tutorial](/tutorials/formula-syntax.qmd) for the syntax.
 
     Attributes
     ----------
@@ -61,15 +65,16 @@ class ModelMatrix:
     def __init__(
         self,
         model_matrix: formulaic.ModelMatrix,
-        drop_rows: set[int],
+        drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
         self._model_spec = model_matrix.model_spec
+        self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
-        self._process(dropped_rows=drop_rows, drop_singletons=drop_singletons)
+        self._process(drop_singletons=drop_singletons)
 
     @staticmethod
     def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
@@ -95,39 +100,50 @@ class ModelMatrix:
             model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
         )
         self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
+        self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
-        datas: list[pd.DataFrame] = list(model_matrix._flatten())
+        datas = flatten_model_matrix(model_matrix)
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 
-    def _process(self, dropped_rows: set[int], drop_singletons: bool = False) -> None:
-        if self.dependent.shape[1] != 1:
-            # If the dependent variable is not numeric, formulaic's contrast encoding kicks in
-            # creating multiple columns for the dependent variable
-            # TODO: Make this check more explicit?
+    def _process(self, drop_singletons: bool = False) -> None:
+        if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
-        if self.endogenous is not None and self.endogenous.shape[1] != 1:
-            raise TypeError("The endogenous variable must be numeric.")
-        # Drop rows with non-finite values
-        is_infinite = pd.Series(
-            ~np.isfinite(self._data).all(axis=1), index=self._data.index
+        elif self._dependent is None or len(self._dependent) != 1:
+            raise TypeError("The model must contain exactly one dependent variable.")
+
+        if self._endogenous is not None:
+            if self.model_spec[
+                _ModelMatrixKey.instrumental_variable
+            ].lhs.factor_contrasts:
+                raise TypeError("The endogenous variable must be numeric.")
+            elif len(self._endogenous) != 1:
+                raise TypeError(
+                    "The model must contain exactly one endogenous variable."
+                )
+
+        # integer and boolean columns are finite by construction
+        maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
+        self._drop(
+            ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
+            "rows with infinite values",
         )
-        if is_infinite.any():
-            infinite_indices = is_infinite[is_infinite].index.tolist()
-            dropped_rows |= set(infinite_indices)
-            self._data.drop(infinite_indices, inplace=True)
-            warnings.warn(
-                f"{is_infinite.sum()} rows with infinite values dropped from the model.",
-            )
         if self._fixed_effects is not None:
             # Ensure fixed effects are `int32`
             self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
                 "int32"
             )
-        if self.fixed_effects is not None or self._drop_intercept:
+
+        if self._offset is not None:
+            if self.model_spec[_ModelMatrixKey.offset].factor_contrasts:
+                raise TypeError("The offset must be numeric.")
+            elif len(self._offset) != 1:
+                raise ValueError("The offset must evaluate to exactly one column.")
+
+        if self._fixed_effects is not None or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [
                     col for col in self._independent if col != "Intercept"
@@ -137,19 +153,24 @@ class ModelMatrix:
                     col for col in self._instruments if col != "Intercept"
                 ]
         # Drop singletons if specified
-        if drop_singletons and self.fixed_effects is not None:
-            is_singleton = pd.Series(
-                detect_singletons(self.fixed_effects.to_numpy()),
-                index=self._data.index,
+        if drop_singletons and self._fixed_effects is not None:
+            fixed_effects = self._data.loc[:, self._fixed_effects]
+            self._drop(
+                detect_singletons(fixed_effects.to_numpy()),
+                "singleton fixed effect(s)",
             )
-            if is_singleton.any():
-                singleton_indices = self._data[is_singleton].index.tolist()
-                dropped_rows |= set(singleton_indices)
-                self._data.drop(singleton_indices, inplace=True)
-                warnings.warn(
-                    f"{is_singleton.sum()} singleton fixed effect(s) dropped from the model."
-                )
-        self._na_index = frozenset(dropped_rows)
+
+    def _drop(self, is_dropped: NDArray[np.bool_], reason: str) -> None:
+        """Drop the masked rows from `self._data` and add their labels to `na_index`.
+
+        `reason` completes the warning "{n} {reason} dropped from the model."
+        """
+        n_dropped = int(is_dropped.sum())
+        if not n_dropped:
+            return
+        self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
+        self._data = self._data.loc[~is_dropped]
+        warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
     @property
     def dependent(self) -> pd.DataFrame:
@@ -181,7 +202,7 @@ class ModelMatrix:
         return self._data[cols]
 
     @property
-    def fixed_effects(self) -> Optional[pd.DataFrame]:
+    def fixed_effects(self) -> pd.DataFrame | None:
         """
         Get the fixed effects variables from the model.
 
@@ -197,7 +218,7 @@ class ModelMatrix:
             return self._data.loc[:, self._fixed_effects]
 
     @property
-    def endogenous(self) -> Optional[pd.DataFrame]:
+    def endogenous(self) -> pd.DataFrame | None:
         """
         Get the endogenous variable(s) for instrumental variable estimation.
 
@@ -214,7 +235,7 @@ class ModelMatrix:
             return self._data.loc[:, self._endogenous]
 
     @property
-    def instruments(self) -> Optional[pd.DataFrame]:
+    def instruments(self) -> pd.DataFrame | None:
         """
         Get the instrumental variable(s) for IV estimation.
 
@@ -232,7 +253,7 @@ class ModelMatrix:
             return self._data.loc[:, self._instruments]
 
     @property
-    def weights(self) -> Optional[pd.DataFrame]:
+    def weights(self) -> pd.DataFrame | None:
         """
         Get the observation weights for weighted estimation.
 
@@ -246,6 +267,23 @@ class ModelMatrix:
             return None
         else:
             return self._data.loc[:, self._weights]
+
+    @property
+    def offset(self) -> pd.DataFrame | None:
+        """
+        Get the evaluated offset for GLM estimation.
+
+        Returns
+        -------
+        pd.DataFrame or None
+            DataFrame containing the evaluated offset expression, which is
+            added to the linear predictor with a fixed coefficient of 1, or
+            None if no offset is specified.
+        """
+        if self._offset is None:
+            return None
+        else:
+            return self._data.loc[:, self._offset]
 
     @property
     def model_spec(self) -> formulaic.ModelSpec:
@@ -270,10 +308,11 @@ def create_model_matrix(
     formula: Formula,
     data: pd.DataFrame,
     weights: str | None = None,
+    offset: str | None = None,
     drop_singletons: bool = False,
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
-    context: Union[int, Mapping[str, Any]] = 0,
+    context: int | Mapping[str, Any] = 0,
 ) -> ModelMatrix:
     """
     Create a ModelMatrix from a formula and data.
@@ -293,6 +332,11 @@ def create_model_matrix(
     weights : str or None, default=None
         Column name in data to use as observation weights. Weights must be
         non-negative numeric values. If None, no weighting is applied.
+    offset : str or None, default=None
+        Formulaic expression that evaluates to one numeric offset column. The
+        offset is added to the linear predictor with a fixed coefficient of 1.
+        Rows with missing offset values are dropped together with missing rows
+        in the rest of the formula.
     drop_singletons : bool, default=False
         If True, observations that are singletons in any fixed effect category
         are dropped from the model.
@@ -315,27 +359,34 @@ def create_model_matrix(
         variables, fixed effects, instruments, weights, and metadata about
         dropped observations.
 
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.estimation.formula.model_matrix import create_model_matrix
+    from pyfixest.estimation.formula.parse import Formula
+
+    data = pf.get_data()
+    formula = Formula.parse("Y ~ X1 + f1 + f2")[0]
+    model_matrix = create_model_matrix(formula=formula, data=data)
+    ```
     """
     # Process input data
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
-        formula=formula, data=data, weights=weights
+        formula=formula, data=data, weights=weights, offset=offset
     )
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context={
-            "log": log,  # custom log settings infinite to nan
-            "i": factor_interaction,  # fixest::i()-style syntax
-            "__fixed_effect__": _factorize,
-        }
-        | {**capture_context(context)},
+        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
     )
-    drop_rows: set[int] = set(range(n_observations)).difference(
-        model_matrix[_ModelMatrixKey.main]["lhs"].index
+    drop_rows = _dropped_rows(
+        kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
+        n_observations=n_observations,
     )
     return ModelMatrix(
         model_matrix,
@@ -345,27 +396,50 @@ def create_model_matrix(
     )
 
 
+def _dropped_rows(kept: pd.Index, n_observations: int) -> frozenset[int]:
+    """Row labels in `range(n_observations)` that `kept` does not contain.
+
+    `create_model_matrix` resets the data index beforehand, so row labels and
+    row positions coincide and the complement can be taken with a mask.
+    """
+    is_kept = np.zeros(n_observations, dtype=bool)
+    is_kept[kept.to_numpy()] = True
+    return frozenset(np.flatnonzero(~is_kept).tolist())
+
+
 def _get_formulaic_formula(
     formula: Formula,
     data: pd.DataFrame,
     weights: str | None = None,
+    offset: str | None = None,
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
-    if formula.fixed_effects is not None:
-        fixed_effects_formula = _encode_fixed_effects(
-            fixed_effects=formula.fixed_effects, data=data
+    if formula.is_fixed_effects:
+        formula_kwargs.update(
+            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
         )
-        formula_kwargs.update({_ModelMatrixKey.fixed_effects: fixed_effects_formula})
-    if formula.first_stage is not None:
+    if formula.is_instrumental_variable:
         formula_kwargs.update(
             {_ModelMatrixKey.instrumental_variable: formula.first_stage}
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)
         formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+    if offset is not None:
+        formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
     formula_formulaic = formulaic.Formula(
         formula_kwargs,
-        _parser=DefaultFormulaParser(feature_flags=FORMULAIC_FEATURE_FLAG),
+        _parser=DefaultFormulaParser(
+            feature_flags=FORMULAIC_FEATURE_FLAG,
+            # When FEs are present, include_intercept=True so that spans_intercept=True
+            # terms (like i()) receive reduced_rank=True from formulaic, causing them to
+            # drop the first level (matching R/fixest). The intercept column is removed
+            # afterwards in ModelMatrix._process(). Without this, i() would receive
+            # reduced_rank=False and generate all levels; the post-hoc collinearity check
+            # would then drop the last level instead of the first, mismatching R.
+            include_intercept=formula.is_fixed_effects,
+        ),
     )
+
     return formula_formulaic

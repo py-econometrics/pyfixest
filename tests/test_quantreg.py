@@ -12,9 +12,6 @@ import pyfixest as pf
 quantreg = importr("quantreg")
 stats = importr("stats")
 
-# Enable pandas conversion
-pandas2ri.activate()
-
 
 @pytest.fixture
 def stata_results_crv():
