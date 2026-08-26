@@ -17,6 +17,16 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Contributor Workflow
+
+- Repository-local skills and developer guides now define architecture,
+  numerical validation, change verification, history curation, review, and PR
+  preparation for contributors and coding agents.
+- A new `test-r-fixest-fast` task runs a compact edit-time comparison of
+  `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
+  `quantreg`. The existing estimator-specific R suites remain the authoritative
+  reference coverage.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
