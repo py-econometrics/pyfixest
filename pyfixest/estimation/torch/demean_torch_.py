@@ -12,6 +12,7 @@ COO on MPS (Metal does not support sparse CSR).
 from __future__ import annotations
 
 import warnings
+from typing import cast
 
 import numpy as np
 import torch
@@ -238,8 +239,7 @@ def _make_demean_variant(
         tol: float = 1e-8,
         maxiter: int = 100_000,
     ) -> tuple[NDArray[np.float64], bool]:
-        if flist is None:
-            raise ValueError("flist cannot be None")
+        flist = cast(NDArray[np.uint64], flist)
         return _demean_torch_on_device_impl(
             x,
             flist,

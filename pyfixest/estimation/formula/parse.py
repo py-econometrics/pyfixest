@@ -284,7 +284,7 @@ class Formula:
         """
         formula = _preprocess(formula)
         return [
-            cls(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
+            Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
 

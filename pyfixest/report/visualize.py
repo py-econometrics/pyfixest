@@ -1,5 +1,5 @@
 import math
-from collections.abc import ValuesView
+from collections.abc import Callable, ValuesView
 from typing import cast
 
 import matplotlib.pyplot as plt
@@ -709,7 +709,11 @@ def _coefplot_matplotlib(
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
+    colormap = cast(
+        Callable[[np.ndarray], np.ndarray],
+        plt.cm.jet,  # ty: ignore[unresolved-attribute]
+    )
+    colors = colormap(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging

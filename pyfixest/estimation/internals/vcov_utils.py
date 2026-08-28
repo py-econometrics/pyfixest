@@ -59,8 +59,7 @@ def prepare_cluster_state(
     k_fe_nested = 0
     n_fe_fully_nested = 0
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
-        if fe is None:
-            raise ValueError("`fe` must not be None when `fixef` is specified.")
+        fe = cast(pd.DataFrame | np.ndarray, fe)
         k_fe = cast(np.ndarray | pd.Series, k_fe)
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),

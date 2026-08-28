@@ -303,7 +303,7 @@ def _did2s_vcov(
     """
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
-    _G = len(np.unique(clustid))  # actually not used here, neither in did2s
+    _G = cast(pd.Index, clustid).nunique()  # actually not used here, neither in did2s
 
     if weights is None:
         weights_array = np.repeat(1.0, data.shape[0])
