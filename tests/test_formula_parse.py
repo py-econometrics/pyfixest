@@ -7,14 +7,19 @@ This module contains:
 - Part 3: Edge case tests
 """
 
-import re
+import warnings
 
+import formulaic
 import numpy as np
 import pytest
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+from pyfixest.estimation.formula.utils import (
+    _get_position_of_first_parenthesis_pair,
+    _preprocess_fixed_effect_interactions,
+)
 
 # =============================================================================
 # Fixtures
@@ -266,8 +271,44 @@ class TestMultipleEstimationExpansion:
     )
     def test_expand_all_multiple_estimation(self, formula, expected):
         """Test expansion of multiple estimation syntax."""
-        result = _expand_all_multiple_estimation(formula)
+        result = list(_expand_all_multiple_estimation(formula))
         assert result == expected
+
+
+class TestParenthesisPair:
+    """Tests for _get_position_of_first_parenthesis_pair."""
+
+    def test_simple_pair(self):
+        string = "sw(X1, X2)"
+        start, end = _get_position_of_first_parenthesis_pair(string)
+        assert string[start:end] == "X1, X2"
+
+    def test_nested_pair_as_first_content_char(self):
+        """Content starting with '(' must not terminate at the inner ')'.
+
+        Regression test: the scan previously skipped the first content
+        character, so `sw((a+b), c)` returned `"(a+b"` instead of the full
+        content of the outer pair.
+        """
+        string = "sw((a+b), c)"
+        start, end = _get_position_of_first_parenthesis_pair(string)
+        assert string[start:end] == "(a+b), c"
+
+    def test_unmatched_parenthesis_raises_value_error(self):
+        """Unclosed '(' raises ValueError, not IndexError."""
+        with pytest.raises(ValueError, match="Unmatched"):
+            _get_position_of_first_parenthesis_pair("sw(a, b")
+        with pytest.raises(ValueError, match="Unmatched"):
+            _get_position_of_first_parenthesis_pair("sw(a, b( | f1)")
+
+    def test_no_parenthesis_raises_value_error(self):
+        with pytest.raises(ValueError, match="No parenthesis"):
+            _get_position_of_first_parenthesis_pair("sw")
+
+    def test_expansion_with_leading_nested_group(self):
+        """sw() arguments wrapped in parentheses expand correctly end to end."""
+        result = list(_expand_all_multiple_estimation("Y ~ sw((X1+X2), X3)"))
+        assert result == ["Y ~ (X1+X2)", "Y ~ X3"]
 
 
 class TestFormulaParse:
@@ -317,9 +358,9 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 + X2")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ X1 + X2"
-        assert f.fixed_effects is None
-        assert f.first_stage is None
+        assert f.second_stage == "Y ~ 1 + X1 + X2"
+        assert not f.is_fixed_effects
+        assert not f.is_instrumental_variable
 
     def test_parse_with_fe(self):
         """Test parsing a formula with fixed effects."""
@@ -327,7 +368,7 @@ class TestFormulaParse:
         assert len(result) == 1
         f = result[0]
         assert f.second_stage == "Y ~ X1"
-        assert f.fixed_effects == "f1"
+        assert str(f.fixed_effects) == "f1"
 
     # def test_parse_iv(self):
     #     result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
@@ -341,8 +382,8 @@ class TestFormulaParse:
         """Y + Y2 ~ X1 is preprocessed to sw(Y, Y2) ~ X1."""
         result = Formula.parse("Y + Y2 ~ X1")
         assert len(result) == 2
-        assert result[0].second_stage == "Y ~ X1"
-        assert result[1].second_stage == "Y2 ~ X1"
+        assert result[0].second_stage == "Y ~ 1 + X1"
+        assert result[1].second_stage == "Y2 ~ 1 + X1"
 
     def test_parse_to_dict_groups_by_fe(self):
         """Test parsing of formulas into dictionary."""
@@ -368,7 +409,7 @@ class TestFormulaParse:
         result = Formula.parse("Y1 + Y2 ~ sw(X1, X2) | csw(f1, f2)")
         assert len(result) == 8  # 2 dep * 2 covars * 2 FE
         second_stages = [f.second_stage for f in result]
-        fixed_effects = [f.fixed_effects for f in result]
+        fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
             "Y1 ~ X1",
             "Y1 ~ X1",
@@ -394,24 +435,24 @@ class TestFormulaParse:
         """csw0 in FE produces a '1' zero-step which maps to fixed_effects=None."""
         result = Formula.parse("Y ~ X1 | csw0(f1, f2)")
         assert len(result) == 3
-        assert result[0].fixed_effects is None  # zero step: "1" -> None
-        assert result[1].fixed_effects == "f1"
-        assert result[2].fixed_effects == "f1 + f2"
+        assert not result[0].is_fixed_effects  # zero step: "1" -> None
+        assert str(result[1].fixed_effects) == "f1"
+        assert str(result[2].fixed_effects) == "f1 + f2"
 
     def test_parse_sw0_in_fe_maps_to_none(self):
         """sw0 in FE produces a '1' zero-step which maps to fixed_effects=None."""
         result = Formula.parse("Y ~ X1 | sw0(f1, f2)")
         assert len(result) == 3
-        assert result[0].fixed_effects is None  # zero step: "1" -> None
-        assert result[1].fixed_effects == "f1"
-        assert result[2].fixed_effects == "f2"
+        assert not result[0].is_fixed_effects  # zero step: "1" -> None
+        assert str(result[1].fixed_effects) == "f1"
+        assert str(result[2].fixed_effects) == "f2"
 
     def test_parse_mvsw_covars_with_csw_fe(self):
         """Mvsw in covariates combined with csw in fixed effects."""
         result = Formula.parse("Y ~ mvsw(X1, X2) | csw(f1, f2)")
         assert len(result) == 8  # 4 mvsw * 2 csw
         second_stages = [f.second_stage for f in result]
-        fixed_effects = [f.fixed_effects for f in result]
+        fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
             "Y ~ 1",
             "Y ~ 1",
@@ -441,6 +482,73 @@ class TestFormulaParse:
         assert "f1 + f2" in result
 
 
+class TestFixedEffectInteractions:
+    """Tests for canonical and legacy fixed-effect interaction syntax."""
+
+    def test_canonical_interaction_parses_without_warning(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
+
+        assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
+        assert parsed.formula == "Y ~ X1 | f1:f2"
+
+    def test_legacy_interaction_warns_once_and_is_canonical(self):
+        canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
+
+        with pytest.warns(
+            DeprecationWarning,
+            match=r"Instead of `Y ~ X1 \| f1\^f2` use `Y ~ X1 \| f1:f2`",
+        ) as caught:
+            legacy = Formula.parse("Y ~ X1 | f1^f2")[0]
+
+        assert len(caught) == 1
+        assert legacy._formula.rhs[1] == canonical._formula.rhs[1]
+        assert legacy.formula == canonical.formula == "Y ~ X1 | f1:f2"
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1^f2^f3", "f1:f2:f3"),
+            ("f1^f2:f3 + f4^f5", "f1:f2:f3 + f4:f5"),
+        ],
+    )
+    def test_legacy_chained_and_mixed_interactions(self, fixed_effects, expected):
+        with pytest.warns(DeprecationWarning) as caught:
+            parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert len(caught) == 1
+        assert set(str(parsed.fixed_effects).split(" + ")) == set(expected.split(" + "))
+        assert "^" not in parsed.formula
+
+    def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
+        formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
+
+        with pytest.warns(DeprecationWarning) as caught:
+            translated = _preprocess_fixed_effect_interactions(formula)
+
+        assert len(caught) == 1
+        assert translated == (
+            "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2:f3"
+        )
+
+    def test_formulaic_power_operators_match_outside_fixed_effects(self):
+        caret = Formula.parse("Y ~ (X1 + X2)^2 | f1:f2")[0]
+        double_star = Formula.parse("Y ~ (X1 + X2)**2 | f1:f2")[0]
+
+        assert caret._formula.rhs[0] == double_star._formula.rhs[0]
+        assert str(caret._formula.rhs[0]) == "1 + X1 + X2 + X1:X2"
+
+    def test_nested_fe_and_iv_power_expressions_are_untouched(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            nested_fe = Formula.parse("Y ~ X1 | I(f1^2)")[0]
+            iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
+
+        assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
+        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+
+
 class TestValidation:
     """Tests for formula validation / error handling."""
 
@@ -456,19 +564,17 @@ class TestValidation:
 
     def test_too_many_tildes_in_part(self):
         """Check maximum number of tildes is not exceeded."""
-        with pytest.raises(FormulaSyntaxError):
+        with pytest.raises(formulaic.errors.FormulaSyntaxError):
             Formula.parse("Y ~ X1 ~ X2 ~ X3")
 
     def test_three_parts_without_iv(self):
         """Y ~ X | f1 | f2 should error (should be Y ~ X | f1 + f2)."""
-        with pytest.raises(FormulaSyntaxError, match="Three-part formula"):
+        with pytest.raises(FormulaSyntaxError):
             Formula.parse("Y ~ X1 | f1 | f2")
 
     def test_three_parts_with_tilde_in_fe(self):
         """Y ~ X | Z ~ W | A ~ B should error (FE part has tilde)."""
-        with pytest.raises(
-            FormulaSyntaxError, match=re.compile("fixed effects.*cannot contain")
-        ):
+        with pytest.raises(FormulaSyntaxError):
             Formula.parse("Y ~ X | Z ~ W | A ~ B")
 
     def test_first_part_must_have_tilde(self):
@@ -541,6 +647,18 @@ def test_explicit_no_fe_iv_coefficients_match(test_data):
     assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
 
 
+def test_interacted_fixed_effect_matches_manual_interaction(test_data):
+    """Interacted fixed effects match an explicitly constructed group."""
+    data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
+    data["f1_f2"] = list(zip(data["f1"], data["f2"], strict=True))
+
+    interacted = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    manual = pf.feols("Y ~ X1 | f1_f2", data=data, fixef_rm="none")
+
+    np.testing.assert_allclose(interacted.coef(), manual.coef())
+    np.testing.assert_allclose(interacted.se(), manual.se())
+
+
 # =============================================================================
 # Part 3: Edge Case Tests
 # =============================================================================
@@ -570,6 +688,32 @@ class TestEdgeCases:
         result = Formula.parse("Y + Y2 + Y3 ~ X1")
         assert len(result) == 3
 
+    @pytest.mark.parametrize(
+        "formula,expected_second_stage",
+        [
+            ("I(Y + Y2) ~ X1", "I(Y + Y2) ~ 1 + X1"),
+            ("I(Y + Y2 + Y3) ~ X1", "I(Y + Y2 + Y3) ~ 1 + X1"),
+            ("log(Y + Y2) ~ X1", "log(Y + Y2) ~ 1 + X1"),
+        ],
+    )
+    def test_transformed_dependent_with_plus(self, formula, expected_second_stage):
+        """A `+` nested in a transform is not a multiple-dependent separator."""
+        result = Formula.parse(formula)
+        assert len(result) == 1
+        assert result[0].second_stage == expected_second_stage
+
+    def test_transformed_dependent_matches_precomputed_column(self, test_data):
+        """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
+        data = test_data.dropna().copy()
+        data["Y_sum"] = data["Y"] + data["Y2"]
+
+        transformed = pf.feols("I(Y + Y2) ~ X1", data)
+        precomputed = pf.feols("Y_sum ~ X1", data)
+
+        np.testing.assert_allclose(
+            transformed.coef().to_numpy(), precomputed.coef().to_numpy()
+        )
+
     def test_iv_endogenous_in_second_stage(self):
         """Endogenous variable should be added to second_stage covariates."""
         result = Formula.parse("Y ~ X1 | Z1 ~ W1")
@@ -577,13 +721,19 @@ class TestEdgeCases:
         assert "Z1" in f.second_stage
         # assert f.first_stage == "Z1 ~ W1"
 
+    def test_iv_transformed_endogenous_in_second_stage(self):
+        """A transformed endogenous variable survives the _hat term filtering."""
+        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
+        assert f.first_stage.startswith("log(Z1) ~")
+
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
         f = result[0]
         assert "Z1" in f.second_stage
-        assert f.fixed_effects == "f1"
-        # assert f.first_stage == "Z1 ~ W1"
+        assert str(f.fixed_effects) == "f1"
+        assert str(f.first_stage) == "Z1 ~ 1 + W1 + X1"
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""
@@ -596,8 +746,8 @@ class TestEdgeCases:
         f_explicit = result_explicit[None][0]
         f_implicit = result_implicit[None][0]
         assert f_explicit.second_stage == f_implicit.second_stage
-        assert f_explicit.fixed_effects is None
-        assert f_implicit.fixed_effects is None
+        assert not f_explicit.is_fixed_effects
+        assert not f_implicit.is_fixed_effects
 
     def test_explicit_no_fe_with_iv(self):
         """Y ~ 1 | 0 | Z1 ~ X1 and Y ~ 1 | Z1 ~ X1 should be equivalent."""
@@ -610,8 +760,8 @@ class TestEdgeCases:
         f_explicit = result_explicit[None][0]
         f_implicit = result_implicit[None][0]
         assert f_explicit.second_stage == f_implicit.second_stage
-        assert f_explicit.fixed_effects is None
-        assert f_implicit.fixed_effects is None
+        assert not f_explicit.is_fixed_effects
+        assert not f_implicit.is_fixed_effects
         assert f_explicit.first_stage == f_implicit.first_stage
 
     def test_formula_roundtrip(self):
@@ -629,5 +779,13 @@ class TestEdgeCases:
             reparsed = Formula.parse(result[0].formula)
             assert len(reparsed) == 1
             assert reparsed[0].second_stage == result[0].second_stage
-            assert reparsed[0].fixed_effects == result[0].fixed_effects
-            assert reparsed[0].first_stage == result[0].first_stage
+            assert reparsed[0].is_fixed_effects == result[0].is_fixed_effects
+            if result[0].is_fixed_effects:
+                assert reparsed[0].fixed_effects == result[0].fixed_effects
+
+            assert (
+                reparsed[0].is_instrumental_variable
+                == result[0].is_instrumental_variable
+            )
+            if result[0].is_instrumental_variable:
+                assert reparsed[0].first_stage == result[0].first_stage

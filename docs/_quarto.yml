@@ -235,8 +235,9 @@ quartodoc:
         Internal APIs for formula parsing and model matrix construction.
       contents:
         - estimation.formula.parse.Formula
+        - estimation.formula.model_matrix.create_model_matrix
         - estimation.formula.model_matrix.ModelMatrix
-        - estimation.formula.factor_interaction.factor_interaction
+        - estimation.formula.transforms.factor_interaction.factor_interaction
     - title: Demeaning
       desc: |
         Fixed-effects demeaning: the `demean()` workhorse and the configurable
@@ -256,4 +257,3 @@ quartodoc:
         - utils.utils.ssc
         - utils.utils.get_ssc
         - estimation.post_estimation.savi.optimal_mixture_precision
-        - estimation.deprecated.model_matrix_fixest_.model_matrix_fixest

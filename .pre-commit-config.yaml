@@ -36,7 +36,7 @@ repos:
         args: ["--verbose"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.1
     hooks:
       - id: ruff-check
         args: ["--fix", "--output-format=full"]

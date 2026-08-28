@@ -17,6 +17,16 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Contributor Workflow
+
+- Repository-local skills and developer guides now define architecture,
+  numerical validation, change verification, history curation, review, and PR
+  preparation for contributors and coding agents.
+- A new `test-r-fixest-fast` task runs a compact edit-time comparison of
+  `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
+  `quantreg`. The existing estimator-specific R suites remain the authoritative
+  reference coverage.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
@@ -59,6 +69,8 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson offsets now accept Formulaic transformations such as
+  `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
   `family="poisson"`. Previously `weights` was silently ignored and `offset`
   was unavailable; Poisson required calling `fepois()` directly.
@@ -69,7 +81,86 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
 
+### Formula Parsing on `formulaic`
+
+Formula parsing no longer splits strings by hand. `feols()` and friends now hand
+the formula to `formulaic`, keep the resulting `ModelSpec`, and reuse it to build
+model matrices for `predict()` and `fixef()`. Most formula terms consequently use
+`formulaic`'s syntax and semantics directly. PyFixest still preprocesses its
+fixest-style multiple-estimation syntax and deprecated legacy spellings. Reusing
+the fitted `ModelSpec` removes a class of bugs where a model matrix was rebuilt
+from `newdata` with different encodings than the one it was fitted on.
+
+The required `formulaic` version is now `>=1.2.0,<1.3`.
+
+Behaviour that changed as a result:
+
+- **Model names are canonical `formulaic` formulas.** They now carry an explicit
+  intercept, order terms by interaction order, and normalise whitespace:
+
+  ```python
+  pf.feols("Y ~ sw(X2+X1, X1)", data)
+  # 0.60.0: ["Y ~ X2+X1", "Y ~ X1"]
+  # 0.70.0: ["Y ~ 1 + X2 + X1", "Y ~ 1 + X1"]
+  ```
+
+  Anything keyed on the old spelling needs updating -- `rename_models` mappings
+  in `etable()`, `coefplot()` and `iplot()`, and lookups into
+  `FixestMulti.all_fitted_models`.
+
+- **Duplicate specifications collapse to one model.** Because names are
+  canonical, a multiple-estimation expansion that produces the same model twice
+  is now estimated and reported once:
+
+  ```python
+  pf.feols("Y ~ csw0(X2, f3) + X2", data)
+  # 0.60.0: 3 models, including the duplicate "Y ~ X2 + X2"
+  # 0.70.0: 2 models
+  ```
+
+- **`fixef()` returns a `pd.DataFrame`** with columns `variable`, `code`,
+  `level` and `coefficient`, instead of `dict[str, dict[str, float]]`. Replace
+  `fit.fixef()["C(f1)"][level]` with a lookup on the frame. The estimates are
+  unchanged, except that with two or more fixed effects the reference level of
+  the second and later ones is now listed explicitly with a coefficient of `0`
+  rather than omitted.
+
+- **Fixed-effect interactions use `:` as their canonical spelling.** Write
+  `Y ~ X1 | f1:f2` to absorb the interaction of `f1` and `f2`. Formulas, model
+  names, summaries, `fixef()` output and prediction messages all use `f1:f2`.
+  The former `f1^f2` spelling remains accepted temporarily, but emits a
+  `DeprecationWarning` and is immediately normalised to `f1:f2`.
+
+- **`predict(newdata=...)` works with `i()`, interacted fixed effects
+  (`f1:f2`) and `poly()`.** These previously raised `NotImplementedError`; the
+  stored `ModelSpec` now encodes `newdata` against the levels seen at fit time.
+  Rows carrying a categorical level that was not seen during fitting return
+  `NaN`, matching how unseen fixed effect levels were already handled. IV
+  models still do not support `predict()`.
+
+- **Malformed formulas may raise `formulaic.errors.FormulaSyntaxError`** rather
+  than `pyfixest.errors.FormulaSyntaxError`. The two are unrelated classes --
+  neither inherits from the other, and neither is a `ValueError` -- so code
+  catching the pyfixest exception has to catch both.
+
+- **`pyfixest.estimation.formula.factor_interaction` moved** to
+  `pyfixest.estimation.formula.transforms.factor_interaction`. The `i()`
+  operator itself is unaffected; only the import path changed.
+
 ### Deprecations and Removals
+
+Formula syntax:
+
+- Using `^` for a fixed-effect interaction (`Y ~ X1 | f1^f2`) is deprecated in
+  favour of `:` (`Y ~ X1 | f1:f2`). The old spelling still works and now emits
+  a `DeprecationWarning`.
+- The fixest-style instrumental variable syntax `Y ~ X1 | X2 ~ Z1` is deprecated
+  in favour of `formulaic`'s `Y ~ X1 + [X2 ~ Z1]`. The old spelling still works
+  and now emits a `DeprecationWarning`.
+- Specifying multiple dependent variables with `+` (`Y + Y2 ~ X1`) is deprecated
+  in favour of `sw(Y, Y2) ~ X1`. The old spelling still works and now emits a
+  `DeprecationWarning`. A `+` nested inside a transform (`I(Y + Y2) ~ X1`) is a
+  single dependent variable and is unaffected.
 
 As previously announced, we removed:
 
@@ -85,6 +176,8 @@ We also removed:
 
 ### Bug Fixes
 
+- CCV auxiliary fits now retain the original demeaner configuration.
+- IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
   different from the model order. Previously, intervals could be associated
   with the wrong coefficient labels, including for simultaneous confidence

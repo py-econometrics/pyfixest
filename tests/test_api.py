@@ -388,17 +388,22 @@ def spline_data():
         ("feglm", "gaussian"),
     ],
 )
-def test_context_capture(spline_data, method, family):
+@pytest.mark.parametrize("fixed_effects", ["", " | f1 + f2"])
+def test_context_capture(spline_data, method, family, fixed_effects):
     method_kwargs = {"data": spline_data}
     if family:
         method_kwargs["family"] = family
 
-    explicit_fit = getattr(pf, method)("Y ~ X2_0 + 0_X2_1 + 1_X2", **method_kwargs)
+    explicit_fit = getattr(pf, method)(
+        f"Y ~ X2_0 + 0_X2_1 + 1_X2{fixed_effects}", **method_kwargs
+    )
     context_captured_fit = getattr(pf, method)(
-        "Y ~ _lspline(X2,[0,1])", context=0, **method_kwargs
+        f"Y ~ _lspline(X2,[0,1]){fixed_effects}", context=0, **method_kwargs
     )
     context_captured_fit_map = getattr(pf, method)(
-        "Y ~ _lspline(X2,[0,1])", context={"_lspline": _lspline}, **method_kwargs
+        f"Y ~ _lspline(X2,[0,1]){fixed_effects}",
+        context={"_lspline": _lspline},
+        **method_kwargs,
     )
 
     for context_fit in [context_captured_fit, context_captured_fit_map]:
