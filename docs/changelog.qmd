@@ -188,6 +188,7 @@ We also removed:
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
 
+
 ## PyFixest 0.60.0
 
 This release focuses on the fixed-effects demeaning stack. The main changes are
