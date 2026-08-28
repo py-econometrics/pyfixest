@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 
@@ -77,24 +77,16 @@ class FixestMulti(TidyColumnAccessors):
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(
-            _tmp, models=cast(Any, self.all_fitted_models.values())
-        )
+        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.coefplot.__doc__ = _tmp.__doc__
         _tmp = _module.iplot
-        self.iplot = functools.partial(
-            _tmp, models=cast(Any, self.all_fitted_models.values())
-        )
+        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.iplot.__doc__ = _tmp.__doc__
         _tmp = _module.summary
-        self.summary = functools.partial(
-            _tmp, models=cast(Any, self.all_fitted_models.values())
-        )
+        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.summary.__doc__ = _tmp.__doc__
         _tmp = _module.etable
-        self.etable = functools.partial(
-            _tmp, models=cast(Any, self.all_fitted_models.values())
-        )
+        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
         self.etable.__doc__ = _tmp.__doc__
 
     @property

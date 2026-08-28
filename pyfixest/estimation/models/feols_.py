@@ -4,7 +4,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
 import formulaic
 import numpy as np
@@ -83,6 +83,14 @@ from pyfixest.utils.utils import (
 )
 
 decomposition_type = Literal["gelbach"]
+
+
+class _ModelSpecWithRhs(Protocol):
+    """Formulaic model-spec interface needed for prediction materialization."""
+
+    rhs: formulaic.ModelSpec
+
+
 prediction_type = Literal["response", "link"]
 
 
@@ -260,6 +268,18 @@ class Feols(ResultAccessorMixin):
 
     """
 
+    if TYPE_CHECKING:
+        _Y: pd.DataFrame | np.ndarray
+        _X: pd.DataFrame | np.ndarray
+        _Yd: pd.DataFrame | np.ndarray
+        _Xd: pd.DataFrame | np.ndarray
+        _Z: pd.DataFrame | np.ndarray | None
+        _fe: pd.DataFrame | np.ndarray | None
+        _endogvar: pd.DataFrame | np.ndarray | None
+        _k_fe: pd.Series | None
+        _coefnames_z: list[str] | None
+        _lag: int | None
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -327,8 +347,6 @@ class Feols(ResultAccessorMixin):
         self._copy_data = copy_data
         self._lean = lean
         self._context = capture_context(context)
-        self._lag: int | None = None
-
         self._support_crv3_inference = True
         self._support_hac_inference = True
         self._supports_wildboottest = True
@@ -459,8 +477,11 @@ class Feols(ResultAccessorMixin):
             else None
         )
 
-        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
+        if self._fe is None:
+            self._k_fe = None
+        else:
+            self._k_fe = self._fe.nunique(axis=0)
+        self._n_fe = len(cast(pd.Series, self._k_fe)) if self._has_fixef else 0
 
         # an empty drop still rebuilds the whole frame, so guard it
         if self._na_index:
@@ -510,13 +531,13 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            assert isinstance(self._Y, pd.DataFrame)
-            assert isinstance(self._X, pd.DataFrame)
-            assert isinstance(self._fe, pd.DataFrame)
+            Y = cast(pd.DataFrame, self._Y)
+            X = cast(pd.DataFrame, self._X)
+            fe = cast(pd.DataFrame, self._fe)
             self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
-                self._Y,
-                self._X,
-                self._fe,
+                Y,
+                X,
+                fe,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
@@ -539,11 +560,11 @@ class Feols(ResultAccessorMixin):
 
     def to_array(self):
         "Convert estimation data frames to np arrays."
-        assert isinstance(self._Yd, pd.DataFrame)
-        assert isinstance(self._Xd, pd.DataFrame)
+        Yd = cast(pd.DataFrame, self._Yd)
+        Xd = cast(pd.DataFrame, self._Xd)
         self._Y, self._X = (
-            self._Yd.to_numpy(),
-            self._Xd.to_numpy(),
+            Yd.to_numpy(),
+            Xd.to_numpy(),
         )
 
     def wls_transform(self):
@@ -555,21 +576,22 @@ class Feols(ResultAccessorMixin):
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear variables."
-        assert isinstance(self._X, np.ndarray)
-        if self._X.shape[1] > 0:
+        X = cast(np.ndarray, self._X)
+        if X.shape[1] > 0:
             (
                 self._X,
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
             ) = drop_multicollinear_variables(
-                self._X,
+                X,
                 self._coefnames,
                 self._collin_tol,
             )
         # update X_is_empty
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1] if not self._X_is_empty else 0
+        X = cast(np.ndarray, self._X)
+        self._X_is_empty = X.shape[1] == 0
+        self._k = X.shape[1] if not self._X_is_empty else 0
 
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
@@ -587,16 +609,15 @@ class Feols(ResultAccessorMixin):
         self.to_array()
         self.drop_multicol_vars()
         self.wls_transform()
-        assert isinstance(self._X, np.ndarray)
-        assert isinstance(self._Y, np.ndarray)
-        Y = self._Y
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
 
         if self._X_is_empty:
             self._u_hat = Y
         else:
-            fit = fit_ols(X=self._X, Y=Y, solver=self._solver)
+            fit = fit_ols(X=X, Y=Y, solver=self._solver)
 
-            self._Z = self._X
+            self._Z = X
             self._tZX = fit.tZX
             self._tZy = fit.tZy
             self._beta_hat = fit.beta
@@ -755,7 +776,7 @@ class Feols(ResultAccessorMixin):
             "ssc_dict": self._ssc_dict,
             "N": self._N,
             "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "k_fe": cast(pd.Series, self._k_fe).sum() if self._has_fixef else 0,
             "n_fe": self._n_fe,
             "vcov_type": vcov_type,
             "G": G,
@@ -783,10 +804,10 @@ class Feols(ResultAccessorMixin):
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
 
     def _vcov_hetero(self):
-        assert isinstance(self._X, np.ndarray)
+        X = cast(np.ndarray, self._X)
         return vcov_hetero(
             scores=self._scores,
-            X=self._X,
+            X=X,
             tZX=self._tZX,
             weights=self._weights,
             weights_type=self._weights_type,
@@ -856,11 +877,11 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_crv3_fast(self, clustid, cluster_col):
-        assert isinstance(self._X, np.ndarray)
-        assert isinstance(self._Y, np.ndarray)
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
         return vcov_crv3_fast(
-            X=self._X,
-            Y=self._Y,
+            X=X,
+            Y=Y,
             beta_hat=self._beta_hat,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -994,7 +1015,7 @@ class Feols(ResultAccessorMixin):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        k_fe = np.sum(cast(pd.Series, self._k_fe).values) if self._has_fixef else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -1360,18 +1381,16 @@ class Feols(ResultAccessorMixin):
 
         fml = self._fml
         data = self._data
-        assert isinstance(self._Y, np.ndarray)
-        assert isinstance(self._X, np.ndarray)
-        Y = self._Y.flatten()
+        Y = cast(np.ndarray, self._Y).flatten()
         W = data[treatment].to_numpy()
         assert np.all(np.isin(W, [0, 1])), (
             "Treatment variable must be binary with values 0 and 1"
         )
-        X = self._X
+        X = cast(np.ndarray, self._X)
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = float(self.coef().xs(treatment))
+        tau_full = np.array(self.coef().xs(treatment))
 
         N = self._N
         G = len(unique_clusters)
@@ -1772,7 +1791,7 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = D2.dot(alpha)
+        self._sumFE = cast(csc_matrix, D2).dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 
@@ -1873,9 +1892,7 @@ class Feols(ResultAccessorMixin):
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             # divide by sqrt(weights) as self._X is "weighted"
-            assert isinstance(self._X, np.ndarray)
-            assert isinstance(self._Y, np.ndarray)
-            X = self._X
+            X = cast(np.ndarray, self._X)
             y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
@@ -1889,7 +1906,9 @@ class Feols(ResultAccessorMixin):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            rhs_spec = cast(
+                _ModelSpecWithRhs, self._model_spec[_ModelMatrixKey.main]
+            ).rhs
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )
@@ -1942,12 +1961,11 @@ class Feols(ResultAccessorMixin):
                 y_hat = np.exp(y_hat)
 
         if se_fit or interval == "prediction":
-            assert isinstance(X, np.ndarray)
             prediction_df = _compute_prediction_error(
                 model=self,
                 nobs=n_observations,
                 yhat=y_hat,
-                X=X,
+                X=cast(np.ndarray, X),
                 alpha=alpha,
             )
             if interval == "prediction":
@@ -2123,16 +2141,16 @@ class Feols(ResultAccessorMixin):
 
         else:
             weights = self._weights.flatten()
-            assert isinstance(self._Y, np.ndarray)
-            assert isinstance(self._X, np.ndarray)
+            Y = cast(np.ndarray, self._Y)
+            X = cast(np.ndarray, self._X)
             fval_df = (
                 self._data[self._fixef.split("+")] if self._fixef is not None else None
             )
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(
-                Y=self._Y,
-                X=self._X,
+                Y=Y,
+                X=X,
                 D=D,
                 coefnames=self._coefnames,
                 resampvar=resampvar_,

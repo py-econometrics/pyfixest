@@ -16,7 +16,7 @@ def _compute_CCV(
     treatment: str,
     cluster_vec: np.ndarray,
     pk: float,
-    tau_full: float,
+    tau_full: float | np.ndarray,
     demeaner: AnyDemeaner,
 ) -> float:
     """
@@ -43,7 +43,7 @@ def _compute_CCV(
     pk : float between 0 and 1.
         The proportion of clusters sampled.
         Default is 1, which means all clusters are sampled.
-    tau_full : float
+    tau_full : float or np.ndarray
         The treatment effect estimate for the full sample.
     demeaner : AnyDemeaner
         Demeaner configuration used by the original model.

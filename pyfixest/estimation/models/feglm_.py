@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -128,10 +128,6 @@ class Feglm(Feols):
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
-        assert isinstance(self._Y, pd.DataFrame)
-        assert isinstance(self._X, pd.DataFrame)
-        if self._fe is not None:
-            assert isinstance(self._fe, pd.DataFrame)
 
         # check for separation
         na_separation: list[int] = []
@@ -140,10 +136,13 @@ class Feglm(Feols):
             and self.separation_check is not None
             and self.separation_check  # not an empty list
         ):
+            Y = cast(pd.DataFrame, self._Y)
+            X = cast(pd.DataFrame, self._X)
+            fe = cast(pd.DataFrame, self._fe)
             na_separation = check_for_separation(
-                Y=self._Y,
-                X=self._X,
-                fe=self._fe,
+                Y=Y,
+                X=X,
+                fe=fe,
                 fml=self._fml,
                 data=self._data,
                 demeaner=self._demeaner,
@@ -151,10 +150,12 @@ class Feglm(Feols):
             )
 
         if na_separation:
-            assert isinstance(self._fe, pd.DataFrame)
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
-            self._fe.drop(na_separation, axis=0, inplace=True)
+            Y = cast(pd.DataFrame, self._Y)
+            X = cast(pd.DataFrame, self._X)
+            fe = cast(pd.DataFrame, self._fe)
+            Y.drop(na_separation, axis=0, inplace=True)
+            X.drop(na_separation, axis=0, inplace=True)
+            fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
@@ -167,37 +168,38 @@ class Feglm(Feols):
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            if self._has_fixef:
-                assert isinstance(self._fe, pd.DataFrame)
-                self._k_fe = self._fe.nunique(axis=0)
-            else:
-                self._k_fe = pd.Series(dtype=int)
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._k_fe = (
+                cast(pd.DataFrame, self._fe).nunique(axis=0)
+                if self._has_fixef
+                else None
+            )
+            self._n_fe = (
+                np.sum(cast(pd.Series, self._k_fe) > 1) if self._has_fixef else 0
+            )
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
-        assert isinstance(self._Y, pd.DataFrame)
-        assert isinstance(self._X, pd.DataFrame)
+        Y = cast(pd.DataFrame, self._Y)
+        X = cast(pd.DataFrame, self._X)
         self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
+            Y.to_numpy(),
+            X.to_numpy(),
+            X.to_numpy(),
         )
         if self._offset_df is not None:
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
-            assert isinstance(self._fe, pd.DataFrame)
-            self._fe = self._fe.to_numpy()
+            fe = cast(pd.DataFrame, self._fe)
+            self._fe = fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self):
         "Fit the GLM via IRLS and write results onto self.* attributes."
         self.to_array()
-        assert isinstance(self._X, np.ndarray)
-        assert isinstance(self._Y, np.ndarray)
-        assert self._fe is None or isinstance(self._fe, np.ndarray)
-        fe = self._fe
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
+        fe = cast(np.ndarray | None, self._fe)
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
@@ -205,8 +207,8 @@ class Feglm(Feols):
             return self.residualize(v=v, X=X, flist=fe, weights=weights, tol=tol)
 
         fit = fit_glm_irls(
-            X=self._X,
-            Y=self._Y,
+            X=X,
+            Y=Y,
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
@@ -389,8 +391,7 @@ class Feglm(Feols):
 
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
-        assert isinstance(self._Y, pd.DataFrame)
-        self._family.check_y(self._Y.to_numpy())
+        self._family.check_y(self._Y)
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
