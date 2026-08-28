@@ -16,6 +16,7 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
+    _FormulaWithRoot,
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
     get_first_multistage_lhs,
@@ -199,7 +200,9 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
+            exogenous = filter_multistage_endogenous_terms(
+                cast(_FormulaWithRoot, exogenous), self.endogenous
+            )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.is_fixed_effects and exogenous_terms:

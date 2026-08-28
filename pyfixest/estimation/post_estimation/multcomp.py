@@ -1,4 +1,5 @@
 import warnings
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -46,7 +47,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     bonf_df
     ```
     """
-    models = _post_processing_input_checks(models)
+    models = cast(list[Feols | Fepois | Feiv], _post_processing_input_checks(models))
     all_model_stats = pd.DataFrame()
     S = len(models)
     pvalues = np.zeros(S)
@@ -284,7 +285,7 @@ def _multcomp_resample(
     if isinstance(models, FixestMulti):
         models = models.to_list()
 
-    models = _post_processing_input_checks(models)
+    models = cast(list[Feols | Fepois | Feiv], _post_processing_input_checks(models))
     if type not in ["rwolf", "wyoung"]:
         raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
     if sampling_method not in ["wild-bootstrap", "ri"]:
