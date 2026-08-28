@@ -187,9 +187,6 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
-- `fit.ccv()` now returns numeric `tau_full` values instead of object-dtype
-  zero-dimensional arrays.
-
 
 ## PyFixest 0.60.0
 
