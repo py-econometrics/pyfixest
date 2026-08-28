@@ -107,7 +107,7 @@ def parse_formula(config: EstimationConfig) -> ParsedFormula:
         or (isinstance(config.quantile, list) and len(config.quantile) > 1)
     )
     is_iv = any(
-        f.first_stage is not None
+        f.is_instrumental_variable
         for formulas in formula_dictionary.values()
         for f in formulas
     )

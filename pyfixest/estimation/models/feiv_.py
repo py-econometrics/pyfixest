@@ -222,22 +222,22 @@ class Feiv(Feols):
     def to_array(self) -> None:
         "Transform estimation DataFrames to arrays."
         super().to_array()
-        assert isinstance(self._Zd, pd.DataFrame)
-        assert isinstance(self._endogvar, pd.DataFrame)
-        self._Z = self._Zd.to_numpy()
-        self._endogvar = self._endogvar.to_numpy()
+        Zd = cast(pd.DataFrame, self._Zd)
+        endogvar = cast(pd.DataFrame, self._endogvar)
+        self._Z = Zd.to_numpy()
+        self._endogvar = endogvar.to_numpy()
 
     def demean(self) -> None:
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            assert isinstance(self._endogvar, pd.DataFrame)
-            assert isinstance(self._Z, pd.DataFrame)
-            assert isinstance(self._fe, pd.DataFrame)
+            endogvar = cast(pd.DataFrame, self._endogvar)
+            Z = cast(pd.DataFrame, self._Z)
+            fe = cast(pd.DataFrame, self._fe)
             self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
-                self._endogvar,
-                self._Z,
-                self._fe,
+                endogvar,
+                Z,
+                fe,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
@@ -249,16 +249,16 @@ class Feiv(Feols):
     def drop_multicol_vars(self) -> None:
         "Drop multicollinear variables in matrix of instruments Z."
         super().drop_multicol_vars()
-        assert isinstance(self._Z, np.ndarray)
-        assert self._coefnames_z is not None
+        Z = cast(np.ndarray, self._Z)
+        coefnames_z = cast(list[str], self._coefnames_z)
         (
             self._Z,
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
         ) = drop_multicollinear_variables(
-            self._Z,
-            self._coefnames_z,
+            Z,
+            coefnames_z,
             self._collin_tol,
         )
 
@@ -268,12 +268,12 @@ class Feiv(Feols):
         self.to_array()
         self.drop_multicol_vars()
         self.wls_transform()
-        assert isinstance(self._X, np.ndarray)
-        assert isinstance(self._Z, np.ndarray)
-        assert isinstance(self._Y, np.ndarray)
+        X = cast(np.ndarray, self._X)
+        Z = cast(np.ndarray, self._Z)
+        Y = cast(np.ndarray, self._Y)
 
         # Second stage (2SLS) on prepared arrays
-        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
+        fit = fit_iv(X=X, Z=Z, Y=Y, solver=self._solver)
 
         self._tZX = fit.tZX
         self._tXZ = fit.tXZ
@@ -288,21 +288,16 @@ class Feiv(Feols):
     def first_stage(self) -> None:
         """Implement First stage regression."""
         # Store names of instruments from Z matrix
-        if self._coefnames_z is None:
-            raise ValueError("Instrument names are required for an IV model.")
-        self._non_exo_instruments: list[str] = list(
-            set(self._coefnames_z) - set(self._coefnames)
-        )
+        coefnames_z = cast(list[str], self._coefnames_z)
+        self._non_exo_instruments = list(set(coefnames_z) - set(self._coefnames))
 
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
 
         fml_first_stage = self.FixestFormula.first_stage
-        if fml_first_stage is None:
-            raise ValueError("An IV model requires a first-stage formula.")
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
-        if self._has_fixef:
+        if self._has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self._fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
@@ -479,17 +474,16 @@ class Feiv(Feols):
         iv_diag_statistics = iv_diag_statistics or []
 
         if "f_stat" in iv_diag_statistics:
-            coefnames_z = self._coefnames_z
-            if coefnames_z is None:
-                raise ValueError("Instrument names are required for an IV model.")
-            non_exo_instruments = self._non_exo_instruments
-            self._p_iv = len(non_exo_instruments)
+            coefnames_z = cast(list[str], self._coefnames_z)
+            self._p_iv = len(self._non_exo_instruments)
 
             # Create an identity matrix of size p_iv by p_iv
             # Pad the identity matrix with zeros to make it of size p_iv by k
             # Extract all the IV indexes and its first index
             self._iv_loc = [
-                coefnames_z.index(x) for x in non_exo_instruments if x in coefnames_z
+                coefnames_z.index(x)
+                for x in self._non_exo_instruments
+                if x in coefnames_z
             ]
 
             # Generate matrix R that tests the following;
@@ -532,9 +526,7 @@ class Feiv(Feols):
         # Extract coefficients for the non-exogenous instruments
 
         pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
-        coefnames_z = self._coefnames_z
-        if coefnames_z is None:
-            raise ValueError("Instrument names are required for an IV model.")
+        coefnames_z = cast(list[str], self._coefnames_z)
         iv_positions = [
             coefnames_z.index(instrument) for instrument in self._non_exo_instruments
         ]
