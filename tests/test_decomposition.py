@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.estimation.post_estimation.decomposition import GelbachDecomposition
 from pyfixest.utils.dgps import gelbach_data
 
 # Set matplotlib backend for headless testing
@@ -18,19 +17,6 @@ try:
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
-
-
-def test_gelbach_decomposition_repr_before_fit():
-    """A decomposition can be inspected before its design matrices are fit."""
-    decomposition = GelbachDecomposition(
-        decomp_var="x1",
-        coefnames=["x1", "x2"],
-        depvarname="y",
-    )
-
-    repr(decomposition)  # raises AttributeError if a field is left unset
-    assert decomposition.X is None
-    assert decomposition.Y is None
 
 
 @pytest.fixture

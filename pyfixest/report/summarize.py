@@ -1,3 +1,5 @@
+from collections.abc import ValuesView
+
 import maketables
 import numpy as np
 import pandas as pd
@@ -9,7 +11,14 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = (
+    FixestMulti
+    | Feols
+    | Fepois
+    | Feiv
+    | list[Feols | Fepois | Feiv]
+    | ValuesView[Feols | Fepois | Feiv]
+)
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",

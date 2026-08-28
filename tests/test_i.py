@@ -396,8 +396,9 @@ def test_factor_x_continuous(df_test, fml):
 @pytest.mark.against_r_core
 def test_interacted_fixed_effects(df_test):
     """Test i() with interacted fixed effects."""
-    fml = "Y ~ i(f_str) | fe1^fe2"
-    py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
+    r_fml = "Y ~ i(f_str) | fe1^fe2"
+    py_fml = "Y ~ i(f_str) | fe1:fe2"
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 
 

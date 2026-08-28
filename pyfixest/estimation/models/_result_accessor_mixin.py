@@ -1,7 +1,7 @@
 import functools
 import warnings
 from importlib import import_module
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -150,24 +150,24 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _adj_r2_within: float
     _vcov_type: str
 
-    def _bind_report_methods(self):
+    def _bind_report_methods(self: "Feols"):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
 
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[cast("Feols", self)])
+        self.summary = functools.partial(_tmp, models=[self])
         self.summary.__doc__ = _tmp.__doc__
 
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[cast("Feols", self)])
+        self.coefplot = functools.partial(_tmp, models=[self])
         self.coefplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[cast("Feols", self)])
+        self.iplot = functools.partial(_tmp, models=[self])
         self.iplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[cast("Feols", self)])
+        self.etable = functools.partial(_tmp, models=[self])
         self.etable.__doc__ = _tmp.__doc__
 
     def evalue(

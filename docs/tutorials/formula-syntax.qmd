@@ -67,10 +67,10 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
 
-We can interact two fixed effects via the `^` operator.
+We can interact two fixed effects via the `:` operator.
 
 ```{python}
-fit7 = pf.feols("Y ~ X1 + X2 | f1^f2", data=data)
+fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 ```
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.

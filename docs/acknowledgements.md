@@ -14,7 +14,7 @@ More concretely, we have borrowed the following API conventions and ideas direct
 
 | Feature | What PyFixest borrows |
 |---|---|
-| **Formula syntax** | `feols()`, `fepois()`, `feglm()` function and argument names; the `i()` interaction operator; multiple estimation syntax via `sw()`, `sw0()`, `csw()`, `csw0()`; fixed effects interactions via `fe1^fe2` |
+| **Formula syntax** | `feols()`, `fepois()`, `feglm()` function and argument names; the `i()` interaction operator; multiple estimation syntax via `sw()`, `sw0()`, `csw()`, `csw0()` |
 | **Multiple Estimation Optimizations** | The core idea that most of the work of fixed effects regression can be pooled / cached when estimating multiple models with the same fixed effects structure|
 | **Demeaning / FWL** | The alternating-projections algorithm in PyFixest is a standalone implementation in numba/rust, but uses the same convergence criteria and default parameters |
 | **Small-sample corrections** | The `ssc()` function to control small sample adjustments, and all of its defaults - `adj`, `fixef_K`, `cluster_adj`, `cluster_df` - mirror fixest exactly (see fixest's [standard errors vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html)) |
