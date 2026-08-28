@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, Final, cast
 
 import pandas as pd
 from formulaic.utils.stateful_transforms import stateful_transform
@@ -16,7 +16,7 @@ def encode_fixed_effects(
     _spec: Any = None,
 ) -> pd.Series[Any]:
     """Encode fixed effect interactions for model matrix construction."""
-    state = {} if _state is None else _state
+    state = cast(dict[str, pd.DataFrame], _state)
     data = pd.concat(args, axis=1)
     if FIXED_EFFECT_ENCODING not in state:
         data[FIXED_EFFECT_ENCODING] = data.groupby(data.columns.tolist()).ngroup()
