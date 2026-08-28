@@ -85,7 +85,7 @@ def feglm(
         - Cumulative stepwise regression (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
-        - Interacted fixed effects (fe1^fe2)
+        - Interacted fixed effects (fe1:fe2)
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
@@ -119,10 +119,11 @@ def feglm(
         Type of weights variable. Either "aweights" (analytic / precision
         weights) or "fweights" (frequency weights). Defaults to "aweights".
 
-    offset : Union[None, str], optional
-        Default is None. Name of a numeric column in `data` to use as an offset
-        on the link scale. Only supported with `family='poisson'`. For exposure
-        adjustments, pass the exposure on the log scale.
+    offset : str | None, optional
+        Default is None. Formulaic expression that evaluates to one numeric
+        offset column on the link scale. Only supported with
+        `family='poisson'`. For exposure adjustments, use an expression such as
+        `offset="log(population)"`.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.

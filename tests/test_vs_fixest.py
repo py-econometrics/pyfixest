@@ -28,6 +28,13 @@ atol = 1e-08
 iwls_maxiter = 25
 iwls_tol = 1e-08
 
+# Poisson IRLS predictions and fixed-effect recovery differ slightly across
+# implementations, while coefficient estimates agree more closely.
+OFFSET_COEF_RTOL = 1e-7
+OFFSET_COEF_ATOL = 1e-7
+OFFSET_PRED_RTOL = 1e-5
+OFFSET_PRED_ATOL = 1e-5
+
 ols_fmls = [
     ("Y~X1"),
     ("Y~X1+X2"),
@@ -78,9 +85,9 @@ ols_fmls = [
 
 ols_but_not_poisson_fml = [
     ("log(Y) ~ X1"),
-    ("Y~X1|f2^f3"),
-    ("Y~X1|f1 + f2^f3"),
-    ("Y~X1|f2^f3^f1"),
+    ("Y~X1|f2:f3"),
+    ("Y~X1|f1 + f2:f3"),
+    ("Y~X1|f2:f3:f1"),
 ]
 
 empty_models = [
@@ -103,7 +110,7 @@ iv_fmls = [
     # "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
     "Y ~ 1 | f1 | X1 ~ Z1",
     "Y ~ 1 | f1 + f3 | X1 ~ Z1",
-    "Y ~ 1 | f1^f2 | X1 ~ Z1",
+    "Y ~ 1 | f1:f2 | X1 ~ Z1",
     "Y ~  X2| f3 | X1 ~ Z1",
     # tests of overidentified models
     "Y ~ 1 | X1 ~ Z1 + Z2",
@@ -425,15 +432,6 @@ def test_single_fit_feols(
                     f"py_predict_all != r_predict_all for {col}",
                 )
 
-            # currently, bug when using predict with newdata and i() or C() or "^" syntax
-            blocked_transforms = ["i(", "^", "poly("]
-            blocked_transform_found = any(bt in fml for bt in blocked_transforms)
-
-            if blocked_transform_found:
-                with pytest.raises(NotImplementedError):
-                    py_predict_newsample = mod.predict(
-                        newdata=data.iloc[0:100], atol=1e-08, btol=1e-08
-                    )
             else:
                 py_predict_newsample = mod.predict(
                     newdata=data.iloc[0:100], atol=1e-12, btol=1e-12
@@ -729,6 +727,111 @@ def test_single_fit_fepois(
         1e-06,
         "py_predict_link != r_predict_link",
     )
+
+
+@pytest.mark.against_r_core
+def test_feglm_gaussian_reference_behavior():
+    """Lock in pyfixest's Gaussian-GLM compatibility decision."""
+    data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
+    fml = "Y ~ X1 + X2"
+    py_ssc = pf.ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_glm = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        vcov="iid",
+        ssc=py_ssc,
+        iwls_tol=1e-10,
+    )
+    py_ols = pf.feols(fml=fml, data=data, vcov="iid", ssc=py_ssc)
+    r_lm = stats.lm(ro.Formula(fml), data=data)
+    r_glm = stats.glm(ro.Formula(fml), data=data, family=stats.gaussian())
+    r_feols = fixest.feols(ro.Formula(fml), data=data, vcov="iid", ssc=r_ssc)
+    r_feglm = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.gaussian(),
+        vcov="iid",
+        ssc=r_ssc,
+    )
+
+    pd.testing.assert_frame_equal(py_glm.tidy(), py_ols.tidy(), rtol=0, atol=1e-10)
+    np.testing.assert_allclose(
+        py_glm._vcov,
+        py_ols._vcov,
+        rtol=0,
+        atol=1e-10,
+        err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
+    )
+
+    for r_fit, label in (
+        (r_lm, "base R lm"),
+        (r_glm, "base R glm"),
+        (r_feols, "R fixest::feols"),
+    ):
+        np.testing.assert_allclose(
+            py_glm.coef(),
+            np.asarray(stats.coef(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM coefficients differ from {label}",
+        )
+        np.testing.assert_allclose(
+            py_glm._vcov,
+            np.asarray(stats.vcov(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM covariance differs from {label}",
+        )
+        assert py_glm._df_t == int(stats.df_residual(r_fit)[0]), (
+            f"Gaussian-GLM residual degrees of freedom differ from {label}"
+        )
+
+    np.testing.assert_allclose(
+        py_glm.coef(),
+        np.asarray(stats.coef(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="Gaussian-GLM coefficients differ from R fixest::feglm",
+    )
+    assert not np.allclose(
+        py_glm._vcov,
+        np.asarray(stats.vcov(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+    ), "expected fixest::feglm covariance divergence was not observed"
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
+def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
+    """Compare transformed-offset estimation and prediction with fixest."""
+    data = data_fepois.dropna().copy()
+    data["exposure"] = np.random.default_rng(20260810).uniform(0.5, 3.0, len(data))
+
+    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)")
+    fit_r = fixest.fepois(
+        ro.Formula(fml), data=data, offset=ro.Formula("~log(exposure)")
+    )
+
+    np.testing.assert_allclose(
+        fit.coef().to_numpy(),
+        fit_r.rx2("coefficients"),
+        rtol=OFFSET_COEF_RTOL,
+        atol=OFFSET_COEF_ATOL,
+    )
+
+    newdata = data.iloc[:5]
+    for prediction_type in ["link", "response"]:
+        np.testing.assert_allclose(
+            fit.predict(newdata=newdata, type=prediction_type),
+            stats.predict(fit_r, newdata=newdata, type=prediction_type),
+            rtol=OFFSET_PRED_RTOL,
+            atol=OFFSET_PRED_ATOL,
+            equal_nan=True,
+        )
 
 
 @pytest.mark.against_r_core
@@ -1155,8 +1258,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         ("Y~ I(X1**2) + csw(f1,f2)"),
         ("Y~ X1 + csw(f1, f2) | f3"),
         ("Y~ X1 + csw0(X2, f3)"),
-        ("Y~ csw0(X2, f3) + X2"),
-        ("Y~ X1 + csw0(X2, f3) + X2"),
+        # fixest doesn't recognise duplicates: `Y ~ X2 + X2`. TODO: Cover that this is correctly identified in tests/test_formula_parse
+        # ("Y~ csw0(X2, f3) + X2"),
+        # ("Y~ X1 + csw0(X2, f3) + X2"),
         ("Y ~ X1 + csw0(f1, f2) | f3"),
         ("Y ~ X1 + sw(X2, f1, f2)"),
         ("Y ~ csw(X1, X2, f3)"),
@@ -1488,6 +1592,7 @@ def _py_fml_to_r_fml(py_fml):
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
+    py_fml = _fixed_effect_interactions_to_fixest(py_fml)
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -1515,7 +1620,17 @@ def _c_to_as_factor(py_fml):
     # Use re.sub() to perform the replacement
     r_fml = re.sub(pattern, replacement, py_fml)
 
-    return r_fml
+    return _fixed_effect_interactions_to_fixest(r_fml)
+
+
+def _fixed_effect_interactions_to_fixest(fml):
+    """Translate PyFixest fixed-effect interactions to R fixest syntax."""
+    parts = fml.split("|")
+    for index, part in enumerate(parts[1:], start=1):
+        if "~" not in part:
+            parts[index] = part.replace(":", "^")
+            break
+    return "|".join(parts)
 
 
 def get_data_r(fml, data):
@@ -1625,7 +1740,7 @@ ssc_fmls = [
     "Y ~ X1 + X2 | f2",
     "Y ~ X1 + X2 | f1 + f2",
     "Y ~ X1 + X2 | f1 + f2 + f3",
-    "Y ~ X1 + X2 | f1^f2",
+    "Y ~ X1 + X2 | f1:f2",
 ]
 
 
@@ -1649,7 +1764,7 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         )
 
     r_kwargs = {
-        "fml": ro.Formula(fml),
+        "fml": ro.Formula(_fixed_effect_interactions_to_fixest(fml)),
         "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
         "data": df,
         "ssc": fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),

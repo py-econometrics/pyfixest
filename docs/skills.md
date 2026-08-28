@@ -42,7 +42,7 @@ Other syntax:
   Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
   Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
 - Standard interactions work as well. `X1 * X2` expands to `X1 + X2 + X1:X2`, while `X1:X2` is the interaction term only.
-- Interacted FEs: `"Y ~ X1 | FE1 ^ FE2"` (creates a combined FE).
+- Interacted FEs: `"Y ~ X1 | FE1:FE2"` (creates a combined FE).
 
 ### Multiple Estimation Operators
 

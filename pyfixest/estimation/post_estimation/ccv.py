@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from numpy.random import Generator
 
+from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation import feols
 
 
@@ -16,6 +17,7 @@ def _compute_CCV(
     cluster_vec: np.ndarray,
     pk: float,
     tau_full: float,
+    demeaner: AnyDemeaner,
 ) -> float:
     """
     Compute the causal cluster variance estimator following Abadie et al (QJE 2023).
@@ -43,6 +45,8 @@ def _compute_CCV(
         Default is 1, which means all clusters are sampled.
     tau_full : float
         The treatment effect estimate for the full sample.
+    demeaner : AnyDemeaner
+        Demeaner configuration used by the original model.
     """
     unique_clusters = np.unique(cluster_vec)
     N = data.shape[0]
@@ -50,7 +54,7 @@ def _compute_CCV(
 
     Z = rng.choice([False, True], size=N)
     # compute alpha, tau using Z == 0
-    fit_split1 = feols(fml, data[Z])
+    fit_split1 = feols(fml, data[Z], demeaner=demeaner)
     coefs_split = fit_split1.coef().to_numpy()
     tau = fit_split1.coef().xs(treatment)
 
@@ -73,14 +77,14 @@ def _compute_CCV(
         if treatment_nested_in_cluster:
             aux_tau_full = tau_full
         else:
-            fit_m_full = feols(fml, data[ind_m])
+            fit_m_full = feols(fml, data[ind_m], demeaner=demeaner)
             aux_tau_full = float(fit_m_full.coef().xs(treatment))
 
         # treatment effect in cluster for subsample
         if treatment_nested_in_cluster_split:
             aux_tau = tau
         else:
-            fit_m = feols(fml, data[ind_m_and_split])
+            fit_m = feols(fml, data[ind_m_and_split], demeaner=demeaner)
             aux_tau = fit_m.coef().xs(treatment)
         tau_ms[i] = aux_tau
 

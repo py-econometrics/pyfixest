@@ -146,6 +146,7 @@ class Feglm(Feols):
                 fe=self._fe,
                 fml=self._fml,
                 data=self._data,
+                demeaner=self._demeaner,
                 methods=self.separation_check,
             )
 
