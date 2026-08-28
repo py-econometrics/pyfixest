@@ -113,9 +113,6 @@ class DID2S(DID):
         array_like
             The variance-covariance matrix of the coefficient estimates.
         """
-        if self._cluster is None:
-            raise ValueError("DID2S requires a cluster variable for vcov().")
-
         return _did2s_vcov(
             data=self._data,
             yname=self._yname,
@@ -124,7 +121,7 @@ class DID2S(DID):
             treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
-            cluster=self._cluster,
+            cluster=cast(str, self._cluster),
             weights=self._weights_name,
         )
 

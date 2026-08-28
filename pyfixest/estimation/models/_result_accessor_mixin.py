@@ -10,6 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -149,7 +150,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _adj_r2_within: float
     _vcov_type: str
 
-    def _bind_report_methods(self):
+    def _bind_report_methods(self: "Feols"):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
 

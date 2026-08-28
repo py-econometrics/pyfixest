@@ -1,4 +1,5 @@
 import math
+from collections.abc import ValuesView
 from typing import cast
 
 import matplotlib.pyplot as plt
@@ -40,7 +41,14 @@ from pyfixest.report.utils import (
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = (
+    FixestMulti
+    | Feols
+    | Fepois
+    | Feiv
+    | list[Feols | Fepois | Feiv]
+    | ValuesView[Feols | Fepois | Feiv]
+)
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
