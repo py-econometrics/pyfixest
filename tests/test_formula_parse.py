@@ -15,6 +15,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
+from pyfixest.estimation.deprecated.model_matrix_fixest_ import model_matrix_fixest
 from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
 from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
@@ -362,6 +363,16 @@ class TestFormulaParse:
         assert not f.is_fixed_effects
         assert not f.is_instrumental_variable
 
+    def test_parse_preserves_subclass(self):
+        """Formula.parse() constructs instances of the calling subclass."""
+
+        class SubFormula(Formula):
+            pass
+
+        result = SubFormula.parse("Y ~ X1")
+
+        assert isinstance(result[0], SubFormula)
+
     def test_parse_with_fe(self):
         """Test parsing a formula with fixed effects."""
         result = Formula.parse("Y ~ X1 | f1")
@@ -369,6 +380,19 @@ class TestFormulaParse:
         f = result[0]
         assert f.second_stage == "Y ~ X1"
         assert str(f.fixed_effects) == "f1"
+
+    @pytest.mark.parametrize(
+        ("formula", "has_fixed_effects"),
+        [("Y ~ X1", False), ("Y ~ X1 | f1", True)],
+    )
+    def test_legacy_model_matrix_fixed_effects(
+        self, test_data, formula, has_fixed_effects
+    ):
+        """The deprecated ModelMatrix shim handles Formulaic fixed effects."""
+        with pytest.warns(FutureWarning, match="model_matrix_fixest"):
+            result = model_matrix_fixest(Formula.parse(formula)[0], test_data)
+
+        assert (result["fe"] is not None) is has_fixed_effects
 
     # def test_parse_iv(self):
     #     result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")

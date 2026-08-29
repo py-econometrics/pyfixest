@@ -19,6 +19,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Contributor Workflow
 
+- Replaces mypy with ty for static type checking, using a Python
+  3.10-compatible configuration and enforcing the check through the local lint
+  workflow and CI. The migration is runtime-neutral.
 - Repository-local skills and developer guides now define architecture,
   numerical validation, change verification, history curation, review, and PR
   preparation for contributors and coding agents.

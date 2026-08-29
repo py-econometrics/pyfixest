@@ -1,7 +1,7 @@
 import re
 import warnings
 from collections.abc import Mapping
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -107,10 +107,12 @@ def model_matrix_fixest(
     )
 
     fml_second_stage = FixestFormula.second_stage
-    fml_first_stage = FixestFormula.first_stage
+    fml_first_stage = (
+        FixestFormula.first_stage if FixestFormula.is_instrumental_variable else None
+    )
     # This legacy helper predates the Formula wrapper and still consumes the
-    # fixed-effect formula as text. Keep the historical runtime value intact.
-    fval = cast(str, FixestFormula.fixed_effects)
+    # fixed-effect formula as text.
+    fval = str(FixestFormula.fixed_effects) if FixestFormula.is_fixed_effects else None
     _check_weights(weights, data)
 
     pattern = (

@@ -48,10 +48,10 @@ repos:
     hooks:
       - id: ty
         name: ty
-        # --python points ty at the environment holding the third-party
-        # packages, so run `pixi install -e py312` once before this hook works.
-        # --frozen keeps the nested `pixi run` from rewriting pixi.lock when a
-        # commit touches pyproject.toml, which prek reports as a hook failure.
+        # The lint task installs the analysis environment before prek runs this
+        # hook, so --python points ty at its third-party dependencies even in a
+        # clean checkout. `--frozen` keeps the nested run from rewriting
+        # pixi.lock.
         # Output format comes from [tool.ty.terminal] in pyproject.toml.
         entry: pixi run --frozen -e lint ty check --project . --python .pixi/envs/py312
         language: system
