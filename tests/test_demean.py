@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
+from within import Effect
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
@@ -59,16 +60,16 @@ TORCH_DEVICE_DEMEANERS = [
 
 
 @pytest.mark.parametrize(
-    "demeaner",
+    ("demeaner", "expected"),
     [
-        LsmrDemeaner(backend="within"),
-        LsmrDemeaner(backend="torch"),
-        LsmrDemeaner(backend="cupy"),
-        MapDemeaner(),
+        (LsmrDemeaner(backend="within"), True),
+        (LsmrDemeaner(backend="torch"), False),
+        (LsmrDemeaner(backend="cupy"), False),
+        (MapDemeaner(), False),
     ],
 )
-def test_no_demeaner_supports_varying_slopes(demeaner):
-    assert not _supports_varying_slopes(demeaner)
+def test_only_within_demeaner_supports_varying_slopes(demeaner, expected):
+    assert _supports_varying_slopes(demeaner) is expected
 
 
 @pytest.fixture(scope="module")
@@ -84,6 +85,131 @@ def demean_data():
     weights = rng.uniform(0, 1, n_obs)
 
     return x, flist, weights
+
+
+def _dense_effect_residuals(
+    x, levels, slopes, level_indices, intercepts, slope_indices, weights
+):
+    """Residualize against an explicit dense effect design."""
+    columns = []
+    for level_index, intercept, effect_slopes in zip(
+        level_indices, intercepts, slope_indices, strict=True
+    ):
+        loadings = ([None] if intercept else []) + list(effect_slopes)
+        for loading in loadings:
+            for level in np.unique(levels[:, level_index]):
+                column = (levels[:, level_index] == level).astype(np.float64)
+                if loading is not None:
+                    column *= slopes[:, loading]
+                columns.append(column)
+    design = np.column_stack(columns)
+    sqrt_weights = np.sqrt(weights)
+    design_w = design * sqrt_weights[:, None]
+    x_w = x * sqrt_weights[:, None]
+    coefficients = np.linalg.lstsq(design_w, x_w, rcond=None)[0]
+    return (x_w - design_w @ coefficients) / sqrt_weights[:, None]
+
+
+@pytest.mark.parametrize("preconditioner", ["off", "additive", "diagonal"])
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize(
+    ("level_indices", "intercepts", "slope_indices"),
+    [
+        ((0, 1), (True, True), ((), ())),
+        ((0,), (True,), ((0,),)),
+        ((0,), (False,), ((0,),)),
+        ((0,), (True,), ((0, 1),)),
+        ((0, 1), (True, False), ((0,), (1,))),
+        ((2,), (True,), ((0,),)),
+    ],
+)
+def test_demean_within_effects_match_dense_design(
+    preconditioner, weighted, level_indices, intercepts, slope_indices
+):
+    """Check ordinary and varying effects against a dense projection."""
+    rng = np.random.default_rng(49812)
+    n_obs = 180
+    f1 = rng.integers(0, 8, n_obs)
+    f2 = rng.integers(0, 6, n_obs)
+    interacted = f1 * 6 + f2
+    levels = np.column_stack([f1, f2, interacted]).astype(np.uint32)
+    slopes = rng.normal(size=(n_obs, 2))
+    x = rng.normal(size=(n_obs, 3))
+    weights = rng.uniform(0.25, 2.0, n_obs) if weighted else np.ones(n_obs)
+    effects = [
+        Effect(
+            levels=levels[:, level_index],
+            intercept=intercept,
+            slopes=[slopes[:, index] for index in effect_slopes],
+        )
+        for level_index, intercept, effect_slopes in zip(
+            level_indices, intercepts, slope_indices, strict=True
+        )
+    ]
+
+    result, success, _ = demean_within(
+        x=x,
+        flist=effects,
+        weights=weights,
+        preconditioner=preconditioner,
+        tol=1e-10,
+        maxiter=10_000,
+    )
+    expected = _dense_effect_residuals(
+        x, levels, slopes, level_indices, intercepts, slope_indices, weights
+    )
+
+    assert success
+    np.testing.assert_allclose(result, expected, rtol=1e-7, atol=1e-8)
+
+
+def test_demean_within_reuses_varying_slope_preconditioner():
+    rng = np.random.default_rng(8172)
+    n_obs = 200
+    levels = rng.integers(0, 10, size=(n_obs, 2), dtype=np.uint32)
+    slopes = rng.normal(size=(n_obs, 2))
+    x = rng.normal(size=(n_obs, 2))
+    effects = [
+        Effect(levels[:, 0], intercept=True, slopes=[slopes[:, 0], slopes[:, 1]]),
+        Effect(levels[:, 1], intercept=True),
+    ]
+
+    kwargs = {
+        "x": x,
+        "flist": effects,
+        "tol": 1e-10,
+        "maxiter": 10_000,
+    }
+    result, success, preconditioner = demean_within(**kwargs)
+    assert success
+    assert preconditioner is not None
+
+    reused, success, reused_preconditioner = demean_within(
+        **kwargs, preconditioner=preconditioner
+    )
+    assert success
+    assert reused_preconditioner is not None
+    assert reused_preconditioner.nrows == preconditioner.nrows
+    assert reused_preconditioner.ncols == preconditioner.ncols
+    np.testing.assert_allclose(reused, result, rtol=1e-10, atol=1e-10)
+
+
+def test_demean_within_map_shortcut_boundary():
+    rng = np.random.default_rng(771)
+    levels = rng.integers(0, 5, size=(100, 1), dtype=np.uint32)
+    x = rng.normal(size=(100, 2))
+    slopes = rng.normal(size=(100, 1))
+
+    ordinary, success, ordinary_preconditioner = demean_within(x=x, flist=levels)
+    varying, slope_success, slope_preconditioner = demean_within(
+        x=x,
+        flist=[Effect(levels[:, 0], intercept=True, slopes=[slopes[:, 0]])],
+    )
+
+    assert success and slope_success
+    assert ordinary_preconditioner is None
+    assert slope_preconditioner is None
+    assert not np.allclose(ordinary, varying)
 
 
 @pytest.mark.parametrize("demean_func", GENERIC_DEMEAN_FUNCS)
@@ -583,7 +709,7 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
         cache.demean_yx,
         Y=Y,
         X=X,
-        fe=None,
+        design=None,
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -615,7 +741,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
         cache.demean_yx,
         Y=Y,
         X=X,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -653,7 +779,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
         cache.demean_yx,
         Y=Y,
         X=X,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -663,7 +789,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
     Yd_unweighted, Xd_unweighted, _ = DemeanCache().demean_yx(
         Y=Y,
         X=X,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=np.ones(N),
         na_index=frozenset(),
         demeaner=demeaner,
@@ -690,7 +816,7 @@ def test_demean_model_caching(benchmark, demeaner):
     Yd1, Xd1, _ = DemeanCache(lookup_dict).demean_yx(
         Y=Y,
         X=X,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -701,7 +827,7 @@ def test_demean_model_caching(benchmark, demeaner):
         DemeanCache(lookup_dict).demean_yx,
         Y=Y,
         X=X,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -718,7 +844,7 @@ def test_demean_model_caching(benchmark, demeaner):
     _, Xd3, _ = DemeanCache(lookup_dict).demean_yx(
         Y=Y,
         X=X_new,
-        fe=fe,
+        design=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
@@ -759,7 +885,7 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         DemeanCache().demean_yx(
             Y=Y,
             X=X,
-            fe=fe,
+            design=fe.to_numpy(),
             weights=weights,
             na_index=frozenset(),
             demeaner=demeaner,

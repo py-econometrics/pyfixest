@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, WithinDesign
 from pyfixest.demeaners import AnyDemeaner
 
 
@@ -48,7 +48,7 @@ class DemeanCache:
     def demean_array(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        design: WithinDesign,
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
@@ -57,20 +57,29 @@ class DemeanCache:
 
         Raises `ValueError` if the demeaning algorithm does not converge.
         """
-        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
+        result, _ = self._run_or_raise(
+            x=x,
+            design=design,
+            weights=weights,
+            na_index=na_index,
+            demeaner=demeaner,
+        )
         return result
 
     def _run_or_raise(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        design: WithinDesign,
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[np.ndarray, Preconditioner | None]:
         cached_preconditioner = self.lookup_preconditioner.get(na_index)
         result, success, used_preconditioner = demeaner.demean(
-            x, flist, weights, cached_preconditioner=cached_preconditioner
+            x=x,
+            flist=design,
+            weights=weights,
+            cached_preconditioner=cached_preconditioner,
         )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
@@ -83,7 +92,7 @@ class DemeanCache:
         self,
         Y: pd.DataFrame,
         X: pd.DataFrame,
-        fe: pd.DataFrame | None,
+        design: WithinDesign | None,
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
@@ -110,15 +119,18 @@ class DemeanCache:
         if YX_array.dtype != np.dtype("float64"):
             YX_array = YX_array.astype(np.float64)
 
-        if fe is None:
+        if design is None:
             YX_demeaned = pd.DataFrame(YX_array, columns=yx_names)
             return YX_demeaned[Y.columns], YX_demeaned[X.columns], None
 
-        fe_array = fe.to_numpy()
         cached_demeaned = self.lookup_demeaned_data.get(na_index)
         if cached_demeaned is None:
             arr, used = self._run_or_raise(
-                YX_array, fe_array, weights, na_index, demeaner
+                x=YX_array,
+                design=design,
+                weights=weights,
+                na_index=na_index,
+                demeaner=demeaner,
             )
             YX_demeaned = pd.DataFrame(arr, columns=yx_names)
         else:
@@ -128,7 +140,11 @@ class DemeanCache:
                 yx_names_list = list(yx_names)
                 new_index = [yx_names_list.index(name) for name in new_names]
                 arr, used = self._run_or_raise(
-                    YX_array[:, new_index], fe_array, weights, na_index, demeaner
+                    x=YX_array[:, new_index],
+                    design=design,
+                    weights=weights,
+                    na_index=na_index,
+                    demeaner=demeaner,
                 )
                 YX_demeaned = pd.DataFrame(
                     np.concatenate([cached_demeaned, arr], axis=1),
