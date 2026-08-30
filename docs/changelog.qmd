@@ -28,6 +28,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
   reference coverage.
+- R CI now runs disjoint canonical shards with the fast live-R matrix as a
+  preflight. Contributor guidance separates repeatable edit feedback from
+  exact-head merge evidence, so long suites can run once after stabilization or
+  in CI without weakening the merge gate.
 
 ### Inference Types
 

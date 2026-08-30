@@ -147,21 +147,20 @@ fixture boundary.
 Use `pixi run` for every Python, pytest, lint, docs, and R command. Bare tools
 may miss dependencies or the compiled extension.
 
-- Edit loop: targeted tests with `-x -q --no-cov` and changed-file lint/type
-  checks.
-- PR baseline: `pixi run test-py` plus relevant lint/type checks. This is a
-  Python-only regression suite; it does not establish numerical agreement with
-  R or other external software.
-- Domain suites: R, HAC, no-JIT, docs, plots, Rust, or extended tests selected
-  by the changed subsystem. Estimation and inference changes require the
-  applicable external-reference suite in addition to `test-py`.
-- Full available suite: `test-all`; exhaustive evidence also requires the
-  CRAN-only R dependencies, applicable platform CI, and relevant benchmarks.
+- Edit feedback: targeted tests with `-x -q --no-cov`, changed-file lint/type
+  checks, and targeted or fast live-R cases for numerical work.
+- Stabilized implementation: run the selected broader baseline once.
+  `test-py` remains Python-only and does not establish numerical agreement.
+- Merge evidence: affected R, HAC, no-JIT, docs, plots, Rust, extended, and
+  platform checks must pass on the exact PR head. A long check may be deferred
+  to exact-head CI at handoff, but deferred is not passed or merge-ready.
+- Exhaustive or release evidence: `test-all` plus the CRAN-only R dependencies,
+  applicable platform CI, and relevant benchmarks.
 
-Long suites can take tens of minutes or more. Run narrow checks while editing,
-then required domain suites once the change stabilizes. Report every applicable
-check as passed, failed, deferred, or not run; never imply that a deferred check
-passed.
+Long suites can take tens of minutes or more. Do not repeatedly run
+`test-r-fixest`, `test-r-core`, or `test-all` while editing. Report every
+applicable check as passed, failed, deferred, or not run; never imply that a
+deferred check passed.
 
 Always update `docs/changelog.qmd`. Documentation ships with the feature. New
 public functions/classes require quartodoc registration; user workflows usually
@@ -205,10 +204,10 @@ qualitative and depends on hardware and caches; report the actual elapsed time.
 | Command | Purpose | Typical scale |
 |---|---|---|
 | `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov` | Test the changed seam without the repository coverage report | Seconds to a few minutes |
-| `pixi run -e py312-r test-r-fixest-fast` | Compare representative `feols`, `fepois`, and `feglm` cases with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
+| `pixi run -e py312-r test-r-fixest-fast` | Get edit feedback from representative `feols`, `fepois`, and `feglm` comparisons with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
 | `pixi run test-py` | Run the broad Python-only regression suite; this is not an external numerical comparison | Minutes |
-| `pixi run -e py312-r test-r-fixest` | Run the canonical `tests/test_vs_fixest.py` comparison matrix | Minutes to tens of minutes |
-| `pixi run -e py312-r test-r-core` | Run all canonical comparisons with conda-forge R packages | May take tens of minutes |
+| `pixi run -e py312-r test-r-fixest` | Produce canonical `tests/test_vs_fixest.py` merge evidence | Minutes to tens of minutes |
+| `pixi run -e py312-r test-r-core` | Produce aggregate canonical comparison evidence with conda-forge R packages | May take tens of minutes |
 | `pixi run -e py312-r test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
 | `pixi run -e py312-r test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
 | `pixi run -e py312-r test-all` | Run every test supported by the current Python and R environment | Potentially substantially longer |
