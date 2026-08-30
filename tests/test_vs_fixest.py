@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+from numpy.typing import NDArray
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -1705,6 +1706,165 @@ def test_influence_against_fixest_refits():
         err_msg=(
             "JLA leave-one-out influence error exceeds five Monte Carlo standard "
             "errors relative to R fixest refits."
+        ),
+    )
+
+
+def _prediction_averaging_matrix(
+    data: pd.DataFrame,
+    average: bool | tuple[str, ...],
+) -> NDArray[np.float64]:
+    number_observations = data.shape[0]
+    if average is False:
+        return np.eye(number_observations)
+    if average is True:
+        return np.full((1, number_observations), 1 / number_observations)
+
+    group_index = pd.MultiIndex.from_frame(data.loc[:, list(average)])
+    group_indices, unique_groups = pd.factorize(group_index, sort=False)
+    group_membership = (
+        group_indices[None, :] == np.arange(len(unique_groups))[:, None]
+    ).astype(np.float64)
+    return group_membership / group_membership.sum(axis=1, keepdims=True)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "average",
+    [
+        pytest.param(False, id="unit"),
+        pytest.param(True, id="overall_average"),
+        pytest.param(("f1",), id="group_averages"),
+    ],
+)
+def test_prediction_uncertainty_against_r_lm_explicit_fixed_effects(
+    average: bool | tuple[str, ...],
+):
+    """Compare HDFE prediction uncertainty with an explicit-factor R lm."""
+    number_observations = 96
+    observation = np.arange(number_observations)
+    data = pd.DataFrame(
+        {
+            "y": np.cos(observation / 5) + observation / 100,
+            "x": np.sin(observation / 7) + observation / 50,
+            "f1": observation % 4,
+            "f2": (observation // 4) % 6,
+        }
+    )
+
+    fit_py = pf.feols(
+        "y ~ x | f1 + f2",
+        data=data,
+        vcov="iid",
+        demeaner=pf.LsmrDemeaner(
+            fixef_atol=1e-12,
+            fixef_btol=1e-12,
+            preconditioner="additive",
+        ),
+    )
+    fit_r = stats.lm(ro.Formula("y ~ x + factor(f1) + factor(f2)"), data=data)
+
+    result = fit_py.predictions(average=average, number_probes=20_000, seed=4981)
+    design_r = np.asarray(stats.model_matrix(fit_r), dtype=np.float64)
+    covariance_r = np.asarray(stats.vcov(fit_r), dtype=np.float64)
+    prediction_covariance_r = design_r @ covariance_r @ design_r.T
+    averaging_matrix = _prediction_averaging_matrix(data, average)
+    variance_r = np.diag(
+        averaging_matrix @ prediction_covariance_r @ averaging_matrix.T
+    )
+    fitted_r = averaging_matrix @ np.asarray(stats.fitted(fit_r), dtype=np.float64)
+
+    assert result.variance.monte_carlo_standard_errors is not None
+    np.testing.assert_allclose(
+        result.estimate,
+        fitted_r,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="PyFixest and R lm fitted values differ.",
+    )
+    np.testing.assert_allclose(
+        result.standard_error,
+        np.sqrt(variance_r),
+        rtol=0.06,
+        atol=0.005,
+        err_msg="JLA prediction standard errors differ from R lm.",
+    )
+    np.testing.assert_array_less(
+        np.abs(result.standard_error**2 - variance_r),
+        5 * result.variance.monte_carlo_standard_errors + 1e-10,
+        err_msg=(
+            "JLA prediction variance error exceeds five Monte Carlo standard "
+            "errors relative to R lm."
+        ),
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "average",
+    [
+        pytest.param(False, id="unit"),
+        pytest.param(True, id="overall_average"),
+        pytest.param(("f1",), id="group_averages"),
+    ],
+)
+def test_crv1_prediction_uncertainty_against_r_fixest_explicit_fixed_effects(
+    average: bool | tuple[str, ...],
+):
+    """Compare HDFE CRV1 prediction variance with explicit-factor R fixest."""
+    number_observations = 96
+    observation = np.arange(number_observations)
+    data = pd.DataFrame(
+        {
+            "y": np.cos(observation / 5) + observation / 100,
+            "x": np.sin(observation / 7) + observation / 50,
+            "f1": observation % 4,
+            "f2": (observation // 4) % 6,
+            "g1": (observation // 3) % 8,
+        }
+    )
+    fit_py = pf.feols(
+        "y ~ x | f1 + f2",
+        data=data,
+        vcov={"CRV1": "g1"},
+        ssc=pf.ssc(k_adj=False, k_fixef="none", G_adj=False),
+        demeaner=pf.LsmrDemeaner(
+            fixef_atol=1e-12,
+            fixef_btol=1e-12,
+            preconditioner="additive",
+        ),
+    )
+    fit_r = fixest.feols(
+        ro.Formula("y ~ x + factor(f1) + factor(f2)"),
+        data=data,
+        cluster=ro.Formula("~g1"),
+        ssc=fixest.ssc(False, "none", False, False, "conventional", "min"),
+    )
+
+    result = fit_py.predictions(average=average, number_probes=20_000, seed=6741)
+    design_r = np.asarray(stats.model_matrix(fit_r), dtype=np.float64)
+    covariance_r = np.asarray(stats.vcov(fit_r), dtype=np.float64)
+    prediction_covariance_r = design_r @ covariance_r @ design_r.T
+    averaging_matrix = _prediction_averaging_matrix(data, average)
+    variance_r = np.diag(
+        averaging_matrix @ prediction_covariance_r @ averaging_matrix.T
+    )
+    fitted_r = averaging_matrix @ np.asarray(stats.fitted(fit_r), dtype=np.float64)
+
+    assert result.variance.monte_carlo_standard_errors is not None
+    np.testing.assert_allclose(
+        result.estimate,
+        fitted_r,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="PyFixest and R fixest fitted values differ.",
+    )
+    np.testing.assert_array_less(
+        np.abs(result.variance.estimate - variance_r),
+        5 * result.variance.monte_carlo_standard_errors + 1e-10,
+        err_msg=(
+            "JLA CRV1 prediction variance error exceeds five Monte Carlo "
+            "standard errors relative to R fixest."
         ),
     )
 
