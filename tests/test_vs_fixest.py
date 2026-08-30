@@ -12,6 +12,10 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
+from tests._feols_test_cases import (
+    ols_but_not_poisson_fml,
+    ols_fmls,
+)
 from tests._torch_test_utils import torch_param
 
 fixest = importr("fixest")
@@ -34,61 +38,6 @@ OFFSET_COEF_RTOL = 1e-7
 OFFSET_COEF_ATOL = 1e-7
 OFFSET_PRED_RTOL = 1e-5
 OFFSET_PRED_ATOL = 1e-5
-
-ols_fmls = [
-    ("Y~X1"),
-    ("Y~X1+X2"),
-    ("Y~X1|f2"),
-    ("Y~X1|f2+f3"),
-    ("Y ~ X1 + exp(X2)"),
-    ("Y ~ X1 + C(f1)"),
-    ("Y ~ X1 + i(f1, ref = 1)"),
-    ("Y ~ X1 + C(f1)"),
-    ("Y ~ X1 + i(f2, ref = 2.0)"),
-    ("Y ~ X1 + C(f1) + C(f2)"),
-    ("Y ~ X1 + C(f1) | f2"),
-    ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
-    ("Y ~ X1 + C(f1) | f2 + f3"),
-    ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
-    ("Y ~ X1 + i(f1) + i(f2)"),
-    ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
-    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
-    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
-    ("Y ~ X1 + X2:f1"),
-    ("Y ~ X1 + X2:f1 | f3"),
-    ("Y ~ X1 + X2:f1 | f3 + f1"),
-    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
-    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-    ("Y ~ X1 + i(f1,X2)"),
-    ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
-    ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
-    ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X1, ref =2)"),
-    ("Y ~ X1 + i(f2,X2)"),
-    ("Y ~ X1 + i(f1,X2) | f2"),
-    ("Y ~ X1 + i(f1,X2) | f2 + f3"),
-    ("Y ~ X1 + i(f1,X2, ref=1.0)"),
-    ("Y ~ X1 + i(f2,X2, ref=2.0)"),
-    ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
-    ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
-    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
-    # ("Y ~ C(f1):C(f2)"),                       # currently does not work
-    ("Y ~ X1 + I(X2 ** 2)"),
-    ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
-    ("Y ~ X1*X2"),
-    ("Y ~ X1*X2 | f1+f2"),
-    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
-    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
-    ("Y ~ X1 + poly(X2, 2) | f1"),
-]
-
-
-ols_but_not_poisson_fml = [
-    ("log(Y) ~ X1"),
-    ("Y~X1|f2:f3"),
-    ("Y~X1|f1 + f2:f3"),
-    ("Y~X1|f2:f3:f1"),
-]
 
 empty_models = [
     ("Y ~ 1 | f1"),
