@@ -12,7 +12,7 @@ selection affect wall time.
 
 | Tier | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit | Fast feedback on the changed seam | Seconds to a few minutes | targeted pytest, changed-file Ruff/mypy |
+| Edit | Fast feedback on the changed seam | Seconds to a few minutes | targeted pytest, changed-file Ruff and project-wide ty |
 | PR baseline | Broad Python regression check | Minutes | `pixi run test-py` |
 | Domain/special | Validate an affected environment or reference | May take tens of minutes | R, HAC, no-JIT, docs, plots, Rust |
 | Full available suite | All tests supported by the current environment | Potentially substantially longer | `test-all`, platform CI, benchmarks |
@@ -56,10 +56,10 @@ pixi run -e py312-r test-all
 pixi run -e py312-r Rscript r_test_requirements.R
 pixi run -e py312-r test-r-extended
 
-# Changed-file quality checks
+# Changed-file quality checks and project-wide type check
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
-pixi run -e lint prek run mypy --files <changed files>
+pixi run -e lint prek run ty --all-files
 
 # Documentation (costly; run only when selected below)
 pixi run docs-build
