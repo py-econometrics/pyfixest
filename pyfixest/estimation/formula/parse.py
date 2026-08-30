@@ -72,7 +72,12 @@ class Formula:
     ```
     """
 
-    _formula: _FormulaWithParts
+    _formula: formulaic.Formula
+
+    @property
+    def _parts(self) -> _FormulaWithParts:
+        """Return the structured Formulaic interface used by this wrapper."""
+        return cast(_FormulaWithParts, self._formula)
 
     def __post_init__(self) -> None:
         if not hasattr(self._formula, "lhs") or not hasattr(self._formula, "rhs"):
@@ -81,12 +86,12 @@ class Formula:
                 f"{self._formula}"
             )
         if (
-            isinstance(self._formula.rhs, tuple)
-            and len(self._formula.rhs) > self._max_parts
+            isinstance(self._parts.rhs, tuple)
+            and len(self._parts.rhs) > self._max_parts
         ):
             raise FormulaSyntaxError(
                 f"Formula can have at most {self._max_parts} parts separated by '|'. "
-                f"Received {len(self._formula.rhs)}:\n"
+                f"Received {len(self._parts.rhs)}:\n"
                 f"{self._formula}"
             )
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
@@ -156,7 +161,7 @@ class Formula:
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:
         """The left hand side of the formula."""
-        return self._formula.lhs
+        return self._parts.lhs
 
     @property
     def _right_hand_side(self) -> formulaic.formula.SimpleFormula:
@@ -164,9 +169,9 @@ class Formula:
         return cast(
             formulaic.formula.SimpleFormula,
             (
-                self._formula.rhs[0]
-                if isinstance(self._formula.rhs, tuple)
-                else self._formula.rhs
+                self._parts.rhs[0]
+                if isinstance(self._parts.rhs, tuple)
+                else self._parts.rhs
             ),
         )
 
@@ -180,8 +185,8 @@ class Formula:
         """Boolean indicating whether the formula is a fixed effects specification."""
         # A MULTIPART formula is a tuple of formulas on the right hand side
         return (
-            isinstance(self._formula.rhs, tuple)
-            and str(self._formula.rhs[-1]) not in ["", "0", "1"]  # ignore intercept
+            isinstance(self._parts.rhs, tuple)
+            and str(self._parts.rhs[-1]) not in ["", "0", "1"]  # ignore intercept
         )
 
     @property
@@ -234,7 +239,7 @@ class Formula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
-        fixed_effect_rhs = cast(formulaic.formula.Formula, self._formula.rhs[1])
+        fixed_effect_rhs = cast(formulaic.formula.Formula, self._parts.rhs[1])
         return cast(
             formulaic.formula.SimpleFormula,
             formulaic.formula.SimpleFormula(
@@ -276,12 +281,7 @@ class Formula:
         """
         formula = _preprocess(formula)
         return [
-            cls(
-                _formula=cast(
-                    _FormulaWithParts,
-                    formulaic.Formula(formulaic_compliant, _parser=_PARSER),
-                )
-            )
+            cls(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
 

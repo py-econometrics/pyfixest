@@ -1,13 +1,13 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from scipy.sparse import csr_matrix, diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -172,6 +172,11 @@ class GelbachDecomposition:
     X2_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     Y_dict: dict[Any, Any] = field(init=False, default_factory=dict)
 
+    X: spmatrix = field(init=False)
+    X1: spmatrix = field(init=False)
+    X2: spmatrix = field(init=False)
+    Y: np.ndarray = field(init=False)
+
     def __post_init__(self):
         x1_variables = (
             [self.decomp_var]
@@ -190,10 +195,11 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            unique_clusters = cast(np.ndarray, self.cluster_df.unique())
+            self.unique_clusters = unique_clusters
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
-                for cluster in self.unique_clusters
+                for cluster in unique_clusters
             }
         else:
             self.unique_clusters = None
@@ -278,9 +284,10 @@ class GelbachDecomposition:
             self.X = X
             self.Y = Y
 
-            self.X1 = self.X[:, ~self.mask]
+            X_stored = cast(csr_matrix, self.X)
+            self.X1 = X_stored[:, ~self.mask]
             self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
-            self.X2 = self.X[:, self.mask]
+            self.X2 = X_stored[:, self.mask]
 
             if weights is not None:
                 weights_sqrt = np.sqrt(weights.flatten())
@@ -329,7 +336,7 @@ class GelbachDecomposition:
             if self.unique_clusters is not None and not self.only_coef:
                 for g in self.unique_clusters:
                     cluster_idx = np.where(self.cluster_df == g)[0]
-                    self.X_dict[g] = self.X[cluster_idx]
+                    self.X_dict[g] = cast(csr_matrix, self.X)[cluster_idx]
                     self.Y_dict[g] = self.Y[cluster_idx]
 
             return self.results
@@ -337,8 +344,9 @@ class GelbachDecomposition:
         else:
             # need to compute X1, X2 in bootstrap sample
 
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
-            X2 = X[:, self.mask]
+            X_stored = cast(csr_matrix, X)
+            X1 = hstack([np.ones((X.shape[0], 1)), X_stored[:, ~self.mask]])
+            X2 = X_stored[:, self.mask]
 
             results = self.compute_gelbach(
                 X1=X1,
@@ -446,7 +454,7 @@ class GelbachDecomposition:
 
         else:
             idx_rows: NDArray[np.int_] = rng.choice(self.N, self.N)
-            X = self.X.tocsr()[idx_rows, :]
+            X = cast(csr_matrix, self.X)[idx_rows, :]
             Y = self.Y[idx_rows]
 
         return self.fit(X=X, Y=Y, store=False)
@@ -479,7 +487,9 @@ class GelbachDecomposition:
 
         if agg_first:
             # Compute H and Hg
-            H = X2.multiply(beta2).tocsc()  # csc better for slicing columns than csr
+            H = (
+                cast(csr_matrix, X2).multiply(beta2).tocsc()
+            )  # csc better for slicing columns than csr
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
 
             for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
@@ -499,7 +509,9 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.decomp_var_in_X1_idx]
+                    lsqr(X1, cast(csr_matrix, X2)[:, j].toarray().flatten())[0][
+                        self.decomp_var_in_X1_idx
+                    ]
                     for j in range(X2.shape[1])
                 ]
             )

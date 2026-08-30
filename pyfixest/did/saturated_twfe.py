@@ -1,5 +1,6 @@
 import re
 import warnings
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -352,7 +353,7 @@ def _saturated_event_study(
     cluster: str | None = None,
 ):
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
-    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
+    m = feols(fml=ff, data=df, vcov={"CRV1": cast(str, cluster)})
     res = m.tidy().reset_index()
     res = res.join(
         res["Coefficient"].str.extract(

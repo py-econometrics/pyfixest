@@ -1,4 +1,6 @@
 import math
+from collections.abc import ValuesView
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,7 +41,14 @@ from pyfixest.report.utils import (
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = (
+    FixestMulti
+    | Feols
+    | Fepois
+    | Feiv
+    | list[Feols | Fepois | Feiv]
+    | ValuesView[Feols | Fepois | Feiv]
+)
 
 # Only setup lets-plot if it's available
 if _HAS_LETS_PLOT:
@@ -700,7 +709,7 @@ def _coefplot_matplotlib(
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
@@ -770,7 +779,7 @@ def _coefplot_matplotlib(
         ax.legend()
     plt.tight_layout()
     plt.close()
-    return f
+    return cast(plt.Figure, f)
 
 
 def _qplot(
@@ -807,7 +816,7 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
+        assert nrow is not None  # narrow the type for the type checker
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -893,7 +902,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
+        df_joint_full["fml"] += " (joint CIs)"
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)

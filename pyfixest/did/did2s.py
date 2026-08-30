@@ -121,7 +121,7 @@ class DID2S(DID):
             treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
-            cluster=self._cluster,
+            cluster=cast(str, self._cluster),
             weights=self._weights_name,
         )
 
@@ -303,8 +303,7 @@ def _did2s_vcov(
     """
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
-
-    _G = clustid.nunique()  # actually not used here, neither in did2s
+    _G = len(np.unique(clustid))  # actually not used here, neither in did2s
 
     if weights is None:
         weights_array = np.repeat(1.0, data.shape[0])
@@ -365,7 +364,7 @@ def _did2s_vcov(
     first_u *= weights_array
     second_u *= weights_array
 
-    X10 = X1.copy().tocsr()  # type: ignore
+    X10 = X1.copy().tocsr()
     treated_rows = np.where(data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
@@ -373,13 +372,13 @@ def _did2s_vcov(
     X2X1 = X2.T.dot(X1)
     X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T  # type: ignore
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))
 
     X10 = X10.tocsr()
-    X2 = X2.tocsr()  # type: ignore
+    X2 = X2.tocsr()
 
     for _, g in enumerate(clustid):
         idx_g: np.ndarray = cluster_col.values == g

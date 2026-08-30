@@ -1,3 +1,5 @@
+from collections.abc import ValuesView
+
 import maketables
 import numpy as np
 import pandas as pd
@@ -9,7 +11,14 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = (
+    FixestMulti
+    | Feols
+    | Fepois
+    | Feiv
+    | list[Feols | Fepois | Feiv]
+    | ValuesView[Feols | Fepois | Feiv]
+)
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -26,7 +35,7 @@ def _get_estimation_method_name(fxst: Feols) -> str:
     if fxst._method == "feols":
         return "IV" if fxst._is_iv else "OLS"
     if "quantreg" in fxst._method:
-        return f"quantreg: q = {fxst._quantile}"  # type: ignore
+        return f"quantreg: q = {fxst._quantile}"  # ty: ignore[unresolved-attribute]
     if fxst._method in _METHOD_DISPLAY_NAMES:
         return _METHOD_DISPLAY_NAMES[fxst._method]
     raise ValueError(f"Unknown estimation method: {fxst._method}")

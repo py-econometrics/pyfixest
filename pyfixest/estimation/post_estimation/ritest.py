@@ -1,4 +1,6 @@
+from collections.abc import Callable
 from importlib import import_module
+from typing import Protocol, TypeVar, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,18 +28,33 @@ except ImportError:
 from scipy.stats import norm
 from tqdm import tqdm
 
+_NumbaFunction = TypeVar("_NumbaFunction", bound=Callable[..., object])
+
+
+class _NumbaModule(Protocol):
+    """Subset of numba's module interface used by the fast RI path."""
+
+    @overload
+    def njit(self, function: _NumbaFunction) -> _NumbaFunction: ...
+
+    @overload
+    def njit(self) -> Callable[[_NumbaFunction], _NumbaFunction]: ...
+
+
 # Numba is an optional dependency. The fast randomization-inference path uses it;
 # the slow path does not. We import lazily so the module loads cleanly even when
 # numba is not installed, and surface a clear error only when the fast path is
 # actually requested.
+nb: _NumbaModule | None = None
 try:
-    import numba as nb
+    import numba
+
+    nb = cast(_NumbaModule, numba)
 
     from pyfixest.estimation.numba.demean_nb import demean
 
     _HAS_NUMBA = True
 except ImportError:
-    nb = None
     demean = None
     _HAS_NUMBA = False
 
@@ -254,7 +271,6 @@ def _run_ri(
     ri_coefs = np.zeros(reps)
 
     X_demean2 = np.ascontiguousarray(X_demean2)
-
     for i in range(reps):
         D2 = _resample(
             resampvar_arr=resampvar_arr,
@@ -263,7 +279,7 @@ def _run_ri(
             iterations=1,
         )
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2  # ty: ignore[call-non-callable]
 
         ri_coefs[i] = lstsq_numba(
             np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
@@ -423,9 +439,10 @@ def _plot_ritest_pvalue(
         return plot.show()
 
     elif plot_backend == "matplotlib":
+        sample_stat_value = cast(float, sample_stat)
         plt.figure(figsize=(10, 6))
         sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
-        plt.axvline(x=sample_stat, color="red", linestyle="--")
+        plt.axvline(x=sample_stat_value, color="red", linestyle="--")
         plt.title(title)
         plt.xlabel(x_lab)
         plt.ylabel(y_lab)

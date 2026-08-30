@@ -8,7 +8,14 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = (
+    FixestMulti
+    | Feols
+    | Fepois
+    | Feiv
+    | list[Feols | Fepois | Feiv]
+    | ValuesView[Feols | Fepois | Feiv]
+)
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -214,7 +221,7 @@ def _post_processing_input_checks(
     models: ModelInputType,
     check_duplicate_model_names: bool = False,
     rename_models: dict[str, str] | None = None,
-) -> list[Feols | Fepois | Feiv]:
+) -> list[Feols | Fepois | Feiv] | ValuesView[Feols | Fepois | Feiv]:
     """
     Perform input checks for post-processing models.
 
@@ -242,7 +249,7 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    models_list: list[Feols | Fepois | Feiv] = []
+    models_list: list[Feols | Fepois | Feiv] | ValuesView[Feols | Fepois | Feiv] = []
 
     if isinstance(models, (Feols, Fepois, Feiv)):
         models_list = [models]
