@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -54,7 +55,7 @@ class Feglm(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         tol: float,
@@ -135,10 +136,13 @@ class Feglm(Feols):
             and self.separation_check is not None
             and self.separation_check  # not an empty list
         ):
+            Y = cast(pd.DataFrame, self._Y)
+            X = cast(pd.DataFrame, self._X)
+            fe = cast(pd.DataFrame, self._fe)
             na_separation = check_for_separation(
-                Y=self._Y,
-                X=self._X,
-                fe=self._fe,
+                Y=Y,
+                X=X,
+                fe=fe,
                 fml=self._fml,
                 data=self._data,
                 demeaner=self._demeaner,
@@ -146,9 +150,12 @@ class Feglm(Feols):
             )
 
         if na_separation:
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
-            self._fe.drop(na_separation, axis=0, inplace=True)
+            Y = cast(pd.DataFrame, self._Y)
+            X = cast(pd.DataFrame, self._X)
+            fe = cast(pd.DataFrame, self._fe)
+            Y.drop(na_separation, axis=0, inplace=True)
+            X.drop(na_separation, axis=0, inplace=True)
+            fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
             if self._weights_df is not None:
                 self._weights_df.drop(na_separation, axis=0, inplace=True)
@@ -161,35 +168,47 @@ class Feglm(Feols):
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._k_fe = (
+                cast(pd.DataFrame, self._fe).nunique(axis=0)
+                if self._has_fixef
+                else None
+            )
+            self._n_fe = (
+                np.sum(cast(pd.Series, self._k_fe) > 1) if self._has_fixef else 0
+            )
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
+        Y = cast(pd.DataFrame, self._Y)
+        X = cast(pd.DataFrame, self._X)
         self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
+            Y.to_numpy(),
+            X.to_numpy(),
+            X.to_numpy(),
         )
         if self._offset_df is not None:
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
-            self._fe = self._fe.to_numpy()
+            fe = cast(pd.DataFrame, self._fe)
+            self._fe = fe.to_numpy()
             if self._fe.ndim == 1:
                 self._fe = self._fe.reshape((self._N, 1))
 
     def get_fit(self):
         "Fit the GLM via IRLS and write results onto self.* attributes."
         self.to_array()
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
+        fe = cast(np.ndarray | None, self._fe)
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
         ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
+            return self.residualize(v=v, X=X, flist=fe, weights=weights, tol=tol)
 
         fit = fit_glm_irls(
-            X=self._X,
-            Y=self._Y,
+            X=X,
+            Y=Y,
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
@@ -279,7 +298,7 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:

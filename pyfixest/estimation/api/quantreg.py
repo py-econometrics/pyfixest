@@ -43,7 +43,7 @@ def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
 
 def quantreg(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = "nid",
     quantile: float = 0.5,
     method: QuantregMethodOptions = "fn",

@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Protocol, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -15,6 +15,14 @@ from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
+
+_ModelSpecDict: TypeAlias = dict[str, formulaic.ModelSpec]
+
+
+class _ModelSpecWithLhs(Protocol):
+    """Formulaic model-spec interface needed for response validation."""
+
+    lhs: formulaic.ModelSpec
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -70,7 +78,7 @@ class ModelMatrix:
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
+        self._model_spec = cast(_ModelSpecDict, model_matrix.model_spec)
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -110,15 +118,18 @@ class ModelMatrix:
         self._data = data.loc[:, ~data.columns.duplicated()]
 
     def _process(self, drop_singletons: bool = False) -> None:
-        if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
+        main_spec = cast(_ModelSpecWithLhs, self.model_spec[_ModelMatrixKey.main])
+        if main_spec.lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
         elif self._dependent is None or len(self._dependent) != 1:
             raise TypeError("The model must contain exactly one dependent variable.")
 
         if self._endogenous is not None:
-            if self.model_spec[
-                _ModelMatrixKey.instrumental_variable
-            ].lhs.factor_contrasts:
+            iv_spec = cast(
+                _ModelSpecWithLhs,
+                self.model_spec[_ModelMatrixKey.instrumental_variable],
+            )
+            if iv_spec.lhs.factor_contrasts:
                 raise TypeError("The endogenous variable must be numeric.")
             elif len(self._endogenous) != 1:
                 raise TypeError(
@@ -286,15 +297,14 @@ class ModelMatrix:
             return self._data.loc[:, self._offset]
 
     @property
-    def model_spec(self) -> formulaic.ModelSpec:
+    def model_spec(self) -> _ModelSpecDict:
         """
         Get the underlying formulaic model specification.
 
         Returns
         -------
-        formulaic.ModelSpec
-            The formulaic ModelSpec object containing metadata about the
-            model structure and transformations.
+            dict[str, formulaic.ModelSpec]
+            The formulaic model specifications keyed by model-matrix role.
         """
         return self._model_spec
 
@@ -389,7 +399,7 @@ def create_model_matrix(
         n_observations=n_observations,
     )
     return ModelMatrix(
-        model_matrix,
+        model_matrix,  # ty: ignore[invalid-argument-type]
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,

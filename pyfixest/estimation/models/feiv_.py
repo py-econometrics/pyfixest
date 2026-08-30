@@ -2,7 +2,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import VcovTypeOptions, WeightsTypeOptions
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -165,7 +166,7 @@ class Feiv(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: Literal[
@@ -221,17 +222,22 @@ class Feiv(Feols):
     def to_array(self) -> None:
         "Transform estimation DataFrames to arrays."
         super().to_array()
-        self._Z = self._Zd.to_numpy()
-        self._endogvar = self._endogvar.to_numpy()
+        Zd = cast(pd.DataFrame, self._Zd)
+        endogvar = cast(pd.DataFrame, self._endogvar)
+        self._Z = Zd.to_numpy()
+        self._endogvar = endogvar.to_numpy()
 
     def demean(self) -> None:
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
+            endogvar = cast(pd.DataFrame, self._endogvar)
+            Z = cast(pd.DataFrame, self._Z)
+            fe = cast(pd.DataFrame, self._fe)
             self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
-                self._endogvar,
-                self._Z,
-                self._fe,
+                endogvar,
+                Z,
+                fe,
                 self._weights.flatten(),
                 self._na_index,
                 self._demeaner,
@@ -243,14 +249,16 @@ class Feiv(Feols):
     def drop_multicol_vars(self) -> None:
         "Drop multicollinear variables in matrix of instruments Z."
         super().drop_multicol_vars()
+        Z = cast(np.ndarray, self._Z)
+        coefnames_z = cast(list[str], self._coefnames_z)
         (
             self._Z,
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
         ) = drop_multicollinear_variables(
-            self._Z,
-            self._coefnames_z,
+            Z,
+            coefnames_z,
             self._collin_tol,
         )
 
@@ -260,9 +268,12 @@ class Feiv(Feols):
         self.to_array()
         self.drop_multicol_vars()
         self.wls_transform()
+        X = cast(np.ndarray, self._X)
+        Z = cast(np.ndarray, self._Z)
+        Y = cast(np.ndarray, self._Y)
 
         # Second stage (2SLS) on prepared arrays
-        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
+        fit = fit_iv(X=X, Z=Z, Y=Y, solver=self._solver)
 
         self._tZX = fit.tZX
         self._tXZ = fit.tXZ
@@ -277,7 +288,8 @@ class Feiv(Feols):
     def first_stage(self) -> None:
         """Implement First stage regression."""
         # Store names of instruments from Z matrix
-        self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
+        coefnames_z = cast(list[str], self._coefnames_z)
+        self._non_exo_instruments = list(set(coefnames_z) - set(self._coefnames))
 
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
@@ -295,7 +307,7 @@ class Feiv(Feols):
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
         else:
-            vcov_detail = self._vcov_type_detail
+            vcov_detail = cast(VcovTypeOptions, self._vcov_type_detail)
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
@@ -462,15 +474,16 @@ class Feiv(Feols):
         iv_diag_statistics = iv_diag_statistics or []
 
         if "f_stat" in iv_diag_statistics:
+            coefnames_z = cast(list[str], self._coefnames_z)
             self._p_iv = len(self._non_exo_instruments)
 
             # Create an identity matrix of size p_iv by p_iv
             # Pad the identity matrix with zeros to make it of size p_iv by k
             # Extract all the IV indexes and its first index
             self._iv_loc = [
-                self._coefnames_z.index(x)
+                coefnames_z.index(x)
                 for x in self._non_exo_instruments
-                if x in self._coefnames_z
+                if x in coefnames_z
             ]
 
             # Generate matrix R that tests the following;
@@ -513,9 +526,9 @@ class Feiv(Feols):
         # Extract coefficients for the non-exogenous instruments
 
         pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        coefnames_z = cast(list[str], self._coefnames_z)
         iv_positions = [
-            self._coefnames_z.index(instrument)
-            for instrument in self._non_exo_instruments
+            coefnames_z.index(instrument) for instrument in self._non_exo_instruments
         ]
         Z = self._model_1st_stage._X[:, iv_positions]
 
