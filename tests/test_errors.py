@@ -125,6 +125,14 @@ def test_dependent_and_endogenous_model_matrix_errors(
         feols(fml=fml, data=data, context={"two_columns": two_columns})
 
 
+def test_varying_slopes_rejected_during_estimation(data):
+    with pytest.raises(
+        NotImplementedError,
+        match="Varying slopes not supported for",
+    ):
+        feols("Y ~ X1 | f1[X2]", data=data)
+
+
 def test_iv_errors():
     data = get_data()
 
