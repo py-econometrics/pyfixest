@@ -1604,25 +1604,39 @@ ssc_fmls = [
     "Y ~ X1 + X2 | f1:f2",
 ]
 
+ssc_formula_vcov_dropna_cases = [
+    pytest.param(
+        fml,
+        dropna,
+        vcov,
+        id=f"fml={fml_id}-vcov={vcov}-dropna={dropna}",
+    )
+    for fml_id, fml in enumerate(ssc_fmls)
+    for dropna in [True, False]
+    for vcov in ["iid", "hetero", "f1", "f2", "f1+f2"]
+    if dropna or vcov in ["iid", "hetero"] or vcov in fml
+]
+
+
+@pytest.fixture(scope="module")
+def ssc_data():
+    data = {}
+    for model, data_model in [("feols", "Feols"), ("fepois", "Fepois")]:
+        base = pf.get_data(model=data_model)
+        data[(model, False)] = base
+        data[(model, True)] = base.dropna()
+    return data
+
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", ssc_fmls)
-@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize("fml,dropna,vcov", ssc_formula_vcov_dropna_cases)
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2", "f1+f2"])
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("G_adj", [True, False])
 @pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
 @pytest.mark.parametrize("model", ["feols", "fepois"])
-def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
-    df = pf.get_data(model="Feols") if model == "feols" else pf.get_data(model="Fepois")
-    if dropna:
-        df.dropna(inplace=True)
-
-    if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
-        pytest.skip(
-            "vcov = f2 requires dropping NAs internally, which is not supported."
-        )
+def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
+    df = ssc_data[(model, dropna)]
 
     r_kwargs = {
         "fml": ro.Formula(_fixed_effect_interactions_to_fixest(fml)),
@@ -1693,55 +1707,47 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         err_msg=f"df.K do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    # df.t identical:
+    # SEs identical:
     np.testing.assert_allclose(
-        py_df_t,
-        r_df_t,
-        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+        py_fit.se(),
+        ro.r("r_fit$coeftable[,2]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # p-values identical:
+    np.testing.assert_allclose(
+        py_fit.pvalue(),
+        ro.r("r_fit$coeftable[,4]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # t-stats identical:
+    np.testing.assert_allclose(
+        py_fit.tstat(),
+        ro.r("r_fit$coeftable[,3]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    if True:
-        # SEs identical:
-        np.testing.assert_allclose(
-            py_fit.se(),
-            ro.r("r_fit$coeftable[,2]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        # p-values identical:
-        np.testing.assert_allclose(
-            py_fit.pvalue(),
-            ro.r("r_fit$coeftable[,4]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        # t-stats identical:
-        np.testing.assert_allclose(
-            py_fit.tstat(),
-            ro.r("r_fit$coeftable[,3]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-
-        # confint identical:
-        np.testing.assert_allclose(
-            py_fit.confint().values,
-            pd.DataFrame(stats.confint(r_fit)).T.values,
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        ## vcov identical:
-        np.testing.assert_allclose(
-            py_fit._vcov,
-            stats.vcov(r_fit),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
+    # confint identical:
+    np.testing.assert_allclose(
+        py_fit.confint().values,
+        pd.DataFrame(stats.confint(r_fit)).T.values,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # vcov identical:
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        stats.vcov(r_fit),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
 
 
 @pytest.mark.against_r_core
