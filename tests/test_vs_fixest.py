@@ -13,10 +13,13 @@ from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
-    ols_but_not_poisson_fml,
+    FEOLS_FORMULA_F3_CASES,
+    build_feols_data_variants,
     ols_fmls,
 )
-from tests._torch_test_utils import torch_param
+from tests._feols_test_cases import (
+    convert_f3 as _convert_f3,
+)
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -94,6 +97,11 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     )
 
 
+@pytest.fixture(scope="module")
+def data_feols_variants(data_feols):
+    return build_feols_data_variants(data_feols)
+
+
 @pytest.fixture
 def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     return pf.get_data(
@@ -146,7 +154,6 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     return py_vcov, r_vcov
 
 
-test_counter_feols = 0
 test_counter_fepois = 0
 test_counter_feiv = 0
 test_counter_feglm = 0
@@ -163,80 +170,19 @@ test_counter_feglm = 0
 # - G_adj: True
 
 
-ALL_F3 = ["str", "object", "int", "categorical", "float"]
-SINGLE_F3 = ALL_F3[0]
-
-
-BACKEND_F3 = [
-    *[
-        pytest.param(name, pf.MapDemeaner(backend="numba"), t, id=name)
-        for name in ("numba",)
-        for t in ALL_F3
-    ],
-    pytest.param(
-        "within",
-        pf.LsmrDemeaner(preconditioner="additive"),
-        SINGLE_F3,
-        id="within_additive",
-    ),
-    pytest.param(
-        "within_diag",
-        pf.LsmrDemeaner(preconditioner="diagonal"),
-        SINGLE_F3,
-        id="within_diagonal",
-    ),
-    *[
-        pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
-        for name in ("rust",)
-    ],
-    torch_param(
-        ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
-        id="torch",
-    ),
-    torch_param(
-        ("torch_cpu", pf.LsmrDemeaner(backend="torch", device="cpu"), SINGLE_F3),
-        id="torch_cpu",
-    ),
-    torch_param(
-        (
-            "torch_mps",
-            pf.LsmrDemeaner(backend="torch", precision="float32", device="mps"),
-            SINGLE_F3,
-        ),
-        id="torch_mps",
-        require="mps",
-    ),
-    torch_param(
-        (
-            "torch_cuda",
-            pf.LsmrDemeaner(backend="torch", device="cuda"),
-            SINGLE_F3,
-        ),
-        id="torch_cuda",
-        require="cuda",
-    ),
-    torch_param(
-        (
-            "torch_cuda32",
-            pf.LsmrDemeaner(backend="torch", precision="float32", device="cuda"),
-            SINGLE_F3,
-        ),
-        id="torch_cuda32",
-        require="cuda",
-    ),
-]
-
-
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("backend_name,demeaner,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
+@pytest.mark.parametrize(
+    "fml,f3_type",
+    FEOLS_FORMULA_F3_CASES,
+    ids=lambda value: str(value),
+)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_feols(
-    data_feols,
+    data_feols_variants,
     dropna,
     inference,
     weights,
@@ -244,29 +190,9 @@ def test_single_fit_feols(
     fml,
     k_adj,
     G_adj,
-    backend_name,
-    demeaner,
 ):
-    global test_counter_feols
-    test_counter_feols += 1
-
-    _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_feols, dropna)
-
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
-
-    data = data_feols.copy()
-
-    if dropna:
-        data = data.dropna()
-
-    # long story, but categories need to be strings to be converted to R factors,
-    # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
-
-    # test fixed effects that are not floats, but ints or categoricals, etc
-
-    data = _convert_f3(data, f3_type)
+    data = data_feols_variants[(dropna, f3_type)]
 
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
@@ -279,7 +205,6 @@ def test_single_fit_feols(
         vcov=inference,
         weights=weights,
         ssc=ssc_,
-        demeaner=demeaner,
     )
     if weights is not None:
         r_fixest = fixest.feols(
@@ -326,24 +251,11 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if backend_name in ("torch", "torch_cpu", "torch_cuda"):
-        coef_tol = 1e-08
-        predict_tol = 5e-05
-        resid_tol = 5e-05
-        inference_tol = 1e-06
-        tstat_tol = 1e-05
-    elif backend_name in ("torch_mps", "torch_cuda32"):
-        coef_tol = 5e-06
-        predict_tol = 2e-04
-        resid_tol = 2e-04
-        inference_tol = 1e-05
-        tstat_tol = 1e-05
-    else:
-        coef_tol = 1e-08
-        predict_tol = 1e-06
-        resid_tol = 1e-06
-        inference_tol = 1e-07
-        tstat_tol = 1e-06
+    coef_tol = 1e-08
+    predict_tol = 1e-06
+    resid_tol = 1e-06
+    inference_tol = 1e-07
+    tstat_tol = 1e-06
 
     if inference == "iid" and k_adj and G_adj:
         py_resid = mod.resid()
@@ -1850,23 +1762,6 @@ def test_inf_dropping(fml, weights):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
     assert int(data.shape[0] - n_zeros) == fit_py._N
-
-
-def _convert_f3(data, f3_type):
-    """Convert f3 to the desired type."""
-    if f3_type == "categorical":
-        data["f3"] = pd.Categorical(data["f3"])
-    elif f3_type == "int":
-        data["f3"] = data["f3"].astype(float).astype(np.int32)
-    elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
-    elif f3_type == "object":
-        data["f3"] = data["f3"].astype(object)
-    elif f3_type == "float":
-        data["f3"] = data["f3"].astype(float)
-    else:
-        pass
-    return data
 
 
 def _get_r_inference(inference):

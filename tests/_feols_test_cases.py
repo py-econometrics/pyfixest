@@ -100,3 +100,16 @@ def convert_f3(data: pd.DataFrame, f3_type: str) -> pd.DataFrame:
     else:  # pragma: no cover - the case matrix is closed above
         raise ValueError(f"Unsupported f3_type: {f3_type}")
     return data
+
+
+def build_feols_data_variants(
+    base: pd.DataFrame,
+) -> dict[tuple[bool, str], pd.DataFrame]:
+    """Build the missing-data and factor-type inputs shared by parity suites."""
+    variants = {}
+    for dropna in (False, True):
+        for f3_type in ALL_F3_TYPES:
+            data = base.dropna() if dropna else base.copy()
+            data.where(data != "nan", np.nan, inplace=True)
+            variants[(dropna, f3_type)] = convert_f3(data, f3_type)
+    return variants

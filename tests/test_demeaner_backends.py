@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from tests._feols_test_cases import FEOLS_FORMULA_F3_CASES, convert_f3
+from tests._feols_test_cases import FEOLS_FORMULA_F3_CASES, build_feols_data_variants
 from tests._torch_test_utils import torch_param
 
 pytestmark = [
@@ -156,13 +156,7 @@ def backend_data() -> dict[tuple[bool, str], pd.DataFrame]:
         error_type="2",
         model="Feols",
     )
-    variants = {}
-    for dropna in (False, True):
-        for f3_type in ("str", "object", "int", "categorical", "float"):
-            data = base.dropna() if dropna else base.copy()
-            data.where(data != "nan", np.nan, inplace=True)
-            variants[(dropna, f3_type)] = convert_f3(data, f3_type)
-    return variants
+    return build_feols_data_variants(base)
 
 
 def _assert_backend_matches(
