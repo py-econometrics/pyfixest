@@ -47,13 +47,13 @@ estimator-specific tolerance, and extend the nearest permanent matrix before
 adding a new test function or file.
 
 Keep the permanent test parametrized through the public API where possible and
-keep its runtime suitable for regular use. Live R comparisons must run through
-rpy2 inside pytest. Register every rpy2-importing test file in
+keep its runtime suitable for regular CI use. Live R comparisons must run
+through rpy2 inside pytest. Register every rpy2-importing test file in
 `tests/conftest.py` and use the strict R marker matching dependency
-availability. If the external implementation is too slow or cannot run
-reliably in the test environment, store a small deterministic result (for
-example, CSV) and commit the code that generates it plus the exact software
-version.
+availability. Do not replace an available live reference merely to shorten the
+edit loop; first select affected live cases or use the fast matrix. Follow the
+stored-reference criteria in `docs/developer/testing.md` when live execution is
+unavailable, unreliable, or impractical.
 
 Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
 Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
@@ -62,5 +62,7 @@ Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 pixi run -e py312-r test-r-fixest-fast
 ```
 
-Use the fast suite while editing. It does not replace or establish permanent
-estimator-specific coverage.
+Use the fast suite while editing. After the implementation stabilizes, produce
+the affected canonical evidence locally or in exact-head CI. The fast suite
+does not replace or establish permanent estimator-specific coverage and is not
+complete merge evidence.

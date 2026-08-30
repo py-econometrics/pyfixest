@@ -5,8 +5,10 @@ description: Prepare reviewer-ready pyfixest single or stacked draft PRs after h
 
 # Prepare the review handoff
 
-Use this skill only after implementation, history curation, and required local
-verification are complete. Read `docs/developer/git-and-pr-style.md`.
+Use this skill only after implementation is stable, any required history
+curation is complete, and required edit or handoff verification is complete.
+Required long checks may still be running in exact-head CI when clearly
+reported. Read `docs/developer/git-and-pr-style.md`.
 
 ## Choose the delivery shape
 
@@ -42,8 +44,10 @@ For a stack, identify the immediate parent only when it is not obvious from the
 PR base. Do not force estimator-specific boilerplate into documentation, CI, or
 maintenance PRs.
 
-Submit new PRs as drafts. Mark a layer ready only when required checks pass or
-clearly identified long checks are running in CI. Require human-maintainer
-approval on every layer.
+Submit new PRs as drafts. A draft may be handed off while clearly identified
+long checks run in exact-head CI. Mark a layer ready for review only when
+required checks pass or those long checks are visibly running. Do not describe
+the change as merge-ready until every required exact-head check passes. Require
+human-maintainer approval on every layer.
 
 Stop at handoff. Do not merge the PR or invoke `gh stack merge`.
