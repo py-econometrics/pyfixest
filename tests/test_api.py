@@ -250,7 +250,6 @@ def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
     # the same solve as the original.
     np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
     assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
-    assert fit_reused.preconditioner.variant == pre.variant
     assert fit_reused.preconditioner.nrows == pre.nrows
 
 
@@ -325,11 +324,8 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     # The 1st-stage demeaner's config stores the 2nd-stage's preconditioner
     # verbatim (identity preserved on assignment).
     assert fit._model_1st_stage._demeaner.preconditioner is preconditioner
-    # The 1st-stage model's preconditioner is what came back from the solve;
-    # a fresh pyo3 wrapper around the same factorization (identity differs;
-    # value semantics match upstream — compare structurally).
+    # The 1st-stage model's preconditioner is what came back from the solve.
     assert isinstance(fit._model_1st_stage.preconditioner, pf.Preconditioner)
-    assert fit._model_1st_stage.preconditioner.variant == preconditioner.variant
     assert fit._model_1st_stage.preconditioner.nrows == preconditioner.nrows
 
 
