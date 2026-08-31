@@ -34,6 +34,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   workflow.
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
+- A Python-only release numerical-contract snapshot suite now provides broad,
+  repeatable edit feedback for public `feols`, `fepois`, `feglm`, and
+  `quantreg` fits. It complements rather than replaces the fast and canonical
+  live-R evidence.
 
 ### Inference Types
 
