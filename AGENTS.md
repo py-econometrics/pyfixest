@@ -148,7 +148,7 @@ Use `pixi run` for every Python, pytest, lint, docs, and R command. Bare tools
 may miss dependencies or the compiled extension.
 
 - Edit loop: targeted tests with `-x -q --no-cov` and changed-file lint/type
-  checks.
+  checks; `ty` checks `pyfixest/` project-wide.
 - PR baseline: `pixi run test-py` plus relevant lint/type checks. This is a
   Python-only regression suite; it does not establish numerical agreement with
   R or other external software.
@@ -212,7 +212,8 @@ qualitative and depends on hardware and caches; report the actual elapsed time.
 | `pixi run -e py312-r test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
 | `pixi run -e py312-r test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
 | `pixi run -e py312-r test-all` | Run every test supported by the current Python and R environment | Potentially substantially longer |
-| `pixi run -e lint prek run <ruff-format\|ruff-check\|mypy> --files <changed files>` | Format, lint, or type-check changed files | Seconds to a few minutes |
+| `pixi run -e lint prek run <ruff-format\|ruff-check> --files <changed files>` | Format or lint changed files | Seconds to a few minutes |
+| `pixi run -e lint prek run ty --all-files` | Type-check `pyfixest/` | Seconds to a few minutes |
 | `pixi run lint` | Run all repository lint hooks | Minutes |
 | `pixi run docs-build` | Regenerate quartodoc reference inputs and navigation | Minutes |
 | `pixi run docs-render` | Build and render the complete documentation site | May take tens of minutes |
