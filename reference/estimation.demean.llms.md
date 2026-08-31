@@ -57,7 +57,7 @@ print(np.linalg.lstsq(X_demeaned, Y_demeaned, rcond=None)[0])
 print(pf.feols(fml, data).coef())
 ```
 
-    [-6.6927558]
+    [-6.73780555]
     Coefficient
-    treat   -6.692756
+    treat   -6.737806
     Name: Estimate, dtype: float64

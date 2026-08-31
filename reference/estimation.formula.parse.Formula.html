@@ -830,7 +830,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Splits a fixest-style formula into second stage, fixed effects and, for IV models, first stage. Use <code>parse()</code> instead of calling the class directly. <code>parse()</code> also expands the multiple estimation operators (<code>sw</code>, <code>sw0</code>, <code>csw</code>, <code>csw0</code>, <code>mvsw</code>) into one <code>Formula</code> per model. This is an internal API. Formulas are written as strings and passed to <code>feols()</code>. See the <a href="../tutorials/formula-syntax.html">formula syntax tutorial</a>.</p>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="2e6e2f0a" class="cell" data-execution_count="1">
+<div id="9af3a227" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pyfixest.estimation.formula.parse <span class="im">import</span> Formula</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fml <span class="op">=</span> Formula.parse(<span class="st">"Y ~ X1 + X2 | f1 + f2"</span>)[<span class="dv">0</span>]</span>
@@ -840,7 +840,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Stepwise syntax expands into one formula per estimated model.</p>
-<div id="ff034687" class="cell" data-execution_count="2">
+<div id="59c38467" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Formula.parse(<span class="st">"Y ~ X1 + csw(X2, X3)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
 <pre><code>[Y ~ 1 + X1 + X2, Y ~ 1 + X1 + X2 + X3]</code></pre>
