@@ -1,6 +1,6 @@
 ---
 title: "Standard Errors & Inference"
-description: "HC-robust, cluster-robust, wild bootstrap, randomization inference, and the causal cluster variance estimator."
+description: "HC-robust, cluster-robust, wild bootstrap, weighting bootstrap, randomization inference, and the causal cluster variance estimator."
 categories: [Core Estimation]
 format:
   html:
@@ -180,16 +180,106 @@ Interpretation target:
 - If `CRV1` reject rate is above nominal size (e.g. > 0.05), inference is too liberal.
 - If `WCB` is closer to nominal size, bootstrap improves finite-sample reliability.
 
-## 9. Concluding Inference Workflow
+## 9. Weighting Bootstrap
+
+The wild bootstrap perturbs residuals. The **weighting bootstrap** instead
+reweights fixed, rowwise model matrices and re-fits the model. It requires a
+large number of independent observations or clusters. It is not a
+null-imposed, studentized wild cluster bootstrap and should not be used as a
+few-cluster correction.
+
+Two procedures are available:
+
+- `bootstrap_bayesian()`: continuous Dirichlet weights give the posterior draws
+  of [Rubin's (1981) Bayesian bootstrap](https://doi.org/10.1214/aos/1176345338).
+  The output distinguishes the original estimate from the posterior mean and
+  reports posterior SD and an equal-tail credible interval.
+  `dirichlet_alpha=1` is Rubin's standard choice; other finite positive values
+  change the common Dirichlet concentration.
+- `bootstrap_pairs()`: integer counts implement a pairs bootstrap while the
+  rowwise outcome, regressor, instrument, and fixed-effect matrices remain
+  fixed. The output reports bootstrap SE, a percentile confidence interval,
+  and the finite-replication-corrected p-value
+  `(1 + exceedances) / (estimable replicates + 1)` for an unstudentized
+  centered test of `H0: beta = 0`.
+
+```python
+fit_weighting = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "f1"})
+bayesian_result = fit_weighting.bootstrap_bayesian(
+    reps=999,
+    dirichlet_alpha=1.0,
+    cluster="f1",
+    level=0.95,
+    seed=42,
+)
+pairs_result = fit_weighting.bootstrap_pairs(
+    reps=999,
+    cluster="f1",
+    level=0.95,
+    seed=42,
+)
+```
+
+When a `cluster` is set, weights are drawn once per cluster and broadcast to
+every observation in that cluster, so resampling respects the dependence
+structure. Unlike the wild cluster bootstrap, only one-way clustering is
+supported; a model with multiway clustering requires passing a single
+`cluster` column explicitly. At least two clusters are required, but in
+applications the justification relies on many independent clusters.
+
+Original analytic weights (`aweights`) are multiplied by each bootstrap draw.
+Frequency weights (`fweights`) are rejected because expanded-sample
+multinomial and aggregated-Dirichlet semantics differ. Quantile regression and
+offsets are also unsupported. DiD results require estimator-specific resampling
+and are rejected. The methods need stored estimation data, so fit with
+`lean=False` and `store_data=True`.
+
+The methods are available on individual fitted results only. Multiple-estimation
+syntax returns a `FixestMulti`; call `fetch_model()` first when one constituent
+model should be bootstrapped.
+
+The weighting bootstrap supports IV (2SLS) and Gaussian, Poisson, logit, and
+probit GLMs. IV inference assumes strong identification in the population and in
+every estimable draw. GLM draws always combine bootstrap weights with the
+original user weights, not final IRLS working weights. A replicate is undefined
+if estimator convergence, finite-value, rank, or IV identification checks fail.
+For binary GLMs, a replicate with one outcome class or a boundary solution is
+also undefined; this replicate guard does not rerun the model's configured
+`separation_check` procedure. Each requested replicate is sampled exactly once.
+An undefined replicate remains `NaN` in the returned draw matrix, and a warning
+reports that summaries use only the estimable replicates. At least two estimable
+replicates are required.
+
+Fitted-model small-sample corrections and wild-bootstrap `k_adj` or `G_adj`
+settings do not modify these raw coefficient draws. Bayesian output contains
+`Original estimate`, `Posterior mean`, `Posterior SD`, `CI lower`, `CI upper`,
+and `interval`. Pairs output contains `Estimate`, `CI lower`, `CI upper`,
+`Bootstrap SE`, `P-value`, and `interval`.
+
+The methods differ rather than forming substitutes for every design:
+
+| | Wild cluster bootstrap | Weighting bootstrap |
+|---|---|---|
+| Perturbs | residuals | observation weights |
+| IV (2SLS) | not supported | supported |
+| Analytic weights | not supported | supported |
+| Multiway clustering | not supported | not supported |
+| Cluster requirement | can improve few-cluster OLS inference | many independent clusters |
+
+The standard Bayesian implementation (`dirichlet_alpha=1`) is numerically
+validated against R's `bayesboot` package. Pairs-bootstrap draws are validated
+against R's `boot` package.
+
+## 10. Concluding Inference Workflow
 
 Suggested workflow:
 
 1. Start from design and dependence structure.
 2. Use robust/clustered vcov aligned with that structure.
-3. If clusters are few or very uneven, use wild cluster bootstrap.
+3. If clusters are few or very uneven, consider a null-imposed wild cluster bootstrap for supported OLS designs; do not treat the weighting bootstrap as a few-cluster correction.
 4. If assignment is randomized, add randomization inference as a design-based check.
 
-## 10. Multiple Testing
+## 11. Multiple Testing
 
 When testing many hypotheses, single-test p-values are not enough.
 Multiple-testing corrections and workflow guidance are covered in a dedicated

@@ -173,6 +173,16 @@ wrapper tests. Extend an existing formula/vcov/weights/SSC matrix when the new
 case fits it. Unit-test internal seams only when the public API cannot exercise
 them cleanly.
 
+For numerical features, make public end-to-end comparisons against the external
+reference the center of the permanent suite. Tests that monkeypatch a sampler,
+solver, or estimator are supplemental and must not be the only external
+validation. When two implementations use incompatible random-number generators,
+choose and document one of three strategies: supply common deterministic draws
+to both numerical engines, compare independently seeded distributional summaries
+with Monte Carlo tolerances, or store deterministic external output together
+with its generating script and software version. Do not add a test-only public
+API solely to synchronize random draws.
+
 Every behavioral change needs regression evidence, but it does not necessarily
 need a new test. Control suite growth in this order:
 
@@ -191,6 +201,9 @@ cannot cover the behavior coherently and report the runtime impact. Do not add
 duplicate coverage merely to give one edge case its own test function. Avoid
 hard line-count limits: review whether the test remains legible and whether its
 maintenance and runtime cost are proportional to the regression it prevents.
+Before handoff, report the approximate collected-test and runtime delta for an
+unusually large suite change and remove tests that only freeze private helper
+structure already exercised by a public integration or external-reference case.
 
 For predictions and residuals, compare a small deterministic subset rather
 than an entire vector and give each quantity its own tolerance. Cover singleton

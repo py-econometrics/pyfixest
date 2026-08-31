@@ -14,6 +14,8 @@ SolverOptions = Literal[
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
+WeightingBootstrapDistribution = Literal["dirichlet", "multinomial"]
+WeightingBootstrapEstimator = Literal["ols", "iv", "glm"]
 InferenceType = Literal["regular", "simult", "savi"]
 
 

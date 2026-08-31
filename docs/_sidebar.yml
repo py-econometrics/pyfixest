@@ -41,6 +41,8 @@ website:
       - reference/estimation.models.feols_.Feols.fixef.qmd
       - reference/estimation.models.feols_.Feols.get_performance.qmd
       - reference/estimation.models.feols_.Feols.wald_test.qmd
+      - reference/estimation.models.feols_.Feols.bootstrap_bayesian.qmd
+      - reference/estimation.models.feols_.Feols.bootstrap_pairs.qmd
       - reference/estimation.models.feols_.Feols.wildboottest.qmd
       - reference/estimation.models.feols_.Feols.ritest.qmd
       - reference/estimation.models.feols_.Feols.ccv.qmd

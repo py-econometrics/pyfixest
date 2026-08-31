@@ -17,6 +17,8 @@ _rpy2_test_files = [
     "test_vs_r_fast.py",
     "test_vs_fixest.py",
     "test_wald_test.py",
+    "test_weighting_bootstrap_vs_r_core.py",
+    "test_weighting_bootstrap_vs_r_extended.py",
 ]
 try:
     import pytest

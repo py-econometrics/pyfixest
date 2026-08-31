@@ -85,6 +85,38 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
 
+### Weighting Bootstraps
+
+- Fitted OLS, fixed-effect OLS, IV, and Gaussian, Poisson, logit, and probit GLMs
+  now provide `bootstrap_bayesian()` and `bootstrap_pairs()` methods. The methods
+  reweight fixed rowwise model matrices and support observation-level or one-way
+  cluster weights, including original analytic weights.
+- Bayesian output reports the original estimate, posterior mean, posterior SD,
+  and equal-tail credible limits. Pairs output reports the original estimate,
+  bootstrap SE, percentile confidence limits, and an unstudentized centered
+  p-value.
+- Frequency weights, quantile regression, offsets, multiway clustering, and
+  DiD results, models fit with `lean=True` or `store_data=False`, and
+  `FixestMulti` containers are not supported. Weighting bootstraps require many
+  independent observations or clusters and are not a few-cluster replacement
+  for the wild cluster bootstrap. Rubin's standard Bayesian bootstrap is
+  validated against R `bayesboot`, and pairs draws are validated against R
+  `boot`.
+- Every requested replicate is sampled exactly once. Replicates that cannot be
+  estimated remain `NaN` in returned draws, and summaries use the estimable
+  replicates.
+
+```{python}
+bootstrap_fit = pf.feols("Y ~ X1 + X2 | f1", data=df)
+bootstrap_fit.bootstrap_bayesian(
+    reps=19,
+    dirichlet_alpha=1.0,
+    level=0.95,
+    seed=42,
+)
+bootstrap_fit.bootstrap_pairs(reps=19, level=0.95, seed=42)
+```
+
 ### Formula Parsing on `formulaic`
 
 Formula parsing no longer splits strings by hand. `feols()` and friends now hand

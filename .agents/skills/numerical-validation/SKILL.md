@@ -55,6 +55,15 @@ reliably in the test environment, store a small deterministic result (for
 example, CSV) and commit the code that generates it plus the exact software
 version.
 
+Prefer public end-to-end reference tests. A test that monkeypatches the sampler,
+solver, or estimator may verify a numerical seam, but it is supplemental rather
+than the primary external comparison. When random-number generators differ
+across languages, use the strategy in `docs/developer/testing.md`: common
+deterministic draws, independently seeded distributional summaries with an
+explicit Monte Carlo tolerance, or stored external output. Separate reference
+files are appropriate when core and extended dependencies require different
+markers or fixture lifecycles; name that boundary clearly.
+
 Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
 Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 
