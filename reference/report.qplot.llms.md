@@ -41,6 +41,6 @@ pf.qplot(fit)
             <Axes: title={'center': 'X2'}, xlabel='Quantile', ylabel='Coefficient (95 % CI)'>],
            dtype=object))
 
-![](report.qplot_files/figure-html/cell-2-output-4.png)
+![](report.qplot_files/figure-html/cell-2-output-2.png)
 
 See the [quantile regression tutorial](../tutorials/quantile-regression.llms.md) for details.

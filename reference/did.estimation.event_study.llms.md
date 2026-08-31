@@ -73,4 +73,4 @@ fit_twfe_saturated.aggregate()
 fit_twfe_saturated.iplot_aggregate()
 ```
 
-![](did.estimation.event_study_files/figure-html/cell-2-output-3.png)
+![](did.estimation.event_study_files/figure-html/cell-2-output-1.png)

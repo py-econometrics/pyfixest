@@ -147,7 +147,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#76048e43 .cell execution_count=3}
+    ::: {#d2942396 .cell execution_count=3}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd

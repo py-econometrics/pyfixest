@@ -86,6 +86,6 @@ pf.panelview(
 )
 ```
 
-![](did.visualize.panelview_files/figure-html/cell-2-output-3.png)
+![](did.visualize.panelview_files/figure-html/cell-2-output-1.png)
 
-![](did.visualize.panelview_files/figure-html/cell-2-output-4.png)
+![](did.visualize.panelview_files/figure-html/cell-2-output-2.png)
