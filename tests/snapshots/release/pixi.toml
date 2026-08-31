@@ -1,0 +1,24 @@
+[workspace]
+name = "pyfixest-release-snapshots"
+channels = ["conda-forge"]
+platforms = ["linux-64", "win-64", "osx-arm64"]
+
+[dependencies]
+python = "~=3.12.0"
+
+[pypi-dependencies]
+pyfixest = "==0.60.0"
+
+[activation.env]
+PYTHONHASHSEED = "0"
+RAYON_NUM_THREADS = "1"
+OMP_NUM_THREADS = "1"
+OPENBLAS_NUM_THREADS = "1"
+MKL_NUM_THREADS = "1"
+VECLIB_MAXIMUM_THREADS = "1"
+NUMEXPR_NUM_THREADS = "1"
+
+[tasks]
+generate = { cmd = "python -P scripts/generate_estimation_snapshots.py --write", cwd = "../../..", description = "Explicitly regenerate the pyfixest 0.60.0 release contract" }
+check = { cmd = "python -P scripts/generate_estimation_snapshots.py --check", cwd = "../../..", description = "Verify release snapshot generator determinism" }
+provenance = { cmd = "python -P -c \"import pyfixest; print(pyfixest.__version__); print(pyfixest.__file__)\"", cwd = "../../..", description = "Print the isolated release interpreter provenance" }
