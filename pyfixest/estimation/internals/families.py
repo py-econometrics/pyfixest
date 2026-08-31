@@ -3,9 +3,13 @@ from __future__ import annotations
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy.stats import norm, t
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,11 +51,11 @@ class GlmFamily:
     variance: Callable[[np.ndarray], np.ndarray]
     deviance: Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
     mu_start: Callable[[np.ndarray, np.ndarray | None], np.ndarray]
-    check_y: Callable[[np.ndarray], None]
+    check_y: Callable[[np.ndarray | pd.DataFrame], None]
     inference_dist: InferenceDist = NORMAL_DIST
 
 
-def _check_y_binary(Y: np.ndarray) -> None:
+def _check_y_binary(Y: np.ndarray | pd.DataFrame) -> None:
     Y_unique = np.unique(Y)
     if len(Y_unique) != 2:
         raise ValueError("The dependent variable must have two unique values.")
@@ -59,7 +63,7 @@ def _check_y_binary(Y: np.ndarray) -> None:
         raise ValueError("The dependent variable must be binary (0 or 1).")
 
 
-def _check_y_noop(Y: np.ndarray) -> None:
+def _check_y_noop(Y: np.ndarray | pd.DataFrame) -> None:
     return None
 
 
@@ -126,7 +130,7 @@ def _pois_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) ->
         )
 
 
-def _check_y_nonneg(Y: np.ndarray) -> None:
+def _check_y_nonneg(Y: np.ndarray | pd.DataFrame) -> None:
     if np.any(Y < 0):
         raise ValueError("The dependent variable must be weakly positive.")
 

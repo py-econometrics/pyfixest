@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -37,11 +38,12 @@ def prepare_cluster_state(
     ssc_dict: dict,
     fixef: str | None,
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    k_fe: np.ndarray | pd.Series | None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
-    cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
-    _check_cluster_df(cluster_df=cluster_df, data=data)
+    data_pandas = _narwhals_to_pandas(data)
+    cluster_df = _get_cluster_df(data=data_pandas, clustervar=clustervar)
+    _check_cluster_df(cluster_df=cluster_df, data=data_pandas)
 
     if cluster_df.shape[1] > 1:
         cluster_df = _prepare_twoway_clustering(
@@ -59,6 +61,7 @@ def prepare_cluster_state(
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
+        k_fe = cast(np.ndarray | pd.Series, k_fe)
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),

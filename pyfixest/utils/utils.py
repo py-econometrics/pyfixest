@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -483,7 +483,11 @@ def capture_context(context: int | Mapping[str, Any]) -> Mapping[str, Any]:
         The context that should be later passed to the Formulaic materialization
         procedure like: `.get_model_matrix(..., context=<this object>)`.
     """
-    return _capture_context(context + 2) if isinstance(context, int) else context
+    return (
+        cast(Mapping[str, Any], _capture_context(context + 2))
+        if isinstance(context, int)
+        else context
+    )
 
 
 def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:

@@ -19,7 +19,7 @@ from pyfixest.utils.dev_utils import DataFrameType
 
 def fepois(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,

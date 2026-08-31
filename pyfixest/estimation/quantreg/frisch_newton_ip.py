@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.linalg import lapack, solve_triangular
 
+_dposv = lapack.dposv  # ty: ignore[unresolved-attribute]
+
 
 def _duality_gap(x, z, s, w):
     return x @ z + s @ w
@@ -30,7 +32,7 @@ def _solve_ADAt(
     K = W @ W.T
 
     u_buf = u.copy()
-    lapack.dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
+    _dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
     # S = np.linalg.cholesky(K)

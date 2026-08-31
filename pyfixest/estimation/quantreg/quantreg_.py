@@ -12,6 +12,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
@@ -67,7 +68,7 @@ class Quantreg(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
         solver: SolverOptions = "np.linalg.solve",
@@ -178,10 +179,12 @@ class Quantreg(Feols):
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
+        Y = cast(pd.DataFrame, self._Y)
+        X = cast(pd.DataFrame, self._X)
         self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
+            Y.to_numpy(),
+            X.to_numpy(),
+            X.to_numpy(),
         )
 
     def prepare_model_matrix(self):
@@ -198,7 +201,9 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        res = self._fit(X=self._X, Y=self._Y)
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
+        res = self._fit(X=X, Y=Y)
 
         self._beta_hat = res[0]
         self._has_converged = res[1]
@@ -209,11 +214,11 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
-        self._Y_hat_link = self._X @ self._beta_hat
+        self._Y_hat_link = X @ self._beta_hat
         self._Y_hat_response = self._Y_hat_link
 
-        self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
-        self._hessian = self._X.T @ self._X
+        self._u_hat = Y.flatten() - X @ self._beta_hat
+        self._hessian = X.T @ X
         self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
@@ -392,13 +397,15 @@ class Quantreg(Feols):
         return fn_res
 
     def _vcov_iid(self):
-        return vcov_iid_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
-        )
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
+        return vcov_iid_qreg(X=X, Y=Y, u_hat=self._u_hat, q=self._quantile, N=self._N)
 
     def _vcov_hetero(self):
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
         return vcov_hetero_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+            X=X, Y=Y, u_hat=self._u_hat, q=self._quantile, N=self._N
         )
 
     def _vcov_nid(self) -> np.ndarray:
@@ -409,9 +416,11 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
+        X = cast(np.ndarray, self._X)
+        Y = cast(np.ndarray, self._Y)
         return vcov_nid_qreg(
-            X=self._X,
-            Y=self._Y,
+            X=X,
+            Y=Y,
             beta_hat=self._beta_hat,
             q=self._quantile,
             N=self._N,
@@ -429,8 +438,9 @@ class Quantreg(Feols):
                 "Multiway clustering is not (yet) supported for quantile regression."
             )
 
+        X = cast(np.ndarray, self._X)
         return vcov_crv1_qreg(
-            X=self._X,
+            X=X,
             u_hat=self._u_hat,
             q=self._quantile,
             clustid=clustid,
