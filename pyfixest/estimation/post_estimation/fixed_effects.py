@@ -306,19 +306,23 @@ def contrast_code_fixed_effects(
         [f"C({fixed_effect})" for fixed_effect in fixed_effects],
         _parser=DefaultFormulaParser(include_intercept=False),
     )
-    matrix = contrast_coding.get_model_matrix(
-        data,
-        output="sparse",
-        ensure_full_rank=True,
-        context=context,
-        transform_state=transform_state,
+    matrix = cast(
+        formulaic.ModelMatrix,
+        contrast_coding.get_model_matrix(
+            data,
+            output="sparse",
+            ensure_full_rank=True,
+            context=context,
+            transform_state=transform_state,
+        ),
     )
+    model_spec = cast(ModelSpec, matrix.model_spec)
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     for fixed_effect_name, term in zip(
-        fixed_effect_names, matrix.model_spec.terms, strict=True
+        fixed_effect_names, model_spec.terms, strict=True
     ):
         coefficient_positions[fixed_effect_name] = (
-            get_fixed_effect_coefficient_positions(term, matrix.model_spec)
+            get_fixed_effect_coefficient_positions(term, model_spec)
         )
 
     return FixedEffectContrastCoding(

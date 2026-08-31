@@ -13,6 +13,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: "Lint and type check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.62.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          # py312 is not linted itself: it is the environment the `ty` hook
+          # resolves third-party types against. Installing it here rather than
+          # in a separate step keeps it inside setup-pixi's cache.
+          environments: lint py312
+
+      - name: Run lint hooks
+        run: pixi run -e lint lint
+        env:
+          SKIP: no-commit-to-branch
+
   test-python:
     name: "Tests Python (${{ matrix.environment }}, ${{ matrix.os }})"
     runs-on: ${{ matrix.os }}

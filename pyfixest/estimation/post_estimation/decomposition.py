@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import csr_matrix, diags, hstack, spmatrix, vstack
+from scipy.sparse import csc_matrix, csr_matrix, diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -17,6 +17,8 @@ PANEL_ALIASES = {
     "share_full": "Share of Full Effect",
     "share_explained": "Share of Explained Effect",
 }
+
+_IndexableSparse = csc_matrix | csr_matrix
 
 
 @dataclass
@@ -284,7 +286,7 @@ class GelbachDecomposition:
             self.X = X
             self.Y = Y
 
-            X_stored = cast(csr_matrix, self.X)
+            X_stored = cast(_IndexableSparse, self.X)
             self.X1 = X_stored[:, ~self.mask]
             self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
             self.X2 = X_stored[:, self.mask]
@@ -336,7 +338,7 @@ class GelbachDecomposition:
             if self.unique_clusters is not None and not self.only_coef:
                 for g in self.unique_clusters:
                     cluster_idx = np.where(self.cluster_df == g)[0]
-                    self.X_dict[g] = cast(csr_matrix, self.X)[cluster_idx]
+                    self.X_dict[g] = cast(_IndexableSparse, self.X)[cluster_idx]
                     self.Y_dict[g] = self.Y[cluster_idx]
 
             return self.results
@@ -344,7 +346,7 @@ class GelbachDecomposition:
         else:
             # need to compute X1, X2 in bootstrap sample
 
-            X_stored = cast(csr_matrix, X)
+            X_stored = cast(_IndexableSparse, X)
             X1 = hstack([np.ones((X.shape[0], 1)), X_stored[:, ~self.mask]])
             X2 = X_stored[:, self.mask]
 
@@ -454,7 +456,7 @@ class GelbachDecomposition:
 
         else:
             idx_rows: NDArray[np.int_] = rng.choice(self.N, self.N)
-            X = cast(csr_matrix, self.X)[idx_rows, :]
+            X = cast(_IndexableSparse, self.X)[idx_rows, :]
             Y = self.Y[idx_rows]
 
         return self.fit(X=X, Y=Y, store=False)
@@ -487,9 +489,8 @@ class GelbachDecomposition:
 
         if agg_first:
             # Compute H and Hg
-            H = (
-                cast(csr_matrix, X2).multiply(beta2).tocsc()
-            )  # csc better for slicing columns than csr
+            H = cast(_IndexableSparse, X2).multiply(beta2).tocsc()
+            # CSC is better for slicing columns than CSR.
             Hg = np.zeros((N, len(self.combine_covariates_dict)))
 
             for i, (_, covariates) in enumerate(self.combine_covariates_dict.items()):
@@ -509,7 +510,7 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, cast(csr_matrix, X2)[:, j].toarray().flatten())[0][
+                    lsqr(X1, cast(_IndexableSparse, X2)[:, j].toarray().flatten())[0][
                         self.decomp_var_in_X1_idx
                     ]
                     for j in range(X2.shape[1])

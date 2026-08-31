@@ -107,8 +107,12 @@ def model_matrix_fixest(
     )
 
     fml_second_stage = FixestFormula.second_stage
-    fml_first_stage = FixestFormula.first_stage
-    fval = FixestFormula.fixed_effects
+    fml_first_stage = (
+        FixestFormula.first_stage if FixestFormula.is_instrumental_variable else None
+    )
+    # This legacy helper predates the Formula wrapper and still consumes the
+    # fixed-effect formula as text.
+    fval = str(FixestFormula.fixed_effects) if FixestFormula.is_fixed_effects else None
     _check_weights(weights, data)
 
     pattern = (

@@ -1,7 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final, Protocol, TypeAlias, cast
+from typing import Any, Final, Protocol, cast
 
 import formulaic
 import numpy as np
@@ -15,8 +15,6 @@ from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
-
-_ModelSpecDict: TypeAlias = dict[str, formulaic.ModelSpec]
 
 
 class _ModelSpecWithLhs(Protocol):
@@ -64,7 +62,7 @@ class ModelMatrix:
         Instrumental variables for IV estimation.
     weights : pd.DataFrame or None
         Observation weights for weighted estimation.
-    model_spec : formulaic.ModelSpec
+    model_spec : formulaic.ModelSpecs
         The underlying formulaic model specification.
     na_index : frozenset[int]
         Indices of rows that were dropped.
@@ -78,7 +76,7 @@ class ModelMatrix:
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = cast(_ModelSpecDict, model_matrix.model_spec)
+        self._model_spec = cast(formulaic.ModelSpecs, model_matrix.model_spec)
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -297,14 +295,14 @@ class ModelMatrix:
             return self._data.loc[:, self._offset]
 
     @property
-    def model_spec(self) -> _ModelSpecDict:
+    def model_spec(self) -> formulaic.ModelSpecs:
         """
         Get the underlying formulaic model specification.
 
         Returns
         -------
-            dict[str, formulaic.ModelSpec]
-            The formulaic model specifications keyed by model-matrix role.
+        formulaic.ModelSpecs
+            The structured formulaic model specifications keyed by model-matrix role.
         """
         return self._model_spec
 

@@ -43,6 +43,17 @@ def test_polars_input():
     fit_offset.predict(newdata=data_pl)
 
 
+def test_vcov_with_polars_data_matches_pandas():
+    data = get_data().dropna()
+    vcov = {"CRV1": "f1"}
+
+    expected = feols("Y ~ X1 | f1", data=data, vcov=vcov)
+    observed = feols("Y ~ X1 | f1", data=data).vcov(vcov, data=pl.from_pandas(data))
+
+    assert observed._G == expected._G
+    np.testing.assert_allclose(observed._vcov, expected._vcov)
+
+
 def test_integer_XY():
     # Create a random number generator
     rng = np.random.default_rng()

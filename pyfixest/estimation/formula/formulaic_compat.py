@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import formulaic
 import formulaic.formula
@@ -25,7 +25,13 @@ class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
-def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
+class _FormulaWithRoot(Protocol):
+    """Formulaic's structured formula interface used for MULTISTAGE terms."""
+
+    root: Iterable[Any]
+
+
+def terms_without_intercept(formula: Iterable[Any]) -> Iterator[Any]:
     """Yield formula terms excluding Formulaic's intercept term."""
     return (term for term in formula if term != "1")
 
@@ -75,7 +81,7 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
 
 
 def filter_multistage_endogenous_terms(
-    exogenous: formulaic.formula.Formula,
+    exogenous: _FormulaWithRoot,
     endogenous_terms: Iterable[Any],
 ) -> formulaic.formula.SimpleFormula:
     """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
@@ -90,8 +96,11 @@ def filter_multistage_endogenous_terms(
             "formulaic MULTISTAGE endogenous suffix changed: expected generated "
             f"second-stage terms {sorted(missing)} to be present before filtering."
         )
-    return formulaic.formula.SimpleFormula(
-        [term for term in terms if str(term) not in generated_endogenous]
+    return cast(
+        formulaic.formula.SimpleFormula,
+        formulaic.formula.SimpleFormula(
+            [term for term in terms if str(term) not in generated_endogenous]
+        ),
     )
 
 
@@ -119,7 +128,7 @@ def materialize_model_spec_with_unseen_mask(
         if bin_key in state:
             column = column.replace(state[bin_key])
         unseen |= (~column.isin(levels) & column.notna()).to_numpy()
-    return model_matrix, unseen
+    return cast(formulaic.ModelMatrix, model_matrix), unseen
 
 
 def rows_with_unseen_contrast_levels(

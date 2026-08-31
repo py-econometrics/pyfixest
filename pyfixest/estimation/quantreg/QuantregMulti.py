@@ -3,7 +3,7 @@ from __future__ import annotations
 import gc
 import inspect
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -93,8 +93,8 @@ class QuantregMulti:
         # data fixed across qregs, just need take from first one
         X = self.all_quantregs[q[q_median_idx]]._X
         Y = self.all_quantregs[q[q_median_idx]]._Y
-        assert isinstance(X, np.ndarray)
-        assert isinstance(Y, np.ndarray)
+        X = cast(np.ndarray, X)
+        Y = cast(np.ndarray, Y)
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]]._N
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)

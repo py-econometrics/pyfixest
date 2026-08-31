@@ -19,6 +19,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Contributor Workflow
 
+- Replaces mypy with ty for static type checking, using a Python
+  3.10-compatible configuration and enforcing the check through the local lint
+  workflow and CI. Associated compatibility fixes preserve `Formula.parse()`
+  subclasses, restore the deprecated model-matrix path, and support
+  Narwhals-compatible data in post-estimation clustered variance calculations.
 - Repository-local skills and developer guides now define architecture,
   numerical validation, change verification, history curation, review, and PR
   preparation for contributors and coding agents.
@@ -189,8 +194,6 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
-- `fit.ccv()` now returns numeric `tau_full` values instead of object-dtype
-  zero-dimensional arrays.
 
 
 ## PyFixest 0.60.0

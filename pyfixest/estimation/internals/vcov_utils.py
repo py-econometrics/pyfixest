@@ -16,7 +16,6 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
@@ -33,7 +32,7 @@ class ClusterPrep:
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: pd.DataFrame,
     clustervar: list[str],
     ssc_dict: dict,
     fixef: str | None,
@@ -41,9 +40,8 @@ def prepare_cluster_state(
     k_fe: np.ndarray | pd.Series | None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
-    data_pandas = _narwhals_to_pandas(data)
-    cluster_df = _get_cluster_df(data=data_pandas, clustervar=clustervar)
-    _check_cluster_df(cluster_df=cluster_df, data=data_pandas)
+    cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
+    _check_cluster_df(cluster_df=cluster_df, data=data)
 
     if cluster_df.shape[1] > 1:
         cluster_df = _prepare_twoway_clustering(
@@ -59,8 +57,7 @@ def prepare_cluster_state(
     k_fe_nested = 0
     n_fe_fully_nested = 0
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
-        if fe is None:
-            raise ValueError("`fe` must not be None when `fixef` is specified.")
+        fe = cast(pd.DataFrame | np.ndarray, fe)
         k_fe = cast(np.ndarray | pd.Series, k_fe)
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),
@@ -130,8 +127,7 @@ def _compute_bread(
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
+        cluster_df = data[clustervar].copy()
     else:
         raise AttributeError(
             """The input data set needs to be stored in the model object if
