@@ -44,6 +44,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   including the distinct observation- and working-weight domains in GLMs. It
   also defines the vocabulary for the planned immutable estimator-state
   refactor.
+- Formula-materialized estimator inputs now have a structurally immutable
+  `FormulaData` state,
+  and the generic fit runner delegates validation, inference data, post-fit
+  work, and result expansion through a structural lifecycle protocol. This
+  keeps formula roles stable while the later within- and weight-scale cleanup
+  proceeds independently.
 
 ### Inference Types
 

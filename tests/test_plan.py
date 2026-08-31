@@ -15,11 +15,14 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import (
     MODEL_REGISTRY,
+    ModelSpec,
     _resolve_model_class,
     build_all_splits,
     expand_specs,
+    fit_one,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 
 
 def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
@@ -299,3 +302,104 @@ def test_public_feols_matches_legacy_behavior():
     fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
     # If the planner regressed anything, coefficients would shift.
     assert abs(fit.coef().iloc[0] - (-0.9240461507764969)) < 1e-10
+
+
+def test_fit_one_uses_the_structural_lifecycle_contract():
+    """The generic pipeline delegates estimator-specific work through hooks."""
+    events: list[str] = []
+
+    class StubModel:
+        _X_is_empty = False
+        _is_iv = False
+
+        def __init__(self, *, events, **kwargs):
+            self.events = events
+
+        def prepare_model_matrix(self):
+            self.events.append("prepare")
+
+        def _validate_response(self):
+            self.events.append("validate")
+
+        def get_fit(self):
+            self.events.append("fit")
+
+        def _inference_data(self):
+            self.events.append("inference_data")
+            return "stub-data"
+
+        def vcov(self, vcov, vcov_kwargs=None, data=None):
+            assert vcov == "iid"
+            assert data == "stub-data"
+            self.events.append("vcov")
+
+        def get_inference(self):
+            self.events.append("inference")
+
+        def _finalize_fit(self):
+            self.events.append("finalize")
+
+        def _clear_attributes(self):
+            self.events.append("clear")
+
+        def _iter_fitted_models(self):
+            return ()
+
+    formula = Formula.parse_to_dict("Y ~ X1")[None][0]
+    spec = ModelSpec(
+        method="quantreg",
+        model_cls=StubModel,
+        formula=formula,
+        fixef_key=None,
+        sample_split_value=_ALL_SAMPLE,
+        model_kwargs={"events": events},
+    )
+
+    fit_one(
+        spec,
+        lookup_demeaned_data={},
+        lookup_preconditioner={},
+        vcov=None,
+        vcov_kwargs=None,
+    )
+
+    assert events == [
+        "prepare",
+        "validate",
+        "fit",
+        "inference_data",
+        "vcov",
+        "inference",
+        "finalize",
+        "clear",
+    ]
+
+
+def test_quantreg_multi_prepares_children_in_lifecycle_hook():
+    """Multi-quantile construction is deferred to the preparation phase."""
+    events: list[str] = []
+
+    class StubQuantreg:
+        def prepare_model_matrix(self):
+            events.append("prepare")
+
+        def to_array(self):
+            events.append("to_array")
+
+        def drop_multicol_vars(self):
+            events.append("drop_multicol_vars")
+
+    fit = QuantregMulti.__new__(QuantregMulti)
+    fit.all_quantregs = {0.25: StubQuantreg(), 0.75: StubQuantreg()}
+
+    fit.prepare_model_matrix()
+
+    assert events == [
+        "prepare",
+        "to_array",
+        "drop_multicol_vars",
+        "prepare",
+        "to_array",
+        "drop_multicol_vars",
+    ]
+    assert fit._X_is_empty is False

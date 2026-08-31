@@ -169,10 +169,35 @@ the retained matrices and several fit products. The public `vcov()` method is
 intentionally in-place and remains a post-fit mutation boundary. User input is
 copied by default, with the documented `copy_data=False` path as the exception.
 
+## Formula-state and lifecycle boundaries
+
+`ModelMatrix` is the construction helper for formula inputs. After missing,
+infinite, singleton, and other formula-level row filters have run, it produces a
+structurally immutable, slotted `FormulaData` value. Its contained Pandas frames are
+treated as read-only rather than being deeply immutable. The value keeps
+dependent, independent, fixed-effect, IV, weight, and offset roles on formula
+scale. Models populate legacy attributes from it in one direction; later
+transformations do not change the role or representation of the retained formula
+state. GLM separation returns a new filtered `FormulaData` value so its canonical
+row sample remains aligned with the data that enter IRLS. `store_data=False` and
+`lean=True` discard formula data together with the other retained input state.
+
+The generic runner operates on the structural `FittedModel` protocol. Response
+validation, inference-data selection, estimator-specific post-fit work, and
+result expansion live behind model hooks rather than estimator-name dispatch in
+the runner. Pipeline-object constructors only assemble configuration and child
+objects; for example, `QuantregMulti` prepares its children in
+`prepare_model_matrix`, not during construction.
+
+This is the representation foundation, not the final within/weight cleanup.
+The compatibility fields documented above still move through their established
+DataFrame, within-array, and solver-array states until the numerical primitives
+and inference consumers move to explicit within-scale inputs.
+
 ## Estimation-state vocabulary
 
 New shared-core work should name the transformation domain instead of relying
-on `_X`, `_Y`, `_Z`, or `_weights`. The planned immutable-state refactor uses
+on `_X`, `_Y`, `_Z`, or `_weights`. The immutable-state refactor uses
 the following vocabulary:
 
 | Term | Meaning |

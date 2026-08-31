@@ -1,4 +1,4 @@
-"""Characterize private estimator state before the immutable-state refactor.
+"""Characterize and protect private estimator-state lifecycle boundaries.
 
 These tests intentionally inspect implementation details. Public numerical
 behavior belongs to the release snapshots and live-R suites; this module locks
@@ -10,6 +10,7 @@ about the new explicit state objects.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import FrozenInstanceError
 from typing import Any
 
 import numpy as np
@@ -18,6 +19,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.model_matrix import FormulaData
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -200,6 +202,73 @@ def test_weighted_iv_fields_end_on_solver_scale(
     )
 
 
+def test_formula_data_remains_canonical_after_linear_fit(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Formula roles remain tabular while compatibility aliases are transformed."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        weights="weight",
+        vcov="iid",
+    )
+
+    formula_data = fit._formula_data
+    assert isinstance(formula_data, FormulaData)
+    assert not hasattr(formula_data, "__dict__")
+    with pytest.raises(FrozenInstanceError):
+        formula_data.na_index = frozenset()
+
+    assert isinstance(formula_data.dependent, pd.DataFrame)
+    assert isinstance(formula_data.independent, pd.DataFrame)
+    assert isinstance(formula_data.fixed_effects, pd.DataFrame)
+    assert isinstance(formula_data.instruments, pd.DataFrame)
+    assert isinstance(formula_data.weights, pd.DataFrame)
+    assert isinstance(fit._Y, np.ndarray)
+    assert isinstance(fit._X, np.ndarray)
+    assert isinstance(fit._Z, np.ndarray)
+    pd.testing.assert_frame_equal(
+        formula_data.dependent,
+        lifecycle_data.loc[:, ["y"]],
+    )
+    pd.testing.assert_frame_equal(
+        formula_data.weights,
+        lifecycle_data.loc[:, ["weight"]],
+    )
+    assert fit._model_spec is formula_data.model_spec
+
+
+def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
+    """Canonical GLM formula data describes the post-separation sample."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 0, 0, 1, 2, 3],
+            "fe": ["a", "a", "b", "b", "b", "c"],
+            "x": [-1.0, 0.5, 0.25, 1.0, -0.5, 1.5],
+        }
+    )
+
+    with pytest.warns(
+        UserWarning, match="2 observations removed because of separation"
+    ):
+        fit = pf.fepois(
+            "y ~ x | fe",
+            data=data,
+            vcov="hetero",
+            separation_check=["fe"],
+        )
+
+    formula_data = fit._formula_data
+    assert formula_data.dependent.index.equals(fit._data.index)
+    assert formula_data.independent.index.equals(fit._data.index)
+    assert formula_data.fixed_effects is not None
+    assert formula_data.fixed_effects.index.equals(fit._data.index)
+    # Row 5 is a formula-stage singleton; rows 0 and 1 are separated.
+    assert formula_data.na_index == frozenset({0, 1, 5})
+    assert len(formula_data.dependent) == fit._N_rows
+    assert fit.n_separation_na == 2
+
+
 def test_multiple_estimation_shares_dataframe_demean_cache(
     lifecycle_data: pd.DataFrame,
 ) -> None:
@@ -233,7 +302,7 @@ def test_multiple_estimation_shares_dataframe_demean_cache(
     ("fit_kwargs", "missing_fields"),
     [
         ({}, frozenset()),
-        ({"store_data": False}, frozenset({"_data"})),
+        ({"store_data": False}, frozenset({"_data", "_formula_data"})),
         (
             {"lean": True},
             frozenset(
@@ -247,6 +316,7 @@ def test_multiple_estimation_shares_dataframe_demean_cache(
                     "_weights",
                     "_scores",
                     "_u_hat",
+                    "_formula_data",
                 }
             ),
         ),
@@ -269,6 +339,7 @@ def test_storage_options_delete_expected_state(
             "_weights",
             "_scores",
             "_u_hat",
+            "_formula_data",
         }
     )
     fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", **fit_kwargs)

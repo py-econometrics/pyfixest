@@ -12,12 +12,12 @@ from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
-from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.models.feprobit_ import Feprobit
+from pyfixest.estimation.protocols import FittedModel, ModelFactory
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 
@@ -33,7 +33,7 @@ class ModelEntry:
     to decide which config fields to thread through.
     """
 
-    model_cls: type
+    model_cls: ModelFactory
     needs: frozenset[str] = field(default_factory=frozenset)
 
 
@@ -62,7 +62,7 @@ MODEL_REGISTRY: dict[str, ModelEntry] = {
 }
 
 
-def _resolve_model_class(method: str, is_iv: bool) -> type:
+def _resolve_model_class(method: str, is_iv: bool) -> ModelFactory:
     """Pick the model class to instantiate for this method.
 
     The only special case is `feols` with an IV formula, which
@@ -135,7 +135,7 @@ class ModelSpec:
     """
 
     method: str
-    model_cls: type
+    model_cls: ModelFactory
     formula: FixestFormula
     fixef_key: str | None
     sample_split_value: Any
@@ -289,11 +289,6 @@ def _build_model_kwargs(
     return kwargs
 
 
-FittedModel = (
-    Feols | Feiv | Fepois | Fegaussian | Felogit | Feprobit | Quantreg | QuantregMulti
-)
-
-
 def fit_one(
     spec: ModelSpec,
     *,
@@ -318,8 +313,7 @@ def fit_one(
     FIT: FittedModel = spec.model_cls(**model_kwargs)
 
     FIT.prepare_model_matrix()
-    if isinstance(FIT, Feglm):
-        FIT._check_dependent_variable()
+    FIT._validate_response()
     FIT.get_fit()
     # if X is empty: no inference (empty X only as shorthand for demeaning)
     if not FIT._X_is_empty:
@@ -327,18 +321,11 @@ def fit_one(
         FIT.vcov(
             vcov=vcov_type,
             vcov_kwargs=vcov_kwargs,
-            data=FIT._data
-            if not isinstance(FIT, QuantregMulti)
-            else FIT.all_quantregs[FIT.quantiles[0]]._data,
-        )  # a little hacky, but works
+            data=FIT._inference_data(),
+        )
 
         FIT.get_inference()
-        if spec.method == "feols" and not FIT._is_iv:
-            FIT.get_performance()
-            if isinstance(FIT, Feols):
-                FIT.wald_test()
-        if isinstance(FIT, Feiv):
-            FIT.first_stage()
+        FIT._finalize_fit()
     # delete large attributes
     FIT._clear_attributes()
 

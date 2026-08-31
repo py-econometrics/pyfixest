@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import Any, Final
+from dataclasses import dataclass, replace
+from typing import Any, Final, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -16,6 +18,8 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
 
+_ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
+
 
 @dataclass(frozen=True, kw_only=True)
 class _ModelMatrixKey:
@@ -24,6 +28,47 @@ class _ModelMatrixKey:
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FormulaData:
+    """Post-filtering, formula-materialized estimator inputs.
+
+    The structurally immutable record fixes the role and representation of every
+    formula-derived value. Its contained DataFrames remain on formula scale and are
+    treated as read-only; estimator-specific transformations produce separate
+    within- or solver-scale arrays instead of changing this record's fields.
+    """
+
+    dependent: pd.DataFrame
+    independent: pd.DataFrame
+    fixed_effects: pd.DataFrame | None
+    endogenous: pd.DataFrame | None
+    instruments: pd.DataFrame | None
+    weights: pd.DataFrame | None
+    offset: pd.DataFrame | None
+    model_spec: _ModelSpecMapping
+    na_index: frozenset[int]
+
+    def without_rows(self, rows: list[int]) -> FormulaData:
+        """Return formula data with ``rows`` removed from every tabular role."""
+        if not rows:
+            return self
+
+        def _drop(frame: pd.DataFrame | None) -> pd.DataFrame | None:
+            return None if frame is None else frame.drop(index=rows)
+
+        return replace(
+            self,
+            dependent=self.dependent.drop(index=rows),
+            independent=self.independent.drop(index=rows),
+            fixed_effects=_drop(self.fixed_effects),
+            endogenous=_drop(self.endogenous),
+            instruments=_drop(self.instruments),
+            weights=_drop(self.weights),
+            offset=_drop(self.offset),
+            na_index=self.na_index.union(rows),
+        )
 
 
 class ModelMatrix:
@@ -56,8 +101,8 @@ class ModelMatrix:
         Instrumental variables for IV estimation.
     weights : pd.DataFrame or None
         Observation weights for weighted estimation.
-    model_spec : formulaic.ModelSpec
-        The underlying formulaic model specification.
+    model_spec : Mapping[str, formulaic.ModelSpec]
+        The underlying formulaic model specifications keyed by role.
     na_index : frozenset[int]
         Indices of rows that were dropped.
     """
@@ -70,7 +115,7 @@ class ModelMatrix:
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
+        self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -286,17 +331,30 @@ class ModelMatrix:
             return self._data.loc[:, self._offset]
 
     @property
-    def model_spec(self) -> formulaic.ModelSpec:
+    def model_spec(self) -> _ModelSpecMapping:
         """
         Get the underlying formulaic model specification.
 
         Returns
         -------
-        formulaic.ModelSpec
-            The formulaic ModelSpec object containing metadata about the
-            model structure and transformations.
+        Mapping[str, formulaic.ModelSpec]
+            Formulaic specifications keyed by model-matrix role.
         """
         return self._model_spec
+
+    def to_formula_data(self) -> FormulaData:
+        """Freeze the fully filtered formula roles into canonical state."""
+        return FormulaData(
+            dependent=self.dependent,
+            independent=self.independent,
+            fixed_effects=self.fixed_effects,
+            endogenous=self.endogenous,
+            instruments=self.instruments,
+            weights=self.weights,
+            offset=self.offset,
+            model_spec=self.model_spec,
+            na_index=self.na_index,
+        )
 
     @property
     def na_index(self) -> frozenset[int]:

@@ -126,7 +126,7 @@ class Feglm(Feols):
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
-        super().prepare_model_matrix()
+        formula_data = super().prepare_model_matrix()
 
         # check for separation
         na_separation: list[int] = []
@@ -146,23 +146,21 @@ class Feglm(Feols):
             )
 
         if na_separation:
-            self._Y.drop(na_separation, axis=0, inplace=True)
-            self._X.drop(na_separation, axis=0, inplace=True)
-            self._fe.drop(na_separation, axis=0, inplace=True)
             self._data.drop(na_separation, axis=0, inplace=True)
-            if self._weights_df is not None:
-                self._weights_df.drop(na_separation, axis=0, inplace=True)
-            if self._offset_df is not None:
-                self._offset_df.drop(na_separation, axis=0, inplace=True)
+            formula_data = formula_data.without_rows(na_separation)
+            self._set_formula_data(formula_data)
+
+            # Preserve the established GLM sample-size convention after
+            # separation. Frequency-weight policy is handled separately.
             self._N = self._Y.shape[0]
             self._N_rows = self._N
-            # Re-set weights after dropping rows (handles both weighted and unweighted)
-            self._weights = self._set_weights()
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
             self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+
+        return formula_data
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
@@ -373,6 +371,10 @@ class Feglm(Feols):
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
         self._family.check_y(self._Y)
+
+    def _validate_response(self) -> None:
+        """Apply family-specific response validation after matrix preparation."""
+        self._check_dependent_variable()
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):

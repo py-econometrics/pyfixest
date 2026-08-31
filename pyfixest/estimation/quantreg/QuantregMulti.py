@@ -69,15 +69,17 @@ class QuantregMulti:
         self.multi_method = multi_method
         self._is_iv = False
 
-        # TODO: call model_matrix(), to_array(), drop_multicol_vars() only once for model 0
-        # and then copy the attributes to the other models (less robust? but faster)
-        [q.prepare_model_matrix() for q in self.all_quantregs.values()]
-        [q.to_array() for q in self.all_quantregs.values()]
-        [q.drop_multicol_vars() for q in self.all_quantregs.values()]
+    def prepare_model_matrix(self) -> None:
+        """Prepare the model inputs for every requested quantile."""
+        # TODO: prepare once and share immutable state across quantiles.
+        for quantreg in self.all_quantregs.values():
+            quantreg.prepare_model_matrix()
+            quantreg.to_array()
+            quantreg.drop_multicol_vars()
 
         self._X_is_empty = False
 
-    def get_fit(self):
+    def get_fit(self) -> dict[float, Quantreg]:
         "Fit multiple quantile regressions via either algo 2 or 3 of CFM."
         # sort q increasing
         q = np.sort(self.quantiles)
@@ -191,54 +193,42 @@ class QuantregMulti:
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
-    ):
+    ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
-        [
-            QuantReg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
-            for QuantReg in self.all_quantregs.values()
-        ]
+        for quantreg in self.all_quantregs.values():
+            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
 
         return self.all_quantregs
 
-    def get_inference(self):
+    def get_inference(self) -> dict[float, Quantreg]:
         "Compute inference for all models of the quantile regression process."
-        [QuantReg.get_inference() for QuantReg in self.all_quantregs.values()]
+        for quantreg in self.all_quantregs.values():
+            quantreg.get_inference()
 
         return self.all_quantregs
 
-    def prepare_model_matrix(self):
-        "Prepare model matrix. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
+    def _validate_response(self) -> None:
+        """Quantile regression has no additional response constraint."""
 
-    def to_array(self):
-        "Covert to array. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
+    def _inference_data(self) -> pd.DataFrame:
+        """Return the shared estimation data from the first quantile model."""
+        return next(iter(self.all_quantregs.values()))._data
 
-    def drop_multicol_vars(self):
-        "Drop multicollinear variables. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
+    def _finalize_fit(self) -> None:
+        """Quantile models require no additional post-fit orchestration."""
 
-    def wls_transform(self):
-        "Apply the WLS transform. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
+    def _iter_fitted_models(self) -> tuple[Quantreg, ...]:
+        """Yield each fitted quantile to the result container."""
+        return tuple(self.all_quantregs.values())
 
-    def demean(self):
-        "Demean the data. Placeholder, only needed due to structure of execution of FixestMulti class."
-        pass
-
-    def get_performance(self):
-        "Compute performance metrics for all models of the quantile regression process."
-        [QuantReg.get_performance() for QuantReg in self.all_quantregs.values()]
-        return self.all_quantregs
-
-    def _clear_attributes(self):
+    def _clear_attributes(self) -> None:
         "Clear all large non-necessary attributes to free memory."
-        [QuantReg._clear_attributes() for QuantReg in self.all_quantregs.values()]
-        del_attributes = ["_X", "_Y"]
-        for QuantReg in self.all_quantregs.values():
-            for attr in del_attributes:
-                if hasattr(QuantReg, attr):
-                    delattr(QuantReg, attr)
-        gc.collect()
+        for quantreg in self.all_quantregs.values():
+            quantreg._clear_attributes()
 
-        return self.all_quantregs
+        del_attributes = ["_X", "_Y"]
+        for quantreg in self.all_quantregs.values():
+            for attr in del_attributes:
+                if hasattr(quantreg, attr):
+                    delattr(quantreg, attr)
+        gc.collect()

@@ -17,7 +17,6 @@ from pyfixest.estimation.plan_ import (
     expand_specs,
     fit_one,
 )
-from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
@@ -99,11 +98,8 @@ def run_estimation(
             vcov_kwargs=config.vcov_kwargs,
         )
 
-        if isinstance(FIT, QuantregMulti):
-            for q_model in FIT.all_quantregs.values():
-                fixest.all_fitted_models[q_model._model_name] = q_model
-        else:
-            fixest.all_fitted_models[FIT._model_name] = FIT
+        for fitted_result in FIT._iter_fitted_models():
+            fixest.all_fitted_models[fitted_result._model_name] = fitted_result
 
     if parsed.is_multiple_estimation:
         return fixest
