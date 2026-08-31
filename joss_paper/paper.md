@@ -10,249 +10,222 @@ tags:
 authors:
   - name: Alexander Fischer
     corresponding: true
-    affiliation: 1
+    affiliation: '1'
   - name: Leonard Stimpfle
-    affiliation: 1
-  - name: Kristof Schroeder
-    affiliation: 1
+    orcid: 0009-0000-7033-7010
+    affiliation: '2'
+  - name: Kristof Schröder
+    affiliation: '3'
   - name: Dirk Sliwka
-    affiliation: 1
-  - name: Juan Orduz
-    affiliation: 1
+    orcid: 0000-0002-8026-0165
+    affiliation: '4'
+  - name: Juan Camilo Orduz
+    affiliation: '5'
   - name: Wenzhi Ding
-    affiliation: 1
+    orcid: 0000-0002-4784-8848
+    affiliation: '6'
 affiliations:
-  - name: Affiliation TBD
-    index: 1
-date: 2 August 2026
+  - index: 1
+    name: trivago N.V., Germany
+  - index: 2
+    name: Ghent University, Belgium
+  - index: 3
+    name: appliedAI Institute for Europe gGmbH, Germany
+  - index: 4
+    name: University of Cologne, Germany
+  - index: 5
+    name: PyMC Labs, Germany
+  - index: 6
+    name: The Hong Kong Polytechnic University, Hong Kong SAR
+date: 31 August 2026
 bibliography: paper.bib
 ---
 
 # Summary
 
-`PyFixest` fits regressions with multiple, potentially high-dimensional fixed
-effects in Python. It reimplements the API of the R package `fixest`
-[@berge2026fixest]: formula syntax, variance-covariance choices, small-sample
-corrections, singleton handling and collinearity rules all follow `fixest`, so
-the same analysis runs in either language with almost no edits.
+`PyFixest` estimates relationships in large or grouped datasets while controlling
+for unobserved differences across many workers, firms, places, time periods, or
+other categories. It avoids constructing the enormous matrices of indicator
+variables that would make conventional regression routines slow or infeasible.
+The package provides linear, instrumental-variable, generalized-linear, and
+quantile regression together with inference, reporting, and causal-analysis
+tools in Python.
 
-`PyFixest` is written from scratch in Python and Rust rather than translated
-from `fixest`'s source. Its test suite compares
-coefficients, standard errors, test statistics, and confidence intervals with
-`fixest` through `rpy2` [@gautier2008rpy2], using a tolerance of $10^{-8}$.
+The user-facing foundation of `PyFixest` is the R package `fixest`
+[@berge2026fixest]. `PyFixest` intentionally adopts `fixest`'s estimator names,
+fixed-effects formula layout, multiple-estimation operators, variance-covariance
+and small-sample-correction interfaces, singleton handling, collinearity
+conventions, and many defaults wherever the corresponding feature is supported.
+These are contributions of the `fixest` authors, not inventions of `PyFixest`.
+Where the interfaces deliberately differ---including Python formula strings,
+dictionary variance specifications, and default variance selection---the
+documentation makes those differences explicit. We ask users to consider citing
+`fixest` alongside this paper.
 
-The interface and the defaults that `PyFixest` reimplements are the work of the
-`fixest` authors. We therefore ask users of `PyFixest` to consider citing `fixest`
-[@berge2026fixest] alongside this paper, even if they haven't used it in their analyses..
+`PyFixest` is an independent Python and Rust implementation. Reference tests use
+`rpy2` [@gautier2008rpy2] to compare its coefficients, inference, and fit
+statistics with `fixest`; tolerances are chosen per estimator, with core OLS
+comparisons typically using relative and absolute tolerances of $10^{-8}$.
 
 # Statement of need
 
-Regressions that absorb several sets of categorical effects are common in
-applied economics. @goldsmith2026tracking finds that roughly half of papers in
-leading economics and finance journals mention fixed effects. Labor economists
-separate worker heterogeneity from firm wage premia, health economists compare
-physicians within regions, and education researchers control for students,
-teachers, and schools simultaneously. These designs often include hundreds of
-thousands of categorical levels.
+High-dimensional fixed effects are ubiquitous in applied economics and related
+fields. Researchers may need to control simultaneously for hundreds of thousands
+of workers, firms, products, locations, or time periods. Directly encoding every
+category creates a design matrix that can exhaust memory and makes generic
+solvers unnecessarily expensive. Applied researchers need estimators that absorb
+these effects efficiently while preserving familiar formulas, robust inference,
+and reproducible defaults.
 
-R and Stata users have had dedicated tools for this for more than a decade:
-`lfe` [@gaure2013lfe], `fixest` [@berge2026fixest] and `reghdfe`
-[@correia2023reghdfe] for linear models, `alpaca` [@stammann2020package] for
-GLMs. Julia has `FixedEffectModels.jl` [@fixedeffectmodelsjl_2025]. Python has
-been thinner. `statsmodels`
-[@seabold2010statsmodels] ships no multi-way fixed-effects estimator, so the
-common workaround is to demean with `pyhdfe` [@gortmaker_pyhdfe_2023] and pass
-the residualized data to a generic OLS routine; `linearmodels` [@linearmodels]
-offers `AbsorbingLS`, which also delegates demeaning to `pyhdfe`. Both work for
-linear models. Neither carries over to GLMs fit by iteratively reweighted least
-squares, where the working weights change at every step and the design has to be
-re-demeaned each time [@correia2020fast; @stammann2017fast].
+The need extends beyond linear regression. Generalized linear models are commonly
+fit by iteratively reweighted least squares, where changing working weights require
+the fixed effects to be absorbed again at every iteration
+[@correia2020fast; @stammann2017fast]. A one-time preprocessing step therefore
+does not provide a general solution.
 
-`PyFixest` covers OLS, WLS, IV, GLMs, and quantile regression behind one
-`fixest`-style API (`feols`, `fepois`, `feglm`, `quantreg`), together with
-several demeaning backends and post-estimation methods.
-Formulas are parsed with `formulaic` [@wardrop_formulaic_2024], whose
-Wilkinson-formula implementation carries the multiple-estimation syntax
-`PyFixest` inherits from `fixest`.
+# State of the field
 
-# Absorbing fixed effects
+R and Stata have long offered specialized packages: `lfe` [@gaure2013lfe],
+`fixest` [@berge2026fixest], `reghdfe` [@correia2023reghdfe], and `alpaca`
+[@stammann2020package]. Julia provides `FixedEffectModels.jl`
+[@fixedeffectmodelsjl_2025]. In Python, `statsmodels`
+[@seabold2010statsmodels] does not provide a native multi-way high-dimensional
+fixed-effects estimator. `pyhdfe` [@gortmaker_pyhdfe_2023] provides absorption
+algorithms, and `linearmodels` [@linearmodels] exposes them through `AbsorbingLS`,
+but these routes focus on linear models rather than an integrated estimation and
+post-estimation workflow.
+
+A separate package is warranted because `PyFixest` provides a Python-native
+counterpart to an established R workflow: cross-language behavioral compatibility,
+several estimator families, multiple estimation, and common reporting and
+inference tools behind one interface. It builds on focused Python infrastructure
+rather than reimplementing it. In particular, Formulaic
+[@wardrop_formulaic_2026] supplies the extensible Wilkinson parser and model-matrix
+machinery. `PyFixest` layers its `fixest`-inspired fixed-effect and
+multiple-estimation grammar, formula expansion, and estimation planning on top;
+Formulaic does not itself implement those `fixest` operators.
+
+# Software design
+
+## Absorbing fixed effects
 
 Consider $y = X\beta + D\alpha + \varepsilon$, where $X$ contains the regressors
-of interest and $D$ is the fixed-effect design. In applied work, $D$ may have
-millions of columns. Forming the cross-product of $[X \;\; D]$, let alone
-inverting it, is infeasible. The Frisch-Waugh-Lovell theorem
-[@frisch1933; @lovell1963] avoids this calculation: residualize $y$ and each
-column of $X$ against $D$, then regress the residualized outcome on the
-residualized regressors. The resulting $\hat\beta$ equals the coefficient from
-the full regression. In most applications, $\alpha$ is a nuisance parameter.
+of interest and $D$ encodes the fixed effects. The Frisch-Waugh-Lovell theorem
+[@frisch1933; @lovell1963] permits residualizing $y$ and every column of $X$
+against $D$, then regressing the residualized outcome on the residualized
+regressors. The resulting $\hat\beta$ equals the coefficient from the full
+regression without requiring the full indicator matrix in the final solve.
 
-This reduces estimation to a sequence of least-squares projections onto the
-column space of $D$. The projections share the Gramian $G = D'WD$ and differ
-only in their right-hand side.
+The default Rust backend uses the method of alternating projections (MAP), or
+iterative demeaning [@guimaraes2010; @gaure2013ols]. It repeatedly subtracts
+weighted group means for each fixed effect. MAP has low setup costs and performs
+well for dense, well-connected designs. On sparse worker-firm, patient-doctor, or
+trade networks, information may propagate slowly between groups. For these
+designs, `LsmrDemeaner` uses LSMR [@fong2011] and the `within` Rust library
+[@within] to construct a preconditioner from pairwise blocks of the fixed-effect
+Gram matrix. PyTorch provides an experimental LSMR backend on CPU, CUDA, and MPS.
+The typed `demeaner=` configuration exposes this trade-off instead of selecting
+one algorithm invisibly.
 
-The standard approach is the method of alternating projections (MAP), also
-called iterative demeaning [@guimaraes2010; @gaure2013ols]. Each diagonal block
-of $G$ contains the total weight for each level of one factor. Holding the other
-factors fixed, the update for one factor is therefore just a pass through the
-data that subtracts weighted group means. MAP cycles through the factors, for
-example workers, firms, and years, until the residual converges. The individual
-sweeps are cheap, and implementations accelerate the sequence
-[@gaure2013ols; @berge2026fixest].
+\autoref{fig:bench} reports median full-estimation runtimes over three runs for
+the reproducible "simple" and "difficult" designs used in the `fixest`
+benchmarks. Absolute values, and especially CPU-GPU comparisons, are
+hardware-dependent. The difficult worker-firm-year design illustrates why
+`PyFixest` offers both low-overhead MAP and a preconditioned solver rather than a
+single backend.
 
-The off-diagonal blocks of $G$ do not appear in the update rule. They contain
-cross-tabulations, such as the workers observed at each firm, and affect later
-updates only through the current residual. Convergence therefore depends on the
-fixed-effects co-occurrence graph. When many workers move between firms, the
-graph is well connected and MAP may converge in a few sweeps. When mobility is
-limited, sorting is strong, or one factor is nearly nested in another, many more
-sweeps may be required [@gaure2013ols]. The graph structures that weaken the
-identification of worker and firm effects also slow their computation.
+![Median runtime for fixed-effects OLS ($k=10$) across PyFixest demeaners, R `fixest`, and Julia `FixedEffectModels.jl`. Scripts and result data are included in the repository; absolute timings are hardware-dependent.\label{fig:bench}](bench_readme.png)
 
-A Krylov solver can instead use a preconditioner: a cheap approximation to
-$G^{-1}$ that preserves the solution while reducing the number of iterations.
-`PyFixest` supports LSMR [@fong2011] with a preconditioner from the `within`
-library [@within]. The preconditioner uses factor-pair blocks of the Gramian.
-After a sign change, each block is a graph Laplacian that admits a sparse
-approximate factorization. Constructing it adds overhead that is not repaid for
-dense, well-connected designs, so MAP remains the default. It can substantially
-reduce runtimes for sparse or strongly sorted graphs. @fischer2026graph describe
-the construction and its benchmarks.
+## Architecture and scope
 
-# Demeaner backends and performance
+Formula parsing and model-matrix construction are separated from estimation
+planning, fitting, and post-estimation. Public functions create a typed
+configuration; a plan expands multiple-estimation formulas; runners construct and
+fit each model; result objects delegate numerical post-estimation work to
+standalone modules. Performance-critical demeaning, singleton detection, clustered
+variance, and HAC loops live in Rust, while orchestration and non-hot-path
+numerics remain readable NumPy. Optional backends are loaded only when requested.
 
-The choice of solver is exposed through a typed `demeaner=` argument. All
-backends solve the same problem and agree up to solver tolerance; they differ in
-speed:
-
-- `MapDemeaner(backend="rust")`, the default: MAP in Rust, no optional
-  dependencies.
-- `MapDemeaner(backend="numba")`: the same algorithm through Numba.
-- `LsmrDemeaner()`: preconditioned LSMR through `within`, using the factor-pair
-  (additive Schwarz) preconditioner.
-- `LsmrDemeaner(backend="torch", device=...)`: experimental LSMR on CPU or GPU
-  (CUDA, MPS) via PyTorch.
-
-\autoref{fig:bench} reports median runtimes on the "simple" and "difficult"
-designs from the [fixest
-benchmarks](https://github.com/kylebutts/fixest_benchmarks) with $k=10$
-covariates, for `PyFixest` MAP, `PyFixest` `within` LSMR, `PyFixest` torch on
-CUDA, R `fixest`, and Julia `FixedEffectModels.jl`.
-
-![Median runtime for fixed-effects OLS ($k=10$) across PyFixest demeaners, R `fixest`, and Julia `FixedEffectModels.jl`. Absolute timings are hardware-dependent.\label{fig:bench}](bench_readme.png)
-
-On the "simple" designs, the implementations in the figure have similar
-runtimes and MAP is competitive. The difficult worker-firm-year design separates
-them: at ten million observations, the `within` backend is nearly two orders of
-magnitude faster than plain `PyFixest` MAP and about one order of magnitude
-faster than the accelerated MAP in `fixest`. The package documentation includes
-additional AKM-style examples with limited mobility and nested effects.
-
-# Distinctive features
-
-Beyond fixed-effects OLS, `PyFixest` includes:
-
-- **IV and GLM**: instrumental variables and GLMs (Poisson, logit, probit,
-  Gaussian) with high-dimensional fixed effects, including separation handling
-  for Poisson [@correia2020fast].
-- **Quantile regression** with an interior-point solver [@koenker2001quantile].
-- **Difference-in-differences**: TWFE, two-stage imputation
-  [@gardner2022two; @butts2021did2s], local projections
-  [@dube2023local; @busch2023lpdid], and Sun-Abraham event studies
-  [@sun2021estimating].
-- **Inference**: heteroskedasticity- and cluster-robust variance estimators
-  including CRV3 [@mackinnon2023fast], HAC, the wild cluster bootstrap
-  [@roodman2019fast; @fischer2022fwildclusterboot], randomization inference
-  [@hess2017randomization], the causal cluster variance estimator
-  [@abadie2023should], Romano-Wolf corrections
-  [@romano2005exact; @clarke2020romano], and simultaneous confidence bands
-  [@montiel2019simultaneous].
-- **Reporting**: publication-ready tables (`etable`) through Great Tables or
-  LaTeX booktabs, coefficient plots, and multiple-estimation syntax (`csw`,
-  `sw`) that reuses the demeaning cache across related formulas.
-- **Post-estimation**: Gelbach decomposition [@gelbach2016covariates], weak-IV
-  diagnostics [@lal2023much], and compressed-regression workflows
-  [@wong2021you; @lal2024large].
+The resulting API covers OLS, WLS, IV, Poisson, logit, probit, Gaussian GLMs, and
+quantile regression [@koenker2001quantile]. It includes difference-in-differences
+estimators [@gardner2022two; @dube2023local; @sun2021estimating], heteroskedastic,
+cluster-robust and HAC inference, wild cluster bootstrap
+[@roodman2019fast; @fischer2022fwildclusterboot], randomization inference
+[@hess2017randomization], causal cluster variance [@abadie2023should],
+multiple-testing corrections [@romano2005exact; @clarke2020romano], and safe
+anytime-valid inference [@lindon2026anytime]. Reporting includes regression tables
+for Great Tables, LaTeX, and Typst, coefficient plots, Gelbach decomposition
+[@gelbach2016covariates], and weak-IV diagnostics [@lal2023much].
 
 # Example
 
-After `pip install pyfixest`:
+After `pip install pyfixest`, a fixed-effects regression with clustered inference
+is:
 
 ```python
 import pyfixest as pf
 
 data = pf.get_data()
-pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
-```
-
-```
-Estimation:  OLS
-Dep. var.: Y, Fixed effects: f1+f2
-Inference:  CRV1
-Observations:  997
-
-| Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
-|:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-| X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
----
-RMSE: 1.441   R2: 0.609   R2 Within: 0.2
-```
-
-Multiple estimation and clustered inference use the same formula grammar as
-`fixest`:
-
-```python
-fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
+fit = pf.feols("Y ~ X1 | f1 + f2", data=data, vcov={"CRV1": "group_id"})
 fit.etable()
 ```
 
-To use a different solver, pass a `demeaner`:
+The corresponding `fixest` call retains the same estimator name and formula
+structure:
 
-```python
-# sparse or strongly sorted fixed effects: preconditioned LSMR
-pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=pf.LsmrDemeaner())
-
-# dense fixed effects: Rust MAP (the default)
-pf.feols("Y ~ X1 | f1 + f2", data=data, demeaner=pf.MapDemeaner(backend="rust"))
+```r
+library(fixest)
+fit <- feols(Y ~ X1 | f1 + f2, data = data, vcov = ~group_id)
+etable(fit)
 ```
 
-The corresponding `fixest` call in R is near-identical in syntax and, where the
-defaults are shared, returns the same point estimates, standard errors and fit
-statistics.
+Python necessarily uses a formula string and a dictionary for clustered
+inference, but the model specification and defaults remain recognizable.
 
-# Research impact
+# Research impact statement
 
-The project is developed openly on
-[GitHub](https://github.com/py-econometrics/pyfixest), documented at
-[pyfixest.org](https://pyfixest.org/), and distributed on PyPI under the MIT
-license. More than 50 people have contributed code.
+`PyFixest` has been developed publicly since 2022 and credits 60 contributors.
+As of 30 August 2026, Pepy records more than 928,000 PyPI downloads, including
+about 111,000 in the preceding 30 days [@pepy]; these installation counts include
+automated and continuous-integration traffic and should not be read as unique
+users.
 
-PyPI records more than 820,000 downloads and roughly 78,000 downloads in the
-last 30 days [@pepy]. Instacart uses `PyFixest` for fixed-effects regressions in
-its experimentation platform, estimating marketplace treatment effects across
-high-cardinality geographies [@knight2026instacart]. Google Scholar identifies
-about thirty working papers and preprints that name `PyFixest` as part of their
-estimation stack. These papers currently cite the GitHub repository because
-`PyFixest` has had no citable version of record. This submission and the Zenodo
-concept DOI
-[10.5281/zenodo.15814089](https://doi.org/10.5281/zenodo.15814089) provide one.
+Documented external uses include Instacart's analysis of high-cardinality
+marketplace experiments [@knight2026instacart], the research workflow accompanying
+*Large Scale Longitudinal Experiments* [@lal2024large], and use as the regression
+backend for extended two-way fixed effects in `ModernDiD` [@moderndid2026]. The
+repository provides extensive tutorials, cross-language reference tests, and
+reproducible benchmark scripts. An archived release is available under the
+Zenodo concept DOI
+[10.5281/zenodo.15814089](https://doi.org/10.5281/zenodo.15814089).
 
 # AI usage disclosure
 
-Much of `PyFixest` predates the routine use of large language models. We have
-since used them to assist with coding, refactoring, tests, documentation, and
-parts of this manuscript's drafting and copy-editing. A human author reviews
-and validates every change; the authors made the econometric decisions. No AI
-system is an author of this paper.
+Generative-AI tools have assisted parts of the project's code, tests,
+documentation, and manuscript. Recorded tools include ChatGPT and GitHub Copilot
+(historical hosted model versions were not retained), Anthropic Claude 3.5, and
+OpenAI Codex with GPT-5. Assistance included code suggestions, refactoring, test
+scaffolding, documentation, and drafting or copy-editing text. Human contributors
+reviewed and edited every retained output, ran the numerical and cross-language
+test suites, and made all econometric, architectural, authorship, and submission
+decisions. No AI system is an author.
 
 # Acknowledgements
 
 We thank Laurent Bergé, Kyle Butts, Grant McDermott, and the `fixest` community.
-`PyFixest` follows their API innovations, and we therefore ask users to consider citing `fixest`
-[@berge2026fixest] alongside this work. `PyFixest` is MIT-licensed and shares no
-source code with `fixest`, which is published under GPL, except for a collinearity-detection routine that
-reimplements Bergé's C++ code and is relicensed under MIT with his permission.
-The documentation records this and the other packages whose conventions we use
-or test against. We also thank all `PyFixest` contributors, the appliedAI
-Institute, and the supporters of community sprints and development time.
+`fixest` is the conceptual and API upstream for `PyFixest`; without its estimator
+design, formula conventions, many defaults, and reporting ideas, `PyFixest` would
+not exist in its present form [@berge2026fixest]. We also thank Matthew Wardrop and
+the Formulaic contributors for the parsing and model-matrix infrastructure on
+which the formula interface is built [@wardrop_formulaic_2026].
+
+`PyFixest` shares no source code with the GPL-licensed `fixest` except for a
+collinearity-detection routine that reimplements Bergé's C++ routine and is
+distributed under the MIT license with his permission. We thank all `PyFixest`
+contributors and participants in community development sprints. The appliedAI
+Institute for Europe supported Kristof Schröder's work on Rust demeaning and the
+`within` solver; responsibility for econometric validation and this manuscript
+rests with the authors. Relevant institutional relationships are reflected in
+the author affiliations above.
 
 # References
