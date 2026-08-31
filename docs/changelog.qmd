@@ -39,6 +39,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `quantreg` fits. Each machine generates its own cached baseline from the
   pinned release environment, avoiding cross-platform snapshot failures. It
   complements rather than replaces the fast and canonical live-R evidence.
+- The developer architecture guide now documents how estimator fields move
+  through formula, fixed-effect-within, and square-root-weighted solver scales,
+  including the distinct observation- and working-weight domains in GLMs. It
+  also defines the vocabulary for the planned immutable estimator-state
+  refactor.
 
 ### Inference Types
 
