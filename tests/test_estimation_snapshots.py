@@ -34,6 +34,13 @@ EXPECTED_CASES = _expected_cases()
 CASES = build_cases()
 FAST_CASE_IDS = fast_case_ids(CASES)
 MANIFEST = load_json(SNAPSHOT_DIR / "manifest.json")
+LOGIT_VCOV_DELTA_CASE_IDS = frozenset(
+    {
+        "feglm-001-family=logit-vcov=hetero",
+        "feglm-002-family=logit-vcov=crv1",
+    }
+)
+PROBIT_IID_DELTA_CASE_ID = "feglm-003-family=probit-vcov=iid"
 PARAMS = [
     pytest.param(
         case,
@@ -95,10 +102,10 @@ def _assert_snapshot(
         tolerance=tolerances["coef"],
         quantity="coefficients",
     )
-    family = case["kwargs"].get("family")
-    vcov = case["kwargs"].get("vcov")
-    changed_logit_vcov = estimator == "feglm" and family == "logit" and vcov != "iid"
-    changed_probit_iid = estimator == "feglm" and family == "probit" and vcov == "iid"
+    # Keep documented release deltas tied to the exact measured cases. New
+    # FEGLM formulas, weights, or vcov variants must not inherit an omission.
+    changed_logit_vcov = str(case["id"]) in LOGIT_VCOV_DELTA_CASE_IDS
+    changed_probit_iid = str(case["id"]) == PROBIT_IID_DELTA_CASE_ID
     # The documented GLM API/behavior change introduces new logit/probit IRLS
     # starts (docs/changelog.qmd, "GLM API and Behavior"). Only the narrow
     # comparisons below materially exceed normal tolerance; canonical live-R
