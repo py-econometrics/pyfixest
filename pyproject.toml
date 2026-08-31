@@ -332,7 +332,8 @@ ty = "==0.0.64"
 
 [tool.pixi.feature.lint.tasks]
 bootstrap-py312 = { cmd = "pixi install --frozen -e py312", description = "Install the ty analysis environment" }
-lint = { cmd = "prek run --all-files", depends-on = ["bootstrap-py312"], description = "Run all pre-commit hooks via prek" }
+typecheck = { cmd = "ty check --project . --python .pixi/envs/py312", depends-on = ["bootstrap-py312"], description = "Type-check pyfixest with ty" }
+lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }
 
 # -- benchmark feature -----------------------------------------------------------------
 

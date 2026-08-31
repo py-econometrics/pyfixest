@@ -59,7 +59,7 @@ pixi run -e py312-r test-r-extended
 # Changed-file quality checks and project-wide type check
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
-pixi run -e lint prek run ty --all-files
+pixi run -e lint typecheck
 
 # Documentation (costly; run only when selected below)
 pixi run docs-build

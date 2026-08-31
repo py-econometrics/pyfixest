@@ -1,7 +1,7 @@
 import itertools
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Final, Protocol, cast
+from typing import Final, Protocol, TypeVar, cast
 
 import formulaic
 import formulaic.formula
@@ -36,6 +36,8 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
+
+_FormulaT = TypeVar("_FormulaT", bound="Formula")
 
 
 class _FormulaWithParts(Protocol):
@@ -277,7 +279,7 @@ class Formula:
         return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
 
     @classmethod
-    def parse(cls, formula: str) -> list["Formula"]:
+    def parse(cls: type[_FormulaT], formula: str) -> list[_FormulaT]:
         """
         Parse fixest-style formula. In case of multiple estimation syntax,
         returns a list of multiple regression formulas.
@@ -289,10 +291,12 @@ class Formula:
         ]
 
     @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list["Formula"]]:
+    def parse_to_dict(
+        cls: type[_FormulaT], formula: str
+    ) -> dict[str | None, list[_FormulaT]]:
         """Group parsed formulas into dictionary keyed by fixed effects."""
         formulas = cls.parse(formula)
-        result: dict[str | None, list[Formula]] = {}
+        result: dict[str | None, list[_FormulaT]] = {}
         for parsed_formula in formulas:
             fixed_effects = (
                 str(parsed_formula.fixed_effects)

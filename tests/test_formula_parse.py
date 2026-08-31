@@ -370,8 +370,10 @@ class TestFormulaParse:
             pass
 
         result = SubFormula.parse("Y ~ X1")
+        grouped = SubFormula.parse_to_dict("Y ~ X1")
 
         assert isinstance(result[0], SubFormula)
+        assert isinstance(grouped[None][0], SubFormula)
 
     def test_parse_with_fe(self):
         """Test parsing a formula with fixed effects."""
