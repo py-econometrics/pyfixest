@@ -178,6 +178,9 @@ We also removed:
 
 ### Bug Fixes
 
+- Fitted models and non-plotting DiD and reporting paths no longer import
+  plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
+  while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
