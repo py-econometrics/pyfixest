@@ -47,13 +47,23 @@ estimator-specific tolerance, and extend the nearest permanent matrix before
 adding a new test function or file.
 
 Keep the permanent test parametrized through the public API where possible and
-keep its runtime suitable for regular CI use. Live R comparisons must run
+keep its runtime suitable for regular CI use. Use the release numerical-contract
+snapshots for broad repeatable regression feedback, but never treat a released
+pyfixest result as an external correctness reference. Live R comparisons must run
 through rpy2 inside pytest. Register every rpy2-importing test file in
 `tests/conftest.py` and use the strict R marker matching dependency
 availability. Do not replace an available live reference merely to shorten the
 edit loop; first select affected live cases or use the fast matrix. Follow the
 stored-reference criteria in `docs/developer/testing.md` when live execution is
 unavailable, unreliable, or impractical.
+
+Release snapshots are generated in a platform-local gitignored cache from the
+pinned release environment, never from development head. The snapshot task
+prepares and invalidates that cache automatically. When a snapshot drifts,
+inspect the post-baseline changelog first. Narrowly comment a single comparison
+only when it is a documented intentional behavior change and retain external R
+evidence; leave unexplained drift as an ordinary failure for human review.
+Change the pinned version only for an explicit baseline roll.
 
 Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
 Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
@@ -62,7 +72,9 @@ Use R `quantreg` for `quantreg`. The fast direct matrix is available as:
 pixi run -e py312-r test-r-fixest-fast
 ```
 
-Use the fast suite while editing. After the implementation stabilizes, produce
-the affected canonical evidence locally or in exact-head CI. The fast suite
-does not replace or establish permanent estimator-specific coverage and is not
-complete merge evidence.
+Use fast release snapshots while editing and their complete matrix through
+`test-py` or the explicit full task after stabilization. Then use the targeted
+or fast live-R suite for direct external feedback and produce the affected
+canonical evidence locally or in exact-head CI. The fast suite does not replace
+or establish permanent estimator-specific coverage and is not complete merge
+evidence.

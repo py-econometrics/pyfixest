@@ -17,11 +17,15 @@ changed-file format/lint/type checks. Once the implementation stabilizes, run
 the selected broader baseline once and assign each required long check to a
 local run or exact-head CI.
 
-- Numerical/API changes require the relevant public integration tests and
-  external-reference suite. `test-py` is a Python-only regression baseline and
-  never substitutes for an external numerical comparison. Use the fast R suite
-  for edit feedback; produce canonical evidence after stabilization, locally or
-  in exact-head CI.
+- Estimation/inference numerical changes require the relevant public integration
+  tests and external-reference suite. Run fast release numerical-contract
+  snapshots for edit feedback; the task prepares its platform-local pinned
+  release cache automatically. Run the full matrix through `test-py` after
+  stabilization. Other API changes use their targeted public tests.
+  `test-py` and snapshots are Python-only and
+  never substitute for an external numerical comparison. After stabilization,
+  use targeted or fast R feedback; produce canonical evidence locally or in
+  exact-head CI.
 - HAC changes require the single-threaded HAC suite.
 - Rust changes require kernel/reference tests and platform CI.
 - Performance-sensitive changes require before/after evidence.
