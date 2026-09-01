@@ -34,6 +34,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   workflow.
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
+- A Python-only snapshot suite compares public estimator results with pyfixest
+  0.60.0. It mirrors the formula, fixed-effect dtype, inference, weight, IV, and
+  SSC structure of the `fixest` comparison tests while using only the default
+  demeaner. Each platform builds and reuses its own untracked baseline cache.
 
 ### Inference Types
 

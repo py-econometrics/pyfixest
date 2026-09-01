@@ -12,16 +12,16 @@ selection affect wall time.
 
 | Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, targeted or fast live-R checks, changed-file Ruff/mypy |
-| Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, changed-file Ruff/mypy, targeted or fast live-R checks |
+| Stabilized implementation | Broaden local confidence once | Minutes | release snapshots, selected subsystem checks, `pixi run test-py` when required |
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
 
-Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
-`test-r-core`, or `test-all` while iterating. Use a targeted test or
-`test-r-fixest-fast` instead. Once the design is stable, run the selected
-baseline once. A required long check may be deferred to exact-head CI at
-implementation handoff when the report names the check and destination.
+Run edit checks repeatedly, but do not repeatedly launch the release snapshots,
+`test-r-fixest`, `test-r-core`, or `test-all` while iterating. Use a targeted
+Python or live-R test first, then run the selected broader baseline once the
+implementation stabilizes. A required long check may be deferred to exact-head CI
+at implementation handoff when the report names the check and destination.
 Deferred is never equivalent to passed, and the change is not merge-ready
 until all required merge evidence is green.
 
@@ -41,6 +41,9 @@ platform CI and benchmarks.
 ```bash
 # Targeted, without the repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
+
+# Full Python-only release contract
+pixi run -e py312 test-estimation-snapshots
 
 # Targeted live-R edit feedback
 pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols
@@ -72,6 +75,63 @@ pixi run docs-build
 pixi run docs-render
 ```
 
+## Release numerical-contract snapshots
+
+`tests/test_estimation_snapshots.py` replays end-to-end public fits against
+results generated locally from the pinned stable pyfixest release. Its formula,
+fixed-effect dtype, inference, weight, IV, and separate SSC parametrizations
+mirror the canonical `test_vs_fixest.py` structure. It uses only the default
+demeaner. Named coefficients and inference quantities use explicit tolerances;
+structural metadata matches exactly.
+
+The full matrix is part of ordinary `test-py` exactly once and is also available
+through the direct no-coverage task after an implementation stabilizes. It is a
+regression alarm, not an external correctness oracle: a release bug would also
+be captured. Keep `test-r-fixest-fast` for direct edit-time external feedback;
+the canonical R suites remain the authoritative exact-head merge evidence.
+
+The first snapshot task uses the locked workspace in
+`tests/snapshots/release/` to generate the baseline with pyfixest 0.60.0. It
+stores the JSON under `.pixi/release-contract/`, which is gitignored. Later
+runs on the same platform reuse that cache. CI generates its own baseline on
+each fresh runner, so snapshots run on Linux, macOS, Windows, and contributor
+machines without comparing one platform's floating-point output with another's.
+
+A short fingerprint names the cache. It hashes the release manifest and
+lockfile, the declared release version, case matrix, data generation and
+extraction code, the generator, and the operating system and architecture.
+Changing any of these inputs selects a new cache automatically. The generator
+writes a completion marker last so interrupted generation is never treated as
+a valid baseline.
+
+Normal test commands prepare the cache automatically. To prepare or explicitly
+replace it without running the current checkout's tests, use:
+
+```bash
+pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml prepare
+pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml regenerate
+```
+
+Do not commit generated JSON or restore it across operating systems or
+architectures. The generated manifest records the release version, isolated
+distribution and environment facts, deterministic data specification, every
+case, platform, and fingerprint.
+
+The baseline is never generated from development head. On drift, inspect the
+post-baseline changelog first: narrowly comment only a documented intentional
+quantity and retain external R evidence; leave unexplained drift as an ordinary
+failing assertion for human review. Change the pinned release only for an
+explicit baseline roll to a newly selected stable version.
+The release contract translates current `:` fixed-effect interactions to the
+equivalent `^` syntax accepted by 0.60.0, so those formula cases remain covered.
+It excludes behavior that has no valid counterpart in that release rather than
+inventing a synthetic baseline; keep such behavior in the live-R matrix.
+Although 0.60.0 exposes a FEPoisson frequency-weight argument, its released
+IRLS path fails dimensionally. Current FEPoisson frequency weights remain a
+known skipped issue ([#367](https://github.com/py-econometrics/pyfixest/issues/367)),
+so they are deliberately outside this PR rather than represented by a
+synthetic release artifact or claimed live-R coverage.
+
 `test-r-core` remains the convenient local aggregate for all canonical
 conda-forge R comparisons. CI partitions that population into
 `test-r-fixest` and the internal `test-r-core-other` shard so
@@ -86,7 +146,7 @@ preflight in the canonical `fixest` job.
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
-| Estimation or inference numerics | targeted integration and edge tests | applicable live external-reference suite |
+| Estimation or inference numerics | targeted integration and release snapshots; targeted/fast live-R after stabilization | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
 | Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
