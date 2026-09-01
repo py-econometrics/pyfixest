@@ -28,6 +28,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
   reference coverage.
+- We reorganize the tests against `fixest` for faster test feedback. By
+  default, we test only the default demeaner backend against `fixest` through
+  an integration test. All other demeaner backends are tested in a separate
+  workflow.
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
 

@@ -1,26 +1,29 @@
 # Testing and verification
 
-Pyfixest testing is risk-based: run the narrowest useful checks while editing,
-then the affected long-running suites after the change stabilizes. Always use
-`pixi run`; bare Python or pytest may not have the compiled extension or the
-right optional dependencies.
+Pyfixest testing is risk-based: use fast checks while editing, broaden the
+evidence once the implementation stabilizes, and require the affected
+long-running suites before merge. Always use `pixi run`; bare Python or pytest
+may not have the compiled extension or the right optional dependencies.
 
 ## Runtime tiers
 
 Runtime labels are qualitative because machine, compiler cache, and test
 selection affect wall time.
 
-| Tier | Purpose | Typical scale | Examples |
+| Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit | Fast feedback on the changed seam | Seconds to a few minutes | targeted pytest, changed-file Ruff/mypy |
-| PR baseline | Broad Python regression check | Minutes | `pixi run test-py` |
-| Domain/special | Validate an affected environment or reference | May take tens of minutes | R, HAC, no-JIT, docs, plots, Rust |
-| Full available suite | All tests supported by the current environment | Potentially substantially longer | `test-all`, platform CI, benchmarks |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, targeted or fast live-R checks, changed-file Ruff/mypy |
+| Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
+| Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
+| Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
 
-Run edit checks repeatedly. Run required domain checks once the design is
-stable. A verification report records actual elapsed time and reports every
-applicable check as passed, failed, deferred, or not run. Deferred is never
-equivalent to passed.
+Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
+`test-r-core`, or `test-all` while iterating. Use a targeted test or
+`test-r-fixest-fast` instead. Once the design is stable, run the selected
+baseline once. A required long check may be deferred to exact-head CI at
+implementation handoff when the report names the check and destination.
+Deferred is never equivalent to passed, and the change is not merge-ready
+until all required merge evidence is green.
 
 `test-py` is the broad Python-only regression baseline. It does not compare
 results with R or another external implementation, so it cannot establish
@@ -39,13 +42,16 @@ platform CI and benchmarks.
 # Targeted, without the repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
 
+# Targeted live-R edit feedback
+pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols
+pixi run -e py312-r test-r-fixest-fast
+
 # Python baseline
 pixi run test-py
 
-# External references
+# Canonical external-reference evidence
 pixi run -e py312-r test-r-core
 pixi run -e py312-r test-r-fixest
-pixi run -e py312-r test-r-fixest-fast
 pixi run -e py312-r test-r-hac
 pixi run -e py312-r test-r-extended
 
@@ -66,9 +72,15 @@ pixi run docs-build
 pixi run docs-render
 ```
 
+`test-r-core` remains the convenient local aggregate for all canonical
+conda-forge R comparisons. CI partitions that population into
+`test-r-fixest` and the internal `test-r-core-other` shard so
+`tests/test_vs_fixest.py` is not executed twice. The fast suite runs once as a
+preflight in the canonical `fixest` job.
+
 ## Selection matrix
 
-| Change | Required local evidence | Long or CI evidence |
+| Change | Required edit or handoff evidence | Merge or long evidence |
 |---|---|---|
 | Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
@@ -95,14 +107,14 @@ For prose under `docs/`, prefer an affected-page render. Reserve the full
 
 Every new estimator requires a permanent comparison with existing software.
 Prefer live R `fixest`, another established R package, or a well-established
-Python package. Use
-`against_r_core` when the reference is available on conda-forge and
-`against_r_extended` for CRAN-only dependencies. Stored Stata or other
-verified output is acceptable when its generator script and software version
-are committed. Keep reference tests fast enough for regular use. If the
-external implementation is too slow or cannot run reliably in the test
-environment, store a small deterministic result and commit the code that
-generates it plus the exact software version.
+Python package. Use `against_r_core` when the reference is available on
+conda-forge and `against_r_extended` for CRAN-only dependencies. Do not replace
+an available live reference merely to avoid running the complete canonical
+suite while editing; first select the affected live cases or use the fast
+matrix. Store a small deterministic result only when the external
+implementation is unavailable or unreliable in the test environment, or when
+measured per-case runtime makes regular execution impractical. Commit its
+generator and exact software version with the stored output.
 
 Any test file importing rpy2 must be listed in `_rpy2_test_files` in
 `tests/conftest.py` so non-R environments skip it safely. HAC tests use
@@ -119,8 +131,8 @@ directly against R `fixest` for `feols`, `fepois`, and `feglm`, and R
 `quantreg` for `quantreg`. To select one entry point while editing, run, for
 example,
 `pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols`.
-This is an edit check, not a second permanent reference framework; extend the
-canonical suites when a change needs new coverage.
+This is edit feedback, not a second permanent reference framework or complete
+merge evidence; extend the canonical suites when a change needs new coverage.
 
 The compact matrix covers the main comparison axes at least once:
 
