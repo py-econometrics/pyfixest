@@ -44,6 +44,14 @@ LOGIT_VCOV_DELTA_CASE_IDS = frozenset(
     }
 )
 PROBIT_IID_DELTA_CASE_ID = "feglm-003-family=probit-vcov=iid"
+FWEIGHTS_SINGLETON_DELTA_CASE_IDS = frozenset(
+    str(case["id"])
+    for case in CASES
+    if case["estimator"] == "feols"
+    and case["formula"] == "Y ~ X1 + X2 | f1^f2"
+    and case["kwargs"].get("weights") == "fweights"
+    and "group=ssc" in str(case["id"])
+)
 PARAMS = [
     pytest.param(
         case,
@@ -121,11 +129,18 @@ def _assert_snapshot(
     # FEGLM formulas, weights, or vcov variants must not inherit an omission.
     changed_logit_vcov = str(case["id"]) in LOGIT_VCOV_DELTA_CASE_IDS
     changed_probit_iid = str(case["id"]) == PROBIT_IID_DELTA_CASE_ID
+    changed_fweight_singletons = str(case["id"]) in FWEIGHTS_SINGLETON_DELTA_CASE_IDS
     # The documented GLM API/behavior change introduces new logit/probit IRLS
     # starts (docs/changelog.qmd, "GLM API and Behavior"). Only the narrow
     # comparisons below materially exceed normal tolerance; canonical live-R
     # remains their authoritative correctness evidence.
-    if not changed_logit_vcov:
+    # Release 0.60.0 treated a physically unique FE row as a singleton even
+    # when its frequency weight represented repeated observations. Current
+    # head follows literal expansion (and R fixest), which changes effective
+    # sample/FE degrees of freedom and derived inference for precisely the
+    # interaction cases enumerated above. Coefficients and prediction/residual
+    # samples remain checked against the frozen artifact.
+    if not changed_logit_vcov and not changed_fweight_singletons:
         for row_name, expected_row in expected["vcov"].items():
             _assert_named_close(
                 actual["vcov"][row_name],
@@ -134,7 +149,11 @@ def _assert_snapshot(
                 quantity=f"vcov row {row_name}",
             )
     for quantity in ("se", "tstat"):
-        if not changed_logit_vcov and not changed_probit_iid:
+        if (
+            not changed_logit_vcov
+            and not changed_probit_iid
+            and not changed_fweight_singletons
+        ):
             _assert_named_close(
                 actual[quantity],
                 expected[quantity],
@@ -147,13 +166,18 @@ def _assert_snapshot(
         # Only the X2 p-value moves beyond tolerance in logit hetero/CRV1.
         pvalue_actual.pop("X2")
         pvalue_expected.pop("X2")
-    _assert_named_close(
-        pvalue_actual,
-        pvalue_expected,
-        tolerance=tolerances.get("pvalue", tolerances["inference"]),
-        quantity="pvalue",
-    )
-    if estimator != "quantreg" and not changed_logit_vcov:
+    if not changed_fweight_singletons:
+        _assert_named_close(
+            pvalue_actual,
+            pvalue_expected,
+            tolerance=tolerances.get("pvalue", tolerances["inference"]),
+            quantity="pvalue",
+        )
+    if (
+        estimator != "quantreg"
+        and not changed_logit_vcov
+        and not changed_fweight_singletons
+    ):
         for name, expected_interval in expected["confint"].items():
             actual_interval = dict(actual["confint"][name])
             expected_interval = dict(expected_interval)
@@ -175,6 +199,10 @@ def _assert_snapshot(
     expected_metadata = dict(expected["metadata"])
     actual_deviance = actual_metadata.pop("deviance", None)
     expected_deviance = expected_metadata.pop("deviance", None)
+    if changed_fweight_singletons:
+        for name in ("nobs", "df_k", "df_t"):
+            actual_metadata.pop(name)
+            expected_metadata.pop(name)
     assert actual_metadata == expected_metadata, "structural metadata differs"
     if expected_deviance is not None:
         np.testing.assert_allclose(
@@ -212,6 +240,9 @@ def test_estimation_snapshot_inventory(release_contract) -> None:
     assert case_ids >= FAST_CASE_IDS
     assert manifest["fingerprint"] == fingerprint
     assert (snapshot_dir() / COMPLETE_MARKER).read_text().strip() == fingerprint
+    # Freeze the scope of the documented fweight-singleton release delta. A
+    # new formula, vcov, or SSC case must not silently inherit this omission.
+    assert len(FWEIGHTS_SINGLETON_DELTA_CASE_IDS) == 108
 
 
 @pytest.mark.parametrize("case", PARAMS)

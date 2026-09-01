@@ -136,10 +136,17 @@ for example, 0.60.0 cannot parse current canonical `:` fixed-effect
 interactions. Do not create a synthetic baseline for such a path: classify it
 with the existing live-R evidence instead.
 Although 0.60.0 exposes a FEPoisson frequency-weight argument, its released
-IRLS path fails dimensionally. Current FEPoisson frequency weights remain a
-known skipped issue ([#367](https://github.com/py-econometrics/pyfixest/issues/367)),
-so they are deliberately outside this PR rather than represented by a
-synthetic release artifact or claimed live-R coverage.
+IRLS path fails dimensionally. The frozen 0.60.0 release contract therefore
+continues to exclude that path rather than inventing a synthetic artifact.
+Current FEPoisson frequency-weight behavior is instead covered by literal
+row-expansion tests in Python and against R `fixest`, including models with
+fixed effects and robust covariance ([#367](https://github.com/py-econometrics/pyfixest/issues/367)).
+Release 0.60.0 also detected fixed-effect singletons from physical row counts
+for OLS frequency weights. Current head counts the represented observations,
+matching literal expansion and R `fixest`. The snapshot contract keeps checking
+coefficients and sampled fitted quantities for the affected interaction cases,
+but narrowly omits their effective-sample metadata and derived inference; the
+literal-expansion and live-R tests are authoritative for that documented delta.
 
 `test-r-core` remains the convenient local aggregate for all canonical
 conda-forge R comparisons. CI partitions that population into

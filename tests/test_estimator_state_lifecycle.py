@@ -1,17 +1,8 @@
-"""Characterize and protect private estimator-state lifecycle boundaries.
-
-These tests intentionally inspect implementation details. Public numerical
-behavior belongs to the release snapshots and live-R suites; this module locks
-the representation, scale, cache, and cleanup seams that those suites cannot
-observe. Refactors should replace these assertions with equivalent assertions
-about the new explicit state objects.
-"""
+"""Protect estimator representation, scale, cache, and cleanup boundaries."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import FrozenInstanceError
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,7 +11,12 @@ import pytest
 import pyfixest as pf
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import FormulaData
-from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.model_state import (
+    GlmWorkingState,
+    ObservationWeights,
+    WithinLinearData,
+)
 
 
 @pytest.fixture
@@ -57,75 +53,16 @@ def lifecycle_data() -> pd.DataFrame:
     )
 
 
-def _clone_state(value: Any) -> Any:
-    if isinstance(value, (pd.DataFrame, pd.Series, np.ndarray)):
-        return value.copy()
-    return value
-
-
-def _capture_after(
-    monkeypatch: pytest.MonkeyPatch,
-    *,
-    method_name: str,
-    state_name: str,
-    attributes: tuple[str, ...],
-    states: dict[str, dict[str, Any]],
-) -> None:
-    """Capture selected Feols attributes after one lifecycle method."""
-    original: Callable[..., Any] = getattr(Feols, method_name)
-
-    def wrapped(self: Feols, *args: Any, **kwargs: Any) -> Any:
-        result = original(self, *args, **kwargs)
-        states[state_name] = {
-            attribute: _clone_state(getattr(self, attribute))
-            for attribute in attributes
-        }
-        return result
-
-    monkeypatch.setattr(Feols, method_name, wrapped)
-
-
 @pytest.mark.parametrize(
     ("weights_type", "expected_n"),
     [("aweights", 24), ("fweights", 52)],
 )
-def test_feols_fields_change_type_and_scale_during_fit(
-    monkeypatch: pytest.MonkeyPatch,
+def test_feols_keeps_formula_within_and_weight_domains_distinct(
     lifecycle_data: pd.DataFrame,
     weights_type: str,
     expected_n: int,
 ) -> None:
-    """Record the DataFrame -> within array -> solver array mutation."""
-    states: dict[str, dict[str, Any]] = {}
-    _capture_after(
-        monkeypatch,
-        method_name="prepare_model_matrix",
-        state_name="formula",
-        attributes=("_Y", "_X", "_weights"),
-        states=states,
-    )
-    _capture_after(
-        monkeypatch,
-        method_name="demean",
-        state_name="within_frame",
-        attributes=("_Y", "_X", "_Yd", "_Xd"),
-        states=states,
-    )
-    _capture_after(
-        monkeypatch,
-        method_name="to_array",
-        state_name="within_array",
-        attributes=("_Y", "_X"),
-        states=states,
-    )
-    _capture_after(
-        monkeypatch,
-        method_name="wls_transform",
-        state_name="solver",
-        attributes=("_Y", "_X"),
-        states=states,
-    )
-
+    """A weighted FE fit retains within arrays and response-scale residuals."""
     fit = pf.feols(
         "y ~ x | fe",
         data=lifecycle_data,
@@ -134,29 +71,21 @@ def test_feols_fields_change_type_and_scale_during_fit(
         vcov="iid",
     )
 
-    assert isinstance(states["formula"]["_Y"], pd.DataFrame)
-    assert isinstance(states["formula"]["_X"], pd.DataFrame)
-    assert isinstance(states["within_frame"]["_Yd"], pd.DataFrame)
-    assert isinstance(states["within_frame"]["_Xd"], pd.DataFrame)
-    assert isinstance(states["within_array"]["_Y"], np.ndarray)
-    assert isinstance(states["within_array"]["_X"], np.ndarray)
-    assert isinstance(states["solver"]["_Y"], np.ndarray)
-    assert isinstance(states["solver"]["_X"], np.ndarray)
+    assert isinstance(fit._formula_data, FormulaData)
+    assert isinstance(fit._formula_data.dependent, pd.DataFrame)
+    assert isinstance(fit._observation_weights, ObservationWeights)
+    assert isinstance(fit._within_data, WithinLinearData)
+    assert fit._Y is fit._within_data.response
+    assert fit._X is fit._within_data.design
+    assert fit._Z is fit._within_data.design
+    assert not hasattr(fit, "_Yd")
+    assert not hasattr(fit, "_Xd")
 
-    np.testing.assert_allclose(
-        states["within_array"]["_Y"], states["within_frame"]["_Yd"].to_numpy()
-    )
-    np.testing.assert_allclose(
-        states["within_array"]["_X"], states["within_frame"]["_Xd"].to_numpy()
-    )
-
-    sqrt_weight = np.sqrt(states["formula"]["_weights"])
-    np.testing.assert_allclose(
-        states["solver"]["_Y"], states["within_array"]["_Y"] * sqrt_weight
-    )
-    np.testing.assert_allclose(
-        states["solver"]["_X"], states["within_array"]["_X"] * sqrt_weight
-    )
+    weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
+    np.testing.assert_array_equal(fit._observation_weights.values, weights)
+    np.testing.assert_array_equal(fit._weights.flatten(), weights)
+    assert fit._observation_weights.kind == weights_type
+    assert expected_n == fit._N
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(
         lifecycle_data["fe"]
@@ -164,20 +93,29 @@ def test_feols_fields_change_type_and_scale_during_fit(
         lifecycle_data["fe"]
     ).transform("sum")
     expected_y_within = lifecycle_data["y"] - weighted_group_mean
-    np.testing.assert_allclose(
-        states["within_frame"]["_Yd"].to_numpy().flatten(), expected_y_within
+    np.testing.assert_allclose(fit._within_data.response.flatten(), expected_y_within)
+    assert not np.allclose(
+        fit._within_data.response.flatten(),
+        expected_y_within * np.sqrt(weights),
     )
 
+    residuals = fit._within_data.response.flatten() - fit._X @ fit._beta_hat
+    np.testing.assert_allclose(fit._u_hat, residuals)
+    np.testing.assert_allclose(fit.resid(), residuals)
     np.testing.assert_allclose(
-        fit._u_hat.flatten(), fit.resid() * np.sqrt(fit._weights.flatten())
+        fit._scores,
+        fit._X * (weights * residuals)[:, None],
     )
-    assert expected_n == fit._N
+    np.testing.assert_allclose(fit._hessian, fit._X.T @ (weights[:, None] * fit._X))
+
+    with pytest.raises(FrozenInstanceError):
+        fit._within_data.response = fit._within_data.design  # type: ignore[misc]
 
 
-def test_weighted_iv_fields_end_on_solver_scale(
+def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     lifecycle_data: pd.DataFrame,
 ) -> None:
-    """Characterize the retained Y/X/Z domains of a weighted FE-IV fit."""
+    """IV state names response, design, endogenous, and instrument roles."""
     fit = pf.feols(
         "y ~ x + [endog ~ z] | fe",
         data=lifecycle_data,
@@ -186,26 +124,35 @@ def test_weighted_iv_fields_end_on_solver_scale(
         vcov="iid",
     )
 
-    assert isinstance(fit._Yd, pd.DataFrame)
-    assert isinstance(fit._Xd, pd.DataFrame)
-    assert isinstance(fit._Zd, pd.DataFrame)
-    assert isinstance(fit._Y, np.ndarray)
-    assert isinstance(fit._X, np.ndarray)
-    assert isinstance(fit._Z, np.ndarray)
+    within = fit._within_data
+    assert isinstance(within, WithinLinearData)
+    assert within.instruments is not None
+    assert within.endogenous is not None
+    assert fit._Y is within.response
+    assert fit._X is within.design
+    assert fit._Z is within.instruments
+    assert fit._endogvar is within.endogenous
+    assert not hasattr(fit, "_Yd")
+    assert not hasattr(fit, "_Xd")
+    assert not hasattr(fit, "_Zd")
+    assert not hasattr(fit, "_endogvard")
 
-    sqrt_weight = np.sqrt(fit._weights)
-    np.testing.assert_allclose(fit._Y, fit._Yd.to_numpy() * sqrt_weight)
-    np.testing.assert_allclose(fit._X, fit._Xd.to_numpy() * sqrt_weight)
-    np.testing.assert_allclose(fit._Z, fit._Zd.to_numpy() * sqrt_weight)
+    weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
+    weighted_design = weights[:, None] * within.design
+    weighted_response = weights[:, None] * within.response
+    np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
+    np.testing.assert_allclose(fit._tZy, within.instruments.T @ weighted_response)
     np.testing.assert_allclose(
-        fit._u_hat.flatten(), fit.resid() * sqrt_weight.flatten()
+        fit._scores,
+        within.instruments * (weights * fit._u_hat)[:, None],
     )
+    np.testing.assert_allclose(fit.resid(), fit._u_hat)
 
 
 def test_formula_data_remains_canonical_after_linear_fit(
     lifecycle_data: pd.DataFrame,
 ) -> None:
-    """Formula roles remain tabular while compatibility aliases are transformed."""
+    """Formula roles remain tabular after numerical arrays are prepared."""
     fit = pf.feols(
         "y ~ x + [endog ~ z] | fe",
         data=lifecycle_data,
@@ -217,16 +164,13 @@ def test_formula_data_remains_canonical_after_linear_fit(
     assert isinstance(formula_data, FormulaData)
     assert not hasattr(formula_data, "__dict__")
     with pytest.raises(FrozenInstanceError):
-        formula_data.na_index = frozenset()
+        formula_data.na_index = frozenset()  # type: ignore[misc]
 
     assert isinstance(formula_data.dependent, pd.DataFrame)
     assert isinstance(formula_data.independent, pd.DataFrame)
     assert isinstance(formula_data.fixed_effects, pd.DataFrame)
     assert isinstance(formula_data.instruments, pd.DataFrame)
     assert isinstance(formula_data.weights, pd.DataFrame)
-    assert isinstance(fit._Y, np.ndarray)
-    assert isinstance(fit._X, np.ndarray)
-    assert isinstance(fit._Z, np.ndarray)
     pd.testing.assert_frame_equal(
         formula_data.dependent,
         lifecycle_data.loc[:, ["y"]],
@@ -236,6 +180,17 @@ def test_formula_data_remains_canonical_after_linear_fit(
         lifecycle_data.loc[:, ["weight"]],
     )
     assert fit._model_spec is formula_data.model_spec
+
+
+def test_unweighted_effective_n_remains_integer_for_prediction_errors(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An integer physical row count remains usable by prediction allocation."""
+    fit = pf.feols("y ~ x", data=lifecycle_data, vcov="iid")
+
+    assert isinstance(fit._N, int)
+    assert isinstance(fit._observation_weights.n_effective, int)
+    assert fit.predict(se_fit=True).shape == (len(lifecycle_data),)
 
 
 def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
@@ -269,10 +224,10 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert fit.n_separation_na == 2
 
 
-def test_multiple_estimation_shares_dataframe_demean_cache(
+def test_multiple_estimation_shares_array_native_demean_cache(
     lifecycle_data: pd.DataFrame,
 ) -> None:
-    """Record the shared mutable DataFrame cache used by FixestMulti."""
+    """Multiple fits share one ordered array cache without DataFrame round trips."""
     fit = pf.feols(
         "y ~ sw(x, x2) | fe",
         data=lifecycle_data,
@@ -291,11 +246,30 @@ def test_multiple_estimation_shares_dataframe_demean_cache(
     assert demeaned_caches[0] is demeaned_caches[1]
     assert preconditioner_caches[0] is preconditioner_caches[1]
     assert demeaned_caches[0]
-    assert all(isinstance(value, pd.DataFrame) for value in demeaned_caches[0].values())
-    assert all(isinstance(model._Yd, pd.DataFrame) for model in models)
-    assert all(isinstance(model._Xd, pd.DataFrame) for model in models)
-    assert all(isinstance(model._Y, np.ndarray) for model in models)
-    assert all(isinstance(model._X, np.ndarray) for model in models)
+    assert all(isinstance(value, DemeanedData) for value in demeaned_caches[0].values())
+    assert all(isinstance(model._within_data, WithinLinearData) for model in models)
+    assert all(model._Y is model._within_data.response for model in models)
+    assert all(model._X is model._within_data.design for model in models)
+
+
+@pytest.mark.parametrize("fit_kwargs", [{"store_data": False}, {"lean": True}])
+def test_multiple_estimation_respects_storage_options(
+    lifecycle_data: pd.DataFrame,
+    fit_kwargs: dict[str, bool],
+) -> None:
+    """The result container must not retain data cleared from all child fits."""
+    fit = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=lifecycle_data,
+        vcov="iid",
+        **fit_kwargs,
+    )
+
+    assert isinstance(fit, FixestMulti)
+    assert not hasattr(fit, "_data")
+    assert not hasattr(fit, "_config")
+    assert not hasattr(fit, "_context")
+    assert all(not hasattr(model, "_data") for model in fit.to_list())
 
 
 @pytest.mark.parametrize(
@@ -308,15 +282,16 @@ def test_multiple_estimation_shares_dataframe_demean_cache(
             frozenset(
                 {
                     "_data",
+                    "_formula_data",
+                    "_within_data",
+                    "_observation_weights",
+                    "_demean_cache",
                     "_X",
                     "_Y",
                     "_Z",
-                    "_Xd",
-                    "_Yd",
                     "_weights",
                     "_scores",
                     "_u_hat",
-                    "_formula_data",
                 }
             ),
         ),
@@ -331,35 +306,168 @@ def test_storage_options_delete_expected_state(
     state_fields = frozenset(
         {
             "_data",
+            "_formula_data",
+            "_within_data",
+            "_observation_weights",
+            "_demean_cache",
             "_X",
             "_Y",
             "_Z",
-            "_Xd",
-            "_Yd",
             "_weights",
             "_scores",
             "_u_hat",
-            "_formula_data",
         }
     )
     fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", **fit_kwargs)
 
     observed_fields = frozenset(field for field in state_fields if hasattr(fit, field))
     assert observed_fields == state_fields - missing_fields
+    if fit_kwargs.get("lean"):
+        for field in ("_model_spec", "_context", "_fe", "_weights_df", "_offset_df"):
+            assert not hasattr(fit, field)
     assert np.isfinite(fit.coef()).all()
 
 
-def test_feglm_overwrites_observation_weights_with_working_weights() -> None:
-    """Record the current observation/IRLS weight field collision."""
+def test_store_data_false_allows_array_only_vcov_updates(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Array-only covariance updates do not require retained formula data."""
+    stripped = pf.feols("y ~ x", data=lifecycle_data, vcov="iid", store_data=False)
+    expected = pf.feols("y ~ x", data=lifecycle_data, vcov="HC1")
+
+    stripped.vcov("HC1")
+
+    np.testing.assert_allclose(stripped._vcov, expected._vcov)
+    assert not hasattr(stripped, "_data")
+
+
+def test_store_data_false_vcov_uses_explicit_estimation_sample(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Data-dependent covariance updates use the documented data argument."""
+    stripped = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", store_data=False)
+    expected = pf.feols("y ~ x | fe", data=lifecycle_data, vcov={"CRV1": "fe"})
+
+    with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
+        stripped.vcov({"CRV1": "fe"})
+
+    stripped.vcov({"CRV1": "fe"}, data=lifecycle_data)
+
+    np.testing.assert_allclose(stripped._vcov, expected._vcov)
+    assert not hasattr(stripped, "_data")
+
+
+def test_vcov_rejects_unfiltered_explicit_data(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An explicit covariance sample must align with the fitted row arrays."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[0], "y"] = np.nan
+    estimation_sample = data.dropna(subset=["y", "x", "fe"])
+    stripped = pf.feols(
+        "y ~ x | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    expected = pf.feols(
+        "y ~ x | fe",
+        data=estimation_sample,
+        vcov={"CRV1": "fe"},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"already-filtered estimation sample.*original estimation order; "
+            r"expected 23 rows, received 24"
+        ),
+    ):
+        stripped.vcov({"CRV1": "fe"}, data=data)
+
+    stripped.vcov({"CRV1": "fe"}, data=estimation_sample)
+    np.testing.assert_allclose(stripped._vcov, expected._vcov)
+
+
+def test_lean_vcov_fails_with_storage_guidance(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Lean results explain that covariance inputs were intentionally discarded."""
+    fit = pf.feols("y ~ x", data=lifecycle_data, vcov="iid", lean=True)
+
+    with pytest.raises(RuntimeError, match=r"vcov\(\).*lean=True.*discarded"):
+        fit.vcov("HC1")
+
+
+def test_iv_first_stage_respects_store_data_false(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A retained IV first stage must not hide a copy of stripped input data."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="hetero",
+        store_data=False,
+    )
+
+    first_stage = fit._model_1st_stage
+    assert not hasattr(first_stage, "_data")
+    assert not hasattr(first_stage, "_formula_data")
+    assert hasattr(first_stage, "_within_data")
+    assert hasattr(first_stage, "_X")
+    fit.IV_Diag()
+    assert np.isfinite(fit._eff_F)
+    with pytest.raises(RuntimeError, match=r"first_stage\(\).*store_data=False"):
+        fit.first_stage()
+
+
+def test_iv_effective_f_explains_stripped_iid_data_requirement(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """IID first-stage refits fail informatively when their data were stripped."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="iid",
+        store_data=False,
+    )
+
+    with pytest.raises(RuntimeError, match=r"effective F.*store_data=False"):
+        fit.IV_Diag()
+
+
+def test_lean_iv_discards_retained_first_stage_arrays(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Lean IV results retain diagnostics but no nested fitted-data graph."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="hetero",
+        lean=True,
+    )
+
+    assert not hasattr(fit, "_model_1st_stage")
+    assert not hasattr(fit, "_X_hat")
+    assert not hasattr(fit, "_v_hat")
+    assert not hasattr(fit, "_endogvar")
+    assert np.isfinite(fit._f_stat_1st_stage)
+    with pytest.raises(RuntimeError, match=r"IV_Diag\(\).*lean=True"):
+        fit.IV_Diag()
+
+
+def test_feglm_keeps_observation_and_working_weights_distinct() -> None:
+    """The stable observation-weight alias is never replaced by IRLS weights."""
     rng = np.random.default_rng(8675309)
     n_obs = 160
     covariate = rng.normal(size=n_obs)
     probability = 1 / (1 + np.exp(-(-0.2 + 0.8 * covariate)))
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
     data = pd.DataFrame(
         {
             "y": rng.binomial(1, probability),
             "x": covariate,
-            "observation_weight": np.linspace(0.5, 2.0, n_obs),
+            "observation_weight": observation_weights,
         }
     )
 
@@ -372,10 +480,71 @@ def test_feglm_overwrites_observation_weights_with_working_weights() -> None:
         iwls_tol=1e-10,
     )
 
-    observation_weights = fit._weights_df.to_numpy()
-    assert isinstance(fit._Y_untransformed, pd.DataFrame)
-    assert isinstance(fit._X, np.ndarray)
-    assert isinstance(fit._Y, np.ndarray)
-    np.testing.assert_allclose(fit._weights.flatten(), fit._irls_weights.flatten())
-    assert not np.allclose(fit._weights.flatten(), observation_weights.flatten())
-    np.testing.assert_allclose(fit._scores, fit._u_hat[:, None] * fit._X)
+    working = fit._working_state
+    assert isinstance(working, GlmWorkingState)
+    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+    np.testing.assert_allclose(fit._observation_weights.values, observation_weights)
+    np.testing.assert_allclose(fit._irls_weights, working.working_weights)
+    assert not np.allclose(working.working_weights, observation_weights)
+    assert fit._X is working.design_within
+    assert fit._Y is working.working_response_within
+    np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
+    np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
+    np.testing.assert_allclose(
+        fit._scores,
+        fit._X * (working.working_weights * working.working_residuals)[:, None],
+    )
+
+
+def test_glm_lean_discards_formula_and_working_state() -> None:
+    """Lean GLM results discard both canonical input and working fit arrays."""
+    data = pd.DataFrame({"y": [0, 1, 0, 1, 1, 0], "x": np.arange(6.0)})
+    fit = pf.feglm("y ~ x", data=data, family="logit", lean=True, vcov="iid")
+
+    discarded = (
+        "_formula_data",
+        "_observation_weights",
+        "_demean_cache",
+        "_working_state",
+        "_irls_weights",
+        "_u_hat_response",
+        "_u_hat_working",
+        "_scores_response",
+        "_scores_working",
+        "_Xbeta",
+        "_offset",
+    )
+    assert all(not hasattr(fit, attr) for attr in discarded)
+    assert np.isfinite(fit.coef()).all()
+    for residual_type in ("response", "working"):
+        with pytest.raises(
+            RuntimeError, match=r"resid\(\).*lean=True.*residual arrays were discarded"
+        ):
+            fit.resid(residual_type)
+
+
+def test_poisson_lean_discards_offset_and_null_fit_arrays() -> None:
+    """Lean Poisson results do not retain offset or null-fit row arrays."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 2, 1, 3, 2],
+            "x": np.arange(6.0),
+            "offset": np.linspace(0.1, 0.6, 6),
+        }
+    )
+    fit = pf.fepois("y ~ x", data=data, offset="offset", lean=True, vcov="iid")
+
+    assert not hasattr(fit, "_offset")
+    assert not hasattr(fit, "_y_hat_null")
+    assert np.isfinite(fit.coef()).all()
+
+
+def test_quantreg_lean_discards_solver_arrays() -> None:
+    """Lean quantile results do not retain row-sized solver outputs."""
+    data = pd.DataFrame({"y": [0.2, 1.1, 1.8, 3.2, 3.9, 5.1], "x": np.arange(6.0)})
+    with pytest.warns(FutureWarning, match="experimental"):
+        fit = pf.quantreg("y ~ x", data=data, lean=True, vcov="iid", maxiter=100)
+
+    solver_arrays = ("_x_final", "_s_final", "_z_final", "_w_final", "_y_final")
+    assert all(not hasattr(fit, attr) for attr in solver_arrays)
+    assert np.isfinite(fit.coef()).all()

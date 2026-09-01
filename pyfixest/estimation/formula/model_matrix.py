@@ -16,6 +16,7 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSF
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
@@ -113,13 +114,17 @@ class ModelMatrix:
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
+        weights_type: WeightsTypeOptions | None = None,
     ) -> None:
         self._drop_intercept = drop_intercept
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
-        self._process(drop_singletons=drop_singletons)
+        self._process(
+            drop_singletons=drop_singletons,
+            weights_type=weights_type,
+        )
 
     @staticmethod
     def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
@@ -154,7 +159,11 @@ class ModelMatrix:
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 
-    def _process(self, drop_singletons: bool = False) -> None:
+    def _process(
+        self,
+        drop_singletons: bool = False,
+        weights_type: WeightsTypeOptions | None = None,
+    ) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
         elif self._dependent is None or len(self._dependent) != 1:
@@ -200,8 +209,16 @@ class ModelMatrix:
         # Drop singletons if specified
         if drop_singletons and self._fixed_effects is not None:
             fixed_effects = self._data.loc[:, self._fixed_effects]
+            frequency_weights = (
+                self._data.loc[:, self._weights].to_numpy().reshape(-1)
+                if weights_type == "fweights" and self._weights is not None
+                else None
+            )
             self._drop(
-                detect_singletons(fixed_effects.to_numpy()),
+                detect_singletons(
+                    fixed_effects.to_numpy(),
+                    frequency_weights=frequency_weights,
+                ),
                 "singleton fixed effect(s)",
             )
 
@@ -371,6 +388,8 @@ def create_model_matrix(
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
     context: int | Mapping[str, Any] = 0,
+    *,
+    weights_type: WeightsTypeOptions | None = None,
 ) -> ModelMatrix:
     """
     Create a ModelMatrix from a formula and data.
@@ -409,6 +428,9 @@ def create_model_matrix(
         Additional context variables for formulaic during model matrix creation.
         Can be an integer (stack frame depth) or a dictionary of variables to
         make available in the formula environment (e.g., custom transformations).
+    weights_type : {"aweights", "fweights"} or None, default=None
+        Weight semantics used when detecting singleton fixed effects. Frequency
+        weights count literal replications; analytic weights do not.
 
     Returns
     -------
@@ -451,6 +473,7 @@ def create_model_matrix(
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
+        weights_type=weights_type,
     )
 
 

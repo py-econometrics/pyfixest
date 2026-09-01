@@ -56,11 +56,11 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
-def test_cluster_but_no_data():
-    """Test if AttributeError if self._data is not stored."""
+def test_cluster_vcov_without_stored_or_explicit_data_is_informative():
+    """Data-dependent vcov updates explain how to supply stripped data."""
     data = get_data()
     fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(AttributeError):
+    with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
         fit.vcov({"CRV1": "f2"})
 
 
@@ -423,7 +423,13 @@ def test_errors_ccv():
 
     # error when fixed effects in estimation
     fit = feols("Y ~ D | f1", data=data)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError, match=r"not supported.*fixed effects"):
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+    # weighted CCV needs a separately defined estimating equation
+    data["observation_weight"] = np.linspace(0.5, 2.0, len(data))
+    fit = feols("Y ~ D", data=data, weights="observation_weight")
+    with pytest.raises(NotImplementedError, match=r"not supported.*weights"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when treatment not found
@@ -456,6 +462,38 @@ def test_errors_ccv():
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
     with pytest.raises(AssertionError):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+
+def test_weighted_update_is_explicitly_unsupported():
+    data = get_data().dropna(subset=["Y", "X1", "weights"])
+    fit = feols("Y ~ X1", data=data, weights="weights")
+
+    with pytest.raises(NotImplementedError, match=r"update.*not supported.*weights"):
+        fit.update(X_new=np.ones((1, 2)), y_new=np.ones(1))
+
+
+def test_iv_update_is_explicitly_unsupported():
+    data = get_data().dropna(subset=["Y", "X1", "Z1"])
+    fit = feols("Y ~ 1 + [X1 ~ Z1]", data=data)
+
+    with pytest.raises(NotImplementedError, match=r"update.*not supported.*IV"):
+        fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+
+
+def test_non_ols_update_is_explicitly_unsupported():
+    poisson_data = get_data(model="Fepois").dropna()
+    linear_data = get_data().dropna()
+    binary_data = poisson_data.copy()
+    binary_data["Y"] = (binary_data["Y"] > binary_data["Y"].median()).astype(int)
+    models = (
+        pf.fepois("Y ~ X1", data=poisson_data),
+        pf.feglm("Y ~ X1", data=binary_data, family="logit"),
+        pf.quantreg("Y ~ X1", data=linear_data),
+    )
+
+    for fit in models:
+        with pytest.raises(NotImplementedError, match=r"update.*only supported.*OLS"):
+            fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
 def test_errors_confint():
@@ -532,6 +570,46 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
+def test_ritest_rejects_non_ols_working_domains(estimator):
+    """RI must not interpret GLM or quantile arrays as OLS solver inputs."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, 1, 1, 0, 1, 0],
+            "x": np.linspace(-1.0, 1.0, 8),
+        }
+    )
+    if estimator == "feglm":
+        fit = pf.feglm("y ~ x", data=data, family="logit")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+
+    with pytest.raises(
+        NotImplementedError, match=r"only supported for OLS and Poisson"
+    ):
+        fit.ritest(resampvar="x", reps=1)
+
+
+@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
+def test_wildboottest_rejects_non_ols_working_domains(estimator):
+    """Wild bootstrap must reject estimator-specific non-OLS array domains."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, 1, 1, 0, 1, 0],
+            "x": np.linspace(-1.0, 1.0, 8),
+        }
+    )
+    if estimator == "feglm":
+        fit = pf.feglm("y ~ x", data=data, family="logit")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+
+    with pytest.raises(NotImplementedError, match=r"only supported for unweighted OLS"):
+        fit.wildboottest(param="x", reps=1)
 
 
 def test_wald_test_invalid_distribution():
@@ -910,6 +988,39 @@ def test_prediction_errors_glm():
             NotImplementedError, match="Prediction with standard errors"
         ):
             model.predict(se_fit=True)
+
+
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+def test_glm_crv3_is_explicitly_unsupported(family):
+    """Do not silently run Poisson jackknife refits for other GLM families."""
+    data = pf.get_data(model="Fepois").dropna().copy()
+    if family in ("logit", "probit"):
+        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
+
+    with pytest.raises(VcovTypeNotSupportedError, match="CRV3 inference"):
+        pf.feglm(
+            "Y ~ X1",
+            data=data,
+            family=family,
+            vcov={"CRV3": "f1"},
+        )
+
+
+def test_poisson_crv3_remains_supported():
+    """Keep the longstanding Poisson jackknife path across both public APIs."""
+    data = pf.get_data(model="Fepois").dropna().iloc[:120].copy()
+    data["cluster"] = np.arange(len(data)) % 6
+
+    direct_fit = pf.fepois("Y ~ X1", data=data, vcov={"CRV3": "cluster"})
+    glm_fit = pf.feglm(
+        "Y ~ X1",
+        data=data,
+        family="poisson",
+        vcov={"CRV3": "cluster"},
+    )
+
+    np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
+    np.testing.assert_allclose(direct_fit._vcov, glm_fit._vcov)
 
 
 def test_empty_vcov_error():

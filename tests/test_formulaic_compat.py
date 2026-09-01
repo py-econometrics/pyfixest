@@ -18,6 +18,8 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.model_matrix import create_model_matrix
+from pyfixest.estimation.formula.parse import Formula
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
@@ -34,6 +36,26 @@ def data() -> pd.DataFrame:
             "f1": rng.integers(0, 5, size=100),
             "f2": rng.integers(0, 3, size=100),
         }
+    )
+
+
+def test_create_model_matrix_preserves_positional_offset_slot() -> None:
+    """Adding weight semantics must not shift the existing offset argument."""
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0],
+            "x": [0.0, 1.0, 2.0],
+            "w": [1.0, 2.0, 1.0],
+            "exposure": [1.0, 2.0, 4.0],
+        }
+    )
+    formula = Formula.parse("y ~ x")[0]
+
+    model_matrix = create_model_matrix(formula, data, "w", "log(exposure)")
+
+    assert model_matrix.offset is not None
+    np.testing.assert_allclose(
+        model_matrix.offset.to_numpy().ravel(), np.log(data["exposure"])
     )
 
 

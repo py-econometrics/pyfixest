@@ -89,11 +89,12 @@ def test_coef_update():
     np.testing.assert_allclose(updated_coefs, full_coefs)
 
 
-def test_coef_update_inplace():
+def test_coef_update_inplace_is_explicitly_unsupported():
     rng = np.random.default_rng(1234)
     data = get_data().dropna(subset=["Y", "X1", "X2"])
     data_subsample = data.sample(frac=0.3, random_state=1234)
     m = feols("Y ~ X1 + X2", data=data_subsample)
+    original_coef = m.coef().copy()
     new_points_id = rng.choice(
         data.index.difference(data_subsample.index), 5, replace=False
     )
@@ -105,16 +106,10 @@ def test_coef_update_inplace():
         ],
         data.loc[new_points_id]["Y"].values,
     )
-    m.update(X_new, y_new, inplace=True)
-    full_coefs = (
-        feols(
-            "Y ~ X1 + X2",
-            data=data.loc[data_subsample.index.append(pd.Index(new_points_id))],
-        )
-        .coef()
-        .values
-    )
-    np.testing.assert_allclose(m.coef().values, full_coefs)
+    with pytest.raises(NotImplementedError, match=r"inplace=True.*not supported"):
+        m.update(X_new, y_new, inplace=True)
+
+    pd.testing.assert_series_equal(m.coef(), original_coef)
 
 
 def test_rename_categoricals():

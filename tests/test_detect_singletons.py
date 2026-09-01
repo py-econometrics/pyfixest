@@ -3,6 +3,35 @@ import pytest
 
 from pyfixest.core.detect_singletons import detect_singletons
 
+
+def test_frequency_counts_prevent_false_singletons_and_still_cascade():
+    """Frequency totals, not physical row counts, define expanded singletons."""
+    fixed_effects = np.array(
+        [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [2, 1],
+        ]
+    )
+    weights = np.array([2, 1, 1, 1])
+
+    np.testing.assert_array_equal(
+        detect_singletons(fixed_effects, frequency_weights=weights),
+        np.array([False, True, True, True]),
+    )
+
+
+@pytest.mark.parametrize("invalid_weight", [np.nan, np.inf, 0.0, -1.0])
+def test_frequency_counts_must_be_finite_and_strictly_positive(invalid_weight):
+    """Direct callers receive the same weight-domain validation as estimators."""
+    fixed_effects = np.array([[0], [0]])
+    weights = np.array([1.0, invalid_weight])
+
+    with pytest.raises(ValueError, match="finite and strictly positive"):
+        detect_singletons(fixed_effects, frequency_weights=weights)
+
+
 input1 = np.array([[0, 2, 1], [0, 2, 1], [0, 1, 3], [0, 1, 2], [0, 1, 2]])
 solution1 = np.array([False, False, True, False, False])
 

@@ -50,9 +50,24 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   work, and result expansion through a structural lifecycle protocol. This
   keeps formula roles stable while the later within- and weight-scale cleanup
   proceeds independently.
+- Estimator internals now keep formula tables, unpremultiplied within arrays,
+  user-scale observation weights, and GLM IRLS working state in separate typed
+  domains. Square-root-weighted arrays are local solver temporaries, and linear
+  residuals remain in response units; a dedicated benchmark guards runtime and
+  retained-memory regressions.
 
 ### Inference Types
 
+- Frequency-weight HC2/HC3 leverage now follows the equivalent expanded sample.
+  Weighted models now reject `ccv()` explicitly, and non-Poisson GLMs reject
+  `CRV3` instead of silently using Poisson jackknife refits. Poisson `CRV3`
+  remains supported.
+- `Feols.update()` remains available as a coefficient-only calculation, but now
+  rejects `inplace=True` instead of leaving inference, prediction, and retained
+  formula state out of sync with the updated coefficients.
+- Randomization inference now rejects non-OLS/non-Poisson results, and the wild
+  bootstrap rejects non-OLS results, rather than treating GLM working state or
+  quantile solver outputs as OLS arrays.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
@@ -93,6 +108,9 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson frequency weights, including models with fixed effects and
+  post-separation sample sizes, now follow the equivalent expanded sample.
+  Probability weights remain unsupported.
 - Poisson offsets now accept Formulaic transformations such as
   `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
@@ -203,6 +221,10 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
+- Weighted fixed-effect contributions are now retained in response units.
+- `store_data=False` and `lean=True` now apply to multiple-estimation containers
+  and retained IV first stages; lean fits also discard demeaning caches, GLM
+  working aliases, and quantile solver outputs.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

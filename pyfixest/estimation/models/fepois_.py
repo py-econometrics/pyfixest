@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from importlib import import_module
 from typing import Any
 
 import numpy as np
@@ -10,6 +11,7 @@ from scipy.special import gammaln
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
@@ -31,21 +33,25 @@ class Fepois(Feglm):
 
     Inherits from the Feglm class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    Note that no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
+    IRLS residualization is orchestrated by ``Feglm`` through the shared
+    ``DemeanCache`` supplied by the estimation runner.
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
 
     Attributes
     ----------
     _Y : np.ndarray
-        The demeaned dependent variable, a two-dimensional numpy array.
+        Final within-scale IRLS working response. It is not multiplied by the
+        square root of the working weights.
     _X : np.ndarray
-        The demeaned independent variables, a two-dimensional numpy array.
-    _fe : np.ndarray
-        Fixed effects, a two-dimensional numpy array or None.
-    weights : np.ndarray
-        Weights, a one-dimensional numpy array or None.
+        Final within-scale IRLS design. It is not multiplied by the square root
+        of the working weights.
+    _fe : pd.DataFrame or None
+        Formula-scale fixed effects.
+    _weights : np.ndarray
+        Compatibility alias containing observation weights only.
+    _irls_weights : np.ndarray
+        Final IRLS working weights.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
@@ -104,7 +110,7 @@ class Fepois(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
@@ -118,7 +124,7 @@ class Fepois(Feglm):
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
         offset: str | None = None,
-    ):
+    ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -147,13 +153,21 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
+        # The inherited jackknife refit dispatch is valid for Poisson and is a
+        # longstanding public capability. Other GLM families keep this disabled.
+        self._support_crv3_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        y_orig = np.asarray(self._Y).flatten()
-        user_weights = self._weights.flatten().copy()
+        y_orig = self._formula_data.dependent.to_numpy().flatten()
+        observation_weights = self._observation_weights.values
+        user_weights = (
+            np.ones_like(y_orig, dtype=np.float64)
+            if observation_weights is None
+            else observation_weights
+        )
 
         super().get_fit()
 
@@ -191,6 +205,40 @@ class Fepois(Feglm):
         self.deviance = self._family.deviance(
             y_orig, self._Y_hat_response, user_weights
         )
+
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return the full Poisson estimation contract for data-changing refits."""
+        kwargs = super()._estimation_refit_kwargs()
+        kwargs.update(
+            {
+                "offset": self._offset_name,
+                "iwls_tol": self.tol,
+                "iwls_maxiter": self.maxiter,
+                "separation_check": (
+                    None
+                    if self.separation_check is None
+                    else list(self.separation_check)
+                ),
+            }
+        )
+        return kwargs
+
+    def _crv3_refit(self, data: pd.DataFrame) -> Fepois:
+        """Replay Poisson estimation for one leave-one-cluster-out sample."""
+        # lazy loading to avoid circular import
+        fixest_module = import_module("pyfixest.estimation")
+        return fixest_module.fepois(
+            fml=self._fml,
+            data=data,
+            vcov="iid",
+            **self._estimation_refit_kwargs(),
+        )
+
+    def _clear_attributes(self) -> None:
+        """Apply GLM cleanup and discard the Poisson null-fit array when lean."""
+        super()._clear_attributes()
+        if self._lean and hasattr(self, "_y_hat_null"):
+            del self._y_hat_null
 
     def predict(
         self,

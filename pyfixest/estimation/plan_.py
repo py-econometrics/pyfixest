@@ -10,6 +10,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -292,7 +293,7 @@ def _build_model_kwargs(
 def fit_one(
     spec: ModelSpec,
     *,
-    lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+    lookup_demeaned_data: dict[frozenset[int], DemeanedData],
     lookup_preconditioner: dict[frozenset[int], Preconditioner],
     vcov: str | dict[str, str] | None,
     vcov_kwargs: dict[str, str | int] | None,

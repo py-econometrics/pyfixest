@@ -6,6 +6,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -24,7 +25,7 @@ class Fegaussian(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: Literal[
@@ -74,4 +75,9 @@ class Fegaussian(Feglm):
 
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
-        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+        return vcov_iid_ols(
+            residuals=self._u_hat,
+            bread=self._bread,
+            N=self._N,
+            weights=self._leverage_weights(),
+        )
