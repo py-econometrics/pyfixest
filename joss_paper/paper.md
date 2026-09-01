@@ -102,9 +102,11 @@ does not have a native multi-way high-dimensional fixed-effects estimator.
 Those are useful building blocks for linear models, but they do not provide the
 range of estimators and post-estimation methods familiar to `fixest` users.
 
-Extending one of these packages would not have produced the cross-estimator API
-we wanted without changing its scope substantially. We therefore built a
-separate package, but reuse focused infrastructure where it already exists.
+We wanted the syntax and estimation flow familiar from `fixest`, a consistent
+API across estimators, and high performance on fixed-effects problems. Extending
+one of these packages to provide that combination would have changed its scope
+substantially. We therefore built a separate package, but reuse focused
+infrastructure where it already exists.
 Formulaic [@wardrop_formulaic_2026] parses Wilkinson expressions and constructs
 model matrices; a PyFixest layer adds fixed effects, multiple-estimation
 operators, formula expansion, and estimation planning. This keeps formula parsing
@@ -157,12 +159,13 @@ anytime-valid inference [@lindon2026anytime]. Reporting includes Great Tables,
 LaTeX, and Typst tables, coefficient plots, Gelbach decomposition
 [@gelbach2016covariates], and weak-IV diagnostics [@lal2023much].
 
-Compatibility with `fixest` is checked rather than assumed. Reference tests call
-R through `rpy2` [@gautier2008rpy2] and compare coefficients, inference, and fit
-statistics at estimator-specific tolerances; core OLS comparisons typically use
-relative and absolute tolerances of $10^{-8}$. For example, Python requires
-formula strings and dictionary variance specifications. The documentation calls
-out such differences.
+Development has been significantly aided by the existence of `fixest` as a
+reference implementation that we test against. Reference tests call R through
+`rpy2` [@gautier2008rpy2] and compare coefficients, inference, and fit statistics
+at estimator-specific tolerances; core OLS comparisons typically use relative
+and absolute tolerances of $10^{-8}$. For example, Python requires formula
+strings and dictionary variance specifications. The documentation calls out such
+differences.
 
 # Research Impact Statement
 
