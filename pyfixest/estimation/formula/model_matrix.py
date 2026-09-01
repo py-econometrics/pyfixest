@@ -21,6 +21,7 @@ from pyfixest.utils.utils import capture_context
 class _ModelMatrixKey:
     main: str = "second_stage"
     fixed_effects: str = "fe"
+    fixed_effect_slopes: str = "fe_slopes"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
@@ -50,6 +51,9 @@ class ModelMatrix:
         The independent variable(s) (right-hand side of the main equation).
     fixed_effects : pd.DataFrame or None
         Fixed effects variables, encoded as integers.
+    fixed_effect_slopes : pd.DataFrame or None
+        Materialized loading columns used by varying fixed effects, or None if
+        no varying slopes are specified.
     endogenous : pd.DataFrame or None
         Endogenous variables in instrumental variable specifications.
     instruments : pd.DataFrame or None
@@ -66,6 +70,7 @@ class ModelMatrix:
         self,
         model_matrix: formulaic.ModelMatrix,
         drop_rows: frozenset[int],
+        absorbs_intercept: bool = False,
         drop_singletons: bool = True,
         drop_intercept: bool = False,
     ) -> None:
@@ -74,7 +79,10 @@ class ModelMatrix:
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
-        self._process(drop_singletons=drop_singletons)
+        self._process(
+            drop_singletons=drop_singletons,
+            absorbs_intercept=absorbs_intercept,
+        )
 
     @staticmethod
     def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
@@ -93,6 +101,9 @@ class ModelMatrix:
         self._fixed_effects = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
+        self._fixed_effect_slopes = self._get_columns(
+            model_matrix, _ModelMatrixKey.fixed_effect_slopes
+        )
         self._endogenous = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
         )
@@ -109,7 +120,11 @@ class ModelMatrix:
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 
-    def _process(self, drop_singletons: bool = False) -> None:
+    def _process(
+        self,
+        drop_singletons: bool = False,
+        absorbs_intercept: bool = False,
+    ) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
         elif self._dependent is None or len(self._dependent) != 1:
@@ -143,7 +158,7 @@ class ModelMatrix:
             elif len(self._offset) != 1:
                 raise ValueError("The offset must evaluate to exactly one column.")
 
-        if self._fixed_effects is not None or self._drop_intercept:
+        if absorbs_intercept or self._drop_intercept:
             if self._independent is not None:
                 self._independent = [
                     col for col in self._independent if col != "Intercept"
@@ -216,6 +231,13 @@ class ModelMatrix:
             return None
         else:
             return self._data.loc[:, self._fixed_effects]
+
+    @property
+    def fixed_effect_slopes(self) -> pd.DataFrame | None:
+        """Get the materialized varying-slope loading columns."""
+        if self._fixed_effect_slopes is None:
+            return None
+        return self._data.loc[:, self._fixed_effect_slopes]
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
@@ -391,6 +413,10 @@ def create_model_matrix(
     return ModelMatrix(
         model_matrix,
         drop_rows=drop_rows,
+        absorbs_intercept=any(
+            specification.intercept
+            for specification in formula.fixed_effect_specifications
+        ),
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
     )
@@ -414,11 +440,20 @@ def _get_formulaic_formula(
     offset: str | None = None,
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
-    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
+    formula_kwargs: dict[str, Any] = {_ModelMatrixKey.main: formula.second_stage}
     if formula.is_fixed_effects:
-        formula_kwargs.update(
-            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
+        formula_kwargs[_ModelMatrixKey.fixed_effects] = formula.fixed_effects_wrapped
+        slopes = list(
+            dict.fromkeys(
+                slope
+                for specification in formula.fixed_effect_specifications
+                for slope in specification.slopes
+            )
         )
+        if slopes:
+            formula_kwargs[_ModelMatrixKey.fixed_effect_slopes] = (
+                formulaic.formula.SimpleFormula(slopes)
+            )
     if formula.is_instrumental_variable:
         formula_kwargs.update(
             {_ModelMatrixKey.instrumental_variable: formula.first_stage}
