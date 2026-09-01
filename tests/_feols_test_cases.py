@@ -62,11 +62,77 @@ ols_but_not_poisson_fml = (
 )
 
 
+iv_fmls = (
+    "Y ~ 1 | X1 ~ Z1",
+    "Y ~  X2 | X1 ~ Z1",
+    "Y ~ X2 + C(f1) | X1 ~ Z1",
+    "Y2 ~ 1 | X1 ~ Z1",
+    "Y2 ~ X2 | X1 ~ Z1",
+    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
+    "Y ~ 1 | f1 | X1 ~ Z1",
+    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
+    "Y ~ 1 | f1:f2 | X1 ~ Z1",
+    "Y ~  X2| f3 | X1 ~ Z1",
+    "Y ~ 1 | X1 ~ Z1 + Z2",
+    "Y ~ X2 | X1 ~ Z1 + Z2",
+    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
+    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
+    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
+    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
+)
+
+
+glm_fmls = (
+    "Y ~ X1",
+    "Y ~ X1 + X2",
+    "Y ~ X1*X2",
+    "Y ~ X1 + f1:X2",
+    "Y ~ X1 | f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1*X2 | f1",
+)
+
+
+ssc_fmls = (
+    "Y ~ X1 + X2 + f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 + X2 | f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2 + f3",
+    "Y ~ X1 + X2 | f1:f2",
+)
+
+
+ssc_formula_vcov_dropna_cases = tuple(
+    (fml, dropna, vcov)
+    for fml in ssc_fmls
+    for dropna in (True, False)
+    for vcov in ("iid", "hetero", "f1", "f2", "f1+f2")
+    if dropna or vcov in ("iid", "hetero") or vcov in fml
+)
+ssc_formula_vcov_dropna_case_ids = tuple(
+    f"fml={ssc_fmls.index(fml)}-vcov={vcov}-dropna={dropna}"
+    for fml, dropna, vcov in ssc_formula_vcov_dropna_cases
+)
+
+
 ALL_F3_TYPES = ("str", "object", "int", "categorical", "float")
 
 
 def _deduplicate(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(items))
+
+
+def fixed_effect_interactions_to_legacy(fml: str) -> str:
+    """Translate ``:`` fixed-effect interactions to the legacy ``^`` spelling."""
+    parts = fml.split("|")
+    for index, part in enumerate(parts[1:], start=1):
+        if "~" not in part:
+            parts[index] = part.replace(":", "^")
+            break
+    return "|".join(parts)
 
 
 FEOLS_FORMULAS = _deduplicate(ols_fmls + ols_but_not_poisson_fml)

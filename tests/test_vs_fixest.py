@@ -15,7 +15,12 @@ from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
     FEOLS_FORMULA_F3_CASES,
     build_feols_data_variants,
+    fixed_effect_interactions_to_legacy,
+    glm_fmls,
+    iv_fmls,
     ols_fmls,
+    ssc_formula_vcov_dropna_case_ids,
+    ssc_formula_vcov_dropna_cases,
 )
 from tests._feols_test_cases import (
     convert_f3 as _convert_f3,
@@ -47,46 +52,6 @@ empty_models = [
     ("Y ~ 1 | f1 + f2"),
     ("Y ~ 0 | f1"),
     ("Y ~ 0 | f1 + f2"),
-]
-
-iv_fmls = [
-    # IV starts here
-    ("Y ~ 1 | X1 ~ Z1"),
-    "Y ~  X2 | X1 ~ Z1",
-    "Y ~ X2 + C(f1) | X1 ~ Z1",
-    "Y2 ~ 1 | X1 ~ Z1",
-    "Y2 ~ X2 | X1 ~ Z1",
-    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
-    # "log(Y) ~ 1 | X1 ~ Z1",
-    # "log(Y) ~ X2 | X1 ~ Z1",
-    # "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
-    "Y ~ 1 | f1 | X1 ~ Z1",
-    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
-    "Y ~ 1 | f1:f2 | X1 ~ Z1",
-    "Y ~  X2| f3 | X1 ~ Z1",
-    # tests of overidentified models
-    "Y ~ 1 | X1 ~ Z1 + Z2",
-    "Y ~ X2 | X1 ~ Z1 + Z2",
-    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
-    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
-    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
-]
-
-glm_fmls = [
-    # No fixed effects
-    "Y ~ X1",
-    "Y ~ X1 + X2",
-    "Y ~ X1*X2",
-    # "Y ~ X1 + C(f2)",
-    # "Y ~ X1 + i(f1, ref = 1)",
-    "Y ~ X1 + f1:X2",
-    # With fixed effects
-    "Y ~ X1 | f1",
-    "Y ~ X1 + X2 | f1",
-    "Y ~ X1 | f1 + f2",
-    "Y ~ X1 + X2 | f1 + f2",
-    "Y ~ X1*X2 | f1",
 ]
 
 
@@ -1462,14 +1427,7 @@ def _c_to_as_factor(py_fml):
     return _fixed_effect_interactions_to_fixest(r_fml)
 
 
-def _fixed_effect_interactions_to_fixest(fml):
-    """Translate PyFixest fixed-effect interactions to R fixest syntax."""
-    parts = fml.split("|")
-    for index, part in enumerate(parts[1:], start=1):
-        if "~" not in part:
-            parts[index] = part.replace(":", "^")
-            break
-    return "|".join(parts)
+_fixed_effect_interactions_to_fixest = fixed_effect_interactions_to_legacy
 
 
 def get_data_r(fml, data):
@@ -1573,32 +1531,6 @@ def test_singleton_dropping():
     # )
 
 
-ssc_fmls = [
-    "Y ~ X1 + X2 + f1",
-    "Y ~ X1 + X2 | f1",
-    "Y ~ X1 + X2 | f2",
-    "Y ~ X1 + X2 | f1 + f2",
-    "Y ~ X1 + X2 | f1 + f2 + f3",
-    "Y ~ X1 + X2 | f1:f2",
-]
-
-ssc_formula_vcov_dropna_cases = [
-    pytest.param(
-        fml,
-        dropna,
-        vcov,
-        id=f"fml={fml_id}-vcov={vcov}-dropna={dropna}",
-    )
-    for fml_id, fml in enumerate(ssc_fmls)
-    for dropna in [True, False]
-    for vcov in ["iid", "hetero", "f1", "f2", "f1+f2"]
-    # Clustering with missing data is supported only when every cluster variable
-    # occurs in the formula. Select supported cases at collection time rather
-    # than collecting them and skipping them during the test run.
-    if dropna or vcov in ["iid", "hetero"] or vcov in fml
-]
-
-
 @pytest.fixture(scope="module")
 def ssc_data():
     data = {}
@@ -1610,7 +1542,11 @@ def ssc_data():
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml,dropna,vcov", ssc_formula_vcov_dropna_cases)
+@pytest.mark.parametrize(
+    "fml,dropna,vcov",
+    ssc_formula_vcov_dropna_cases,
+    ids=ssc_formula_vcov_dropna_case_ids,
+)
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("G_adj", [True, False])
