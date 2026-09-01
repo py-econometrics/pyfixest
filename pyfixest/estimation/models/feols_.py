@@ -1717,6 +1717,11 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        if not self._support_decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for OLS models."
+            )
+
         nthreads_int = -1 if nthreads is None else nthreads
 
         rng = (

@@ -934,6 +934,23 @@ def test_gelbach_errors():
         )
 
 
+@pytest.mark.parametrize("model_type", ["feglm", "quantreg"])
+def test_decomposition_rejects_unsupported_models(model_type):
+    data = gelbach_data(nobs=100)
+
+    if model_type == "feglm":
+        data["binary_y"] = (data["y"] > data["y"].median()).astype(int)
+        fit = pf.feglm("binary_y ~ x1 + x21", data=data, family="logit")
+    else:
+        fit = pf.quantreg("y ~ x1 + x21", data=data, quantile=0.5)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Decomposition is currently only supported for OLS models\.",
+    ):
+        fit.decompose(decomp_var="x1", only_coef=True)
+
+
 def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
     data = pf.get_data()
