@@ -4,9 +4,7 @@ on:
   pull_request:
     paths:
       - "joss_paper/**"
-  push:
-    paths:
-      - "joss_paper/**"
+      - ".github/workflows/joss-paper.yaml"
   workflow_dispatch:
 
 permissions:
@@ -21,7 +19,7 @@ jobs:
         with:
           journal: joss
           paper-path: joss_paper/paper.md
-      - uses: actions/upload-artifact@v8
+      - uses: actions/upload-artifact@v7
         with:
           name: joss-paper
           path: joss_paper/paper.pdf
