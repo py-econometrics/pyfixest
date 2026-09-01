@@ -1,0 +1,164 @@
+"""Prepare the platform-local release numerical-contract cache."""
+
+from __future__ import annotations
+
+import argparse
+import importlib.metadata
+import json
+import platform
+import shutil
+import sys
+import tempfile
+import warnings
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+# Import the release wheel before adding any checkout-local helper to sys.path.
+# The Pixi task uses ``python -P`` so the checkout cannot
+# shadow this package just because the command is launched at repository root.
+import pyfixest  # noqa: E402
+
+_module_path = Path(pyfixest.__file__).resolve()
+if _module_path.is_relative_to(ROOT / "pyfixest"):
+    raise RuntimeError(
+        "The generator imported pyfixest from this checkout, not the isolated release wheel."
+    )
+
+sys.path.insert(0, str(ROOT / "tests"))
+
+from _estimation_snapshot_cache import (  # noqa: E402
+    CACHE_ROOT,
+    COMPLETE_MARKER,
+    snapshot_dir,
+    snapshot_fingerprint,
+)
+from _estimation_snapshot_contract import (  # noqa: E402
+    AUGMENTATION_SEED,
+    DATA_SEED,
+    NOBS,
+    RELEASE_VERSION,
+    SCHEMA_VERSION,
+    build_cases,
+    extract_snapshot,
+    fast_case_ids,
+    fit_case,
+)
+
+
+def _json_bytes(value: object) -> bytes:
+    return (
+        json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode()
+
+
+def _artifacts(output_dir: Path) -> dict[Path, dict[str, object]]:
+    installed_version = importlib.metadata.version("pyfixest")
+    if installed_version != RELEASE_VERSION:
+        raise RuntimeError(
+            f"Expected pyfixest=={RELEASE_VERSION}, found {installed_version}. "
+            "Use an isolated interpreter containing the recorded release wheel."
+        )
+    cases = build_cases()
+    snapshots: dict[str, dict[str, object]] = {}
+    print(f"Generating {len(cases)} release snapshot cases...")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for case in cases:
+            estimator = str(case["estimator"])
+            snapshots.setdefault(estimator, {})[str(case["id"])] = extract_snapshot(
+                fit_case(case)
+            )
+
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "baseline": {
+            "pyfixest_version": installed_version,
+            "pyfixest_distribution": "pyfixest",
+            "pyfixest_module_location": "site-packages/pyfixest",
+            "python_environment": "tests/snapshots/release/.pixi/envs/default",
+            "python_version": platform.python_version(),
+            "platform": platform.system(),
+            "architecture": platform.machine(),
+            "numpy_version": importlib.metadata.version("numpy"),
+            "pandas_version": importlib.metadata.version("pandas"),
+            "scipy_version": importlib.metadata.version("scipy"),
+        },
+        "fingerprint": snapshot_fingerprint(),
+        "generation_command": (
+            "pixi run --locked --clean-env --manifest-path "
+            "tests/snapshots/release/pixi.toml prepare"
+        ),
+        "data": {
+            "base_seed": DATA_SEED,
+            "augmentation_seed": AUGMENTATION_SEED,
+            "nobs_before_complete_case": NOBS,
+            "description": (
+                "Base data use a deterministic NumPy Generator; a separate deterministic "
+                "augmentation stream supplies IV Z1/X_endog/Y_iv and positive integer "
+                "fweights. f3 has seven missing rows for complete-case SSC paths."
+            ),
+        },
+        "cases": cases,
+        "snapshot_files": {
+            estimator: f"{estimator}.json" for estimator in sorted(snapshots)
+        },
+        "fast_case_ids": sorted(fast_case_ids(cases)),
+    }
+    artifacts: dict[Path, dict[str, object]] = {output_dir / "manifest.json": manifest}
+    artifacts.update(
+        {
+            output_dir / f"{estimator}.json": {
+                "schema_version": SCHEMA_VERSION,
+                "estimator": estimator,
+                "cases": values,
+            }
+            for estimator, values in snapshots.items()
+        }
+    )
+    return artifacts
+
+
+def _prepare(*, force: bool) -> Path:
+    target = snapshot_dir()
+    complete = target / COMPLETE_MARKER
+    if complete.exists() and not force:
+        print(f"Release snapshot cache hit: {target.relative_to(ROOT)}")
+        return target
+
+    CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        if not force and complete.exists():
+            print(f"Release snapshot cache hit: {target.relative_to(ROOT)}")
+            return target
+        if not force:
+            raise RuntimeError(f"Incomplete release snapshot cache: {target}")
+        shutil.rmtree(target)
+    temporary = Path(tempfile.mkdtemp(prefix=".building-", dir=CACHE_ROOT))
+    try:
+        for path, value in _artifacts(temporary).items():
+            path.write_bytes(_json_bytes(value))
+        (temporary / COMPLETE_MARKER).write_text(snapshot_fingerprint() + "\n")
+        try:
+            temporary.rename(target)
+        except FileExistsError:
+            if not complete.exists():
+                raise
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+    print(f"Prepared release snapshot cache: {target.relative_to(ROOT)}")
+    return target
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--force", action="store_true", help="replace this platform's current cache"
+    )
+    args = parser.parse_args()
+    _prepare(force=args.force)
+
+
+if __name__ == "__main__":
+    main()
