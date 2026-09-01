@@ -542,12 +542,6 @@ class Feiv(Feols):
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
-            if not hasattr(self._model_1st_stage, "_data"):
-                raise RuntimeError(
-                    "The effective F statistic cannot recompute heteroskedastic "
-                    "first-stage inference when store_data=False. Fit with a "
-                    "heteroskedastic vcov at estimation time or retain the data."
-                )
             self._model_1st_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013

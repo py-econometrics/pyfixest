@@ -112,11 +112,11 @@ class QuantregMulti:
             fit_kwargs["rng"] = rng
         beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
 
-        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = (
-            Y.flatten() - (X @ beta_hat).flatten()
+        self._publish_fit_state(
+            quantreg=self.all_quantregs[q[q_median_idx]],
+            beta_hat=beta_hat,
+            hessian=hessian,
         )
-        self.all_quantregs[q[q_median_idx]]._hessian = hessian
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -139,9 +139,11 @@ class QuantregMulti:
                 beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
                 )[0]
-                self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
-                self.all_quantregs[q[i]]._hessian = hessian
+                self._publish_fit_state(
+                    quantreg=self.all_quantregs[q[i]],
+                    beta_hat=beta_hat,
+                    hessian=hessian,
+                )
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -165,12 +167,11 @@ class QuantregMulti:
                 M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
-                self.all_quantregs[q[i]]._beta_hat = beta_new
-                self.all_quantregs[q[i]]._u_hat = (
-                    self.all_quantregs[q[i]]._Y.flatten()
-                    - self.all_quantregs[q[i]]._X @ beta_new
+                self._publish_fit_state(
+                    quantreg=self.all_quantregs[q[i]],
+                    beta_hat=beta_new,
+                    hessian=hessian,
                 )
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm2_fun(i, "left")
@@ -188,6 +189,18 @@ class QuantregMulti:
             sorted(self.all_quantregs.items(), key=lambda item: item[0])
         )
         return self.all_quantregs
+
+    @staticmethod
+    def _publish_fit_state(
+        *, quantreg: Quantreg, beta_hat: np.ndarray, hessian: np.ndarray
+    ) -> None:
+        """Publish canonical child state after a multi-quantile solver step."""
+        y_hat = quantreg._X @ beta_hat
+        quantreg._beta_hat = beta_hat
+        quantreg._Y_hat_link = y_hat
+        quantreg._Y_hat_response = y_hat
+        quantreg._u_hat = quantreg._Y.flatten() - y_hat
+        quantreg._hessian = hessian
 
     def vcov(
         self,
@@ -226,10 +239,4 @@ class QuantregMulti:
         "Clear all large non-necessary attributes to free memory."
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
-
-        del_attributes = ["_X", "_Y"]
-        for quantreg in self.all_quantregs.values():
-            for attr in del_attributes:
-                if hasattr(quantreg, attr):
-                    delattr(quantreg, attr)
         gc.collect()

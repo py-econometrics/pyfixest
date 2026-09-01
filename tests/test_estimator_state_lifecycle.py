@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -348,13 +349,160 @@ def test_store_data_false_vcov_uses_explicit_estimation_sample(
     stripped = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", store_data=False)
     expected = pf.feols("y ~ x | fe", data=lifecycle_data, vcov={"CRV1": "fe"})
 
+    metadata_before = deepcopy(
+        (
+            stripped._vcov_type,
+            stripped._vcov_type_detail,
+            stripped._is_clustered,
+            stripped._clustervar,
+            stripped._G,
+            stripped._df_k,
+            stripped._df_t,
+        )
+    )
+    arrays_before = {
+        attr: getattr(stripped, attr).copy()
+        for attr in (
+            "_bread",
+            "_ssc",
+            "_vcov",
+            "_se",
+            "_tstat",
+            "_pvalue",
+            "_conf_int",
+        )
+    }
+
     with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
         stripped.vcov({"CRV1": "fe"})
+
+    assert (
+        stripped._vcov_type,
+        stripped._vcov_type_detail,
+        stripped._is_clustered,
+        stripped._clustervar,
+        stripped._G,
+        stripped._df_k,
+        stripped._df_t,
+    ) == metadata_before
+    for attr, value in arrays_before.items():
+        np.testing.assert_array_equal(getattr(stripped, attr), value)
 
     stripped.vcov({"CRV1": "fe"}, data=lifecycle_data)
 
     np.testing.assert_allclose(stripped._vcov, expected._vcov)
     assert not hasattr(stripped, "_data")
+
+
+def test_fixest_multi_forwards_explicit_vcov_data(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Multiple-estimation covariance updates forward an explicit sample."""
+    stripped = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=lifecycle_data,
+        vcov="iid",
+        store_data=False,
+    )
+    expected = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=lifecycle_data,
+        vcov={"CRV1": "fe"},
+    )
+
+    stripped.vcov({"CRV1": "fe"}, data=lifecycle_data)
+
+    for stripped_model, expected_model in zip(
+        stripped.to_list(), expected.to_list(), strict=True
+    ):
+        np.testing.assert_allclose(stripped_model._vcov, expected_model._vcov)
+        assert not hasattr(stripped_model, "_data")
+
+
+def test_fixest_multi_vcov_preflights_different_estimation_samples(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A common-sample mismatch leaves every child model unchanged."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[:3], "x2"] = np.nan
+    fit = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=r"common, already-filtered estimation sample.*\[21, 24\], received 24",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=data)
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
+
+
+def test_fixest_multi_vcov_rejects_equal_size_split_samples(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Equal row counts do not make distinct split samples interchangeable."""
+    data = lifecycle_data.assign(sample=np.tile(["left", "right"], 12))
+    fit = pf.feols(
+        "y ~ x | fe",
+        data=data,
+        split="sample",
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+    left_sample = data.loc[data["sample"] == "left"]
+
+    with pytest.raises(
+        ValueError,
+        match=r"child models use different estimation samples.*Fetch each child",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=left_sample)
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
+
+
+def test_fixest_multi_vcov_rejects_equal_size_distinct_na_masks(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Equal-sized formula expansions must retain the same source rows."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[0], "x"] = np.nan
+    data.loc[data.index[1], "x2"] = np.nan
+    fit = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=r"child models use different estimation samples.*Fetch each child",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=data.drop(index=0))
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
 
 
 def test_vcov_rejects_unfiltered_explicit_data(
@@ -421,19 +569,27 @@ def test_iv_first_stage_respects_store_data_false(
         fit.first_stage()
 
 
-def test_iv_effective_f_explains_stripped_iid_data_requirement(
+def test_iv_effective_f_uses_retained_arrays_without_stored_data(
     lifecycle_data: pd.DataFrame,
 ) -> None:
-    """IID first-stage refits fail informatively when their data were stripped."""
-    fit = pf.feols(
+    """IID first-stage diagnostics need retained arrays, not formula data."""
+    stripped = pf.feols(
         "y ~ x + [endog ~ z] | fe",
         data=lifecycle_data,
         vcov="iid",
         store_data=False,
     )
+    retained = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="iid",
+    )
 
-    with pytest.raises(RuntimeError, match=r"effective F.*store_data=False"):
-        fit.IV_Diag()
+    stripped.IV_Diag()
+    retained.IV_Diag()
+
+    np.testing.assert_allclose(stripped._eff_F, retained._eff_F)
+    assert not hasattr(stripped._model_1st_stage, "_data")
 
 
 def test_lean_iv_discards_retained_first_stage_arrays(
@@ -548,3 +704,23 @@ def test_quantreg_lean_discards_solver_arrays() -> None:
     solver_arrays = ("_x_final", "_s_final", "_z_final", "_w_final", "_y_final")
     assert all(not hasattr(fit, attr) for attr in solver_arrays)
     assert np.isfinite(fit.coef()).all()
+
+
+def test_quantreg_multi_retains_default_post_estimation_state() -> None:
+    """Default multi-quantile results support prediction and vcov updates."""
+    rng = np.random.default_rng(20260901)
+    x = rng.normal(size=200)
+    data = pd.DataFrame({"y": 1 + 2 * x + rng.normal(size=200), "x": x})
+    with pytest.warns(FutureWarning, match="experimental"):
+        multi = pf.quantreg("y ~ x", data=data, quantile=[0.25, 0.75], vcov="iid")
+        single = pf.quantreg("y ~ x", data=data, quantile=0.25, vcov="hetero")
+
+    multi.vcov("hetero")
+
+    for model in multi.to_list():
+        assert np.isfinite(model.predict()).all()
+        assert np.isfinite(model.se()).all()
+
+    first_quantile = multi.fetch_model(0, print_fml=False)
+    np.testing.assert_allclose(first_quantile.predict(), single.predict())
+    np.testing.assert_allclose(first_quantile.se(), single.se())

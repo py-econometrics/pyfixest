@@ -224,7 +224,9 @@ We also removed:
 - Weighted fixed-effect contributions are now retained in response units.
 - `store_data=False` and `lean=True` now apply to multiple-estimation containers
   and retained IV first stages; lean fits also discard demeaning caches, GLM
-  working aliases, and quantile solver outputs.
+  working aliases, and quantile solver outputs. Multiple-model `vcov()` updates
+  can forward a common explicit estimation sample, while default multi-quantile
+  results retain the arrays needed for prediction and covariance updates.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

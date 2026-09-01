@@ -707,19 +707,21 @@ class Feols(ResultAccessorMixin):
         # deparse vcov input
         _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
 
-        (
-            self._vcov_type,
-            self._vcov_type_detail,
-            self._is_clustered,
-            self._clustervar,
-        ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
+        vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
+            vcov, self._has_fixef, self._is_iv
+        )
 
-        if self._vcov_type in {"HAC", "CRV"} and data_to_check is None:
+        if vcov_type in {"HAC", "CRV"} and data_to_check is None:
             raise RuntimeError(
                 "This vcov update requires estimation data, but the result was fit "
                 "with store_data=False. Pass the estimation sample via data= or refit "
                 "with store_data=True."
             )
+
+        self._vcov_type = vcov_type
+        self._vcov_type_detail = vcov_type_detail
+        self._is_clustered = is_clustered
+        self._clustervar = clustervar
 
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
