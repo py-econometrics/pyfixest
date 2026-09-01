@@ -154,10 +154,6 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     return py_vcov, r_vcov
 
 
-test_counter_fepois = 0
-test_counter_feiv = 0
-test_counter_feglm = 0
-
 # What is being tested in all tests:
 # - pyfixest vs fixest
 # - inference: iid, hetero, cluster
@@ -431,7 +427,6 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
@@ -440,13 +435,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, offset
+    data_fepois, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
-    global test_counter_fepois
-    test_counter_fepois += 1
-
     _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_fepois, dropna)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
@@ -458,8 +449,6 @@ def test_single_fit_fepois(
         offset_var = "offset_var"
     else:
         offset_var = None
-    if dropna:
-        data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
     data_fepois.where(data_fepois != "nan", np.nan, inplace=True)
@@ -708,9 +697,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     (loglik, loglik_null, pseudo_r2, pearson_chi2) are not defined for
     logit/probit/gaussian and are therefore skipped.
     """
-    global test_counter_feglm
-    test_counter_feglm += 1
-
     _skip_f3_checks(fml, "str")
 
     ssc_ = ssc(k_adj=True, G_adj=True)
@@ -849,7 +835,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
@@ -858,7 +843,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
 @pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_iv(
     data_feols,
-    dropna,
     inference,
     weights,
     f3_type,
@@ -866,17 +850,11 @@ def test_single_fit_iv(
     k_adj,
     G_adj,
 ):
-    global test_counter_feiv
-    test_counter_feiv += 1
-
     _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_feiv, dropna)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data = data_feols.copy()
-    if dropna:
-        data.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
     data.where(data != "nan", np.nan, inplace=True)
@@ -1614,6 +1592,9 @@ ssc_formula_vcov_dropna_cases = [
     for fml_id, fml in enumerate(ssc_fmls)
     for dropna in [True, False]
     for vcov in ["iid", "hetero", "f1", "f2", "f1+f2"]
+    # Clustering with missing data is supported only when every cluster variable
+    # occurs in the formula. Select supported cases at collection time rather
+    # than collecting them and skipping them during the test run.
     if dropna or vcov in ["iid", "hetero"] or vcov in fml
 ]
 
@@ -1806,8 +1787,3 @@ def _skip_f3_checks(fml, f3_type):
         pytest.skip(
             "No need to tests for different types of factor variable when not included in formula."
         )
-
-
-def _skip_dropna(test_counter, dropna):
-    if test_counter % 4 != 0 and dropna:
-        pytest.skip(f"Skipping dropna=True for test number {test_counter}")

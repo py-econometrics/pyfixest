@@ -28,14 +28,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
   reference coverage.
-- R CI now runs disjoint canonical shards with the fast live-R matrix as a
-  preflight. Contributor guidance separates repeatable edit feedback from
-  exact-head merge evidence, so long suites can run once after stabilization or
-  in CI without weakening the merge gate.
-- `feols` backend parity now runs as an exhaustive Python-only matrix over
-  formulas, factor representations, weights, missing-data modes, and inference
-  types. The canonical live-R matrix exercises the reference backend directly,
-  avoiding redundant R fits while preserving fit-time inference validation.
+- We reorganize the tests against `fixest` for faster test feedback. By
+  default, we test only the default demeaner backend against `fixest` through
+  an integration test. All other demeaner backends are tested in a separate
+  workflow.
 
 ### Inference Types
 
