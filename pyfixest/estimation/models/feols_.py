@@ -61,14 +61,6 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.ritest import (
-    _HAS_NUMBA,
-    _decode_resampvar,
-    _get_ritest_pvalue,
-    _get_ritest_stats_fast,
-    _get_ritest_stats_slow,
-    _plot_ritest_pvalue,
-)
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -2003,6 +1995,14 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
+        from pyfixest.estimation.post_estimation.ritest import (
+            _HAS_NUMBA,
+            _decode_resampvar,
+            _get_ritest_pvalue,
+            _get_ritest_stats_fast,
+            _get_ritest_stats_slow,
+        )
+
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
@@ -2159,6 +2159,8 @@ class Feols(ResultAccessorMixin):
         A lets_plot or matplotlib figure with the distribution of the Randomization
         Inference Statistics.
         """
+        from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
+
         if not hasattr(self, "_ritest_statistics"):
             raise ValueError(
                 """

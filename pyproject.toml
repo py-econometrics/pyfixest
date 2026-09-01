@@ -211,6 +211,9 @@ wildboottest = ">=0.3.2"
 maturin-import-hook = ">=0.2.0"
 maturin = ">=1.8"
 
+[tool.pixi.activation.env]
+MPLCONFIGDIR = "$PIXI_PROJECT_ROOT/.pixi/matplotlib"
+
 [tool.pixi.tasks]
 test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }

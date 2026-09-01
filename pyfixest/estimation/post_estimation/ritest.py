@@ -1,28 +1,7 @@
 from importlib import import_module
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-
-# Make lets-plot an optional dependency
-try:
-    from lets_plot import (
-        LetsPlot,
-        aes,
-        geom_density,
-        geom_vline,
-        ggplot,
-        ggtitle,
-        theme_bw,
-        xlab,
-        ylab,
-    )
-
-    _HAS_LETS_PLOT = True
-except ImportError:
-    _HAS_LETS_PLOT = False
-
 from scipy.stats import norm
 from tqdm import tqdm
 
@@ -46,10 +25,6 @@ _NUMBA_RITEST_ERROR = (
     "Install it with `pip install pyfixest[numba]`, or pass "
     "`choose_algorithm='slow'`."
 )
-
-# Only setup lets-plot if it's available
-if _HAS_LETS_PLOT:
-    LetsPlot.setup_html()
 
 
 def _get_ritest_stats_slow(
@@ -406,10 +381,23 @@ def _plot_ritest_pvalue(
     y_lab = "Density"
 
     if plot_backend == "lets_plot":
-        if not _HAS_LETS_PLOT:
+        try:
+            from lets_plot import (
+                LetsPlot,
+                aes,
+                geom_density,
+                geom_vline,
+                ggplot,
+                ggtitle,
+                theme_bw,
+                xlab,
+                ylab,
+            )
+        except ImportError:
             print("lets-plot is not installed. Falling back to matplotlib.")
             plot_backend = "matplotlib"
         else:
+            LetsPlot.setup_html()
             plot = (
                 ggplot(df, aes(x="ri_stats"))
                 + geom_density(fill="blue", alpha=0.5)
@@ -419,10 +407,12 @@ def _plot_ritest_pvalue(
                 + xlab(x_lab)
                 + ylab(y_lab)
             )
+            return plot.show()
 
-        return plot.show()
+    if plot_backend == "matplotlib":
+        import matplotlib.pyplot as plt
+        import seaborn as sns
 
-    elif plot_backend == "matplotlib":
         plt.figure(figsize=(10, 6))
         sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
         plt.axvline(x=sample_stat, color="red", linestyle="--")
@@ -431,8 +421,9 @@ def _plot_ritest_pvalue(
         plt.ylabel(y_lab)
         plt.show()
 
-    else:
-        raise ValueError(f"Unsupported plot backend: {plot_backend}")
+        return None
+
+    raise ValueError(f"Unsupported plot backend: {plot_backend}")
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
