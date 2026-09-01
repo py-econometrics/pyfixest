@@ -194,3 +194,8 @@ def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
             "value to be a two-tuple of (Factor.Kind, state_dict)."
         )
     return kind, state
+
+
+def is_python_expression(factor: Factor) -> bool:
+    """Return whether Formulaic represents the factor as Python syntax."""
+    return factor.eval_method is Factor.EvalMethod.PYTHON
