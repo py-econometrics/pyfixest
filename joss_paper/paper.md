@@ -185,20 +185,10 @@ under the Zenodo concept DOI
 
 # AI Usage Disclosure
 
-Generative AI tools have been used in both software development and preparation
-of this paper.
-
-*Software.* PyFixest development began before AI coding assistants became a
-routine part of the project. Later contributions used ChatGPT and GitHub Copilot
-(the hosted model versions were not recorded) and Anthropic Claude 3.5 for code
-suggestions, refactoring, tests, and documentation. Maintainers reviewed the
-retained changes and validated numerical work with the Python and cross-language
-test suites. Econometric and API decisions remained with the human contributors.
-
-*Paper.* OpenAI Codex with GPT-5 assisted with repository research, source
-checking, drafting, and copy-editing. The authors reviewed and edited the text and
-remain responsible for its claims, citations, authorship, and submission. No AI
-system is an author.
+OpenAI Codex with GPT-5 assisted with repository research, source checking,
+drafting, and copy-editing. The authors reviewed and edited the text and remain
+responsible for its claims, citations, authorship, and submission. No AI system is
+an author.
 
 # Acknowledgements
 
