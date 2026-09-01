@@ -205,10 +205,10 @@ class LsmrDemeaner(BaseDemeaner):
 
     Notes
     -----
-    The `within`` backend takes a single tolerance, so `fixef_atol` and
-    `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
-    backend. The `torch` backend uses both tolerances independently
-    (SciPy LSMR convention).
+    The `within` and `torch` backends take a single tolerance, so `fixef_atol`
+    and `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)`. For
+    floating-point stability, the `torch` backend also bounds the effective
+    tolerance below by three times the selected precision's machine epsilon.
 
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.

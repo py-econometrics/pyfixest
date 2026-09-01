@@ -28,6 +28,14 @@ from pyfixest.estimation.torch.lsmr_torch import lsmr_torch, lsmr_torch_batched
 # Benchmarked breakeven is device-specific.
 _BATCHED_K_THRESHOLD_CUDA = 2
 _BATCHED_K_THRESHOLD_MPS = 5
+# LSMR's stopping tests combine several dtype-level norms. A small margin
+# above one epsilon prevents float32 recurrences from iterating into roundoff.
+_LSMR_TOL_EPS_MULTIPLIER = 3.0
+
+
+def _effective_lsmr_tol(tol: float, dtype: torch.dtype) -> float:
+    """Keep LSMR's stopping tolerance above the dtype's noise floor."""
+    return max(tol, _LSMR_TOL_EPS_MULTIPLIER * torch.finfo(dtype).eps)
 
 
 def _lsmr_istop_is_success(istop: int) -> bool:
@@ -87,6 +95,8 @@ def _demean_torch_on_device_impl(
         raise ValueError("flist cannot be None")
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
+
+    tol = _effective_lsmr_tol(tol, dtype)
 
     # Track original shape to restore on output
     was_1d = x.ndim == 1
@@ -201,7 +211,9 @@ def demean_torch(
     weights : np.ndarray, shape (N,)
         Observation weights (1.0 for equal weighting).
     tol : float
-        Convergence tolerance for LSMR (used as both atol and btol).
+        Convergence tolerance for LSMR (used as both atol and btol). Values
+        below three times the selected dtype's machine epsilon use that numerical
+        floor instead.
     maxiter : int
         Maximum LSMR iterations per column.
     dtype : torch.dtype

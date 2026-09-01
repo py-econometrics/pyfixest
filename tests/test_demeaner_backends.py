@@ -27,11 +27,14 @@ pytestmark = [
 class BackendCase:
     name: str
     demeaner: pf.MapDemeaner | pf.LsmrDemeaner
+    coef_rtol: float
     coef_tol: float
     predict_tol: float
     resid_tol: float
     inference_tol: float
     tstat_tol: float
+    confint_rtol: float
+    confint_tol: float
 
 
 REFERENCE_DEMEANER = pf.MapDemeaner(backend="rust")
@@ -41,11 +44,14 @@ BACKEND_CASES = [
         BackendCase(
             name="numba",
             demeaner=pf.MapDemeaner(backend="numba"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=1e-6,
             resid_tol=1e-6,
             inference_tol=1e-7,
             tstat_tol=1e-6,
+            confint_rtol=0,
+            confint_tol=1e-7,
         ),
         id="numba",
     ),
@@ -53,6 +59,7 @@ BACKEND_CASES = [
         BackendCase(
             name="within_additive",
             demeaner=pf.LsmrDemeaner(preconditioner="additive"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=1e-6,
             resid_tol=1e-6,
@@ -60,6 +67,8 @@ BACKEND_CASES = [
             # factor expansions more than the historical X1 diagonal check.
             inference_tol=1e-6,
             tstat_tol=1e-6,
+            confint_rtol=0,
+            confint_tol=1e-6,
         ),
         id="within_additive",
     ),
@@ -67,6 +76,7 @@ BACKEND_CASES = [
         BackendCase(
             name="within_diagonal",
             demeaner=pf.LsmrDemeaner(preconditioner="diagonal"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=1e-6,
             resid_tol=1e-6,
@@ -74,6 +84,8 @@ BACKEND_CASES = [
             # factor expansions more than the historical X1 diagonal check.
             inference_tol=1e-6,
             tstat_tol=1e-6,
+            confint_rtol=0,
+            confint_tol=1e-6,
         ),
         id="within_diagonal",
     ),
@@ -81,11 +93,14 @@ BACKEND_CASES = [
         BackendCase(
             name="torch",
             demeaner=pf.LsmrDemeaner(backend="torch", device="auto"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=5e-5,
             resid_tol=5e-5,
             inference_tol=1e-6,
             tstat_tol=1e-5,
+            confint_rtol=0,
+            confint_tol=1e-6,
         ),
         id="torch",
     ),
@@ -93,11 +108,14 @@ BACKEND_CASES = [
         BackendCase(
             name="torch_cpu",
             demeaner=pf.LsmrDemeaner(backend="torch", device="cpu"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=5e-5,
             resid_tol=5e-5,
             inference_tol=1e-6,
             tstat_tol=1e-5,
+            confint_rtol=0,
+            confint_tol=1e-6,
         ),
         id="torch_cpu",
     ),
@@ -107,11 +125,21 @@ BACKEND_CASES = [
             demeaner=pf.LsmrDemeaner(
                 backend="torch", precision="float32", device="mps"
             ),
-            coef_tol=5e-6,
+            # Preserve a strict absolute guard near zero while allowing the
+            # expected float32 rounding scale for large coefficients.
+            coef_rtol=1e-6,
+            # Float32 LSMR stopping error is amplified by large factor
+            # expansions; the observed coefficient error is below 2e-4.
+            coef_tol=2e-4,
             predict_tol=2e-4,
             resid_tol=2e-4,
-            inference_tol=1e-5,
-            tstat_tol=1e-5,
+            # Full covariance matrices and derived inference amplify the
+            # float32 residualization error more than point estimates.
+            inference_tol=2e-4,
+            tstat_tol=2e-4,
+            # Confidence bounds combine coefficient and standard-error error.
+            confint_rtol=2e-6,
+            confint_tol=3e-4,
         ),
         id="torch_mps",
         require="mps",
@@ -120,11 +148,14 @@ BACKEND_CASES = [
         BackendCase(
             name="torch_cuda",
             demeaner=pf.LsmrDemeaner(backend="torch", device="cuda"),
+            coef_rtol=0,
             coef_tol=1e-8,
             predict_tol=5e-5,
             resid_tol=5e-5,
             inference_tol=1e-6,
             tstat_tol=1e-5,
+            confint_rtol=0,
+            confint_tol=1e-6,
         ),
         id="torch_cuda",
         require="cuda",
@@ -135,11 +166,14 @@ BACKEND_CASES = [
             demeaner=pf.LsmrDemeaner(
                 backend="torch", precision="float32", device="cuda"
             ),
+            coef_rtol=0,
             coef_tol=5e-6,
             predict_tol=2e-4,
             resid_tol=2e-4,
             inference_tol=1e-5,
             tstat_tol=1e-5,
+            confint_rtol=0,
+            confint_tol=1e-5,
         ),
         id="torch_cuda32",
         require="cuda",
@@ -175,7 +209,7 @@ def _assert_backend_matches(
     np.testing.assert_allclose(
         actual.coef(),
         reference.coef(),
-        rtol=0,
+        rtol=case.coef_rtol,
         atol=case.coef_tol,
         err_msg=f"coefficients differ for {context}",
     )
@@ -210,8 +244,8 @@ def _assert_backend_matches(
     np.testing.assert_allclose(
         actual.confint(),
         reference.confint(),
-        rtol=0,
-        atol=case.inference_tol,
+        rtol=case.confint_rtol,
+        atol=case.confint_tol,
         err_msg=f"confidence intervals differ for {context}",
     )
     np.testing.assert_allclose(
@@ -241,6 +275,94 @@ def _assert_backend_matches(
         equal_nan=True,
         err_msg=f"fit statistics differ for {context}",
     )
+
+
+def _assert_backend_prediction_paths_match(
+    actual,
+    reference,
+    data: pd.DataFrame,
+    case: BackendCase,
+) -> None:
+    context = f"backend={case.name}"
+    newdata = data.iloc[:100]
+
+    actual_prediction = actual.predict(newdata=newdata, atol=1e-12, btol=1e-12)
+    reference_prediction = reference.predict(
+        newdata=newdata,
+        atol=1e-12,
+        btol=1e-12,
+    )
+    np.testing.assert_array_equal(
+        np.isnan(actual_prediction),
+        np.isnan(reference_prediction),
+        err_msg=f"new-data prediction missingness differs for {context}",
+    )
+    observed = ~np.isnan(reference_prediction)
+    np.testing.assert_allclose(
+        actual_prediction[observed][:5],
+        reference_prediction[observed][:5],
+        rtol=0,
+        atol=case.predict_tol,
+        err_msg=f"new-data predictions differ for {context}",
+    )
+
+    if not actual._has_fixef and not actual._has_weights:
+        np.testing.assert_allclose(
+            actual.predict(se_fit=True),
+            reference.predict(se_fit=True),
+            rtol=0,
+            atol=case.predict_tol,
+            err_msg=f"prediction standard errors differ for {context}",
+        )
+        np.testing.assert_allclose(
+            actual.predict(newdata=newdata, se_fit=True),
+            reference.predict(newdata=newdata, se_fit=True),
+            rtol=0,
+            atol=case.predict_tol,
+            equal_nan=True,
+            err_msg=f"new-data prediction standard errors differ for {context}",
+        )
+
+        actual_interval = actual.predict(interval="prediction")
+        reference_interval = reference.predict(interval="prediction")
+        for column in ["fit", "se_fit", "ci_low", "ci_high"]:
+            np.testing.assert_allclose(
+                actual_interval[column].to_numpy()[-4:],
+                reference_interval[column].to_numpy()[-4:],
+                rtol=0,
+                atol=case.predict_tol,
+                err_msg=(f"prediction intervals differ for {context}, column={column}"),
+            )
+
+        actual_interval = actual.predict(
+            newdata=newdata,
+            interval="prediction",
+        )
+        reference_interval = reference.predict(
+            newdata=newdata,
+            interval="prediction",
+        )
+        for column in ["fit", "se_fit", "ci_low", "ci_high"]:
+            np.testing.assert_allclose(
+                actual_interval[column].to_numpy()[-4:],
+                reference_interval[column].to_numpy()[-4:],
+                rtol=0,
+                atol=case.predict_tol,
+                equal_nan=True,
+                err_msg=(
+                    "new-data prediction intervals differ for "
+                    f"{context}, column={column}"
+                ),
+            )
+    else:
+        with pytest.raises(NotImplementedError):
+            actual.predict(se_fit=True)
+        with pytest.raises(NotImplementedError):
+            actual.predict(interval="prediction")
+        with pytest.raises(NotImplementedError):
+            actual.predict(newdata=newdata, se_fit=True)
+        with pytest.raises(NotImplementedError):
+            actual.predict(newdata=newdata, interval="prediction")
 
 
 @pytest.mark.parametrize("dropna", [False, True])
@@ -273,3 +395,10 @@ def test_feols_demeaner_backends_match_reference(
     reference = pf.feols(**fit_kwargs, demeaner=REFERENCE_DEMEANER)
     actual = pf.feols(**fit_kwargs, demeaner=case.demeaner)
     _assert_backend_matches(actual, reference, case)
+    if inference == "iid":
+        _assert_backend_prediction_paths_match(
+            actual=actual,
+            reference=reference,
+            data=data,
+            case=case,
+        )

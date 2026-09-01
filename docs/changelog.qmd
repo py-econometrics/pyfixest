@@ -35,6 +35,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
 
+### Demeaning Backends
+
+- Float32 Torch demeaning now stops at a tolerance supported by its numerical
+  precision. This keeps MPS and CUDA32 estimates stable when a model contains
+  large factor expansions.
+- Alternative demeaner checks now cover predictions on both fitting and new
+  data, including prediction uncertainty wherever the model supports it.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.

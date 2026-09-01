@@ -100,7 +100,9 @@ The `MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control
 convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
 `within` backend the two tolerances are collapsed to
 `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);
-`torch` uses both independently (SciPy LSMR convention).
+the `torch` backend does the same. To avoid unstable iterations below the
+selected dtype's useful precision, `torch` also uses three times machine epsilon
+as a lower bound for the effective tolerance.
 
 ```{python}
 fit = pf.feols(

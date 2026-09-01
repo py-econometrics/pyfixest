@@ -19,7 +19,11 @@ GENERIC_DEMEAN_FUNCS = [
 ]
 
 if HAS_TORCH:
-    from pyfixest.estimation.torch.demean_torch_ import demean_torch
+    from pyfixest.estimation.torch.demean_torch_ import (
+        _demean_torch_on_device_impl,
+        _effective_lsmr_tol,
+        demean_torch,
+    )
 
     GENERIC_DEMEAN_FUNCS.append(pytest.param(demean_torch, id="demean_torch"))
 
@@ -115,6 +119,38 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
     res_torch, success = demean_func(x, flist, weights, tol=1e-10)
     assert success, f"{backend_name} did not converge on weighted demeaning"
     np.testing.assert_allclose(res_torch, res_pyhdfe, rtol=rtol, atol=atol)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="torch is not installed")
+def test_torch_float32_tolerance_respects_machine_precision(demean_data):
+    """Sub-epsilon requests should produce the stable float32-floor solution."""
+    import torch
+
+    x, flist, weights = demean_data
+    floor = _effective_lsmr_tol(1e-12, torch.float32)
+
+    actual, actual_success = _demean_torch_on_device_impl(
+        x=x,
+        flist=flist,
+        weights=weights,
+        tol=1e-12,
+        maxiter=1_000,
+        device=torch.device("cpu"),
+        dtype=torch.float32,
+    )
+    expected, expected_success = _demean_torch_on_device_impl(
+        x=x,
+        flist=flist,
+        weights=weights,
+        tol=floor,
+        maxiter=1_000,
+        device=torch.device("cpu"),
+        dtype=torch.float32,
+    )
+
+    assert actual_success
+    assert expected_success
+    np.testing.assert_array_equal(actual, expected)
 
 
 @pytest.mark.parametrize(
