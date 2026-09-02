@@ -157,7 +157,6 @@ def test_fweights_ols_matches_literal_expansion(
         )
 
 
-@pytest.mark.skip(reason="Poisson fweights has a separate bug - see issue #367")
 @pytest.mark.parametrize(
     "fml,fe_col",
     [
@@ -177,13 +176,15 @@ def test_fweights_poisson(fml, fe_col):
         data[cols].groupby(cols).size().reset_index().rename(columns={0: "count"})
     )
 
-    fit_raw = pf.fepois(fml, data=data, vcov="iid")
+    fit_raw = pf.fepois(fml, data=data, vcov="iid", iwls_tol=1e-12, iwls_maxiter=100)
     fit_agg = pf.fepois(
         fml,
         data=data_agg,
         weights="count",
         weights_type="fweights",
         vcov="iid",
+        iwls_tol=1e-12,
+        iwls_maxiter=100,
     )
 
     # Poisson only supports HC1 for hetero-robust SEs

@@ -1531,6 +1531,62 @@ def test_singleton_dropping():
     # )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero"])
+def test_fepois_frequency_weights_against_fixest(data_fepois, fml, vcov):
+    """Compare FEPoisson fweights with the literal expansion in R fixest."""
+    data = data_fepois.dropna().copy()
+    # A fixed-effect level holding a single physical row with a frequency
+    # weight above one is a singleton for pyfixest but not after literal
+    # expansion. Keeping only levels with more than one physical row makes the
+    # comparison independent of that deliberate deviation.
+    data = data.loc[data.groupby("f1")["f1"].transform("size") > 1]
+    data = data.reset_index(drop=True)
+    data["fweights"] = np.arange(len(data)) % 4 + 1
+    expanded_data = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_fit = pf.fepois(
+        fml=fml,
+        data=data,
+        weights="fweights",
+        weights_type="fweights",
+        vcov=vcov,
+        ssc=py_ssc,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+    )
+    r_fit = fixest.fepois(
+        ro.Formula(fml),
+        data=expanded_data,
+        vcov=vcov,
+        ssc=r_ssc,
+        glm_tol=1e-10,
+        glm_iter=100,
+    )
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit)),
+        rtol=0,
+        atol=1e-6,
+        err_msg="FEPoisson fweights differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        np.asarray(stats.vcov(r_fit)),
+        rtol=0,
+        atol=1e-6,
+        err_msg="FEPoisson fweight covariance differs from the R fixest literal expansion",
+    )
+
+
 @pytest.fixture(scope="module")
 def ssc_data():
     data = {}

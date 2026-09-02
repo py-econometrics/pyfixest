@@ -94,6 +94,8 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson and GLM frequency weights now work; the 0.60.0 path raised a shape
+  error. Probability weights remain unsupported.
 - Poisson offsets now accept Formulaic transformations such as
   `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
