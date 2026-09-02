@@ -56,12 +56,22 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
-def test_cluster_but_no_data():
-    """Test if AttributeError if self._data is not stored."""
+def test_cluster_vcov_without_stored_or_explicit_data_is_informative():
+    """Data-dependent vcov updates explain how to supply stripped data."""
     data = get_data()
     fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(AttributeError):
+    with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
         fit.vcov({"CRV1": "f2"})
+
+
+def test_vcov_column_list_without_data_is_informative():
+    """A column-list vcov cannot be validated without the estimation sample."""
+    data = get_data()
+    fit = feols("Y ~ X1", data=data, store_data=False)
+    with pytest.raises(
+        RuntimeError, match=r"vcov column list requires estimation data"
+    ):
+        fit.vcov(["f2"])
 
 
 def test_error_hc23_fe():

@@ -451,6 +451,7 @@ class Quantreg(Feols):
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
+        self._require_fit_arrays("objective_value", arrays="the residual arrays")
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
 
     def get_performance(self):

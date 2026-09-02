@@ -295,11 +295,16 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        if type not in ("response", "working"):
+            raise ValueError("type must be one of 'response' or 'working'.")
+        self._require_fit_arrays(
+            "resid",
+            arrays="the response and working residual arrays",
+            remedy="Refit with lean=False to access residuals.",
+        )
         if type == "response":
             return self._u_hat_response.flatten()
-        if type == "working":
-            return self._u_hat_working.flatten()
-        raise ValueError("type must be one of 'response' or 'working'.")
+        return self._u_hat_working.flatten()
 
     def residualize(
         self,
@@ -310,6 +315,7 @@ class Feglm(Feols):
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
+        self._require_fit_arrays("residualize", arrays="the demeaning caches")
         if flist is None:
             return v, X
 
