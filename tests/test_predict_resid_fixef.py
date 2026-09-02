@@ -199,6 +199,54 @@ def test_vs_fixest(data, fml):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit"])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y_bin ~ X1",
+        "Y_bin ~ X1 | f1",
+        "Y_bin ~ X1 + X2 | f1 + f2",
+    ],
+)
+def test_feglm_resid_vs_fixest(data, family, fml):
+    """Compare binomial GLM residuals with fixest.
+
+    `feglm().resid()` returns the response residual `y - mu`, which is what
+    `residuals.fixest` returns for a GLM. Note that `residuals.fixest` ignores
+    its `type` argument for `feglm` objects, so the working residual has no
+    counterpart here; `test_glm_resid_types` covers it internally.
+    """
+    data = data.copy()
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+
+    mod = pf.feglm(
+        fml=fml,
+        data=data,
+        family=family,
+        vcov="hetero",
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+    )
+
+    r_mod = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.binomial(link=family),
+        se="hetero",
+        glm_tol=1e-10,
+        glm_iter=100,
+    )
+
+    np.testing.assert_allclose(
+        mod.resid(),
+        np.asarray(stats.residuals(r_mod)).ravel(),
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"{family} response residuals differ from fixest",
+    )
+
+
+@pytest.mark.against_r_core
 def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 

@@ -139,15 +139,24 @@ owns reference selection, markers, tolerances, the runtime tiers, and the
 selection matrix that decides which checks a change requires; the
 `change-verification` skill applies it.
 
-Three rules that are easy to get wrong:
+For internal or backend refactors that must not change results, the release
+contract (`test-release-contract`) is the edit-loop gate: it replays the public
+estimator matrix against a pinned pyfixest release in seconds. It is a
+regression alarm, not an external correctness reference; a released pyfixest
+result never substitutes for R.
+
+Four rules that are easy to get wrong:
 
 - `test-py` is Python-only and never establishes numerical agreement.
 - `test-r-fixest-fast` is edit feedback, not merge evidence.
 - Report every applicable check as passed, failed, deferred, or not run. A
   deferred or CI-only check is never a pass.
+- `test-release-contract` **skips** without a recorded baseline, and so does
+  `test-py`. Confirm it reports passed cases, not skipped, before citing it.
 
 ```bash
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov   # targeted
+pixi run -e py312 test-release-contract                             # refactor invariance, ~15s
 pixi run -e py312-r test-r-fixest-fast                              # fast live-R
 pixi run test-py                                                    # Python baseline
 pixi run -e lint prek run ruff-check --files <changed files>        # changed-file lint

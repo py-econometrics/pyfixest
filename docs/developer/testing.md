@@ -12,7 +12,7 @@ selection affect wall time.
 
 | Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, targeted or fast live-R checks, changed-file Ruff/mypy |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff/mypy |
 | Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
@@ -41,6 +41,9 @@ platform CI and benchmarks.
 ```bash
 # Targeted, without the repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
+
+# Release contract: regression alarm against the pinned pyfixest release
+pixi run -e py312 test-release-contract
 
 # Targeted live-R edit feedback
 pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols
@@ -88,7 +91,8 @@ This matrix is authoritative for which checks a change requires.
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
-| Estimation or inference numerics | targeted integration and edge tests | applicable live external-reference suite |
+| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint/type checks | Python baseline; applicable external suite for every estimator the refactor touches |
+| Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
 | Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
@@ -104,6 +108,62 @@ it is not a general Markdown validator. Do not run it for changes limited to
 `AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
 For prose under `docs/`, prefer an affected-page render. Reserve the full
 `docs-render` task for changes that can affect the site broadly.
+
+## Release contract
+
+`tests/test_release_contract.py` mirrors the structure of
+`tests/test_vs_fixest.py` — the same data fixtures, the same parametrization
+over the shared formula tuples in `tests/_feols_test_cases.py`, one test per
+estimator — but replaces the R reference with results recorded from a pinned
+pyfixest release. It is a fast regression alarm, not an external correctness
+oracle: a bug already present in the pinned release is recorded, not caught.
+
+The baseline is recorded by running that same test file under the release
+wheel, in the locked workspace in `tests/snapshots/release/`, so the two sides
+cannot describe different case matrices. `test-release-contract` records it on
+first use and reuses it afterwards; the recording is platform-local and
+gitignored, so every operating system and architecture compares against its own
+floating-point output. `test-py` picks the suite up once a baseline exists and
+skips it otherwise, so it never forces a recording. CI deliberately does not
+record a baseline, so the suite is local-only: it skips on every runner, and the
+canonical R suites remain the exact-head merge evidence. A fingerprint over the test file, the baseline module,
+the shared case lists, the release lockfile, and the platform invalidates it
+automatically. To record it without running the checkout's tests:
+
+```bash
+pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
+```
+
+The nested workspace's lockfile is format v7, so recording needs pixi 0.68.0 or
+newer. It deliberately avoids `--clean-env`, which pixi does not support on
+Windows; `scripts/record_release_baseline.py` guards the release import itself.
+
+The pinned release lives in one place, the `pyfixest` entry of
+`tests/snapshots/release/pixi.toml`. Roll it just after tagging a release --
+that is what brings back the comparisons the documented differences currently
+skip, and the skip list is shortest right then:
+
+```bash
+pixi run roll-release-baseline          # newest release tag in this checkout
+pixi run roll-release-baseline 0.61.0   # a specific release
+```
+
+The suite warns when a newer release tag exists than the pinned version.
+
+Comparisons use a near-machine-precision default. Widen a single
+`baseline.check(...)` call, or `baseline.skip(...)` a quantity, only for a
+behaviour change that post-dates the pinned release, and give the call an
+explicit `reason`; unexplained drift is a regression for human review, not a
+tolerance to raise. Change the pin in `tests/snapshots/release/pixi.toml` only
+through `roll-release-baseline`, for a deliberate roll to a stable release.
+
+The recording lives under the checkout root, so each worktree records its own
+baseline. When the suite fails after a change you intended as a pure refactor,
+the change is no longer a refactor: either fix the regression, or reclassify it
+as a numerics change. Declare the difference in
+`tests/test_release_contract.py` with a `reason`, add the external comparison
+the "Estimation or inference numerics" row requires, and record it in the
+changelog.
 
 ## External numerical references
 

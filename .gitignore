@@ -64,3 +64,7 @@ benchmarks/data/
 # A stray root SKILL.md (e.g. copied from docs/skills.md). Repository skills
 # live in .agents/skills/ and are tracked.
 /SKILL.md
+
+# Platform-local pyfixest release baseline (see docs/developer/testing.md)
+tests/snapshots/release/.cache/
+tests/snapshots/release/.pixi/

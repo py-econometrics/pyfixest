@@ -21,7 +21,9 @@ Prioritize findings that can produce silently wrong numbers:
    decision;
 4. estimator-specific logic leaking into shared runners or model classes;
 5. input mutation, unstable RNG, unjustified tolerances, or missing convergence
-   checks;
+   checks, including any widened tolerance or `baseline.skip` in
+   `tests/test_release_contract.py`, which is a behaviour-change declaration
+   and needs a changelog entry and an external reference;
 6. avoidable test-suite growth: one-off tests that belong in an existing matrix,
    duplicated fixtures/adapters/assertions, redundant coverage, or
    disproportionate runtime;

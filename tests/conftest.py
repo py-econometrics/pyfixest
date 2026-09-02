@@ -3,6 +3,28 @@
 import os
 import sys
 
+# Fixtures used by tests/test_release_contract.py. Registering them here keeps
+# the test module free of the fixture-shadowing import that ruff rejects.
+from tests._release_baseline import (  # noqa: F401
+    _release_cache,
+    baseline,
+)
+
+
+def pytest_addoption(parser):
+    """Register the flag that records the pyfixest release baseline.
+
+    See `tests/_release_baseline.py`; the flag is only ever passed by
+    `scripts/record_release_baseline.py` inside the pinned release workspace.
+    """
+    parser.addoption(
+        "--record-release-baseline",
+        action="store_true",
+        default=False,
+        help="fit tests/test_release_contract.py and record the results as the baseline",
+    )
+
+
 # Skip test files that require rpy2 when it is not installed (e.g. non-R pixi env).
 _rpy2_test_files = [
     "test_did.py",
