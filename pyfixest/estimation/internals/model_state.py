@@ -110,3 +110,20 @@ class WithinLinearData:
     design: NDArray[np.float64]
     instruments: NDArray[np.float64] | None = None
     endogenous: NDArray[np.float64] | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class GlmWorkingState:
+    """Final GLM IRLS state in within scale.
+
+    ``working_weights`` are the final IRLS weights themselves.  Square-root
+    weighted arrays are solver-local temporaries and deliberately absent.
+    """
+
+    working_response_within: NDArray[np.float64]
+    design_within: NDArray[np.float64]
+    working_weights: NDArray[np.float64]
+    eta: NDArray[np.float64]
+    mu: NDArray[np.float64]
+    response_residuals: NDArray[np.float64]
+    working_residuals: NDArray[np.float64]

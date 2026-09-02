@@ -19,6 +19,7 @@ from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_m
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
+    GlmWorkingState,
     ObservationWeights,
     WithinLinearData,
 )
@@ -280,3 +281,43 @@ def test_multiple_estimation_shares_array_native_demean_cache(
     assert all(isinstance(model._within_data, WithinLinearData) for model in models)
     assert all(model._Y is model._within_data.response for model in models)
     assert all(model._X is model._within_data.design for model in models)
+
+
+def test_feglm_keeps_observation_and_working_weights_distinct() -> None:
+    """The stable observation-weight alias is never replaced by IRLS weights."""
+    rng = np.random.default_rng(8675309)
+    n_obs = 160
+    covariate = rng.normal(size=n_obs)
+    probability = 1 / (1 + np.exp(-(-0.2 + 0.8 * covariate)))
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
+    data = pd.DataFrame(
+        {
+            "y": rng.binomial(1, probability),
+            "x": covariate,
+            "observation_weight": observation_weights,
+        }
+    )
+
+    fit = pf.feglm(
+        "y ~ x",
+        data=data,
+        family="logit",
+        weights="observation_weight",
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+
+    working = fit._working_state
+    assert isinstance(working, GlmWorkingState)
+    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+    np.testing.assert_allclose(fit._observation_weights.values, observation_weights)
+    np.testing.assert_allclose(fit._irls_weights, working.working_weights)
+    assert not np.allclose(working.working_weights, observation_weights)
+    assert fit._X is working.design_within
+    assert fit._Y is working.working_response_within
+    np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
+    np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
+    np.testing.assert_allclose(
+        fit._scores,
+        fit._X * (working.working_weights * working.working_residuals)[:, None],
+    )

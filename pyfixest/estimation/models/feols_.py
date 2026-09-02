@@ -798,6 +798,10 @@ class Feols(ResultAccessorMixin):
         """Return weights used by the fitted normal equations."""
         return self._observation_weights.values
 
+    def _fixef_weights(self) -> np.ndarray | None:
+        """Return weights used by fixed-effect coefficient recovery."""
+        return self._observation_weights.values
+
     def _vcov_hetero(self):
         return vcov_hetero(
             scores=self._scores,
@@ -1712,7 +1716,7 @@ class Feols(ResultAccessorMixin):
         fixed_effects.head()
         ```
         """
-        weights_sqrt = np.sqrt(self._weights).flatten()
+        fixef_weights = self._fixef_weights()
 
         if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
@@ -1757,13 +1761,15 @@ class Feols(ResultAccessorMixin):
                 _ModelMatrixKey.fixed_effects
             ].transform_state,
         )
-        D2 = contrast_coding.matrix
-        if self._has_weights:
+        fixed_effect_design = contrast_coding.matrix
+        solve_design = fixed_effect_design
+        if fixef_weights is not None:
+            weights_sqrt = np.sqrt(fixef_weights).flatten()
             uhat *= weights_sqrt
             weights_diag = diags(weights_sqrt, 0)
-            D2 = weights_diag.dot(D2)
+            solve_design = weights_diag.dot(fixed_effect_design)
 
-        alpha = lsqr(D2, uhat, atol=atol, btol=btol)[0]
+        alpha = lsqr(solve_design, uhat, atol=atol, btol=btol)[0]
 
         self._fixef_coefficients = build_fixed_effects(
             fixed_effect_coefficients=alpha,
@@ -1773,7 +1779,7 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = D2.dot(alpha)
+        self._sumFE = solve_design.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 from scipy.stats import norm
 
@@ -35,16 +36,163 @@ fml_list = [
 fml_ols_vs_gaussian = ["Y ~ X1", "Y ~ X1 + C(f1)", "Y ~ X1 * X2"]
 
 
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit", "poisson"])
+def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
+    """Retain formula inputs and observation weights beside final IWLS state."""
+    rng = np.random.default_rng(918273)
+    n_groups = 12
+    group_size = 15
+    n_obs = n_groups * group_size
+    fixed_effect = np.repeat(np.arange(n_groups), group_size)
+    covariate = rng.normal(size=n_obs)
+    linear_predictor = -0.2 + 0.7 * covariate + 0.05 * fixed_effect
+
+    if family == "gaussian":
+        response = linear_predictor + rng.normal(scale=0.5, size=n_obs)
+    elif family == "poisson":
+        # Strict positivity prevents a group from being removed for separation.
+        response = rng.poisson(np.exp(linear_predictor)) + 1
+    else:
+        probability = 1 / (1 + np.exp(-linear_predictor))
+        response = rng.binomial(1, probability)
+
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
+    data = pd.DataFrame(
+        {
+            "y": response,
+            "x": covariate,
+            "fe": fixed_effect,
+            "weight": observation_weights,
+        }
+    )
+    fit = pf.feglm(
+        "y ~ x | fe",
+        data=data,
+        family=family,
+        weights="weight",
+        vcov="hetero",
+        separation_check=[],
+        iwls_tol=1e-10,
+    )
+
+    assert isinstance(fit._model_matrix.dependent, pd.DataFrame)
+    assert isinstance(fit._model_matrix.independent, pd.DataFrame)
+    assert isinstance(fit._fe, pd.DataFrame)
+    np.testing.assert_allclose(
+        fit._observation_weights.values,
+        observation_weights,
+    )
+    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+
+    working = fit._working_state
+    assert fit._X is working.design_within
+    assert fit._Y is working.working_response_within
+    assert fit._Z is working.design_within
+    assert fit._irls_weights is working.working_weights
+    assert not hasattr(working, "sqrt_working_weights")
+    assert not hasattr(working, "design_solver")
+    assert not hasattr(working, "response_solver")
+
+    np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
+    np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
+    np.testing.assert_allclose(
+        fit._scores,
+        working.design_within
+        * (working.working_weights * working.working_residuals)[:, None],
+    )
+    expected_hessian = working.design_within.T @ (
+        working.working_weights[:, None] * working.design_within
+    )
+    np.testing.assert_allclose(fit._hessian, expected_hessian)
+    np.testing.assert_allclose(fit._leverage_weights(), working.working_weights)
+    np.testing.assert_allclose(fit._fixef_weights(), working.working_weights)
+
+    for group in np.unique(fixed_effect):
+        group_rows = fixed_effect == group
+        group_weights = working.working_weights[group_rows]
+        np.testing.assert_allclose(
+            group_weights @ working.design_within[group_rows],
+            0,
+            atol=1e-8,
+        )
+        np.testing.assert_allclose(
+            group_weights @ working.working_response_within[group_rows],
+            0,
+            atol=1e-8,
+        )
+
+    if family == "gaussian":
+        np.testing.assert_allclose(working.working_weights, observation_weights)
+    else:
+        assert not np.allclose(working.working_weights, observation_weights)
+
+
+@pytest.mark.parametrize("vcov", ["HC2", "HC3"])
+def test_feglm_frequency_weight_leverage_matches_expanded_sample(vcov):
+    """Use observation counts, not IRLS weights, in fweight HC leverage."""
+    rng = np.random.default_rng(102938)
+    covariate = np.linspace(-1.5, 1.5, 80)
+    probability = 1 / (1 + np.exp(-(-0.15 + 0.8 * covariate)))
+    aggregated = pd.DataFrame(
+        {
+            "y": rng.binomial(1, probability),
+            "x": covariate,
+            "count": rng.integers(1, 5, size=len(covariate)),
+        }
+    )
+    expanded = aggregated.loc[aggregated.index.repeat(aggregated["count"])].copy()
+
+    fit_frequency = pf.feglm(
+        "y ~ x",
+        data=aggregated,
+        family="logit",
+        weights="count",
+        weights_type="fweights",
+        vcov=vcov,
+        iwls_tol=1e-11,
+    )
+    fit_expanded = pf.feglm(
+        "y ~ x",
+        data=expanded,
+        family="logit",
+        vcov=vcov,
+        iwls_tol=1e-11,
+    )
+
+    np.testing.assert_allclose(
+        fit_frequency.coef(),
+        fit_expanded.coef(),
+        atol=1e-10,
+        err_msg="Frequency-weighted logit coefficients differ from row expansion.",
+    )
+    # Collapsing duplicate rows changes floating-point accumulation order and
+    # therefore the final IWLS stopping point at roughly the low 1e-6 scale.
+    np.testing.assert_allclose(
+        fit_frequency._vcov,
+        fit_expanded._vcov,
+        atol=1e-9,
+        rtol=5e-6,
+        err_msg=f"Frequency-weighted logit {vcov} differs from row expansion.",
+    )
+
+
 @pytest.mark.parametrize("fml", fml_ols_vs_gaussian)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "f1"}])
 @pytest.mark.parametrize("dropna", [True])
-def test_ols_vs_gaussian_glm(fml, inference, dropna):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     data = pf.get_data()
     if dropna:
         data = data.dropna()
 
-    fit_ols = pf.feols(fml=fml, data=data, vcov=inference)
-    fit_gaussian = pf.feglm(fml=fml, data=data, family="gaussian", vcov=inference)
+    fit_ols = pf.feols(fml=fml, data=data, vcov=inference, weights=weights)
+    fit_gaussian = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        vcov=inference,
+        weights=weights,
+    )
 
     check_absolute_diff(
         fit_ols.coef().xs("X1"), fit_gaussian.coef().xs("X1"), tol=1e-10

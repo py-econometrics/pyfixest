@@ -49,7 +49,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Estimator internals now keep formula tables, unpremultiplied within arrays,
   and user-scale observation weights in separate typed domains.
   Square-root-weighted arrays are local solver temporaries, and linear
-  residuals remain in response units.
+  residuals remain in response units. GLM IRLS working state (working response,
+  design, and weights) is kept separate from observation weights.
 
 ### Inference Types
 

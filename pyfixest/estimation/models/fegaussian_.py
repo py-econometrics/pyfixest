@@ -75,4 +75,9 @@ class Fegaussian(Feglm):
 
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
-        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+        return vcov_iid_ols(
+            residuals=self._u_hat,
+            bread=self._bread,
+            N=self._N,
+            weights=self._leverage_weights(),
+        )
