@@ -9,6 +9,8 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -69,7 +71,7 @@ class Quantreg(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
@@ -177,12 +179,29 @@ class Quantreg(Feols):
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
     def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+        "Publish quantile-regression arrays from the immutable formula state."
+        response = self._model_matrix.dependent.to_numpy(dtype=np.float64)
+        design = self._model_matrix.independent.to_numpy(dtype=np.float64)
+        self._Y = response
+        self._X = design
+        self._Z = design
+
+    def drop_multicol_vars(self):
+        "Detect and drop multicollinear quantile-regression covariates."
+        if self._X.shape[1] > 0:
+            (
+                self._X,
+                self._coefnames,
+                self._collin_vars,
+                self._collin_index,
+            ) = drop_multicollinear_variables(
+                self._X,
+                self._coefnames,
+                self._collin_tol,
+            )
+        self._Z = self._X
+        self._X_is_empty = self._X.shape[1] == 0
+        self._k = self._X.shape[1]
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -393,12 +412,20 @@ class Quantreg(Feols):
 
     def _vcov_iid(self):
         return vcov_iid_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+            X=self._X,
+            Y=self._Y,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            N=self._N_rows,
         )
 
     def _vcov_hetero(self):
         return vcov_hetero_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+            X=self._X,
+            Y=self._Y,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            N=self._N_rows,
         )
 
     def _vcov_nid(self) -> np.ndarray:
@@ -414,7 +441,7 @@ class Quantreg(Feols):
             Y=self._Y,
             beta_hat=self._beta_hat,
             q=self._quantile,
-            N=self._N,
+            N=self._N_rows,
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )

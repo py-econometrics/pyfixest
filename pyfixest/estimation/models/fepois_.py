@@ -10,6 +10,7 @@ from scipy.special import gammaln
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
@@ -104,7 +105,7 @@ class Fepois(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
@@ -152,7 +153,7 @@ class Fepois(Feglm):
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        y_orig = np.asarray(self._Y).flatten()
+        y_orig = self._model_matrix.dependent.to_numpy().flatten()
         user_weights = self._weights.flatten().copy()
 
         super().get_fit()

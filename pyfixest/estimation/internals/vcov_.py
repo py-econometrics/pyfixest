@@ -30,9 +30,22 @@ def _sandwich(
     return bread @ projected_meat @ bread
 
 
-def vcov_iid_ols(residuals: np.ndarray, bread: np.ndarray, N: int) -> np.ndarray:
-    "IID Variance-Covariance Matrix for OLS."
-    sigma2 = np.sum(residuals.flatten() ** 2) / (N - 1)
+def vcov_iid_ols(
+    residuals: np.ndarray,
+    bread: np.ndarray,
+    N: int | float,
+    weights: np.ndarray | None = None,
+) -> np.ndarray:
+    """Compute IID OLS covariance from response-scale residuals.
+
+    ``weights=None`` selects the allocation-free unweighted path. Otherwise,
+    the residual sum of squares is evaluated in the weighted estimating
+    equation without materializing square-root-weighted residuals.
+    """
+    squared_residuals = residuals.flatten() ** 2
+    if weights is not None:
+        squared_residuals = weights.flatten() * squared_residuals
+    sigma2 = np.sum(squared_residuals) / (N - 1)
     return bread * sigma2
 
 
@@ -46,6 +59,7 @@ def vcov_hetero(
     X: np.ndarray,
     tZX: np.ndarray,
     weights: np.ndarray,
+    leverage_weights: np.ndarray | None,
     weights_type: WeightsTypeOptions | None,
     vcov_type_detail: HeteroVcovTypeOptions,
     bread: np.ndarray,
@@ -58,6 +72,8 @@ def vcov_hetero(
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
         leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
+        if leverage_weights is not None:
+            leverage = leverage_weights.flatten() * leverage
         if weights_type == "fweights":
             leverage = leverage / weights.flatten()
         transformed_scores = (
@@ -187,20 +203,31 @@ def _jackknife_vcov(beta_jack: np.ndarray, beta_center: np.ndarray) -> np.ndarra
 def vcov_crv3_fast(
     X: np.ndarray,
     Y: np.ndarray,
+    weights: np.ndarray | None,
     beta_hat: np.ndarray,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled CRV3 vcov via the closed-form cluster jackknife (no fixed effects)."
+    """Compute unscaled CRV3 from within-scale arrays without retaining WLS data."""
     beta_jack = np.zeros((len(clustid), X.shape[1]))
 
-    tXX = X.T @ X
-    tXy = X.T @ Y
+    if weights is None:
+        X_solver = X
+        Y_solver = Y.reshape(-1, 1)
+    else:
+        sqrt_weights = np.sqrt(weights).reshape(-1, 1)
+        X_solver = X * sqrt_weights
+        Y_solver = Y.reshape(-1, 1) * sqrt_weights
+
+    tXX = X_solver.T @ X_solver
+    tXy = X_solver.T @ Y_solver
 
     for ixg, g in enumerate(clustid):
-        Xg = X[np.equal(g, cluster_col)]
-        Yg = Y[np.equal(g, cluster_col)]
+        group = np.equal(g, cluster_col)
+        Xg = X_solver[group]
+        Yg = Y_solver[group]
         tXgXg = Xg.T @ Xg
-        beta_jack[ixg, :] = (np.linalg.pinv(tXX - tXgXg) @ (tXy - Xg.T @ Yg)).flatten()
+        tXgyg = Xg.T @ Yg
+        beta_jack[ixg, :] = (np.linalg.pinv(tXX - tXgXg) @ (tXy - tXgyg)).flatten()
 
     return _jackknife_vcov(beta_jack=beta_jack, beta_center=beta_hat)

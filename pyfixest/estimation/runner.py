@@ -8,6 +8,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -81,7 +82,7 @@ def run_estimation(
 
     _NO_CACHE_KEY: Any = object()
     prev_cache_key: Any = _NO_CACHE_KEY
-    lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = {}
+    lookup_demeaned_data: dict[frozenset[int], DemeanedData] = {}
     lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
 
     for spec in specs:

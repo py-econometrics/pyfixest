@@ -25,14 +25,19 @@ from pyfixest.estimation.formula.formulaic_compat import (
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
-from pyfixest.estimation.internals.demean_ import DemeanCache
+from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
+    WeightsTypeOptions,
     _validate_literal_argument,
+)
+from pyfixest.estimation.internals.model_state import (
+    ObservationWeights,
+    WithinLinearData,
 )
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
@@ -80,10 +85,10 @@ class Feols(ResultAccessorMixin):
     Non user-facing class to estimate a linear regression via OLS.
 
     Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple
-    estimation).
+    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd)
+    function. This class constructs within-scale arrays through a shared
+    ``DemeanCache``; the estimation runner supplies that cache for reuse across
+    multiple fits.
 
     Parameters
     ----------
@@ -259,7 +264,7 @@ class Feols(ResultAccessorMixin):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
@@ -425,32 +430,35 @@ class Feols(ResultAccessorMixin):
     # Deliberately untyped: an annotation makes mypy check this body, whose published
     # attribute types are still transitional or loose; see the typing follow-up.
     def _publish_model_matrix(self, model_matrix):
-        """Publish one structurally immutable state through compatibility aliases."""
+        """Publish structurally immutable formula and observation-weight state."""
         self._model_matrix = model_matrix
-        self._Y = model_matrix.dependent
-        self._Y_untransformed = self._Y.copy()
-        self._X = model_matrix.independent
+        self._Y_untransformed = model_matrix.dependent.copy()
         self._fe = model_matrix.fixed_effects
-        self._endogvar = model_matrix.endogenous
-        self._Z = model_matrix.instruments
         self._weights_df = model_matrix.weights
         self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
+        independent = model_matrix.independent
         is_icovar = (
-            self._X.columns.str.contains(r"^.+::.+$") if not self._X.empty else None
+            independent.columns.str.contains(r"^.+::.+$")
+            if not independent.empty
+            else None
         )
         self._icovars = (
-            self._X.columns[is_icovar].tolist()
+            independent.columns[is_icovar].tolist()
             if is_icovar is not None and is_icovar.any()
             else None
         )
-        self._X_is_empty = self._X.shape[0] == 0
+        self._X_is_empty = independent.shape[1] == 0
         self._model_spec = model_matrix.model_spec
 
-        self._coefnames = self._X.columns.tolist()
-        self._coefnames_z = self._Z.columns.tolist() if self._Z is not None else None
-        self._depvar = self._Y.columns[0]
+        self._coefnames = independent.columns.tolist()
+        self._coefnames_z = (
+            model_matrix.instruments.columns.tolist()
+            if model_matrix.instruments is not None
+            else None
+        )
+        self._depvar = model_matrix.dependent.columns[0]
 
         self._has_fixef = self._fe is not None
         self._fixef = (
@@ -462,63 +470,54 @@ class Feols(ResultAccessorMixin):
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        self._weights = self._set_weights()
-        self._N, self._N_rows = self._set_nobs()
+        self._observation_weights = self._set_observation_weights()
+        self._N = self._observation_weights.n_effective
+        self._N_rows = self._observation_weights.n_rows
+        # Compatibility alias: always observation weights, never solver or
+        # GLM working weights. Canonical code uses `_observation_weights`.
+        values = self._observation_weights.values
+        self._weights = (
+            np.ones((self._N_rows, 1), dtype=np.float64)
+            if values is None
+            else values.reshape((-1, 1))
+        )
 
     def _validate_response(self) -> None:
         """Validate estimator-specific response constraints, if any."""
 
-    def _set_nobs(self) -> tuple[int, int]:
-        """
-        Fetch the number of observations used in fitting the regression model.
+    def _set_observation_weights(self) -> ObservationWeights:
+        """Build canonical user-scale observation weights for this row sample."""
+        n_rows = len(self._model_matrix.dependent)
+        if self._model_matrix.weights is None:
+            return ObservationWeights.unweighted(n_rows=n_rows)
 
-        Returns
-        -------
-        tuple[int, int]
-            A tuple containing the total number of observations and the number of rows
-            in the dependent variable array.
-        """
-        N_rows = len(self._Y)
-        if self._weights_type == "aweights":
-            N = N_rows
-        elif self._weights_type == "fweights":
-            N = np.sum(self._weights)
+        assert self._weights_type in ("aweights", "fweights")
+        weights_kind = cast(WeightsTypeOptions, self._weights_type)
+        return ObservationWeights.from_values(
+            self._model_matrix.weights.to_numpy().reshape(-1),
+            kind=weights_kind,
+        )
 
-        return N, N_rows
+    def _prepare_within_data(self) -> WithinLinearData:
+        """Return fixed-effect-residualized arrays in their original units."""
+        response_frame = self._model_matrix.dependent
+        design_frame = self._model_matrix.independent
+        response = response_frame.to_numpy(dtype=np.float64)
+        design = design_frame.to_numpy(dtype=np.float64)
 
-    def _set_weights(self) -> np.ndarray:
-        """
-        Return the weights used in the regression model.
-
-        Returns
-        -------
-        np.ndarray
-            The weights used in the regression model.
-            If no weights are used, returns an array of ones
-            with the same length as the dependent variable array.
-        """
-        N = len(self._Y)
-
-        if self._weights_df is not None:
-            _weights = self._weights_df.to_numpy()
-        else:
-            _weights = np.ones(N)
-
-        return _weights.reshape((N, 1))
-
-    def demean(self):
-        "Demean the dependent variable and covariates by the fixed effect(s)."
-        if self._has_fixef:
-            self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
-                self._Y,
-                self._X,
-                self._fe,
-                self._weights.flatten(),
-                self._na_index,
-                self._demeaner,
+        if self._model_matrix.fixed_effects is not None:
+            response, design, _ = self._demean_cache.demean_yx(
+                response,
+                design,
+                y_names=response_frame.columns,
+                x_names=design_frame.columns,
+                fe=self._model_matrix.fixed_effects.to_numpy(),
+                weights=self._observation_weights.values,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
             )
-        else:
-            self._Yd, self._Xd = self._Y, self._X
+
+        return WithinLinearData(response=response, design=design)
 
     @property
     def preconditioner(self) -> Preconditioner | None:
@@ -533,36 +532,42 @@ class Feols(ResultAccessorMixin):
         """
         return self._demean_cache.lookup_preconditioner.get(self._na_index)
 
-    def to_array(self):
-        "Convert estimation data frames to np arrays."
-        self._Y, self._X = (
-            self._Yd.to_numpy(),
-            self._Xd.to_numpy(),
-        )
-
-    def wls_transform(self):
-        "Transform model matrices for WLS Estimation."
-        if self._has_weights:
-            w = np.sqrt(self._weights)
-            self._Y = self._Y * w
-            self._X = self._X * w
-
-    def drop_multicol_vars(self):
-        "Detect and drop multicollinear variables."
-        if self._X.shape[1] > 0:
+    def _drop_multicollinear_within_data(
+        self, within_data: WithinLinearData
+    ) -> WithinLinearData:
+        """Return within data after the established unweighted rank check."""
+        design = within_data.design
+        if design.shape[1] > 0:
             (
-                self._X,
+                design,
                 self._coefnames,
                 self._collin_vars,
                 self._collin_index,
             ) = drop_multicollinear_variables(
-                self._X,
+                design,
                 self._coefnames,
                 self._collin_tol,
             )
-        # update X_is_empty
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1] if not self._X_is_empty else 0
+
+        return WithinLinearData(
+            response=within_data.response,
+            design=design,
+            instruments=within_data.instruments,
+            endogenous=within_data.endogenous,
+        )
+
+    def _set_within_data(self, within_data: WithinLinearData) -> None:
+        """Publish canonical within data and stable array compatibility aliases."""
+        self._within_data = within_data
+        self._Y = within_data.response
+        self._X = within_data.design
+        self._Z = (
+            within_data.design
+            if within_data.instruments is None
+            else within_data.instruments
+        )
+        self._X_is_empty = within_data.design.shape[1] == 0
+        self._k = within_data.design.shape[1]
 
     def _get_predictors(self) -> None:
         self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
@@ -576,17 +581,19 @@ class Feols(ResultAccessorMixin):
         -------
         None
         """
-        self.demean()
-        self.to_array()
-        self.drop_multicol_vars()
-        self.wls_transform()
+        within_data = self._drop_multicollinear_within_data(self._prepare_within_data())
+        self._set_within_data(within_data)
 
         if self._X_is_empty:
-            self._u_hat = self._Y
+            self._u_hat = within_data.response.flatten()
         else:
-            fit = fit_ols(X=self._X, Y=self._Y, solver=self._solver)
+            fit = fit_ols(
+                X=within_data.design,
+                Y=within_data.response,
+                weights=self._observation_weights.values,
+                solver=self._solver,
+            )
 
-            self._Z = self._X
             self._tZX = fit.tZX
             self._tZy = fit.tZy
             self._beta_hat = fit.beta
@@ -745,7 +752,7 @@ class Feols(ResultAccessorMixin):
         self,
         *,
         vcov_type: str,
-        G: int | list[int],
+        G: int | float | list[int],
         vcov_sign: int = 1,
         k_fe_nested: int = 0,
         n_fe_fully_nested: int = 0,
@@ -780,7 +787,16 @@ class Feols(ResultAccessorMixin):
         return crv3(clustid=clustid, cluster_col=cluster_col)
 
     def _vcov_iid(self):
-        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+        return vcov_iid_ols(
+            residuals=self._u_hat,
+            bread=self._bread,
+            N=self._N,
+            weights=self._observation_weights.values,
+        )
+
+    def _leverage_weights(self) -> np.ndarray | None:
+        """Return weights used by the fitted normal equations."""
+        return self._observation_weights.values
 
     def _vcov_hetero(self):
         return vcov_hetero(
@@ -788,6 +804,7 @@ class Feols(ResultAccessorMixin):
             X=self._X,
             tZX=self._tZX,
             weights=self._weights,
+            leverage_weights=self._leverage_weights(),
             weights_type=self._weights_type,
             vcov_type_detail=self._vcov_type_detail,
             bread=self._bread,
@@ -858,6 +875,7 @@ class Feols(ResultAccessorMixin):
         return vcov_crv3_fast(
             X=self._X,
             Y=self._Y,
+            weights=self._observation_weights.values,
             beta_hat=self._beta_hat,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -909,9 +927,6 @@ class Feols(ResultAccessorMixin):
                 "_X",
                 "_Y",
                 "_Z",
-                "_Xd",
-                "_Yd",
-                "_Zd",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
@@ -1464,8 +1479,8 @@ class Feols(ResultAccessorMixin):
             X = csc_matrix(X) if output == "sparse" else X
 
         else:
-            Y = self._Y.flatten() / np.sqrt(self._weights.flatten())
-            X = self._X / np.sqrt(self._weights)
+            Y = self._Y.flatten()
+            X = self._X
             xnames = self._coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
@@ -1858,14 +1873,13 @@ class Feols(ResultAccessorMixin):
         if newdata is None:
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
-            # divide by sqrt(weights) as self._X is "weighted"
             X = self._X
             y_hat = (
                 self._Y_hat_link
                 if type == "link" or self._method == "feols"
                 else self._Y_hat_response
             )
-            n_observations = self._N
+            n_observations = self._N_rows
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
             n_observations = newdata.shape[0]
