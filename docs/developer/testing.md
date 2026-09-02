@@ -97,8 +97,12 @@ the shared case lists, the release lockfile, and the platform invalidates it
 automatically. To record it without running the checkout's tests:
 
 ```bash
-pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml record
+pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
 ```
+
+The nested workspace's lockfile is format v7, so recording needs pixi 0.68.0 or
+newer. It deliberately avoids `--clean-env`, which pixi does not support on
+Windows; `scripts/record_release_baseline.py` guards the release import itself.
 
 The pinned release lives in one place, the `pyfixest` entry of
 `tests/snapshots/release/pixi.toml`. Roll it just after tagging a release --
@@ -116,8 +120,8 @@ Comparisons use a near-machine-precision default. Widen a single
 `baseline.check(...)` call, or `baseline.skip(...)` a quantity, only for a
 behaviour change that post-dates the pinned release, and give the call an
 explicit `reason`; unexplained drift is a regression for human review, not a
-tolerance to raise. Change `RELEASE_VERSION` only for a deliberate baseline
-roll to a newly selected stable release.
+tolerance to raise. Change the pin in `tests/snapshots/release/pixi.toml` only
+through `roll-release-baseline`, for a deliberate roll to a stable release.
 
 `test-r-core` remains the convenient local aggregate for all canonical
 conda-forge R comparisons. CI partitions that population into

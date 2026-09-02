@@ -17,6 +17,7 @@ import hashlib
 import importlib.metadata
 import json
 import platform
+import re
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -25,7 +26,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-import tomllib
 
 from tests._feols_test_cases import fixed_effect_interactions_to_legacy
 
@@ -34,8 +34,7 @@ RELEASE_MANIFEST = ROOT / "tests" / "snapshots" / "release" / "pixi.toml"
 CACHE_PATH = ROOT / "tests" / "snapshots" / "release" / ".cache" / "contract.json.gz"
 RECORD_OPTION = "--record-release-baseline"
 RECORD_COMMAND = (
-    "pixi run --locked --clean-env "
-    "--manifest-path tests/snapshots/release/pixi.toml record"
+    "pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record"
 )
 
 # Both sides run the same algorithm on the same inputs, so only the two
@@ -61,11 +60,14 @@ def pinned_release() -> str:
     """Read the pinned release from the locked baseline workspace.
 
     The manifest is the single source of truth for which release this suite
-    compares against; `scripts/roll_release_baseline.py` rewrites it.
+    compares against; `scripts/roll_release_baseline.py` rewrites it. The pin
+    is read with a regex rather than a TOML parser so the module imports on
+    every supported Python, including 3.10 without `tomllib`.
     """
-    with RELEASE_MANIFEST.open("rb") as handle:
-        specification = tomllib.load(handle)["pypi-dependencies"]["pyfixest"]
-    return str(specification).removeprefix("==")
+    match = re.search(r'(?m)^pyfixest = "==([^"]+)"$', RELEASE_MANIFEST.read_text())
+    if match is None:
+        raise RuntimeError(f"Could not find the pyfixest pin in {RELEASE_MANIFEST}.")
+    return match.group(1)
 
 
 RELEASE_VERSION = pinned_release()

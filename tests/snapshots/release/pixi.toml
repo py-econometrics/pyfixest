@@ -21,5 +21,5 @@ VECLIB_MAXIMUM_THREADS = "1"
 NUMEXPR_NUM_THREADS = "1"
 
 [tasks]
-record = { cmd = "python -P scripts/record_release_baseline.py", cwd = "../../..", description = "Record this platform's pyfixest 0.60.0 baseline if it is missing or stale" }
+record = { cmd = "python -P scripts/record_release_baseline.py", cwd = "../../..", description = "Record this platform's baseline for the pinned pyfixest release if it is missing or stale" }
 provenance = { cmd = "python -P -c \"import pyfixest; print(pyfixest.__version__); print(pyfixest.__file__)\"", cwd = "../../..", description = "Print the isolated release interpreter provenance" }

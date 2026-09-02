@@ -58,7 +58,6 @@ def main() -> None:
             "pixi",
             "run",
             "--locked",
-            "--clean-env",
             "--manifest-path",
             str(RELEASE_MANIFEST),
             "record",

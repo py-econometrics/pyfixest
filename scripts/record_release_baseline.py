@@ -3,8 +3,7 @@
 Run through the locked workspace in `tests/snapshots/release/`, which pins the
 release wheel:
 
-    pixi run --locked --clean-env \
-        --manifest-path tests/snapshots/release/pixi.toml record
+    pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
 
 The recording is `tests/test_release_contract.py` itself, executed against the
 pinned release, so the baseline and the comparison can never describe different
