@@ -42,6 +42,9 @@ platform CI and benchmarks.
 # Targeted, without the repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
 
+# Python-only regression against the pinned pyfixest release
+pixi run -e py312 test-release-contract
+
 # Targeted live-R edit feedback
 pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols
 pixi run -e py312-r test-r-fixest-fast
@@ -72,6 +75,36 @@ pixi run docs-build
 pixi run docs-render
 ```
 
+## Release-contract snapshots
+
+`tests/test_release_contract.py` mirrors the structure of
+`tests/test_vs_fixest.py` — the same data fixtures, the same parametrization
+over the shared formula tuples in `tests/_feols_test_cases.py`, one test per
+estimator — but replaces the R reference with results recorded from a pinned
+pyfixest release. It is a fast regression alarm, not an external correctness
+oracle: a bug already present in the pinned release is recorded, not caught.
+
+The baseline is recorded by running that same test file under the release
+wheel, in the locked workspace in `tests/snapshots/release/`, so the two sides
+cannot describe different case matrices. `test-release-contract` records it on
+first use and reuses it afterwards; the recording is platform-local and
+gitignored, so every operating system and architecture compares against its own
+floating-point output. `test-py` picks the suite up once a baseline exists and
+skips it otherwise, so it never forces a recording. A fingerprint over the test file, the baseline module,
+the shared case lists, the release lockfile, and the platform invalidates it
+automatically. To record it without running the checkout's tests:
+
+```bash
+pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml record
+```
+
+Comparisons use a near-machine-precision default. Widen a single
+`baseline.check(...)` call, or `baseline.skip(...)` a quantity, only for a
+behaviour change that post-dates the pinned release, and give the call an
+explicit `reason`; unexplained drift is a regression for human review, not a
+tolerance to raise. Change `RELEASE_VERSION` only for a deliberate baseline
+roll to a newly selected stable release.
+
 `test-r-core` remains the convenient local aggregate for all canonical
 conda-forge R comparisons. CI partitions that population into
 `test-r-fixest` and the internal `test-r-core-other` shard so
@@ -86,7 +119,7 @@ preflight in the canonical `fixest` job.
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
-| Estimation or inference numerics | targeted integration and edge tests | applicable live external-reference suite |
+| Estimation or inference numerics | targeted integration and edge tests; release-contract snapshots once stabilized | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
 | Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |

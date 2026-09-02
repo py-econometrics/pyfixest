@@ -47,7 +47,10 @@ estimator-specific tolerance, and extend the nearest permanent matrix before
 adding a new test function or file.
 
 Keep the permanent test parametrized through the public API where possible and
-keep its runtime suitable for regular CI use. Live R comparisons must run
+keep its runtime suitable for regular CI use. Use the release-contract snapshots
+(`docs/developer/testing.md`) for broad repeatable regression feedback, but never
+treat a released pyfixest result as an external correctness reference. Live R
+comparisons must run
 through rpy2 inside pytest. Register every rpy2-importing test file in
 `tests/conftest.py` and use the strict R marker matching dependency
 availability. Do not replace an available live reference merely to shorten the

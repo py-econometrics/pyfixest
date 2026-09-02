@@ -215,6 +215,8 @@ maturin = ">=1.8"
 MPLCONFIGDIR = "$PIXI_PROJECT_ROOT/.pixi/matplotlib"
 
 [tool.pixi.tasks]
+_record-release-baseline = { cmd = "pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml record", description = "Record this platform's pyfixest release baseline if it is missing or stale" }
+test-release-contract = { cmd = "pytest -q tests/test_release_contract.py --no-cov -n auto", depends-on = ["_setup", "_record-release-baseline"], description = "Compare public estimator results with the pinned pyfixest release" }
 test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
 test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }

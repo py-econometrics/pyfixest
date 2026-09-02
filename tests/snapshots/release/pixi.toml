@@ -5,6 +5,7 @@ platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [dependencies]
 python = "~=3.12.0"
+pytest = ">=8"
 
 [pypi-dependencies]
 pyfixest = "==0.60.0"
@@ -20,6 +21,5 @@ VECLIB_MAXIMUM_THREADS = "1"
 NUMEXPR_NUM_THREADS = "1"
 
 [tasks]
-prepare = { cmd = "python -P scripts/generate_estimation_snapshots.py", cwd = "../../..", description = "Prepare this platform's cached pyfixest 0.60.0 release contract" }
-regenerate = { cmd = "python -P scripts/generate_estimation_snapshots.py --force", cwd = "../../..", description = "Replace this platform's cached release contract" }
+record = { cmd = "python -P scripts/record_release_baseline.py", cwd = "../../..", description = "Record this platform's pyfixest 0.60.0 baseline if it is missing or stale" }
 provenance = { cmd = "python -P -c \"import pyfixest; print(pyfixest.__version__); print(pyfixest.__file__)\"", cwd = "../../..", description = "Print the isolated release interpreter provenance" }

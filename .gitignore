@@ -67,3 +67,7 @@ SKILL.md
 !.agents/skills/
 !.agents/skills/*/
 !.agents/skills/*/SKILL.md
+
+# Platform-local pyfixest release baseline (see docs/developer/testing.md)
+tests/snapshots/release/.cache/
+tests/snapshots/release/.pixi/
