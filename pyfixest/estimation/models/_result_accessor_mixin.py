@@ -132,11 +132,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
     _observation_weights: "ObservationWeights"
     _within_data: "WithinLinearData"
-    _Y: np.ndarray
-    _Y_untransformed: pd.DataFrame
+    _response: np.ndarray
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -310,8 +308,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        Y_within = self._within_data.response
-        Y = self._Y_untransformed.to_numpy()
+        Y_within = self._within_data.response.flatten()
+        Y = self._response
         observation_weights = self._observation_weights.values
 
         has_intercept = not self._drop_intercept
@@ -328,8 +326,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             y_center = np.mean(Y)
             ssy = np.sum((Y - y_center) ** 2)
         else:
-            weights = observation_weights.reshape((-1, 1))
-            ssu = np.sum(weights.flatten() * self._u_hat**2)
+            weights = observation_weights
+            ssu = np.sum(weights * self._u_hat**2)
             y_center = np.average(Y, weights=weights)
             ssy = np.sum(weights * (Y - y_center) ** 2)
         self._rmse = np.sqrt(ssu / self._N)

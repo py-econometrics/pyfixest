@@ -58,7 +58,7 @@ def vcov_hetero(
     scores: np.ndarray,
     X: np.ndarray,
     tZX: np.ndarray,
-    weights: np.ndarray,
+    weights: np.ndarray | None,
     leverage_weights: np.ndarray | None,
     weights_type: WeightsTypeOptions | None,
     vcov_type_detail: HeteroVcovTypeOptions,
@@ -68,14 +68,19 @@ def vcov_hetero(
     tZZinv: np.ndarray,
 ) -> np.ndarray:
     "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
+    # Frequency weights are the only scheme corrected for here: each row stands
+    # for `weights` identical observations. Unweighted fits pass `weights=None`
+    # and need no correction.
+    frequency_weights = weights if weights_type == "fweights" else None
+
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
         leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
         if leverage_weights is not None:
             leverage = leverage_weights.flatten() * leverage
-        if weights_type == "fweights":
-            leverage = leverage / weights.flatten()
+        if frequency_weights is not None:
+            leverage = leverage / frequency_weights.flatten()
         transformed_scores = (
             scores / np.sqrt(1 - leverage)[:, None]
             if vcov_type_detail == "HC2"
@@ -86,9 +91,8 @@ def vcov_hetero(
             f"vcov_type_detail must be one of {HeteroVcovTypeOptions}, got {vcov_type_detail}."
         )
 
-    # for fweights, need to divide by sqrt(weights)
-    if weights_type == "fweights":
-        transformed_scores = transformed_scores / np.sqrt(weights)
+    if frequency_weights is not None:
+        transformed_scores = transformed_scores / np.sqrt(frequency_weights)
 
     Omega = transformed_scores.T @ transformed_scores
 

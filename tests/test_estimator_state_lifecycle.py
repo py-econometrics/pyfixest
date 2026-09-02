@@ -118,6 +118,31 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
         fit._within_data.response = fit._within_data.design  # type: ignore[misc]
 
 
+@pytest.mark.parametrize("alias", ["_Y", "_X", "_Z", "_weights"])
+def test_array_aliases_are_read_only_views(
+    lifecycle_data: pd.DataFrame,
+    alias: str,
+) -> None:
+    """The typed state objects stay the single writable representation."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+
+    with pytest.raises(AttributeError):
+        setattr(fit, alias, np.zeros((fit._N_rows, 1)))
+    with pytest.raises(AttributeError):
+        delattr(fit, alias)
+
+
+def test_unweighted_weight_alias_is_materialized_on_access(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An unweighted fit stores no weight vector but still exposes one."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+
+    assert fit._observation_weights.values is None
+    np.testing.assert_array_equal(fit._weights, np.ones((fit._N_rows, 1)))
+    assert fit._weights is not fit._weights
+
+
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     lifecycle_data: pd.DataFrame,
 ) -> None:

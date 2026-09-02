@@ -51,6 +51,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   Square-root-weighted arrays are local solver temporaries, and linear
   residuals remain in response units. GLM IRLS working state (working response,
   design, and weights) is kept separate from observation weights.
+- Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
+  read-only views over the typed state objects.
 
 ### Inference Types
 

@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
@@ -120,7 +121,6 @@ class Feglm(Feols):
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty((0, 1))
 
         self._method = "feglm"
         self._family = family
@@ -205,40 +205,69 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
-        self._working_state = fit.working_state
-        self._X = self._working_state.design_within
-        self._Y = self._working_state.working_response_within
-        self._Z = self._X
-        self._X_is_empty = self._working_state.design_within.shape[1] == 0
-        self._k = self._working_state.design_within.shape[1]
+
+        working_state = fit.working_state
+        self._working_state = working_state
+        design_within = working_state.design_within
+        self._X_is_empty = design_within.shape[1] == 0
+        self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        self._Y_hat_response = self._working_state.mu
-        self._Y_hat_link = self._working_state.eta
-        self._irls_weights = self._working_state.working_weights
+        self._Y_hat_response = working_state.mu
+        self._Y_hat_link = working_state.eta
 
-        self._u_hat_response = self._working_state.response_residuals
-        self._u_hat_working = self._working_state.working_residuals
+        self._u_hat_response = working_state.response_residuals
+        self._u_hat_working = working_state.working_residuals
         self._u_hat = self._u_hat_working
 
-        self._scores_response = self._u_hat_response[:, None] * fit.X
-        self._scores_working = self._u_hat_working[:, None] * fit.X
-
         weighted_working_residuals = (
-            self._working_state.working_weights * self._u_hat_working
+            working_state.working_weights * working_state.working_residuals
         )
-        self._scores = self._X * weighted_working_residuals[:, None]
+        self._scores = design_within * weighted_working_residuals[:, None]
 
-        weighted_design = self._working_state.working_weights[:, None] * self._X
-        self._tZX = self._Z.T @ weighted_design
+        weighted_design = working_state.working_weights[:, None] * design_within
+        self._tZX = design_within.T @ weighted_design
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = self._working_state.eta.reshape(-1, 1)
 
         self._hessian = self._tZX.copy()
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    # Read-only views on the final IRLS state. A GLM never builds the linear
+    # `_within_data`, so these override the base aliases rather than extend them.
+
+    @property
+    def _Y(self) -> NDArray[np.float64]:
+        """Within-scale IRLS working response."""
+        return self._working_state.working_response_within
+
+    @property
+    def _X(self) -> NDArray[np.float64]:
+        """Within-scale IRLS design, not premultiplied by working weights."""
+        return self._working_state.design_within
+
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """The IRLS design; a GLM has no instruments."""
+        return self._working_state.design_within
+
+    @property
+    def _irls_weights(self) -> NDArray[np.float64]:
+        """Final IRLS working weights, never the observation weights."""
+        return self._working_state.working_weights
+
+    @property
+    def _Xbeta(self) -> NDArray[np.float64]:
+        """Linear predictor as a column vector."""
+        return self._working_state.eta.reshape(-1, 1)
+
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and drop the IRLS state backing the GLM aliases."""
+        super()._clear_attributes()
+        if self._lean and hasattr(self, "_working_state"):
+            del self._working_state
 
     def _leverage_weights(self) -> np.ndarray:
         """Return final GLM working weights for HC2/HC3 leverage."""
