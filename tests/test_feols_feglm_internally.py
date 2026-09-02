@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from scipy.stats import norm
 
 import pyfixest as pf
 from pyfixest.errors import NonConvergenceError
@@ -240,3 +241,49 @@ def test_glm_raises_after_iwls_maxiter_without_convergence():
             maxiter=1,
             tol=1e-14,
         )
+
+
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+def test_glm_resid_types(family):
+    """`resid()` is the response residual; `working` divides it by dmu/deta.
+
+    The response residual is compared with `fixest` in
+    `tests/test_predict_resid_fixef.py`; this pins the relationship between the
+    two types, which `residuals.fixest` cannot express.
+    """
+    data = pf.get_data(model="Fepois").dropna()
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    binomial = family in ("logit", "probit")
+    fml = "Y_bin ~ X1 + X2 | f1" if binomial else "Y ~ X1 + X2 | f1"
+
+    mod = pf.feglm(fml=fml, data=data, family=family, iwls_tol=1e-10, iwls_maxiter=100)
+
+    response = mod.resid()
+    working = mod.resid(type="working")
+    mu = mod.predict(type="response")
+    eta = mod.predict(type="link")
+    if family == "logit":
+        dmu_deta = mu * (1 - mu)
+    elif family == "probit":
+        dmu_deta = norm.pdf(eta)
+    else:
+        dmu_deta = np.ones_like(mu)
+
+    # The working residual is stored from the final IRLS iterate, so its mu
+    # trails the returned coefficients by one step and the identity holds to the
+    # size of that last update. That is far tighter than the factor of two to
+    # five that separates the two residual types, which is what this pins.
+    np.testing.assert_allclose(
+        working * dmu_deta,
+        response,
+        rtol=1e-04,
+        atol=1e-08,
+        err_msg=f"{family} working residual is not the response residual / dmu_deta",
+    )
+    if not binomial:
+        check_absolute_diff(
+            working, response, 1e-12, "gaussian residual types should coincide"
+        )
+
+    with pytest.raises(ValueError, match="type must be one of 'response' or 'working'"):
+        mod.resid(type="deviance")
