@@ -69,6 +69,9 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
   and shared CRV orchestration reduce memory use and duplicated bookkeeping.
 - Internal SSC context calls now use `compute()` so they are distinct from the
   public `get_ssc()` calculation they delegate to.
+- Stata `b1x2` reference tests now compare uncorrected Gelbach covariance
+  matrices and separately verify small-sample corrections for HC1 and one-way
+  CRV1 inference, including analytical and frequency weights.
 
 ### GLM API and Behavior
 

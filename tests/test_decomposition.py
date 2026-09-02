@@ -12,6 +12,10 @@ import pyfixest as pf
 from pyfixest.estimation.post_estimation.decomposition import _sparse_grouped_values
 from pyfixest.utils.dgps import gelbach_data
 
+# Full-precision Stata exports allow tight tolerances despite different solvers.
+B1X2_RTOL = 1e-10
+B1X2_ATOL = 1e-12
+
 # Set matplotlib backend for headless testing
 try:
     import matplotlib
@@ -1097,51 +1101,123 @@ def test_weights(fml):
         )
 
 
-@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
-def test_weighted_point_estimates_against_stata_b1x2(weights_type):
-    reference_path = Path("tests/data/gelbach_b1x2_weighted.csv")
+@pytest.fixture(scope="module")
+def b1x2_weighted_data():
     data = pd.read_stata("tests/data/gelbach.dta")
     observation = np.arange(1, data.shape[0] + 1)
     data["aw"] = 0.75 + np.mod(observation, 7) / 4
     data["fw"] = 1 + np.mod(observation, 3)
-    weight_column = "aw" if weights_type == "aweights" else "fw"
-    groups = {"g1": ["x21", "x22"], "g2": ["x23"]}
+    return data
 
-    reference = pd.read_csv(reference_path)
-    reference = reference.query("weights_type == @weights_type").set_index("effect")
 
-    results = {}
-    for agg_first in [True, False]:
-        with _expected_agg_first_warning(agg_first):
-            results[agg_first] = (
-                pf.feols(
-                    "y ~ x1 + x21 + x22 + x23",
-                    data=data,
-                    weights=weight_column,
-                    weights_type=weights_type,
-                )
-                .decompose(
-                    decomp_var="x1",
-                    combine_covariates=groups,
-                    agg_first=agg_first,
-                    only_coef=True,
-                )
-                .tidy(panels="levels")["coefficients"]
-            )
+@pytest.fixture(scope="module")
+def b1x2_ssc_results():
+    return (
+        pd.read_csv(Path("tests/data/gelbach_b1x2_ssc.csv"), na_values=".")
+        .set_index(["weights_type", "vcov", "ssc", "effect_i", "effect_j"])
+        .sort_index()
+    )
 
-        np.testing.assert_allclose(
-            results[agg_first].reindex(reference.index),
-            reference["coefficient"],
-            rtol=1e-8,
-            atol=1e-9,
+
+@pytest.mark.parametrize("weights_type", ["unweighted", "aweights", "fweights"])
+@pytest.mark.parametrize("vcov", ["hetero", "CRV1"])
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_uncorrected_inference_against_stata_b1x2(
+    b1x2_weighted_data, b1x2_ssc_results, weights_type, vcov, agg_first
+):
+    reference = b1x2_ssc_results.loc[(weights_type, vcov, "none")]
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23",
+        data=b1x2_weighted_data,
+        weights={"unweighted": None, "aweights": "aw", "fweights": "fw"}[weights_type],
+        weights_type="fweights" if weights_type == "fweights" else "aweights",
+        ssc=pf.ssc(k_adj=False, G_adj=False),
+    )
+    with _expected_agg_first_warning(agg_first):
+        gb = fit.decompose(
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+            vcov={"CRV1": "cluster"} if vcov == "CRV1" else vcov,
+            agg_first=agg_first,
         )
+    levels = gb.tidy(panels="levels")
+    np.testing.assert_allclose(
+        levels.loc[reference.index.get_level_values("effect_i"), "coefficients"],
+        reference["coefficient"],
+        rtol=B1X2_RTOL,
+        atol=B1X2_ATOL,
+    )
+    np.testing.assert_allclose(
+        gb._absolute_vcov.stack().reindex(reference.index),
+        reference["covariance"],
+        rtol=B1X2_RTOL,
+        atol=B1X2_ATOL,
+    )
+    diagonal = reference.loc[[i == j for i, j in reference.index]]
+    np.testing.assert_allclose(
+        levels.loc[diagonal.index.get_level_values("effect_i"), "std_error"],
+        np.sqrt(diagonal["covariance"]),
+        rtol=B1X2_RTOL,
+        atol=B1X2_ATOL,
+    )
 
-    pd.testing.assert_series_equal(
-        results[True],
-        results[False],
-        check_exact=False,
-        rtol=1e-8,
-        atol=1e-9,
+
+@pytest.mark.parametrize("weights_type", ["unweighted", "aweights", "fweights"])
+@pytest.mark.parametrize("vcov", ["hetero", "CRV1"])
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("G_adj", [True, False])
+def test_analytic_ssc_factors_against_stata_b1x2(
+    b1x2_weighted_data, b1x2_ssc_results, weights_type, vcov, k_adj, G_adj
+):
+    data = b1x2_weighted_data
+    raw = b1x2_ssc_results.loc[(weights_type, vcov, "none")]
+    corrected = b1x2_ssc_results.loc[(weights_type, vcov, "default")]
+    N = data["fw"].sum() if weights_type == "fweights" else len(data)
+    G = data["cluster"].nunique()
+    cluster_factor = G / (G - 1) if vcov == "CRV1" else 1
+    numerator = N - 1 if vcov == "CRV1" else N
+    # The fixture has 5 full-model and 2 baseline coefficients, with intercepts.
+    # b1x2's joint auxiliary _robust call instead defaults to minus(1).
+    full_factor = numerator / (N - 5) * cluster_factor
+    base_factor = numerator / (N - 2) * cluster_factor
+    auxiliary_factor = numerator / (N - 1) * cluster_factor
+
+    # b1x2 corrects the full-model term separately from auxiliary/cross terms.
+    expected = auxiliary_factor * raw["covariance"] + (
+        full_factor - auxiliary_factor
+    ) * raw["beta_covariance"].fillna(0)
+    for effect, factor in [
+        ("direct_effect", base_factor),
+        ("full_effect", full_factor),
+    ]:
+        expected.loc[(effect, effect)] = (
+            factor * raw.loc[(effect, effect), "covariance"]
+        )
+    np.testing.assert_allclose(
+        corrected["covariance"], expected, rtol=B1X2_RTOL, atol=B1X2_ATOL
+    )
+    np.testing.assert_allclose(
+        corrected["coefficient"], raw["coefficient"], rtol=B1X2_RTOL, atol=B1X2_ATOL
+    )
+
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23",
+        data=data,
+        weights={"unweighted": None, "aweights": "aw", "fweights": "fw"}[weights_type],
+        weights_type="fweights" if weights_type == "fweights" else "aweights",
+        ssc=pf.ssc(k_adj=k_adj, G_adj=G_adj),
+    )
+    gb = fit.decompose(
+        decomp_var="x1",
+        combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+        vcov={"CRV1": "cluster"} if vcov == "CRV1" else vcov,
+    )
+    factor = (numerator / (N - 5) if k_adj else 1) * (cluster_factor if G_adj else 1)
+    np.testing.assert_allclose(
+        gb._absolute_vcov.stack().reindex(raw.index),
+        factor * raw["covariance"],
+        rtol=B1X2_RTOL,
+        atol=B1X2_ATOL,
     )
 
 
