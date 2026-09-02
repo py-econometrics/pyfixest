@@ -55,7 +55,7 @@ cd pyfixest
 
 `PyFixest` uses [pixi](https://pixi.sh/latest/) for package management. All configuration lives in `pyproject.toml` under `[tool.pixi.*]` sections.
 
-To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). `PyFixest` needs pixi 0.71.0 or newer: the workspace declares its CUDA requirement as a [rich platform](https://pixi.sh/latest/workspace/multi_platform_configuration/) and the lockfile is format v7. Environments are installed automatically when you run a task (e.g. `pixi run test-py`). You do not need a global Rust installation -- Rust is installed via conda.
+To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). You need pixi 0.71.0 or newer, because `pixi.lock` is written in the v7 format and the `benchmark` environment declares its CUDA 12.8 requirement on a [named platform](https://pixi.sh/latest/workspace/multi_platform_configuration/). Environments are installed automatically when you run a task (e.g. `pixi run test-py`). You do not need a global Rust installation -- Rust is installed via conda.
 
 To see all available tasks and their descriptions, run:
 
