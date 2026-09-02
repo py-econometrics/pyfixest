@@ -34,12 +34,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   workflow.
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
-- A new `test-release-contract` task replays the public estimator matrix
-  against a pinned pyfixest release instead of R, giving fast Python-only
-  regression feedback. It mirrors the structure of `tests/test_vs_fixest.py`,
-  and its baseline is recorded per platform from the locked release workspace
-  in `tests/snapshots/release/` rather than committed. The R suites remain the
-  authoritative reference coverage.
+- We add regression / snapshot tests against pyfixest 0.60.0 for `feols` /
+  `fepois` / `feglm` / `quantreg`.
 
 ### Inference Types
 
