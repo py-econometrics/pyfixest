@@ -423,7 +423,13 @@ def test_errors_ccv():
 
     # error when fixed effects in estimation
     fit = feols("Y ~ D | f1", data=data)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError, match=r"not supported.*fixed effects"):
+        fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+    # weighted CCV needs a separately defined estimating equation
+    data["observation_weight"] = np.linspace(0.5, 2.0, len(data))
+    fit = feols("Y ~ D", data=data, weights="observation_weight")
+    with pytest.raises(NotImplementedError, match=r"not supported.*weights"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when treatment not found
@@ -449,13 +455,49 @@ def test_errors_ccv():
     pois_data = get_data(model="Fepois").dropna()
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
     fit = fepois("Y ~ D", data=pois_data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(
+        NotImplementedError, match=r"not supported for models of type 'fepois'"
+    ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
-    with pytest.raises(AssertionError):
+    with pytest.raises(
+        NotImplementedError, match=r"not supported for models of type 'feols'"
+    ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+
+def test_weighted_update_is_explicitly_unsupported():
+    data = get_data().dropna(subset=["Y", "X1", "weights"])
+    fit = feols("Y ~ X1", data=data, weights="weights")
+
+    with pytest.raises(NotImplementedError, match=r"update.*not supported.*weights"):
+        fit.update(X_new=np.ones((1, 2)), y_new=np.ones(1))
+
+
+def test_iv_update_is_explicitly_unsupported():
+    data = get_data().dropna(subset=["Y", "X1", "Z1"])
+    fit = feols("Y ~ 1 + [X1 ~ Z1]", data=data)
+
+    with pytest.raises(NotImplementedError, match=r"update.*not supported.*IV"):
+        fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+
+
+def test_non_ols_update_is_explicitly_unsupported():
+    poisson_data = get_data(model="Fepois").dropna()
+    linear_data = get_data().dropna()
+    binary_data = poisson_data.copy()
+    binary_data["Y"] = (binary_data["Y"] > binary_data["Y"].median()).astype(int)
+    models = (
+        pf.fepois("Y ~ X1", data=poisson_data),
+        pf.feglm("Y ~ X1", data=binary_data, family="logit"),
+        pf.quantreg("Y ~ X1", data=linear_data),
+    )
+
+    for fit in models:
+        with pytest.raises(NotImplementedError, match=r"update.*only supported.*OLS"):
+            fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
 def test_errors_confint():

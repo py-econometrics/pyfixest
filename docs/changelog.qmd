@@ -54,6 +54,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Inference Types
 
+- Weighted models now reject `ccv()` explicitly. `Feols.update()` remains a
+  coefficient-only calculation and rejects `inplace=True`, weights, IV, and
+  non-OLS models instead of mixing scales.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
