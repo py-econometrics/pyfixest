@@ -1,5 +1,5 @@
 ---
-name: pyfixest-pr-review
+name: pr-review
 description: Review pyfixest diffs for compatibility, numerical correctness, unsupported estimation paths, and repository policy.
 ---
 
@@ -21,7 +21,9 @@ Prioritize findings that can produce silently wrong numbers:
    decision;
 4. estimator-specific logic leaking into shared runners or model classes;
 5. input mutation, unstable RNG, unjustified tolerances, or missing convergence
-   checks;
+   checks, including any widened tolerance or `baseline.skip` in
+   `tests/test_release_contract.py`, which is a behaviour-change declaration
+   and needs a changelog entry and an external reference;
 6. avoidable test-suite growth: one-off tests that belong in an existing matrix,
    duplicated fixtures/adapters/assertions, redundant coverage, or
    disproportionate runtime;
@@ -31,42 +33,27 @@ Prioritize findings that can produce silently wrong numbers:
 Check that a new estimator is an add-on and that every claimed support path is
 tested or rejected explicitly.
 
-## Select verification from unresolved risk
+## Spend verification budget on unresolved risk
 
-Treat checks named in a PR brief as evidence requirements, not as instructions
-to rerun every command locally. First resolve the exact head SHA, inspect the
-diff, and inventory completed CI for that SHA. Select the cheapest check that
-can answer each remaining review question:
+Select checks with the `change-verification` skill, but review differs from
+authoring in what it should re-run. Treat checks named in a PR brief as evidence
+requirements, not as instructions to rerun every command locally. First resolve
+the exact head SHA and inventory completed CI for that SHA, then run only the
+cheapest check that can answer each remaining review question.
 
-- configuration, documentation, and typing-only changes: inspect the effective
-  configuration and run the relevant lint, type, or direct validation check;
-- changed runtime branches: run the narrowest tests that exercise those paths;
-- changed numerical behavior: run targeted regressions plus the applicable
-  permanent external-reference suite;
-- dependency or environment changes: validate a clean, frozen installation in
-  the affected environment;
-- CI enforcement changes: inspect the workflow and prove that a representative
-  failure makes the configured command exit nonzero.
-
-Escalate to a broad suite only when a narrow check fails or leaves material
-uncertainty, the diff crosses subsystems, equivalent exact-head CI is missing,
-stale, cancelled, or non-equivalent, or repository policy requires that suite.
 Do not duplicate an expensive successful exact-head CI job locally without a
-concrete reason. A CI check can satisfy an evidence requirement, but report it
-as CI evidence rather than as a local pass.
+concrete reason. Escalate to a broad suite only when a narrow check fails or
+leaves material uncertainty, the diff crosses subsystems, equivalent exact-head
+CI is missing, stale, cancelled, or non-equivalent, or repository policy
+requires that suite. Before starting a multi-minute local check, state which
+unresolved risk it addresses and why existing CI is insufficient.
 
 For a stack, inspect every layer's diff and run targeted checks wherever
-behavior changes. If the stated acceptance boundary is the cumulative stack,
-run the broad regression suite once on the final head; earlier issues that the
-final layer fixes are layering observations, not final blockers. Require broad
+behavior changes. If the stated acceptance boundary is the cumulative stack, run
+the broad regression suite once on the final head; earlier issues that the final
+layer fixes are layering observations, not final blockers. Require broad
 per-layer runs only when each layer must be independently releasable or the user
 explicitly requests them.
-
-Before starting a multi-minute local check, state which unresolved risk it
-addresses and why existing CI is insufficient. Prefer exact-head CI evidence
-when local reproduction adds no diagnostic value. Stop when equivalent evidence
-has resolved the risk. A green suite never overrides a concrete code finding,
-and an unrun check must be reported truthfully.
 
 ## Output
 
@@ -75,7 +62,7 @@ references and the concrete failure mode. Separate questions from findings.
 Say when no findings remain. Classify material verification as locally run,
 satisfied by exact-head CI, not applicable, or not run, and explain any
 remaining uncertainty. Do not count redundant local and CI runs as independent
-confidence.
+confidence. A green suite never overrides a concrete code finding.
 
 Automated review does not approve a PR. A human maintainer must review every
 layer before merge.

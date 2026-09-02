@@ -11,41 +11,26 @@ Use this skill after implementation stabilizes and before handoff.
 
 Resolve and record the actual PR base and merge base as described in
 `docs/developer/git-and-pr-style.md`; do not assume local `master` is current.
-Inspect every changed path against that base and classify the change using the
-selection matrix in `docs/developer/testing.md`. Start with targeted tests and
-changed-file format/lint/type checks. Once the implementation stabilizes, run
-the selected broader baseline once and assign each required long check to a
-local run or exact-head CI.
+Inspect every changed path against that base, then classify the change and pick
+its checks with the selection matrix in `docs/developer/testing.md`. That matrix
+is authoritative, including for which changes justify a documentation build.
+For a change confined to the documentation or workflow-metadata rows of that
+matrix, the row is the whole procedure: run its listed checks and report them.
 
-- Numerical/API changes require the relevant public integration tests and
-  external-reference suite. `test-py` and the release-contract snapshots
-  (`test-release-contract`, see `docs/developer/testing.md`) are Python-only
-  regression baselines and never substitute for an external numerical
-  comparison. Use the fast R suite
-  for edit feedback; produce canonical evidence after stabilization, locally or
-  in exact-head CI.
-- HAC changes require the single-threaded HAC suite.
-- Rust changes require kernel/reference tests and platform CI.
-- Performance-sensitive changes require before/after evidence.
+For a refactor declared invariant, run the release contract first and on every
+iteration; it is the cheapest check that can falsify the whole change. Cite it
+only when it reports passed cases: a skip means no baseline, not success. A
+failure ends the refactor classification. Fix it or follow the numerics row.
+Never widen a contract tolerance to get green.
 
-Documentation commands are costly and opt-in. Do not run `docs-build` or
-`docs-render` merely because repository guidance, workflow metadata, or a PR
-template changed.
+Start with targeted tests and changed-file format/lint/type checks. Once the
+implementation stabilizes, run the selected broader baseline once and assign
+each required long check to a local run or exact-head CI.
 
-- Run `docs-build` only when public Python docstrings, quartodoc registration,
-  or API-reference configuration changes.
-- For content under `docs/`, render only the affected page when practical.
-- Run `docs-render` only for site-wide configuration, navigation, templates, or
-  cross-page changes.
-- Changes limited to `AGENTS.md`, `.agents/`, `.github/` templates, or other
-  workflow metadata need direct validation and `git diff --check`, not a docs
-  build.
-- Executable docstrings and documentation examples still require executing the
-  changed example and checking the affected rendered page.
-
-Unknown paths require the conservative PR baseline. For a stack, repeat the
-selection for each layer against its immediate parent, then inspect the
-cumulative top against the trunk.
+Unknown paths require the conservative PR baseline. For a stack, run targeted
+checks for each layer against its immediate parent and the broad suites once on
+the cumulative top against the trunk, unless each layer must be independently
+releasable.
 
 Complete the required edit and handoff checks locally. A long check listed as
 merge evidence may be deferred to exact-head CI when a local run would add no
@@ -60,12 +45,12 @@ For every applicable check record:
 - status: passed, failed, deferred, or not run;
 - exact command;
 - elapsed time;
-- reason and destination for a deferred check.
+- reason and destination for a deferred check;
+- for the release contract, the passed case count or the skip reason.
 
-Run long domain suites after the design stabilizes. A deferred or CI-only check
-is not a pass. Do not claim implementation handoff while required local checks
-are unreported or failing, and do not claim merge readiness until all required
-exact-head evidence has passed.
+Do not claim implementation handoff while required local checks are unreported
+or failing, and do not claim merge readiness until all required exact-head
+evidence has passed.
 
 Write this report directly in the handoff or PR body. Do not introduce a
 generated verification artifact unless the task specifically requires one.

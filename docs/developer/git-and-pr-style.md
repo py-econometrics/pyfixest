@@ -1,11 +1,10 @@
 # Git and pull-request style
 
 This document defines the style for presenting pyfixest changes to reviewers.
-Use the [`pr-draft-summary`](../../.agents/skills/pr-draft-summary/SKILL.md)
-skill to prepare the PR and the
-[`history-curation`](../../.agents/skills/history-curation/SKILL.md) skill before
-rewriting agent-owned commits. The skills define the procedures and safety
-gates; this document defines the branch, commit, and PR conventions they apply.
+Use the [`pr-handoff`](../../.agents/skills/pr-handoff/SKILL.md) skill to
+curate agent-owned commits and prepare the PR. That skill defines the procedure
+and its safety gates; this document defines the branch, commit, and PR
+conventions it applies.
 
 ## Establish the base
 
@@ -59,9 +58,14 @@ For example:
 > weights and multiple estimation remain explicitly unsupported.
 
 After the opening, complete only the applicable sections of the repository PR
-template. Keep ordinary PR bodies under about 200 words. GitHub
-already shows the files, commits, branches, and base SHA; repeat them only when
-a non-obvious stack relationship affects review. Group successful checks and
-give detail to failures, deferred checks, numerical deviations, and support
-limits. Human approval is represented by GitHub review state, not by an author
-checkbox.
+template. Keep ordinary PR bodies under about 200 words: one outcome-first
+paragraph and at most a few bullets for material review risks or non-obvious
+decisions. Use a longer body only when a support matrix or numerical deviation
+genuinely needs it.
+
+GitHub already shows the files, commits, branches, and base SHA; do not repeat
+them as file lists, commit-by-commit narratives, or implementation diaries.
+Mention them only when a non-obvious stack relationship affects review. Group
+successful checks on one line and give detail to failures, deferred checks,
+numerical deviations, and support limits. Human approval is represented by
+GitHub review state, not by an author checkbox.

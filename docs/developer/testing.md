@@ -12,7 +12,7 @@ selection affect wall time.
 
 | Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, targeted or fast live-R checks, changed-file Ruff/mypy |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff/mypy |
 | Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
@@ -42,7 +42,7 @@ platform CI and benchmarks.
 # Targeted, without the repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
 
-# Python-only regression against the pinned pyfixest release
+# Release contract: regression alarm against the pinned pyfixest release
 pixi run -e py312 test-release-contract
 
 # Targeted live-R edit feedback
@@ -70,12 +70,46 @@ pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
 pixi run -e lint prek run mypy --files <changed files>
 
-# Documentation (costly; run only when selected below)
+# Documentation (costly; run only when the selection matrix calls for it)
 pixi run docs-build
 pixi run docs-render
 ```
 
-## Release-contract snapshots
+`test-r-core` remains the convenient local aggregate for all canonical
+conda-forge R comparisons. CI partitions that population into
+`test-r-fixest` and the internal `test-r-core-other` shard so
+`tests/test_vs_fixest.py` is not executed twice. The fast suite runs once as a
+preflight in the canonical `fixest` job.
+
+## Selection matrix
+
+This matrix is authoritative for which checks a change requires.
+
+| Change | Required edit or handoff evidence | Merge or long evidence |
+|---|---|---|
+| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
+| Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
+| Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
+| Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
+| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint/type checks | Python baseline; applicable external suite for every estimator the refactor touches |
+| Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
+| New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
+| HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
+| Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
+| Optional backend | targeted dependency-present and dependency-absent paths | backend/platform CI |
+| Performance-sensitive loop | correctness tests and before/after benchmark | relevant benchmark environment |
+| Dependency or workflow | targeted environment/config validation | affected CI workflow |
+
+Unknown or cross-cutting paths receive the PR baseline rather than silently
+selecting no tests.
+
+Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
+it is not a general Markdown validator. Do not run it for changes limited to
+`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
+For prose under `docs/`, prefer an affected-page render. Reserve the full
+`docs-render` task for changes that can affect the site broadly.
+
+## Release contract
 
 `tests/test_release_contract.py` mirrors the structure of
 `tests/test_vs_fixest.py` — the same data fixtures, the same parametrization
@@ -123,93 +157,63 @@ explicit `reason`; unexplained drift is a regression for human review, not a
 tolerance to raise. Change the pin in `tests/snapshots/release/pixi.toml` only
 through `roll-release-baseline`, for a deliberate roll to a stable release.
 
-`test-r-core` remains the convenient local aggregate for all canonical
-conda-forge R comparisons. CI partitions that population into
-`test-r-fixest` and the internal `test-r-core-other` shard so
-`tests/test_vs_fixest.py` is not executed twice. The fast suite runs once as a
-preflight in the canonical `fixest` job.
-
-## Selection matrix
-
-| Change | Required edit or handoff evidence | Merge or long evidence |
-|---|---|---|
-| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
-| Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
-| Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
-| Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
-| Estimation or inference numerics | targeted integration and edge tests; release-contract snapshots once stabilized | applicable live external-reference suite |
-| New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
-| HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
-| Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
-| Optional backend | targeted dependency-present and dependency-absent paths | backend/platform CI |
-| Performance-sensitive loop | correctness tests and before/after benchmark | relevant benchmark environment |
-| Dependency or workflow | targeted environment/config validation | affected CI workflow |
-
-Unknown or cross-cutting paths receive the PR baseline rather than silently
-selecting no tests.
-
-Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
-it is not a general Markdown validator. Do not run it for changes limited to
-`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
-For prose under `docs/`, prefer an affected-page render. Reserve the full
-`docs-render` task for changes that can affect the site broadly.
+The recording lives under the checkout root, so each worktree records its own
+baseline. When the suite fails after a change you intended as a pure refactor,
+the change is no longer a refactor: either fix the regression, or reclassify it
+as a numerics change. Declare the difference in
+`tests/test_release_contract.py` with a `reason`, add the external comparison
+the "Estimation or inference numerics" row requires, and record it in the
+changelog.
 
 ## External numerical references
 
 Every new estimator requires a permanent comparison with existing software.
-Prefer live R `fixest`, another established R package, or a well-established
-Python package. Use `against_r_core` when the reference is available on
-conda-forge and `against_r_extended` for CRAN-only dependencies. Do not replace
-an available live reference merely to avoid running the complete canonical
-suite while editing; first select the affected live cases or use the fast
-matrix. Store a small deterministic result only when the external
-implementation is unavailable or unreliable in the test environment, or when
-measured per-case runtime makes regular execution impractical. Commit its
-generator and exact software version with the stored output.
+Choose the reference in this order:
+
+1. live R `fixest`, another established R package, or a well-established Python
+   package available in a maintained environment;
+2. a CRAN-only R package in the extended environment;
+3. stored output from Stata or other established software, with the generating
+   script and exact version committed;
+4. another established external package with its exact version recorded.
+
+Use `against_r_core` when the reference is available on conda-forge and
+`against_r_extended` for CRAN-only dependencies. Do not replace an available
+live reference merely to avoid running the complete canonical suite while
+editing; first select the affected live cases or use the fast matrix. Reach for
+a stored result only when the external implementation is unavailable or
+unreliable in the test environment, or when measured per-case runtime makes
+regular execution impractical.
 
 Any test file importing rpy2 must be listed in `_rpy2_test_files` in
-`tests/conftest.py` so non-R environments skip it safely. HAC tests use
-single-threaded BLAS to avoid oversubscription.
+`tests/conftest.py` so non-R environments skip it safely, and must use the
+strict R marker matching dependency availability. HAC tests use single-threaded
+BLAS to avoid oversubscription.
 
-Compare named numerical quantities through the public API. Record deterministic
-data or seeds, formulas, weights, vcov/SSC, package versions, and explicit
-`rtol`/`atol` with a numerical justification. Add edge, brute-force,
+Use the same deterministic rows and model specification on both sides. Compare
+named numerical quantities through the public API so ordering differences cannot
+hide discrepancies. Record deterministic data or seeds, formulas, weights,
+vcov/SSC, package versions, and explicit `rtol`/`atol` with a numerical
+justification. Compare the quantities the method promises: coefficients, vcov,
+standard errors, degrees of freedom, observations, dropped terms, convergence,
+or deterministic prediction subsets as applicable. Add edge, brute-force,
 closed-form, and simulation tests as needed, but never substitute them for the
 external comparison required for a new estimator.
 
-`pixi run -e py312-r test-r-fixest-fast` runs representative rpy2 cases
-directly against R `fixest` for `feols`, `fepois`, and `feglm`, and R
-`quantreg` for `quantreg`. To select one entry point while editing, run, for
-example,
-`pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols`.
-This is edit feedback, not a second permanent reference framework or complete
-merge evidence; extend the canonical suites when a change needs new coverage.
-
-The compact matrix covers the main comparison axes at least once:
-
-| Entry point | Representative paths |
-|---|---|
-| `feols` and `fepois` | no fixed effects with IID inference; weighted fixed effects with heteroskedastic inference; fixed effects with CRV1 inference |
-| `feglm` | logit without fixed effects and IID inference; weighted probit with fixed effects and heteroskedastic inference; Poisson with fixed effects and CRV1 inference |
-| `quantreg` | `fn` and `pfn`; low, interior, median, and high quantiles; one and two regressors |
-
+`pixi run -e py312-r test-r-fixest-fast` runs representative rpy2 cases directly
+against R `fixest` for `feols`, `fepois`, and `feglm`, and R `quantreg` for
+`quantreg`. See `tests/test_vs_r_fast.py` for the exact cases it covers. This is
+edit feedback, not a second permanent reference framework or complete merge
+evidence; extend the canonical suites when a change needs new coverage.
 `quantreg` does not support fixed effects, and its inference contract follows R
 `quantreg` rather than the `fixest` IID/heteroskedastic/CRV1 matrix.
 
-### Error and tolerance contract
+### Tolerance contract
 
-For an `assert_allclose(actual, reference, rtol, atol)` comparison, the tested
-elementwise error is
-
-```text
-abs(actual - reference) <= atol + rtol * abs(reference)
-```
-
-Thus `atol` governs values near zero and `rtol` governs differences at the
-scale of the reference value. Every numerical assertion must identify the
-quantity that failed in `err_msg`. Align named coefficients and covariance
-rows/columns before comparing them; compare observation counts, degrees of
-freedom, dropped-term sets, and other discrete structure exactly.
+Every numerical assertion must identify the quantity that failed in `err_msg`.
+Align named coefficients and covariance rows/columns before comparing them;
+compare observation counts, degrees of freedom, dropped-term sets, and other
+discrete structure exactly.
 
 Do not prescribe one tolerance for every estimator or copy the loosest
 tolerance in a test. Use separate, numerically justified tolerances for
@@ -225,9 +229,7 @@ Treat `tests/test_vs_fixest.py` as the source of truth for the current
 `feols`, `fepois`, and `feglm` comparison standards, including the formulas,
 parameters, quantities, and absolute-error tolerances being tested. Follow
 `tests/test_quantreg.py` for `quantreg`, whose solver-specific relative and
-absolute tolerances are different. The compact `tests/test_vs_r_fast.py` suite
-uses representative combinations from those contracts rather than duplicating
-their complete matrices.
+absolute tolerances are different.
 
 ## Test design
 
@@ -247,6 +249,11 @@ need a new test. Control suite growth in this order:
    different.
 4. Add a test file only for a distinct subsystem, dependency marker, or fixture
    lifecycle.
+
+Every new or changed error or warning path needs a test that triggers it.
+Extend `tests/test_errors.py` or the nearest subsystem suite, and assert the
+exception or warning category plus stable message text with
+`pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`.
 
 Reuse seeded fixtures, external-reference adapters, and assertion helpers. A
 new test file or unusually large test diff must explain why an existing matrix
