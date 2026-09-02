@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-from _estimation_snapshot_cache import (
+from tests._estimation_snapshot_cache import (
     COMPLETE_MARKER,
-    snapshot_dir,
+    SNAPSHOT_DIRECTORY,
     snapshot_fingerprint,
 )
-from _estimation_snapshot_contract import (
+from tests._estimation_snapshot_contract import (
     build_case_groups,
     extract_snapshot,
     fit_case,
@@ -63,13 +59,23 @@ TOLERANCES: dict[str, dict[str, tuple[float, float]]] = {
 }
 
 
+def _tolerance_category(quantity: str) -> str:
+    if quantity in ("coef", "vcov"):
+        return quantity
+    if quantity in ("resid_sample", "predict_sample"):
+        return "samples"
+    if quantity == "deviance":
+        return "metrics"
+    return "inference"
+
+
 def _params(group: str) -> list[Any]:
     return [pytest.param(case, id=case["id"]) for case in CASE_GROUPS[group]]
 
 
 @pytest.fixture(scope="session")
 def release_contract() -> tuple[dict[str, Any], dict[str, dict[str, object]]]:
-    cache_dir = snapshot_dir()
+    cache_dir = SNAPSHOT_DIRECTORY
     if not (cache_dir / COMPLETE_MARKER).exists():
         pytest.fail(
             "Release snapshot cache is missing. Run "
@@ -130,17 +136,11 @@ def _assert_case(case, release_contract) -> None:
     assert actual["metadata"] == expected["metadata"], "metadata differs"
     tolerances = TOLERANCES[estimator]
     for quantity in sorted(set(expected) - {"metadata"}):
-        tolerance_name = {
-            "coef": "coef",
-            "vcov": "vcov",
-            "resid_sample": "samples",
-            "predict_sample": "samples",
-            "deviance": "metrics",
-        }.get(quantity, "inference")
+        category = _tolerance_category(quantity)
         _assert_numeric_tree(
             actual[quantity],
             expected[quantity],
-            tolerance=tolerances[tolerance_name],
+            tolerance=tolerances[category],
             quantity=quantity,
         )
 
@@ -149,10 +149,10 @@ def test_estimation_snapshot_inventory(release_contract) -> None:
     manifest, expected_cases = release_contract
     fingerprint = snapshot_fingerprint()
     case_ids = {case["id"] for cases in CASE_GROUPS.values() for case in cases}
-    assert case_ids == {case["id"] for case in manifest["cases"]}
+    assert case_ids == set(manifest["case_ids"])
     assert case_ids == set(expected_cases)
     assert manifest["fingerprint"] == fingerprint
-    assert (snapshot_dir() / COMPLETE_MARKER).read_text().strip() == fingerprint
+    assert (SNAPSHOT_DIRECTORY / COMPLETE_MARKER).read_text().strip() == fingerprint
 
 
 @pytest.mark.parametrize("case", _params("feols"))

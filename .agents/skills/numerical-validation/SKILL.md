@@ -57,13 +57,9 @@ edit loop; first select affected live cases or use the fast matrix. Follow the
 stored-reference criteria in `docs/developer/testing.md` when live execution is
 unavailable, unreliable, or impractical.
 
-Release snapshots are generated in a platform-local gitignored cache from the
-pinned release environment, never from development head. The snapshot task
-prepares and invalidates that cache automatically. When a snapshot drifts,
-inspect the post-baseline changelog first. Narrowly comment a comparison or case
-only when it is a documented intentional behavior change, and retain external R
-evidence; leave unexplained drift as an ordinary failure for human review.
-Change the pinned version only for an explicit baseline roll.
+Release snapshots live in a platform-local gitignored cache; their generation,
+drift triage, and baseline-roll policy is defined in `docs/developer/testing.md`.
+Never treat a released pyfixest result as an external correctness reference.
 
 Use R `fixest` as the default reference for `feols`, `fepois`, and `feglm`.
 Use R `quantreg` for `quantreg`. The fast direct matrix is available as:

@@ -9,7 +9,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from _feols_test_cases import (
+
+from tests._feols_test_cases import (
     FEOLS_FORMULA_F3_CASES,
     fixed_effect_interactions_to_legacy,
     glm_fmls,
@@ -17,7 +18,7 @@ from _feols_test_cases import (
     ols_fmls,
     ssc_formula_vcov_dropna_cases,
 )
-from _feols_test_cases import (
+from tests._feols_test_cases import (
     convert_f3 as _convert_f3,
 )
 
@@ -55,13 +56,32 @@ QUANTREG_CASES = (
     ("Y ~ X1 + X2", 0.5, "fn", {"CRV1": "group_id"}),
 )
 
+# Quantities whose semantics changed after the pinned release; excluded from
+# the comparison here and covered by the live-R matrix instead. Intentional
+# differences stay explicit in one place.
+EXCLUDED_FIELDS: dict[str, tuple[str, ...]] = {
+    # GLM residual semantics changed after 0.60.0.
+    "feglm": ("resid_sample",),
+    # Quantreg confidence intervals now use the t reference distribution.
+    "quantreg": ("confint",),
+}
 
-def _case(group: str, index: int, **values: Any) -> dict[str, Any]:
-    return {"id": f"{group}-{index:04d}", "group": group, **values}
+
+def _text(value: Any) -> str:
+    """Render a case component as a stable id fragment."""
+    if value is None:
+        return "none"
+    if isinstance(value, dict):
+        return ":".join(f"{key}={item}" for key, item in value.items())
+    return str(value)
 
 
-def _vcov(vcov: str) -> str | dict[str, str]:
-    return vcov if vcov in {"iid", "hetero"} else {"CRV1": vcov}
+def _case(group: str, id_parts: tuple[Any, ...], **values: Any) -> dict[str, Any]:
+    return {
+        "id": "-".join([group, *(_text(part) for part in id_parts)]),
+        "group": group,
+        **values,
+    }
 
 
 def build_case_groups() -> dict[str, list[dict[str, Any]]]:
@@ -71,7 +91,7 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
     groups["feols"] = [
         _case(
             "feols",
-            index,
+            (formula, f3_type, vcov, weights, "dropna" if dropna else "missing"),
             estimator="feols",
             formula=formula,
             release_formula=fixed_effect_interactions_to_legacy(formula),
@@ -80,20 +100,18 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
             f3_type=f3_type,
             kwargs={"vcov": vcov, "weights": weights},
         )
-        for index, (dropna, vcov, weights, (formula, f3_type)) in enumerate(
-            product(
-                (False, True),
-                VCOV_CASES,
-                (None, "weights"),
-                FEOLS_FORMULA_F3_CASES,
-            )
+        for dropna, vcov, weights, (formula, f3_type) in product(
+            (False, True),
+            VCOV_CASES,
+            (None, "weights"),
+            FEOLS_FORMULA_F3_CASES,
         )
     ]
 
     groups["fepois"] = [
         _case(
             "fepois",
-            index,
+            (formula, vcov, weights, "offset" if offset else "no-offset"),
             estimator="fepois",
             formula=formula,
             release_formula=fixed_effect_interactions_to_legacy(formula),
@@ -108,15 +126,15 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
                 "iwls_maxiter": 100,
             },
         )
-        for index, (vcov, formula, weights, offset) in enumerate(
-            product(VCOV_CASES, ols_fmls, (None, "weights"), (False, True))
+        for vcov, formula, weights, offset in product(
+            VCOV_CASES, ols_fmls, (None, "weights"), (False, True)
         )
     ]
 
     groups["iv"] = [
         _case(
             "iv",
-            index,
+            (formula, vcov, weights, weights_type),
             estimator="feols",
             formula=formula,
             release_formula=fixed_effect_interactions_to_legacy(formula),
@@ -126,18 +144,18 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
             kwargs={
                 "vcov": vcov,
                 "weights": weights,
-                **({"weights_type": weights_type} if weights_type is not None else {}),
+                "weights_type": weights_type,
             },
         )
-        for index, (vcov, formula, (weights, weights_type)) in enumerate(
-            product(VCOV_CASES, iv_fmls, IV_WEIGHT_CASES)
+        for vcov, formula, (weights, weights_type) in product(
+            VCOV_CASES, iv_fmls, IV_WEIGHT_CASES
         )
     ]
 
     groups["feglm"] = [
         _case(
             "feglm",
-            index,
+            (formula, family, vcov),
             estimator="feglm",
             formula=formula.replace("Y", "Y_bin", 1),
             release_formula=fixed_effect_interactions_to_legacy(
@@ -153,15 +171,13 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
                 "iwls_maxiter": 100,
             },
         )
-        for index, (formula, (family, vcov)) in enumerate(
-            product(glm_fmls, FEGLM_FAMILY_VCOV_CASES)
-        )
+        for formula, (family, vcov) in product(glm_fmls, FEGLM_FAMILY_VCOV_CASES)
     ]
 
     groups["quantreg"] = [
         _case(
             "quantreg",
-            index,
+            (formula, quantile, method, vcov),
             estimator="quantreg",
             formula=formula,
             release_formula=formula,
@@ -177,13 +193,22 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
                 "ssc": {"k_adj": False, "G_adj": False},
             },
         )
-        for index, (formula, quantile, method, vcov) in enumerate(QUANTREG_CASES)
+        for formula, quantile, method, vcov in QUANTREG_CASES
     ]
 
     groups["ssc"] = [
         _case(
             "ssc",
-            index,
+            (
+                model,
+                formula,
+                weights,
+                "dropna" if dropna else "missing",
+                vcov,
+                f"k_adj={k_adj}",
+                f"G_adj={g_adj}",
+                f"k_fixef={k_fixef}",
+            ),
             estimator=model,
             formula=formula,
             release_formula=fixed_effect_interactions_to_legacy(formula),
@@ -191,7 +216,7 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
             dropna=dropna,
             f3_type="str",
             kwargs={
-                "vcov": _vcov(vcov),
+                "vcov": {"CRV1": vcov} if vcov not in ("iid", "hetero") else vcov,
                 "weights": weights,
                 "ssc": {
                     "k_adj": k_adj,
@@ -199,31 +224,25 @@ def build_case_groups() -> dict[str, list[dict[str, Any]]]:
                     "G_df": "min",
                     "k_fixef": k_fixef,
                 },
-                **(
-                    {"iwls_tol": 1e-10, "iwls_maxiter": 100}
-                    if model == "fepois"
-                    else {}
-                ),
+                "iwls_tol": 1e-10 if model == "fepois" else None,
+                "iwls_maxiter": 100 if model == "fepois" else None,
             },
         )
-        for index, (
-            (formula, dropna, vcov),
-            weights,
-            k_adj,
-            g_adj,
-            k_fixef,
-            model,
-        ) in enumerate(
-            product(
-                ssc_formula_vcov_dropna_cases,
-                (None, "weights"),
-                (True, False),
-                (True, False),
-                ("full", "none", "nonnested"),
-                ("feols", "fepois"),
-            )
+        for (formula, dropna, vcov), weights, k_adj, g_adj, k_fixef, model in product(
+            ssc_formula_vcov_dropna_cases,
+            (None, "weights"),
+            (True, False),
+            (True, False),
+            ("full", "none", "nonnested"),
+            ("feols", "fepois"),
         )
     ]
+
+    ids = [case["id"] for cases in groups.values() for case in cases]
+    if len(ids) != len(set(ids)):
+        raise ValueError(
+            f"Duplicate snapshot case ids: {sorted({i for i in ids if ids.count(i) > 1})}"
+        )
     return groups
 
 
@@ -275,7 +294,6 @@ def build_data(data_id: str, *, dropna: bool, f3_type: str) -> pd.DataFrame:
         data.loc[row, column] = np.nan
     if dropna:
         data = data.dropna().copy()
-    data.where(data != "nan", np.nan, inplace=True)
     return _convert_f3(data, f3_type)
 
 
@@ -288,7 +306,9 @@ def fit_case(case: dict[str, Any], *, release: bool) -> Any:
         dropna=bool(case["dropna"]),
         f3_type=str(case["f3_type"]),
     )
-    kwargs = dict(case["kwargs"])
+    # Drop None-valued options so the case matrix can list them explicitly
+    # without worrying which parameters each estimator accepts.
+    kwargs = {key: value for key, value in case["kwargs"].items() if value is not None}
     if "ssc" in kwargs:
         kwargs["ssc"] = pf.ssc(**kwargs["ssc"])
     formula = case["release_formula"] if release else case["formula"]
@@ -346,13 +366,12 @@ def extract_snapshot(fit: Any, *, estimator: str) -> dict[str, Any]:
         "metadata": metadata,
         "predict_sample": predict_sample,
     }
-    # GLM residual semantics intentionally changed after 0.60.0.
-    if estimator != "feglm":
+    excluded = EXCLUDED_FIELDS.get(estimator, ())
+    if "resid_sample" not in excluded:
         result["resid_sample"] = [
             _number(value) for value in np.asarray(fit.resid()).ravel()[:SAMPLE_SIZE]
         ]
-    # Quantreg now uses its t reference distribution for confidence intervals.
-    if estimator != "quantreg":
+    if "confint" not in excluded:
         confint = fit.confint().sort_index()
         result["confint"] = {
             str(name): {str(column): _number(value) for column, value in row.items()}

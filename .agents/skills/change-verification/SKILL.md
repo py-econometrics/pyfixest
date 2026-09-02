@@ -20,8 +20,7 @@ local run or exact-head CI.
 - Estimation/inference numerical changes require the relevant public integration
   tests and external-reference suite. Use targeted Python or live-R cases while
   editing, then run the release numerical-contract snapshots once after
-  stabilization; the task prepares its platform-local pinned release cache
-  automatically. Other API changes use their targeted public tests.
+  stabilization. Other API changes use their targeted public tests.
   `test-py` and snapshots are Python-only and never substitute for an external
   numerical comparison. Targeted or fast live-R cases provide direct feedback;
   produce canonical evidence locally or in exact-head CI.

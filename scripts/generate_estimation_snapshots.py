@@ -14,9 +14,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Import the release wheel before adding any checkout-local helper to sys.path.
-# The Pixi task uses ``python -P`` so the checkout cannot
-# shadow this package just because the command is launched at repository root.
+# Import the release wheel before adding the checkout to sys.path. The Pixi
+# task uses ``python -P`` so the checkout cannot shadow this package just
+# because the command is launched at repository root.
 import pyfixest  # noqa: E402
 
 _module_path = Path(pyfixest.__file__).resolve()
@@ -25,15 +25,14 @@ if _module_path.is_relative_to(ROOT / "pyfixest"):
         "The generator imported pyfixest from this checkout, not the isolated release wheel."
     )
 
-sys.path.insert(0, str(ROOT / "tests"))
+sys.path.insert(0, str(ROOT))
 
-from _estimation_snapshot_cache import (  # noqa: E402
-    CACHE_ROOT,
+from tests._estimation_snapshot_cache import (  # noqa: E402
     COMPLETE_MARKER,
-    snapshot_dir,
+    SNAPSHOT_DIRECTORY,
     snapshot_fingerprint,
 )
-from _estimation_snapshot_contract import (  # noqa: E402
+from tests._estimation_snapshot_contract import (  # noqa: E402
     DATA_SEED,
     NOBS,
     RELEASE_VERSION,
@@ -95,7 +94,7 @@ def _artifacts(output_dir: Path) -> dict[Path, dict[str, object]]:
                 "quantile, weight, and offset inputs for every case."
             ),
         },
-        "cases": cases,
+        "case_ids": sorted(str(case["id"]) for case in cases),
         "snapshot_files": {
             estimator: f"{estimator}.json" for estimator in sorted(snapshots)
         },
@@ -115,30 +114,25 @@ def _artifacts(output_dir: Path) -> dict[Path, dict[str, object]]:
 
 
 def _prepare(*, force: bool) -> Path:
-    target = snapshot_dir()
+    target = SNAPSHOT_DIRECTORY
     complete = target / COMPLETE_MARKER
-    if complete.exists() and not force:
+    fingerprint = snapshot_fingerprint()
+    if not force and target.exists() and not complete.exists():
+        raise RuntimeError(f"Incomplete release snapshot cache: {target}")
+    if not force and complete.exists() and complete.read_text().strip() == fingerprint:
         print(f"Release snapshot cache hit: {target.relative_to(ROOT)}")
         return target
 
-    CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+    cache_root = target.parent
+    cache_root.mkdir(parents=True, exist_ok=True)
     if target.exists():
-        if not force and complete.exists():
-            print(f"Release snapshot cache hit: {target.relative_to(ROOT)}")
-            return target
-        if not force:
-            raise RuntimeError(f"Incomplete release snapshot cache: {target}")
         shutil.rmtree(target)
-    temporary = Path(tempfile.mkdtemp(prefix=".building-", dir=CACHE_ROOT))
+    temporary = Path(tempfile.mkdtemp(prefix=".building-", dir=cache_root))
     try:
         for path, value in _artifacts(temporary).items():
             path.write_bytes(_json_bytes(value))
         (temporary / COMPLETE_MARKER).write_text(snapshot_fingerprint() + "\n")
-        try:
-            temporary.rename(target)
-        except FileExistsError:
-            if not complete.exists():
-                raise
+        temporary.rename(target)
     finally:
         if temporary.exists():
             shutil.rmtree(temporary)

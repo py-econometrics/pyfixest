@@ -92,17 +92,19 @@ the canonical R suites remain the authoritative exact-head merge evidence.
 
 The first snapshot task uses the locked workspace in
 `tests/snapshots/release/` to generate the baseline with pyfixest 0.60.0. It
-stores the JSON under `.pixi/release-contract/`, which is gitignored. Later
-runs on the same platform reuse that cache. CI generates its own baseline on
-each fresh runner, so snapshots run on Linux, macOS, Windows, and contributor
-machines without comparing one platform's floating-point output with another's.
+stores the JSON under `.pixi/release-contract/`, a single gitignored cache
+directory. Later runs on the same platform reuse it. CI generates its own
+baseline on each fresh runner, so snapshots run on Linux, macOS, Windows, and
+contributor machines without comparing one platform's floating-point output
+with another's.
 
-A short fingerprint names the cache. It hashes the release manifest and
-lockfile, the declared release version, case matrix, data generation and
-extraction code, the generator, and the operating system and architecture.
-Changing any of these inputs selects a new cache automatically. The generator
-writes a completion marker last so interrupted generation is never treated as
-a valid baseline.
+A short fingerprint recorded in the completion marker and manifest
+invalidates the cache. It hashes the release manifest and lockfile, the
+declared release version, case matrix, data generation and extraction code,
+the generator, and the operating system and architecture. On a fingerprint
+mismatch, `prepare` replaces the single cache directory in place and never
+accumulates stale baselines. The completion marker is written last so
+interrupted generation is never treated as a valid baseline.
 
 Normal test commands prepare the cache automatically. To prepare or explicitly
 replace it without running the current checkout's tests, use:
