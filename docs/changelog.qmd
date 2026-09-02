@@ -94,9 +94,6 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 - `feglm(family="gaussian")` now matches `pf.feols()` (and base R `lm`/`glm`)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
-- `feglm().resid()` now returns the response residual `y - mu` by default,
-  matching R's `glm()`. It previously returned the IRLS working residual, which
-  is still available as `resid(type="working")`.
 
 ### Formula Parsing on `formulaic`
 

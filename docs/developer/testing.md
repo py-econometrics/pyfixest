@@ -90,7 +90,9 @@ cannot describe different case matrices. `test-release-contract` records it on
 first use and reuses it afterwards; the recording is platform-local and
 gitignored, so every operating system and architecture compares against its own
 floating-point output. `test-py` picks the suite up once a baseline exists and
-skips it otherwise, so it never forces a recording. A fingerprint over the test file, the baseline module,
+skips it otherwise, so it never forces a recording. CI deliberately does not
+record a baseline, so the suite is local-only: it skips on every runner, and the
+canonical R suites remain the exact-head merge evidence. A fingerprint over the test file, the baseline module,
 the shared case lists, the release lockfile, and the platform invalidates it
 automatically. To record it without running the checkout's tests:
 
