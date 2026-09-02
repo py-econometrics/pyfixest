@@ -8,6 +8,9 @@ project:
     - "*.ipynb"
     - "*.md"
     - "!quarto_example/"
+    # Contributor policy, not user documentation: kept out of the site and
+    # llms.txt. contributing.qmd links to it on GitHub.
+    - "!developer/"
     # Draft outlines: excluded from the site and llms.txt until finished.
     # (Both open with an explicit "outline" callout.) Delete the matching line
     # to publish one. Complete-but-unlinked pages are left to render normally.

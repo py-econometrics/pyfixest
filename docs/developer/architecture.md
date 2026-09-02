@@ -79,14 +79,16 @@ the individual models and shared primitives, not in the container.
 
 ## Repository map and extension seams
 
+Step-by-step recipes for estimators, post-estimation features, vcov types,
+estimation-time options, and Rust kernels live in
+[`AGENTS.md`](../../AGENTS.md) under "Wiring recipes". This table covers the
+remaining seams.
+
 | Change | Primary location | Pattern to follow |
 |---|---|---|
-| Estimation entry point | `estimation/api/<name>.py` | `api/quantreg.py` and its export chain |
 | Model/result type | `estimation/models/<name>_.py` | nearest compatible result class |
-| Post-estimation operation | `estimation/post_estimation/` | `ritest.py` plus thin model wrapper |
 | Shared numerical primitive | `estimation/internals/` | `fit_.py`, `vcov_.py`, or nearest analogue |
 | Formula behavior | `estimation/formula/` | existing parser/model-matrix seams |
-| Native hot loop | `src/` and `pyfixest/core/` | `src/nw.rs` → `core/nw.py` |
 | DiD estimator | `pyfixest/did/` | nearest DiD API/result pair |
 | User documentation | `docs/` | nearest tutorial/how-to plus quartodoc registration |
 

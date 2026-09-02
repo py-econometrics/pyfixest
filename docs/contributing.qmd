@@ -16,10 +16,10 @@ either Python or econometrics will help, but you really don't need to be a `nump
 
 The repository's local developer guides are authoritative:
 
-- [Architecture](developer/architecture.md)
-- [Testing and verification](developer/testing.md)
-- [`fixest` compatibility](developer/fixest-compatibility.md)
-- [Git and pull-request style](developer/git-and-pr-style.md)
+- [Architecture](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/architecture.md)
+- [Testing and verification](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/testing.md)
+- [`fixest` compatibility](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/fixest-compatibility.md)
+- [Git and pull-request style](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/git-and-pr-style.md)
 
 The [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) is a useful
 generated overview, but it may lag the repository and is secondary to these

@@ -4,46 +4,58 @@ pyfixest ports R's `fixest` to Python: high-dimensional fixed-effects estimation
 (OLS/WLS, IV, Poisson, GLM, quantile regression), fixest formula syntax,
 post-estimation tools, and Rust kernels for hot loops.
 
-Two rules beat everything else:
+Three rules beat everything else:
 
 1. **Mirror `fixest`** in user-facing behavior, naming, and defaults unless an
    intentional difference is documented and tested.
 2. **Mirror the nearest existing implementation.** Find the in-repo precedent
    and copy its structure before writing new code.
+3. **Never return silently wrong numbers.** Every estimation or inference
+   feature defines and tests its behavior for weights, fixed effects, IV, and
+   multiple estimation, or raises a specific unsupported error. This is the
+   highest review concern.
 
 `CLAUDE.md` is a committed thin redirect to this file; do not duplicate these
 rules in tool-specific configuration.
 
-## Required workflow skills
+## Where policy lives
 
-Load the repository-local skill when its trigger applies:
+The architecture, test policy, compatibility ledger, and Git/PR style live in
+[`docs/developer/`](docs/developer/). They are authoritative. This file is a
+routing layer and a repo-specific conventions list; it does not restate their
+policy, and neither should skills or ad hoc prompts.
+
+| Document | Owns |
+|---|---|
+| [`architecture.md`](docs/developer/architecture.md) | Core boundaries, estimation flow, extension seams |
+| [`testing.md`](docs/developer/testing.md) | Runtime tiers, check-selection matrix, references, tolerances, test design |
+| [`fixest-compatibility.md`](docs/developer/fixest-compatibility.md) | Intentional deviations from R `fixest` |
+| [`git-and-pr-style.md`](docs/developer/git-and-pr-style.md) | Branch, commit, and PR-body conventions |
+
+## Contributor workflow skills
+
+The skills under `.agents/skills/` are plain files shared by every coding tool,
+not tool-registered commands: when a trigger applies, read the `SKILL.md` and
+follow it. A change flows plan → implement → verify → self-review → hand off,
+and the table is in that order. (The user-facing analytics prompt at
+`docs/skills.md` is unrelated.)
 
 | Skill | Trigger |
 |---|---|
 | [`implementation-strategy`](.agents/skills/implementation-strategy/SKILL.md) | Before estimator, public API, inference, formula, or shared-core work |
-| [`numerical-validation`](.agents/skills/numerical-validation/SKILL.md) | Any estimator or numerical-behavior change |
-| [`change-verification`](.agents/skills/change-verification/SKILL.md) | Before handing off code, tests, docs, CI, or metadata changes |
-| [`history-curation`](.agents/skills/history-curation/SKILL.md) | Before the first PR submission when agent-owned commits may need rewriting |
-| [`pyfixest-pr-review`](.agents/skills/pyfixest-pr-review/SKILL.md) | PR review and final self-review |
-| [`pr-draft-summary`](.agents/skills/pr-draft-summary/SKILL.md) | Preparing a single or stacked draft PR |
+| [`change-verification`](.agents/skills/change-verification/SKILL.md) | After implementation stabilizes, before handing off any code, tests, docs, CI, or metadata change |
+| [`pr-review`](.agents/skills/pr-review/SKILL.md) | Final self-review before handoff, and any explicit PR review |
+| [`pr-handoff`](.agents/skills/pr-handoff/SKILL.md) | Curating agent-owned commits and submitting the draft PR |
 
-The authoritative architecture, test policy, compatibility ledger, and Git/PR
-style live in [`docs/developer/`](docs/developer/). Skills route work to those
-sources; do not copy their detailed policy into ad hoc prompts.
+## Architecture in one paragraph
 
-## Architecture strategy
-
-Keep the shared estimation core narrow and stable. Formula parsing, model-matrix
+Keep the shared estimation core narrow and stable: formula parsing, model-matrix
 construction, demeaning, generic fit and inference primitives, result
-interfaces, and backend kernels are core. New estimators start as standalone
-add-on functions in their own API or domain modules and compose those stable
-primitives. Do not add estimator-specific switches to generic runners or grow
-model classes with numerical logic.
-
-A new primitive belongs in shared core only when it has a real shared consumer,
-a generic contract, and maintainer design approval. A compatible estimator may
-return an existing result type; otherwise give it a dedicated result class.
-Post-estimation methods validate and delegate to standalone numerical functions.
+interfaces, and backend kernels. New estimators start as standalone add-on
+functions in their own API or domain modules and compose those primitives. Do
+not add estimator-specific switches to generic runners or grow model classes
+with numerical logic. See `docs/developer/architecture.md` for the estimation
+flow, the stable-core contract, and the extension-seam table.
 
 ## Repo map
 
@@ -59,15 +71,9 @@ Post-estimation methods validate and delegate to standalone numerical functions.
 | `pyfixest/core/`, `src/` | Python wrappers/type stubs and PyO3 Rust kernels |
 | `pyfixest/did/`, `report/`, `utils/` | DiD estimators, reporting, utilities, and DGPs |
 | `tests/` | Pytest suite, reference scripts, and stored reference outputs |
-| `docs/` | Quarto user documentation and developer policy |
+| `docs/` | Quarto user documentation; `docs/developer/` is contributor policy and is not rendered |
 
-Estimation flow is `feols()` → `EstimationConfig` → `parse_formula` →
-`runner.run_estimation` / `fit_one` → `prepare_model_matrix` → `get_fit` →
-`vcov` → `get_inference`. `get_fit` performs `demean` → `to_array` →
-`drop_multicol_vars` → `wls_transform` before solving. `FixestMulti` is a
-container; post-estimation happens through fitted results.
-
-## Where new code goes
+## Wiring recipes
 
 - **Estimator:** a standalone module under `estimation/api/` (or the relevant
   domain package), with its own tests, result contract, exports, and quartodoc
@@ -78,19 +84,17 @@ container; post-estimation happens through fitted results.
 - **Vcov type:** literal in `internals/literals.py`, validation in the model,
   small dispatch method, math in `internals/vcov_utils.py` or Rust, and wiring
   through `FixestMulti`/quantreg where supported. Template: NW/DK HAC.
-- **Estimation-time option:** put the shared typed option alias in
-  `pyfixest/estimation/internals/literals.py`, validate it at the API boundary,
-  and thread it through `EstimationConfig` and
-  `plan_._build_model_kwargs`.
+- **Estimation-time option:** shared typed option alias in
+  `internals/literals.py`, validated at the API boundary, threaded through
+  `EstimationConfig` and `plan_._build_model_kwargs`.
 - **Rust kernel:** `src/<topic>.rs`, registration in `src/lib.rs`, typed stub
   in `core/_core_impl.pyi`, and a clean wrapper in `core/`. Keep a NumPy
-  reference implementation when feasible. Template: `src/nw.rs` →
-  `core/nw.py`.
+  reference implementation when feasible. Template: `src/nw.rs` → `core/nw.py`.
 
 Reuse formula handling, `capture_context`, `_narwhals_to_pandas`, cluster
 preparation, `run_crv_loop`, and `_create_rng`; do not rederive them.
 
-## Numerical and code conventions
+## Code conventions
 
 - Write for an econometrics practitioner. Use econometrically meaningful names
   such as `scores`, `meat`, `bread`, `u_hat`, and `clustid`; follow the paper's
@@ -105,121 +109,75 @@ preparation, `run_crv_loop`, and `_create_rng`; do not rederive them.
   ordinary NumPy rather than speculative micro-optimization.
 - Use `from __future__ import annotations`, PEP 604 unions, keyword arguments
   for internal calls, and `NDArray[np.float64]` in stubs. Put shared typed
-  option aliases (`Literal`) in
-  `pyfixest/estimation/internals/literals.py`.
+  option aliases (`Literal`) in `pyfixest/estimation/internals/literals.py`.
 - Validate at the API boundary. Bad option values raise `ValueError` with the
   allowed values; domain failures use the flat classes in `pyfixest/errors/`.
-- Every new or changed error and warning path needs a test that triggers it.
-  Extend `tests/test_errors.py` or the nearest subsystem suite, and assert the
-  exception or warning category plus stable message text with
-  `pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`.
+  Every new or changed error or warning path needs a triggering test; see the
+  test-design rules in `docs/developer/testing.md`.
 - Guard optional dependencies at import time and raise an actionable message
   naming the pip extra only when the optional path is used.
 - Use `np.random.default_rng(seed)`, never global seeding.
 - Never mutate user input except the documented `copy_data=False` path.
 - Post-estimation code that needs stripped data must fail informatively under
   `store_data=False` or `lean=True`.
-- Every estimation/inference feature defines and tests behavior for weights,
-  fixed effects, IV, and multiple estimation, or raises a specific unsupported
-  error. Silent wrong results on those paths are the highest review concern.
 
 Public functions, methods, and classes need NumPy docstrings. User-facing
 entries include complete Parameters/Returns, an executable `{python}` example,
 root-relative `.qmd` links, and a linked paper for econometric methods.
 
-## Numerical references are mandatory
+## Evidence
 
-Every new estimator must be tested permanently against existing software. This
-rule always applies; simulation properties, shape checks, and internal
-reimplementations are additional evidence, not substitutes. If no external
-implementation is available, the estimator is not merge-ready. Numerical
-changes to existing estimators also require an external comparison wherever
-overlapping software exists. Follow the `numerical-validation` skill and
-`docs/developer/testing.md` for reference selection, markers, and tolerances.
+Every new estimator must be tested permanently against existing software, and
+numerical changes to existing estimators require an external comparison wherever
+overlapping software exists. Simulation properties, shape checks, and internal
+reimplementations are additional evidence, never substitutes. If no external
+implementation is available, the estimator is not merge-ready.
 
-Every behavioral change needs regression evidence, but not necessarily new test
-code. Extend the nearest existing parametrized matrix before creating a new
-test function or file. A new file needs a distinct subsystem, dependency, or
-fixture boundary.
+Use `pixi run` for every Python, pytest, lint, docs, and R command; bare tools
+may miss dependencies or the compiled extension. `docs/developer/testing.md`
+owns reference selection, markers, tolerances, the runtime tiers, and the
+selection matrix that decides which checks a change requires; the
+`change-verification` skill applies it.
 
-## Verification and documentation
+Three rules that are easy to get wrong:
 
-Use `pixi run` for every Python, pytest, lint, docs, and R command. Bare tools
-may miss dependencies or the compiled extension.
+- `test-py` is Python-only and never establishes numerical agreement.
+- `test-r-fixest-fast` is edit feedback, not merge evidence.
+- Report every applicable check as passed, failed, deferred, or not run. A
+  deferred or CI-only check is never a pass.
 
-- Edit feedback: targeted tests with `-x -q --no-cov`, changed-file lint/type
-  checks, and targeted or fast live-R cases for numerical work.
-- Stabilized implementation: run the selected broader baseline once.
-  `test-py` remains Python-only and does not establish numerical agreement.
-- Merge evidence: affected R, HAC, no-JIT, docs, plots, Rust, extended, and
-  platform checks must pass on the exact PR head. A long check may be deferred
-  to exact-head CI at handoff, but deferred is not passed or merge-ready.
-- Exhaustive or release evidence: `test-all` plus the CRAN-only R dependencies,
-  applicable platform CI, and relevant benchmarks.
-
-Long suites can take tens of minutes or more. Do not repeatedly run
-`test-r-fixest`, `test-r-core`, or `test-all` while editing. Report every
-applicable check as passed, failed, deferred, or not run; never imply that a
-deferred check passed.
+```bash
+pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov   # targeted
+pixi run -e py312-r test-r-fixest-fast                              # fast live-R
+pixi run test-py                                                    # Python baseline
+pixi run -e lint prek run ruff-check --files <changed files>        # changed-file lint
+pixi task list                                                      # everything else
+```
 
 Always update `docs/changelog.qmd`. Documentation ships with the feature. New
 public functions/classes require quartodoc registration; user workflows usually
 need a `docs/how-to/` guide or an extension to the nearest existing guide.
 Never hand-edit generated `docs/reference/**`.
 
-## Git, stacked PRs, and review
+## Git and review
 
-- Follow `docs/developer/git-and-pr-style.md` for branch names, commit messages,
-  commit bodies, and outcome-first PR openings. Never commit to `master` or use
-  an agent identity as a branch prefix.
-- Prefer a GitHub stacked PR when work has two or more independently reviewable
-  layers. Split by dependency and reviewer concern, not file count. Keep small,
-  cohesive changes in one PR and unrelated work out of the stack.
-- Every stack layer must be coherent, testable against its immediate parent,
-  and reviewed by a human maintainer.
-- Before opening a PR, ask the user explicitly whether the proposed history
-  rewrite is approved. General permission to implement or open a PR is not
-  rewrite approval. State the exact branches, bases, pushed/review state,
-  dependent branches, and commands before asking.
-- With approval, rewrite only agent-owned local history into concise,
-  self-contained commits. Every commit must address one reviewer concern, pair
-  tests with behavior, pass its applicable checks, and remain small enough for
-  independent human review. Remove WIP, fixup, formatting-only, and accidental
-  commits.
-- Never rewrite a contributor-owned branch. After review starts, do not rewrite
-  silently; obtain maintainer approval and use stack-aware force-with-lease.
-- Agents prepare draft PRs and respond to review. Agents never merge their own
-  work or invoke `gh stack merge`.
+Follow `docs/developer/git-and-pr-style.md` for branch names, commit messages,
+and PR bodies; the `pr-handoff` skill covers history rewriting and submission.
+Never commit to `master` or use an agent identity as a branch prefix.
 
-Human maintainer review is required before every merge, including every layer
-of a stack. Automated review and green CI supplement this gate; they do not
-replace it.
+Prefer a GitHub stacked PR when work has two or more independently reviewable
+layers. Split by dependency and reviewer concern, not file count. Every layer
+must be coherent, testable against its immediate parent, and small enough for
+independent human review.
 
-## Commands
+Rewriting history always requires explicit user approval for that specific
+rewrite; general permission to implement or open a PR is not rewrite approval.
+Never rewrite a contributor-owned branch or rewrite silently after review starts.
 
-This is a quick reference. The `change-verification` skill and
-`docs/developer/testing.md` define which checks a change requires. Runtime is
-qualitative and depends on hardware and caches; report the actual elapsed time.
-
-| Command | Purpose | Typical scale |
-|---|---|---|
-| `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov` | Test the changed seam without the repository coverage report | Seconds to a few minutes |
-| `pixi run -e py312-r test-r-fixest-fast` | Get edit feedback from representative `feols`, `fepois`, and `feglm` comparisons with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
-| `pixi run test-py` | Run the broad Python-only regression suite; this is not an external numerical comparison | Minutes |
-| `pixi run -e py312-r test-r-fixest` | Produce canonical `tests/test_vs_fixest.py` merge evidence | Minutes to tens of minutes |
-| `pixi run -e py312-r test-r-core` | Produce aggregate canonical comparison evidence with conda-forge R packages | May take tens of minutes |
-| `pixi run -e py312-r test-r-hac` | Run single-threaded HAC comparisons against R | May take tens of minutes |
-| `pixi run -e py312-r test-r-extended` | Run CRAN-only reference tests after installing their dependencies | May take tens of minutes or longer |
-| `pixi run -e py312-r test-all` | Run every test supported by the current Python and R environment | Potentially substantially longer |
-| `pixi run -e lint prek run <ruff-format\|ruff-check\|mypy> --files <changed files>` | Format, lint, or type-check changed files | Seconds to a few minutes |
-| `pixi run lint` | Run all repository lint hooks | Minutes |
-| `pixi run docs-build` | Regenerate quartodoc reference inputs and navigation | Minutes |
-| `pixi run docs-render` | Build and render the complete documentation site | May take tens of minutes |
-| `pixi task list` | List the remaining Pixi tasks and their descriptions | Seconds |
-
-Rust sources rebuild through maturin-import-hook. If the extension fails after
-a Rust edit, run
-`pixi run -e py312-r python scripts/setup_maturin_hook.py` once.
+Agents prepare draft PRs and respond to review. Agents never merge their own
+work or invoke `gh stack merge`. Human maintainer review is required before
+every merge, including every layer of a stack; automated review and green CI
+supplement that gate rather than replacing it.
 
 ## Do not touch unless the task requires it
 

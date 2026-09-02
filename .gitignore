@@ -61,9 +61,6 @@ benchmarks/data/
 # Local dev files
 .claude/
 .serena/
-SKILL.md
-
-# Repository-local agent skills are shared project policy.
-!.agents/skills/
-!.agents/skills/*/
-!.agents/skills/*/SKILL.md
+# A stray root SKILL.md (e.g. copied from docs/skills.md). Repository skills
+# live in .agents/skills/ and are tracked.
+/SKILL.md
