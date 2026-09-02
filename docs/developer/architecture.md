@@ -77,6 +77,119 @@ shared estimator API
 `FixestMulti` is a container for fitted results. Numerical behavior belongs in
 the individual models and shared primitives, not in the container.
 
+## Current estimator-state lifecycle
+
+The fitted-model classes currently use themselves as both a work area and a
+result object. Several private attributes therefore change representation and
+numerical scale while a model is fitted. This section records that status quo;
+it is not a contract for new code.
+
+For linear models, the transformations are:
+
+```text
+formula-materialized scale
+  -> weighted fixed-effect projection
+within scale (original units; not premultiplied)
+  -> multiplication by sqrt(observation weights)
+solver scale
+```
+
+The word *weighted* has two distinct meanings in that sequence. Fixed-effect
+residualization uses the observation weights when computing group projections,
+but its output is still in the dependent variable's and covariates' original
+units. Only `wls_transform()` premultiplies those within-scale values by the
+square root of the weights.
+
+### Linear and IV models
+
+`Feols.prepare_model_matrix()` initially stores formula-materialized pandas
+objects in `_Y`, `_X`, `_fe`, `_weights_df`, and, for IV models, `_Z` and
+`_endogvar`. It also retains a copy of the response in `_Y_untransformed`.
+The subsequent stages reuse the same model object:
+
+| Stage | OLS fields | Additional IV fields | Representation and scale |
+|---|---|---|---|
+| `demean()` | `_Yd`, `_Xd` | `_Zd`, `_endogvard` | pandas DataFrames on within scale; the FE projection uses observation weights |
+| `to_array()` | `_Y`, `_X` are reassigned | `_Z` and `_endogvar` are reassigned | NumPy arrays; `_Y` and `_X` now hold within-scale values |
+| `drop_multicol_vars()` | `_X` may lose columns | `_Z` may lose columns | NumPy arrays on within scale; coefficient-name lists mutate in parallel |
+| `wls_transform()` | `_Y`, `_X` are reassigned again | `_Z` and `_endogvar` are reassigned again | NumPy arrays on solver scale, premultiplied by `sqrt(_weights)` |
+| solve | `_Z` aliases `_X`; fit products overwrite empty placeholders | IV cross-products and fit outputs replace placeholders | Solver-scale arrays remain attached to the fitted result |
+
+Consequently, the meaning of `_X`, `_Y`, and `_Z` cannot be inferred from
+their names or type annotations alone. OLS and IV `_u_hat` are also stored on
+solver scale; the public `resid()` accessor divides by `sqrt(_weights)` to
+return residuals in response units. Consumers such as leverage, covariance,
+fixed-effect recovery, and decomposition either expect solver-scale fields or
+undo the transform locally.
+
+The API currently accepts analytic weights (`aweights`) and frequency weights
+(`fweights`), not probability weights. Both weight types use the same weighted
+point-estimation transform. They differ in effective sample size and parts of
+inference: analytic weights use the number of retained rows, while frequency
+weights use the sum of the weights. Estimator-specific support limitations
+must remain explicit rather than being inferred from the array representation.
+
+### GLM, Poisson, and quantile models
+
+`Feglm` starts with formula-materialized DataFrames and converts `_Y`, `_X`,
+and `_fe` to arrays before IRLS. Each iteration creates a working response and
+working weights, performs a weighted FE projection, and solves a square-root-
+weighted least-squares problem. After the final iteration:
+
+- `_X` and `_Y` are replaced by the final solver-scale working design and
+  response;
+- `_weights`, which initially contains observation weights, is replaced by the
+  final IRLS weights and duplicated in `_irls_weights`;
+- `_u_hat` is the solver-scale working residual, while
+  `_u_hat_response` and `_u_hat_working` record two public residual domains;
+- `_scores`, `_scores_response`, and `_scores_working` similarly coexist on
+  different scales.
+
+`Fepois` must copy the observation weights before delegating to this GLM path
+because the inherited `_weights` field changes meaning. `Quantreg` does not
+support fixed effects or weights, but it still reassigns formula-materialized
+`_Y` and `_X` DataFrames to NumPy arrays before solving.
+
+### Shared caches, result completion, and cleanup
+
+For a multiple-estimation cache block, the runner gives each model a
+`DemeanCache` backed by the same mutable dictionaries. Its linear-model cache
+converts pandas inputs to arrays for demeaning, wraps the results in a
+DataFrame, stores that frame, and converts selected columns back to arrays in
+each model. The cache key is the retained-row index set because formulas in one
+cache block share fixed effects and observation weights. GLM iterations do not
+cache demeaned values because their working weights change; they share only a
+preconditioner cache.
+
+Model constructors also create many empty-array and `None` placeholders. The
+runner then mutates the model through preparation, fitting, covariance
+calculation, inference, performance statistics or IV first stages, and finally
+`_clear_attributes()`. `store_data=False` deletes `_data`; `lean=True` deletes
+the retained matrices and several fit products. The public `vcov()` method is
+intentionally in-place and remains a post-fit mutation boundary. User input is
+copied by default, with the documented `copy_data=False` path as the exception.
+
+## Estimation-state vocabulary
+
+New shared-core work should name the transformation domain instead of relying
+on `_X`, `_Y`, `_Z`, or `_weights`. The planned immutable-state refactor uses
+the following vocabulary:
+
+| Term | Meaning |
+|---|---|
+| formula data | Post-filtering, formula-materialized tabular values and metadata; not necessarily identical to raw user columns |
+| observation weights | The weights supplied by the user, together with their `aweights` or `fweights` interpretation |
+| within data | Arrays after the possibly weighted FE projection, still in original units and not premultiplied by square-root weights |
+| solver data | Ephemeral arrays such as `design_sqrt_weighted` used by a numerical solve |
+| working state | GLM iteration values, including a working response and working weights, kept distinct from observation weights |
+| response residual | A residual in the response's units; weighted scores and solver residuals should be named separately |
+
+These states should be completed values returned by transformations. Persisted
+arrays should not change type or numerical domain, and solver scratch should
+not replace canonical within data. A fitted result may still expose explicitly
+in-place post-estimation operations, but those operations must not repurpose
+estimation fields.
+
 ## Repository map and extension seams
 
 Step-by-step recipes for estimators, post-estimation features, vcov types,
