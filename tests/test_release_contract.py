@@ -14,6 +14,8 @@ remains the authoritative evidence.
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -31,7 +33,13 @@ from tests._feols_test_cases import (
 from tests._feols_test_cases import (
     convert_f3 as _convert_f3,
 )
-from tests._release_baseline import Baseline, data_digest
+from tests._release_baseline import (
+    RELEASE_VERSION,
+    Baseline,
+    data_digest,
+    newest_release_tag,
+    release_number,
+)
 
 INFERENCE = ["iid", "hetero", {"CRV1": "group_id"}]
 
@@ -169,6 +177,27 @@ def _check_fit_at_x1(baseline: Baseline, mod, **tolerance) -> None:
     baseline.check("tstat", mod.tstat().xs("X1"), **tolerance)
     baseline.check("pvalue", mod.pvalue().xs("X1"), **tolerance)
     baseline.check("confint", mod.confint().xs("X1"), **tolerance)
+
+
+def test_release_pin_is_current():
+    """Nudge when a newer release exists than the one the baseline is pinned to.
+
+    Rolling the pin is what brings back the comparisons that the documented
+    differences above currently skip, so this warns rather than failing.
+    """
+    newest = newest_release_tag()
+    pinned = release_number(RELEASE_VERSION)
+    if newest is None or pinned is None:
+        pytest.skip("no comparable release tag available in this checkout")
+    if release_number(newest) > pinned:
+        warnings.warn(
+            f"The release contract is pinned to pyfixest {RELEASE_VERSION}, but "
+            f"{newest} has been released. Roll it with "
+            "`pixi run roll-release-baseline`, then re-audit the documented "
+            "differences at the top of this file.",
+            UserWarning,
+            stacklevel=1,
+        )
 
 
 def test_release_data_is_unchanged(data_feols, data_fepois, ssc_data, baseline):

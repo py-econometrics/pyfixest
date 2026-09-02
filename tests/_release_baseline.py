@@ -17,6 +17,7 @@ import hashlib
 import importlib.metadata
 import json
 import platform
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -24,12 +25,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
+import tomllib
 
 from tests._feols_test_cases import fixed_effect_interactions_to_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_MANIFEST = ROOT / "tests" / "snapshots" / "release" / "pixi.toml"
 CACHE_PATH = ROOT / "tests" / "snapshots" / "release" / ".cache" / "contract.json.gz"
-RELEASE_VERSION = "0.60.0"
 RECORD_OPTION = "--record-release-baseline"
 RECORD_COMMAND = (
     "pixi run --locked --clean-env "
@@ -50,8 +52,52 @@ FINGERPRINT_SOURCES = (
     "tests/test_release_contract.py",
     "tests/_release_baseline.py",
     "tests/_feols_test_cases.py",
+    "tests/snapshots/release/pixi.toml",
     "tests/snapshots/release/pixi.lock",
 )
+
+
+def pinned_release() -> str:
+    """Read the pinned release from the locked baseline workspace.
+
+    The manifest is the single source of truth for which release this suite
+    compares against; `scripts/roll_release_baseline.py` rewrites it.
+    """
+    with RELEASE_MANIFEST.open("rb") as handle:
+        specification = tomllib.load(handle)["pypi-dependencies"]["pyfixest"]
+    return str(specification).removeprefix("==")
+
+
+RELEASE_VERSION = pinned_release()
+
+
+def release_number(version: str) -> tuple[int, ...] | None:
+    """Parse a final release version, ignoring pre-releases."""
+    parts = version.split(".")
+    if not parts or not all(part.isdigit() for part in parts):
+        return None
+    return tuple(int(part) for part in parts)
+
+
+def newest_release_tag() -> str | None:
+    """Best-effort newest released version from the repository's git tags."""
+    try:
+        tags = subprocess.run(
+            ["git", "tag", "--list", "v*"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        ).stdout.split()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    released = [
+        (number, version)
+        for version in (tag.removeprefix("v") for tag in tags)
+        if (number := release_number(version)) is not None
+    ]
+    return max(released)[1] if released else None
 
 
 def fingerprint() -> str:

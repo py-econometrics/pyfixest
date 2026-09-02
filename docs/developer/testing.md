@@ -100,6 +100,18 @@ automatically. To record it without running the checkout's tests:
 pixi run --locked --clean-env --manifest-path tests/snapshots/release/pixi.toml record
 ```
 
+The pinned release lives in one place, the `pyfixest` entry of
+`tests/snapshots/release/pixi.toml`. Roll it just after tagging a release --
+that is what brings back the comparisons the documented differences currently
+skip, and the skip list is shortest right then:
+
+```bash
+pixi run roll-release-baseline          # newest release tag in this checkout
+pixi run roll-release-baseline 0.61.0   # a specific release
+```
+
+The suite warns when a newer release tag exists than the pinned version.
+
 Comparisons use a near-machine-precision default. Widen a single
 `baseline.check(...)` call, or `baseline.skip(...)` a quantity, only for a
 behaviour change that post-dates the pinned release, and give the call an
