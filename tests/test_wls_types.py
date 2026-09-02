@@ -157,6 +157,49 @@ def test_fweights_ols_matches_literal_expansion(
         )
 
 
+def test_fweights_singleton_detection_counts_physical_rows():
+    """Singleton detection stays physical-row based under frequency weights.
+
+    An aggregate row that is alone in its fixed-effect level is dropped as a
+    singleton even though its frequency weight stands for several observations.
+    This is a deliberate deviation from the literal expansion, where that level
+    holds more than one row and therefore survives; changing it would move the
+    sample size, degrees of freedom, and standard errors of every
+    frequency-weighted fixed-effect fit.
+    """
+    aggregate = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 2.5, 1.5, 3.5, 2.0],
+            "x": [-1.0, 0.5, 1.5, -0.5, 1.0, 0.25, -1.5],
+            "fe": ["a", "a", "a", "b", "b", "b", "c"],
+            "count": [1, 2, 3, 2, 1, 2, 2],
+        }
+    )
+    expanded = (
+        aggregate.loc[aggregate.index.repeat(aggregate["count"])]
+        .drop(columns="count")
+        .reset_index(drop=True)
+    )
+
+    with pytest.warns(UserWarning, match=r"1 singleton fixed effect\(s\) dropped"):
+        fit_weighted = pf.feols(
+            "y ~ x | fe",
+            data=aggregate,
+            weights="count",
+            weights_type="fweights",
+            vcov="iid",
+        )
+    fit_expanded = pf.feols("y ~ x | fe", data=expanded, vcov="iid")
+
+    dropped_count = int(aggregate.loc[aggregate["fe"] == "c", "count"].sum())
+    effective_n = int(aggregate["count"].sum()) - dropped_count
+
+    assert fit_weighted._N_rows == len(aggregate) - 1
+    assert effective_n == fit_weighted._N
+    # The same level is not a singleton once the rows are literally repeated.
+    assert fit_expanded._N_rows == len(expanded)
+
+
 @pytest.mark.parametrize(
     "fml,fe_col",
     [

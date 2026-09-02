@@ -60,13 +60,11 @@ shared estimator API
   -> prepare_model_matrix
   -> estimator-specific get_fit
        -> feols / feiv
-            -> demean
-            -> to_array
-            -> drop_multicol_vars
-            -> wls_transform
-            -> solve OLS / 2SLS
+            -> construct within-scale arrays
+            -> drop collinear columns
+            -> solve OLS / 2SLS with local weight transforms
        -> fepois / feglm
-            -> IRLS with weighted demeaning and solving inside each iteration
+            -> IRLS with explicit observation and working weights
        -> quantreg
             -> Frisch-Newton solve (absorbed fixed effects are unsupported)
   -> vcov
@@ -77,12 +75,13 @@ shared estimator API
 `FixestMulti` is a container for fitted results. Numerical behavior belongs in
 the individual models and shared primitives, not in the container.
 
-## Current estimator-state lifecycle
+## Historical estimator-state lifecycle (pre-refactor)
 
-The fitted-model classes currently use themselves as both a work area and a
-result object. Several private attributes therefore change representation and
-numerical scale while a model is fitted. This section records that status quo;
-it is not a contract for new code.
+Before the immutable-state refactor, fitted-model classes used themselves as
+both a work area and a result object. Several private attributes therefore
+changed representation and numerical scale while a model was fitted. This
+section preserves that baseline as migration history; it is not the current
+contract for new code.
 
 For linear models, the transformations are:
 
@@ -192,10 +191,9 @@ constructors only assemble configuration and child objects; for example,
 `QuantregMulti` prepares its children in `prepare_model_matrix`, not during
 construction.
 
-This is the representation foundation, not the final within/weight cleanup.
-The compatibility fields documented above still move through their established
-DataFrame, within-array, and solver-array states until the numerical primitives
-and inference consumers move to explicit within-scale inputs.
+This established the representation foundation. The within/weight cleanup
+described below completes that layer by moving numerical primitives and
+inference consumers to explicit within-scale inputs.
 
 ## Estimation-state vocabulary
 
@@ -217,6 +215,71 @@ arrays should not change type or numerical domain, and solver scratch should
 not replace canonical within data. A fitted result may still expose explicitly
 in-place post-estimation operations, but those operations must not repurpose
 estimation fields.
+
+## Implemented array and weight domains
+
+The shared linear and GLM paths now implement the vocabulary above with frozen,
+slotted state values:
+
+| State | Persisted contract |
+|---|---|
+| `ModelMatrix` | Formula-materialized pandas tables remain on formula scale and keep dependent, independent, fixed-effect, IV, weight, and offset roles separate. |
+| `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
+| `WithinLinearData` | Unpremultiplied within-scale arrays, with response, design, instruments, and endogenous variables in named roles. |
+| `GlmWorkingState` | Final within-scale working response and design, IRLS working weights, predictors, means, and response- and working-residual domains. |
+| `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
+
+Analytic weights keep the retained row count as the effective sample size;
+frequency weights use the sum of their user-scale values. Probability weights
+(`pweights`) remain unsupported. Fixed-effect projection may use observation or
+IRLS weights, but the returned arrays remain within scale. OLS, IV, and IRLS
+fit primitives create square-root-weighted design and response arrays only as
+local solver temporaries. They persist response-unit residuals and weighted
+scores or cross-products, not solver-scale copies of canonical data.
+Singleton fixed-effect detection counts physical rows even under frequency
+weights, so an aggregate row alone in its level is dropped although its literal
+expansion would not be; this deliberate deviation is documented in
+`tests/test_wls_types.py`.
+
+GLMs keep two weight concepts deliberately separate. `ObservationWeights`
+never changes after formula preparation, while each IRLS iteration computes
+working weights and the final values live in `GlmWorkingState`. Response
+residuals and working residuals likewise have separate fields.
+
+The compatibility aliases are still available, but they are read-only
+properties over the typed state rather than cross-type workspaces: the state
+objects are the single writable representation, and assigning or deleting an
+alias raises. For linear and IV fits, `_Y`, `_X`, and `_Z` view within-scale
+arrays; for GLMs they view the final within-scale working response and design.
+`_weights` always means observation weights, never square-root solver weights
+or GLM working weights, and an unweighted fit materializes its ones column on
+access instead of keeping one alive for the lifetime of the result. New code
+should consume the typed state values rather than infer semantics from these
+aliases.
+
+`ccv()` explicitly rejects weighted models. `update()` can compute and return
+coefficient-only Sherman-Morrison updates for unweighted, non-IV OLS without
+fixed effects, but rejects `inplace=True`: design rows alone cannot reconstruct
+the complete formula, prediction, inference, and performance state of a fitted
+result.
+
+Storage policy follows the full result graph. Retained IV first stages honor
+`store_data=False`, and lean results discard within state, GLM working state,
+demeaning caches, quantile solver outputs, and large first-stage arrays. Lean
+results do keep the formula specification and evaluation context, so
+`predict(newdata=...)` still works for models without fixed effects. Array-only
+covariance updates remain available after `store_data=False`; cluster and HAC
+updates require the estimation sample through the documented `vcov(data=...)`
+argument. Explicit covariance data must already be filtered to the fitted row
+sample and retain its estimation order; a row-count check rejects misaligned
+inputs before covariance dispatch. Lean results reject post-fit covariance
+updates because their numerical arrays have been discarded. Every other method
+that needs discarded state raises an informative error naming the storage
+option and its remedy.
+
+Keeping canonical arrays unpremultiplied favors readability without moving
+weight work out of the numerical hot path: each solver still performs the same
+vectorized square-root transform locally.
 
 ## Repository map and extension seams
 
