@@ -596,3 +596,165 @@ def test_lean_vcov_fails_with_storage_guidance(
 
     with pytest.raises(RuntimeError, match=r"vcov\(\).*lean=True.*discarded"):
         fit.vcov("HC1")
+
+
+STORAGE_STATE_FIELDS = frozenset(
+    {
+        "_data",
+        "_model_matrix",
+        "_within_data",
+        "_observation_weights",
+        "_demean_cache",
+        "_fe",
+        "_response",
+        "_X",
+        "_Y",
+        "_Z",
+        "_weights",
+        "_scores",
+        "_u_hat",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    ("fit_kwargs", "missing_fields"),
+    [
+        ({}, frozenset()),
+        ({"store_data": False}, frozenset({"_data", "_model_matrix"})),
+        ({"lean": True}, STORAGE_STATE_FIELDS),
+    ],
+    ids=["retained", "store_data_false", "lean"],
+)
+def test_storage_options_delete_expected_state(
+    lifecycle_data: pd.DataFrame,
+    fit_kwargs: dict[str, bool],
+    missing_fields: frozenset[str],
+) -> None:
+    """Distinguish data-only cleanup from lean fit-state cleanup."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", **fit_kwargs)
+
+    observed_fields = frozenset(
+        field for field in STORAGE_STATE_FIELDS if hasattr(fit, field)
+    )
+    assert observed_fields == STORAGE_STATE_FIELDS - missing_fields
+    if fit_kwargs.get("lean"):
+        # Retained so that predict(newdata=...) keeps working without fixed
+        # effects, and so that row alignment stays checkable.
+        for field in ("_model_spec", "_context", "_na_index"):
+            assert hasattr(fit, field)
+    assert np.isfinite(fit.coef()).all()
+
+
+def test_iv_first_stage_respects_store_data_false(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A retained IV first stage must not hide a copy of stripped input data."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="hetero",
+        store_data=False,
+    )
+
+    first_stage = fit._model_1st_stage
+    assert not hasattr(first_stage, "_data")
+    assert not hasattr(first_stage, "_model_matrix")
+    assert hasattr(first_stage, "_within_data")
+    assert hasattr(first_stage, "_X")
+    fit.IV_Diag()
+    assert np.isfinite(fit._eff_F)
+    with pytest.raises(RuntimeError, match=r"first_stage\(\).*store_data=False"):
+        fit.first_stage()
+
+
+def test_iv_effective_f_uses_retained_arrays_without_stored_data(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """IID first-stage diagnostics need retained arrays, not formula data."""
+    stripped = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="iid",
+        store_data=False,
+    )
+    retained = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="iid",
+    )
+
+    stripped.IV_Diag()
+    retained.IV_Diag()
+
+    np.testing.assert_allclose(stripped._eff_F, retained._eff_F)
+    assert not hasattr(stripped._model_1st_stage, "_data")
+
+
+def test_lean_iv_discards_retained_first_stage_arrays(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Lean IV results retain diagnostics but no nested fitted-data graph."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z] | fe",
+        data=lifecycle_data,
+        vcov="hetero",
+        lean=True,
+    )
+
+    assert not hasattr(fit, "_model_1st_stage")
+    assert not hasattr(fit, "_X_hat")
+    assert not hasattr(fit, "_v_hat")
+    # `_endogvar` is a read-only view on the discarded within data.
+    assert not hasattr(fit, "_endogvar")
+    assert np.isfinite(fit._f_stat_1st_stage)
+    with pytest.raises(RuntimeError, match=r"IV_Diag\(\).*lean=True"):
+        fit.IV_Diag()
+
+
+def test_glm_lean_discards_formula_and_working_state() -> None:
+    """Lean GLM results discard both canonical input and working fit arrays."""
+    data = pd.DataFrame({"y": [0, 1, 0, 1, 1, 0], "x": np.arange(6.0)})
+    fit = pf.feglm("y ~ x", data=data, family="logit", lean=True, vcov="iid")
+
+    discarded = (
+        "_model_matrix",
+        "_observation_weights",
+        "_demean_cache",
+        "_working_state",
+        "_u_hat_response",
+        "_u_hat_working",
+        "_offset",
+    )
+    assert all(not hasattr(fit, attr) for attr in discarded)
+    # The IRLS aliases are read-only views on the discarded working state.
+    assert not hasattr(fit, "_irls_weights")
+    assert not hasattr(fit, "_Xbeta")
+    assert np.isfinite(fit.coef()).all()
+
+
+def test_poisson_lean_discards_offset_and_null_fit_arrays() -> None:
+    """Lean Poisson results do not retain offset or null-fit row arrays."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 2, 1, 3, 2],
+            "x": np.arange(6.0),
+            "offset": np.linspace(0.1, 0.6, 6),
+        }
+    )
+    fit = pf.fepois("y ~ x", data=data, offset="offset", lean=True, vcov="iid")
+
+    assert not hasattr(fit, "_offset")
+    assert not hasattr(fit, "_y_hat_null")
+    assert np.isfinite(fit.coef()).all()
+
+
+def test_quantreg_lean_discards_solver_arrays() -> None:
+    """Lean quantile results do not retain row-sized solver outputs."""
+    data = pd.DataFrame({"y": [0.2, 1.1, 1.8, 3.2, 3.9, 5.1], "x": np.arange(6.0)})
+    with pytest.warns(FutureWarning, match="experimental"):
+        fit = pf.quantreg("y ~ x", data=data, lean=True, vcov="iid", maxiter=100)
+
+    solver_arrays = ("_x_final", "_s_final", "_z_final", "_w_final", "_y_final")
+    assert all(not hasattr(fit, attr) for attr in solver_arrays)
+    assert np.isfinite(fit.coef()).all()

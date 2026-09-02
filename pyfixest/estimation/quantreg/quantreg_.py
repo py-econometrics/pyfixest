@@ -219,6 +219,20 @@ class Quantreg(Feols):
         self._hessian = self._X.T @ self._X
         self._bread = np.linalg.inv(self._hessian)
 
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and discard quantile solver arrays when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            for attr in (
+                "_x_final",
+                "_s_final",
+                "_z_final",
+                "_w_final",
+                "_y_final",
+            ):
+                if hasattr(self, attr):
+                    delattr(self, attr)
+
     def fit_qreg_fn(
         self,
         X: np.ndarray,

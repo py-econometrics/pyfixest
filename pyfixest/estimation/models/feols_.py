@@ -1030,19 +1030,21 @@ class Feols(ResultAccessorMixin):
             # backing them are what has to go.
             attributes += [
                 "_data",
+                "_model_matrix",
                 "_within_data",
                 "_observation_weights",
+                "_demean_cache",
+                "_fe",
+                "_response",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
                 "_tZX",
-                "_scores",
                 "_tZZinv",
+                "_scores",
                 "_u_hat",
                 "_Y_hat_link",
                 "_Y_hat_response",
-                "_response",
-                "_model_matrix",
             ]
 
         for attr in attributes:

@@ -338,6 +338,7 @@ class Feiv(Feols):
             collin_tol=self._collin_tol,
             solver=self._solver,
             demeaner=demeaner,
+            store_data=self._store_data,
         )
 
         # Ensure model1 is of type Feols

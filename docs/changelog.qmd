@@ -217,6 +217,9 @@ We also removed:
   that need discarded state now raise an informative `RuntimeError` instead of
   `AttributeError`. `vcov(..., data=...)` now validates that the explicit sample
   matches the fitted rows.
+- `store_data=False` and `lean=True` now apply to retained IV first stages; lean
+  fits also discard demeaning caches, GLM working state, and quantile solver
+  outputs.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.

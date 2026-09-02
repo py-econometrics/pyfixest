@@ -264,10 +264,19 @@ class Feglm(Feols):
         return self._working_state.eta.reshape(-1, 1)
 
     def _clear_attributes(self) -> None:
-        """Apply base cleanup and drop the IRLS state backing the GLM aliases."""
+        """Apply base cleanup and discard large GLM fit arrays when lean."""
         super()._clear_attributes()
-        if self._lean and hasattr(self, "_working_state"):
-            del self._working_state
+        if self._lean:
+            # The IRLS aliases are read-only views, so the working state
+            # backing them is what has to go.
+            for attr in (
+                "_working_state",
+                "_u_hat_response",
+                "_u_hat_working",
+                "_offset",
+            ):
+                if hasattr(self, attr):
+                    delattr(self, attr)
 
     def _leverage_weights(self) -> np.ndarray:
         """Return final GLM working weights for HC2/HC3 leverage."""
