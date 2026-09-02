@@ -149,8 +149,9 @@ may miss dependencies or the compiled extension.
 
 - Edit feedback: targeted tests with `-x -q --no-cov`, changed-file lint/type
   checks, and targeted or fast live-R cases for numerical work.
-- Stabilized implementation: run the selected broader baseline once.
-  `test-py` remains Python-only and does not establish numerical agreement.
+- Stabilized implementation: run the release-contract snapshots and the selected
+  broader baseline once. `test-py` and the snapshots are Python-only and do not
+  establish numerical agreement.
 - Merge evidence: affected R, HAC, no-JIT, docs, plots, Rust, extended, and
   platform checks must pass on the exact PR head. A long check may be deferred
   to exact-head CI at handoff, but deferred is not passed or merge-ready.
@@ -204,6 +205,7 @@ qualitative and depends on hardware and caches; report the actual elapsed time.
 | Command | Purpose | Typical scale |
 |---|---|---|
 | `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov` | Test the changed seam without the repository coverage report | Seconds to a few minutes |
+| `pixi run -e py312 test-release-contract` | Replay the public estimator matrix against the pinned pyfixest release; Python-only, so it is a regression alarm rather than an external comparison | Seconds to a few minutes after the first recording |
 | `pixi run -e py312-r test-r-fixest-fast` | Get edit feedback from representative `feols`, `fepois`, and `feglm` comparisons with R `fixest`, and `quantreg` with R `quantreg` | Seconds to a few minutes |
 | `pixi run test-py` | Run the broad Python-only regression suite; this is not an external numerical comparison | Minutes |
 | `pixi run -e py312-r test-r-fixest` | Produce canonical `tests/test_vs_fixest.py` merge evidence | Minutes to tens of minutes |

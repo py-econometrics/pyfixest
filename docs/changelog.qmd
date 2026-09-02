@@ -34,6 +34,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   workflow.
 - Pixi tasks now share a writable project-local Matplotlib configuration
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
+- We add regression / snapshot tests against pyfixest 0.60.0 for `feols` /
+  `fepois` / `feglm` / `quantreg`.
 
 ### Inference Types
 

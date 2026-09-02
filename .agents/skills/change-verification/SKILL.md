@@ -18,8 +18,10 @@ the selected broader baseline once and assign each required long check to a
 local run or exact-head CI.
 
 - Numerical/API changes require the relevant public integration tests and
-  external-reference suite. `test-py` is a Python-only regression baseline and
-  never substitutes for an external numerical comparison. Use the fast R suite
+  external-reference suite. `test-py` and the release-contract snapshots
+  (`test-release-contract`, see `docs/developer/testing.md`) are Python-only
+  regression baselines and never substitute for an external numerical
+  comparison. Use the fast R suite
   for edit feedback; produce canonical evidence after stabilization, locally or
   in exact-head CI.
 - HAC changes require the single-threaded HAC suite.
