@@ -134,9 +134,10 @@ automatically. To record it without running the checkout's tests:
 pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
 ```
 
-The nested workspace's lockfile is format v7, so recording needs pixi 0.68.0 or
-newer. It deliberately avoids `--clean-env`, which pixi does not support on
-Windows; `scripts/record_release_baseline.py` guards the release import itself.
+The nested workspace's lockfile is format v7, like the checkout's own, so
+recording needs the repository-wide minimum of pixi 0.71.0 or newer. It
+deliberately avoids `--clean-env`, which pixi does not support on Windows;
+`scripts/record_release_baseline.py` guards the release import itself.
 
 The pinned release lives in one place, the `pyfixest` entry of
 `tests/snapshots/release/pixi.toml`. Roll it just after tagging a release --

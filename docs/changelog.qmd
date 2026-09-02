@@ -36,6 +36,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
 - We add a release contract, `pixi run -e py312 test-release-contract`, that
   compares `feols` / `fepois` / `feglm` / `quantreg` against pyfixest 0.60.0.
+- The pixi workspace now declares the benchmark feature's CUDA requirement as a
+  rich platform instead of the deprecated `[system-requirements]` table, and the
+  lockfile moves to format v7. Contributors and CI need pixi 0.71.0 or newer.
 
 ### Inference Types
 
