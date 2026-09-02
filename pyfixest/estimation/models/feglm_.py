@@ -152,12 +152,6 @@ class Feglm(Feols):
             model_matrix = model_matrix.without_rows(na_separation)
             self._publish_model_matrix(model_matrix)
 
-            # Preserve the established GLM sample-size convention after
-            # separation. Frequency-weight policy is handled separately.
-            n_rows_after_separation = model_matrix.dependent.shape[0]
-            self._N = n_rows_after_separation
-            self._N_rows = n_rows_after_separation
-
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0

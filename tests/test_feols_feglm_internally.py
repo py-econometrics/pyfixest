@@ -176,6 +176,47 @@ def test_feglm_frequency_weight_leverage_matches_expanded_sample(vcov):
     )
 
 
+def test_feglm_frequency_weight_sample_size_survives_separation():
+    """Recompute effective and physical sample sizes in their distinct domains."""
+    aggregated = pd.DataFrame(
+        {
+            "y": [0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0],
+            "x": [-1.2, -0.4, 0.7, -1.1, -0.2, 0.9, -0.8, 0.1, 1.2, -0.9, 0.4, 1.4],
+            "fe": np.repeat(list("abcd"), 3),
+            "count": [1, 3, 2, 2, 1, 4, 1, 2, 3, 3, 2, 1],
+        }
+    )
+    expanded = aggregated.loc[aggregated.index.repeat(aggregated["count"])].copy()
+
+    with pytest.warns(UserWarning, match="observations removed because of separation"):
+        fit_frequency = pf.feglm(
+            "y ~ x | fe",
+            data=aggregated,
+            family="logit",
+            weights="count",
+            weights_type="fweights",
+            vcov="HC1",
+            separation_check=["fe"],
+            iwls_tol=1e-11,
+        )
+    with pytest.warns(UserWarning, match="observations removed because of separation"):
+        fit_expanded = pf.feglm(
+            "y ~ x | fe",
+            data=expanded,
+            family="logit",
+            vcov="HC1",
+            separation_check=["fe"],
+            iwls_tol=1e-11,
+        )
+
+    assert fit_frequency._N == fit_expanded._N == 19
+    assert fit_frequency._N_rows == 9
+    assert fit_expanded._N_rows == 19
+    assert fit_frequency._observation_weights.n_effective == 19
+    np.testing.assert_allclose(fit_frequency.coef(), fit_expanded.coef(), atol=1e-10)
+    np.testing.assert_allclose(fit_frequency._vcov, fit_expanded._vcov, atol=1e-10)
+
+
 @pytest.mark.parametrize("fml", fml_ols_vs_gaussian)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "f1"}])
 @pytest.mark.parametrize("dropna", [True])
