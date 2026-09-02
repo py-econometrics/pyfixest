@@ -17,6 +17,26 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Contributor Workflow
+
+- Repository-local skills and developer guides now define architecture,
+  numerical validation, change verification, history curation, review, and PR
+  preparation for contributors and coding agents.
+- PR reviews now select verification from unresolved risk, reuse successful
+  exact-head CI evidence, and avoid redundant broad local test runs.
+- A new `test-r-fixest-fast` task runs a compact edit-time comparison of
+  `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
+  `quantreg`. The existing estimator-specific R suites remain the authoritative
+  reference coverage.
+- We reorganize the tests against `fixest` for faster test feedback. By
+  default, we test only the default demeaner backend against `fixest` through
+  an integration test. All other demeaner backends are tested in a separate
+  workflow.
+- Pixi tasks now share a writable project-local Matplotlib configuration
+  directory, avoiding repeated font-cache rebuilds across fresh test processes.
+- We add a release contract, `pixi run -e py312 test-release-contract`, that
+  compares `feols` / `fepois` / `feglm` / `quantreg` against pyfixest 0.60.0.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
@@ -75,6 +95,8 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson offsets now accept Formulaic transformations such as
+  `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
   `family="poisson"`. Previously `weights` was silently ignored and `offset`
   was unavailable; Poisson required calling `fepois()` directly.
@@ -84,6 +106,9 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 - `feglm(family="gaussian")` now matches `pf.feols()` (and base R `lm`/`glm`)
   exactly. We slightly deviate from `fixest::feglm(family="gaussian")`, which uses slightly different small sample corrections between OLS and GLM with Gaussian link.
 - Logit and probit IRLS initialise at new values for better numerical stability.
+- `feglm().resid()` now returns the response residual `y - mu` by default,
+  matching `fixest` and base R's `glm()`. It previously returned the IRLS
+  working residual, which is still available as `resid(type="working")`.
 
 ### Formula Parsing on `formulaic`
 
@@ -180,6 +205,9 @@ We also removed:
 
 ### Bug Fixes
 
+- Fitted models and non-plotting DiD and reporting paths no longer import
+  plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
+  while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

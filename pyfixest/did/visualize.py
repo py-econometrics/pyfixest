@@ -1,5 +1,11 @@
-import matplotlib.pyplot as plt
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pandas as pd
+
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
 
 
 def panelview(
@@ -251,6 +257,8 @@ def _plot_panelview_output_plot(
     ylim: tuple[float, float] | None = None,
     figsize: tuple | None = (11, 3),
 ) -> plt.Axes:
+    import matplotlib.pyplot as plt
+
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     for unit_id in data_pivot.index:
@@ -350,6 +358,8 @@ def _plot_panelview(
     noticks: bool | None = False,
     title: str | None = None,
 ) -> plt.Axes:
+    import matplotlib.pyplot as plt
+
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
     cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")

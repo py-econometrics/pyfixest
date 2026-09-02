@@ -1,352 +1,196 @@
 # pyfixest — guide for coding agents
 
 pyfixest ports R's `fixest` to Python: high-dimensional fixed-effects estimation
-(OLS/WLS, IV, Poisson, GLM, quantile regression) with fixest formula syntax, a
-post-estimation toolbox, and Rust kernels for hot loops.
+(OLS/WLS, IV, Poisson, GLM, quantile regression), fixest formula syntax,
+post-estimation tools, and Rust kernels for hot loops.
 
-Two rules beat everything else:
+Three rules beat everything else:
 
-1. **Mirror `fixest`** in user-facing behavior, naming, and defaults, unless there
-   is a documented reason not to.
-2. **Mirror the nearest existing implementation.** Almost every kind of change has
-   an in-repo precedent. Find it and copy its structure before writing new code.
+1. **Mirror `fixest`** in user-facing behavior, naming, and defaults unless an
+   intentional difference is documented and tested.
+2. **Mirror the nearest existing implementation.** Find the in-repo precedent
+   and copy its structure before writing new code.
+3. **Never return silently wrong numbers.** Every estimation or inference
+   feature defines and tests its behavior for weights, fixed effects, IV, and
+   multiple estimation, or raises a specific unsupported error. This is the
+   highest review concern.
 
-For the end-to-end workflow (implement a feature, clean up a contributor PR),
-follow **`.agents/feature-pr.md`**. This file is the tool-neutral entry point:
-Claude Code (via `CLAUDE.md`), Codex, and OpenCode read `AGENTS.md` natively;
-if a tool in your setup does not, point its rules/config file here instead of
-duplicating content. `CLAUDE.md` is a thin redirect (`@AGENTS.md`) and is
-committed to the repo.
-Edit the workflow only in `.agents/feature-pr.md`.
+`CLAUDE.md` is a committed thin redirect to this file; do not duplicate these
+rules in tool-specific configuration.
+
+## Where policy lives
+
+The architecture, test policy, compatibility ledger, and Git/PR style live in
+[`docs/developer/`](docs/developer/). They are authoritative. This file is a
+routing layer and a repo-specific conventions list; it does not restate their
+policy, and neither should skills or ad hoc prompts.
+
+| Document | Owns |
+|---|---|
+| [`architecture.md`](docs/developer/architecture.md) | Core boundaries, estimation flow, extension seams |
+| [`testing.md`](docs/developer/testing.md) | Runtime tiers, check-selection matrix, references, tolerances, test design |
+| [`fixest-compatibility.md`](docs/developer/fixest-compatibility.md) | Intentional deviations from R `fixest` |
+| [`git-and-pr-style.md`](docs/developer/git-and-pr-style.md) | Branch, commit, and PR-body conventions |
+
+## Contributor workflow skills
+
+The skills under `.agents/skills/` are plain files shared by every coding tool,
+not tool-registered commands: when a trigger applies, read the `SKILL.md` and
+follow it. A change flows plan → implement → verify → self-review → hand off,
+and the table is in that order. (The user-facing analytics prompt at
+`docs/skills.md` is unrelated.)
+
+| Skill | Trigger |
+|---|---|
+| [`implementation-strategy`](.agents/skills/implementation-strategy/SKILL.md) | Before estimator, public API, inference, formula, or shared-core work |
+| [`change-verification`](.agents/skills/change-verification/SKILL.md) | After implementation stabilizes, before handing off any code, tests, docs, CI, or metadata change |
+| [`pr-review`](.agents/skills/pr-review/SKILL.md) | Final self-review before handoff, and any explicit PR review |
+| [`pr-handoff`](.agents/skills/pr-handoff/SKILL.md) | Curating agent-owned commits and submitting the draft PR |
+
+## Architecture in one paragraph
+
+Keep the shared estimation core narrow and stable: formula parsing, model-matrix
+construction, demeaning, generic fit and inference primitives, result
+interfaces, and backend kernels. New estimators start as standalone add-on
+functions in their own API or domain modules and compose those primitives. Do
+not add estimator-specific switches to generic runners or grow model classes
+with numerical logic. See `docs/developer/architecture.md` for the estimation
+flow, the stable-core contract, and the extension-seam table.
 
 ## Repo map
 
 | Path | Contents |
 |---|---|
-| `pyfixest/estimation/api/` | Public entry points, one module per function: `feols`, `fepois`, `feglm`, `quantreg`; shared input checks in `api/utils.py` |
-| `pyfixest/estimation/models/` | Model/result classes (`Feols`, `Feiv`, `Fepois`, `Feglm`, …); modules end in `_` (`feols_.py`) |
-| `pyfixest/estimation/internals/` | Shared estimation internals: `vcov_utils.py`, `solvers.py`, `collinearity.py`, `separation.py`, `literals.py` |
-| `pyfixest/estimation/post_estimation/` | Post-estimation features (`ritest`, `ccv`, `decomposition`, `prediction`, `multcomp`); model classes hold only wrapper methods free of numerics |
-| `pyfixest/estimation/formula/` | Formula parsing and model-matrix construction (wraps formulaic) |
-| `pyfixest/estimation/` root | `config.py` (`EstimationConfig`), `plan_.py` (`parse_formula`, `fit_one`), `runner.py`, `FixestMulti_.py` (pure container for multiple estimation); backend subpackages `numba/` and `torch/`; `deprecated/`. Root-level `feols_.py`/`feiv_.py`/`fepois_.py` are compat shims — the real classes live in `models/` |
-| `pyfixest/demeaners.py` | Public demeaner configs (`BaseDemeaner`, `MapDemeaner`, `LsmrDemeaner`) behind the `demeaner=` argument; own quartodoc section |
-| `pyfixest/core/` | Python wrappers and `_core_impl.pyi` type stubs for the Rust extension |
-| `src/` | Rust kernels (PyO3), registered in `src/lib.rs` |
-| `pyfixest/did/`, `pyfixest/report/`, `pyfixest/utils/` | DiD estimators; `etable`/plots; data utilities and DGPs (`utils/dgps.py`) |
-| `tests/` | Pytest suite; reference scripts and stored outputs in `tests/data/` |
-| `docs/` | Quarto site, Diataxis layout: `tutorials/`, `how-to/`, `explanation/`, `textbook-replications/` |
+| `pyfixest/estimation/api/` | Public estimation entry points, one module per function |
+| `pyfixest/estimation/models/` | Model/result classes; modules end in `_` |
+| `pyfixest/estimation/internals/` | Shared fit, solver, vcov, collinearity, and separation primitives |
+| `pyfixest/estimation/post_estimation/` | Standalone post-estimation logic |
+| `pyfixest/estimation/formula/` | Formula parsing and model-matrix construction |
+| `pyfixest/estimation/config.py`, `plan_.py`, `runner.py` | Configuration, formula planning, and estimation orchestration |
+| `pyfixest/demeaners.py` | Public demeaner configurations |
+| `pyfixest/core/`, `src/` | Python wrappers/type stubs and PyO3 Rust kernels |
+| `pyfixest/did/`, `report/`, `utils/` | DiD estimators, reporting, utilities, and DGPs |
+| `tests/` | Pytest suite, reference scripts, and stored reference outputs |
+| `docs/` | Quarto user documentation; `docs/developer/` is contributor policy and is not rendered |
 
-Estimation flow: `feols()` builds an `EstimationConfig` → `parse_formula`
-(`plan_.py`) expands multiple-estimation syntax → `FixestMulti` holds the models →
-`runner.run_estimation` / `plan_.fit_one` drive each model through
-`prepare_model_matrix → get_fit → vcov → get_inference`, where `get_fit` runs
-`demean → to_array → drop_multicol_vars → wls_transform` before solving.
-Post-estimation happens via methods on the fitted model.
+## Wiring recipes
 
-## Where new code goes
+- **Estimator:** a standalone module under `estimation/api/` (or the relevant
+  domain package), with its own tests, result contract, exports, and quartodoc
+  registration. Keep its special cases out of the generic fit pipeline.
+- **Post-estimation feature:** numerical logic in `post_estimation/`; a thin
+  method on `Feols` and siblings where applicable. Template:
+  `post_estimation/ritest.py` and `Feols.ritest`.
+- **Vcov type:** literal in `internals/literals.py`, validation in the model,
+  small dispatch method, math in `internals/vcov_utils.py` or Rust, and wiring
+  through `FixestMulti`/quantreg where supported. Template: NW/DK HAC.
+- **Estimation-time option:** shared typed option alias in
+  `internals/literals.py`, validated at the API boundary, threaded through
+  `EstimationConfig` and `plan_._build_model_kwargs`.
+- **Rust kernel:** `src/<topic>.rs`, registration in `src/lib.rs`, typed stub
+  in `core/_core_impl.pyi`, and a clean wrapper in `core/`. Keep a NumPy
+  reference implementation when feasible. Template: `src/nw.rs` → `core/nw.py`.
 
-**New post-estimation feature** — standalone module in
-`estimation/post_estimation/` holding the logic; a thin method on `Feols` (and
-siblings where applicable) that validates inputs and delegates. The commit history
-is one long effort to carve logic *out* of the model classes — do not grow them.
-Template: `post_estimation/ritest.py` + `Feols.ritest`.
+Reuse formula handling, `capture_context`, `_narwhals_to_pandas`, cluster
+preparation, `run_crv_loop`, and `_create_rng`; do not rederive them.
 
-**New vcov type** — add the option to `internals/literals.py`; accept and
-validate it in `_check_vcov_input` / `_deparse_vcov_input`
-(`models/feols_.py`); dispatch from `Feols.vcov()` via a small `_vcov_<name>`
-method; put the meat/bread math in `internals/vcov_utils.py` (or a Rust kernel);
-thread through `FixestMulti.vcov()` and quantreg if applicable; wire ssc via
-`_make_ssc_kwargs`. Template: the NW/DK HAC path.
+## Code conventions
 
-**New estimation entry point** — own module in `estimation/api/`; export through
-`estimation/api/__init__.py` and `pyfixest/__init__.py` (`__all__`,
-`_lazy_imports`, `_direct_module_imports`); add to the quartodoc `contents` list
-in `docs/_quarto.yml`. Keep the signature order consistent with siblings:
-`fml, data, vcov, …, copy_data, store_data, lean, …`. User-facing functions that
-are *not* estimation entry points (`rwolf`, `bonferroni`, `wyoung`) instead live
-in `post_estimation/` and are exported through `estimation/__init__.py` plus the
-top-level `_lazy_imports`.
+- Write for an econometrics practitioner. Use econometrically meaningful names
+  such as `scores`, `meat`, `bread`, `u_hat`, and `clustid`; follow the paper's
+  notation where it makes the implementation easier to recognize. Cite the
+  paper in the implementing function.
+- Methods orchestrate; numerical computation happens in standalone functions
+  operating on arrays. Return small typed result dataclasses rather than tuples
+  or dicts.
+- Keep functions short and single-purpose. Solver iteration loops are the main
+  exception when splitting would obscure the algorithm or hurt compilation.
+- Put measured, non-vectorizable hot loops in Rust. Keep everything else clear,
+  ordinary NumPy rather than speculative micro-optimization.
+- Use `from __future__ import annotations`, PEP 604 unions, keyword arguments
+  for internal calls, and `NDArray[np.float64]` in stubs. Put shared typed
+  option aliases (`Literal`) in `pyfixest/estimation/internals/literals.py`.
+- Validate at the API boundary. Bad option values raise `ValueError` with the
+  allowed values; domain failures use the flat classes in `pyfixest/errors/`.
+  Every new or changed error or warning path needs a triggering test; see the
+  test-design rules in `docs/developer/testing.md`.
+- Guard optional dependencies at import time and raise an actionable message
+  naming the pip extra only when the optional path is used.
+- Use `np.random.default_rng(seed)`, never global seeding.
+- Never mutate user input except the documented `copy_data=False` path.
+- Post-estimation code that needs stripped data must fail informatively under
+  `store_data=False` or `lean=True`.
 
-**New Rust kernel** — `src/<topic>.rs` with a function named `_<name>_rs`;
-register in `src/lib.rs`; add a typed stub to `pyfixest/core/_core_impl.pyi`;
-re-export under a clean alias in `pyfixest/core/<topic>.py`. Keep a NumPy
-reference implementation around for tests when feasible. Template: `src/nw.rs` →
-`pyfixest/core/nw.py`.
+Public functions, methods, and classes need NumPy docstrings. User-facing
+entries include complete Parameters/Returns, an executable `{python}` example,
+root-relative `.qmd` links, and a linked paper for econometric methods.
 
-**New estimation-time option** — `Literal` alias in `internals/literals.py`;
-accept it in each relevant `api/` function with a documented default; validate
-early (`_validate_literal_argument` or `api/utils._estimation_input_checks`);
-thread through `EstimationConfig` and `plan_._build_model_kwargs`.
+## Evidence
 
-Reuse before you write: formula handling in `estimation/formula/`, context
-capture via `utils.utils.capture_context`, dataframe conversion via
-`utils.dev_utils._narwhals_to_pandas` (`DataFrameType` accepts pandas/polars/
-duckdb), cluster prep via `internals/vcov_utils.prepare_cluster_state` /
-`run_crv_loop`, RNG via `utils.dev_utils._create_rng`.
+Every new estimator must be tested permanently against existing software, and
+numerical changes to existing estimators require an external comparison wherever
+overlapping software exists. Simulation properties, shape checks, and internal
+reimplementations are additional evidence, never substitutes. If no external
+implementation is available, the estimator is not merge-ready.
 
-## House style
+Use `pixi run` for every Python, pytest, lint, docs, and R command; bare tools
+may miss dependencies or the compiled extension. `docs/developer/testing.md`
+owns reference selection, markers, tolerances, the runtime tiers, and the
+selection matrix that decides which checks a change requires; the
+`change-verification` skill applies it.
 
-Write for an econometrics practitioner first. A reader who knows the method from
-the paper should recognize it in the code:
+For internal or backend refactors that must not change results, the release
+contract (`test-release-contract`) is the edit-loop gate: it replays the public
+estimator matrix against a pinned pyfixest release in seconds. It is a
+regression alarm, not an external correctness reference; a released pyfixest
+result never substitutes for R.
 
-- Name objects after the econometrics they represent — `scores`, `meat`,
-  `bread`, `u_hat`, `clustid` — and mirror the source paper's notation where it
-  has one. Matrix products use the `t` prefix for transpose: `tZX` is Z'X,
-  `tZZinv` is (Z'Z)^-1. Cite the paper (with a link) in the docstring of the
-  function that implements it, as `Feols.decompose` does for Gelbach (2016).
-- Methods orchestrate; numbers happen in functions. A model method validates
-  inputs, unpacks `self._` state into locals, calls a standalone module-level
-  function that operates on arrays, and assigns the results back to `self._`
-  attributes. The numerical function never touches `self` — that seam is what
-  makes it testable against a reference. `Feols.get_fit` →
-  `internals/fit_.fit_ols` is the template.
-- Numerical functions return a small result dataclass (`OlsFit`, `IvFit`,
-  `ClusterPrep`; frozen and slotted where possible) whose Attributes docstring
-  states each array's shape — not a tuple, not a dict. Internal calls pass
-  arguments by keyword: `fit_ols(X=self._X, Y=self._Y, solver=self._solver)`.
-- One function, one named task, kept short — most functions in the codebase are
-  under ~30 code lines. If a function's name or docstring summary needs an
-  "and", split it. The fit pipeline is the model: `prepare_model_matrix →
-  get_fit → vcov`, with `get_fit` stepping through `demean → to_array →
-  drop_multicol_vars → wls_transform`, each step a small named unit. Sanctioned
-  exceptions to "short": a single solver iteration loop (IRLS, LSMR,
-  Frisch–Newton — splitting it hurts readability and `torch.compile`) and
-  validation-heavy user-facing methods. Split logic, not loops.
-- Performance-critical code — per-observation or per-cluster hot loops that
-  NumPy cannot vectorize — is written and optimized in Rust under `src/` (the
-  demean, CRV1-meat, and HAC-meat kernels are the pattern), not micro-optimized
-  in Python. Everything else stays plain, readable NumPy: do not trade clarity
-  for speed outside a measured hot loop, and keep a NumPy reference
-  implementation around for testing the kernel.
+Four rules that are easy to get wrong:
 
-Naming and layout:
-- One public function per `api/` module; model-class modules end in `_`
-  (`feols_.py` holds `Feols`) so they don't shadow the API function names. New
-  helper modules are plain snake_case.
-- Private helpers are module-level `_underscore` functions kept in the same
-  module as their only caller, or in `internals/` when shared.
-- Model state is `self._underscore` (`self._data`, `self._weights`,
-  `self._is_iv`); results are exposed through methods (`tidy()`, `coef()`,
-  `se()`) — shared accessors live in `models/_result_accessor_mixin.py`.
-
-Signatures and typing:
-- `from __future__ import annotations`; PEP 604 unions (`str | None`); typed
-  option enums as `Literal` aliases in `internals/literals.py`.
-- In docstring Parameters sections, spell types as in the signature
-  (`str | None`, not `Optional[str]`). Older docstrings mix spellings — don't
-  copy them.
-- mypy runs on `pyfixest/` only; `NDArray[np.float64]` in the `.pyi` stubs.
-
-Docstrings (ruff enforces the NumPy convention):
-- Required on public functions/methods/classes; not required in `tests/`.
-- User-facing API docstrings carry full Parameters/Returns and an Examples
-  section with executable ```{python} chunks — quartodoc renders and runs them.
-- Cross-link classes as `[Feols](/reference/estimation.models.feols_.Feols.qmd)`
-  and vignettes as `[guide](/tutorials/standard-errors.qmd)` — always
-  root-relative with a `.qmd` extension. A few older docstrings use relative
-  paths or `.html`; don't copy them.
-- Inline code references use single backticks.
-
-Errors, warnings, optional dependencies:
-- Validate at the API boundary and fail fast. Bad option values raise
-  `ValueError` listing the allowed values; domain errors use the flat exception
-  classes in `pyfixest/errors/__init__.py` (add one there if none fits).
-- Deprecate arguments with `warnings.warn(..., UserWarning)` while keeping the
-  old spelling working (see `Feols.decompose`'s `param` → `decomp_var`).
-- Optional deps (`numba`, `lets_plot`, `torch`) are guarded with
-  `try/except ImportError` and a `_HAS_X` flag at module top; raise an
-  actionable message naming the pip extra only when the path is actually used
-  (see `post_estimation/ritest.py`).
-
-Numerics and data:
-- RNG is always `np.random.default_rng(seed)`; never global seeding.
-- Never mutate user input data. `copy_data=False` is the only sanctioned
-  exception, and its side effects are spelled out in the docstring.
-- `store_data=False` and `lean=True` strip attributes
-  (`Feols._clear_attributes`): post-estimation code that needs `self._data`
-  must raise an informative error, not crash.
-- Every estimation/inference feature defines its behavior under weights
-  (`aweights` vs `fweights`), fixed effects, IV (`Feiv`), and multiple
-  estimation (`FixestMulti`) — test the supported paths, raise
-  (`NotImplementedError`, `VcovTypeNotSupportedError`) on the rest. Silent
-  wrong numbers on these paths are the number-one review concern.
-
-Comments are sparse and state constraints the code can't (the rpy2 converter
-note in `tests/conftest.py`, the lazy-numba note in `ritest.py`) — no narration.
-
-## Testing
-
-- Quick suite: `pixi run test-py`. Targeted:
-  `pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov`
-  (`--no-cov` skips the coverage report that pytest addopts force on every run).
-- Markers (strict): `extended`, `against_r_core` (conda R packages),
-  `against_r_extended` (CRAN extras), `plots`, `hac`. The quick suite excludes
-  all of them.
-- Any new test file importing `rpy2` must be added to `_rpy2_test_files` in
-  `tests/conftest.py` so non-R environments skip it.
-- Prefer a few heavily parametrized *integration* tests that drive the public API
-  (`feols`/`fepois`/`feglm`/`quantreg`) end to end and check against a reference,
-  over many small unit tests. `tests/test_vs_fixest.py` is the archetype — one
-  parametrized matrix over formulas × vcov × weights × ssc, all compared to R
-  `fixest`. Reserve unit tests for internal seams that are awkward to reach through
-  the API: the demean kernel (`test_demean.py`), formula parser
-  (`test_formula_parse.py`), HAC meat (`test_hac_meat.py`) — not thin wrappers or
-  getters.
-- When a change fits an existing parametrized matrix, extend it — add a formula
-  to the module-level list or a case to the matrix — rather than writing a new
-  test function. `test_errors.py`'s one-function-per-error style predates this
-  rule; don't copy it.
-- Style: module-level formula lists fed to `pytest.mark.parametrize`; seeded
-  DGP fixtures (module-scoped when expensive); explicit `rtol`/`atol` constants
-  at the top of the file with a comment justifying them.
-- The bar for new econometrics is higher than "runs and has the right shape":
-  exact known-value or brute-force cross-checks, edge cases (singleton
-  clusters, collinearity, tiny samples), invalid-input tests, and at least one
-  external reference — R `fixest`/`sandwich` via rpy2, stored Stata output
-  committed under `tests/data/` (with the `.do` script), or a simulation
-  property (empirical size/coverage). Code adapted from elsewhere gets a
-  provenance and license note in its docstring (see `tests/test_ccv.py`).
-- Reference packages and dependencies: if the reference implementation is on
-  conda-forge, add it as a dependency (R packages → `[tool.pixi.feature.r.dependencies]`
-  in `pyproject.toml`, test marked `against_r_core`) so CI runs the comparison
-  live. If it is *not* on conda-forge, either install it from CRAN via
-  `r_test_requirements.R` (repo root) and mark the test `against_r_extended` (that
-  suite runs locally only, not in CI), or ship a small script that produces the
-  reference values and hard-code those values into the test (commit the
-  generator under `tests/data/`, as the Stata `.do` files do). Both are fine;
-  reach for hard-coded values over a heavy or flaky live dependency.
-
-## Docs
-
-Always update `docs/changelog.qmd` with a concise entry for each change.
-
-Docs ship in the same PR as the feature — a reviewer treats missing docs as an
-incomplete change. What to touch depends on the surface:
-
-- New estimation-time option or `vcov` value: `feols`, `fepois`, `feglm`, and
-  `quantreg` each carry their *own* Parameters docstring (there is no shared
-  docstring), so document the option in every one that accepts it, and in the
-  relevant model method (e.g. `Feols.vcov`).
-- New post-estimation method: a full NumPy docstring with an executable Examples
-  section (a `{python}` chunk) on the method itself — quartodoc renders and runs
-  it into the reference.
-- New class or function: register it in the quartodoc `contents`
-  (`docs/_quarto.yml`); `pixi run docs-build` regenerates `docs/_sidebar.yml` and
-  the reference pages.
-- Vignette: add a `docs/how-to/<feature>.qmd` (hyphenated filename) when the
-  feature is a workflow a user would want a guide for, and register it in the
-  `_quarto.yml` navbar; extend the nearest existing vignette instead when the
-  feature only widens one (a new vcov type → the standard-errors guide,
-  `docs/tutorials/standard-errors.qmd`). The Conley and decomposition features
-  are the model.
-- Never hand-edit `docs/reference/**` — it is generated by quartodoc and
-  gitignored. Reference display names are shortened by a custom renderer
-  (`docs/_renderer.py`); the `docs-build` task runs quartodoc from `docs/` so it
-  can import it.
-
-Every entry in the quartodoc reference (`contents` in `docs/_quarto.yml`) meets
-the same bar, whether it is a function, a method or a class:
-
-- Description: say what the object does and when to use it, not just what it
-  returns. A one-line summary is not enough for a user-facing entry.
-- At least one executable example: an `Examples` section with a `{python}` chunk,
-  which quartodoc runs into the page. This includes getters and accessors
-  (`coef()`, `se()`, a `get_*` data generator), where two lines that fit a model
-  and print the result are enough. Keep examples fast (small `pf.get_data()`
-  samples, few bootstrap `reps`). Skip the example only when runtime is
-  prohibitive, and say so.
-- Vignette link when a relevant guide exists, as
-  `[guide](/how-to/<feature>.qmd)`. Inference methods point at the
-  standard-errors guide (`/tutorials/standard-errors.qmd`), `decompose` at the
-  decomposition vignette.
-- Paper citation with a link whenever an econometric method is implemented, in
-  the function that implements it. `Feols.decompose` cites Gelbach (2016),
-  `quantreg` cites Portnoy and Koenker (1997). Mirror the paper's notation in
-  the code (see "House style").
-
-Result classes (`Feols`, `Fepois`, `Feiv`, ...) are obtained through the
-estimation functions, so their example fits a model and calls a method instead
-of constructing the class.
-
-Examples go straight to the `{python}` chunk and keep any explanation in short
-comments inside the code. Do not narrate the example in prose — the long
-narrated Examples in `feols` and `fepois` predate this rule; don't copy their
-style for new entries.
-
-Check that an example actually runs before handing off: the minimum is
-executing its body in `pixi run python`; the full check is
-`pixi run docs-build` followed by
-`QUARTO_PYTHON=.pixi/envs/docs/bin/python3 quarto render docs/reference/<page>.qmd`
-(quarto ignores the `python:` key in `_quarto.yml` for single-file renders).
-
-## Commands
+- `test-py` is Python-only and never establishes numerical agreement.
+- `test-r-fixest-fast` is edit feedback, not merge evidence.
+- Report every applicable check as passed, failed, deferred, or not run. A
+  deferred or CI-only check is never a pass.
+- `test-release-contract` **skips** without a recorded baseline, and so does
+  `test-py`. Confirm it reports passed cases, not skipped, before citing it.
 
 ```bash
-pixi run test-py                                   # quick suite, no R
-pixi run -e py312-r pytest tests/test_x.py -x -q --no-cov   # targeted, R available
-pixi run -e py312-r pytest tests -m "not (extended or against_r_core or against_r_extended or plots or hac)"
-pixi run test-r-core                               # R comparisons, conda-forge packages
-pixi run test-r-extended                           # R comparisons, CRAN extras (local only)
-pixi run test-r-fixest                             # tests/test_vs_fixest.py only
-pixi run test-r-hac                                # HAC vs R, single-threaded BLAS
-pixi run test-all                                  # everything
-
-pixi run -e lint prek run ruff-format --files <changed files>
-pixi run -e lint prek run ruff-check  --files <changed files>
-pixi run -e lint prek run mypy       --files <changed files>
-pixi run lint                                      # all hooks, all files
-
-pixi run docs-render                               # full docs (runs quartodoc docs-build first)
-pixi task list                                     # everything else
+pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov   # targeted
+pixi run -e py312 test-release-contract                             # refactor invariance, ~15s
+pixi run -e py312-r test-r-fixest-fast                              # fast live-R
+pixi run test-py                                                    # Python baseline
+pixi run -e lint prek run ruff-check --files <changed files>        # changed-file lint
+pixi task list                                                      # everything else
 ```
 
-Always go through `pixi run`; bare `python`/`pytest` may lack dependencies or
-the compiled Rust extension. Rust sources rebuild automatically on import via
-maturin-import-hook; if `pyfixest.core._core_impl` fails to import after
-touching `src/`, run `pixi run -e py312-r python scripts/setup_maturin_hook.py`
-once.
+Always update `docs/changelog.qmd`. Documentation ships with the feature. New
+public functions/classes require quartodoc registration; user workflows usually
+need a `docs/how-to/` guide or an extension to the nearest existing guide.
+Never hand-edit generated `docs/reference/**`.
 
-## Do not touch (unless the task is about them)
+## Git and review
 
-- `pixi.lock`, `Cargo.lock` — only for intentional dependency changes, in their
-  own commit.
-- `docs/_freeze/**` — frozen notebook output; re-render only pages your change
-  affects.
-- `docs/reference/**` — generated by quartodoc and gitignored; never hand-edit.
-- `.coverage`, `coverage.xml`, `docs/_site/**` — local artifacts.
-- Do not reformat files you didn't otherwise change; keep diffs reviewable.
+Follow `docs/developer/git-and-pr-style.md` for branch names, commit messages,
+and PR bodies; the `pr-handoff` skill covers history rewriting and submission.
+Never commit to `master` or use an agent identity as a branch prefix.
 
-## Git and PRs
+Prefer a GitHub stacked PR when work has two or more independently reviewable
+layers. Split by dependency and reviewer concern, not file count. Every layer
+must be coherent, testable against its immediate parent, and small enough for
+independent human review.
 
-- Never commit to `master` (a pre-commit hook blocks it); branch first.
-- Do not start branch names with `codex/`; use a conventional prefix such as
-  `bug/`, `feat/`, or `chore/`.
-- Run lint and type checks on the changed files before each commit: `ruff-format`,
-  then `ruff-check`, then `mypy` (commands under "Commands"). The same hooks gate
-  the PR in CI, so a red check blocks the merge. `ruff-format` and `ruff-check
-  --fix` rewrite files in place — stage the result before committing. These fire
-  automatically only if `prek install` set up the git hook, which agents and fresh
-  clones usually haven't done, so run them explicitly rather than relying on it.
-  mypy is scoped to `pyfixest/`, not `tests/`.
-- Commit subjects: a conventional prefix plus one short, precise, imperative
-  line that says what changed — e.g. `feat: add transform building blocks`,
-  `refactor: make FixestMulti a pure container`, `chore: remove dead code from
-  Feols`. Use `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`,
-  `build`, `ci`; add a scope when it narrows usefully (`fix(vcov): ...`).
-  Target ~50–60 chars including the prefix, no trailing period, backtick code
-  identifiers. Don't hand-append `(#PR)`; GitHub adds it on squash-merge.
-- Commit bodies: add one only when the *why* isn't obvious from the subject,
-  and keep it to a line or two. Write plain English that a contributor reading
-  `git log` in a year can follow without opening the diff. Name the thing, then
-  say what is true of it, in the present tense and in ordinary words:
-  - "`_feols_input_checks` is never called" — not "has no callers".
-  - "`na_index` is only assigned, never read" — not "was only ever written".
-  - "the second `_supports_wildboottest = True` overwrites the first, so the
-    weights check above it never takes effect" — not "the guard was a no-op".
+Rewriting history always requires explicit user approval for that specific
+rewrite; general permission to implement or open a PR is not rewrite approval.
+Never rewrite a contributor-owned branch or rewrite silently after review starts.
 
-  Prefer a longer plain sentence over a short cryptic one. If a phrase would
-  need a follow-up question to explain it, it is the wrong phrase.
-- Before handing off a PR, rewrite the branch into a few logically ordered,
-  individually test-passing commits (helpers + tests → wiring + tests → API
-  exposure + docs). The maintainer reviews commit by commit; see
-  `.agents/feature-pr.md`, Phase 5, for the guarded rewrite recipe.
+Agents prepare draft PRs and respond to review. Agents never merge their own
+work or invoke `gh stack merge`. Human maintainer review is required before
+every merge, including every layer of a stack; automated review and green CI
+supplement that gate rather than replacing it.
+
+## Do not touch unless the task requires it
+
+- `pixi.lock` and `Cargo.lock` except intentional dependency changes.
+- `docs/_freeze/**`, generated `docs/reference/**`, `.coverage`,
+  `coverage.xml`, or `docs/_site/**`.
+- Unrelated user changes or files changed only by broad formatting.
