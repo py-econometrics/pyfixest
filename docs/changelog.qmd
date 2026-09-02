@@ -40,6 +40,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   platform, because pixi has deprecated the `[system-requirements]` table. We
   also refresh `pixi.lock` in the newer v7 format. Both ask for pixi 0.71.0 or
   newer.
+- Fitted models now retain the formula `ModelMatrix` as read-only formula
+  state, GLM separation filters it through `ModelMatrix.without_rows()`, and
+  the generic fit runner delegates response validation, post-fit work, and
+  result expansion through a structural lifecycle protocol. This keeps formula
+  roles stable while the later within- and weight-scale cleanup proceeds
+  independently.
 
 ### Inference Types
 

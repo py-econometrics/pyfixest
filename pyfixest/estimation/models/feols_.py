@@ -404,7 +404,7 @@ class Feols(ResultAccessorMixin):
         self.iplot_aggregate = _not_implemented_did
 
     def prepare_model_matrix(self):
-        "Prepare model matrices for estimation."
+        """Build and retain the canonical formula-derived estimator inputs."""
         model_matrix = model_matrix_fixest.create_model_matrix(
             formula=self.FixestFormula,
             data=self._data,
@@ -414,7 +414,19 @@ class Feols(ResultAccessorMixin):
             offset=self._offset_name,
             context=self._context,
         )
+        self._publish_model_matrix(model_matrix)
 
+        # an empty drop still rebuilds the whole frame, so guard it
+        if self._na_index:
+            self._data.drop(index=list(self._na_index), inplace=True)
+
+        return model_matrix
+
+    # Deliberately untyped: an annotation makes mypy check this body, whose published
+    # attribute types are still transitional or loose; see the typing follow-up.
+    def _publish_model_matrix(self, model_matrix):
+        """Publish one structurally immutable state through compatibility aliases."""
+        self._model_matrix = model_matrix
         self._Y = model_matrix.dependent
         self._Y_untransformed = self._Y.copy()
         self._X = model_matrix.independent
@@ -450,12 +462,11 @@ class Feols(ResultAccessorMixin):
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        # an empty drop still rebuilds the whole frame, so guard it
-        if self._na_index:
-            self._data.drop(index=list(self._na_index), inplace=True)
-
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()
+
+    def _validate_response(self) -> None:
+        """Validate estimator-specific response constraints, if any."""
 
     def _set_nobs(self) -> tuple[int, int]:
         """
@@ -588,6 +599,16 @@ class Feols(ResultAccessorMixin):
             self._tZZinv = np.array([])
 
         self._get_predictors()
+
+    def _finalize_fit(self) -> None:
+        """Compute OLS-only post-fit statistics."""
+        if self._method == "feols" and not self._is_iv:
+            self.get_performance()
+            self.wald_test()
+
+    def _iter_fitted_models(self) -> tuple[Feols, ...]:
+        """Yield this fitted result to the result container."""
+        return (self,)
 
     def vcov(
         self,
@@ -880,7 +901,7 @@ class Feols(ResultAccessorMixin):
         attributes = []
 
         if not self._store_data:
-            attributes += ["_data"]
+            attributes += ["_data", "_model_matrix"]
 
         if self._lean:
             attributes += [
@@ -902,6 +923,7 @@ class Feols(ResultAccessorMixin):
                 "_Y_hat_link",
                 "_Y_hat_response",
                 "_Y_untransformed",
+                "_model_matrix",
             ]
 
         for attr in attributes:
