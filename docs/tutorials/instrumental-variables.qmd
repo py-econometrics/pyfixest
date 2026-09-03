@@ -96,11 +96,31 @@ digraph IV2 {
 
 `PyFixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects $T$ onto $Z$ (and all other exogenous variables) to obtain $\hat{T}$, then uses $\hat{T}$ to estimate the causal effect of $T$ on $Y$. Because $\hat{T}$ is not a function of $U$, we can think of the dashed path from the unobserved variable as blocked or removed.
 
-In `PyFixest`, the IV syntax is:
+## IV formula syntax in PyFixest 0.70
+
+Starting with PyFixest 0.70, write an IV specification with Formulaic's
+bracketed multistage syntax:
 
 ```
-Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument
+Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects
 ```
+
+For example, an IV regression with exogenous controls and fixed effects is
+specified as follows:
+
+```python
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
+```
+
+::: {.callout-warning}
+## Legacy IV syntax is deprecated
+
+The former fixest-style syntax, `Y ~ X2 | f1 + f2 | X1 ~ Z1`, still works in
+0.70, but raises a `DeprecationWarning` and will become an error in a future
+release. Update formulas to the bracketed syntax above. See the
+[Formula Parsing on `formulaic` section of the changelog](/changelog.qmd#formula-parsing-on-formulaic)
+for the full set of formula-parsing changes in 0.70.
+:::
 
 ::: {.callout-note}
 ## Fixed Effects with IV
@@ -163,7 +183,7 @@ $$\hat{\beta}_{\text{Wald}} = \frac{\bar{Y}_{Z=1} - \bar{Y}_{Z=0}}{\bar{T}_{Z=1}
 In `PyFixest`, we can fit the IV model using the formula interface:
 
 ```{python}
-fit_iv = pf.feols("earnings ~ 1 | num_children ~ ivf_success", data=ivf_df)
+fit_iv = pf.feols("earnings ~ 1 + [num_children ~ ivf_success]", data=ivf_df)
 
 pf.etable([
     fit_ols,
@@ -240,7 +260,10 @@ fit_itt = pf.feols("revenue ~ assigned_treatment | user_type", data=ab_df)
 fit_fs = pf.feols("adopted_feature ~ assigned_treatment | user_type", data=ab_df)
 
 # IV / LATE
-fit_late = pf.feols("revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data=ab_df)
+fit_late = pf.feols(
+    "revenue ~ 1 + [adopted_feature ~ assigned_treatment] | user_type",
+    data=ab_df,
+)
 ```
 
 ### Compare All Three
@@ -314,7 +337,7 @@ fit_ols_b = pf.feols("wages ~ immigration + log_population", data=bartik_df)
 
 # IV: using the Bartik instrument
 fit_iv_b = pf.feols(
-    "wages ~ log_population | immigration ~ bartik_instrument",
+    "wages ~ log_population + [immigration ~ bartik_instrument]",
     data=bartik_df,
 )
 ```
