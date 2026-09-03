@@ -47,6 +47,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+from pyfixest.estimation.post_estimation import jla
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
     _decompose_arg_check,
@@ -64,6 +65,7 @@ from pyfixest.estimation.post_estimation.prediction import _compute_prediction_e
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _create_rng,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -1739,6 +1741,146 @@ class Feols(ResultAccessorMixin):
         self._sumFE = D2.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
+
+    def leverage(
+        self,
+        number_probes: int = 100,
+        seed: int = 1234,
+        compute_monte_carlo_standard_errors: bool = False,
+    ) -> jla.RandomizedDiagonalResult:
+        """Approximate regression leverage values using random projections.
+
+        This method applies the leverage approximation of [Kline, Saggio, and
+        Sølvsten (2020)](https://doi.org/10.3982/ECTA16410) to the complete
+        regression projection, including absorbed fixed effects. Its
+        Rademacher random projections follow [Achlioptas
+        (2003)](https://doi.org/10.1016/S0022-0000(03)00025-4).
+
+        Parameters
+        ----------
+        number_probes : int, optional
+            Number of independent Rademacher probes. More probes reduce the
+            Monte Carlo error but increase runtime and memory use. Defaults to
+            ``100``.
+        seed : int, optional
+            Seed used to construct the random-number generator. Defaults to
+            ``1234``.
+        compute_monte_carlo_standard_errors : bool, optional
+            Whether to estimate Monte Carlo standard errors. Defaults to
+            ``False``.
+
+        Returns
+        -------
+        RandomizedDiagonalResult
+            Approximate leverage values and optional Monte Carlo standard
+            errors.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+        result = fit.leverage(number_probes=100, seed=1234)
+        result.estimate[:5]
+        ```
+        """
+        if self._lean:
+            raise ValueError(
+                "leverage() is unavailable for lean models. "
+                "Re-estimate with lean=False."
+            )
+        if self._is_iv:
+            raise NotImplementedError("leverage() is not implemented for IV models.")
+        if self._method != "feols":
+            raise NotImplementedError(
+                "leverage() is currently implemented only for OLS models."
+            )
+        if self._has_weights and self._weights_type == "fweights":
+            raise NotImplementedError(
+                "leverage() does not currently support frequency weights."
+            )
+        regression_projection = jla.RegressionProjectionOperator(
+            fixed_effect_residual_projection=(
+                jla.FixedEffectResidualProjection(
+                    fixed_effects=np.asarray(self._fe, dtype=np.int32),
+                    weights=np.asarray(self._weights, dtype=np.float64).reshape(-1),
+                    demeaner=self._demeaner,
+                    preconditioner=self.preconditioner,
+                )
+                if self._has_fixef
+                else None
+            ),
+            covariates=np.asarray(self._X, dtype=np.float64),
+            gramian=(
+                np.asarray(self._hessian, dtype=np.float64)
+                if self._X.shape[1] > 0
+                else np.empty((0, 0), dtype=np.float64)
+            ),
+        )
+        return jla.leverage(
+            regression_projection=regression_projection,
+            number_probes=number_probes,
+            random_number_generator=_create_rng(seed),
+            compute_monte_carlo_standard_errors=compute_monte_carlo_standard_errors,
+        )
+
+    def influence(
+        self,
+        number_probes: int = 100,
+        seed: int = 1234,
+        compute_monte_carlo_standard_errors: bool = False,
+    ) -> jla.RandomizedDiagonalResult:
+        """Calculate leave-one-out influence values for an OLS model.
+
+        The influence of observation ``i`` is the change in its own fitted
+        value when it is deleted from the estimation sample:
+
+        ``fitted_i - fitted_i_without_i = leverage_i * residual_i / (1 - leverage_i)``.
+
+        Leverage is approximated for the complete regression projection,
+        including absorbed fixed effects, using the Johnson--Lindenstrauss
+        approximation described by [Kline, Saggio, and Sølvsten
+        (2020)](https://doi.org/10.3982/ECTA16410).
+
+        Parameters
+        ----------
+        number_probes : int, optional
+            Number of independent Rademacher probes used to approximate
+            leverage. More probes reduce Monte Carlo error but increase runtime
+            and memory use. Defaults to ``100``.
+        seed : int, optional
+            Seed used to construct the random-number generator. Defaults to
+            ``1234``.
+        compute_monte_carlo_standard_errors : bool, optional
+            Whether to propagate leverage's Monte Carlo standard errors to the
+            influence values. Defaults to ``False``.
+
+        Returns
+        -------
+        RandomizedDiagonalResult
+            Approximate leave-one-out influence values and optional Monte Carlo
+            standard errors.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+        result = fit.influence(number_probes=100, seed=1234)
+        result.estimate[:5]
+        ```
+        """
+        leverage = self.leverage(
+            number_probes=number_probes,
+            seed=seed,
+            compute_monte_carlo_standard_errors=compute_monte_carlo_standard_errors,
+        )
+        return jla.influence(
+            residuals=np.asarray(self.resid(), dtype=np.float64),
+            leverage=leverage,
+        )
 
     def predict(
         self,
