@@ -8,7 +8,12 @@ import pytest
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
+from pyfixest.demeaners import (
+    LsmrDemeaner,
+    MapDemeaner,
+    _resolve_preconditioner,
+    _supports_varying_slopes,
+)
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
@@ -51,6 +56,19 @@ TORCH_DEVICE_DEMEANERS = [
         require="cuda",
     ),
 ]
+
+
+@pytest.mark.parametrize(
+    "demeaner",
+    [
+        LsmrDemeaner(backend="within"),
+        LsmrDemeaner(backend="torch"),
+        LsmrDemeaner(backend="cupy"),
+        MapDemeaner(),
+    ],
+)
+def test_no_demeaner_supports_varying_slopes(demeaner):
+    assert not _supports_varying_slopes(demeaner)
 
 
 @pytest.fixture(scope="module")

@@ -433,6 +433,13 @@ class LsmrDemeaner(BaseDemeaner):
 
 AnyDemeaner = MapDemeaner | LsmrDemeaner
 
+
+def _supports_varying_slopes(demeaner: AnyDemeaner) -> bool:
+    """Return whether a demeaner backend supports varying slopes."""
+    # return isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within"
+    return False
+
+
 __all__ = [
     "AnyDemeaner",
     "BaseDemeaner",

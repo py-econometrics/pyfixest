@@ -590,15 +590,15 @@ class TestVaryingSlopeParsing:
 
         assert parsed.fixed_effect_specifications == ()
 
-    def test_distinct_terms_with_shared_levels_remain_distinct(self):
-        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
+    def test_fixed_effect_specs_merge_shared_levels(self):
+        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z1, z2]] + f2[z3] + f1[[z1]]")[0]
 
         assert [
             (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
             for spec in parsed.fixed_effect_specifications
         ] == [
-            ("f1", True, ()),
-            ("f1", False, ("z",)),
+            ("f1", True, ("z1", "z2")),
+            ("f2", True, ("z3",)),
         ]
 
     @pytest.mark.parametrize(
