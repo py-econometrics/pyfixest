@@ -230,6 +230,8 @@ We also removed:
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
 - Weighted fixed-effect contributions (`_sumFE`) are now stored in response
   units.
+- `IV_Diag()` no longer relabels the main model's covariance type when computing
+  the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

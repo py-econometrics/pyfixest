@@ -549,7 +549,6 @@ class Feiv(Feols):
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
-            self._vcov_type_detail = "hetero"
             self._model_1st_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013
