@@ -81,6 +81,32 @@ mixture_precision = pf.optimal_mixture_precision(
 fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 ```
 
+### Omitted-Variable-Bias Sensitivity Analysis
+
+Unweighted `feols()` models now support sensitivity analysis following
+[Cinelli and Hazlett
+(2020)](https://doi.org/10.1111/rssb.12348). Configure an analysis for one
+treatment coefficient, inspect its partial $R^2$ and robustness values, and
+benchmark omitted confounding against observed covariates:
+
+```{python}
+fit = pf.feols("Y ~ X1 + X2 | f1", data=df)
+sensitivity = fit.sensitivity_analysis("X1")
+
+sensitivity.sensitivity_stats()
+sensitivity.ovb_bounds("X2", kd=[0.5, 1], ky=[1, 2])
+_ = sensitivity.plot(benchmark_covariates="X2", kd=[0.5, 1], ky=[1, 2])
+```
+
+The implementation matches the numerical definitions in R's `sensemakr`
+package. It supports absorbed fixed effects and `store_data=False` by working
+from the fitted model matrix. Sensitivity statistics always use IID standard
+errors and residual degrees of freedom; models fitted with robust, clustered,
+or HAC covariance estimators emit a warning before using those IID inputs.
+Weighted, IV, GLM, quantile, and `lean=True` fits are not yet supported.
+Contour and extreme-scenario plots can display benchmark or manually supplied
+partial-$R^2$ values without refitting the model.
+
 ### GLM API and Behavior
 
 - Poisson offsets now accept Formulaic transformations such as

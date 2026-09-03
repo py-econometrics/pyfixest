@@ -300,3 +300,11 @@ class FixestMulti(TidyColumnAccessors):
             print("Model: ", key)
         model = self.all_fitted_models[key]
         return model
+
+    def sensitivity_analysis(self, treatment: str) -> None:
+        """Explain how to run sensitivity analysis for one fitted model."""
+        raise NotImplementedError(
+            "Sensitivity analysis is defined for one OLS fit. Call "
+            "fetch_model() first, then call sensitivity_analysis(treatment) on "
+            "the returned model."
+        )
