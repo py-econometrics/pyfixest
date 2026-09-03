@@ -28,6 +28,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
+from pyfixest.estimation.internals.jla import LinearOperator
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
@@ -1880,6 +1881,194 @@ class Feols(ResultAccessorMixin):
         return jla.influence(
             residuals=np.asarray(self.resid(), dtype=np.float64),
             leverage=leverage,
+        )
+
+    def predictions(
+        self,
+        type: PredictionType = "link",
+        average: bool | tuple[str, ...] = False,
+        number_probes: int = 100,
+        seed: int = 1234,
+    ) -> jla.PredictionResult:
+        """Calculate in-sample OLS predictions and their standard errors.
+
+        For models with absorbed fixed effects, prediction variances include
+        uncertainty from both the reported coefficients and the fixed effects.
+        They are approximated from the complete regression projection using the
+        Johnson--Lindenstrauss construction of [Kline, Saggio, and Sølvsten
+        (2020)](https://doi.org/10.3982/ECTA16410). The reported Monte Carlo
+        standard errors describe approximation error in the variance estimates,
+        not sampling uncertainty.
+
+        Parameters
+        ----------
+        type : PredictionType, optional
+            Prediction scale. ``"link"`` and ``"response"`` are identical for
+            OLS. Defaults to ``"link"``.
+        average : bool | tuple[str, ...], optional
+            Whether to average predictions before calculating uncertainty.
+            ``True`` returns the overall average. A non-empty tuple of column
+            names returns averages for each observed group. Defaults to
+            ``False``.
+        number_probes : int, optional
+            Number of independent Rademacher probes. More probes reduce Monte
+            Carlo error but increase runtime and memory use. Defaults to ``100``.
+        seed : int, optional
+            Seed used to construct the random-number generator. Defaults to
+            ``1234``.
+
+        Returns
+        -------
+        PredictionResult
+            In-sample predictions, their statistical standard errors, and
+            variance-level Monte Carlo standard errors for randomized results.
+
+        Raises
+        ------
+        ValueError
+            If the model is lean, ``type`` or ``average`` is invalid, grouped
+            averages are requested without stored data, or grouping columns
+            contain missing values.
+        NotImplementedError
+            If the model is weighted, instrumental-variables, fixed-effect-only,
+            not OLS, or was fitted with an inference method other than IID or
+            one-way CRV1.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+        result = fit.predictions(number_probes=100, seed=1234)
+        result.estimate[:5]
+        result.standard_error[:5]
+        ```
+        """
+        if self._lean:
+            raise ValueError(
+                "predictions() is unavailable for lean models. "
+                "Re-estimate with lean=False."
+            )
+        if self._is_iv:
+            raise NotImplementedError("predictions() is not implemented for IV models.")
+        if self._method != "feols":
+            raise NotImplementedError(
+                "predictions() is currently implemented only for OLS models."
+            )
+        if self._has_weights:
+            raise NotImplementedError(
+                "predictions() does not currently support regression weights."
+            )
+        if self._X_is_empty:
+            raise NotImplementedError(
+                "predictions() does not currently support models without "
+                "estimated covariate coefficients."
+            )
+        if self._vcov_type not in {"iid", "CRV"} or (
+            self._vcov_type == "CRV" and self._vcov_type_detail != "CRV1"
+        ):
+            raise NotImplementedError(
+                "predictions() currently supports only IID and CRV1 inference."
+            )
+        if self._vcov_type == "CRV" and self._cluster_df.shape[1] != 1:
+            raise NotImplementedError(
+                "predictions() currently supports only one-way CRV1 inference."
+            )
+        _validate_literal_argument(type, PredictionType)
+
+        group_keys: tuple[tuple[object, ...], ...] | None = None
+        if average is False:
+            prediction_to_quantity: LinearOperator = jla.IdentityOperator(
+                size=self._N_rows
+            )
+        elif average is True:
+            prediction_to_quantity = jla.PredictionAveragingOperator(
+                group_indices=np.zeros(self._N_rows, dtype=np.intp),
+            )
+        elif (
+            isinstance(average, tuple)
+            and average
+            and all(isinstance(column, str) for column in average)
+        ):
+            if not self._store_data:
+                raise ValueError(
+                    "Grouped prediction averages require stored data. "
+                    "Re-estimate with store_data=True."
+                )
+            missing_columns = [
+                column for column in average if column not in self._data.columns
+            ]
+            if missing_columns:
+                raise ValueError(
+                    f"Grouping columns not found in stored data: {missing_columns}."
+                )
+            if len(set(average)) != len(average):
+                raise ValueError(f"Grouping columns must be unique: {average}")
+            group_data = self._data.loc[:, list(average)]
+            if group_data.isna().to_numpy().any():
+                raise ValueError("Grouping columns must not contain missing values.")
+            group_indices, unique_groups = pd.factorize(
+                pd.MultiIndex.from_frame(group_data), sort=False
+            )
+            group_keys = tuple(tuple(key) for key in unique_groups.tolist())
+            prediction_to_quantity = jla.PredictionAveragingOperator(
+                group_indices=np.asarray(group_indices, dtype=np.intp),
+            )
+        else:
+            raise ValueError(
+                "average must be False, True, or a non-empty tuple of column names."
+            )
+
+        fitted_values = np.asarray(self._Y_hat_link, dtype=np.float64)
+        fitted_values = prediction_to_quantity.apply(fitted_values[:, None]).reshape(-1)
+        regression_projection = jla.RegressionProjectionOperator(
+            fixed_effect_residual_projection=(
+                jla.FixedEffectResidualProjection(
+                    fixed_effects=np.asarray(self._fe, dtype=np.int32),
+                    weights=np.asarray(self._weights, dtype=np.float64).reshape(-1),
+                    demeaner=self._demeaner,
+                    preconditioner=self.preconditioner,
+                )
+                if self._has_fixef
+                else None
+            ),
+            covariates=np.asarray(self._X, dtype=np.float64),
+            gramian=(
+                np.asarray(self._hessian, dtype=np.float64)
+                if self._X.shape[1] > 0
+                else np.empty((0, 0), dtype=np.float64)
+            ),
+        )
+        residuals = np.asarray(self._u_hat, dtype=np.float64).reshape(-1)
+        ssc = np.asarray(self._ssc, dtype=np.float64).reshape(-1)
+        score_covariance_factor: LinearOperator
+        if self._vcov_type == "iid":
+            residual_variance = float(ssc[0] * np.sum(residuals**2) / (self._N - 1))
+            score_covariance_factor = jla.DiagonalScoreCovarianceFactor(
+                number_observations=self._N,
+                scale=np.sqrt(residual_variance),
+            )
+        else:
+            cluster_indices = np.asarray(
+                pd.factorize(self._cluster_df.iloc[:, 0])[0],
+                dtype=np.intp,
+            )
+            score_covariance_factor = jla.ClusterScoreCovarianceFactor(
+                score_scale=np.sqrt(float(ssc[0])) * residuals,
+                cluster_indices=cluster_indices,
+                number_clusters=int(self._cluster_df.iloc[:, 0].nunique()),
+            )
+        return jla.prediction_uncertainty(
+            fitted_values=fitted_values,
+            prediction_jacobian=jla.PredictionJacobian(
+                score_covariance_factor=score_covariance_factor,
+                score_to_prediction=regression_projection,
+                prediction_to_quantity=prediction_to_quantity,
+            ),
+            number_probes=number_probes,
+            random_number_generator=_create_rng(seed),
+            group_keys=group_keys,
         )
 
     def predict(
