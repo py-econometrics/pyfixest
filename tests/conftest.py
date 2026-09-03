@@ -27,6 +27,7 @@ def pytest_addoption(parser):
 
 # Skip test files that require rpy2 when it is not installed (e.g. non-R pixi env).
 _rpy2_test_files = [
+    "test_dfm_test_vs_r.py",
     "test_did.py",
     "test_hac_vs_fixest.py",
     "test_i.py",
