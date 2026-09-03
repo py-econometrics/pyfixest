@@ -186,7 +186,13 @@ ignore_missing_imports = true
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "win-64", "osx-arm64"]
+platforms = [
+    "linux-64",
+    "win-64",
+    "osx-arm64",
+    # CUDA-enabled variant of linux-64, selected by the benchmark feature only.
+    { name = "linux-64-cuda", platform = "linux-64", cuda = "12.8" },
+]
 
 [tool.pixi.dependencies]
 python = ">=3.10,<3.15"
@@ -323,7 +329,7 @@ lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks v
 # -- benchmark feature -----------------------------------------------------------------
 
 [tool.pixi.feature.benchmark]
-platforms = ["win-64", "linux-64", "osx-arm64"]
+platforms = ["win-64", "linux-64-cuda", "osx-arm64"]
 
 [tool.pixi.feature.benchmark.dependencies]
 r-arrow = "*"
@@ -336,13 +342,10 @@ benchmark = { cmd = "python benchmarks/modular/benchmark_main.py", depends-on = 
 benchmark-akm = { cmd = "python benchmarks/modular/benchmark_akm_sweep.py", depends-on = ["_setup", "_julia-setup"], description = "Run fixed-size AKM parameter sweep benchmarks (Python, R, Julia)" }
 benchmark-akm-occupation = { cmd = "python benchmarks/modular/benchmark_akm_occupation.py", depends-on = ["_setup", "_julia-setup"], description = "Run occupation-extended AKM benchmarks (Python, R, Julia)" }
 
-[tool.pixi.feature.benchmark.system-requirements]
-cuda = "12.8"
-
-[tool.pixi.feature.benchmark.target.linux-64.dependencies]
+[tool.pixi.feature.benchmark.target.linux-64-cuda.dependencies]
 cuda-version = "12.8.*"
 
-[tool.pixi.feature.benchmark.target.linux-64.pypi-dependencies]
+[tool.pixi.feature.benchmark.target.linux-64-cuda.pypi-dependencies]
 torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" }
 
 # -- environments ----------------------------------------------------------------------

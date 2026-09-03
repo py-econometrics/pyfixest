@@ -26,7 +26,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.62.2
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
@@ -58,7 +58,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.62.2
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
@@ -101,7 +101,7 @@ jobs:
 
       - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.62.2
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
