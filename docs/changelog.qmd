@@ -61,6 +61,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   non-OLS models instead of mixing scales.
 - Non-Poisson GLMs reject `CRV3` instead of silently refitting through the
   Poisson jackknife. Poisson `CRV3` remains supported.
+- CRV3 jackknife and slow randomization-inference refits now replay the
+  original estimation options (weights, small-sample corrections, singleton
+  handling, solver, demeaner, offset, IRLS tolerances).
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
