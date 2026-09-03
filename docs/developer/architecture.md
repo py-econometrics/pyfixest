@@ -263,19 +263,36 @@ fixed effects, but rejects `inplace=True`: design rows alone cannot reconstruct
 the complete formula, prediction, inference, and performance state of a fitted
 result.
 
-Storage policy follows the full result graph. Retained IV first stages honor
-`store_data=False`, and lean results discard within state, GLM working state,
-demeaning caches, quantile solver outputs, and large first-stage arrays. Lean
-results do keep the formula specification and evaluation context, so
-`predict(newdata=...)` still works for models without fixed effects. Array-only
-covariance updates remain available after `store_data=False`; cluster and HAC
-updates require the estimation sample through the documented `vcov(data=...)`
-argument. Explicit covariance data must already be filtered to the fitted row
-sample and retain its estimation order; a row-count check rejects misaligned
-inputs before covariance dispatch. Lean results reject post-fit covariance
-updates because their numerical arrays have been discarded. Every other method
-that needs discarded state raises an informative error naming the storage
-option and its remedy.
+Post-estimation paths reject the estimators they cannot represent instead of
+reading their arrays as OLS state. Non-Poisson GLMs reject `CRV3` until their
+leave-cluster-out refits can retain the original family and solver
+configuration; Poisson keeps its longstanding jackknife-refit path.
+Randomization inference rejects non-OLS/non-Poisson results, and the wild
+bootstrap and `decompose()` reject non-OLS results, so none of them
+reinterprets GLM working state or quantile solver outputs as linear-model
+arrays. Poisson CRV3 and slow randomization refits replay the original
+estimation options. A prebuilt LSMR preconditioner is the sole exception: its
+factorization belongs to one fixed-effect design, so refits keep its variant
+but rebuild it for the changed row set. Weighted `fixef()` stores `_sumFE` in
+response units, and `IV_Diag()` leaves the outer model's covariance label
+untouched.
+
+Storage policy follows the full result graph. Multiple-estimation containers
+keep no copy of the input frame under `store_data=False` or `lean=True`,
+retained IV first stages honor `store_data=False`, and lean results discard
+within state, GLM working state, demeaning caches, quantile solver outputs, and
+large first-stage arrays. Lean results do keep the formula specification and
+evaluation context, so `predict(newdata=...)` still works for models without
+fixed effects. Array-only covariance updates remain available after
+`store_data=False`; cluster and HAC updates require the estimation sample
+through the documented `vcov(data=...)` argument. Explicit covariance data must
+already be filtered to the fitted row sample and retain its estimation order; a
+row-count check rejects misaligned inputs before covariance dispatch, and
+`FixestMulti.vcov(data=...)` validates one common sample for every child before
+any child is updated. Lean results reject post-fit covariance updates because
+their numerical arrays have been discarded. Every other method that needs
+discarded state raises an informative error naming the storage option and its
+remedy.
 
 Keeping canonical arrays unpremultiplied favors readability without moving
 weight work out of the numerical hot path: each solver still performs the same

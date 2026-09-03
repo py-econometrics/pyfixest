@@ -219,13 +219,6 @@ We also removed:
 
 - Removed `pf.dtable()`; use `maketables.DTable()` directly instead.
 
-Storage options:
-
-- `store_data=False` and `lean=True` now apply to multiple-estimation
-  containers; `FixestMulti.vcov()` accepts a common explicit estimation sample;
-  default multi-quantile results retain the arrays needed for prediction and
-  covariance updates.
-
 ### Bug Fixes
 
 - `lean=True` results keep the formula specification and evaluation context, so
@@ -236,6 +229,10 @@ Storage options:
 - `store_data=False` and `lean=True` now apply to retained IV first stages; lean
   fits also discard demeaning caches, GLM working state, and quantile solver
   outputs.
+- `store_data=False` and `lean=True` now apply to multiple-estimation
+  containers; `FixestMulti.vcov()` accepts a common explicit estimation sample;
+  default multi-quantile results retain the arrays needed for prediction and
+  covariance updates.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
