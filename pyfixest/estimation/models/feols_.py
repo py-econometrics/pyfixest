@@ -1933,7 +1933,7 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = solve_design.dot(alpha)
+        self._sumFE = fixed_effect_design.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 
