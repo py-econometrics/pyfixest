@@ -203,6 +203,11 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
+- `predict()` now honors its `atol` and `btol` arguments on every call. The fixed
+  effects recovered by `lsqr()` were cached after the first call and reused
+  regardless of the tolerance requested later, so `predict(atol=1e-12)` silently
+  returned values computed at the earlier, looser tolerance. Cached fixed effects
+  that are already tighter than requested are still reused.
 
 
 ## PyFixest 0.60.0
