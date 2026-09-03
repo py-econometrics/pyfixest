@@ -14,6 +14,7 @@ from pyfixest.estimation.api import (
     feglm,
     feols,
     fepois,
+    oriv,
     quantreg,
 )
 from pyfixest.estimation.deprecated.model_matrix_fixest_ import (
@@ -65,6 +66,7 @@ __all__ = [
     "literals",
     "model_matrix_fixest",
     "optimal_mixture_precision",
+    "oriv",
     "quantreg",
     "rwolf",
     "wyoung",
