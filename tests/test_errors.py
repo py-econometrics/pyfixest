@@ -964,6 +964,39 @@ def test_prediction_errors_glm():
             model.predict(se_fit=True)
 
 
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+def test_glm_crv3_is_explicitly_unsupported(family):
+    """Do not silently run Poisson jackknife refits for other GLM families."""
+    data = pf.get_data(model="Fepois").dropna().copy()
+    if family in ("logit", "probit"):
+        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
+
+    with pytest.raises(VcovTypeNotSupportedError, match="CRV3 inference"):
+        pf.feglm(
+            "Y ~ X1",
+            data=data,
+            family=family,
+            vcov={"CRV3": "f1"},
+        )
+
+
+def test_poisson_crv3_remains_supported():
+    """Keep the longstanding Poisson jackknife path across both public APIs."""
+    data = pf.get_data(model="Fepois").dropna().iloc[:120].copy()
+    data["cluster"] = np.arange(len(data)) % 6
+
+    direct_fit = pf.fepois("Y ~ X1", data=data, vcov={"CRV3": "cluster"})
+    glm_fit = pf.feglm(
+        "Y ~ X1",
+        data=data,
+        family="poisson",
+        vcov={"CRV3": "cluster"},
+    )
+
+    np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
+    np.testing.assert_allclose(direct_fit._vcov, glm_fit._vcov)
+
+
 def test_empty_vcov_error():
     data = pf.get_data()
     fit = pf.feols("Y ~ 1 | f1", data=data)

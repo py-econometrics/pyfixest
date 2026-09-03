@@ -113,7 +113,9 @@ class Feglm(Feols):
         self.separation_check = separation_check
         self._accelerate = accelerate
 
-        self._support_crv3_inference = True
+        # The inherited slow jackknife refits with the linear/Poisson APIs and
+        # cannot yet preserve a generic GLM family's estimation contract.
+        self._support_crv3_inference = False
         self._support_iid_inference = True
         self._support_hac_inference = True
         self._supports_cluster_causal_variance = False
