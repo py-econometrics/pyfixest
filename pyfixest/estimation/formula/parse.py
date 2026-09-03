@@ -1,3 +1,4 @@
+import ast
 import itertools
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -6,7 +7,7 @@ from typing import Final
 import formulaic
 import formulaic.formula
 from formulaic.parser import DefaultFormulaParser
-from formulaic.parser.types import FormulaParser
+from formulaic.parser.types import Factor, FormulaParser, Term
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -20,6 +21,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     filter_multistage_endogenous_terms,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
+    is_python_expression,
     is_structured_formula,
     terms_without_intercept,
 )
@@ -35,6 +37,117 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
+_PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
+    include_intercept=False
+)
+
+
+@dataclass(frozen=True, slots=True)
+class FixedEffectSpecification:
+    """Specification for materialization of fixed effect term.
+
+    Attributes
+    ----------
+    levels : Term
+        Formulaic term that identifies the fixed-effect levels.
+    intercept : bool
+        Whether the effect includes a constant loading for every level.
+    slopes : tuple[Term, ...]
+        Formulaic terms representing varying slopes by fixed-effect level.
+    """
+
+    levels: Term
+    intercept: bool
+    slopes: tuple[Term, ...] = ()
+
+    @classmethod
+    def from_term(cls, term: Term) -> "FixedEffectSpecification":
+        """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
+        # A fixed-effect term can have multiple factors if it represents interactions
+        # For example f1:f2[z] has two factors: `(f1, f2[z])`
+        varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
+        for position, factor in enumerate(term.factors):
+            factor_expression = _factor_ast(factor)
+            if factor_expression is None or not isinstance(
+                factor_expression, ast.Subscript
+            ):
+                continue
+            varying_slope_expressions.append((factor_expression, position))
+
+        if not varying_slope_expressions:
+            return cls(levels=term, intercept=True)
+        elif len(varying_slope_expressions) != 1:
+            # Reject expressions of the form `f1[z1]:f2[z2]`
+            raise FormulaSyntaxError(
+                "Cannot specify more than one varying-slope expression in a single fixed-effect term."
+            )
+        elif varying_slope_expressions[0][1] != len(term.factors) - 1:
+            # Varying slope syntax must be attached to last factor in term
+            # For example, accept `f1:f2[z]` but reject `f1[z]:f2`
+            raise FormulaSyntaxError(
+                "Varying-slope syntax is only supported on the final factor "
+                "of a fixed-effect interaction."
+            )
+        # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
+        # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
+        # First, get the factor with varying slopes (e.g., `f2[z]` in `f1:f2[z]`)
+        expression = varying_slope_expressions[0][0]
+        fixed_effect_level = expression.value  # `f2`
+        fixed_effect_slopes = expression.slice  # `z`
+        if isinstance(fixed_effect_level, ast.Subscript):
+            raise FormulaSyntaxError(
+                "Nested varying-slope subscripts are not supported."
+            )
+        if isinstance(fixed_effect_slopes, ast.List):
+            # Varying slopes without fixed effect: f1[[z1, z2]]
+            intercept = False
+            slope_nodes = tuple(fixed_effect_slopes.elts)
+        else:
+            # Varying slopes fixed effect: f1[z1] or f1[z1, z2]
+            intercept = True
+            slope_nodes = (
+                tuple(fixed_effect_slopes.elts)
+                if isinstance(fixed_effect_slopes, ast.Tuple)  # f1[z1, z2]
+                else (fixed_effect_slopes,)  # f1[z1]
+            )
+
+        if not slope_nodes:
+            # Guard against `f1[]` or `f1[[]]`
+            raise FormulaSyntaxError(
+                "A varying-slope term must specify at least one slope."
+            )
+        return cls(
+            levels=Term(term.factors[:-1] + _term_from_ast(fixed_effect_level).factors),
+            intercept=intercept,
+            slopes=tuple(_term_from_ast(node) for node in slope_nodes),
+        )
+
+
+def _term_from_ast(node: ast.expr) -> Term:
+    """Parse one extracted Python expression as one Formulaic term."""
+    expression = ast.unparse(node)
+    formula = formulaic.Formula(expression, _parser=_PARSER_NO_INTERCEPT)
+    if not isinstance(formula, formulaic.formula.SimpleFormula) or len(formula) != 1:
+        raise FormulaSyntaxError(
+            f"`{expression}` is not valid here. Each fixed-effect level and slope "
+            "must resolve to exactly one formula term. To specify multiple slopes, "
+            "separate them with commas, for example `f1[z1, z2]`."
+        )
+    return formula[0]
+
+
+def _factor_ast(factor: Factor) -> ast.expr | None:
+    """Return the AST for a Python-evaluated Formulaic factor."""
+    # Factor must encoded as Python expression by formulaic
+    # (because `f1[z]` is Python syntax)
+    if not is_python_expression(factor):
+        return None
+    try:
+        return ast.parse(factor.expr, mode="eval").body
+    except SyntaxError as exception:
+        raise FormulaSyntaxError(
+            f"Could not parse fixed-effect expression: {factor.expr}"
+        ) from exception
 
 
 @dataclass(kw_only=True, frozen=True, slots=True, repr=False)
@@ -223,11 +336,20 @@ class Formula:
         )
 
     @property
+    def fixed_effect_specifications(self) -> tuple[FixedEffectSpecification, ...]:
+        """Fixed effects represented as symbolic `within::Effect` terms."""
+        if not self.is_fixed_effects:
+            return ()
+        return tuple(
+            FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+        )
+
+    @property
     def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
             [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
-            _parser=DefaultFormulaParser(include_intercept=False),
+            _parser=_PARSER_NO_INTERCEPT,
         )
 
     @property
