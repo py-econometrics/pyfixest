@@ -1293,6 +1293,9 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
+            raise NotImplementedError(
+                "Wild cluster bootstrap is only supported for unweighted OLS models."
+            )
 
         self._require_fit_arrays("wildboottest", arrays="the fitted arrays")
         self._require_estimation_data("wildboottest")
@@ -1770,6 +1773,11 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        if not self._support_decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for OLS models."
+            )
+
         self._require_fit_arrays("decompose", arrays="the fitted arrays")
         # A cluster variable or an absorbed fixed effect is read back from the
         # estimation sample; the plain covariate case works on arrays alone.
@@ -2215,6 +2223,10 @@ class Feols(ResultAccessorMixin):
         if self._is_iv:
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
+            )
+        if self._method not in {"feols", "fepois"}:
+            raise NotImplementedError(
+                "Randomization Inference is only supported for OLS and Poisson models."
             )
 
         # check that resampvar in _coefnames
