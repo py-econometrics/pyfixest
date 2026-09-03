@@ -1,8 +1,37 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
+
+
+def test_twoway_cluster_intersection_preserves_cluster_pairs():
+    rng = np.random.default_rng(20260809)
+    pair_data = pd.DataFrame(
+        {
+            "cluster1": ["a-b", "a", "c-d", "c"] * 8,
+            "cluster2": ["c", "b-c", "e", "d-e"] * 8,
+        }
+    )
+    pair_data["x"] = rng.normal(size=len(pair_data))
+    pair_data["y"] = 1 + pair_data["x"] + rng.normal(size=len(pair_data))
+    encoded_data = pair_data.copy()
+    encoded_data["cluster1_code"] = pd.factorize(encoded_data["cluster1"])[0]
+    encoded_data["cluster2_code"] = pd.factorize(encoded_data["cluster2"])[0]
+
+    string_vcov = feols(
+        "y ~ x",
+        data=pair_data,
+        vcov={"CRV1": "cluster1 + cluster2"},
+    )._vcov
+    encoded_vcov = feols(
+        "y ~ x",
+        data=encoded_data,
+        vcov={"CRV1": "cluster1_code + cluster2_code"},
+    )._vcov
+
+    np.testing.assert_allclose(string_vcov, encoded_vcov, rtol=1e-12, atol=1e-12)
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])

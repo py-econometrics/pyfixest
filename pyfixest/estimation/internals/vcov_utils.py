@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -19,7 +22,7 @@ from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ClusterPrep:
     "Precomputed cluster state shared across the CRV per-cluster loop."
 
@@ -30,35 +33,88 @@ class ClusterPrep:
     n_fe_fully_nested: int
 
 
+@dataclass(frozen=True, slots=True)
+class SscContext:
+    """Model quantities used to build small-sample-correction arguments.
+
+    Attributes
+    ----------
+    ssc_dict : dict[str, Any]
+        User-selected small-sample-correction rules.
+    N : int
+        Effective number of observations.
+    k : int
+        Number of estimated slope coefficients.
+    k_fe : int
+        Number of fixed-effect coefficients.
+    n_fe : int
+        Number of fixed-effect dimensions.
+    """
+
+    ssc_dict: dict[str, Any]
+    N: int
+    k: int
+    k_fe: int
+    n_fe: int
+
+    def compute(
+        self,
+        *,
+        vcov_type: str,
+        G: int,
+        vcov_sign: int = 1,
+        k_fe_nested: int = 0,
+        n_fe_fully_nested: int = 0,
+    ) -> tuple[np.ndarray, int, int]:
+        "Compute a small-sample correction using the stored model quantities."
+        return get_ssc(
+            ssc_dict=self.ssc_dict,
+            N=self.N,
+            k=self.k,
+            k_fe=self.k_fe,
+            n_fe=self.n_fe,
+            vcov_type=vcov_type,
+            G=G,
+            vcov_sign=vcov_sign,
+            k_fe_nested=k_fe_nested,
+            n_fe_fully_nested=n_fe_fully_nested,
+        )
+
+
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: DataFrameType | None,
     clustervar: list[str],
     ssc_dict: dict,
     fixef: str | None,
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    k_fe: np.ndarray | pd.Series | None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
+    assert data is not None  # `_get_cluster_df` raises before this point.
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
-    if cluster_df.shape[1] > 1:
-        cluster_df = _prepare_twoway_clustering(
-            clustervar=clustervar, cluster_df=cluster_df
+    cluster_columns = [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
+    if len(cluster_columns) > 1:
+        intersection = (
+            cluster_columns[0] * (int(cluster_columns[1].max()) + 1)
+            + cluster_columns[1]
         )
+        cluster_df.loc[:, "cluster_intersection"] = intersection
+        cluster_columns.append(intersection)
 
     G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
 
-    cluster_arr_int = np.column_stack(
-        [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
-    )
+    cluster_arr_int = np.column_stack(cluster_columns)
 
     k_fe_nested = 0
     n_fe_fully_nested = 0
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
+        if k_fe is None:
+            raise ValueError("`k_fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
@@ -78,11 +134,11 @@ def prepare_cluster_state(
     )
 
 
-def run_crv_loop(
+def assemble_crv_vcov(
     *,
     prep: ClusterPrep,
     k: int,
-    make_ssc_kwargs: Callable[..., dict],
+    ssc_context: SscContext,
     cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
 ) -> tuple[np.ndarray, np.ndarray, int, int]:
     "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
@@ -90,7 +146,7 @@ def run_crv_loop(
     n_clusters = prep.cluster_df.shape[1]
 
     vcov = np.zeros((k, k))
-    ssc_arr: np.ndarray | None = None
+    ssc_arr = np.empty(n_clusters)
     df_t_full = np.zeros(n_clusters)
     df_k = 0
 
@@ -98,20 +154,17 @@ def run_crv_loop(
         cluster_col = prep.cluster_arr_int[:, x]
         clustid = np.unique(cluster_col)
 
-        ssc, df_k, df_t = get_ssc(
-            **make_ssc_kwargs(
-                vcov_type="CRV",
-                G=prep.G[x],
-                vcov_sign=vcov_sign_list[x],
-                k_fe_nested=prep.k_fe_nested,
-                n_fe_fully_nested=prep.n_fe_fully_nested,
-            )
+        ssc, df_k, df_t = ssc_context.compute(
+            vcov_type="CRV",
+            G=prep.G[x],
+            vcov_sign=vcov_sign_list[x],
+            k_fe_nested=prep.k_fe_nested,
+            n_fe_fully_nested=prep.n_fe_fully_nested,
         )
-        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+        ssc_arr[x] = ssc[0]
         df_t_full[x] = df_t
         vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
 
-    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
     return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
 
@@ -125,23 +178,22 @@ def _compute_bread(
     return np.linalg.inv(_tXZ @ _tZZinv @ _tZX) if _is_iv else np.linalg.inv(_hessian)
 
 
-def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
-    if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
-    else:
+def _get_cluster_df(data: DataFrameType | None, clustervar: list[str]) -> pd.DataFrame:
+    if data is None or data.shape[0] == 0:
         raise AttributeError(
-            """The input data set needs to be stored in the model object if
-            you call `vcov()` post estimation with a novel cluster variable.
-            Please set the function argument `store_data=True` when calling
-            the regression.
-            """
+            "The input data set must be stored in the model object for "
+            "post-estimation clustering. Set `store_data=True` when fitting "
+            "the regression."
         )
 
-    return cluster_df
+    data_pandas = _narwhals_to_pandas(data)
+    missing = [name for name in clustervar if name not in data_pandas.columns]
+    if missing:
+        raise ValueError(f"Cluster variable(s) {missing} are not in the data.")
+    return data_pandas[clustervar].copy()
 
 
-def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
+def _check_cluster_df(cluster_df: pd.DataFrame, data: DataFrameType):
     if np.any(cluster_df.isna().any()):
         raise NanInClusterVarError(
             "CRV inference not supported with missing values in the cluster variable."
@@ -274,15 +326,3 @@ def _dk_meat_panel(
             lag,
         )
     )
-
-
-def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
-    cluster_one = clustervar[0]
-    cluster_two = clustervar[1]
-    cluster_df_one_str = cluster_df[cluster_one].astype(str)
-    cluster_df_two_str = cluster_df[cluster_two].astype(str)
-    cluster_df.loc[:, "cluster_intersection"] = cluster_df_one_str.str.cat(
-        cluster_df_two_str, sep="-"
-    )
-
-    return cluster_df
