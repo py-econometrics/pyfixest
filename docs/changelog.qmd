@@ -53,6 +53,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   design, and weights) is kept separate from observation weights.
 - Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
   read-only views over the typed state objects.
+- Fitted results are now built from a shared `BaseRegression` class and one leaf
+  per estimator. `Feols` is the OLS leaf, `Feiv` extends it, and `Feglm` and
+  `Quantreg` are separate leaves rather than `Feols` subclasses. Estimator
+  differences inside a shared method are hooks on the base instead of
+  comparisons against the mutable `_method` label. Reporting and the result
+  container are typed against a `FittedResult` protocol, `FixestMulti` is
+  generic in its result class, and `pf.estimation.BaseRegression` is exported
+  for `isinstance` checks.
 
 ### Inference Types
 

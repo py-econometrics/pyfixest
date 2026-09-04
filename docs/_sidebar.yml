@@ -21,6 +21,7 @@ website:
       - reference/estimation.post_estimation.multcomp.wyoung.qmd
       section: Multiple Hypothesis Testing
     - contents:
+      - reference/estimation.models.base_regression_.BaseRegression.qmd
       - reference/estimation.models.feols_.Feols.qmd
       - reference/estimation.models.fepois_.Fepois.qmd
       - reference/estimation.models.feiv_.Feiv.qmd

@@ -41,6 +41,7 @@ Read the rows as follows.
 | `update` | [`update()`](/reference/estimation.models.feols_.Feols.update.qmd) |
 | `savi` | [`evalue()`](/reference/estimation.models.feols_.Feols.evalue.qmd), [`pvalue_savi()`](/reference/estimation.models.feols_.Feols.pvalue_savi.qmd), and `confint(inference_type="savi")` |
 
+
 ## The support of one fit
 
 Weights, fixed effects, and instruments can withdraw a feature the estimator
@@ -65,6 +66,26 @@ Calling one of those methods raises the same reason as an error.
 try:
     weighted.ccv(treatment="X1")
 except NotImplementedError as error:
+    print(error)
+```
+
+## When a method is not there at all
+
+The table above withdraws a method from a particular fit. Some methods are
+never available for an estimator, because their derivation assumes a single
+linear estimating equation: `wildboottest()`, `ccv()`, `decompose()`,
+`update()`, `evalue()`, and `pvalue_savi()` exist on `feols()` results only. A
+Poisson, GLM, or quantile result does not define them, so the attribute is
+absent and the reason arrives as an `AttributeError`.
+
+```{python}
+poisson = pf.fepois("Y ~ X1", pf.get_data(model="Fepois"))
+
+print(hasattr(poisson, "decompose"))
+
+try:
+    poisson.decompose(decomp_var="X1")
+except AttributeError as error:
     print(error)
 ```
 
