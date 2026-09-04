@@ -12,6 +12,7 @@ LLMS_TXT = """\
 ## Pages
 
 - [Guide](guide.llms.md)
+- [Tutorials](tutorials/index.llms.md)
 - [Tutorial](tutorials/tutorial.llms.md)
 - [PyFixest](index.llms.md)
 """
@@ -58,6 +59,7 @@ def site(tmp_path: Path) -> Path:
     site = tmp_path / "_site"
     _write(site / "llms.txt", LLMS_TXT)
     _write(site / "guide.llms.md", GUIDE)
+    _write(site / "tutorials" / "index.llms.md", "# Tutorials\n")
     _write(site / "tutorials" / "tutorial.llms.md", "# Tutorial\n")
     _write(site / "index.llms.md", "# PyFixest\n\nGo to [docs](guide.llms.md).\n")
     return site
@@ -85,7 +87,12 @@ def test_bundle_copies_pages_without_the_redirect_stub(
         path.relative_to(output).as_posix()
         for path in output.rglob("*")
         if path.is_file()
-    ) == ["guide.llms.md", "llms.txt", "tutorials/tutorial.llms.md"]
+    ) == [
+        "guide.llms.md",
+        "llms.txt",
+        "tutorials/index.llms.md",
+        "tutorials/tutorial.llms.md",
+    ]
 
 
 def test_index_drops_the_stub_entry_and_stamps_the_version(
@@ -105,6 +112,7 @@ def test_index_drops_the_stub_entry_and_stamps_the_version(
         "## Pages\n"
         "\n"
         "- [Guide](guide.llms.md)\n"
+        "- [Tutorials](tutorials/index.llms.md)\n"
         "- [Tutorial](tutorials/tutorial.llms.md)\n"
     )
 
@@ -146,7 +154,7 @@ def test_bundling_twice_is_idempotent(
         if path.is_file()
     }
 
-    assert bundle(site=site, output=output, version_file=version_file) == 2
+    assert bundle(site=site, output=output, version_file=version_file) == 3
     assert {
         path.relative_to(output): path.read_bytes()
         for path in output.rglob("*")
