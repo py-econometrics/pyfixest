@@ -41,6 +41,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   also refresh `pixi.lock` in the newer v7 format. Both ask for pixi 0.71.0 or
   newer.
 
+### Documentation
+
+- The package docstring, README, and landing page now point agents at the
+  machine-readable documentation and the repository.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
