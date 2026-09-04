@@ -4,11 +4,10 @@ from collections import Counter
 from collections.abc import ValuesView
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models.base_regression_ import BaseRegression
+from pyfixest.estimation.protocols import FittedResult
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -214,15 +213,15 @@ def _post_processing_input_checks(
     models: ModelInputType,
     check_duplicate_model_names: bool = False,
     rename_models: dict[str, str] | None = None,
-) -> list[Feols | Fepois | Feiv]:
+) -> list[FittedResult]:
     """
     Perform input checks for post-processing models.
 
     Parameters
     ----------
-        models : Union[List[Union[Feols, Fepois, Feiv]], FixestMulti]
-                The models to be checked. This can either be a list of models
-                (Feols, Fepois, Feiv) or a single FixestMulti object.
+        models : Union[List[FittedResult], FixestMulti]
+                The models to be checked. This can either be a list of fitted
+                results or a single FixestMulti object.
         check_duplicate_model_names : bool, optional
                 Whether to check for duplicate model names. Default is False.
                 Mostly used to avoid overlapping models in plots created via
@@ -233,27 +232,26 @@ def _post_processing_input_checks(
 
     Returns
     -------
-        List[Union[Feols, Fepois]]
-            A list of checked and validated models. The returned list contains only
-            Feols and Fepois types.
+        list[FittedResult]
+            A list of checked and validated fitted results.
 
     Raises
     ------
         TypeError: If the models argument is not of the expected type.
 
     """
-    models_list: list[Feols | Fepois | Feiv] = []
+    models_list: list[FittedResult] = []
 
-    if isinstance(models, (Feols, Fepois, Feiv)):
+    if isinstance(models, BaseRegression):
         models_list = [models]
     elif isinstance(models, FixestMulti):
         models_list = models.to_list()
     elif isinstance(models, (list, ValuesView)):
-        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
-            models_list = models
+        if all(isinstance(m, BaseRegression) for m in models):
+            models_list = list(models)
         else:
             raise TypeError(
-                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
+                "All elements in the models list must be fitted pyfixest results."
             )
     else:
         raise TypeError("Invalid type for models argument.")

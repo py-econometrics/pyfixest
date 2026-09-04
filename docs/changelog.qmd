@@ -53,6 +53,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   design, and weights) is kept separate from observation weights.
 - Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
   read-only views over the typed state objects.
+- Fitted results are now built from a shared `BaseRegression` class and one leaf
+  per estimator. `Feols` is the OLS leaf, `Feiv` extends it, and `Feglm` and
+  `Quantreg` are separate leaves rather than `Feols` subclasses. Estimator
+  differences inside a shared method are hooks on the base instead of
+  comparisons against the mutable `_method` label. Reporting and the result
+  container are typed against a `FittedResult` protocol, `FixestMulti` is
+  generic in its result class, and `pf.estimation.BaseRegression` is exported
+  for `isinstance` checks.
 
 ### Inference Types
 
@@ -95,14 +103,25 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ```
 
 - Rejected combinations now share one message, `"<feature> is not supported for
-  <reason>."`. The exception types are unchanged: `CRV3` raises
-  `VcovTypeNotSupportedError` and every other feature raises
-  `NotImplementedError`.
+  <reason>."`. `CRV3` raises `VcovTypeNotSupportedError`, and every feature a
+  fit could support raises `NotImplementedError`.
+- **Breaking:** post-estimation methods an estimator never supports are no
+  longer defined on its result class. `wildboottest()`, `ccv()`, `decompose()`,
+  `update()`, `evalue()`, and `pvalue_savi()` are OLS-only, so a Poisson, GLM,
+  or quantile result raises `AttributeError` instead of `NotImplementedError`,
+  and `hasattr(fit, "decompose")` is now `False` for those fits. The message
+  still carries the reason from the capability table and points at
+  `capabilities()`. Fit-dependent restrictions -- weights, fixed effects, IV --
+  keep raising `NotImplementedError` from the method itself.
 - `quantreg()` results now reject `predict(se_fit=True)` and
   `predict(interval="prediction")`. They previously returned prediction
   standard errors from the OLS residual-variance formula, which does not
   describe a conditional quantile; R `quantreg` inverts ranks or bootstraps
   instead.
+- `feglm()` and `fepois()` results now reject `predict(interval="prediction")`
+  as they already rejected `predict(se_fit=True)`. The GLM prediction overrides
+  did not forward `interval`, so the argument was silently dropped and point
+  predictions were returned in place of a prediction interval.
 
 ### Safe Anytime-Valid Inference (SAVI)
 

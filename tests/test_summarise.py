@@ -130,8 +130,16 @@ def test_summary():
     etable([fit1, fit2], type="tex", model_heads=["Model 1", "Model 2"], head_order="")
     etable([fit1, fit2], type="tex", file_name="tests/texfiles/test.tex")
 
+    # Reporting must reach the result classes that are not OLS leaves: a GLM
+    # and a quantile fit descend from BaseRegression, not from Feols.
+    df_bin = df1.assign(Y_bin=(df1["Y"] > 0).astype(int))
+    fit_logit = pf.feglm("Y_bin ~ X1 + X2", data=df_bin, family="logit")
+
     summary(fit_qreg)
     etable(fit_qreg)
+    summary(fit_logit)
+    etable(fit_logit)
+    etable([fit_logit, fit_qreg, fit1], type="df")
 
 
 def test_etable_significance_stars_follow_coef_fmt():

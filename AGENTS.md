@@ -79,8 +79,9 @@ flow, the stable-core contract, and the extension-seam table.
   domain package), with its own tests, result contract, exports, and quartodoc
   registration. Keep its special cases out of the generic fit pipeline.
 - **Post-estimation feature:** numerical logic in `post_estimation/`; a thin
-  method on `Feols` and siblings where applicable. Template:
-  `post_estimation/ritest.py` and `Feols.ritest`.
+  method on `BaseRegression` when every estimator can run it, and on the
+  narrowest class that can otherwise. Template: `post_estimation/ritest.py` and
+  `BaseRegression.ritest`.
 - **Vcov type:** literal in `internals/literals.py`, validation in the model,
   small dispatch method, math in `internals/vcov_utils.py` or Rust, and wiring
   through `FixestMulti`/quantreg where supported. Template: NW/DK HAC.

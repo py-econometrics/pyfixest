@@ -8,9 +8,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
     _check_label_keys_in_covars,
@@ -24,7 +22,7 @@ if TYPE_CHECKING:
 
 _HAS_LETS_PLOT = find_spec("lets_plot") is not None
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -85,8 +83,8 @@ def iplot(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -273,8 +271,8 @@ def coefplot(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -425,8 +423,8 @@ def qplot(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
@@ -464,12 +462,12 @@ def qplot(
     if figsize is None:
         figsize = (10, 6)
 
-    models = _post_processing_input_checks(
+    models_list = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
     )
 
     df_all = pd.DataFrame()
-    for model in models:
+    for model in models_list:
         if not isinstance(model, Quantreg):
             raise TypeError(
                 "The 'qplot' function is only supported for objects of type Quantreg."
@@ -848,7 +846,7 @@ def _qplot(
 
 
 def _get_model_df(
-    fxst: Feols | Fepois | Feiv,
+    fxst: FittedResult,
     alpha: float,
     joint: str | bool | None,
     seed: int | None = None,
@@ -859,7 +857,7 @@ def _get_model_df(
 
     Parameters
     ----------
-    fxst : Union[Feols, Fepois, Feiv]
+    fxst : FittedResult
         The fitted model.
     alpha : float
         The significance level for the confidence intervals.

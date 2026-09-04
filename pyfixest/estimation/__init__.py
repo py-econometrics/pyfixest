@@ -24,6 +24,7 @@ from pyfixest.estimation.FixestMulti_ import (
     FixestMulti,
 )
 from pyfixest.estimation.internals import literals
+from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import (
     Feiv,
@@ -46,6 +47,7 @@ from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
 __all__ = [
     "BaseDemeaner",
+    "BaseRegression",
     "Fegaussian",
     "Feiv",
     "Felogit",

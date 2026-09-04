@@ -1,16 +1,16 @@
 import warnings
+from typing import cast
 
 import numpy as np
 import pandas as pd
 from scipy.stats import t
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
@@ -22,8 +22,8 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -46,11 +46,11 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     bonf_df
     ```
     """
-    models = _post_processing_input_checks(models)
+    models_list = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
-    S = len(models)
+    S = len(models_list)
     pvalues = np.zeros(S)
-    for i, model in enumerate(models):
+    for i, model in enumerate(models_list):
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -61,7 +61,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     adjusted_pvalues = np.minimum(1, pvalues * S)
 
     all_model_stats.loc["Bonferroni Pr(>|t|)"] = adjusted_pvalues
-    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
+    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models_list)])
 
     return all_model_stats
 
@@ -281,10 +281,10 @@ def _multcomp_resample(
     seed: int,
     sampling_method: str = "wild-bootstrap",
 ) -> pd.DataFrame:
-    if isinstance(models, FixestMulti):
-        models = models.to_list()
-
-    models = _post_processing_input_checks(models)
+    # Both procedures resample through the wild bootstrap or randomization
+    # inference, which only the OLS leaf implements. A GLM or quantile result
+    # raises from the capability contract when its method is looked up.
+    models_list = cast("list[Feols]", _post_processing_input_checks(models))
     if type not in ["rwolf", "wyoung"]:
         raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
     if sampling_method not in ["wild-bootstrap", "ri"]:
@@ -296,7 +296,7 @@ def _multcomp_resample(
     full_enumeration = False
 
     S = 0
-    for model in models:
+    for model in models_list:
         if param not in model._coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model._fml}."
@@ -327,7 +327,7 @@ def _multcomp_resample(
     boot_p_vals = np.zeros_like(boot_t_stats)
 
     for i in range(S):
-        model = models[i]
+        model = models_list[i]
 
         if sampling_method == "wild-bootstrap":
             wildboot_res_df, bootstrapped_t_stats = model.wildboottest(
@@ -372,5 +372,5 @@ def _multcomp_resample(
     else:
         raise ValueError("Invalid adjustment procedure specified")
 
-    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
+    all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models_list)])
     return all_model_stats

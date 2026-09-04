@@ -4,12 +4,10 @@ import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import InferenceType
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -21,7 +19,7 @@ _METHOD_DISPLAY_NAMES: dict[str, str] = {
 }
 
 
-def _get_estimation_method_name(fxst: Feols) -> str:
+def _get_estimation_method_name(fxst: FittedResult) -> str:
     """Get the display name for an estimation method."""
     if fxst._method == "feols":
         return "IV" if fxst._is_iv else "OLS"
@@ -63,8 +61,8 @@ def etable(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
@@ -291,8 +289,8 @@ def summary(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : a fitted result, FixestMulti, or list of fitted results
+        A fitted model object, or a list of fitted model objects.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type : {"regular"}, optional
@@ -317,9 +315,9 @@ def summary(
     pf.summary([fit1, fit2, fit3])
     ```
     """
-    models = _post_processing_input_checks(models)
+    models_list = _post_processing_input_checks(models)
 
-    for fxst in list(models):
+    for fxst in models_list:
         depvar = fxst._depvar
 
         df = fxst.tidy(inference_type=inference_type).round(digits)

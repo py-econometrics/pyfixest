@@ -229,6 +229,19 @@ def _call(fit, feature: str):
     raise AssertionError(f"unknown feature {feature}")
 
 
+# Features whose method only the OLS leaf defines. A fit whose class does not
+# implement one has no such attribute at all, so the capability reason arrives
+# as an `AttributeError` from `BaseRegression.__getattr__` rather than as the
+# exception the feature registers.
+CLASS_LEVEL_METHODS = {
+    "wildboottest": "wildboottest",
+    "ccv": "ccv",
+    "decompose": "decompose",
+    "update": "update",
+    "savi": "evalue",
+}
+
+
 # (fit, feature, declared reason or None when the feature must be available).
 # `fixef` appears only for fits that absorb fixed effects, because the missing
 # fixed-effect ValueError is raised before the support gate.
@@ -333,10 +346,45 @@ def test_declared_support_matches_the_public_methods(
             _call(fit, feature)
         return
 
+    method = CLASS_LEVEL_METHODS.get(feature)
+    if method is not None and not hasattr(type(fit), method):
+        # The method is not defined for this class at all; the reason reaches
+        # the caller through the attribute lookup instead.
+        with pytest.raises(
+            AttributeError,
+            match=rf"has no attribute '{method}'\. .* is not supported for {reason}\.",
+        ):
+            _call(fit, feature)
+        return
+
     with pytest.raises(
         FEATURE_ERRORS[feature], match=rf"is not supported for {reason}\.$"
     ):
         _call(fit, feature)
+
+
+@pytest.mark.parametrize("kind", ["poisson", "logit", "quantreg"])
+def test_ols_only_methods_are_absent_from_non_ols_results(
+    capability_data: pd.DataFrame, kind: str
+):
+    """Method placement, not a runtime check, answers support for these."""
+    fit = _fit(kind, capability_data)
+
+    for method in ("ccv", "decompose", "update", "wildboottest", "pvalue_savi"):
+        assert not hasattr(fit, method)
+
+    with pytest.raises(
+        AttributeError,
+        match=r"has no attribute 'decompose'\. Decomposition is not supported "
+        r"for models of type '\w+'\. Call capabilities\(\)",
+    ):
+        getattr(fit, "decompose")  # noqa: B009
+
+    # Any other missing name keeps the plain message.
+    with pytest.raises(
+        AttributeError, match=r"object has no attribute 'not_a_pyfixest_method'$"
+    ):
+        getattr(fit, "not_a_pyfixest_method")  # noqa: B009
 
 
 def test_capabilities_accessor_reports_supported_and_reason(
@@ -360,17 +408,23 @@ def test_capabilities_accessor_reports_supported_and_reason(
     assert plain.loc["ccv", "reason"] is None
 
 
-def test_quantreg_rejects_ols_prediction_errors(capability_data: pd.DataFrame):
-    """OLS residual-variance prediction errors do not describe a quantile."""
-    fit = _fit("quantreg", capability_data)
+@pytest.mark.parametrize("kind", ["quantreg", "logit", "poisson"])
+def test_non_ols_fits_reject_prediction_errors(
+    capability_data: pd.DataFrame, kind: str
+):
+    """Both prediction-error arguments hit the gate, not only `se_fit`.
+
+    The OLS residual-variance formula behind `se_fit` and `interval` describes
+    neither a conditional quantile nor a GLM mean, so both arguments must be
+    rejected rather than silently returning point predictions.
+    """
+    fit = _fit(kind, capability_data)
+    reason = fit._capabilities.evaluate(fit._fit_features)["prediction_errors"]
 
     for kwargs in ({"se_fit": True}, {"interval": "prediction"}):
         with pytest.raises(
             NotImplementedError,
-            match=(
-                r"Prediction with standard errors is not supported for models of "
-                r"type 'quantreg'\."
-            ),
+            match=rf"Prediction with standard errors is not supported for {reason}\.",
         ):
             fit.predict(**kwargs)
 

@@ -171,16 +171,16 @@ quartodoc:
         construct these directly; they are the objects `feols()`, `fepois()`,
         `feglm()`, and `quantreg()` return.
       contents:
+        - name: estimation.models.base_regression_.BaseRegression
+          exclude:
+            - prepare_model_matrix
+            - get_fit
+            - get_inference
         - name: estimation.models.feols_.Feols
           exclude:
             - prepare_model_matrix
-            - demean
-            - to_array
-            - wls_transform
-            - drop_multicol_vars
             - get_fit
             - get_inference
-            - add_fixest_multi_context
         - estimation.models.fepois_.Fepois
         - estimation.models.feiv_.Feiv
         - estimation.models.feglm_.Feglm
@@ -193,8 +193,11 @@ quartodoc:
     - title: Post-Estimation Methods
       desc: |
         Methods available on a fitted model object, e.g. the result of a call to
-        `feols()`. Defined on `Feols` and shared by `Fepois`, `Feglm`, `Feiv`, and
-        `Quantreg` through inheritance.
+        `feols()`. Most are defined on `BaseRegression` and shared by every
+        estimator; `wildboottest()`, `ccv()`, `decompose()`, `update()`,
+        `evalue()`, and `pvalue_savi()` are defined on `Feols` and are absent
+        from GLM, Poisson, and quantile results. `capabilities()` reports what
+        one fit supports.
       contents:
         - estimation.models.feols_.Feols.tidy
         - estimation.models.feols_.Feols.coef

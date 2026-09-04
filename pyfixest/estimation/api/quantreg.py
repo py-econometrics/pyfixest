@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyfixest.estimation.api.utils import _estimation_input_checks
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
@@ -12,6 +13,7 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
 )
 from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import capture_context
@@ -61,7 +63,7 @@ def quantreg(
     split: str | None = None,
     fsplit: str | None = None,
     seed: int | None = None,
-):
+) -> Quantreg | FixestMulti[Quantreg]:
     """
     Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997).
     Note that the interior point algorithm assumes independent observations.
@@ -277,4 +279,6 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed)
+    # `run_estimation` dispatches through the model registry, so the concrete
+    # result class is only known from the method this entry point requested.
+    return cast("Quantreg | FixestMulti[Quantreg]", run_estimation(config, parsed))

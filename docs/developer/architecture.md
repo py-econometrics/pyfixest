@@ -72,8 +72,9 @@ shared estimator API
   -> fitted result / FixestMulti
 ```
 
-`FixestMulti` is a container for fitted results. Numerical behavior belongs in
-the individual models and shared primitives, not in the container.
+`FixestMulti` is a container for fitted results, generic in the result class the
+entry point produces. Numerical behavior belongs in the individual models and
+shared primitives, not in the container.
 
 ## Historical estimator-state lifecycle (pre-refactor)
 
@@ -307,7 +308,8 @@ remaining seams.
 
 | Change | Primary location | Pattern to follow |
 |---|---|---|
-| Model/result type | `estimation/models/<name>_.py` | nearest compatible result class |
+| Model/result type | `estimation/models/<name>_.py` | a `BaseRegression` leaf, or the nearest compatible result class |
+| Behavior shared by every estimator | `estimation/models/base_regression_.py` | an existing shared method plus its estimator hook |
 | Shared numerical primitive | `estimation/internals/` | `fit_.py`, `vcov_.py`, or nearest analogue |
 | Formula behavior | `estimation/formula/` | existing parser/model-matrix seams |
 | DiD estimator | `pyfixest/did/` | nearest DiD API/result pair |
@@ -316,6 +318,34 @@ remaining seams.
 Public estimation functions use one module per entry point. Model modules end in
 `_` so they do not shadow public functions. Compatibility shims in the
 `estimation/` root are not implementation locations.
+
+## Result classes
+
+`BaseRegression` owns what every estimator shares: construction and formula
+publication, canonical observation weights and within-scale arrays, the storage
+guards, the capability contract, covariance dispatch, coefficient-level
+inference, report binding, and the post-estimation methods every estimator can
+run. `Feols` is the ordinary-least-squares leaf; `Feiv` extends it because 2SLS
+shares the linear within-data path. `Feglm` and `Quantreg` are separate leaves,
+with `Fepois`, `Felogit`, `Feprobit`, and `Fegaussian` under `Feglm`.
+
+Method placement, not a runtime check, answers whether an estimator can run a
+post-estimation method at all. `wildboottest()`, `ccv()`, `decompose()`,
+`update()`, `evalue()`, and `pvalue_savi()` assume a single linear estimating
+equation, so they live on `Feols` and a GLM or quantile result has no such
+attribute; `BaseRegression.__getattr__` supplies the capability reason.
+Restrictions that depend on the fit rather than on the class stay in the
+capability table and raise from the method.
+
+Estimator differences inside a shared method are hooks on the base, not
+comparisons against the mutable `_method` label: `_fixef_residual_target()`,
+`_response_from_link()`, `_vcov_crv3()`, `_crv3_refit()`, `_finalize_fit()`,
+`_leverage_weights()`, `_fixef_weights()`, and the
+`_ritest_forces_slow_algorithm` class attribute. `get_fit()` is abstract.
+
+Consumers -- reporting, multiple-testing corrections, the result container --
+are typed against the `FittedResult` protocol, which states the surface every
+fitted result exposes. Runtime `isinstance` checks name `BaseRegression`.
 
 ## Result and numerical boundaries
 
