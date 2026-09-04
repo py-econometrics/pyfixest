@@ -41,6 +41,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   also refresh `pixi.lock` in the newer v7 format. Both ask for pixi 0.71.0 or
   newer.
 
+### Documentation
+
+- Wheels and source distributions now include the rendered documentation under
+  `pyfixest/docs/` (`llms.txt` plus one Markdown page per documentation page,
+  with executed output), generated at build time from the same Quarto sources
+  as the website.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.

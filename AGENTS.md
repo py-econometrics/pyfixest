@@ -72,6 +72,7 @@ flow, the stable-core contract, and the extension-seam table.
 | `pyfixest/did/`, `report/`, `utils/` | DiD estimators, reporting, utilities, and DGPs |
 | `tests/` | Pytest suite, reference scripts, and stored reference outputs |
 | `docs/` | Quarto user documentation; `docs/developer/` is contributor policy and is not rendered |
+| `pyfixest/docs/` | Generated at build time by `docs-bundle` from Quarto's llms output; gitignored, absent in source checkouts, present in installed releases |
 
 ## Wiring recipes
 
@@ -161,12 +162,14 @@ pixi run -e py312-r test-r-fixest-fast                              # fast live-
 pixi run test-py                                                    # Python baseline
 pixi run -e lint prek run ruff-check --files <changed files>        # changed-file lint
 pixi task list                                                      # everything else
+pixi run -e docs docs-bundle  # render docs and bundle them into pyfixest/docs
 ```
 
 Always update `docs/changelog.qmd`. Documentation ships with the feature. New
 public functions/classes require quartodoc registration; user workflows usually
 need a `docs/how-to/` guide or an extension to the nearest existing guide.
-Never hand-edit generated `docs/reference/**`.
+Never hand-edit generated `docs/reference/**`. The hosted pages and the
+`.llms.md` pages bundled into `pyfixest/docs/` are the same Quarto output.
 
 ## Git and review
 
