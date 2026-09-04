@@ -3,15 +3,14 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
-from pyfixest.estimation.models.feiv_ import Feiv
+from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import ParsedFormula
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 
@@ -74,7 +73,7 @@ class FixestMulti(TidyColumnAccessors):
             self._data = data
             self._context = context
 
-        self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
+        self.all_fitted_models: dict[str, BaseRegression] = {}
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
@@ -106,14 +105,14 @@ class FixestMulti(TidyColumnAccessors):
         """Parsed formula dict keyed by fixed-effects spec."""
         return self._parsed.formula_dict
 
-    def to_list(self) -> list[Feols | Fepois | Feiv]:
+    def to_list(self) -> list[BaseRegression]:
         """
         Return a list of all fitted models.
 
         Returns
         -------
         list
-            A list of all fitted models of types Feols, Fepois, or Feiv.
+            A list of every fitted result this call produced.
         """
         return list(self.all_fitted_models.values())
 
@@ -286,7 +285,10 @@ class FixestMulti(TidyColumnAccessors):
         """
         res_df = pd.DataFrame()
         for x in list(self.all_fitted_models.keys()):
-            fxst = self.all_fitted_models[x]
+            # The wild bootstrap resamples the residuals of a single linear
+            # equation, so it lives on the OLS leaf. A container holding a GLM
+            # or quantile result raises from the capability contract instead.
+            fxst = cast("Feols", self.all_fitted_models[x])
 
             boot_res = fxst.wildboottest(
                 reps,
@@ -318,9 +320,9 @@ class FixestMulti(TidyColumnAccessors):
 
     def fetch_model(
         self, i: int | str, print_fml: bool | None = True
-    ) -> Feols | Fepois:
+    ) -> BaseRegression:
         """
-        Fetch a model of class Feols from the Fixest class.
+        Fetch one fitted model from the results container.
 
         Parameters
         ----------
@@ -331,7 +333,7 @@ class FixestMulti(TidyColumnAccessors):
 
         Returns
         -------
-            A Feols object.
+            The fitted result at position `i`.
         """
         if isinstance(i, str):
             i = int(i)

@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 
 class FittedModel(Protocol):
@@ -42,7 +42,7 @@ class FittedModel(Protocol):
         """Run estimator-specific post-fit orchestration."""
         ...
 
-    def _iter_fitted_models(self) -> Iterable[Feols]:
+    def _iter_fitted_models(self) -> Iterable[BaseRegression]:
         """Yield concrete fitted results produced by this pipeline object."""
         ...
 

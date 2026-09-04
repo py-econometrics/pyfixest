@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
@@ -560,4 +560,6 @@ def feols(
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    # `run_estimation` dispatches through the model registry, so the concrete
+    # result class is only known from the method this entry point requested.
+    return cast("Feols | FixestMulti", run_estimation(config, parsed))

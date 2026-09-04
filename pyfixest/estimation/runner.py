@@ -9,9 +9,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.plan_ import (
     ParsedFormula,
     build_all_splits,
@@ -48,7 +46,7 @@ def _split_plan(config: EstimationConfig) -> tuple[bool, bool, str | None]:
 def run_estimation(
     config: EstimationConfig,
     parsed: ParsedFormula,
-) -> Feols | Fepois | Feiv | FixestMulti:
+) -> BaseRegression | FixestMulti:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
     Prepares the runtime inputs (data, context, split plan), builds a

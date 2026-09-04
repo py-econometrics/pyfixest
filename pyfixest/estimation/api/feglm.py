@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.utils import _estimation_input_checks
@@ -353,4 +353,6 @@ def feglm(
     if parsed.is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    return run_estimation(config, parsed)
+    # `run_estimation` dispatches through the model registry, so the concrete
+    # result class is only known from the family this entry point requested.
+    return cast("Feols | Fepois | FixestMulti", run_estimation(config, parsed))
