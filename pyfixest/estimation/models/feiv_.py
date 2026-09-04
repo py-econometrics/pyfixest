@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,10 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    VcovTypeOptions,
+    WeightsTypeOptions,
+)
 from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -336,14 +339,15 @@ class Feiv(Feols):
         if self._has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self._fixef}"
 
-        # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: dict[str, str] | str
+        # The first stage replays the second stage's inference request, which
+        # `feols` validates again at its own boundary.
+        vcov_detail: dict[str, str] | VcovTypeOptions
 
         if self._is_clustered:
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
         else:
-            vcov_detail = self._vcov_type_detail
+            vcov_detail = cast(VcovTypeOptions, self._vcov_type_detail)
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)

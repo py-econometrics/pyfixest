@@ -7,7 +7,7 @@ from dataclasses import replace
 from functools import partial
 from importlib import import_module
 from types import MappingProxyType
-from typing import Any, ClassVar, Final, Literal, cast
+from typing import Any, ClassVar, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -52,6 +52,8 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.vcov_ import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
     vcov_crv1,
     vcov_hac,
     vcov_hetero,
@@ -1070,6 +1072,8 @@ class BaseRegression(TidyColumnAccessors):
 
     def _vcov_hetero(self):
         observation_weights = self._observation_weights.values
+        # `_deparse_vcov_input` maps exactly the four HC details onto the
+        # "hetero" family this method is dispatched for.
         return vcov_hetero(
             scores=self._scores,
             X=self._X,
@@ -1082,7 +1086,7 @@ class BaseRegression(TidyColumnAccessors):
             ),
             leverage_weights=self._leverage_weights(),
             weights_type=self._weights_type,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -1112,7 +1116,7 @@ class BaseRegression(TidyColumnAccessors):
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=cast(int | None, self._lag),
-            vcov_type_detail=cast(Literal["NW", "DK"], self._vcov_type_detail),
+            vcov_type_detail=cast(HacVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
