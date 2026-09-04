@@ -1,0 +1,324 @@
+---
+title: "PyFixest Cheat Sheet"
+description: "One-page executed reference: formulas, standard errors, post-estimation methods, tables, and the page to read for each task."
+format:
+  html:
+    html-table-processing: none
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+Every cell below runs when the documentation is built, including the ones that raise.
+
+```{python}
+from importlib import resources
+
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+
+data = pf.get_data(N=1000, seed=1234).dropna()
+data["Y_binary"] = (data["Y"] > data["Y"].median()).astype(int)
+pois = pf.get_data(N=1000, seed=1234, model="Fepois").dropna()
+
+# multi-cohort panel bundled with PyFixest, subset to 200 units
+panel = pd.read_csv(
+    resources.files("pyfixest.did.data").joinpath("df_het.csv")
+).query("unit <= 200")
+```
+
+## Where to go for each task
+
+| Task | Start here | Then |
+|---|---|---|
+| Fit a first model | [A first Regression with PyFixest](getting-started.qmd) | [OLS with Fixed Effects](tutorials/ols-fixed-effects.qmd) |
+| Formulas, fixed effects, interactions, multiple estimation | [Formula Syntax](tutorials/formula-syntax.qmd) | [`feols()`](reference/estimation.api.feols.feols.qmd) |
+| Instrumental variables | [Instrumental Variables](tutorials/instrumental-variables.qmd) | [`feols()`](reference/estimation.api.feols.feols.qmd) |
+| Poisson or GLM | [Poisson & GLMs](tutorials/poisson-glm.qmd) | [`fepois()`](reference/estimation.api.fepois.fepois.qmd), [`feglm()`](reference/estimation.api.feglm.feglm.qmd) |
+| Quantile regression | [Quantile Regression](tutorials/quantile-regression.qmd) | [`quantreg()`](reference/estimation.api.quantreg.quantreg.qmd) |
+| Choose or change standard errors | [Standard Errors & Inference](tutorials/standard-errors.qmd) | [`Feols.vcov()`](reference/estimation.models.feols_.Feols.vcov.qmd) |
+| Tables, summaries, coefficient plots | [Regression Tables](tutorials/regression-tables.qmd) | [Function Reference](reference/index.qmd) |
+| Difference-in-differences, event studies | [Difference-in-Differences Estimation](tutorials/difference-in-differences.qmd) | [DiD reference](reference/index.qmd#difference-in-differences) |
+| Predictions, residuals, fixed-effect estimates | [`Feols.predict()`](reference/estimation.models.feols_.Feols.predict.qmd) | [`Feols.resid()`](reference/estimation.models.feols_.Feols.resid.qmd), [`Feols.fixef()`](reference/estimation.models.feols_.Feols.fixef.qmd) |
+| Hypothesis tests, decomposition | [`Feols.wald_test()`](reference/estimation.models.feols_.Feols.wald_test.qmd) | [How much do Covariates Matter?](how-to/regression_decomposition.qmd) |
+| Multiple-hypothesis corrections | [`rwolf()`](reference/estimation.post_estimation.multcomp.rwolf.qmd) | [`wyoung()`](reference/estimation.post_estimation.multcomp.wyoung.qmd), [`bonferroni()`](reference/estimation.post_estimation.multcomp.bonferroni.qmd) |
+| Anytime-valid / sequential inference | [When to Use Anytime-Valid Inference](how-to/anytime-valid-inference.qmd) | [`Feols.evalue()`](reference/estimation.models.feols_.Feols.evalue.qmd), [`Feols.pvalue_savi()`](reference/estimation.models.feols_.Feols.pvalue_savi.qmd) |
+| Marginal effects | [Marginal Effects and Hypothesis Tests](how-to/marginaleffects.qmd) | [Function Reference](reference/index.qmd) |
+| AB tests with panel data | [Variance Reduction in AB Tests](how-to/panel_variance_reduction.qmd) | [Difference-in-Differences Estimation](tutorials/difference-in-differences.qmd) |
+| Slow or failing fixed-effects fits | [When Are Fixed Effects Estimations Difficult?](explanation/difficult-fixed-effects.md) | [Choosing a Demeaner Backend](how-to/demeaner-backends.qmd) |
+| Translate from R or Stata | [Does PyFixest match fixest?](explanation/compare-fixest-pyfixest.qmd) | [Translating Stata to PyFixest](how-to/stata-2-pyfixest.qmd) |
+| Exact signatures | [Function Reference](reference/index.qmd) | [llms.txt](llms.txt) |
+
+## Core API
+
+Four estimation functions cover the package; see [A first Regression with PyFixest](getting-started.qmd).
+
+```{python}
+pf.etable(
+    [
+        pf.feols("Y ~ X1 + X2 | f1 + f2", data=data),
+        pf.fepois("Y ~ X1 | f1", data=pois),
+        pf.feglm("Y_binary ~ X1 | f1", data=data, family="logit"),
+        pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5),
+    ],
+    model_heads=["feols", "fepois", "feglm(logit)", "quantreg(0.5)"],
+)
+```
+
+## Formula grammar
+
+A formula has up to three `|`-separated parts; see [Formula Syntax](tutorials/formula-syntax.qmd).
+
+```{python}
+# fixed effects with +, interacted fixed effects with :
+pf.etable([pf.feols("Y ~ X1 | f1 + f2", data=data),
+           pf.feols("Y ~ X1 | f1:f2", data=data)])
+```
+
+```{python}
+# IV: a "[endogenous ~ instruments]" term on the right-hand side
+# (the fixest-style "Y ~ X2 | f1 | X1 ~ Z1" still works but is deprecated)
+pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", data=data).tidy()
+```
+
+```{python}
+# i(cat) expands a categorical, ref drops a level, i(cat, x) gives slopes on x
+pf.etable([pf.feols("Y ~ i(f1, ref=1.0)", data=data),
+           pf.feols("Y ~ i(f1, X2)", data=data)], keep=["f1"])
+```
+
+```{python}
+# X1 * X2 expands to X1 + X2 + X1:X2, X1:X2 is the interaction alone
+pf.etable([pf.feols("Y ~ X1 * X2", data=data),
+           pf.feols("Y ~ X1:X2", data=data)])
+```
+
+```{python}
+# sw() over the dependent variables gives one estimation each
+pf.feols("sw(Y, Y2) ~ X1", data=data).tidy()
+```
+
+## Multiple estimation
+
+Stepwise operators and `split` turn one call into many fits; see [Formula Syntax](tutorials/formula-syntax.qmd).
+
+```{python}
+def expansion(fml):
+    fits = pf.feols(fml, data=data).tidy().index.get_level_values("fml")
+    return " | ".join(fits.unique().tolist())
+
+
+operators = ["Y ~ X1 + sw(X2, f3)", "Y ~ X1 + sw0(X2, f3)", "Y ~ csw(X1, X2)",
+             "Y ~ csw0(X1, X2)", "Y ~ mvsw(X1, X2)"]
+pd.DataFrame({"formula": operators, "expands to": [expansion(f) for f in operators]})
+```
+
+```{python}
+# split fits one model per subsample, fsplit adds the full sample
+pf.etable(pf.feols("Y ~ X1", data=data, fsplit="f3"))
+```
+
+```{python}
+pf.feols("Y ~ csw(X1, X2)", data=data).summary()
+```
+
+## Standard errors
+
+Set `vcov` at estimation time or afterwards; see [Standard Errors & Inference](tutorials/standard-errors.qmd).
+
+```{python}
+spellings = {
+    "iid": "iid", "hetero": "hetero", "HC1": "HC1", "HC2": "HC2", "HC3": "HC3",
+    "CRV1": {"CRV1": "f1"}, "CRV3": {"CRV3": "f1"},
+    "CRV1 two-way": {"CRV1": "f1 + f2"},
+}
+pd.DataFrame(
+    {k: pf.feols("Y ~ X1 + X2", data=data, vcov=v).se() for k, v in spellings.items()}
+)
+```
+
+```{python}
+# NW and DK require vcov_kwargs with time_id, panel_id and lag are optional
+hac_kwargs = {"time_id": "year", "panel_id": "unit"}
+pd.DataFrame(
+    {
+        hac: pf.feols(
+            "dep_var ~ treat", data=panel, vcov=hac, vcov_kwargs=hac_kwargs
+        ).se()
+        for hac in ["NW", "DK"]
+    }
+)
+```
+
+```{python}
+# change inference after estimation, and adjust the small-sample correction
+fit = pf.feols("Y ~ X1 | f1", data=data)
+no_ssc = pf.feols("Y ~ X1 | f1", data=data, ssc=pf.ssc(adj=False, cluster_adj=False))
+pd.DataFrame({"default": fit.se(), "post-hoc CRV1": fit.vcov({"CRV1": "f1"}).se(),
+              "ssc(adj=False)": no_ssc.se()})
+```
+
+```{python}
+#| error: true
+# HC2 and HC3 are unavailable once fixed effects are absorbed
+pf.feols("Y ~ X1 | f1", data=data, vcov="HC2")
+```
+
+```{python}
+#| error: true
+# CRV3 is unavailable for IV models
+pf.feols("Y ~ 1 + [X1 ~ Z1]", data=data, vcov={"CRV3": "f1"})
+```
+
+```{python}
+#| error: true
+# quantile regression clusters on one variable only
+pf.quantreg("Y ~ X1", data=data, quantile=0.5, vcov={"CRV1": "f1 + f2"})
+```
+
+## Post-estimation
+
+Every fitted model shares the accessors below; see [`Feols`](reference/estimation.models.feols_.Feols.qmd).
+
+```{python}
+fit = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "f1"})
+fit.tidy()
+```
+
+```{python}
+# the same numbers, column by column
+stats = {"coef": fit.coef(), "se": fit.se(), "t": fit.tstat(), "p": fit.pvalue()}
+pd.DataFrame(stats).join(fit.confint())
+```
+
+```{python}
+pd.DataFrame({"predict": fit.predict(newdata=data.head(5)), "resid": fit.resid()[:5]})
+```
+
+```{python}
+fit.fixef().head(3)
+```
+
+```{python}
+pf.feols("Y ~ X1 + X2", data=data).wald_test()
+```
+
+```{python}
+fit.wildboottest(param="X1", reps=99, seed=1234)
+```
+
+```{python}
+pf.feols("Y ~ X1 + X2", data=data).ritest(resampvar="X1", reps=99)
+```
+
+```{python}
+pf.feols("Y ~ X1 + X2", data=data).decompose(param="X1", reps=99, seed=1234)
+```
+
+```{python}
+# Sherman-Morrison coefficient update for one new observation
+pf.feols("Y ~ X1", data=data.head(900)).update(
+    X_new=np.array([[1.0, 0.5]]), y_new=np.array([1.0])
+)
+```
+
+```{python}
+savi = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+pd.DataFrame({"evalue": savi.evalue(), "pvalue_savi": savi.pvalue_savi()})
+```
+
+```{python}
+#| error: true
+# the wild cluster bootstrap is OLS-only
+pf.fepois("Y ~ X1 | f1", data=pois).wildboottest(param="X1", reps=99, seed=1234)
+```
+
+```{python}
+#| error: true
+# one endogenous variable per model
+pf.feols("Y ~ 1 + [X1 + X2 ~ Z1 + Z2]", data=data)
+```
+
+## Difference-in-differences
+
+Each estimator takes a long panel with a cohort column; see [Difference-in-Differences Estimation](tutorials/difference-in-differences.qmd).
+
+```{python}
+pf.panelview(panel, unit="unit", time="year", treat="treat",
+             collapse_to_cohort=True, sort_by_timing=True, figsize=(6, 3))
+```
+
+```{python}
+es_args = dict(data=panel, yname="dep_var", idname="unit", tname="year", gname="g")
+pf.event_study(**es_args).tidy()
+```
+
+```{python}
+# estimator="saturated" returns a SaturatedEventStudy with cohort-specific effects
+saturated = pf.event_study(**es_args, estimator="saturated")
+saturated.aggregate().head(3)
+```
+
+```{python}
+pf.did2s(panel, yname="dep_var", first_stage="~ 0 | unit + year",
+         second_stage="~ i(rel_year, ref=-1.0)", treatment="treat",
+         cluster="state").tidy().head(3)
+```
+
+```{python}
+pf.lpdid(**es_args, vcov={"CRV1": "state"}, att=True).tidy()
+```
+
+## Plots
+
+`coefplot` plots any coefficients, `iplot` the ones `i()` created; see [Regression Tables](tutorials/regression-tables.qmd).
+
+```{python}
+pf.coefplot([pf.feols("Y ~ X1 + X2", data=data),
+             pf.feols("Y ~ X1 + X2 | f1", data=data)], keep="X", coord_flip=False)
+```
+
+```{python}
+pf.iplot(pf.feols("dep_var ~ i(rel_year, ref=-1.0)", data=panel),
+         coord_flip=False, figsize=(9, 3))
+```
+
+## Multiple testing
+
+All three take a set of models and one shared parameter; see [`rwolf()`](reference/estimation.post_estimation.multcomp.rwolf.qmd).
+
+```{python}
+models = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
+pf.bonferroni(models, param="X1")
+```
+
+```{python}
+pf.rwolf(models, param="X1", reps=99, seed=1234)
+```
+
+```{python}
+pf.wyoung(models, param="X1", reps=99, seed=1234)
+```
+
+## Tables
+
+`etable` renders models as `"gt"`, `"md"`, `"tex"`, `"typst"`, or `"df"`; see [Regression Tables](tutorials/regression-tables.qmd).
+
+```{python}
+fits = [pf.feols("Y ~ X1 + X2", data=data), pf.feols("Y ~ X1 + X2 | f1", data=data)]
+pf.etable(fits, type="md", drop=["X2"])
+```
+
+```{python}
+pf.etable(
+    fits,
+    type="md",
+    keep="X1",
+    labels={"X1": "Treatment", "Y": "Outcome"},
+    coef_fmt="b (se) [p]",
+    model_heads=["No controls", "With fixed effects"],
+    head_order="hd",
+)
+```
