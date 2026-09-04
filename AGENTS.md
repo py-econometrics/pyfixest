@@ -161,6 +161,7 @@ pixi run -e py312 test-release-contract                             # refactor i
 pixi run -e py312-r test-r-fixest-fast                              # fast live-R
 pixi run test-py                                                    # Python baseline
 pixi run -e lint prek run ruff-check --files <changed files>        # changed-file lint
+pixi run -e py312 type-check                                        # ty, whole package
 pixi task list                                                      # everything else
 ```
 

@@ -122,6 +122,19 @@ This installs prek as a git hook so checks run automatically on each commit.
 pixi run lint
 ```
 
+### Type checking
+
+The prek hooks run [mypy](https://mypy-lang.org/). CI additionally runs
+[ty](https://github.com/astral-sh/ty), which resolves imports from the
+environment it runs in and therefore lives with the runtime dependencies
+instead of the lint environment:
+
+```{.bash .code-copy}
+pixi run -e py312 type-check
+```
+
+Both checks must pass. ty is configured under `[tool.ty]` in `pyproject.toml`.
+
 ### Building the documentation
 
 ```{.bash .code-copy}

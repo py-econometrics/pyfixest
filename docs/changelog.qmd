@@ -61,6 +61,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   container are typed against a `FittedResult` protocol, `FixestMulti` is
   generic in its result class, and `pf.estimation.BaseRegression` is exported
   for `isinstance` checks.
+- We add [ty](https://github.com/astral-sh/ty) as a blocking CI check,
+  `pixi run -e py312 type-check`, alongside the existing mypy pre-commit hook.
+  Fixing its diagnostics tightened annotations across the DiD, formula,
+  decomposition, and reporting code; `panelview` now declares the
+  `matplotlib.pyplot.Axes` its docstring already documented. The files the
+  open estimation-state work rewrites are excluded for now and follow later.
 
 ### Inference Types
 
