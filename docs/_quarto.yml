@@ -87,6 +87,8 @@ website:
           file: how-to/marginaleffects.qmd
         - text: "When to Use Anytime-Valid Inference"
           file: how-to/anytime-valid-inference.qmd
+        - text: "Which Methods Does Each Estimator Support?"
+          file: how-to/supported-methods.qmd
         - text: "Regression Decomposition"
           file: how-to/regression_decomposition.qmd
         - text: "Compare Stata & PyFixest"
@@ -204,6 +206,7 @@ quartodoc:
         - estimation.models.feols_.Feols.vcov
         - estimation.models.feols_.Feols.predict
         - estimation.models.feols_.Feols.fixef
+        - estimation.models.feols_.Feols.capabilities
         - estimation.models.feols_.Feols.get_performance
         - estimation.models.feols_.Feols.wald_test
         - estimation.models.feols_.Feols.wildboottest
@@ -213,6 +216,12 @@ quartodoc:
         - estimation.models.feols_.Feols.update
         - estimation.models.feols_.Feols.evalue
         - estimation.models.feols_.Feols.pvalue_savi
+    - title: Estimator Support
+      desc: |
+        Which post-estimation and inference methods each estimator supports. See
+        [Which Methods Does Each Estimator Support?](/how-to/supported-methods.qmd).
+      contents:
+        - estimation.capabilities.support_matrix
     - title: Summarize and Visualize
       desc: |
         Summary tables and coefficient plots for fitted models.

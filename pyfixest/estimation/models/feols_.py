@@ -1137,6 +1137,53 @@ class Feols(ResultAccessorMixin):
         if self._lean:
             self._fit_state_discarded = True
 
+    def capabilities(self) -> pd.DataFrame:
+        """
+        Report which post-estimation methods this fitted model supports.
+
+        Support depends on the estimator and on the fit: weights, absorbed
+        fixed effects, and instruments each withdraw methods whose derivation
+        does not cover them. Calling an unsupported method raises an error
+        carrying the same reason.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Indexed by feature, with a boolean `supported` column and a
+            `reason` column that is None wherever the feature is available.
+            See [Which Methods Does Each Estimator Support?](/how-to/supported-methods.qmd)
+            for what each feature name refers to.
+
+        Notes
+        -----
+        Restrictions that depend on the arguments rather than on the fit, such
+        as the covariance types `evalue()` accepts or `update(inplace=True)`,
+        are documented with the individual methods.
+        [`pf.estimation.support_matrix()`](/reference/estimation.capabilities.support_matrix.qmd)
+        gives the same table across all estimators.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2", pf.get_data(), weights="weights")
+        fit.capabilities()
+        ```
+        """
+        reasons = self._capabilities.evaluate(self._fit_features)
+        index = pd.Index(list(reasons), name="feature")
+        return pd.DataFrame(
+            {
+                "supported": pd.Series(
+                    [reason is None for reason in reasons.values()], index=index
+                ),
+                # object dtype so a supported feature keeps its None reason
+                # instead of being coerced to a missing string value.
+                "reason": pd.Series(list(reasons.values()), index=index, dtype=object),
+            }
+        )
+
     def wald_test(self, R=None, q=None, distribution="F"):
         """
         Conduct Wald test.

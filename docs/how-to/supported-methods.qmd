@@ -1,0 +1,74 @@
+---
+title: "Which Methods Does Each Estimator Support?"
+description: "Look up whether a fitted model can run a post-estimation or inference method, and why not when it cannot."
+categories: [post-estimation, inference]
+jupyter: python3
+---
+
+Not every post-estimation method applies to every fit. Cluster-jackknife
+covariance needs refits that reproduce the original estimator; the wild cluster
+bootstrap resamples residuals of a single linear equation; the Gelbach
+decomposition compares nested linear projections. PyFixest declares those
+limits once per estimator instead of discovering them halfway through a
+computation, so an unsupported combination raises an error naming the reason
+rather than returning a plausible-looking number.
+
+## The estimator matrix
+
+`support_matrix()` shows what each estimator supports for a plain fit, i.e.
+without weights and without absorbed fixed effects.
+
+```{python}
+import pyfixest as pf
+
+pf.estimation.support_matrix()
+```
+
+Read the rows as follows.
+
+| Feature | Method |
+|---|---|
+| `crv3` | `vcov({"CRV3": ...})`, the cluster jackknife |
+| `hac` | `vcov("NW")` and `vcov("DK")` |
+| `nid` | `vcov("nid")`, the quantile sandwich with an estimated conditional density |
+| `wildboottest` | [`wildboottest()`](/reference/estimation.models.feols_.Feols.wildboottest.qmd) |
+| `ccv` | [`ccv()`](/reference/estimation.models.feols_.Feols.ccv.qmd) |
+| `decompose` | [`decompose()`](/reference/estimation.models.feols_.Feols.decompose.qmd) |
+| `ritest` | [`ritest()`](/reference/estimation.models.feols_.Feols.ritest.qmd) |
+| `fixef` | [`fixef()`](/reference/estimation.models.feols_.Feols.fixef.qmd) |
+| `predict` | [`predict()`](/reference/estimation.models.feols_.Feols.predict.qmd) |
+| `prediction_errors` | `predict(se_fit=True)` and `predict(interval="prediction")` |
+| `update` | [`update()`](/reference/estimation.models.feols_.Feols.update.qmd) |
+| `savi` | [`evalue()`](/reference/estimation.models.feols_.Feols.evalue.qmd), [`pvalue_savi()`](/reference/estimation.models.feols_.Feols.pvalue_savi.qmd), and `confint(inference_type="savi")` |
+
+## The support of one fit
+
+Weights, fixed effects, and instruments can withdraw a feature the estimator
+supports in general. `capabilities()` reports the support of the fit in hand
+together with the reason for every unsupported entry.
+
+```{python}
+data = pf.get_data()
+weighted = pf.feols("Y ~ X1 + X2", data=data, weights="weights")
+
+weighted.capabilities()
+```
+
+Analytic weights leave point predictions and cluster-robust covariance
+available but rule out the wild bootstrap, randomization inference, the causal
+cluster variance, and safe anytime-valid inference, each of which assumes an
+unweighted estimating equation.
+
+Calling one of those methods raises the same reason as an error.
+
+```{python}
+try:
+    weighted.ccv(treatment="X1")
+except NotImplementedError as error:
+    print(error)
+```
+
+Restrictions that depend on the arguments rather than on the fit -- the vcov
+types `evalue()` accepts, `update(inplace=True)`, or multiway clustering in the
+wild bootstrap -- are not part of this table and are documented with the
+individual methods.

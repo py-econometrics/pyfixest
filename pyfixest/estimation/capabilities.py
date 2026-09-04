@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Final, Literal, TypeAlias, get_args
 
+import pandas as pd
+
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.internals.literals import (
     EstimatorKind,
@@ -91,7 +93,7 @@ class FitFeatures:
     is_did: bool = False
 
 
-Rule: TypeAlias = Callable[[FitFeatures], "str | None"]
+Rule: TypeAlias = Callable[[FitFeatures], str | None]
 """Return the reason a fit is unsupported, or None when it is supported."""
 
 Condition: TypeAlias = tuple[Callable[[FitFeatures], bool], str]
@@ -311,3 +313,53 @@ def require_support(
     if reason is None:
         return
     raise FEATURE_ERRORS[feature](f"{subject} is not supported for {reason}.")
+
+
+def support_matrix() -> pd.DataFrame:
+    """Return the feature support of every estimator at a plain fit.
+
+    The table evaluates each model class's declaration for an unweighted fit
+    without fixed effects, so it shows what an estimator supports in principle.
+    Weights, fixed effects, and instruments can withdraw a feature from an
+    individual fit; call
+    [`capabilities()`](/reference/estimation.models.feols_.Feols.capabilities.qmd)
+    on a fitted result for the support of that fit.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Boolean support, indexed by feature, with one column per estimator:
+        `feols`, `feiv`, `fepois`, `feglm`, and `quantreg`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.estimation.support_matrix()
+    ```
+    """
+    from pyfixest.estimation.models.feglm_ import Feglm
+    from pyfixest.estimation.models.feiv_ import Feiv
+    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.models.fepois_ import Fepois
+    from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+
+    plain_fits: dict[str, tuple[type[Feols], FitFeatures]] = {
+        "feols": (Feols, FitFeatures(estimator="feols")),
+        "feiv": (Feiv, FitFeatures(estimator="feols", is_iv=True)),
+        "fepois": (Fepois, FitFeatures(estimator="fepois", family="poisson")),
+        "feglm": (Feglm, FitFeatures(estimator="feglm", family="logit")),
+        "quantreg": (Quantreg, FitFeatures(estimator="quantreg")),
+    }
+
+    return pd.DataFrame(
+        {
+            name: [
+                reason is None
+                for reason in model._capabilities.evaluate(features).values()
+            ]
+            for name, (model, features) in plain_fits.items()
+        },
+        index=pd.Index(FEATURES, name="feature"),
+    )

@@ -19,6 +19,7 @@ from pyfixest.estimation.capabilities import (
     Capabilities,
     FitFeatures,
     require_support,
+    support_matrix,
     supported,
     unless,
     unsupported,
@@ -124,6 +125,24 @@ def test_feature_errors_cover_every_feature():
     assert {FEATURE_ERRORS[feature] for feature in FEATURES if feature != "crv3"} == {
         NotImplementedError
     }
+
+
+def test_support_matrix_shape_and_selected_entries():
+    matrix = support_matrix()
+
+    assert list(matrix.index) == list(FEATURES)
+    assert matrix.index.name == "feature"
+    assert list(matrix.columns) == ["feols", "feiv", "fepois", "feglm", "quantreg"]
+    assert matrix.to_numpy().dtype == np.dtype(bool)
+
+    assert matrix.loc["crv3", "feols"]
+    assert not matrix.loc["crv3", "feiv"]
+    assert matrix.loc["crv3", "fepois"]
+    assert not matrix.loc["crv3", "feglm"]
+    assert matrix.loc["nid", "quantreg"]
+    assert not matrix.loc["nid", "feols"]
+    assert matrix.loc["predict", "quantreg"]
+    assert not matrix.loc["prediction_errors", "quantreg"]
 
 
 # ---------------------------------------------------------------------------
@@ -318,6 +337,27 @@ def test_declared_support_matches_the_public_methods(
         FEATURE_ERRORS[feature], match=rf"is not supported for {reason}\.$"
     ):
         _call(fit, feature)
+
+
+def test_capabilities_accessor_reports_supported_and_reason(
+    capability_data: pd.DataFrame,
+):
+    """The accessor reports the support of the fit in hand, not of its class."""
+    fit = _fit("ols_aweights", capability_data)
+    table = fit.capabilities()
+
+    assert list(table.index) == list(FEATURES)
+    assert table.index.name == "feature"
+    assert list(table.columns) == ["supported", "reason"]
+
+    assert table.loc["predict", "supported"]
+    assert table.loc["predict", "reason"] is None
+    assert not table.loc["ccv", "supported"]
+    assert table.loc["ccv", "reason"] == "models with weights"
+
+    plain = _fit("ols", capability_data).capabilities()
+    assert plain.loc["ccv", "supported"]
+    assert plain.loc["ccv", "reason"] is None
 
 
 def test_quantreg_rejects_ols_prediction_errors(capability_data: pd.DataFrame):
