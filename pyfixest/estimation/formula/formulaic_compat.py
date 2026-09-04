@@ -9,7 +9,9 @@ import formulaic
 import formulaic.formula
 import numpy as np
 import pandas as pd
+from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Factor
+from formulaic.utils.structured import Structured
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -25,6 +27,11 @@ if TYPE_CHECKING:
 FormulaSide: TypeAlias = (
     formulaic.formula.SimpleFormula | formulaic.formula.StructuredFormula
 )
+
+# What `Formula.get_model_matrix` materializes: one matrix for a flat formula,
+# and formulaic's structured container for the multi-part formulas pyfixest
+# builds. Both are navigated by role key and both serve the same attributes.
+AnyModelMatrix: TypeAlias = formulaic.ModelMatrix | Structured[formulaic.ModelMatrix]
 
 
 class FormulaicCompatibilityError(RuntimeError):
@@ -51,6 +58,37 @@ def formula_rhs(
     """
     # formulaic internal: see `formula_lhs`.
     return formula.rhs  # ty: ignore[unresolved-attribute]
+
+
+def model_spec_lhs(spec: ModelSpec) -> ModelSpec:
+    """Return the dependent-variable spec of a two-sided sub-formula."""
+    # formulaic internal: a two-sided sub-formula materializes into the
+    # structured `ModelSpecs` container, which serves `lhs` and `rhs` from
+    # `Structured.__getattr__`. A `ModelSpec` mapping is typed in terms of the
+    # single-spec leaf, so the two sides are invisible to a type checker.
+    return spec.lhs  # ty: ignore[unresolved-attribute]
+
+
+def model_spec_rhs(spec: ModelSpec) -> ModelSpec:
+    """Return the covariate spec of a two-sided sub-formula."""
+    # formulaic internal: see `model_spec_lhs`.
+    return spec.rhs  # ty: ignore[unresolved-attribute]
+
+
+def parsed_simple_formula(
+    expressions: Iterable[str], *, include_intercept: bool = False
+) -> formulaic.formula.SimpleFormula:
+    """Parse formula expressions into a flat formulaic formula."""
+    # formulaic internal: the `Formula` metaclass annotates `__call__` as
+    # returning the `Formula` base class; a flat list of expressions always
+    # parses into `SimpleFormula`, the only side that iterates over terms.
+    return cast(
+        "formulaic.formula.SimpleFormula",
+        formulaic.formula.Formula(
+            list(expressions),
+            _parser=DefaultFormulaParser(include_intercept=include_intercept),
+        ),
+    )
 
 
 def simple_formula(terms: Iterable[Any]) -> formulaic.formula.SimpleFormula:
@@ -131,7 +169,7 @@ def filter_multistage_endogenous_terms(
     )
 
 
-def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:
+def flatten_model_matrix(model_matrix: AnyModelMatrix) -> list[pd.DataFrame]:
     """Return the leaf data frames from a possibly structured ModelMatrix."""
     # formulaic internal: `_flatten()` is private and its iteration order is
     # documented as unstable. Callers must not rely on the returned order.

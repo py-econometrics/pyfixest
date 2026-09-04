@@ -23,6 +23,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     formula_rhs,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
+    parsed_simple_formula,
     simple_formula,
     terms_without_intercept,
 )
@@ -237,11 +238,10 @@ class Formula:
         return simple_formula(terms_without_intercept(parts[1]))
 
     @property
-    def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
+    def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
-        return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
-            _parser=DefaultFormulaParser(include_intercept=False),
+        return parsed_simple_formula(
+            f"__fixed_effect__{term.factors}" for term in self.fixed_effects
         )
 
     @property

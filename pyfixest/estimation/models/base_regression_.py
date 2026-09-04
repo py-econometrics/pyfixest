@@ -31,6 +31,7 @@ from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
+    model_spec_rhs,
 )
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -1915,7 +1916,7 @@ class BaseRegression(TidyColumnAccessors):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            rhs_spec = model_spec_rhs(self._model_spec[_ModelMatrixKey.main])
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )
