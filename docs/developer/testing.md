@@ -12,7 +12,7 @@ selection affect wall time.
 
 | Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff/mypy |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff/mypy, ty |
 | Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
@@ -70,6 +70,9 @@ pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
 pixi run -e lint prek run mypy --files <changed files>
 
+# Whole-package type check; ty resolves imports from the estimation environment
+pixi run -e py312 type-check
+
 # Documentation (costly; run only when the selection matrix calls for it)
 pixi run docs-build
 pixi run docs-render
@@ -81,6 +84,13 @@ conda-forge R comparisons. CI partitions that population into
 `tests/test_vs_fixest.py` is not executed twice. The fast suite runs once as a
 preflight in the canonical `fixest` job.
 
+Two type checkers run side by side while pyfixest migrates from mypy to ty
+(issue #1104). mypy stays a prek hook and keeps owning the `# type: ignore`
+comments; ty checks the whole package in one pass and blocks CI. ty is
+configured under `[tool.ty]` in `pyproject.toml`, including a temporary
+exclude list; do not silence a diagnostic by extending it. Suppress a single
+line only with `# ty: ignore[rule]` and a reason naming the third-party gap.
+
 ## Selection matrix
 
 This matrix is authoritative for which checks a change requires.
@@ -90,8 +100,8 @@ This matrix is authoritative for which checks a change requires.
 | Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
-| Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
-| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint/type checks | Python baseline; applicable external suite for every estimator the refactor touches |
+| Python API or internals | targeted public tests; changed-file lint/mypy; `type-check` | Python baseline |
+| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint/mypy; `type-check` | Python baseline; applicable external suite for every estimator the refactor touches |
 | Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
