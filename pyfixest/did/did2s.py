@@ -121,7 +121,8 @@ class DID2S(DID):
             treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
-            cluster=self._cluster,
+            # DID2S always clusters; only the DID base class allows `None`.
+            cluster=cast(str, self._cluster),
             weights=self._weights_name,
         )
 
@@ -302,7 +303,10 @@ def _did2s_vcov(
         A variance covariance matrix.
     """
     cluster_col = data[cluster]
-    _, clustid = pd.factorize(cluster_col)
+    # `pd.factorize` returns the distinct levels as an ndarray or an Index
+    # depending on the input; the cluster loop and count below need an Index.
+    _, clustid_levels = pd.factorize(cluster_col)
+    clustid = pd.Index(clustid_levels)
 
     _G = clustid.nunique()  # actually not used here, neither in did2s
 
