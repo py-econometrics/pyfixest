@@ -93,11 +93,11 @@ class FitFeatures:
     is_did: bool = False
 
 
+# A rule returns the reason a fit is unsupported, or None when it is supported.
 Rule: TypeAlias = Callable[[FitFeatures], str | None]
-"""Return the reason a fit is unsupported, or None when it is supported."""
 
+# A predicate on a fit paired with the reason it makes a feature unavailable.
 Condition: TypeAlias = tuple[Callable[[FitFeatures], bool], str]
-"""A predicate on a fit paired with the reason it makes a feature unavailable."""
 
 
 def unsupported_estimator(features: FitFeatures) -> str:
