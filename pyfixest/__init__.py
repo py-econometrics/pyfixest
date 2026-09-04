@@ -1,3 +1,14 @@
+"""Fast high-dimensional fixed-effects estimation for Python.
+
+Docs:    installed, version-matched corpus at
+         importlib.resources.files("pyfixest") / "docs" (start with llms.txt;
+         absent in a source checkout, where docs/ and AGENTS.md apply);
+         latest release at https://pyfixest.org/llms.txt
+Source:  https://github.com/py-econometrics/pyfixest
+Skills:  skills/pyfixest/SKILL.md next to this package in site-packages;
+         also https://pyfixest.org/skills.html
+"""
+
 import importlib as _importlib
 from importlib.metadata import PackageNotFoundError, version
 
