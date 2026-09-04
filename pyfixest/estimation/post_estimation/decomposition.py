@@ -1,15 +1,21 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from pandas.api.extensions import ExtensionArray
+from scipy.sparse import csc_matrix, csr_matrix, diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
+
+# scipy's `spmatrix` only carries the matrix-semantics mixin: indexing,
+# `.multiply()` and the format converters live on the concrete classes. The
+# decomposition builds and consumes compressed matrices throughout.
+CompressedMatrix: TypeAlias = csc_matrix | csr_matrix
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -164,7 +170,9 @@ class GelbachDecomposition:
 
     # Define attributes initialized post-creation
     cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
-    unique_clusters: np.ndarray | None = field(init=False, default=None)
+    unique_clusters: np.ndarray | ExtensionArray | None = field(
+        init=False, default=None
+    )
     mask: np.ndarray = field(init=False)
     mediator_names: list[str] = field(init=False)
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
@@ -190,10 +198,11 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            unique_clusters = self.cluster_df.unique()
+            self.unique_clusters = unique_clusters
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
-                for cluster in self.unique_clusters
+                for cluster in unique_clusters
             }
         else:
             self.unique_clusters = None
@@ -268,7 +277,7 @@ class GelbachDecomposition:
 
     def fit(
         self,
-        X: spmatrix,
+        X: CompressedMatrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
@@ -437,8 +446,11 @@ class GelbachDecomposition:
     def _bootstrap(self, rng: np.random.Generator):
         "Run a single bootstrap iteration."
         if self.unique_clusters is not None:
+            # A pandas ExtensionArray is an array-like the generator samples
+            # from, but numpy does not type its overloads for it.
+            unique_clusters = cast("np.ndarray", self.unique_clusters)
             idx_clusters = rng.choice(
-                self.unique_clusters, len(self.unique_clusters), replace=True
+                unique_clusters, len(unique_clusters), replace=True
             ).tolist()
 
             X = vstack([self.X_dict[g].tocsr() for g in idx_clusters])
@@ -454,7 +466,7 @@ class GelbachDecomposition:
     def compute_gelbach(
         self,
         X1: spmatrix,
-        X2: spmatrix,
+        X2: CompressedMatrix,
         Y: np.ndarray,
         X: spmatrix,
         agg_first: bool | None,

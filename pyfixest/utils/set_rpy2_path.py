@@ -1,5 +1,7 @@
-import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
+# rpy2 ships only with the `r` pixi feature, so it is absent from the
+# environment the type checker resolves imports from.
+import rpy2.robjects as robjects  # ty: ignore[unresolved-import]
+from rpy2.robjects.packages import importr  # ty: ignore[unresolved-import]
 
 
 def update_r_paths():

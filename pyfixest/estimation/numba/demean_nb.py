@@ -77,7 +77,9 @@ def demean(
     x_prev = np.empty((n_threads, n_samples), dtype=x.dtype)
 
     not_converged = 0
-    for k in nb.prange(n_features):
+    # numba's `prange` is a marker class whose `__new__` returns a plain
+    # `range` outside nopython mode, which static type checkers cannot see.
+    for k in nb.prange(n_features):  # ty: ignore[not-iterable]
         tid = nb.get_thread_id()
 
         xk_curr = x_curr[tid, :]
