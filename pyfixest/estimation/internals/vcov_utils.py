@@ -15,7 +15,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
@@ -32,7 +32,10 @@ class ClusterPrep:
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    # `_get_cluster_df` inspects `data.empty` and `_check_cluster_df` its shape,
+    # so the CRV path requires a pandas frame rather than any narwhals-native
+    # frame the public `vcov()` signature accepts.
+    data: pd.DataFrame,
     clustervar: list[str],
     ssc_dict: dict,
     fixef: str | None,

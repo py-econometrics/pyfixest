@@ -4,12 +4,15 @@ import re
 import warnings
 from functools import partial
 from importlib import import_module
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 
 
 def check_for_separation(
@@ -238,7 +241,11 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
+        # A single formula without multiple estimation always fits one model.
+        fitted = cast(
+            "Feols",
+            feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner),
+        )
         tmp["Uhat"] = pd.Series(
             data=fitted.predict(), index=fitted._data.index, name="Uhat"
         )
