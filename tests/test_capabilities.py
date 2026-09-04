@@ -1,7 +1,12 @@
 """Tests for the declarative post-estimation capability contract."""
 
+import warnings
+
+import numpy as np
+import pandas as pd
 import pytest
 
+import pyfixest as pf
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.capabilities import (
     FEATURE_ERRORS,
@@ -119,3 +124,242 @@ def test_feature_errors_cover_every_feature():
     assert {FEATURE_ERRORS[feature] for feature in FEATURES if feature != "crv3"} == {
         NotImplementedError
     }
+
+
+# ---------------------------------------------------------------------------
+# The declared table, enforced through the public methods that consult it.
+# ---------------------------------------------------------------------------
+
+_N = 60
+
+
+@pytest.fixture(scope="module")
+def capability_data() -> pd.DataFrame:
+    """Build a tiny deterministic sample every estimator in the matrix can fit."""
+    rng = np.random.default_rng(2718)
+    treatment = rng.binomial(1, 0.5, size=_N).astype(float)
+    instrument = rng.normal(size=_N)
+    endogenous = 0.8 * instrument + rng.normal(scale=0.5, size=_N)
+    return pd.DataFrame(
+        {
+            "Y": 1.0 + 0.5 * treatment + 0.4 * endogenous + rng.normal(size=_N),
+            "Y_count": rng.poisson(2.0, size=_N),
+            "Y_bin": rng.binomial(1, 0.5, size=_N),
+            "D": treatment,
+            "X2": rng.normal(size=_N),
+            "Z1": instrument,
+            "endog": endogenous,
+            "t": np.arange(_N, dtype=float),
+            "f1": np.tile(np.arange(6), _N // 6),
+            "cluster": np.tile(np.arange(5), _N // 5),
+            "aw": np.linspace(0.5, 1.5, _N),
+            "fw": np.tile([1.0, 2.0], _N // 2),
+        }
+    )
+
+
+def _fit(kind: str, data: pd.DataFrame):
+    if kind == "ols":
+        return pf.feols("Y ~ D + X2", data=data)
+    if kind == "ols_aweights":
+        return pf.feols("Y ~ D + X2", data=data, weights="aw", weights_type="aweights")
+    if kind == "ols_fweights":
+        return pf.feols("Y ~ D + X2", data=data, weights="fw", weights_type="fweights")
+    if kind == "ols_fixef":
+        return pf.feols("Y ~ D + X2 | f1", data=data)
+    if kind == "iv":
+        return pf.feols("Y ~ X2 + [endog ~ Z1]", data=data)
+    if kind == "iv_fixef":
+        return pf.feols("Y ~ X2 + [endog ~ Z1] | f1", data=data)
+    if kind == "poisson":
+        return pf.fepois("Y_count ~ D + X2", data=data)
+    if kind == "logit":
+        return pf.feglm("Y_bin ~ D + X2", data=data, family="logit")
+    if kind == "quantreg":
+        with pytest.warns(FutureWarning, match="experimental"):
+            return pf.quantreg("Y ~ D + X2", data=data, quantile=0.5)
+    raise AssertionError(f"unknown fit kind {kind}")
+
+
+def _call(fit, feature: str):
+    """Invoke `feature` with the smallest arguments that reach its support gate."""
+    if feature == "crv3":
+        return fit.vcov({"CRV3": "cluster"})
+    if feature == "hac":
+        return fit.vcov("NW", vcov_kwargs={"time_id": "t", "lag": 1})
+    if feature == "nid":
+        return fit.vcov("nid")
+    if feature == "wildboottest":
+        return fit.wildboottest(param=fit._coefnames[1], reps=11, seed=45)
+    if feature == "ccv":
+        return fit.ccv(treatment="D", cluster="cluster", n_splits=2, seed=45)
+    if feature == "decompose":
+        return fit.decompose(decomp_var="D", only_coef=True)
+    if feature == "ritest":
+        return fit.ritest(resampvar="D", reps=2)
+    if feature == "fixef":
+        return fit.fixef()
+    if feature == "predict":
+        return fit.predict()
+    if feature == "prediction_errors":
+        return fit.predict(se_fit=True)
+    if feature == "update":
+        return fit.update(np.ones((1, fit._k)), np.zeros(1))
+    if feature == "savi":
+        return fit.evalue()
+    raise AssertionError(f"unknown feature {feature}")
+
+
+# (fit, feature, declared reason or None when the feature must be available).
+# `fixef` appears only for fits that absorb fixed effects, because the missing
+# fixed-effect ValueError is raised before the support gate.
+SUPPORT_CASES = [
+    ("ols", "crv3", None),
+    ("ols", "hac", None),
+    ("ols", "nid", "models of type 'feols'"),
+    ("ols", "wildboottest", None),
+    ("ols", "ccv", None),
+    ("ols", "decompose", None),
+    ("ols", "ritest", None),
+    ("ols", "predict", None),
+    ("ols", "prediction_errors", None),
+    ("ols", "update", None),
+    ("ols", "savi", None),
+    ("ols_aweights", "crv3", None),
+    ("ols_aweights", "hac", None),
+    ("ols_aweights", "wildboottest", "models with weights"),
+    ("ols_aweights", "ccv", "models with weights"),
+    ("ols_aweights", "decompose", "models with non-frequency weights"),
+    ("ols_aweights", "ritest", "models with weights"),
+    ("ols_aweights", "predict", None),
+    ("ols_aweights", "prediction_errors", "models with weights"),
+    ("ols_aweights", "update", "models with weights"),
+    ("ols_aweights", "savi", "models with weights"),
+    ("ols_fweights", "hac", "models with frequency weights"),
+    ("ols_fweights", "decompose", None),
+    ("ols_fweights", "savi", "models with weights"),
+    ("ols_fixef", "crv3", None),
+    ("ols_fixef", "hac", None),
+    ("ols_fixef", "wildboottest", None),
+    ("ols_fixef", "ccv", "models with fixed effects"),
+    ("ols_fixef", "ritest", None),
+    ("ols_fixef", "fixef", None),
+    ("ols_fixef", "predict", None),
+    ("ols_fixef", "prediction_errors", "models with fixed effects"),
+    ("ols_fixef", "update", "models with fixed effects"),
+    ("ols_fixef", "savi", "models with fixed effects"),
+    ("iv", "crv3", "IV models"),
+    ("iv", "hac", None),
+    ("iv", "wildboottest", "IV models"),
+    ("iv", "ccv", "IV models"),
+    ("iv", "decompose", "IV models"),
+    ("iv", "ritest", "IV models"),
+    ("iv", "predict", "IV models"),
+    ("iv", "prediction_errors", "IV models"),
+    ("iv", "update", "IV models"),
+    ("iv", "savi", "IV models"),
+    ("iv_fixef", "fixef", "IV models"),
+    ("poisson", "crv3", None),
+    ("poisson", "hac", None),
+    ("poisson", "nid", "models of type 'fepois'"),
+    ("poisson", "wildboottest", "models of type 'fepois'"),
+    ("poisson", "ccv", "models of type 'fepois'"),
+    ("poisson", "decompose", "models of type 'fepois'"),
+    ("poisson", "ritest", None),
+    ("poisson", "predict", None),
+    ("poisson", "prediction_errors", "models of type 'fepois'"),
+    ("poisson", "update", "models of type 'fepois'"),
+    ("poisson", "savi", "models of type 'fepois'"),
+    ("logit", "crv3", "models of type 'feglm'"),
+    ("logit", "hac", None),
+    ("logit", "nid", "models of type 'feglm'"),
+    ("logit", "wildboottest", "models of type 'feglm'"),
+    ("logit", "ccv", "models of type 'feglm'"),
+    ("logit", "decompose", "models of type 'feglm'"),
+    ("logit", "ritest", "models of type 'feglm'"),
+    ("logit", "predict", None),
+    ("logit", "prediction_errors", "models of type 'feglm'"),
+    ("logit", "update", "models of type 'feglm'"),
+    ("logit", "savi", "models of type 'feglm'"),
+    ("quantreg", "crv3", "models of type 'quantreg'"),
+    ("quantreg", "hac", "models of type 'quantreg'"),
+    ("quantreg", "nid", None),
+    ("quantreg", "wildboottest", "models of type 'quantreg'"),
+    ("quantreg", "ccv", "models of type 'quantreg'"),
+    ("quantreg", "decompose", "models of type 'quantreg'"),
+    ("quantreg", "ritest", "models of type 'quantreg'"),
+    ("quantreg", "predict", None),
+    ("quantreg", "prediction_errors", "models of type 'quantreg'"),
+    ("quantreg", "update", "models of type 'quantreg'"),
+    ("quantreg", "savi", "models of type 'quantreg'"),
+]
+
+
+@pytest.mark.parametrize(
+    ("kind", "feature", "reason"),
+    SUPPORT_CASES,
+    ids=[f"{kind}-{feature}" for kind, feature, _ in SUPPORT_CASES],
+)
+def test_declared_support_matches_the_public_methods(
+    capability_data: pd.DataFrame, kind: str, feature: str, reason: "str | None"
+):
+    """Every declared cell is what the corresponding public method enforces."""
+    fit = _fit(kind, capability_data)
+    assert fit._capabilities.evaluate(fit._fit_features)[feature] == reason
+
+    if reason is None:
+        # A supported cell must not raise the errors the contract owns.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _call(fit, feature)
+        return
+
+    with pytest.raises(
+        FEATURE_ERRORS[feature], match=rf"is not supported for {reason}\.$"
+    ):
+        _call(fit, feature)
+
+
+def test_quantreg_rejects_ols_prediction_errors(capability_data: pd.DataFrame):
+    """OLS residual-variance prediction errors do not describe a quantile."""
+    fit = _fit("quantreg", capability_data)
+
+    for kwargs in ({"se_fit": True}, {"interval": "prediction"}):
+        with pytest.raises(
+            NotImplementedError,
+            match=(
+                r"Prediction with standard errors is not supported for models of "
+                r"type 'quantreg'\."
+            ),
+        ):
+            fit.predict(**kwargs)
+
+
+def test_unweighted_fits_report_no_weights_kind():
+    """The estimation API keeps a default `weights_type` on unweighted fits."""
+    fit = pf.feols("Y ~ X1", data=pf.get_data(), weights_type="fweights")
+    assert fit._fit_features.weights_kind is None
+    assert not FREQUENCY_WEIGHTS[0](fit._fit_features)
+
+
+def test_difference_in_differences_results_keep_their_refit_gates():
+    """A relabelled `Feols` result must not be refit as if it were plain OLS."""
+    data = pd.read_csv("pyfixest/did/data/df_het.csv").iloc[:2000]
+    fit = pf.did2s(
+        data,
+        yname="dep_var",
+        first_stage="~ 0 | state + year",
+        second_stage="~ i(rel_year, ref=-1.0)",
+        treatment="treat",
+        cluster="state",
+    )
+
+    assert fit._fit_features.is_did
+    reasons = fit._capabilities.evaluate(fit._fit_features)
+    for feature in ("ritest", "update", "savi"):
+        assert reasons[feature] == "difference-in-differences results"
+
+    with pytest.raises(NotImplementedError, match="difference-in-differences results"):
+        fit.update(np.ones((1, fit._k)), np.zeros(1))
+    with pytest.raises(NotImplementedError, match="difference-in-differences results"):
+        fit.evalue()

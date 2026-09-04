@@ -1024,12 +1024,14 @@ class GelbachDecomposition:
 def _decompose_arg_check(
     type: str,
     has_weights: bool,
-    weights_type: str | None,
-    is_iv: bool,
-    method: str,
     only_coef: bool,
 ) -> None:
-    "Check arguments for decomposition."
+    """Check the decomposition arguments against the fit that requests them.
+
+    Fit-level support -- IV, non-OLS estimators, and non-frequency weights --
+    is declared in `pyfixest.estimation.capabilities` and rejected before this
+    call. What remains depends on the arguments.
+    """
     supported_decomposition_types = ["gelbach"]
 
     if type not in supported_decomposition_types:
@@ -1037,23 +1039,9 @@ def _decompose_arg_check(
             f"'type' {type} is not in supported types {supported_decomposition_types}."
         )
 
-    if has_weights and weights_type != "fweights":
-        raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights."
-        )
     if has_weights and not only_coef:
         raise NotImplementedError(
             "Decomposition is currently only supported for models with frequency weights when only_coef is False."
-        )
-
-    if is_iv:
-        raise NotImplementedError(
-            "Decomposition is currently not supported for IV models."
-        )
-
-    if method == "fepois":
-        raise NotImplementedError(
-            "Decomposition is currently not supported for Poisson regression."
         )
 
     return None

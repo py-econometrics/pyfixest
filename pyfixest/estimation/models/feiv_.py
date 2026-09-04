@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,12 @@ from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
+from pyfixest.estimation.capabilities import (
+    FREQUENCY_WEIGHTS,
+    Capabilities,
+    unless,
+    unsupported,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -74,10 +80,6 @@ class Feiv(Feols):
         Indices of collinear variables in Z.
     _is_iv : bool
         Indicator if instrumental variables are used.
-    _support_crv3_inference : bool
-        Indicator for supporting CRV3 inference.
-    _support_iid_inference : bool
-        Indicator for supporting IID inference.
     _tZX : np.ndarray
         Transpose of Z times X.
     _tXZ : np.ndarray
@@ -160,6 +162,25 @@ class Feiv(Feols):
     details.
     """
 
+    # 2SLS keeps the estimator kind of the linear path it extends. Every
+    # feature that reads the retained design as a single-equation OLS fit --
+    # jackknife refits, bootstrap resampling, mediation, prediction, and
+    # coefficient updates -- would ignore the first stage, so 2SLS supports
+    # only the covariance estimators written for it.
+    _capabilities: ClassVar[Capabilities] = Capabilities(
+        crv3=unsupported("IV models"),
+        hac=unless(FREQUENCY_WEIGHTS),
+        wildboottest=unsupported("IV models"),
+        ccv=unsupported("IV models"),
+        decompose=unsupported("IV models"),
+        ritest=unsupported("IV models"),
+        fixef=unsupported("IV models"),
+        predict=unsupported("IV models"),
+        prediction_errors=unsupported("IV models"),
+        update=unsupported("IV models"),
+        savi=unsupported("IV models"),
+    )
+
     # Constructor and methods implementation...
     def __init__(
         self,
@@ -209,10 +230,6 @@ class Feiv(Feols):
         )
 
         self._is_iv = True
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
 
     def _prepare_within_data(self) -> WithinLinearData:
         """Return second-stage and instrument arrays on within scale."""

@@ -355,7 +355,10 @@ def test_hac_rejects_fweights(vcov):
     if vcov == "DK":
         kwargs["panel_id"] = "unit"
 
-    with pytest.raises(NotImplementedError, match="fweights"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"HAC inference \(NW, DK\) is not supported for models with frequency weights",
+    ):
         feols(
             "Y ~ X1",
             data=data,

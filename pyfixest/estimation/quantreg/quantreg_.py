@@ -1,16 +1,18 @@
 import warnings
 from collections.abc import Callable, Mapping
 from functools import partial
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.capabilities import Capabilities, supported
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
+    EstimatorKind,
     QuantregMethodOptions,
     SolverOptions,
 )
@@ -59,6 +61,17 @@ class Quantreg(Feols):
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
     """
+
+    _estimator: ClassVar[EstimatorKind] = "quantreg"
+    # The quantile sandwich replaces the OLS residual variance, so `nid` is the
+    # estimator-specific covariance and the OLS residual-variance formulas
+    # behind prediction errors do not describe a conditional quantile. Their
+    # standard errors would be a validated-looking number for a method R
+    # `quantreg` estimates by rank inversion or the bootstrap instead.
+    _capabilities: ClassVar[Capabilities] = Capabilities(
+        nid=supported(),
+        predict=supported(),
+    )
 
     def __init__(
         self,
@@ -112,12 +125,6 @@ class Quantreg(Feols):
            """,
             FutureWarning,
         )
-
-        self._supports_wildboottest = False
-        self._support_crv3_inference = False
-        self._supports_cluster_causal_variance = False
-        self._support_hac_inference = False
-        self._support_decomposition = False
 
         self._quantile = quantile
         self._method = f"quantreg_{method}"

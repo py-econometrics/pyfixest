@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
+    from pyfixest.estimation.capabilities import Feature
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
         ObservationWeights,
@@ -162,6 +163,15 @@ class ResultAccessorMixin(TidyColumnAccessors):
         remedy: str = "Refit with lean=False.",
     ) -> None:
         """Reject a call whose input arrays `lean=True` discarded.
+
+        Implemented by the host class.
+        """
+        raise NotImplementedError
+
+    def _require_support(
+        self, feature: "Feature", *, subject: str | None = None
+    ) -> None:
+        """Reject a feature this fit does not support.
 
         Implemented by the host class.
         """
