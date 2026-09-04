@@ -23,9 +23,10 @@ only when it reports passed cases: a skip means no baseline, not success. A
 failure ends the refactor classification. Fix it or follow the numerics row.
 Never widen a contract tolerance to get green.
 
-Start with targeted tests and changed-file format/lint/type checks. Once the
-implementation stabilizes, run the selected broader baseline once and assign
-each required long check to a local run or exact-head CI.
+Start with targeted tests, changed-file format and lint checks, and the
+whole-package type check. Once the implementation stabilizes, run the selected
+broader baseline once and assign each required long check to a local run or
+exact-head CI.
 
 Unknown paths require the conservative PR baseline. For a stack, run targeted
 checks for each layer against its immediate parent and the broad suites once on

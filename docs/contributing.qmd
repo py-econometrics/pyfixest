@@ -124,16 +124,17 @@ pixi run lint
 
 ### Type checking
 
-The prek hooks run [mypy](https://mypy-lang.org/). CI additionally runs
-[ty](https://github.com/astral-sh/ty), which resolves imports from the
-environment it runs in and therefore lives with the runtime dependencies
-instead of the lint environment:
+pyfixest is type-checked with [ty](https://github.com/astral-sh/ty), which
+blocks CI. It resolves imports from the environment it runs in and therefore
+lives with the runtime dependencies instead of the lint environment:
 
 ```{.bash .code-copy}
 pixi run -e py312 type-check
 ```
 
-Both checks must pass. ty is configured under `[tool.ty]` in `pyproject.toml`.
+ty is configured under `[tool.ty]` in `pyproject.toml`. Fix a diagnostic at its
+source; suppress a line only with `# ty: ignore[rule]` and a comment naming the
+third-party gap it works around.
 
 ### Building the documentation
 

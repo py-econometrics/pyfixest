@@ -61,12 +61,17 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   container are typed against a `FittedResult` protocol, `FixestMulti` is
   generic in its result class, and `pf.estimation.BaseRegression` is exported
   for `isinstance` checks.
-- We add [ty](https://github.com/astral-sh/ty) as a blocking CI check,
-  `pixi run -e py312 type-check`, alongside the existing mypy pre-commit hook.
-  Fixing its diagnostics tightened annotations across the DiD, formula,
-  decomposition, and reporting code; `panelview` now declares the
-  `matplotlib.pyplot.Axes` its docstring already documented. The files the
-  open estimation-state work rewrites are excluded for now and follow later.
+- pyfixest is now type-checked with [ty](https://github.com/astral-sh/ty)
+  instead of mypy, which completes the migration in issue #1104.
+  `pixi run -e py312 type-check` runs it over the whole package and blocks CI,
+  and the mypy pre-commit hook and its `# type: ignore` comments are gone.
+  Fixing the diagnostics tightened annotations throughout: `panelview` declares
+  the `matplotlib.pyplot.Axes` its docstring already documented, the `vcov`
+  argument accepts the `"NW"` and `"DK"` strings the estimators document and
+  validate, and the reporting entries declare every collection of models they
+  already accepted. Options that never accepted `None` no longer say they do,
+  among them the `wildboottest` bootstrap settings and `weights_type` on the
+  result classes.
 
 ### Inference Types
 
