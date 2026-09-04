@@ -8,7 +8,7 @@ from typing import Any, cast
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
-from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
+from pyfixest.estimation.models._tidy_accessors import TidyColumnAccessors
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import ParsedFormula

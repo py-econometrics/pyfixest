@@ -28,7 +28,7 @@ from pyfixest.errors import EmptyVcovError
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+    from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 SAVI_REFERENCE = (
     "Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor "
@@ -155,7 +155,7 @@ def optimal_mixture_precision(
     return float(result.x)
 
 
-def _validate_savi_model(model: ResultAccessorMixin) -> None:
+def _validate_savi_model(model: BaseRegression) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
     model._require_support("savi", subject="SAVI inference")
     if model._vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
@@ -167,9 +167,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         raise EmptyVcovError()
 
 
-def _coefficient_evalues(
-    model: ResultAccessorMixin, mixture_precision: float
-) -> pd.Series:
+def _coefficient_evalues(model: BaseRegression, mixture_precision: float) -> pd.Series:
     """Compute coefficient-wise e-values for a validated model."""
     values = _savi_e_value(
         model._tstat**2,
@@ -182,7 +180,7 @@ def _coefficient_evalues(
 
 
 def _evalue(
-    model: ResultAccessorMixin,
+    model: BaseRegression,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
     """Compute coefficient-wise SAVI e-values."""
@@ -192,7 +190,7 @@ def _evalue(
 
 
 def _pvalue_savi(
-    model: ResultAccessorMixin,
+    model: BaseRegression,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
     """Compute coefficient-wise SAVI sequential p-values."""
@@ -202,7 +200,7 @@ def _pvalue_savi(
 
 
 def _confint(
-    model: ResultAccessorMixin,
+    model: BaseRegression,
     alpha: float = 0.05,
     mixture_precision: float = 1.0,
     keep: list | str | None = None,
