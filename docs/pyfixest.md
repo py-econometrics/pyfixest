@@ -22,6 +22,10 @@ The package aims to mimic the syntax and functionality of [Laurent Bergé's](htt
 
 For questions on `PyFixest`, head over to our [GitHub discussions](https://github.com/py-econometrics/pyfixest/discussions), or join our [Discord server](https://discord.gg/gBAydeDMVK).
 
+## Using PyFixest with AI agents
+
+Installed releases ship the documentation next to the code: `python -c "import importlib.resources as r; print(r.files('pyfixest') / 'docs')"` prints the directory; start with its `llms.txt`. The same pages are online at [llms.txt](llms.txt), and the [AI agent guide](skills.md) explains how to use them with a coding agent.
+
 ## Features
 
 - **Estimation**
