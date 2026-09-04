@@ -354,6 +354,7 @@ class Feiv(Feols):
         The following is an example usage of this method:
 
             ```{python}
+            #| label: feiv-iv-diag-example
 
             import numpy as np
             import pandas as pd
