@@ -5,8 +5,9 @@ from collections.abc import ValuesView
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.base_regression_ import BaseRegression
+from pyfixest.estimation.protocols import FittedResult
 
-ModelInputType = FixestMulti | BaseRegression | list[BaseRegression]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
@@ -212,13 +213,13 @@ def _post_processing_input_checks(
     models: ModelInputType,
     check_duplicate_model_names: bool = False,
     rename_models: dict[str, str] | None = None,
-) -> list[BaseRegression]:
+) -> list[FittedResult]:
     """
     Perform input checks for post-processing models.
 
     Parameters
     ----------
-        models : Union[List[BaseRegression], FixestMulti]
+        models : Union[List[FittedResult], FixestMulti]
                 The models to be checked. This can either be a list of fitted
                 results or a single FixestMulti object.
         check_duplicate_model_names : bool, optional
@@ -231,7 +232,7 @@ def _post_processing_input_checks(
 
     Returns
     -------
-        list[BaseRegression]
+        list[FittedResult]
             A list of checked and validated fitted results.
 
     Raises
@@ -239,7 +240,7 @@ def _post_processing_input_checks(
         TypeError: If the models argument is not of the expected type.
 
     """
-    models_list: list[BaseRegression] = []
+    models_list: list[FittedResult] = []
 
     if isinstance(models, BaseRegression):
         models_list = [models]

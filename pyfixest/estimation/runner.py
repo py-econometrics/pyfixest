@@ -9,13 +9,13 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.plan_ import (
     ParsedFormula,
     build_all_splits,
     expand_specs,
     fit_one,
 )
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import capture_context
 
@@ -46,7 +46,7 @@ def _split_plan(config: EstimationConfig) -> tuple[bool, bool, str | None]:
 def run_estimation(
     config: EstimationConfig,
     parsed: ParsedFormula,
-) -> BaseRegression | FixestMulti:
+) -> FittedResult | FixestMulti[Any]:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
     Prepares the runtime inputs (data, context, split plan), builds a
@@ -59,7 +59,9 @@ def run_estimation(
     context: Mapping[str, Any] = capture_context(config.context)
     run_full, run_split, splitvar = _split_plan(config)
 
-    fixest = FixestMulti(config=config, parsed=parsed, data=data, context=context)
+    fixest: FixestMulti[Any] = FixestMulti(
+        config=config, parsed=parsed, data=data, context=context
+    )
 
     all_splits = build_all_splits(
         run_full=run_full,

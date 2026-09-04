@@ -273,6 +273,7 @@ class BaseRegression(TidyColumnAccessors):
     _has_fixef: bool
     _has_weights: bool
     _coefnames: list[str]
+    _icovars: list[str] | None
     _k_fe: pd.Series
     _response: NDArray[np.float64]
     _observation_weights: ObservationWeights

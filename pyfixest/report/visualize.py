@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.base_regression_ import BaseRegression
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
     _check_label_keys_in_covars,
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 _HAS_LETS_PLOT = find_spec("lets_plot") is not None
 
-ModelInputType = FixestMulti | BaseRegression | list[BaseRegression]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -846,7 +846,7 @@ def _qplot(
 
 
 def _get_model_df(
-    fxst: BaseRegression,
+    fxst: FittedResult,
     alpha: float,
     joint: str | bool | None,
     seed: int | None = None,
@@ -857,7 +857,7 @@ def _get_model_df(
 
     Parameters
     ----------
-    fxst : BaseRegression
+    fxst : FittedResult
         The fitted model.
     alpha : float
         The significance level for the confidence intervals.

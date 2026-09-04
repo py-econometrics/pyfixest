@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.api.feglm import feglm
@@ -12,7 +12,6 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
-from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
 
@@ -40,7 +39,7 @@ def fepois(
     context: int | Mapping[str, Any] | None = None,
     split: str | None = None,
     fsplit: str | None = None,
-) -> Feols | Fepois | FixestMulti:
+) -> Fepois | FixestMulti[Fepois]:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
 
@@ -246,29 +245,33 @@ def fepois(
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
     For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    # Thin wrapper: fepois is exactly feglm(family="poisson").
-    return feglm(
-        fml=fml,
-        data=data,
-        family="poisson",
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        weights=weights,
-        weights_type=weights_type,
-        offset=offset,
-        ssc=ssc,
-        fixef_rm=fixef_rm,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        collin_tol=collin_tol,
-        separation_check=separation_check,
-        solver=solver,
-        demeaner=demeaner,
-        drop_intercept=drop_intercept,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        context=context,
-        split=split,
-        fsplit=fsplit,
+    # Thin wrapper: fepois is exactly feglm(family="poisson"), which resolves
+    # the Poisson family to the `Fepois` result class.
+    return cast(
+        "Fepois | FixestMulti[Fepois]",
+        feglm(
+            fml=fml,
+            data=data,
+            family="poisson",
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            weights=weights,
+            weights_type=weights_type,
+            offset=offset,
+            ssc=ssc,
+            fixef_rm=fixef_rm,
+            iwls_tol=iwls_tol,
+            iwls_maxiter=iwls_maxiter,
+            collin_tol=collin_tol,
+            separation_check=separation_check,
+            solver=solver,
+            demeaner=demeaner,
+            drop_intercept=drop_intercept,
+            copy_data=copy_data,
+            store_data=store_data,
+            lean=lean,
+            context=context,
+            split=split,
+            fsplit=fsplit,
+        ),
     )

@@ -20,8 +20,7 @@ from pyfixest.estimation.internals.literals import (
     WeightsTypeOptions,
     _validate_literal_argument,
 )
-from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
@@ -54,7 +53,7 @@ def feglm(
     split: str | None = None,
     fsplit: str | None = None,
     accelerate: bool = True,
-) -> Feols | Fepois | FixestMulti:
+) -> Feglm | FixestMulti[Feglm]:
     """
     Estimate GLM regression models with fixed effects.
 
@@ -355,4 +354,4 @@ def feglm(
 
     # `run_estimation` dispatches through the model registry, so the concrete
     # result class is only known from the family this entry point requested.
-    return cast("Feols | Fepois | FixestMulti", run_estimation(config, parsed))
+    return cast("Feglm | FixestMulti[Feglm]", run_estimation(config, parsed))

@@ -4,10 +4,10 @@ import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import InferenceType
-from pyfixest.estimation.models.base_regression_ import BaseRegression
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | BaseRegression | list[BaseRegression]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",
@@ -19,7 +19,7 @@ _METHOD_DISPLAY_NAMES: dict[str, str] = {
 }
 
 
-def _get_estimation_method_name(fxst: BaseRegression) -> str:
+def _get_estimation_method_name(fxst: FittedResult) -> str:
     """Get the display name for an estimation method."""
     if fxst._method == "feols":
         return "IV" if fxst._is_iv else "OLS"

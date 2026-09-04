@@ -3,19 +3,21 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, cast
+from typing import Any, Generic, TypeVar, cast
 
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.models._tidy_accessors import TidyColumnAccessors
-from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import ParsedFormula
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 
+ResultT = TypeVar("ResultT", bound=FittedResult)
 
-class FixestMulti(TidyColumnAccessors):
+
+class FixestMulti(TidyColumnAccessors, Generic[ResultT]):
     """
     Results container holding every model fitted by one public-API call.
 
@@ -73,7 +75,7 @@ class FixestMulti(TidyColumnAccessors):
             self._data = data
             self._context = context
 
-        self.all_fitted_models: dict[str, BaseRegression] = {}
+        self.all_fitted_models: dict[str, ResultT] = {}
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
@@ -105,7 +107,7 @@ class FixestMulti(TidyColumnAccessors):
         """Parsed formula dict keyed by fixed-effects spec."""
         return self._parsed.formula_dict
 
-    def to_list(self) -> list[BaseRegression]:
+    def to_list(self) -> list[ResultT]:
         """
         Return a list of all fitted models.
 
@@ -121,7 +123,7 @@ class FixestMulti(TidyColumnAccessors):
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
-    ) -> FixestMulti:
+    ) -> FixestMulti[ResultT]:
         """
         Update regression inference "on the fly".
 
@@ -318,9 +320,7 @@ class FixestMulti(TidyColumnAccessors):
 
         return res_df
 
-    def fetch_model(
-        self, i: int | str, print_fml: bool | None = True
-    ) -> BaseRegression:
+    def fetch_model(self, i: int | str, print_fml: bool | None = True) -> ResultT:
         """
         Fetch one fitted model from the results container.
 

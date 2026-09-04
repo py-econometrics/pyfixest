@@ -48,7 +48,7 @@ def feols(
     seed: int | None = None,
     split: str | None = None,
     fsplit: str | None = None,
-) -> Feols | FixestMulti:
+) -> Feols | FixestMulti[Feols]:
     """
     Estimate a linear regression model with fixed effects using fixest formula syntax.
 
@@ -562,4 +562,4 @@ def feols(
     parsed = parse_formula(config)
     # `run_estimation` dispatches through the model registry, so the concrete
     # result class is only known from the method this entry point requested.
-    return cast("Feols | FixestMulti", run_estimation(config, parsed))
+    return cast("Feols | FixestMulti[Feols]", run_estimation(config, parsed))

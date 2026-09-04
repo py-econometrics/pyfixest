@@ -6,11 +6,11 @@ import pandas as pd
 from scipy.stats import t
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.report.utils import _post_processing_input_checks
 
-ModelInputType = FixestMulti | BaseRegression | list[BaseRegression]
+ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
