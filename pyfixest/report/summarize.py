@@ -2,12 +2,9 @@ import maketables
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.estimation.protocols import FittedResult
-from pyfixest.report.utils import _post_processing_input_checks
-
-ModelInputType = FixestMulti | FittedResult | list[FittedResult]
+from pyfixest.report.utils import ModelInputType, _post_processing_input_checks
 
 _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "fepois": "Poisson",

@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.protocols import FittedResult
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
+    ModelInputType,
     _check_label_keys_in_covars,
     _post_processing_input_checks,
     _relabel_expvar,
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
 _HAS_LETS_PLOT = find_spec("lets_plot") is not None
 
-ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:

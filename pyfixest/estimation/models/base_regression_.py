@@ -74,6 +74,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -474,21 +475,24 @@ class BaseRegression(TidyColumnAccessors):
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
+        # The report entries take the models to report on; every binding here
+        # reports on this result alone. They copy the sequence before use.
+        models: list[FittedResult] = [self]
 
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
+        self.summary = functools.partial(_tmp, models=models)
         self.summary.__doc__ = _tmp.__doc__
 
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
+        self.coefplot = functools.partial(_tmp, models=models)
         self.coefplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
+        self.iplot = functools.partial(_tmp, models=models)
         self.iplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
+        self.etable = functools.partial(_tmp, models=models)
         self.etable.__doc__ = _tmp.__doc__
 
     def prepare_model_matrix(self):

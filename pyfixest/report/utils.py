@@ -2,12 +2,19 @@ import re
 import warnings
 from collections import Counter
 from collections.abc import ValuesView
+from typing import TypeAlias
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.protocols import FittedResult
 
-ModelInputType = FixestMulti | FittedResult | list[FittedResult]
+# What every reporting and post-estimation entry accepts as `models`, and what
+# `_post_processing_input_checks` below validates: one fitted result, a
+# multiple-estimation container, a list of results, or the `dict.values()` view
+# `FixestMulti` binds its own report methods to.
+ModelInputType: TypeAlias = (
+    FixestMulti | FittedResult | list[FittedResult] | ValuesView[FittedResult]
+)
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
