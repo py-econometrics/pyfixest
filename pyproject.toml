@@ -185,19 +185,6 @@ include = ["pyfixest"]
 exclude = [
     # Superseded formula plumbing kept for backwards compatibility.
     "pyfixest/estimation/deprecated",
-    # Temporary: these files are rewritten by the open estimation-state stack
-    # (#1499-#1501). They are type-checked by the mypy-to-ty migration layer
-    # that lands on top of that stack, so that the two efforts do not conflict.
-    "pyfixest/estimation/FixestMulti_.py",
-    "pyfixest/estimation/formula/model_matrix.py",
-    "pyfixest/estimation/models/_result_accessor_mixin.py",
-    "pyfixest/estimation/models/feglm_.py",
-    "pyfixest/estimation/models/feiv_.py",
-    "pyfixest/estimation/models/feols_.py",
-    "pyfixest/estimation/post_estimation/ritest.py",
-    "pyfixest/estimation/quantreg/QuantregMulti.py",
-    "pyfixest/estimation/quantreg/frisch_newton_ip.py",
-    "pyfixest/estimation/quantreg/quantreg_.py",
 ]
 
 [tool.ty.rules]
