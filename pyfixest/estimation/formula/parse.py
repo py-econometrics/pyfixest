@@ -1,7 +1,7 @@
 import itertools
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, cast
 
 import formulaic
 import formulaic.formula
@@ -16,11 +16,14 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
+    FormulaSide,
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
+    formula_lhs,
+    formula_rhs,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
-    is_structured_formula,
+    simple_formula,
     terms_without_intercept,
 )
 from pyfixest.estimation.formula.utils import (
@@ -149,54 +152,60 @@ class Formula:
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:
         """The left hand side of the formula."""
-        return self._formula.lhs
+        return formula_lhs(self._formula)
 
     @property
-    def _right_hand_side(self) -> formulaic.formula.SimpleFormula:
+    def _right_hand_side(self) -> FormulaSide:
         """The right hand side of the formula excluding fixed effects."""
+        right_hand_side = formula_rhs(self._formula)
         return (
-            self._formula.rhs[0]
-            if isinstance(self._formula.rhs, tuple)
-            else self._formula.rhs
+            right_hand_side[0]
+            if isinstance(right_hand_side, tuple)
+            else right_hand_side
         )
 
     @property
     def is_instrumental_variable(self) -> bool:
         """Boolean indicating whether the formula is an instrumental variable specification."""
-        return is_structured_formula(self._right_hand_side)
+        # formulaic parses an IV right hand side into a nested StructuredFormula
+        return isinstance(self._right_hand_side, formulaic.formula.StructuredFormula)
 
     @property
     def is_fixed_effects(self) -> bool:
         """Boolean indicating whether the formula is a fixed effects specification."""
         # A MULTIPART formula is a tuple of formulas on the right hand side
+        right_hand_side = formula_rhs(self._formula)
         return (
-            isinstance(self._formula.rhs, tuple)
-            and str(self._formula.rhs[-1]) not in ["", "0", "1"]  # ignore intercept
+            isinstance(right_hand_side, tuple)
+            and str(right_hand_side[-1]) not in ["", "0", "1"]  # ignore intercept
         )
 
     @property
-    def dependent(self) -> formulaic.formula.Formula:
+    def dependent(self) -> formulaic.formula.SimpleFormula:
         """The dependent variable."""
         return self._left_hand_side
 
     @property
-    def exogenous(self) -> formulaic.formula.Formula:
+    def exogenous(self) -> formulaic.formula.SimpleFormula:
         """Exogenous aka covariates aka independent variables."""
-        exogenous = self._right_hand_side
-        if self.is_instrumental_variable:
-            exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
+        right_hand_side = self._right_hand_side
+        exogenous = (
+            filter_multistage_endogenous_terms(right_hand_side, self.endogenous)
+            if isinstance(right_hand_side, formulaic.formula.StructuredFormula)
+            else right_hand_side
+        )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.is_fixed_effects and exogenous_terms:
             # Drop the intercept for fixed effects regressions, except for
             # intercept-only specifications such as `Y ~ 1 | f1`; these can be
             # used to demean dependent variables.
-            exogenous = formulaic.formula.SimpleFormula(exogenous_terms)
+            exogenous = simple_formula(exogenous_terms)
 
         return exogenous
 
     @property
-    def endogenous(self) -> formulaic.formula.Formula:
+    def endogenous(self) -> formulaic.formula.SimpleFormula:
         """Endogenous variables of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
@@ -205,7 +214,7 @@ class Formula:
         return get_first_multistage_lhs(self._right_hand_side)
 
     @property
-    def instruments(self) -> formulaic.formula.Formula:
+    def instruments(self) -> formulaic.formula.SimpleFormula:
         """Instruments of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
@@ -214,13 +223,18 @@ class Formula:
         return get_first_multistage_rhs(self._right_hand_side)
 
     @property
-    def fixed_effects(self) -> formulaic.formula.Formula:
+    def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
-        return formulaic.formula.SimpleFormula(
-            terms_without_intercept(self._formula.rhs[1])
+        # `is_fixed_effects` guarantees a MULTIPART right hand side, and
+        # formulaic nests an IV block only in its first part, so the
+        # fixed-effect part is always a flat list of terms.
+        parts = cast(
+            "tuple[FormulaSide, formulaic.formula.SimpleFormula]",
+            formula_rhs(self._formula),
         )
+        return simple_formula(terms_without_intercept(parts[1]))
 
     @property
     def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
@@ -236,14 +250,14 @@ class Formula:
         right_hand_side = list(self.exogenous)
         if self.is_instrumental_variable:
             right_hand_side += list(self.endogenous)
-        return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
+        return f"{self.dependent} ~ {simple_formula(right_hand_side)}"
 
     @property
     def first_stage(self) -> str:
         """The first stage formula of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
+        return f"{self.endogenous} ~ {simple_formula(itertools.chain(self.instruments, self.exogenous))}"
 
     @classmethod
     def parse(cls, formula: str) -> list["Formula"]:
