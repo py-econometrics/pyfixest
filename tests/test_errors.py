@@ -472,9 +472,7 @@ def test_errors_ccv():
 
     # same for IV
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
-    with pytest.raises(
-        NotImplementedError, match=r"not supported for models of type 'feols'"
-    ):
+    with pytest.raises(NotImplementedError, match=r"not supported for IV models"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
 
@@ -506,7 +504,9 @@ def test_non_ols_update_is_explicitly_unsupported():
     )
 
     for fit in models:
-        with pytest.raises(NotImplementedError, match=r"update.*only supported.*OLS"):
+        with pytest.raises(
+            NotImplementedError, match=r"update.*not supported for models of type"
+        ):
             fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
@@ -602,7 +602,8 @@ def test_ritest_rejects_non_ols_working_domains(estimator):
             fit = pf.quantreg("y ~ x", data=data, maxiter=100)
 
     with pytest.raises(
-        NotImplementedError, match=r"only supported for OLS and Poisson"
+        NotImplementedError,
+        match=r"Randomization inference is not supported for models of type",
     ):
         fit.ritest(resampvar="x", reps=1)
 
@@ -622,7 +623,10 @@ def test_wildboottest_rejects_non_ols_working_domains(estimator):
         with pytest.warns(FutureWarning, match="experimental"):
             fit = pf.quantreg("y ~ x", data=data, maxiter=100)
 
-    with pytest.raises(NotImplementedError, match=r"only supported for unweighted OLS"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Wild cluster bootstrap is not supported for models of type",
+    ):
         fit.wildboottest(param="x", reps=1)
 
 
@@ -928,7 +932,7 @@ def test_gelbach_errors():
     # error for WLS and aweights
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights.",
+        match=r"Decomposition is not supported for models with non-frequency weights\.",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="aweights"
@@ -960,7 +964,7 @@ def test_decomposition_rejects_unsupported_models(model_type):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for OLS models\.",
+        match=r"Decomposition is not supported for models of type '(feglm|quantreg)'\.",
     ):
         fit.decompose(decomp_var="x1", only_coef=True)
 
@@ -1346,7 +1350,7 @@ def unsupported_savi_design(request):
         weights="savi_weights",
         weights_type=request.param,
     )
-    return fit, "weighted feols"
+    return fit, "models with weights"
 
 
 @pytest.fixture(scope="module", params=["hac", "crv", "multiway_crv"])
@@ -1375,7 +1379,9 @@ def unsupported_savi_vcov(request):
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
-    with pytest.raises(NotImplementedError, match="supported only for feols"):
+    with pytest.raises(
+        NotImplementedError, match="SAVI inference is not supported for"
+    ):
         unsupported_savi_model.evalue()
 
 

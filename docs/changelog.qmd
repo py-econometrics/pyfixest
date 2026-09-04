@@ -78,6 +78,32 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   fit.confint(inference_type="simult")   # replaces fit.confint(joint=True)
   ```
 
+### Post-Estimation
+
+- Which post-estimation and inference methods a fit supports is now declared
+  once per estimator instead of being re-derived inside each method.
+  `pf.estimation.support_matrix()` shows the estimator-by-feature table, and
+  `fit.capabilities()` reports the support of one fitted model together with
+  the reason behind every unsupported entry. See
+  [Which Methods Does Each Estimator Support?](/how-to/supported-methods.qmd).
+
+  ```python
+  import pyfixest as pf
+
+  pf.estimation.support_matrix()
+  pf.feols("Y ~ X1", pf.get_data(), weights="weights").capabilities()
+  ```
+
+- Rejected combinations now share one message, `"<feature> is not supported for
+  <reason>."`. The exception types are unchanged: `CRV3` raises
+  `VcovTypeNotSupportedError` and every other feature raises
+  `NotImplementedError`.
+- `quantreg()` results now reject `predict(se_fit=True)` and
+  `predict(interval="prediction")`. They previously returned prediction
+  standard errors from the OLS residual-variance formula, which does not
+  describe a conditional quantile; R `quantreg` inverts ranks or bootstraps
+  instead.
+
 ### Safe Anytime-Valid Inference (SAVI)
 
 PyFixest now supports safe anytime-valid inference (SAVI) for linear

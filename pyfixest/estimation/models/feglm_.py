@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import pandas as pd
@@ -9,11 +9,18 @@ from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.capabilities import (
+    FREQUENCY_WEIGHTS,
+    Capabilities,
+    supported,
+    unless,
+)
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.literals import EstimatorKind
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -48,6 +55,17 @@ class Feglm(Feols):
     fit.tidy()
     ```
     """
+
+    _estimator: ClassVar[EstimatorKind] = "feglm"
+    # IRLS leaves a working response, a working design, and working weights
+    # behind. Features that read those arrays as an OLS fit would resample or
+    # refit the wrong quantities, so a GLM keeps only the covariance and
+    # post-estimation paths written against its working state.
+    _capabilities: ClassVar[Capabilities] = Capabilities(
+        hac=unless(FREQUENCY_WEIGHTS),
+        fixef=supported(),
+        predict=supported(),
+    )
 
     def __init__(
         self,
@@ -112,15 +130,6 @@ class Feglm(Feols):
         self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
-
-        # The inherited slow jackknife refits with the linear/Poisson APIs and
-        # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = False
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
@@ -402,8 +411,8 @@ class Feglm(Feols):
             standard errors if argument "se_fit=True".
         """
         if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for GLMs."
+            self._require_support(
+                "prediction_errors", subject="Prediction with standard errors"
             )
 
         yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)

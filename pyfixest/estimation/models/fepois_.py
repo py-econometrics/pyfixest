@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -10,10 +10,18 @@ from scipy.special import gammaln
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.capabilities import (
+    FREQUENCY_WEIGHTS,
+    WEIGHTED,
+    Capabilities,
+    supported,
+    unless,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
+    EstimatorKind,
     SolverOptions,
 )
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -100,6 +108,19 @@ class Fepois(Feglm):
     ```
     """
 
+    _estimator: ClassVar[EstimatorKind] = "fepois"
+    # Poisson adds the two paths whose refits the class can replay: the
+    # longstanding CRV3 jackknife and randomization inference, which both
+    # re-estimate through the public Poisson API rather than reusing the IRLS
+    # working arrays.
+    _capabilities: ClassVar[Capabilities] = Capabilities(
+        crv3=supported(),
+        hac=unless(FREQUENCY_WEIGHTS),
+        ritest=unless(WEIGHTED),
+        fixef=supported(),
+        predict=supported(),
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -153,11 +174,6 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
-        # The inherited jackknife refit dispatch is valid for Poisson and is a
-        # longstanding public capability. Other GLM families keep this disabled.
-        self._support_crv3_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
@@ -301,8 +317,8 @@ class Fepois(Feglm):
             standard errors if argument "se_fit=True".
         """
         if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for Poisson regression."
+            self._require_support(
+                "prediction_errors", subject="Prediction with standard errors"
             )
 
         return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)

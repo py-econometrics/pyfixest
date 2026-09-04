@@ -5,6 +5,10 @@ VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+# The estimator that produced a fitted result. Unlike the mutable `_method`
+# label, this identifies the model class and never carries a family, solver, or
+# difference-in-differences suffix.
+EstimatorKind = Literal["feols", "fepois", "feglm", "quantreg"]
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",

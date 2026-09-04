@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Any, ClassVar, Literal, cast
 
 import formulaic
 import numpy as np
@@ -20,6 +20,20 @@ from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.capabilities import (
+    DID_METHOD_LABELS,
+    DIFFERENCE_IN_DIFFERENCES,
+    FIXED_EFFECTS,
+    FREQUENCY_WEIGHTS,
+    NON_FREQUENCY_WEIGHTS,
+    WEIGHTED,
+    Capabilities,
+    Feature,
+    FitFeatures,
+    require_support,
+    supported,
+    unless,
+)
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -32,6 +46,7 @@ from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
+    EstimatorKind,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -151,8 +166,6 @@ class Feols(ResultAccessorMixin):
         Number of observations.
     _k : int
         Number of independent variables (or features).
-    _support_crv3_inference : bool
-        Indicates support for CRV3 inference.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -257,6 +270,24 @@ class Feols(ResultAccessorMixin):
 
     """
 
+    _estimator: ClassVar[EstimatorKind] = "feols"
+    # Which post-estimation features an OLS fit supports; see
+    # `pyfixest.estimation.capabilities`. Argument-level restrictions stay with
+    # their methods, so only fit-level support is declared here.
+    _capabilities: ClassVar[Capabilities] = Capabilities(
+        crv3=supported(),
+        hac=unless(FREQUENCY_WEIGHTS),
+        wildboottest=unless(WEIGHTED),
+        ccv=unless(FIXED_EFFECTS, WEIGHTED),
+        decompose=unless(NON_FREQUENCY_WEIGHTS),
+        ritest=unless(DIFFERENCE_IN_DIFFERENCES, WEIGHTED),
+        fixef=supported(),
+        predict=supported(),
+        prediction_errors=unless(FIXED_EFFECTS, WEIGHTED),
+        update=unless(DIFFERENCE_IN_DIFFERENCES, FIXED_EFFECTS, WEIGHTED),
+        savi=unless(DIFFERENCE_IN_DIFFERENCES, FIXED_EFFECTS, WEIGHTED),
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -328,14 +359,6 @@ class Feols(ResultAccessorMixin):
         # through the same guarded methods.
         self._fit_state_discarded = False
         self._context = capture_context(context)
-
-        self._support_crv3_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = True
-        self._supports_cluster_causal_variance = True
-        if self._has_weights or self._is_iv:
-            self._supports_wildboottest = False
-        self._support_decomposition = True
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -644,6 +667,47 @@ class Feols(ResultAccessorMixin):
         """Yield this fitted result to the result container."""
         return (self,)
 
+    @property
+    def _fit_features(self) -> FitFeatures:
+        """Fit-level properties the capability rules read.
+
+        Rebuilt on every access: `vcov()` and the storage options mutate a
+        fitted result in place, so a cached snapshot could outlive the state it
+        describes.
+        """
+        family = getattr(self, "_family", None)
+        return FitFeatures(
+            estimator=self._estimator,
+            family=None if family is None else family.name,
+            is_iv=self._is_iv,
+            has_fixef=self._has_fixef,
+            has_weights=self._has_weights,
+            weights_kind=(
+                cast(WeightsTypeOptions, self._weights_type)
+                if self._has_weights
+                else None
+            ),
+            is_did=self._method in DID_METHOD_LABELS,
+        )
+
+    def _require_support(self, feature: Feature, *, subject: str | None = None) -> None:
+        """Reject a feature this fit does not support.
+
+        Parameters
+        ----------
+        feature : Feature
+            The feature the caller is about to run.
+        subject : str, optional
+            How the error message names the feature. Defaults to
+            `"<feature>()"`.
+        """
+        require_support(
+            capabilities=self._capabilities,
+            feature=feature,
+            features=self._fit_features,
+            subject=f"{feature}()" if subject is None else subject,
+        )
+
     def _require_fit_arrays(
         self,
         method: str,
@@ -863,10 +927,7 @@ class Feols(ResultAccessorMixin):
         if self._vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self._support_crv3_inference:
-            raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self._method}'."
-            )
+        self._require_support("crv3", subject="CRV3 inference")
         use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
         if use_fast:
             return self._vcov_crv3_fast(clustid=clustid, cluster_col=cluster_col)
@@ -917,16 +978,7 @@ class Feols(ResultAccessorMixin):
         _time_id = self._time_id
         _panel_id = self._panel_id
 
-        if not self._support_hac_inference:
-            raise NotImplementedError(
-                "HAC inference is not supported for this model type."
-            )
-
-        # fweights not supported
-        if self._has_weights and self._weights_type == "fweights":
-            raise NotImplementedError(
-                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
-            )
+        self._require_support("hac", subject="HAC inference (NW, DK)")
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
@@ -954,8 +1006,11 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_nid(self):
+        "Reject 'nid' covariance for estimators without a conditional density."
+        self._require_support("nid", subject="'nid' inference")
         raise NotImplementedError(
-            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+            f"'nid' inference is declared supported for models of type "
+            f"'{self._estimator}', but the class provides no implementation."
         )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
@@ -1081,6 +1136,53 @@ class Feols(ResultAccessorMixin):
 
         if self._lean:
             self._fit_state_discarded = True
+
+    def capabilities(self) -> pd.DataFrame:
+        """
+        Report which post-estimation methods this fitted model supports.
+
+        Support depends on the estimator and on the fit: weights, absorbed
+        fixed effects, and instruments each withdraw methods whose derivation
+        does not cover them. Calling an unsupported method raises an error
+        carrying the same reason.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Indexed by feature, with a boolean `supported` column and a
+            `reason` column that is None wherever the feature is available.
+            See [Which Methods Does Each Estimator Support?](/how-to/supported-methods.qmd)
+            for what each feature name refers to.
+
+        Notes
+        -----
+        Restrictions that depend on the arguments rather than on the fit, such
+        as the covariance types `evalue()` accepts or `update(inplace=True)`,
+        are documented with the individual methods.
+        [`pf.estimation.support_matrix()`](/reference/estimation.capabilities.support_matrix.qmd)
+        gives the same table across all estimators.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2", pf.get_data(), weights="weights")
+        fit.capabilities()
+        ```
+        """
+        reasons = self._capabilities.evaluate(self._fit_features)
+        index = pd.Index(list(reasons), name="feature")
+        return pd.DataFrame(
+            {
+                "supported": pd.Series(
+                    [reason is None for reason in reasons.values()], index=index
+                ),
+                # object dtype so a supported feature keeps its None reason
+                # instead of being coerced to a missing string value.
+                "reason": pd.Series(list(reasons.values()), index=index, dtype=object),
+            }
+        )
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
@@ -1284,18 +1386,7 @@ class Feols(ResultAccessorMixin):
                 f"Parameter {param} not found in the model's coefficients."
             )
 
-        if not self._supports_wildboottest:
-            if self._is_iv:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for IV estimation."
-                )
-            if self._has_weights:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for WLS estimation."
-                )
-            raise NotImplementedError(
-                "Wild cluster bootstrap is only supported for unweighted OLS models."
-            )
+        self._require_support("wildboottest", subject="Wild cluster bootstrap")
 
         self._require_fit_arrays("wildboottest", arrays="the fitted arrays")
         self._require_estimation_data("wildboottest")
@@ -1330,16 +1421,6 @@ class Feols(ResultAccessorMixin):
         except ImportError:
             print(
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported with IV estimation."
-            )
-
-        if self._method == "fepois":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for Poisson regression."
             )
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
@@ -1466,11 +1547,7 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        if not self._supports_cluster_causal_variance:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is not supported for models "
-                f"of type '{self._method}'."
-            )
+        self._require_support("ccv", subject="The causal cluster variance estimator")
         assert isinstance(treatment, str), "treatment must be a string."
         assert isinstance(cluster, str) or cluster is None, (
             "cluster must be a string or None."
@@ -1479,15 +1556,6 @@ class Feols(ResultAccessorMixin):
         assert isinstance(n_splits, int), "n_splits must be an integer."
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
         assert isinstance(qk, (int, float)) and 0 <= qk <= 1
-
-        if self._has_fixef:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is currently not supported for models with fixed effects."
-            )
-        if self._has_weights:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is currently not supported for models with weights."
-            )
 
         if treatment not in self._coefnames:
             raise ValueError(
@@ -1764,19 +1832,12 @@ class Feols(ResultAccessorMixin):
             else:
                 x1_vars = list(x1_vars)
 
+        self._require_support("decompose", subject="Decomposition")
         _decompose_arg_check(
             type=type,
             has_weights=self._has_weights,
-            weights_type=self._weights_type,
-            is_iv=self._is_iv,
-            method=self._method,
             only_coef=only_coef,
         )
-
-        if not self._support_decomposition:
-            raise NotImplementedError(
-                "Decomposition is currently only supported for OLS models."
-            )
 
         self._require_fit_arrays("decompose", arrays="the fitted arrays")
         # A cluster variable or an absorbed fixed effect is read back from the
@@ -1878,10 +1939,7 @@ class Feols(ResultAccessorMixin):
         if not self._has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self._is_iv:
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
-            )
+        self._require_support("fixef", subject="The fixef() method")
 
         self._require_fit_arrays("fixef", arrays="the fitted arrays")
         self._require_estimation_data("fixef")
@@ -2018,21 +2076,12 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self._is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
+        self._require_support("predict", subject="The predict() method")
 
         if interval == "prediction" or se_fit:
-            if self._has_fixef:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with fixed effects."
-                )
-
-            if self._has_weights:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with weights."
-                )
+            self._require_support(
+                "prediction_errors", subject="Prediction with standard errors"
+            )
 
         _validate_literal_argument(type, PredictionType)
         if interval is not None:
@@ -2220,14 +2269,7 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self._is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self._method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
-            )
+        self._require_support("ritest", subject="Randomization inference")
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2274,13 +2316,6 @@ class Feols(ResultAccessorMixin):
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        if self._has_weights:
-            raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
-            )
 
         if choose_algorithm == "slow" or self._method == "fepois":
             vcov_input: str | dict[str, str]
@@ -2454,22 +2489,7 @@ class Feols(ResultAccessorMixin):
         fit.update(X_new, y_new)
         ```
         """
-        if self._has_fixef:
-            raise NotImplementedError(
-                "The update() method is currently not supported for models with fixed effects."
-            )
-        if self._method != "feols":
-            raise NotImplementedError(
-                "The update() method is currently only supported for OLS models."
-            )
-        if self._is_iv:
-            raise NotImplementedError(
-                "The update() method is currently not supported for IV models."
-            )
-        if self._has_weights:
-            raise NotImplementedError(
-                "The update() method is currently not supported for models with weights."
-            )
+        self._require_support("update", subject="The update() method")
         if inplace:
             raise NotImplementedError(
                 "update(..., inplace=True) is not supported because appending design "
