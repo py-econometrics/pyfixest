@@ -75,7 +75,7 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
 @torch.no_grad()
 def _demean_torch_on_device_impl(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint64],
+    flist: NDArray[np.uint64] | None,
     weights: NDArray[np.float64] | None,
     tol: float,
     maxiter: int,

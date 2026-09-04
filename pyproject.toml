@@ -162,23 +162,12 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
+[tool.ty.src]
+include = ["pyfixest"]
+exclude = [
+    # Superseded formula plumbing kept for backwards compatibility.
+    "pyfixest/estimation/deprecated",
 ]
-ignore_missing_imports = true
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
@@ -326,6 +315,18 @@ prek = ">=0.3.4"
 [tool.pixi.feature.lint.tasks]
 lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks via prek" }
 
+# -- type-check feature ------------------------------------------------------------------
+# ty resolves imports from the environment it runs in, so it is paired with the
+# runtime dependencies rather than with the standalone lint environment. It is a
+# feature rather than a default dependency because conda-forge's `ty` requires
+# CPython >= 3.11 and would make the py310 environment unsolvable.
+
+[tool.pixi.feature.typecheck.dependencies]
+ty = ">=0.0.78,<0.1"
+
+[tool.pixi.feature.typecheck.tasks]
+type-check = { cmd = "ty check", description = "Type-check pyfixest with ty" }
+
 # -- benchmark feature -----------------------------------------------------------------
 
 [tool.pixi.feature.benchmark]
@@ -352,10 +353,10 @@ torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" 
 
 [tool.pixi.environments]
 py310 = ["py310", "torch"]
-py311 = ["py311", "torch"]
-py312 = ["py312", "torch"]
-py313 = ["py313", "torch"]
-py314 = ["py314", "torch"]
+py311 = ["py311", "torch", "typecheck"]
+py312 = ["py312", "torch", "typecheck"]
+py313 = ["py313", "torch", "typecheck"]
+py314 = ["py314", "torch", "typecheck"]
 py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }
 py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }

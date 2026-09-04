@@ -9,6 +9,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
+    WeightsTypeOptions,
 )
 
 
@@ -52,7 +53,7 @@ class EstimationConfig:
 
     # --- weights ---
     weights: str | None = None
-    weights_type: str = "aweights"
+    weights_type: WeightsTypeOptions = "aweights"
 
     # --- splits ---
     split: str | None = None

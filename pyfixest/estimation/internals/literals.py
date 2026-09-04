@@ -1,7 +1,10 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+# The `vcov` strings the estimation entries accept. "NW" and "DK" additionally
+# require `vcov_kwargs`; "nid" is quantile-regression only. Clustered inference
+# is requested as a `{"CRV1": ...}` mapping rather than a string.
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]

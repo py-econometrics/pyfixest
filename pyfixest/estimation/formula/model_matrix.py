@@ -14,7 +14,11 @@ from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
+from pyfixest.estimation.formula.formulaic_compat import (
+    AnyModelMatrix,
+    flatten_model_matrix,
+    model_spec_lhs,
+)
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
@@ -74,7 +78,7 @@ class ModelMatrix:
 
     def __init__(
         self,
-        model_matrix: formulaic.ModelMatrix,
+        model_matrix: AnyModelMatrix,
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
@@ -87,7 +91,7 @@ class ModelMatrix:
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
-    def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
+    def _get_columns(mm: AnyModelMatrix, *keys: str) -> list[str] | None:
         """Extract column names by traversing nested keys, or None if missing."""
         try:
             result = mm
@@ -97,7 +101,7 @@ class ModelMatrix:
         except KeyError:
             return None
 
-    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
+    def _collect_columns(self, model_matrix: AnyModelMatrix) -> None:
         self._dependent = self._get_columns(model_matrix, _ModelMatrixKey.main, "lhs")
         self._independent = self._get_columns(model_matrix, _ModelMatrixKey.main, "rhs")
         self._fixed_effects = self._get_columns(
@@ -112,7 +116,7 @@ class ModelMatrix:
         self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
         self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
 
-    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+    def _collect_data(self, model_matrix: AnyModelMatrix) -> None:
         datas = flatten_model_matrix(model_matrix)
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
@@ -120,15 +124,15 @@ class ModelMatrix:
         self._data = data.loc[:, ~data.columns.duplicated()]
 
     def _process(self, drop_singletons: bool = False) -> None:
-        if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
+        if model_spec_lhs(self.model_spec[_ModelMatrixKey.main]).factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
         elif self._dependent is None or len(self._dependent) != 1:
             raise TypeError("The model must contain exactly one dependent variable.")
 
         if self._endogenous is not None:
-            if self.model_spec[
-                _ModelMatrixKey.instrumental_variable
-            ].lhs.factor_contrasts:
+            if model_spec_lhs(
+                self.model_spec[_ModelMatrixKey.instrumental_variable]
+            ).factor_contrasts:
                 raise TypeError("The endogenous variable must be numeric.")
             elif len(self._endogenous) != 1:
                 raise TypeError(

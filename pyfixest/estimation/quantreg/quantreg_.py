@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.literals import (
     EstimatorKind,
     QuantregMethodOptions,
     SolverOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
@@ -87,7 +88,7 @@ class Quantreg(BaseRegression):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",

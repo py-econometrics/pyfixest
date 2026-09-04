@@ -7,7 +7,7 @@ from dataclasses import replace
 from functools import partial
 from importlib import import_module
 from types import MappingProxyType
-from typing import Any, ClassVar, Final, Literal, cast
+from typing import Any, ClassVar, Final, cast
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
+    model_spec_rhs,
 )
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -51,6 +52,8 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.vcov_ import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
     vcov_crv1,
     vcov_hac,
     vcov_hetero,
@@ -73,6 +76,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.protocols import FittedResult
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -133,7 +137,7 @@ class BaseRegression(TidyColumnAccessors):
         Whether the intercept is dropped from the design.
     weights : str or None
         Name of the observation-weight column, or None for an unweighted fit.
-    weights_type : str or None
+    weights_type : WeightsTypeOptions
         Either `"aweights"` for analytic or `"fweights"` for frequency weights.
     collin_tol : float
         Tolerance of the collinearity check on the within design.
@@ -273,8 +277,10 @@ class BaseRegression(TidyColumnAccessors):
     _has_fixef: bool
     _has_weights: bool
     _coefnames: list[str]
+    _coefnames_z: list[str] | None
     _icovars: list[str] | None
-    _k_fe: pd.Series
+    # Levels per fixed effect, or None when the model has no fixed effects.
+    _k_fe: pd.Series | None
     _response: NDArray[np.float64]
     _observation_weights: ObservationWeights
     _within_data: WithinLinearData
@@ -304,7 +310,7 @@ class BaseRegression(TidyColumnAccessors):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
@@ -471,21 +477,24 @@ class BaseRegression(TidyColumnAccessors):
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
+        # The report entries take the models to report on; every binding here
+        # reports on this result alone. They copy the sequence before use.
+        models: list[FittedResult] = [self]
 
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
+        self.summary = functools.partial(_tmp, models=models)
         self.summary.__doc__ = _tmp.__doc__
 
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
+        self.coefplot = functools.partial(_tmp, models=models)
         self.coefplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
+        self.iplot = functools.partial(_tmp, models=models)
         self.iplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
+        self.etable = functools.partial(_tmp, models=models)
         self.etable.__doc__ = _tmp.__doc__
 
     def prepare_model_matrix(self):
@@ -507,9 +516,9 @@ class BaseRegression(TidyColumnAccessors):
 
         return model_matrix
 
-    # Deliberately untyped: an annotation makes mypy check this body, whose published
-    # attribute types are still transitional or loose; see the typing follow-up.
-    def _publish_model_matrix(self, model_matrix):
+    def _publish_model_matrix(
+        self, model_matrix: model_matrix_fixest.ModelMatrix
+    ) -> None:
         """Publish structurally immutable formula and observation-weight state."""
         self._model_matrix = model_matrix
         self._response = model_matrix.dependent.to_numpy(dtype=np.float64).flatten()
@@ -545,8 +554,8 @@ class BaseRegression(TidyColumnAccessors):
             else None
         )
 
-        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
+        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+        self._n_fe = len(self._k_fe) if self._k_fe is not None else 0
 
         self._observation_weights = self._set_observation_weights()
         self._N = self._observation_weights.n_effective
@@ -562,10 +571,9 @@ class BaseRegression(TidyColumnAccessors):
             return ObservationWeights.unweighted(n_rows=n_rows)
 
         assert self._weights_type in ("aweights", "fweights")
-        weights_kind = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
-            kind=weights_kind,
+            kind=self._weights_type,
         )
 
     def _prepare_within_data(self) -> WithinLinearData:
@@ -579,8 +587,8 @@ class BaseRegression(TidyColumnAccessors):
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_names=response_frame.columns,
-                x_names=design_frame.columns,
+                y_names=response_frame.columns.tolist(),
+                x_names=design_frame.columns.tolist(),
                 fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
@@ -702,11 +710,7 @@ class BaseRegression(TidyColumnAccessors):
             is_iv=self._is_iv,
             has_fixef=self._has_fixef,
             has_weights=self._has_weights,
-            weights_kind=(
-                cast(WeightsTypeOptions, self._weights_type)
-                if self._has_weights
-                else None
-            ),
+            weights_kind=self._weights_type if self._has_weights else None,
             is_did=self._method in DID_METHOD_LABELS,
         )
 
@@ -1010,7 +1014,7 @@ class BaseRegression(TidyColumnAccessors):
             "ssc_dict": self._ssc_dict,
             "N": self._N,
             "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "k_fe": self._k_fe.sum() if self._k_fe is not None else 0,
             "n_fe": self._n_fe,
             "vcov_type": vcov_type,
             "G": G,
@@ -1068,6 +1072,8 @@ class BaseRegression(TidyColumnAccessors):
 
     def _vcov_hetero(self):
         observation_weights = self._observation_weights.values
+        # `_deparse_vcov_input` maps exactly the four HC details onto the
+        # "hetero" family this method is dispatched for.
         return vcov_hetero(
             scores=self._scores,
             X=self._X,
@@ -1080,7 +1086,7 @@ class BaseRegression(TidyColumnAccessors):
             ),
             leverage_weights=self._leverage_weights(),
             weights_type=self._weights_type,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -1110,7 +1116,7 @@ class BaseRegression(TidyColumnAccessors):
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=cast(int | None, self._lag),
-            vcov_type_detail=cast(Literal["NW", "DK"], self._vcov_type_detail),
+            vcov_type_detail=cast(HacVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -1281,7 +1287,7 @@ class BaseRegression(TidyColumnAccessors):
 
         has_intercept = not self._drop_intercept
 
-        if self._has_fixef:
+        if self._k_fe is not None:
             k_fe = np.sum(self._k_fe - 1) + 1
             adj_factor = (self._N - has_intercept) / (self._N - self._k - k_fe)
             adj_factor_within = (self._N - k_fe) / (self._N - self._k - k_fe)
@@ -1634,7 +1640,7 @@ class BaseRegression(TidyColumnAccessors):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        k_fe = np.sum(self._k_fe.values) if self._k_fe is not None else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -1913,7 +1919,7 @@ class BaseRegression(TidyColumnAccessors):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            rhs_spec = model_spec_rhs(self._model_spec[_ModelMatrixKey.main])
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )

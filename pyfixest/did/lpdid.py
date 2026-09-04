@@ -26,7 +26,7 @@ class LPDID(DID):
         The name of the time variable.
     gname : str
         The name of the group variable.
-    xfml : str
+    xfml : str, optional
         The transformation to apply to the data.
     att : str
         The attribute to consider in the model.
@@ -49,7 +49,7 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
         vcov: VcovTypeOptions | dict[str, str] | None = None,
@@ -286,7 +286,7 @@ def _lpdid_estimate(
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = h  # type: ignore[union-attr]
+            fit_tidy.name = h
             fit_all.append(fit_tidy)
 
         for h in range(pre_window + 1):
@@ -301,7 +301,7 @@ def _lpdid_estimate(
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
             fit_tidy["N"] = int(fit._N)
-            fit_tidy.name = -h  # type: ignore[union-attr]
+            fit_tidy.name = -h
             fit_all.append(fit_tidy)
 
         res = pd.DataFrame(fit_all).sort_index()

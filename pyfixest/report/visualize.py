@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import math
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.protocols import FittedResult
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
+    ModelInputType,
     _check_label_keys_in_covars,
     _post_processing_input_checks,
     _relabel_expvar,
@@ -21,8 +21,6 @@ if TYPE_CHECKING:
     import matplotlib.pyplot as plt
 
 _HAS_LETS_PLOT = find_spec("lets_plot") is not None
-
-ModelInputType = FixestMulti | FittedResult | list[FittedResult]
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -694,13 +692,14 @@ def _coefplot_matplotlib(
     if ax is None:
         f, ax = plt.subplots(figsize=figsize, **fig_kwargs)
     else:
-        f = ax.get_figure()
+        # An Axes drawn by matplotlib always belongs to a figure.
+        f = cast("plt.Figure", ax.get_figure())
 
     # Check if we have multiple models
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
@@ -809,7 +808,6 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -895,7 +893,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
+        df_joint_full["fml"] += " (joint CIs)"
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)

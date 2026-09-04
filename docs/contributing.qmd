@@ -122,6 +122,20 @@ This installs prek as a git hook so checks run automatically on each commit.
 pixi run lint
 ```
 
+### Type checking
+
+pyfixest is type-checked with [ty](https://github.com/astral-sh/ty), which
+blocks CI. It resolves imports from the environment it runs in and therefore
+lives with the runtime dependencies instead of the lint environment:
+
+```{.bash .code-copy}
+pixi run -e py312 type-check
+```
+
+ty is configured under `[tool.ty]` in `pyproject.toml`. Fix a diagnostic at its
+source; suppress a line only with `# ty: ignore[rule]` and a comment naming the
+third-party gap it works around.
+
 ### Building the documentation
 
 ```{.bash .code-copy}

@@ -21,7 +21,7 @@ from maketables.extractors import PyFixestExtractor, register_extractor
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 
-class BaseRegressionExtractor(PyFixestExtractor):  # type: ignore[misc]
+class BaseRegressionExtractor(PyFixestExtractor):
     """Extract any fitted pyfixest result, not only the `Feols` family."""
 
     def can_handle(self, model: Any) -> bool:
@@ -55,7 +55,13 @@ def register_pyfixest_extractor() -> None:
         for extractor in _EXTRACTOR_REGISTRY
     ):
         return
-    register_extractor(BaseRegressionExtractor())
+    # maketables internal: its own `PyFixestExtractor`, which this class
+    # extends, does not implement the `default_stat_keys` member its
+    # `ModelExtractor` protocol declares. The registry looks the method up
+    # defensively, so the extractor works exactly as the built-in one does.
+    register_extractor(
+        BaseRegressionExtractor()  # ty: ignore[invalid-argument-type]
+    )
 
 
 register_pyfixest_extractor()

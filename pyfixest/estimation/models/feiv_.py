@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -22,6 +22,10 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import (
+    VcovTypeOptions,
+    WeightsTypeOptions,
+)
 from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -60,7 +64,7 @@ class Feiv(Feols):
         Resolved typed demeaner configuration.
     weights_name : Optional[str]
         Name of the weights variable.
-    weights_type : Optional[str]
+    weights_type : WeightsTypeOptions
         Type of the weights variable. Either "aweights" for analytic weights
         or "fweights" for frequency weights.
 
@@ -190,7 +194,7 @@ class Feiv(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: Literal[
@@ -245,8 +249,8 @@ class Feiv(Feols):
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=endogenous_frame.columns,
-                x_names=instrument_frame.columns,
+                y_names=endogenous_frame.columns.tolist(),
+                x_names=instrument_frame.columns.tolist(),
                 fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
@@ -319,6 +323,10 @@ class Feiv(Feols):
         """Implement First stage regression."""
         self._require_estimation_data("first_stage")
 
+        # An IV formula always produces instrument names; the base class keeps
+        # them optional because non-IV models have none.
+        assert self._coefnames_z is not None
+
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -331,14 +339,15 @@ class Feiv(Feols):
         if self._has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self._fixef}"
 
-        # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: dict[str, str] | str
+        # The first stage replays the second stage's inference request, which
+        # `feols` validates again at its own boundary.
+        vcov_detail: dict[str, str] | VcovTypeOptions
 
         if self._is_clustered:
             a = self._clustervar[0]
             vcov_detail = {self._vcov_type_detail: a}
         else:
-            vcov_detail = self._vcov_type_detail
+            vcov_detail = cast(VcovTypeOptions, self._vcov_type_detail)
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
@@ -528,6 +537,7 @@ class Feiv(Feols):
         iv_diag_statistics = iv_diag_statistics or []
 
         self._require_first_stage_state("IV_weakness_test")
+        assert self._coefnames_z is not None
 
         if "f_stat" in iv_diag_statistics:
             self._p_iv = len(self._non_exo_instruments)
@@ -562,6 +572,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         self._require_first_stage_state("eff_F")
+        assert self._coefnames_z is not None
 
         # If vcov is iid, redo first stage regression
 

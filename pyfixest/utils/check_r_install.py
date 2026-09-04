@@ -1,4 +1,6 @@
-from rpy2.robjects.packages import importr
+# rpy2 ships only with the `r` pixi feature, so it is absent from the
+# environment the type checker resolves imports from.
+from rpy2.robjects.packages import importr  # ty: ignore[unresolved-import]
 
 
 def _catch_import_issue(name: str, strict: bool) -> bool | None:

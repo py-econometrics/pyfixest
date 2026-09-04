@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
@@ -23,6 +23,7 @@ from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     EstimatorKind,
     SolverOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -80,7 +81,7 @@ class Fepois(Feglm):
         variables that need to be available in the formula environment.
     weights_name : Optional[str]
         Name of the weights variable.
-    weights_type : Optional[str]
+    weights_type : WeightsTypeOptions
         Type of weights variable.
     _data: pd.DataFrame
         The data frame used in the estimation. Deleted if arguments `lean = True`
@@ -129,7 +130,7 @@ class Fepois(Feglm):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
@@ -243,11 +244,16 @@ class Fepois(Feglm):
         """Replay Poisson estimation for one leave-one-cluster-out sample."""
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        return fixest_module.fepois(
-            fml=self._fml,
-            data=data,
-            vcov="iid",
-            **self._estimation_refit_kwargs(),
+        # A fitted result carries the expanded single formula and the refit
+        # passes no split, so this never returns a multiple-estimation object.
+        return cast(
+            "Fepois",
+            fixest_module.fepois(
+                fml=self._fml,
+                data=data,
+                vcov="iid",
+                **self._estimation_refit_kwargs(),
+            ),
         )
 
     def _clear_attributes(self) -> None:

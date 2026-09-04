@@ -13,7 +13,7 @@ from formulaic import ModelSpec
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Term
 from numpy._typing import NDArray
-from scipy.sparse import spmatrix
+from scipy.sparse import csc_matrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -88,14 +88,14 @@ class FixedEffectContrastCoding:
 
     Attributes
     ----------
-    matrix : spmatrix
+    matrix : csc_matrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
     coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
         Observed and retained codes with their positions in the complete
         coefficient vector, keyed by fixed effect.
     """
 
-    matrix: spmatrix
+    matrix: csc_matrix
     coefficient_positions: Mapping[str, FixedEffectCoefficientPositions]
 
 
@@ -313,15 +313,18 @@ def contrast_code_fixed_effects(
         context=context,
         transform_state=transform_state,
     )
+    # An unstructured formula always materializes into a single `ModelMatrix`,
+    # which carries the `ModelSpec` recorded during materialization.
+    model_spec = cast(ModelSpec, matrix.model_spec)
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     for fixed_effect_name, term in zip(
-        fixed_effect_names, matrix.model_spec.terms, strict=True
+        fixed_effect_names, model_spec.terms, strict=True
     ):
         coefficient_positions[fixed_effect_name] = (
-            get_fixed_effect_coefficient_positions(term, matrix.model_spec)
+            get_fixed_effect_coefficient_positions(term, model_spec)
         )
 
     return FixedEffectContrastCoding(
-        matrix=cast(scipy.sparse.spmatrix, matrix),
+        matrix=cast(scipy.sparse.csc_matrix, matrix),
         coefficient_positions=coefficient_positions,
     )

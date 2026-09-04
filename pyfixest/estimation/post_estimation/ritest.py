@@ -1,30 +1,38 @@
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from tqdm import tqdm
 
-# Numba is an optional dependency. The fast randomization-inference path uses it;
-# the slow path does not. We import lazily so the module loads cleanly even when
-# numba is not installed, and surface a clear error only when the fast path is
-# actually requested.
-try:
-    import numba as nb
-
-    from pyfixest.estimation.numba.demean_nb import demean
-
-    _HAS_NUMBA = True
-except ImportError:
-    nb = None
-    demean = None
-    _HAS_NUMBA = False
-
 _NUMBA_RITEST_ERROR = (
     "Fast randomization inference requires the optional `numba` extra. "
     "Install it with `pip install pyfixest[numba]`, or pass "
     "`choose_algorithm='slow'`."
 )
+
+
+def _import_numba() -> tuple[Any, Any]:
+    """Return `(numba, demean)`, or `(None, None)` without the numba extra.
+
+    Numba is an optional dependency. The fast randomization-inference path uses
+    it; the slow path does not. Importing it here keeps the module loadable
+    without the extra and defers the error to the fast path, which raises
+    `_NUMBA_RITEST_ERROR`. Neither numba nor its jitted kernels carry usable
+    static types, so both are returned untyped.
+    """
+    try:
+        import numba
+
+        from pyfixest.estimation.numba.demean_nb import demean
+    except ImportError:
+        return None, None
+    return numba, demean
+
+
+nb, demean = _import_numba()
+_HAS_NUMBA = nb is not None
 
 
 def _get_ritest_stats_slow(
@@ -425,7 +433,7 @@ def _plot_ritest_pvalue(
 
         plt.figure(figsize=(10, 6))
         sns.kdeplot(data=df, x="ri_stats", fill=True, color="blue", alpha=0.5)
-        plt.axvline(x=sample_stat, color="red", linestyle="--")
+        plt.axvline(x=float(sample_stat), color="red", linestyle="--")
         plt.title(title)
         plt.xlabel(x_lab)
         plt.ylabel(y_lab)
