@@ -466,7 +466,8 @@ def test_errors_ccv():
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
     fit = fepois("Y ~ D", data=pois_data)
     with pytest.raises(
-        NotImplementedError, match=r"not supported for models of type 'fepois'"
+        AttributeError,
+        match=r"has no attribute 'ccv'\..*not supported for models of type 'fepois'",
     ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
@@ -503,9 +504,12 @@ def test_non_ols_update_is_explicitly_unsupported():
         pf.quantreg("Y ~ X1", data=linear_data),
     )
 
+    # `update()` is defined on the OLS leaf only, so the capability reason
+    # arrives through the attribute lookup.
     for fit in models:
         with pytest.raises(
-            NotImplementedError, match=r"update.*not supported for models of type"
+            AttributeError,
+            match=r"has no attribute 'update'\..*not supported for models of type",
         ):
             fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
@@ -624,8 +628,9 @@ def test_wildboottest_rejects_non_ols_working_domains(estimator):
             fit = pf.quantreg("y ~ x", data=data, maxiter=100)
 
     with pytest.raises(
-        NotImplementedError,
-        match=r"Wild cluster bootstrap is not supported for models of type",
+        AttributeError,
+        match=r"has no attribute 'wildboottest'\..*"
+        r"Wild cluster bootstrap is not supported for models of type",
     ):
         fit.wildboottest(param="x", reps=1)
 
@@ -898,7 +903,7 @@ def test_gelbach_errors():
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(AttributeError, match=r"has no attribute 'decompose'"):
         dt = pf.get_data(model="Fepois")
         pf.fepois("Y ~ X1", data=dt).decompose(
             param="X1", combine_covariates={"g1": ["x21"]}
@@ -963,8 +968,9 @@ def test_decomposition_rejects_unsupported_models(model_type):
         fit = pf.quantreg("y ~ x1 + x21", data=data, quantile=0.5)
 
     with pytest.raises(
-        NotImplementedError,
-        match=r"Decomposition is not supported for models of type '(feglm|quantreg)'\.",
+        AttributeError,
+        match=r"has no attribute 'decompose'\. Decomposition is not supported "
+        r"for models of type '(feglm|quantreg)'\.",
     ):
         fit.decompose(decomp_var="x1", only_coef=True)
 
@@ -1330,11 +1336,19 @@ def test_did2s_unestimated_first_stage_fixef():
 
 @pytest.fixture(params=["fepois", "feiv", "quantreg"])
 def unsupported_savi_model(request):
+    """Return a fit SAVI rejects, with the error its class produces.
+
+    `evalue()` is defined on the OLS leaf, so a Poisson or quantile result has
+    no such attribute and the reason reaches the caller through the attribute
+    lookup. An IV result inherits the method and is rejected by the gate inside
+    it.
+    """
     if request.param == "fepois":
-        return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois"))
+        return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois")), AttributeError
     if request.param == "quantreg":
-        return pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
-    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data())
+        fit = pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
+        return fit, AttributeError
+    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data()), NotImplementedError
 
 
 @pytest.fixture(scope="module", params=["fixef", "aweights", "fweights"])
@@ -1379,10 +1393,9 @@ def unsupported_savi_vcov(request):
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
-    with pytest.raises(
-        NotImplementedError, match="SAVI inference is not supported for"
-    ):
-        unsupported_savi_model.evalue()
+    fit, error = unsupported_savi_model
+    with pytest.raises(error, match="SAVI inference is not supported for"):
+        fit.evalue()
 
 
 def test_savi_rejects_weights_and_fixed_effects(unsupported_savi_design):

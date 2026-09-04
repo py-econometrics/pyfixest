@@ -28,6 +28,7 @@ from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
 )
+from pyfixest.estimation.internals.vcov_ import vcov_crv3_fast
 from pyfixest.estimation.models.base_regression_ import (
     BaseRegression,
     _check_vcov_input,
@@ -163,10 +164,38 @@ class Feols(BaseRegression):
         self._get_predictors()
 
     def _finalize_fit(self) -> None:
-        """Compute OLS-only post-fit statistics."""
-        if self._method == "feols" and not self._is_iv:
-            self.get_performance()
-            self.wald_test()
+        """Report the goodness-of-fit and Wald statistics of a linear fit."""
+        self.get_performance()
+        self.wald_test()
+
+    def _vcov_crv3(
+        self,
+        clustid: np.ndarray,
+        cluster_col: np.ndarray,
+        *,
+        data: pd.DataFrame,
+    ) -> np.ndarray:
+        """Take the closed-form cluster jackknife where the shortcut applies.
+
+        `vcov_crv3_fast` evaluates the leave-one-cluster-out refits of a plain
+        OLS fit algebraically. It does not describe a fit with absorbed fixed
+        effects, and a difference-in-differences result carries two-step or
+        event-study estimates whose refit is not the retained design's, so both
+        fall back to the explicit refit.
+        """
+        if not self._has_fixef and not self._fit_features.is_did:
+            return self._vcov_crv3_fast(clustid=clustid, cluster_col=cluster_col)
+        return super()._vcov_crv3(clustid=clustid, cluster_col=cluster_col, data=data)
+
+    def _vcov_crv3_fast(self, clustid, cluster_col):
+        return vcov_crv3_fast(
+            X=self._X,
+            Y=self._Y,
+            weights=self._observation_weights.values,
+            beta_hat=self._beta_hat,
+            clustid=clustid,
+            cluster_col=cluster_col,
+        )
 
     def _crv3_refit(self, data: pd.DataFrame) -> Feols:
         """Replay OLS for one leave-one-cluster-out sample."""
@@ -854,3 +883,72 @@ class Feols(BaseRegression):
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
 
         return beta_n_plus_1
+
+    def evalue(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI e-values.
+
+        Parameters
+        ----------
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
+
+        Returns
+        -------
+        pd.Series
+            One e-value per coefficient.
+
+        Notes
+        -----
+        SAVI currently supports unweighted, non-IV `feols` models without
+        absorbed fixed effects. The covariance estimator must be iid or
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
+        for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
+        variance by `n / (n - k)` while the R implementation in `avlm` does not.
+        Inference is pointwise / by coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        fit.evalue()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _evalue
+
+        return _evalue(model=self, mixture_precision=mixture_precision)
+
+    def pvalue_savi(
+        self,
+        mixture_precision: float = 1.0,
+    ) -> pd.Series:
+        """Compute coefficient-wise SAVI sequential p-values.
+
+        The sequential-p-value analogue of `evalue`. See `evalue` for the
+        `mixture_precision` argument and the supported-model restrictions.
+
+        Returns
+        -------
+        pd.Series
+            One sequential p-value per coefficient.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
+        fit.pvalue_savi()
+        ```
+        """
+        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+
+        return _pvalue_savi(model=self, mixture_precision=mixture_precision)

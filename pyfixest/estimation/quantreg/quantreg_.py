@@ -16,7 +16,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
 )
@@ -28,7 +28,7 @@ from pyfixest.estimation.quantreg.vcov_ import (
 )
 
 
-class Quantreg(Feols):
+class Quantreg(BaseRegression):
     """
     Quantile regression model.
 
@@ -57,6 +57,12 @@ class Quantreg(Feols):
     fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.25, 0.5, 0.75])
     pf.etable(fits)
     ```
+
+    A quantile fit is a leaf of
+    [BaseRegression](/reference/estimation.models.base_regression_.BaseRegression.qmd),
+    not of `Feols`: the interior-point solver estimates a conditional quantile,
+    so the post-estimation methods derived for a conditional mean are not
+    defined here. See `capabilities()` for what a given fit supports.
 
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
@@ -185,15 +191,13 @@ class Quantreg(Feols):
             valid = ", ".join(self._method_map)
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
-    def to_array(self):
-        "Publish quantile-regression within data from the formula state."
+    def _publish_within_data(self) -> None:
+        "Publish the quantile-regression within data from the formula state."
         # Quantile regression supports neither fixed effects nor weights, so
         # the shared preparation reduces to the formula arrays themselves.
-        self._set_within_data(self._prepare_within_data())
-
-    def drop_multicol_vars(self):
-        "Detect and drop multicollinear quantile-regression covariates."
-        self._set_within_data(self._drop_multicollinear_within_data(self._within_data))
+        self._set_within_data(
+            self._drop_multicollinear_within_data(self._prepare_within_data())
+        )
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -206,8 +210,7 @@ class Quantreg(Feols):
 
     def get_fit(self) -> None:
         """Fit a quantile regression model using the interior point method."""
-        self.to_array()
-        self.drop_multicol_vars()
+        self._publish_within_data()
 
         res = self._fit(X=self._X, Y=self._Y)
 

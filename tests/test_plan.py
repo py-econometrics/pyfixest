@@ -378,11 +378,8 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
         def prepare_model_matrix(self):
             events.append("prepare")
 
-        def to_array(self):
-            events.append("to_array")
-
-        def drop_multicol_vars(self):
-            events.append("drop_multicol_vars")
+        def _publish_within_data(self):
+            events.append("publish_within_data")
 
     fit = QuantregMulti.__new__(QuantregMulti)
     fit.all_quantregs = {0.25: StubQuantreg(), 0.75: StubQuantreg()}
@@ -391,10 +388,8 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
 
     assert events == [
         "prepare",
-        "to_array",
-        "drop_multicol_vars",
+        "publish_within_data",
         "prepare",
-        "to_array",
-        "drop_multicol_vars",
+        "publish_within_data",
     ]
     assert fit._X_is_empty is False

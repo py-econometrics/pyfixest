@@ -23,10 +23,10 @@ from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import EstimatorKind
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
-from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 
-class Feglm(Feols):
+class Feglm(BaseRegression):
     """
     Base class for the estimation of a fixed-effects GLM model.
 
@@ -36,6 +36,13 @@ class Feglm(Feols):
     [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with
     the `family` argument and implemented by a subclass. `poisson` dispatches to
     [Fepois](/reference/estimation.models.fepois_.Fepois.qmd).
+
+    A GLM is a leaf of
+    [BaseRegression](/reference/estimation.models.base_regression_.BaseRegression.qmd),
+    not of `Feols`: IRLS leaves a working response, a working design, and
+    working weights behind, so the post-estimation methods written against a
+    single linear estimating equation are not defined here. See
+    `capabilities()` for what a given fit supports.
 
     Examples
     --------

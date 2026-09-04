@@ -91,7 +91,9 @@ class Fepois(Feglm):
     `Fepois` is returned by
     [fepois()](/reference/estimation.api.fepois.fepois.qmd) and is not
     constructed directly. Post-estimation methods are inherited from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd).
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) and
+    [BaseRegression](/reference/estimation.models.base_regression_.BaseRegression.qmd);
+    call `capabilities()` for the ones a given fit supports.
 
     ```{python}
     import pyfixest as pf

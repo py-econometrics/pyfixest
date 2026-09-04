@@ -339,13 +339,14 @@ def support_matrix() -> pd.DataFrame:
     pf.estimation.support_matrix()
     ```
     """
+    from pyfixest.estimation.models.base_regression_ import BaseRegression
     from pyfixest.estimation.models.feglm_ import Feglm
     from pyfixest.estimation.models.feiv_ import Feiv
     from pyfixest.estimation.models.feols_ import Feols
     from pyfixest.estimation.models.fepois_ import Fepois
     from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
-    plain_fits: dict[str, tuple[type[Feols], FitFeatures]] = {
+    plain_fits: dict[str, tuple[type[BaseRegression], FitFeatures]] = {
         "feols": (Feols, FitFeatures(estimator="feols")),
         "feiv": (Feiv, FitFeatures(estimator="feols", is_iv=True)),
         "fepois": (Fepois, FitFeatures(estimator="fepois", family="poisson")),

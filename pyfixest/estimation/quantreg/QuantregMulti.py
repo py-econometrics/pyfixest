@@ -75,8 +75,7 @@ class QuantregMulti:
         # TODO: prepare once and share immutable state across quantiles.
         for quantreg in self.all_quantregs.values():
             quantreg.prepare_model_matrix()
-            quantreg.to_array()
-            quantreg.drop_multicol_vars()
+            quantreg._publish_within_data()
 
         self._X_is_empty = False
 

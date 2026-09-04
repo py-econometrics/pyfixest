@@ -95,9 +95,16 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ```
 
 - Rejected combinations now share one message, `"<feature> is not supported for
-  <reason>."`. The exception types are unchanged: `CRV3` raises
-  `VcovTypeNotSupportedError` and every other feature raises
-  `NotImplementedError`.
+  <reason>."`. `CRV3` raises `VcovTypeNotSupportedError`, and every feature a
+  fit could support raises `NotImplementedError`.
+- **Breaking:** post-estimation methods an estimator never supports are no
+  longer defined on its result class. `wildboottest()`, `ccv()`, `decompose()`,
+  `update()`, `evalue()`, and `pvalue_savi()` are OLS-only, so a Poisson, GLM,
+  or quantile result raises `AttributeError` instead of `NotImplementedError`,
+  and `hasattr(fit, "decompose")` is now `False` for those fits. The message
+  still carries the reason from the capability table and points at
+  `capabilities()`. Fit-dependent restrictions -- weights, fixed effects, IV --
+  keep raising `NotImplementedError` from the method itself.
 - `quantreg()` results now reject `predict(se_fit=True)` and
   `predict(interval="prediction")`. They previously returned prediction
   standard errors from the OLS residual-variance formula, which does not

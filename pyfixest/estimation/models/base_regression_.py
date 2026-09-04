@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
-from typing import Any, ClassVar, Literal, cast
+from types import MappingProxyType
+from typing import Any, ClassVar, Final, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -51,7 +52,6 @@ from pyfixest.estimation.internals.model_state import (
 )
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
-    vcov_crv3_fast,
     vcov_hac,
     vcov_hetero,
     vcov_iid_ols,
@@ -82,6 +82,22 @@ from pyfixest.utils.utils import (
     capture_context,
     get_ssc,
     simultaneous_crit_val,
+)
+
+# Methods only the ordinary-least-squares leaf implements, mapped to the
+# capability feature that explains their absence and to the subject the method
+# itself names when it rejects an unsupported fit. `BaseRegression.__getattr__`
+# turns a lookup of one of these names on a GLM or quantile result into an
+# `AttributeError` carrying that reason.
+_CAPABILITY_GATED_METHODS: Final[Mapping[str, tuple[Feature, str]]] = MappingProxyType(
+    {
+        "ccv": ("ccv", "The causal cluster variance estimator"),
+        "decompose": ("decompose", "Decomposition"),
+        "evalue": ("savi", "SAVI inference"),
+        "pvalue_savi": ("savi", "SAVI inference"),
+        "update": ("update", "The update() method"),
+        "wildboottest": ("wildboottest", "Wild cluster bootstrap"),
+    }
 )
 
 
@@ -419,6 +435,34 @@ class BaseRegression(TidyColumnAccessors):
         # set functions inherited from other modules
         self._bind_report_methods()
         self._bind_estimator_methods()
+
+    def __getattr__(self, name: str) -> Any:
+        """Explain a post-estimation method this estimator does not implement.
+
+        Method placement answers support statically: a GLM or quantile result
+        simply has no `wildboottest`, `ccv`, `decompose`, `update`, `evalue`, or
+        `pvalue_savi` attribute. Python would report that as an anonymous
+        `AttributeError`, so this hook adds the reason the capability table
+        gives and points at `capabilities()`.
+
+        The fixed module-level table is consulted before any instance attribute
+        is touched, so lookups during construction, `hasattr` guards,
+        `_clear_attributes()`, `copy`, and pickling cannot recurse. Every other
+        name raises the ordinary `AttributeError`.
+        """
+        entry = _CAPABILITY_GATED_METHODS.get(name)
+        if entry is None:
+            raise AttributeError(
+                f"{type(self).__name__!r} object has no attribute {name!r}"
+            )
+
+        feature, subject = entry
+        reason = getattr(self._capabilities, feature)(self._fit_features)
+        detail = "" if reason is None else f" {subject} is not supported for {reason}."
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}.{detail}"
+            " Call capabilities() on the fitted result for the features it supports."
+        )
 
     def _bind_estimator_methods(self) -> None:
         """Bind estimator-specific instance methods; the base binds none."""
@@ -981,14 +1025,24 @@ class BaseRegression(TidyColumnAccessors):
         *,
         data: pd.DataFrame,
     ) -> np.ndarray:
-        "Pick CRV1 / CRV3-fast / CRV3-slow for one cluster column."
+        "Pick CRV1 or the estimator's CRV3 implementation for one cluster column."
         if self._vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
         self._require_support("crv3", subject="CRV3 inference")
-        use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
-        if use_fast:
-            return self._vcov_crv3_fast(clustid=clustid, cluster_col=cluster_col)
+        return self._vcov_crv3(clustid=clustid, cluster_col=cluster_col, data=data)
+
+    def _vcov_crv3(
+        self,
+        clustid: np.ndarray,
+        cluster_col: np.ndarray,
+        *,
+        data: pd.DataFrame,
+    ) -> np.ndarray:
+        """Cluster jackknife from explicit leave-one-cluster-out refits.
+
+        Estimators with a closed form for their own jackknife override this.
+        """
         return self._vcov_crv3_slow(
             clustid=clustid,
             cluster_col=cluster_col,
@@ -1081,16 +1135,6 @@ class BaseRegression(TidyColumnAccessors):
             tXZ=self._tXZ,
             tZZinv=self._tZZinv,
             tZX=self._tZX,
-        )
-
-    def _vcov_crv3_fast(self, clustid, cluster_col):
-        return vcov_crv3_fast(
-            X=self._X,
-            Y=self._Y,
-            weights=self._observation_weights.values,
-            beta_hat=self._beta_hat,
-            clustid=clustid,
-            cluster_col=cluster_col,
         )
 
     def _estimation_refit_kwargs(self) -> dict[str, Any]:
@@ -2198,75 +2242,6 @@ class BaseRegression(TidyColumnAccessors):
         return _plot_ritest_pvalue(
             ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
         )
-
-    def evalue(
-        self,
-        mixture_precision: float = 1.0,
-    ) -> pd.Series:
-        """Compute coefficient-wise SAVI e-values.
-
-        Parameters
-        ----------
-        mixture_precision : float, optional
-            Positive mixture precision fixed before sequential monitoring.
-            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
-            minimize confidence-sequence width at a target sample size.
-
-        Returns
-        -------
-        pd.Series
-            One e-value per coefficient.
-
-        Notes
-        -----
-        SAVI currently supports unweighted, non-IV `feols` models without
-        absorbed fixed effects. The covariance estimator must be iid or
-        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
-        for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
-        variance by `n / (n - k)` while the R implementation in `avlm` does not.
-        Inference is pointwise / by coefficient.
-
-        Examples
-        --------
-        ```{python}
-        import pyfixest as pf
-
-        data = pf.get_data()
-        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
-        fit.evalue()
-        ```
-        """
-        from pyfixest.estimation.post_estimation.savi import _evalue
-
-        return _evalue(model=self, mixture_precision=mixture_precision)
-
-    def pvalue_savi(
-        self,
-        mixture_precision: float = 1.0,
-    ) -> pd.Series:
-        """Compute coefficient-wise SAVI sequential p-values.
-
-        The sequential-p-value analogue of `evalue`. See `evalue` for the
-        `mixture_precision` argument and the supported-model restrictions.
-
-        Returns
-        -------
-        pd.Series
-            One sequential p-value per coefficient.
-
-        Examples
-        --------
-        ```{python}
-        import pyfixest as pf
-
-        data = pf.get_data()
-        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
-        fit.pvalue_savi()
-        ```
-        """
-        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
-
-        return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
 
 def _check_vcov_input(
