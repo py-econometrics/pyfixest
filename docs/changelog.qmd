@@ -103,6 +103,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   standard errors from the OLS residual-variance formula, which does not
   describe a conditional quantile; R `quantreg` inverts ranks or bootstraps
   instead.
+- `feglm()` and `fepois()` results now reject `predict(interval="prediction")`
+  as they already rejected `predict(se_fit=True)`. The GLM prediction overrides
+  did not forward `interval`, so the argument was silently dropped and point
+  predictions were returned in place of a prediction interval.
 
 ### Safe Anytime-Valid Inference (SAVI)
 

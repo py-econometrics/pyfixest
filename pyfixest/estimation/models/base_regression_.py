@@ -240,6 +240,10 @@ class BaseRegression(TidyColumnAccessors):
 
     # Declared by each leaf class; see `pyfixest.estimation.capabilities`.
     _estimator: ClassVar[EstimatorKind]
+    # Whether randomization inference must refit through the public estimation
+    # API instead of resampling the retained design. Set by estimators whose
+    # fast-path arrays are not an OLS design.
+    _ritest_forces_slow_algorithm: ClassVar[bool] = False
     # A base result supports nothing until its class declares otherwise.
     _capabilities: ClassVar[Capabilities] = Capabilities()
 
@@ -1629,6 +1633,46 @@ class BaseRegression(TidyColumnAccessors):
 
         return res
 
+    def _fixef_residual_target(
+        self, response: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        """Return the target whose residual identifies the fixed effects.
+
+        A linear model residualizes the formula response itself. Estimators
+        whose coefficients live on a link scale override this.
+
+        Parameters
+        ----------
+        response : numpy.ndarray
+            The formula-materialized response of the estimation sample.
+
+        Returns
+        -------
+        numpy.ndarray
+            The target `fixef()` residualizes against the design.
+        """
+        return response
+
+    def _response_from_link(
+        self, link_predictor: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        """Map the linear predictor onto the response scale.
+
+        A linear model estimates the conditional mean directly, so the link and
+        response scales coincide. GLMs apply the family's inverse link.
+
+        Parameters
+        ----------
+        link_predictor : numpy.ndarray
+            Predictions on the scale of the linear predictor.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predictions on the scale of the response.
+        """
+        return link_predictor
+
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
@@ -1686,17 +1730,7 @@ class BaseRegression(TidyColumnAccessors):
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._Y_hat_link
-                # _Y_hat_link contains the offset as part of eta; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self._offset_name is not None:
-                    assert self._offset is not None
-                    Y = Y - self._offset.flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
+            uhat = (self._fixef_residual_target(Y) - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
@@ -1825,11 +1859,7 @@ class BaseRegression(TidyColumnAccessors):
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             X = self._X
-            y_hat = (
-                self._Y_hat_link
-                if type == "link" or self._method == "feols"
-                else self._Y_hat_response
-            )
+            y_hat = self._Y_hat_link if type == "link" else self._Y_hat_response
             n_observations = self._N_rows
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
@@ -1892,8 +1922,8 @@ class BaseRegression(TidyColumnAccessors):
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
 
-            if type == "response" and self._method == "fepois":
-                y_hat = np.exp(y_hat)
+            if type == "response":
+                y_hat = self._response_from_link(y_hat)
 
         if se_fit or interval == "prediction":
             prediction_df = _compute_prediction_error(
@@ -2046,7 +2076,7 @@ class BaseRegression(TidyColumnAccessors):
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
-        if choose_algorithm == "slow" or self._method == "fepois":
+        if choose_algorithm == "slow" or self._ritest_forces_slow_algorithm:
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}

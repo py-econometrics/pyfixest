@@ -360,17 +360,23 @@ def test_capabilities_accessor_reports_supported_and_reason(
     assert plain.loc["ccv", "reason"] is None
 
 
-def test_quantreg_rejects_ols_prediction_errors(capability_data: pd.DataFrame):
-    """OLS residual-variance prediction errors do not describe a quantile."""
-    fit = _fit("quantreg", capability_data)
+@pytest.mark.parametrize("kind", ["quantreg", "logit", "poisson"])
+def test_non_ols_fits_reject_prediction_errors(
+    capability_data: pd.DataFrame, kind: str
+):
+    """Both prediction-error arguments hit the gate, not only `se_fit`.
+
+    The OLS residual-variance formula behind `se_fit` and `interval` describes
+    neither a conditional quantile nor a GLM mean, so both arguments must be
+    rejected rather than silently returning point predictions.
+    """
+    fit = _fit(kind, capability_data)
+    reason = fit._capabilities.evaluate(fit._fit_features)["prediction_errors"]
 
     for kwargs in ({"se_fit": True}, {"interval": "prediction"}):
         with pytest.raises(
             NotImplementedError,
-            match=(
-                r"Prediction with standard errors is not supported for models of "
-                r"type 'quantreg'\."
-            ),
+            match=rf"Prediction with standard errors is not supported for {reason}\.",
         ):
             fit.predict(**kwargs)
 

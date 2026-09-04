@@ -23,12 +23,7 @@ from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import EstimatorKind
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
-from pyfixest.estimation.models.feols_ import (
-    Feols,
-    PredictionErrorOptions,
-    PredictionType,
-)
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.estimation.models.feols_ import Feols
 
 
 class Feglm(Feols):
@@ -350,78 +345,28 @@ class Feglm(Feols):
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
 
-    def predict(
-        self,
-        newdata: DataFrameType | None = None,
-        atol: float = 1e-6,
-        btol: float = 1e-6,
-        type: PredictionType = "link",
-        se_fit: bool | None = False,
-        interval: PredictionErrorOptions | None = None,
-        alpha: float = 0.05,
-    ) -> np.ndarray | pd.DataFrame:
+    def _fixef_residual_target(
+        self, response: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        """Residualize the estimated linear predictor instead of the response.
+
+        Equation (5.2) in Stammann (2018),
+        [arXiv:1707.01815](http://arxiv.org/abs/1707.01815). `_Y_hat_link`
+        carries the offset as part of eta, so the offset is subtracted here:
+        `_sumFE` then holds the pure fixed-effect contribution and `predict()`
+        can add the offset back from `newdata` without double-counting it.
         """
-        Return predicted values from regression model.
+        eta = self._Y_hat_link
+        if self._offset_name is None:
+            return eta
+        assert self._offset is not None
+        return eta - self._offset.flatten()
 
-        Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations
-        will be set to NaN.
-
-        Parameters
-        ----------
-        newdata : Union[None, pd.DataFrame], optional
-            A pd.DataFrame with the new data, to be used for prediction.
-            If None (default), uses the data used for fitting the model.
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        type : str, optional
-            The type of prediction to be computed.
-            Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the response variable,
-            i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
-            i.e., the linear predictor X @ beta.
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
-        interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
-        alpha: float, optional
-            The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if interval = "prediction" is not None.
-
-        Returns
-        -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
-        """
-        if se_fit:
-            self._require_support(
-                "prediction_errors", subject="Prediction with standard errors"
-            )
-
-        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
-        if type == "response":
-            return self._family.inv_link(
-                yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat
-            )
-        else:
-            return yhat
+    def _response_from_link(
+        self, link_predictor: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        """Apply the family's inverse link to the linear predictor."""
+        return self._family.inv_link(link_predictor)
 
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
