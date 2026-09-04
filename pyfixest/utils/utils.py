@@ -106,7 +106,9 @@ def ssc(
     ```
 
     Defaults follow `fixest`. See
-    [On Small Sample Corrections](/explanation/ssc.qmd) for details.
+    [Standard Errors & Inference](/tutorials/standard-errors.qmd) for how small-
+    sample corrections fit into an inference workflow and
+    [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
     deprecated_mapping = {
         "adj": "k_adj",

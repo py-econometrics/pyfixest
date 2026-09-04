@@ -228,12 +228,13 @@ def feglm(
     Notes
     -----
     `Feglm` inherits from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd). A GLM fit therefore
-    supports the same post-estimation methods as an OLS fit, among them
-    `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with
-    `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`.
-    See the Post-Estimation Methods section of the function reference for the
-    full list.
+    [Feols](/reference/estimation.models.feols_.Feols.qmd), so GLM fits share
+    common result accessors such as `tidy()`, `coef()`, and `confint()`.
+    Availability of other post-estimation and inference methods depends on the
+    fitted family and the method's requirements. See
+    [Standard Errors & Inference](/tutorials/standard-errors.qmd) before using
+    inherited inference methods. `predict()` accepts `type="response"` or
+    `"link"`.
 
     `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
     link scale. For effects on the response scale, see the

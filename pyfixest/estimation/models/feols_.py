@@ -637,7 +637,9 @@ class Feols(ResultAccessorMixin):
         fit.vcov({"CRV1": "f1"}).tidy()
         ```
 
-        See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
+        See [Standard Errors & Inference](/tutorials/standard-errors.qmd) for
+        choosing a covariance estimator and checking supported combinations.
+        [On Small Sample Corrections](/explanation/ssc.qmd) explains how the
         `ssc` adjustments interact with each estimator.
         """
         # Assuming `data` is the DataFrame in question
@@ -1076,6 +1078,11 @@ class Feols(ResultAccessorMixin):
             (HC vs CRV), and whether the null hypothesis was imposed on the
             bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
             returns a tuple of the regular output and the bootstrapped t-stats.
+
+        Notes
+        -----
+        See [Standard Errors & Inference](/tutorials/standard-errors.qmd) for
+        guidance on wild-bootstrap inference and unsupported model types.
 
         Examples
         --------
@@ -1972,6 +1979,11 @@ class Feols(ResultAccessorMixin):
         A pd.Series with the regression coefficient of `resampvar` and the p-value
         of the RI test. Additionally, reports the standard error and the confidence
         interval of the p-value.
+
+        Notes
+        -----
+        See [Standard Errors & Inference](/tutorials/standard-errors.qmd) for
+        choosing a resampling scheme and checking supported model types.
 
         Examples
         --------
