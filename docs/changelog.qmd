@@ -1,8 +1,8 @@
 ---
+title: Changelog
+description: "Release notes for every PyFixest version, covering new features, behavior changes, deprecations, and bug fixes."
 freeze: auto
 ---
-
-# Changelog
 
 ```{python}
 import pyfixest as pf
@@ -207,6 +207,11 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
+
+### Documentation
+
+- Every documentation page now carries a title and a one-sentence description,
+  which Quarto uses in `llms.txt` and the listing pages.
 
 
 ## PyFixest 0.60.0
