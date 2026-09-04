@@ -40,7 +40,7 @@ def prepare_cluster_state(
     ssc_dict: dict,
     fixef: str | None,
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    k_fe: np.ndarray | pd.Series | None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
@@ -60,8 +60,10 @@ def prepare_cluster_state(
     k_fe_nested = 0
     n_fe_fully_nested = 0
     if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
-        if fe is None:
-            raise ValueError("`fe` must not be None when `fixef` is specified.")
+        if fe is None or k_fe is None:
+            raise ValueError(
+                "`fe` and `k_fe` must not be None when `fixef` is specified."
+            )
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef.split("+"), dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),

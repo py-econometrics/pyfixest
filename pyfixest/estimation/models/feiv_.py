@@ -245,8 +245,8 @@ class Feiv(Feols):
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=endogenous_frame.columns,
-                x_names=instrument_frame.columns,
+                y_names=endogenous_frame.columns.tolist(),
+                x_names=instrument_frame.columns.tolist(),
                 fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
@@ -318,6 +318,10 @@ class Feiv(Feols):
     def first_stage(self) -> None:
         """Implement First stage regression."""
         self._require_estimation_data("first_stage")
+
+        # An IV formula always produces instrument names; the base class keeps
+        # them optional because non-IV models have none.
+        assert self._coefnames_z is not None
 
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
@@ -528,6 +532,7 @@ class Feiv(Feols):
         iv_diag_statistics = iv_diag_statistics or []
 
         self._require_first_stage_state("IV_weakness_test")
+        assert self._coefnames_z is not None
 
         if "f_stat" in iv_diag_statistics:
             self._p_iv = len(self._non_exo_instruments)
@@ -562,6 +567,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         self._require_first_stage_state("eff_F")
+        assert self._coefnames_z is not None
 
         # If vcov is iid, redo first stage regression
 

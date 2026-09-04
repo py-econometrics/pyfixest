@@ -273,8 +273,10 @@ class BaseRegression(TidyColumnAccessors):
     _has_fixef: bool
     _has_weights: bool
     _coefnames: list[str]
+    _coefnames_z: list[str] | None
     _icovars: list[str] | None
-    _k_fe: pd.Series
+    # Levels per fixed effect, or None when the model has no fixed effects.
+    _k_fe: pd.Series | None
     _response: NDArray[np.float64]
     _observation_weights: ObservationWeights
     _within_data: WithinLinearData
@@ -507,9 +509,9 @@ class BaseRegression(TidyColumnAccessors):
 
         return model_matrix
 
-    # Deliberately untyped: an annotation makes mypy check this body, whose published
-    # attribute types are still transitional or loose; see the typing follow-up.
-    def _publish_model_matrix(self, model_matrix):
+    def _publish_model_matrix(
+        self, model_matrix: model_matrix_fixest.ModelMatrix
+    ) -> None:
         """Publish structurally immutable formula and observation-weight state."""
         self._model_matrix = model_matrix
         self._response = model_matrix.dependent.to_numpy(dtype=np.float64).flatten()
@@ -545,8 +547,8 @@ class BaseRegression(TidyColumnAccessors):
             else None
         )
 
-        self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
+        self._k_fe = self._fe.nunique(axis=0) if self._fe is not None else None
+        self._n_fe = len(self._k_fe) if self._k_fe is not None else 0
 
         self._observation_weights = self._set_observation_weights()
         self._N = self._observation_weights.n_effective
@@ -579,8 +581,8 @@ class BaseRegression(TidyColumnAccessors):
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_names=response_frame.columns,
-                x_names=design_frame.columns,
+                y_names=response_frame.columns.tolist(),
+                x_names=design_frame.columns.tolist(),
                 fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
@@ -1010,7 +1012,7 @@ class BaseRegression(TidyColumnAccessors):
             "ssc_dict": self._ssc_dict,
             "N": self._N,
             "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
+            "k_fe": self._k_fe.sum() if self._k_fe is not None else 0,
             "n_fe": self._n_fe,
             "vcov_type": vcov_type,
             "G": G,
@@ -1281,7 +1283,7 @@ class BaseRegression(TidyColumnAccessors):
 
         has_intercept = not self._drop_intercept
 
-        if self._has_fixef:
+        if self._k_fe is not None:
             k_fe = np.sum(self._k_fe - 1) + 1
             adj_factor = (self._N - has_intercept) / (self._N - self._k - k_fe)
             adj_factor_within = (self._N - k_fe) / (self._N - self._k - k_fe)
@@ -1634,7 +1636,7 @@ class BaseRegression(TidyColumnAccessors):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        k_fe = np.sum(self._k_fe.values) if self._k_fe is not None else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))

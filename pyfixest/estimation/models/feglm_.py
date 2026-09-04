@@ -168,7 +168,7 @@ class Feglm(BaseRegression):
 
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._n_fe = np.sum(self._k_fe > 1) if self._k_fe is not None else 0
 
         return model_matrix
 
@@ -377,7 +377,7 @@ class Feglm(BaseRegression):
 
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
-        self._family.check_y(self._model_matrix.dependent)
+        self._family.check_y(self._model_matrix.dependent.to_numpy())
 
     def _validate_response(self) -> None:
         """Apply family-specific response validation after matrix preparation."""
