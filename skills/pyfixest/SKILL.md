@@ -44,8 +44,9 @@ data = pf.get_data().dropna()
 # fixed effects follow the first |, : interacts them (`^` is deprecated)
 pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 pf.feols("Y ~ X1 | f1:f2", data=data)
-# three-part IV: depvar ~ exogenous | fixed effects | endogenous ~ instruments
-pf.feols("Y ~ X2 | f1 | X1 ~ Z1", data=data)  # newer spelling: Y ~ X2 + [X1 ~ Z1] | f1
+# IV: a [endogenous ~ instruments] term on the right-hand side
+# (the fixest-style "Y ~ X2 | f1 | X1 ~ Z1" still works but is deprecated)
+pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", data=data)
 # i(cat) expands a categorical, ref drops a level, i(cat, x) gives slopes on x
 pf.feols("Y ~ i(f1, ref=1.0) + i(f1, X2)", data=data)
 # vcov spellings; NW and DK additionally need vcov_kwargs with time metadata
