@@ -3,12 +3,12 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from typing import Any, ClassVar, Literal, cast
+from typing import Any, ClassVar, Literal, cast, overload
 
 import formulaic
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix, spmatrix
+from scipy.sparse import csc_matrix
 from scipy.stats import t
 
 from pyfixest.estimation.capabilities import (
@@ -201,11 +201,16 @@ class Feols(BaseRegression):
         """Replay OLS for one leave-one-cluster-out sample."""
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        return fixest_module.feols(
-            fml=self._fml,
-            data=data,
-            vcov="iid",
-            **self._estimation_refit_kwargs(),
+        # A fitted result carries the expanded single formula and the refit
+        # passes no split, so this never returns a multiple-estimation object.
+        return cast(
+            "Feols",
+            fixest_module.feols(
+                fml=self._fml,
+                data=data,
+                vcov="iid",
+                **self._estimation_refit_kwargs(),
+            ),
         )
 
     def wildboottest(
@@ -213,13 +218,13 @@ class Feols(BaseRegression):
         reps: int,
         cluster: str | None = None,
         param: str | None = None,
-        weights_type: str | None = "rademacher",
-        impose_null: bool | None = True,
-        bootstrap_type: str | None = "11",
+        weights_type: str = "rademacher",
+        impose_null: bool = True,
+        bootstrap_type: str = "11",
         seed: int | None = None,
-        k_adj: bool | None = True,
-        G_adj: bool | None = True,
-        parallel: bool | None = False,
+        k_adj: bool = True,
+        G_adj: bool = True,
+        parallel: bool = False,
         return_bootstrapped_t_stats=False,
     ):
         """
@@ -359,6 +364,7 @@ class Feols(BaseRegression):
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
             full_enumeration_warn = False
+            small_sample_correction = boot.small_sample_correction
 
         else:
             inference = f"CRV({cluster_list[0]})"
@@ -387,6 +393,7 @@ class Feols(BaseRegression):
             boot.get_vcov()
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
+            small_sample_correction = boot.ssc
 
             if full_enumeration_warn:
                 warnings.warn(
@@ -405,7 +412,7 @@ class Feols(BaseRegression):
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
-            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
+            "ssc": small_sample_correction,
         }
 
         res_df = pd.Series(res)
@@ -520,7 +527,7 @@ class Feols(BaseRegression):
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = np.array(self.coef().xs(treatment))
+        tau_full = float(self.coef().xs(treatment))
 
         N = self._N
         G = len(unique_clusters)
@@ -579,9 +586,19 @@ class Feols(BaseRegression):
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
+    @overload
     def _model_matrix_one_hot(
-        self, output="numpy"
-    ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
+        self, output: Literal["numpy"] = "numpy"
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]: ...
+
+    @overload
+    def _model_matrix_one_hot(
+        self, output: Literal["sparse"]
+    ) -> tuple[np.ndarray, csc_matrix, list[str]]: ...
+
+    def _model_matrix_one_hot(
+        self, output: Literal["numpy", "sparse"] = "numpy"
+    ) -> tuple[np.ndarray, np.ndarray | csc_matrix, list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
@@ -244,11 +244,16 @@ class Fepois(Feglm):
         """Replay Poisson estimation for one leave-one-cluster-out sample."""
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        return fixest_module.fepois(
-            fml=self._fml,
-            data=data,
-            vcov="iid",
-            **self._estimation_refit_kwargs(),
+        # A fitted result carries the expanded single formula and the refit
+        # passes no split, so this never returns a multiple-estimation object.
+        return cast(
+            "Fepois",
+            fixest_module.fepois(
+                fml=self._fml,
+                data=data,
+                vcov="iid",
+                **self._estimation_refit_kwargs(),
+            ),
         )
 
     def _clear_attributes(self) -> None:
