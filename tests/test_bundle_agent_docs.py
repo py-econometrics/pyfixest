@@ -44,8 +44,12 @@ FENCED_BLOCK = '```python\nprint("![alt](inline.png)")\n```'
 CARGO_TOML = """\
 [package]
 name = "pyfixest_core"
-version = "9.9.9"
+version = "1.2.3"
 edition = "2021"
+
+[dependencies.pyo3]
+version = "9.9.9"
+features = ["extension-module"]
 """
 
 
@@ -107,7 +111,7 @@ def test_index_drops_the_stub_entry_and_stamps_the_version(
         "\n"
         "> Fast high-dimensional fixed effects regression in Python.\n"
         "\n"
-        "Version: 9.9.9\n"
+        "Version: 1.2.3\n"
         "\n"
         "## Pages\n"
         "\n"
@@ -160,6 +164,17 @@ def test_bundling_twice_is_idempotent(
         for path in output.rglob("*")
         if path.is_file()
     } == first
+
+
+def test_manifest_without_a_package_version_raises(site: Path, tmp_path: Path) -> None:
+    manifest = tmp_path / "no-version.toml"
+    _write(
+        manifest,
+        '[package]\nname = "pyfixest_core"\n\n[dependencies.pyo3]\nversion = "9.9.9"\n',
+    )
+
+    with pytest.raises(AgentDocsBundleError, match=r"No \[package\] version"):
+        bundle(site=site, output=tmp_path / "docs", version_file=manifest)
 
 
 def test_missing_llms_index_raises(tmp_path: Path, version_file: Path) -> None:

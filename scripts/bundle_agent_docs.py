@@ -7,8 +7,10 @@ import re
 import shutil
 from pathlib import Path
 
-import tomllib
-
+_PACKAGE_TABLE_RE = re.compile(
+    r"^\[package\][^\n]*\n(.*?)(?=^\[|\Z)", re.MULTILINE | re.DOTALL
+)
+_VERSION_RE = re.compile(r"^\s*version\s*=\s*[\"']([^\"']*)[\"']", re.MULTILINE)
 _MARKDOWN_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]*\)(\{[^}]*\})?")
 _BADGE_LINK_RE = re.compile(
     r"\[!\[[^\]]*\]\([^)]*\)(?:\{[^}]*\})?\]\([^)]*\)(?:\{[^}]*\})?"
@@ -60,15 +62,26 @@ def _normalize_markdown(text: str) -> str:
     return "".join(normalized)
 
 
+def _package_version(version_file: Path) -> str:
+    """Read `[package] version` without tomllib, which needs Python 3.11."""
+    table = _PACKAGE_TABLE_RE.search(version_file.read_text(encoding="utf-8"))
+    if table is None:
+        raise AgentDocsBundleError(f"No [package] table in {version_file}")
+    version = _VERSION_RE.search(table[1])
+    if version is None:
+        raise AgentDocsBundleError(f"No [package] version in {version_file}")
+    return version[1]
+
+
 def _index_text(site: Path, version_file: Path) -> str:
     """Drop the redirect stub from llms.txt and stamp the package version."""
-    manifest = tomllib.loads(version_file.read_text(encoding="utf-8"))
+    version = _package_version(version_file)
     lines = (site / "llms.txt").read_text(encoding="utf-8").splitlines()
     kept = [line for line in lines if f"]({_STUB})" not in line]
     after = next((i for i, line in enumerate(kept) if line.startswith(">")), 0) + 1
     while after < len(kept) and kept[after].startswith(">"):
         after += 1
-    kept[after:after] = ["", f"Version: {manifest['package']['version']}"]
+    kept[after:after] = ["", f"Version: {version}"]
     return "\n".join(kept) + "\n"
 
 
