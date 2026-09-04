@@ -72,14 +72,15 @@ pf.etable(
 A formula has up to three `|`-separated parts; see [Formula Syntax](tutorials/formula-syntax.qmd).
 
 ```{python}
-# fixed effects with +, interacted fixed effects with ^
+# fixed effects with +, interacted fixed effects with :
 pf.etable([pf.feols("Y ~ X1 | f1 + f2", data=data),
-           pf.feols("Y ~ X1 | f1^f2", data=data)])
+           pf.feols("Y ~ X1 | f1:f2", data=data)])
 ```
 
 ```{python}
-# IV: "depvar ~ exogenous | fixed effects | endogenous ~ instruments"
-pf.feols("Y ~ X2 | f1 | X1 ~ Z1", data=data).tidy()
+# IV: a "[endogenous ~ instruments]" term on the right-hand side
+# (the fixest-style "Y ~ X2 | f1 | X1 ~ Z1" still works but is deprecated)
+pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", data=data).tidy()
 ```
 
 ```{python}
@@ -95,8 +96,8 @@ pf.etable([pf.feols("Y ~ X1 * X2", data=data),
 ```
 
 ```{python}
-# several dependent variables become several estimations
-pf.feols("Y + Y2 ~ X1", data=data).tidy()
+# sw() over the dependent variables gives one estimation each
+pf.feols("sw(Y, Y2) ~ X1", data=data).tidy()
 ```
 
 ## Multiple estimation
@@ -168,7 +169,7 @@ pf.feols("Y ~ X1 | f1", data=data, vcov="HC2")
 ```{python}
 #| error: true
 # CRV3 is unavailable for IV models
-pf.feols("Y ~ 1 | X1 ~ Z1", data=data, vcov={"CRV3": "f1"})
+pf.feols("Y ~ 1 + [X1 ~ Z1]", data=data, vcov={"CRV3": "f1"})
 ```
 
 ```{python}
@@ -237,7 +238,7 @@ pf.fepois("Y ~ X1 | f1", data=pois).wildboottest(param="X1", reps=99, seed=1234)
 ```{python}
 #| error: true
 # one endogenous variable per model
-pf.feols("Y ~ 1 | X1 + X2 ~ Z1 + Z2", data=data)
+pf.feols("Y ~ 1 + [X1 + X2 ~ Z1 + Z2]", data=data)
 ```
 
 ## Difference-in-differences
@@ -289,7 +290,7 @@ pf.iplot(pf.feols("dep_var ~ i(rel_year, ref=-1.0)", data=panel),
 All three take a set of models and one shared parameter; see [`rwolf()`](reference/estimation.post_estimation.multcomp.rwolf.qmd).
 
 ```{python}
-models = pf.feols("Y + Y2 ~ X1 + X2", data=data)
+models = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
 pf.bonferroni(models, param="X1")
 ```
 
