@@ -30,7 +30,13 @@ def _solve_ADAt(
     K = W @ W.T
 
     u_buf = u.copy()
-    lapack.dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
+    # scipy internal: `scipy.linalg.lapack` generates its wrappers at import
+    # time from the compiled LAPACK library, so none of them are visible to a
+    # type checker. `dposv` is the Cholesky solve for a symmetric positive
+    # definite system, which is what the normal equations produce here.
+    lapack.dposv(  # ty: ignore[unresolved-attribute]
+        K, u_buf, lower=1, overwrite_a=True, overwrite_b=True
+    )
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
     # S = np.linalg.cholesky(K)
