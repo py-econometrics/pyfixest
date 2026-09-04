@@ -48,6 +48,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   with executed output), generated at build time from the same Quarto sources
   as the website. The bundled `llms.txt` describes each page, and release builds
   render every page from scratch so the bundled output matches the released code.
+- Release builds render the documentation once and ship it in every wheel and
+  the source distribution; the release job refuses to upload archives without
+  it.
 
 ### Inference Types
 

@@ -169,7 +169,10 @@ Always update `docs/changelog.qmd`. Documentation ships with the feature. New
 public functions/classes require quartodoc registration; user workflows usually
 need a `docs/how-to/` guide or an extension to the nearest existing guide.
 Never hand-edit generated `docs/reference/**`. The hosted pages and the
-`.llms.md` pages bundled into `pyfixest/docs/` are the same Quarto output.
+`.llms.md` pages bundled into `pyfixest/docs/` are the same Quarto output. The
+`agent-docs` job in `.github/workflows/build-and-release.yaml` produces that
+bundle once per release and hands it to every wheel and the sdist; a
+`workflow_dispatch` run exercises the same path without publishing.
 
 ## Git and review
 
