@@ -162,35 +162,12 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
-]
-ignore_missing_imports = true
-
 [tool.ty.src]
 include = ["pyfixest"]
 exclude = [
     # Superseded formula plumbing kept for backwards compatibility.
     "pyfixest/estimation/deprecated",
 ]
-
-[tool.ty.rules]
-# mypy still runs as a pre-commit hook and owns the `# type: ignore` comments
-# in this repository, so ty must not report them as unused.
-unused-type-ignore-comment = "ignore"
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
@@ -345,7 +322,7 @@ lint = { cmd = "prek run --all-files", description = "Run all pre-commit hooks v
 # CPython >= 3.11 and would make the py310 environment unsolvable.
 
 [tool.pixi.feature.typecheck.dependencies]
-ty = ">=0.0.78"
+ty = ">=0.0.78,<0.1"
 
 [tool.pixi.feature.typecheck.tasks]
 type-check = { cmd = "ty check", description = "Type-check pyfixest with ty" }

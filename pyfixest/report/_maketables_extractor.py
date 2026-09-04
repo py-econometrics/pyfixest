@@ -21,7 +21,7 @@ from maketables.extractors import PyFixestExtractor, register_extractor
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 
-class BaseRegressionExtractor(PyFixestExtractor):  # type: ignore[misc]
+class BaseRegressionExtractor(PyFixestExtractor):
     """Extract any fitted pyfixest result, not only the `Feols` family."""
 
     def can_handle(self, model: Any) -> bool:

@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 _HAS_LETS_PLOT = find_spec("lets_plot") is not None
 
 
-
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
     """
     Set the figure size based on the plot backend.
@@ -809,7 +808,6 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -895,7 +893,7 @@ def _get_model_df(
             .merge(df_joint, on="Coefficient", how="left")
         )
 
-        df_joint_full["fml"] += " (joint CIs)"  # type: ignore[operator]
+        df_joint_full["fml"] += " (joint CIs)"
 
         if joint == "both":
             df_model = pd.concat([df_model, df_joint_full], axis=0)

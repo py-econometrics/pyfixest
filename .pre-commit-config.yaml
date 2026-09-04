@@ -42,11 +42,3 @@ repos:
         types_or: [jupyter, pyi, python]
       - id: ruff-format
         types_or: [jupyter, pyi, python]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.3.0
-    hooks:
-      - id: mypy
-        args: [--ignore-missing-imports]
-        files: ^pyfixest/
-        additional_dependencies: [numpy>=1.20, pandas-stubs]

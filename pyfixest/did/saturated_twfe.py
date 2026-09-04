@@ -112,6 +112,11 @@ class SaturatedEventStudy(DID):
         Feols
             The fitted Feols model object.
         """
+        # `event_study()` resolves the cluster variable to the unit id before
+        # constructing this estimator, and the class documents it as required:
+        # the saturated study reports CRV1 inference on it.
+        assert self._cluster is not None, "cluster must be set"
+
         self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
             self._data,
             outcome=self._yname,
@@ -352,10 +357,10 @@ def _saturated_event_study(
     outcome: str,
     time_id: str,
     unit_id: str,
-    cluster: str | None = None,
+    cluster: str,
 ):
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
-    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
+    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})
     res = m.tidy().reset_index()
     res = res.join(
         res["Coefficient"].str.extract(
