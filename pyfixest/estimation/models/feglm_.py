@@ -20,7 +20,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
-from pyfixest.estimation.internals.literals import EstimatorKind
+from pyfixest.estimation.internals.literals import EstimatorKind, WeightsTypeOptions
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
 from pyfixest.estimation.models.base_regression_ import BaseRegression
@@ -77,7 +77,7 @@ class Feglm(BaseRegression):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,

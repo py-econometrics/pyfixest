@@ -135,7 +135,7 @@ class BaseRegression(TidyColumnAccessors):
         Whether the intercept is dropped from the design.
     weights : str or None
         Name of the observation-weight column, or None for an unweighted fit.
-    weights_type : str or None
+    weights_type : WeightsTypeOptions
         Either `"aweights"` for analytic or `"fweights"` for frequency weights.
     collin_tol : float
         Tolerance of the collinearity check on the within design.
@@ -308,7 +308,7 @@ class BaseRegression(TidyColumnAccessors):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
@@ -569,10 +569,9 @@ class BaseRegression(TidyColumnAccessors):
             return ObservationWeights.unweighted(n_rows=n_rows)
 
         assert self._weights_type in ("aweights", "fweights")
-        weights_kind = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
-            kind=weights_kind,
+            kind=self._weights_type,
         )
 
     def _prepare_within_data(self) -> WithinLinearData:
@@ -709,11 +708,7 @@ class BaseRegression(TidyColumnAccessors):
             is_iv=self._is_iv,
             has_fixef=self._has_fixef,
             has_weights=self._has_weights,
-            weights_kind=(
-                cast(WeightsTypeOptions, self._weights_type)
-                if self._has_weights
-                else None
-            ),
+            weights_kind=self._weights_type if self._has_weights else None,
             is_did=self._method in DID_METHOD_LABELS,
         )
 

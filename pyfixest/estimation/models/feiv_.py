@@ -22,6 +22,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
 from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -60,7 +61,7 @@ class Feiv(Feols):
         Resolved typed demeaner configuration.
     weights_name : Optional[str]
         Name of the weights variable.
-    weights_type : Optional[str]
+    weights_type : WeightsTypeOptions
         Type of the weights variable. Either "aweights" for analytic weights
         or "fweights" for frequency weights.
 
@@ -190,7 +191,7 @@ class Feiv(Feols):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: Literal[

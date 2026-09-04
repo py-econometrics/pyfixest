@@ -23,6 +23,7 @@ from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     EstimatorKind,
     SolverOptions,
+    WeightsTypeOptions,
 )
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -80,7 +81,7 @@ class Fepois(Feglm):
         variables that need to be available in the formula environment.
     weights_name : Optional[str]
         Name of the weights variable.
-    weights_type : Optional[str]
+    weights_type : WeightsTypeOptions
         Type of weights variable.
     _data: pd.DataFrame
         The data frame used in the estimation. Deleted if arguments `lean = True`
@@ -129,7 +130,7 @@ class Fepois(Feglm):
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
-        weights_type: str | None,
+        weights_type: WeightsTypeOptions,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
