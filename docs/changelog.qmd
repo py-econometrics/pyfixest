@@ -41,6 +41,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   also refresh `pixi.lock` in the newer v7 format. Both ask for pixi 0.71.0 or
   newer.
 
+### Documentation
+
+- The Standard Errors & Inference tutorial now documents IID,
+  heteroskedasticity-robust, clustered, HAC, bootstrap, and randomization-based
+  inference with executed examples and explicit support limits. The `fepois`
+  docstring no longer claims wild-bootstrap support.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
