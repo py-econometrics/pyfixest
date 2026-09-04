@@ -47,6 +47,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   heteroskedasticity-robust, clustered, HAC, bootstrap, and randomization-based
   inference with executed examples and explicit support limits. The `fepois`
   docstring no longer claims wild-bootstrap support.
+- An executed cheat sheet (`cheatsheet.qmd`) replaces the hand-maintained skill
+  text: every formula, `vcov` spelling, and unsupported combination on it runs
+  at render time.
 
 ### Inference Types
 
