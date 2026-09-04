@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -694,13 +694,14 @@ def _coefplot_matplotlib(
     if ax is None:
         f, ax = plt.subplots(figsize=figsize, **fig_kwargs)
     else:
-        f = ax.get_figure()
+        # An Axes drawn by matplotlib always belongs to a figure.
+        f = cast("plt.Figure", ax.get_figure())
 
     # Check if we have multiple models
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging
