@@ -60,11 +60,9 @@ shared estimator API
   -> prepare_model_matrix
   -> estimator-specific get_fit
        -> feols / feiv
-            -> demean
-            -> to_array
-            -> drop_multicol_vars
-            -> wls_transform
-            -> solve OLS / 2SLS
+            -> construct within-scale arrays
+            -> drop collinear columns
+            -> solve OLS / 2SLS with local weight transforms
        -> fepois / feglm
             -> IRLS with weighted demeaning and solving inside each iteration
        -> quantreg
@@ -218,20 +216,47 @@ not replace canonical within data. A fitted result may still expose explicitly
 in-place post-estimation operations, but those operations must not repurpose
 estimation fields.
 
-## Implemented linear array and weight domains
+## Implemented array and weight domains
 
-Linear estimators retain formula tables, user-scale `ObservationWeights`, and
-unpremultiplied `WithinLinearData` as distinct state. For IV models, `design`
-is the full structural regressor matrix and `instruments` is the full
-instrument matrix, including exogenous regressors that instrument themselves.
-OLS and IV primitives create square-root-weighted arrays only as solver-local
-temporaries; persisted residuals remain in response units, while scores and
-cross-products contain the full observation weights required by their
-estimating equations.
+The shared linear path now implements the vocabulary above with frozen, slotted
+state values. Frozen state prevents field rebinding, but contained NumPy arrays
+remain mutable unless they are explicitly marked read-only:
 
-Frozen state objects prevent field rebinding, but their NumPy arrays remain
-element-mutable unless separately marked read-only. The shared demeaning cache
-does mark published buffers read-only because they are shared across fits.
+| State | Persisted contract |
+|---|---|
+| `ModelMatrix` | Formula-materialized pandas tables remain on formula scale and keep dependent, independent, fixed-effect, IV, weight, and offset roles separate. |
+| `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
+| `WithinLinearData` | Unpremultiplied within-scale arrays, with response, design, instruments, and endogenous variables in named roles. |
+| `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
+
+Analytic weights keep the retained row count as the effective sample size;
+frequency weights use the sum of their user-scale values. Probability weights
+(`pweights`) remain unsupported. Fixed-effect projection may use observation
+weights, but the returned arrays remain within scale. OLS and IV fit primitives
+create square-root-weighted design and response arrays only as local solver
+temporaries. They persist response-unit residuals and weighted scores or
+cross-products, not solver-scale copies of canonical data.
+
+`ccv()` explicitly rejects weighted models. `update()` can compute and return
+coefficient-only Sherman-Morrison updates for unweighted, non-IV OLS without
+fixed effects, but rejects `inplace=True`: design rows alone cannot reconstruct
+the complete formula, prediction, inference, and performance state of a fitted
+result.
+
+Post-estimation paths reject the estimators they cannot represent instead of
+reading their arrays as OLS state. Non-Poisson GLMs reject `CRV3` until their
+leave-cluster-out refits can retain the original family and solver
+configuration; Poisson keeps its longstanding jackknife-refit path.
+Randomization inference rejects non-OLS/non-Poisson results, and the wild
+bootstrap and `decompose()` reject non-OLS results, so none of them
+reinterprets GLM working state or quantile solver outputs as linear-model
+arrays. Weighted `fixef()` stores `_sumFE` in
+response units, and `IV_Diag()` leaves the outer model's covariance label
+untouched.
+
+Keeping canonical arrays unpremultiplied favors readability without moving
+weight work out of the numerical hot path: each solver still performs the same
+vectorized square-root transform locally.
 
 ## Repository map and extension seams
 
@@ -258,21 +283,6 @@ A model method validates inputs, unpacks model state, calls a module-level
 function with keyword arguments, and stores or returns the result. Numerical
 functions operate on arrays and return small typed dataclasses whose docstrings
 state array shapes.
-
-`ccv()` explicitly rejects weighted models. `update()` can compute and return
-coefficient-only Sherman-Morrison updates for unweighted, non-IV OLS without
-fixed effects, but rejects `inplace=True`: design rows alone cannot reconstruct
-the complete formula, prediction, inference, and performance state of a fitted
-result.
-
-Post-estimation paths reject the estimators they cannot represent instead of
-reading their arrays as OLS state. Non-Poisson GLMs reject `CRV3` until their
-leave-cluster-out refits can retain the original family and solver
-configuration; Poisson keeps its longstanding jackknife-refit path.
-Randomization inference rejects non-OLS/non-Poisson results, and the wild
-bootstrap and `decompose()` reject non-OLS results, so none of them
-reinterprets GLM working state or quantile solver outputs as linear-model
-arrays.
 
 Every estimator or inference feature specifies behavior for weights, fixed
 effects, IV, multiple estimation, `lean=True`, and `store_data=False`.
