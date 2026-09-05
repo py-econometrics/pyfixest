@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,6 +29,45 @@ class ClusterPrep:
     G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
     k_fe_nested: int
     n_fe_fully_nested: int
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class HacMetadata:
+    "Metadata needed to describe and recompute a HAC covariance estimate."
+
+    lag: int | None
+    time_id: str
+    panel_id: str | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class GeneratorState:
+    "Copied bit-generator state advanced by staged covariance computation."
+
+    state: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InferenceState:
+    "Complete covariance and derived-inference state prepared for publication."
+
+    vcov_type: str
+    vcov_type_detail: str
+    is_clustered: bool
+    clustervar: list[str]
+    G: list[int]
+    bread: np.ndarray
+    ssc: np.ndarray
+    vcov: np.ndarray
+    df_k: int
+    df_t: int | float
+    se: np.ndarray
+    tstat: np.ndarray
+    pvalue: np.ndarray
+    conf_int: np.ndarray
+    cluster_df: pd.DataFrame | None
+    hac: HacMetadata | None
+    generator: GeneratorState | None
 
 
 def prepare_cluster_state(

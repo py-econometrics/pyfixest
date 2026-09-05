@@ -17,8 +17,8 @@ class InferenceDist:
     The `df_t` argument is ignored for the normal distribution.
     """
 
-    pvalue: Callable[[np.ndarray, int], np.ndarray]
-    crit_val: Callable[[float, int], float]
+    pvalue: Callable[[np.ndarray, int | float], np.ndarray]
+    crit_val: Callable[[float, int | float], float]
 
 
 T_DIST = InferenceDist(

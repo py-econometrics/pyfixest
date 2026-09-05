@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import warnings
 from collections.abc import Mapping
+from copy import copy as shallow_copy
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
@@ -60,6 +61,9 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    GeneratorState,
+    HacMetadata,
+    InferenceState,
     _compute_bread,
     prepare_cluster_state,
     run_crv_loop,
@@ -287,7 +291,7 @@ class BaseRegression(TidyColumnAccessors):
     _N: int | float
     _N_rows: int
     _k: int
-    _df_t: int
+    _df_t: int | float
     _vcov: NDArray[np.float64]
     _beta_hat: NDArray[np.float64]
     _u_hat: NDArray[np.float64]
@@ -895,6 +899,17 @@ class BaseRegression(TidyColumnAccessors):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        state = self._prepare_vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+        self._apply_vcov(state)
+        return self
+
+    def _prepare_vcov(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+    ) -> InferenceState:
+        """Compute a complete inference update without mutating this result."""
         self._require_fit_arrays(
             "vcov",
             arrays="the required estimation arrays",
@@ -911,6 +926,8 @@ class BaseRegression(TidyColumnAccessors):
         vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
             vcov, self._has_fixef, self._is_iv
         )
+        vcov_type_detail = cast(str, vcov_type_detail)
+        clustervar = [] if clustervar is None else clustervar
 
         # Reject before any inference state is overwritten, so a failed update
         # leaves the previous covariance estimate intact.
@@ -920,10 +937,60 @@ class BaseRegression(TidyColumnAccessors):
                 remedy="Refit with store_data=True and lean=False.",
             )
 
+        self._require_vcov_support(
+            vcov_type=vcov_type,
+            vcov_type_detail=vcov_type_detail,
+        )
+
+        staged = self._vcov_staging_copy()
+        staged._compute_vcov(
+            vcov_type=vcov_type,
+            vcov_type_detail=vcov_type_detail,
+            is_clustered=is_clustered,
+            clustervar=clustervar,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        return staged._capture_inference_state()
+
+    def _require_vcov_support(
+        self,
+        *,
+        vcov_type: str,
+        vcov_type_detail: str,
+    ) -> None:
+        """Reject unsupported covariance requests before staging any work."""
+        if vcov_type == "HAC":
+            self._require_support("hac", subject="HAC inference (NW, DK)")
+        elif vcov_type_detail == "CRV3":
+            self._require_support("crv3", subject="CRV3 inference")
+        elif vcov_type == "nid":
+            self._require_support("nid", subject="'nid' inference")
+
+    def _vcov_staging_copy(self) -> BaseRegression:
+        """Return a shallow private copy whose inference fields may be replaced."""
+        return shallow_copy(self)
+
+    def _compute_vcov(
+        self,
+        *,
+        vcov_type: str,
+        vcov_type_detail: str,
+        is_clustered: bool,
+        clustervar: list[str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: pd.DataFrame | None,
+    ) -> None:
+        """Compute covariance and inference in place on a private staging copy."""
         self._vcov_type = vcov_type
         self._vcov_type_detail = vcov_type_detail
         self._is_clustered = is_clustered
         self._clustervar = clustervar
+        self._G = []
+        self._cluster_df = None
+        self._lag = None
+        self._time_id = None
+        self._panel_id = None
 
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
@@ -983,7 +1050,65 @@ class BaseRegression(TidyColumnAccessors):
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
-        return self
+    def _capture_inference_state(self) -> InferenceState:
+        """Return the completed staged fields as one publication payload."""
+        hac = (
+            HacMetadata(
+                lag=cast(int | None, self._lag),
+                time_id=cast(str, self._time_id),
+                panel_id=cast(str | None, self._panel_id),
+            )
+            if self._vcov_type == "HAC"
+            else None
+        )
+        return InferenceState(
+            vcov_type=self._vcov_type,
+            vcov_type_detail=self._vcov_type_detail,
+            is_clustered=self._is_clustered,
+            clustervar=list(self._clustervar),
+            G=list(self._G),
+            bread=self._bread,
+            ssc=self._ssc,
+            vcov=self._vcov,
+            df_k=self._df_k,
+            df_t=self._df_t,
+            se=self._se,
+            tstat=self._tstat,
+            pvalue=self._pvalue,
+            conf_int=self._conf_int,
+            cluster_df=self._cluster_df,
+            hac=hac,
+            generator=self._capture_vcov_generator_state(),
+        )
+
+    def _capture_vcov_generator_state(self) -> GeneratorState | None:
+        """Return estimator-specific random state advanced during staging."""
+        return None
+
+    def _apply_vcov_generator_state(self, state: GeneratorState | None) -> None:
+        """Publish estimator-specific random state after successful staging."""
+
+    def _apply_vcov(self, state: InferenceState) -> None:
+        """Publish one fully prepared inference update on this fitted result."""
+        self._apply_vcov_generator_state(state.generator)
+        self._vcov_type = state.vcov_type
+        self._vcov_type_detail = state.vcov_type_detail
+        self._is_clustered = state.is_clustered
+        self._clustervar = state.clustervar
+        self._G = state.G
+        self._bread = state.bread
+        self._ssc = state.ssc
+        self._vcov = state.vcov
+        self._df_k = state.df_k
+        self._df_t = state.df_t
+        self._se = state.se
+        self._tstat = state.tstat
+        self._pvalue = state.pvalue
+        self._conf_int = state.conf_int
+        self._cluster_df = state.cluster_df
+        self._lag = None if state.hac is None else state.hac.lag
+        self._time_id = None if state.hac is None else state.hac.time_id
+        self._panel_id = None if state.hac is None else state.hac.panel_id
 
     def _make_ssc_kwargs(
         self,

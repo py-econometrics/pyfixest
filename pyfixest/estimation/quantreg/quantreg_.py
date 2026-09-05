@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from functools import partial
+from types import MethodType
 from typing import Any, ClassVar, cast
 
 import numpy as np
@@ -17,6 +21,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import GeneratorState
 from pyfixest.estimation.models.base_regression_ import BaseRegression
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -455,6 +460,44 @@ class Quantreg(BaseRegression):
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )
+
+    def _vcov_staging_copy(self) -> Quantreg:
+        """Copy the NID solver callback and its RNG for transactional staging."""
+        staged = cast("Quantreg", super()._vcov_staging_copy())
+        fit = self._fit
+        if not isinstance(fit, partial):
+            return staged
+
+        keywords = dict(fit.keywords or {})
+        rng = keywords.get("rng")
+        if isinstance(rng, np.random.Generator):
+            keywords["rng"] = deepcopy(rng)
+
+        fit_function = fit.func
+        if isinstance(fit_function, MethodType) and fit_function.__self__ is self:
+            fit_function = getattr(staged, fit_function.__name__)
+        staged._fit = partial(fit_function, *fit.args, **keywords)
+        return staged
+
+    def _capture_vcov_generator_state(self) -> GeneratorState | None:
+        """Capture a staged PFN generator without exposing its mutable object."""
+        fit = self._fit
+        if not isinstance(fit, partial):
+            return None
+        rng = (fit.keywords or {}).get("rng")
+        if not isinstance(rng, np.random.Generator):
+            return None
+        return GeneratorState(state=deepcopy(rng.bit_generator.state))
+
+    def _apply_vcov_generator_state(self, state: GeneratorState | None) -> None:
+        """Advance the original PFN generator only after covariance succeeds."""
+        if state is None:
+            return
+        fit = self._fit
+        assert isinstance(fit, partial)
+        rng = (fit.keywords or {}).get("rng")
+        assert isinstance(rng, np.random.Generator)
+        rng.bit_generator.state = deepcopy(state.state)
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         """

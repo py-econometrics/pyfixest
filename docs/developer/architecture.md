@@ -166,8 +166,13 @@ runner then mutates the model through preparation, fitting, covariance
 calculation, inference, performance statistics or IV first stages, and finally
 `_clear_attributes()`. `store_data=False` deletes `_data`; `lean=True` deletes
 the retained matrices and several fit products. The public `vcov()` method is
-intentionally in-place and remains a post-fit mutation boundary. User input is
-copied by default, with the documented `copy_data=False` path as the exception.
+intentionally in-place and remains a post-fit mutation boundary. It computes a
+complete typed inference state on a private staging copy before publishing any
+fields. Multiple-estimation containers prepare every child's update before
+publishing the first, so validation or numerical failure preserves all prior
+covariance metadata, derived inference, and quantile-solver random state.
+User input is copied by default, with the documented `copy_data=False` path as
+the exception.
 
 ## Formula-state and lifecycle boundaries
 
