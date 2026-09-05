@@ -224,6 +224,7 @@ def run_crv3_poisson():
 
 
 def test_fepois_crv3_replays_estimation_contract(monkeypatch):
+    """Poisson jackknife refits must preserve every coefficient-affecting option."""
     rng = np.random.default_rng(20260901)
     n_clusters = 6
     rows_per_cluster = 12
@@ -233,11 +234,12 @@ def test_fepois_crv3_replays_estimation_contract(monkeypatch):
     x = rng.normal(size=n)
     exposure = rng.uniform(0.5, 3.0, size=n)
     weight = rng.uniform(0.75, 1.5, size=n)
+    fixed_effect_value = np.linspace(-0.25, 0.25, 6)[fixed_effect]
 
     def shift(values):
         return values + 0.125
 
-    eta = 0.35 * shift(x) + np.linspace(-0.25, 0.25, 6)[fixed_effect] + np.log(exposure)
+    eta = 0.35 * shift(x) + fixed_effect_value + np.log(exposure)
     data = pd.DataFrame(
         {
             "y": rng.poisson(np.exp(eta)),
@@ -248,17 +250,21 @@ def test_fepois_crv3_replays_estimation_contract(monkeypatch):
             "cluster": cluster,
         }
     )
+
     demeaner = MapDemeaner(fixef_tol=1e-8, fixef_maxiter=20_000)
     ssc_config = ssc(k_adj=False, G_adj=False)
     real_fepois = estimation.fepois
     refit_calls = []
+    beta_jack = []
 
     def recording_fepois(*, data, **kwargs):
         refit_calls.append((data, kwargs))
-        return real_fepois(data=data, **kwargs)
+        refit = real_fepois(data=data, **kwargs)
+        beta_jack.append(refit.coef().to_numpy())
+        return refit
 
     monkeypatch.setattr(estimation, "fepois", recording_fepois)
-    real_fepois(
+    fit = real_fepois(
         "y ~ shift(x) | fixed_effect",
         data=data,
         vcov={"CRV3": "cluster"},
@@ -280,14 +286,31 @@ def test_fepois_crv3_replays_estimation_contract(monkeypatch):
     assert len(refit_calls) == n_clusters
     for refit_data, kwargs in refit_calls:
         assert refit_data["cluster"].nunique() == n_clusters - 1
+        assert kwargs["fml"] == "y ~ shift(x) | fixed_effect"
+        assert kwargs["vcov"] == "iid"
         assert kwargs["weights"] == "weight"
+        assert kwargs["weights_type"] == "aweights"
         assert kwargs["ssc"] == ssc_config
+        assert kwargs["fixef_rm"] == "none"
+        assert kwargs["iwls_tol"] == 1e-10
+        assert kwargs["iwls_maxiter"] == 100
+        assert kwargs["collin_tol"] == 1e-8
+        assert kwargs["separation_check"] == []
+        assert kwargs["solver"] == "np.linalg.lstsq"
         assert kwargs["demeaner"] is demeaner
+        assert kwargs["drop_intercept"] is True
         assert kwargs["offset"] == "log(exposure)"
         assert kwargs["context"]["shift"] is shift
 
+    expected_vcov = np.zeros_like(fit._vcov)
+    for beta in beta_jack:
+        centered = beta - fit.coef().to_numpy()
+        expected_vcov += np.outer(centered, centered)
+    np.testing.assert_allclose(fit._vcov, expected_vcov, rtol=1e-12, atol=1e-12)
+
 
 def test_crv3_rebuilds_preconditioner_for_each_changed_design():
+    """Leave-cluster-out refits must not reuse a full-sample factorization."""
     rng = np.random.default_rng(20260902)
     n_groups = 6
     rows_per_group = 6
@@ -307,7 +330,10 @@ def test_crv3_rebuilds_preconditioner_for_each_changed_design():
         demeaner=LsmrDemeaner(backend="within"),
     )
     assert base.preconditioner is not None
-    reused = LsmrDemeaner(backend="within", preconditioner=base.preconditioner)
+    reused = LsmrDemeaner(
+        backend="within",
+        preconditioner=base.preconditioner,
+    )
 
     fit = feols(
         "y ~ x | group + time",
@@ -315,6 +341,7 @@ def test_crv3_rebuilds_preconditioner_for_each_changed_design():
         vcov={"CRV3": "group"},
         demeaner=reused,
     )
+
     assert np.isfinite(fit._vcov).all()
 
 

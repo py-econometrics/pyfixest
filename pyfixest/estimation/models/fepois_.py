@@ -208,12 +208,6 @@ class Fepois(Feglm):
             y_orig, self._Y_hat_response, poisson_summary_weights
         )
 
-    def _clear_attributes(self) -> None:
-        """Apply GLM cleanup and discard the Poisson null-fit array when lean."""
-        super()._clear_attributes()
-        if self._lean and hasattr(self, "_y_hat_null"):
-            del self._y_hat_null
-
     def _estimation_refit_kwargs(self) -> dict[str, Any]:
         """Return the full Poisson estimation contract for data-changing refits."""
         kwargs = super()._estimation_refit_kwargs()
@@ -233,6 +227,7 @@ class Fepois(Feglm):
 
     def _crv3_refit(self, data: pd.DataFrame) -> Fepois:
         """Replay Poisson estimation for one leave-one-cluster-out sample."""
+        # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
         return fixest_module.fepois(
             fml=self._fml,
@@ -240,6 +235,12 @@ class Fepois(Feglm):
             vcov="iid",
             **self._estimation_refit_kwargs(),
         )
+
+    def _clear_attributes(self) -> None:
+        """Apply GLM cleanup and discard the Poisson null-fit array when lean."""
+        super()._clear_attributes()
+        if self._lean and hasattr(self, "_y_hat_null"):
+            del self._y_hat_null
 
     def predict(
         self,
