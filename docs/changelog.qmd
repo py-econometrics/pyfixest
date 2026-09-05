@@ -36,6 +36,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   directory, avoiding repeated font-cache rebuilds across fresh test processes.
 - We add a release contract, `pixi run -e py312 test-release-contract`, that
   compares `feols` / `fepois` / `feglm` / `quantreg` against pyfixest 0.60.0.
+- Permanent R references now compare frequency-weighted Gaussian, logit, and
+  probit GLMs with literal row expansion across fixed effects, covariance
+  estimators, small-sample corrections, and separation-filtered samples.
 - The `benchmark` environment now declares its CUDA 12.8 requirement on a named
   platform, because pixi has deprecated the `[system-requirements]` table. We
   also refresh `pixi.lock` in the newer v7 format. Both ask for pixi 0.71.0 or

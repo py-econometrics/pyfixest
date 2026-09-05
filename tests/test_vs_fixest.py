@@ -29,6 +29,7 @@ from tests._feols_test_cases import (
 fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
+sandwich = importr("sandwich")
 
 # note: tolerances are lowered below for
 # fepois inference as it is not as precise as feols
@@ -109,6 +110,32 @@ def _make_frequency_weighted_linear_data():
     return data
 
 
+@pytest.fixture(scope="module")
+def frequency_weighted_glm_data():
+    """Return aggregate GLM data and its literal frequency expansion."""
+    rng = np.random.default_rng(20260905)
+    n = 240
+    x = rng.normal(size=n)
+    data = pd.DataFrame(
+        {
+            "x": x,
+            "fe": np.repeat(np.arange(12), 20),
+            "fe2": np.tile(np.arange(5), 48),
+            "cluster": np.tile(np.arange(16), 15),
+            "fweights": rng.integers(1, 6, size=n),
+        }
+    )
+    linear_predictor = 0.2 + 0.4 * x + 0.08 * data["fe"]
+    data["ybin"] = rng.binomial(1, 1 / (1 + np.exp(-linear_predictor)))
+    data["ycont"] = 0.4 * x + 0.1 * data["fe"] + rng.normal(size=n)
+    expanded = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    return data, expanded
+
+
 rng = np.random.default_rng(8760985)
 
 
@@ -152,6 +179,44 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     r_idx = r_names.index(r_name)
     r_vcov = np.array(stats.vcov(r_model))[r_idx, r_idx]
     return py_vcov, r_vcov
+
+
+def _get_named_r_coef_vcov(
+    py_model, r_model, name_map=None, vcov_matrix=None, vcov_names=None
+):
+    """Align R coefficients and covariance to a pyfixest model's names."""
+    ro.globalenv[".named_r_fit"] = r_model
+    if vcov_matrix is None:
+        vcov_names = list(ro.r("rownames(vcov(.named_r_fit))"))
+        vcov_matrix = stats.vcov(r_model)
+    assert vcov_names is not None, "Covariance names must accompany an external matrix"
+    coefficient_names = list(ro.r("names(coef(.named_r_fit))"))
+    py_names = list(py_model.coef().index)
+    name_map = {"Intercept": "(Intercept)", **(name_map or {})}
+    mapped_names = [name_map.get(name, name) for name in py_names]
+    assert len(mapped_names) == len(set(mapped_names)), (
+        "Mapped pyfixest names are not unique"
+    )
+    assert len(coefficient_names) == len(set(coefficient_names)), (
+        "R coefficient names are not unique"
+    )
+    assert len(vcov_names) == len(set(vcov_names)), "R covariance names are not unique"
+    assert set(mapped_names) == set(coefficient_names), (
+        f"Coefficient name mismatch: pyfixest={mapped_names}, R={coefficient_names}"
+    )
+    assert set(mapped_names) == set(vcov_names), (
+        f"Covariance name mismatch: pyfixest={mapped_names}, R={vcov_names}"
+    )
+    coef_order = [coefficient_names.index(name) for name in mapped_names]
+    vcov_order = [vcov_names.index(name) for name in mapped_names]
+    coefficient = np.asarray(stats.coef(r_model))[coef_order]
+    covariance = np.asarray(vcov_matrix)[np.ix_(vcov_order, vcov_order)]
+    return coefficient, covariance
+
+
+def _expanded_row_positions(fweights):
+    """Return the first expanded-row position for each aggregate observation."""
+    return np.concatenate(([0], np.cumsum(np.asarray(fweights)[:-1])))
 
 
 # What is being tested in all tests:
@@ -610,38 +675,285 @@ def test_frequency_weighted_linear_models_against_fixest(fml):
     )
     r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
 
-    ro.globalenv[".fweight_r_fit"] = r_fit
-    r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
-    r_vcov_names = list(ro.r("rownames(vcov(.fweight_r_fit))"))
-    py_coefficient_names = list(py_fit.coef().index)
     is_iv = "d ~ z" in fml
-    r_name_by_py_name = {
-        "Intercept": "(Intercept)",
-        "d": "fit_d" if is_iv else "d",
-    }
-    r_order = [
-        r_coefficient_names.index(r_name_by_py_name.get(name, name))
-        for name in py_coefficient_names
-    ]
-    r_vcov_order = [
-        r_vcov_names.index(r_name_by_py_name.get(name, name))
-        for name in py_coefficient_names
-    ]
+    name_map = {"d": "fit_d"} if is_iv else None
+    r_coefficient, r_covariance = _get_named_r_coef_vcov(py_fit, r_fit, name_map)
 
     np.testing.assert_allclose(
         py_fit.coef().to_numpy(),
-        np.asarray(stats.coef(r_fit))[r_order],
+        r_coefficient,
         rtol=0,
         atol=1e-8,
         err_msg="Fweight coefficients differ from the R fixest literal expansion",
     )
     np.testing.assert_allclose(
         py_fit._vcov,
-        np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
+        r_covariance,
         rtol=0,
         atol=1e-7,
         err_msg="Fweight covariance differs from the R fixest literal expansion",
     )
+
+
+# External references recorded with R 4.5.3, fixest 0.14.0, and sandwich 3.1-1.
+# Tight IWLS/FE controls isolate the remaining probit difference to fixest's
+# stopping point: dense stats::glm was 1.91e-8 from fixest and 1.2e-9 from
+# pyfixest in the single-FE diagnostic. Across this matrix the largest probit
+# coefficient difference is 2.82e-8 in the two-FE case.
+_FWEIGHT_GLM_COEF_ATOL = {"logit": 1e-8, "probit": 4e-8, "gaussian": 1e-8}
+_FWEIGHT_GLM_VCOV_ATOL = 1e-7
+_FWEIGHT_GLM_VALUE_ATOL = 1e-5
+_FWEIGHT_GLM_HC_VCOV_ATOL = 1e-9
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian"])
+@pytest.mark.parametrize(
+    "fixed_effects", ["", " | fe", " | fe + fe2"], ids=["no-fe", "one-fe", "two-fe"]
+)
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "cluster"])
+def test_frequency_weighted_glms_against_literal_expansion(
+    frequency_weighted_glm_data, family, fixed_effects, vcov
+):
+    """Compare fweight GLMs with literal expansion in R fixest across 54 cases.
+
+    Gaussian GLM inference follows the documented OLS contract, so its external
+    reference is ``fixest::feols`` rather than ``fixest::feglm``.
+    """
+    data, expanded = frequency_weighted_glm_data
+    response = "ycont" if family == "gaussian" else "ybin"
+    fml = f"{response} ~ x{fixed_effects}"
+    py_vcov = {"CRV1": "cluster"} if vcov == "cluster" else vcov
+    r_vcov = ro.Formula("~cluster") if vcov == "cluster" else vcov
+    positions = _expanded_row_positions(data["fweights"])
+    sample = np.array([0, 17, 83, 159, 239])
+
+    for adjust in (True, False):
+        case = f"family={family}, vcov={vcov}, k_adj=G_adj={adjust}"
+        py_fit = pf.feglm(
+            fml,
+            data=data,
+            family=family,
+            weights="fweights",
+            weights_type="fweights",
+            vcov=py_vcov,
+            ssc=ssc(k_adj=adjust, G_adj=adjust),
+            iwls_tol=1e-15,
+            iwls_maxiter=100,
+            demeaner=pf.MapDemeaner(fixef_tol=1e-12),
+        )
+        r_kwargs = {
+            "data": expanded,
+            "vcov": r_vcov,
+            "ssc": fixest.ssc(adjust, "nonnested", False, adjust, "min", "min"),
+        }
+        if family == "gaussian":
+            r_fit = fixest.feols(ro.Formula(fml), **r_kwargs)
+        else:
+            r_fit = fixest.feglm(
+                ro.Formula(fml),
+                family=stats.binomial(link=family),
+                glm_tol=2.3e-13,
+                glm_iter=100,
+                fixef_tol=3e-12,
+                **r_kwargs,
+            )
+        r_coefficient, r_covariance = _get_named_r_coef_vcov(py_fit, r_fit)
+        ro.globalenv[".fweight_glm_fit"] = r_fit
+
+        np.testing.assert_allclose(
+            py_fit.coef(),
+            r_coefficient,
+            rtol=0,
+            atol=_FWEIGHT_GLM_COEF_ATOL[family],
+            err_msg=f"Coefficient mismatch for {case}",
+        )
+        np.testing.assert_allclose(
+            py_fit._vcov,
+            r_covariance,
+            rtol=0,
+            atol=_FWEIGHT_GLM_VCOV_ATOL,
+            err_msg=f"Covariance mismatch for {case}",
+        )
+        assert py_fit._N == int(stats.nobs(r_fit)[0]) == len(expanded)
+        assert py_fit._df_k == ro.r('attr(.fweight_glm_fit$cov.scaled, "df.K")')[0]
+        assert py_fit._df_t == ro.r('attr(.fweight_glm_fit$cov.scaled, "df.t")')[0]
+
+        r_prediction = np.asarray(stats.predict(r_fit, type="response"))
+        r_residual = np.asarray(stats.residuals(r_fit))
+        np.testing.assert_allclose(
+            py_fit.predict(type="response")[sample],
+            r_prediction[positions[sample]],
+            rtol=0,
+            atol=_FWEIGHT_GLM_VALUE_ATOL,
+            err_msg=f"Response prediction mismatch for {case}",
+        )
+        np.testing.assert_allclose(
+            py_fit.resid()[sample],
+            r_residual[positions[sample]],
+            rtol=0,
+            atol=_FWEIGHT_GLM_VALUE_ATOL,
+            err_msg=f"Residual mismatch for {case}",
+        )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian"])
+@pytest.mark.parametrize("vcov", ["HC2", "HC3"])
+def test_frequency_weighted_glm_hc_against_sandwich(
+    frequency_weighted_glm_data, family, vcov
+):
+    """Compare no-FE fweight HC2/HC3 covariance with R sandwich."""
+    data, expanded = frequency_weighted_glm_data
+    response = "ycont" if family == "gaussian" else "ybin"
+    fml = f"{response} ~ x"
+    py_fit = pf.feglm(
+        fml,
+        data=data,
+        family=family,
+        weights="fweights",
+        weights_type="fweights",
+        vcov=vcov,
+        ssc=ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-15,
+        iwls_maxiter=100,
+    )
+    if family == "gaussian":
+        r_fit = stats.lm(ro.Formula(fml), data=expanded)
+    else:
+        r_fit = stats.glm(
+            ro.Formula(fml),
+            data=expanded,
+            family=stats.binomial(link=family),
+            control=stats.glm_control(epsilon=1e-15, maxit=100),
+        )
+    ro.globalenv[".fweight_hc_fit"] = r_fit
+    ro.globalenv[".fweight_hc_type"] = vcov
+    r_hc_vcov = ro.r("sandwich::vcovHC(.fweight_hc_fit, type = .fweight_hc_type)")
+    r_hc_names = list(
+        ro.r("rownames(sandwich::vcovHC(.fweight_hc_fit, type = .fweight_hc_type))")
+    )
+    r_coefficient, r_covariance = _get_named_r_coef_vcov(
+        py_fit, r_fit, vcov_matrix=r_hc_vcov, vcov_names=r_hc_names
+    )
+    case = f"family={family}, vcov={vcov}, k_adj=G_adj=False"
+
+    np.testing.assert_allclose(
+        py_fit.coef(),
+        r_coefficient,
+        rtol=0,
+        atol=_FWEIGHT_GLM_COEF_ATOL[family],
+        err_msg=f"Coefficient mismatch for {case}",
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        r_covariance,
+        rtol=0,
+        atol=_FWEIGHT_GLM_HC_VCOV_ATOL,
+        err_msg=f"Covariance mismatch for {case}",
+    )
+    assert py_fit._N == int(stats.nobs(r_fit)[0]) == len(expanded)
+    assert py_fit._df_k == len(r_coefficient)
+    assert py_fit._df_t == int(stats.df_residual(r_fit)[0])
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["logit", "probit"])
+def test_frequency_weighted_glm_separation_against_literal_expansion(
+    frequency_weighted_glm_data, family
+):
+    """Compare FE separation samples under aggregate and expanded fweights."""
+    data, _ = frequency_weighted_glm_data
+    data = data.copy()
+    data.loc[data["fe"] == 0, "ybin"] = 0
+    retained = data["fe"] != 0
+    retained_data = data.loc[retained]
+    retained_expanded = (
+        retained_data.loc[retained_data.index.repeat(retained_data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    expanded = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    positions = _expanded_row_positions(retained_data["fweights"])
+    sample = np.array([0, 17, 83, 159, 219])
+
+    for vcov in ("iid", "hetero", "cluster"):
+        case = f"family={family}, vcov={vcov}, k_adj=G_adj=True"
+        py_vcov = {"CRV1": "cluster"} if vcov == "cluster" else vcov
+        r_vcov = ro.Formula("~cluster") if vcov == "cluster" else vcov
+        py_fit = pf.feglm(
+            "ybin ~ x | fe",
+            data=data,
+            family=family,
+            weights="fweights",
+            weights_type="fweights",
+            vcov=py_vcov,
+            iwls_tol=1e-15,
+            iwls_maxiter=100,
+            separation_check=["fe"],
+            demeaner=pf.MapDemeaner(fixef_tol=1e-12),
+        )
+        r_fit = fixest.feglm(
+            ro.Formula("ybin ~ x | fe"),
+            data=expanded,
+            family=stats.binomial(link=family),
+            vcov=r_vcov,
+            glm_tol=2.3e-13,
+            glm_iter=100,
+            fixef_tol=3e-12,
+        )
+        r_coefficient, r_covariance = _get_named_r_coef_vcov(py_fit, r_fit)
+        ro.globalenv[".separated_fweight_glm_fit"] = r_fit
+
+        np.testing.assert_allclose(
+            py_fit.coef(),
+            r_coefficient,
+            rtol=0,
+            atol=_FWEIGHT_GLM_COEF_ATOL[family],
+            err_msg=f"Coefficient mismatch after separation for {case}",
+        )
+        np.testing.assert_allclose(
+            py_fit._vcov,
+            r_covariance,
+            rtol=0,
+            atol=_FWEIGHT_GLM_VCOV_ATOL,
+            err_msg=f"Covariance mismatch after separation for {case}",
+        )
+        assert py_fit._N_rows == len(retained_data) == 220
+        assert py_fit._N == int(stats.nobs(r_fit)[0]) == len(retained_expanded)
+        assert py_fit._na_index == frozenset(range(20))
+        assert (
+            py_fit._df_k
+            == ro.r('attr(.separated_fweight_glm_fit$cov.scaled, "df.K")')[0]
+        )
+        assert (
+            py_fit._df_t
+            == ro.r('attr(.separated_fweight_glm_fit$cov.scaled, "df.t")')[0]
+        )
+
+        r_prediction = np.asarray(
+            stats.predict(r_fit, newdata=retained_data, type="response")
+        )
+        r_residual = np.asarray(stats.residuals(r_fit))
+        assert len(r_residual) == len(retained_expanded)
+        np.testing.assert_allclose(
+            py_fit.predict(type="response")[sample],
+            r_prediction[sample],
+            rtol=0,
+            atol=_FWEIGHT_GLM_VALUE_ATOL,
+            err_msg=f"Response prediction mismatch after separation for {case}",
+        )
+        np.testing.assert_allclose(
+            py_fit.resid()[sample],
+            r_residual[positions[sample]],
+            rtol=0,
+            atol=_FWEIGHT_GLM_VALUE_ATOL,
+            err_msg=f"Residual mismatch after separation for {case}",
+        )
 
 
 @pytest.mark.against_r_core
