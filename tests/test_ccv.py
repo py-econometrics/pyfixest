@@ -203,3 +203,23 @@ def test_against_stata(data):
 
     assert np.abs(res_ccv4["2.5%"] - 0.428) < 1e-02
     assert np.abs(res_ccv4["97.5%"] - 0.503) < 1e-02
+
+
+@pytest.mark.parametrize("switch_from_crv", [False, True])
+def test_ccv_without_cluster_raises_after_nonclustered_inference(switch_from_crv):
+    """CCV requires an explicit cluster after IID inference is published."""
+    rng = np.random.default_rng(20260905)
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=24),
+            "treatment": np.tile([0, 1], 12),
+            "cluster": np.repeat(np.arange(6), 4),
+        }
+    )
+    vcov = {"CRV1": "cluster"} if switch_from_crv else "iid"
+    fit = feols("y ~ treatment", data=data, vcov=vcov)
+    if switch_from_crv:
+        fit.vcov("iid")
+
+    with pytest.raises(ValueError, match="No cluster variable found in the model fit"):
+        fit.ccv(treatment="treatment")

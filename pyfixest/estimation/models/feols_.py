@@ -491,7 +491,7 @@ class Feols(BaseRegression):
         self._require_estimation_data("ccv")
 
         if cluster is None:
-            if self._clustervar is None:
+            if not self._clustervar:
                 raise ValueError("No cluster variable found in the model fit.")
             elif len(self._clustervar) > 1:
                 raise ValueError(
