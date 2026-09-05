@@ -173,6 +173,7 @@ def test_fepois_ritest():
 
 
 def test_fepois_slow_ritest_replays_estimation_contract(monkeypatch):
+    """Poisson RI refits must retain offsets, formula context, and fit options."""
     import pyfixest.estimation as estimation
 
     data = pf.get_data(model="Fepois").dropna().iloc[:96].copy()
@@ -200,6 +201,7 @@ def test_fepois_slow_ritest_replays_estimation_contract(monkeypatch):
         drop_intercept=True,
         context={"shift": shift},
     )
+
     refit_calls = []
 
     def recording_fepois(fml, *, data, vcov, **kwargs):
@@ -218,8 +220,17 @@ def test_fepois_slow_ritest_replays_estimation_contract(monkeypatch):
     for fml, vcov, kwargs in refit_calls:
         assert fml == "Y ~ treatment_resampled + shift(X1) | f1"
         assert vcov == "iid"
+        assert kwargs["weights"] is None
+        assert kwargs["weights_type"] == "aweights"
         assert kwargs["ssc"] == ssc_config
+        assert kwargs["fixef_rm"] == "none"
+        assert kwargs["iwls_tol"] == 1e-10
+        assert kwargs["iwls_maxiter"] == 100
+        assert kwargs["collin_tol"] == 1e-8
+        assert kwargs["separation_check"] == []
+        assert kwargs["solver"] == "np.linalg.lstsq"
         assert kwargs["demeaner"] is demeaner
+        assert kwargs["drop_intercept"] is True
         assert kwargs["offset"] == "log(exposure)"
         assert kwargs["context"]["shift"] is shift
 

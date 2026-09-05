@@ -64,7 +64,8 @@ def _get_ritest_stats_slow(
     vcov : str or dict[str, str]
         The type of covarianc estimator. See `feols` or `fepois` for details.
     refit_kwargs : dict, optional
-        Estimator options to replay on each resampled data set.
+        Estimator options from the original fit that must be replayed on each
+        resampled data set. Defaults to no additional options.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
