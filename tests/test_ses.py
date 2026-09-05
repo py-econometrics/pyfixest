@@ -1,11 +1,18 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest.estimation as estimation
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
+from pyfixest.errors import MatrixNotFullRankError
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
+from tests.test_estimator_state_lifecycle import (
+    _assert_inference_unchanged,
+    _snapshot_inference,
+)
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
@@ -343,6 +350,98 @@ def test_crv3_rebuilds_preconditioner_for_each_changed_design():
     )
 
     assert np.isfinite(fit._vcov).all()
+
+
+def _crv3_rank_loss_data() -> pd.DataFrame:
+    """Build a sample where omitting cluster zero makes z collinear with x."""
+    rng = np.random.default_rng(1499)
+    n = 120
+    cluster = np.repeat(np.arange(6), 20)
+    x = rng.normal(size=n)
+    z = x + 1e-5 * rng.normal(size=n)
+    z[cluster == 0] += rng.normal(size=20)
+    return pd.DataFrame(
+        {
+            "y": 0.5 * x + 2 * z + rng.normal(scale=0.01, size=n),
+            "x": x,
+            "z": z,
+            "fixed_effect": np.tile(np.arange(4), 30),
+            "cluster": cluster,
+        }
+    )
+
+
+def test_crv3_rejects_leave_cluster_out_coefficient_mismatch():
+    """CRV3 must not broadcast a rank-deficient refit's coefficients."""
+    data = _crv3_rank_loss_data()
+    error = (
+        r"omitting cluster .*0.*missing terms: \['z'\]; "
+        r"unexpected terms: \[\]"
+    )
+
+    with pytest.raises(MatrixNotFullRankError, match=error):
+        feols(
+            "y ~ x + z | fixed_effect",
+            data=data,
+            vcov={"CRV3": "cluster"},
+            collin_tol=1e-4,
+        )
+
+    fit = feols(
+        "y ~ x + z | fixed_effect",
+        data=data,
+        vcov="iid",
+        collin_tol=1e-4,
+    )
+    before = _snapshot_inference(fit)
+    with pytest.raises(MatrixNotFullRankError, match=error):
+        fit.vcov({"CRV3": "cluster"})
+    _assert_inference_unchanged(fit, before)
+
+
+def test_crv3_aligns_refit_coefficient_names(monkeypatch):
+    """Slow CRV3 aligns names and rejects unexpected or duplicate terms."""
+    data = _crv3_rank_loss_data()
+    fit = feols(
+        "y ~ x + z | fixed_effect",
+        data=data,
+        vcov="iid",
+        collin_tol=1e-4,
+    )
+    refit_coefs = []
+
+    def reordered_refit(*, data):
+        i = len(refit_coefs)
+        coef = pd.Series([20.0 + i, 10.0 + i], index=["z", "x"])
+        refit_coefs.append(coef)
+        return SimpleNamespace(coef=lambda: coef)
+
+    monkeypatch.setattr(fit, "_crv3_refit", reordered_refit)
+    fit.vcov({"CRV3": "cluster"})
+    expected = np.zeros_like(fit._vcov)
+    for coef in refit_coefs:
+        centered = coef.reindex(fit._coefnames).to_numpy() - fit._beta_hat
+        expected += np.outer(centered, centered)
+    np.testing.assert_allclose(
+        fit._vcov,
+        fit._ssc * expected,
+        err_msg="CRV3 covariance differs after coefficient-name alignment",
+    )
+
+    invalid_refits = [
+        (pd.Series([1.0, 2.0, 3.0], index=["x", "z", "w"]), "unexpected.*w"),
+        (pd.Series([1.0, 2.0, 3.0], index=["x", "x", "z"]), "duplicate.*x"),
+    ]
+    for coef, error in invalid_refits:
+        monkeypatch.setattr(
+            fit,
+            "_crv3_refit",
+            lambda *, data, coef=coef: SimpleNamespace(coef=lambda: coef),
+        )
+        before = _snapshot_inference(fit)
+        with pytest.raises(MatrixNotFullRankError, match=error):
+            fit.vcov({"CRV3": "cluster"})
+        _assert_inference_unchanged(fit, before)
 
 
 @pytest.mark.parametrize("vcov", ["NW", "DK"])

@@ -19,7 +19,11 @@ from scipy.stats import chi2, f
 
 from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
-from pyfixest.errors import EmptyVcovError, VcovTypeNotSupportedError
+from pyfixest.errors import (
+    EmptyVcovError,
+    MatrixNotFullRankError,
+    VcovTypeNotSupportedError,
+)
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.capabilities import (
     DID_METHOD_LABELS,
@@ -1301,12 +1305,25 @@ class BaseRegression(TidyColumnAccessors):
         data: pd.DataFrame,
     ) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
+        full_terms = pd.Index(self._coefnames)
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             refit_data = data[~np.equal(g, cluster_col)]
             fit = self._crv3_refit(data=refit_data)
-            beta_jack[ixg, :] = fit.coef().to_numpy()
+            refit_coef = fit.coef()
+            duplicate = (
+                refit_coef.index[refit_coef.index.duplicated()].unique().tolist()
+            )
+            missing = full_terms.difference(refit_coef.index, sort=False).tolist()
+            unexpected = refit_coef.index.difference(full_terms, sort=False).tolist()
+            if duplicate or missing or unexpected:
+                raise MatrixNotFullRankError(
+                    "CRV3 leave-one-cluster-out refit omitting cluster "
+                    f"{g!r} changed coefficient names; missing terms: {missing}; "
+                    f"unexpected terms: {unexpected}; duplicate terms: {duplicate}."
+                )
+            beta_jack[ixg, :] = refit_coef.reindex(full_terms).to_numpy()
 
         # optional: beta_bar in MNW (2022)
         # center = "estimate"
