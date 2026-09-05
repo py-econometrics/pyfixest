@@ -9,6 +9,7 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
@@ -69,7 +70,7 @@ class Quantreg(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
@@ -177,12 +178,14 @@ class Quantreg(Feols):
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
     def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+        "Publish quantile-regression within data from the formula state."
+        # Quantile regression supports neither fixed effects nor weights, so
+        # the shared preparation reduces to the formula arrays themselves.
+        self._set_within_data(self._prepare_within_data())
+
+    def drop_multicol_vars(self):
+        "Detect and drop multicollinear quantile-regression covariates."
+        self._set_within_data(self._drop_multicollinear_within_data(self._within_data))
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
@@ -215,6 +218,20 @@ class Quantreg(Feols):
         self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
         self._hessian = self._X.T @ self._X
         self._bread = np.linalg.inv(self._hessian)
+
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and discard quantile solver arrays when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            for attr in (
+                "_x_final",
+                "_s_final",
+                "_z_final",
+                "_w_final",
+                "_y_final",
+            ):
+                if hasattr(self, attr):
+                    delattr(self, attr)
 
     def fit_qreg_fn(
         self,
@@ -393,12 +410,20 @@ class Quantreg(Feols):
 
     def _vcov_iid(self):
         return vcov_iid_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+            X=self._X,
+            Y=self._Y,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            N=self._N_rows,
         )
 
     def _vcov_hetero(self):
         return vcov_hetero_qreg(
-            X=self._X, Y=self._Y, u_hat=self._u_hat, q=self._quantile, N=self._N
+            X=self._X,
+            Y=self._Y,
+            u_hat=self._u_hat,
+            q=self._quantile,
+            N=self._N_rows,
         )
 
     def _vcov_nid(self) -> np.ndarray:
@@ -414,7 +439,7 @@ class Quantreg(Feols):
             Y=self._Y,
             beta_hat=self._beta_hat,
             q=self._quantile,
-            N=self._N,
+            N=self._N_rows,
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )
@@ -440,6 +465,7 @@ class Quantreg(Feols):
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
+        self._require_fit_arrays("objective_value", arrays="the residual arrays")
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
 
     def get_performance(self):

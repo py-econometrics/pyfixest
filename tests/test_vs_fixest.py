@@ -74,6 +74,41 @@ def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     )
 
 
+def _make_frequency_weighted_linear_data():
+    """Return deterministic aggregate linear and IV data (seed 20260901)."""
+    rng = np.random.default_rng(20260901)
+    n_per_group = 12
+    fixed_effect = np.repeat(list("abcd"), n_per_group)
+    fixed_effect_value = np.repeat([-0.8, -0.2, 0.3, 0.9], n_per_group)
+    x = rng.normal(size=4 * n_per_group)
+    z = rng.normal(size=4 * n_per_group)
+    d = (
+        0.9 * z
+        + 0.3 * x
+        + 0.25 * fixed_effect_value
+        + rng.normal(scale=0.35, size=len(x))
+    )
+    y = (
+        1.0
+        + 0.8 * d
+        - 0.5 * x
+        + fixed_effect_value
+        + rng.normal(scale=0.45, size=len(x))
+    )
+
+    data = pd.DataFrame(
+        {
+            "y": y,
+            "x": x,
+            "d": d,
+            "z": z,
+            "fe": fixed_effect,
+            "fweights": rng.integers(1, 5, size=len(x)),
+        }
+    )
+    return data
+
+
 rng = np.random.default_rng(8760985)
 
 
@@ -541,6 +576,71 @@ def test_single_fit_fepois(
         r_predict_link[0:5],
         1e-06,
         "py_predict_link != r_predict_link",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ x",
+        "y ~ x | fe",
+        "y ~ x | d ~ z",
+        "y ~ x | fe | d ~ z",
+    ],
+)
+def test_frequency_weighted_linear_models_against_fixest(fml):
+    """Compare fweight OLS and IV covariance to R fixest literal expansion."""
+    data = _make_frequency_weighted_linear_data()
+    expanded_data = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_fit = pf.feols(
+        fml=fml,
+        data=data,
+        weights="fweights",
+        weights_type="fweights",
+        vcov="hetero",
+        ssc=py_ssc,
+    )
+    r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
+
+    ro.globalenv[".fweight_r_fit"] = r_fit
+    r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
+    r_vcov_names = list(ro.r("rownames(vcov(.fweight_r_fit))"))
+    py_coefficient_names = list(py_fit.coef().index)
+    is_iv = "d ~ z" in fml
+    r_name_by_py_name = {
+        "Intercept": "(Intercept)",
+        "d": "fit_d" if is_iv else "d",
+    }
+    r_order = [
+        r_coefficient_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+    r_vcov_order = [
+        r_vcov_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit))[r_order],
+        rtol=0,
+        atol=1e-8,
+        err_msg="Fweight coefficients differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
+        rtol=0,
+        atol=1e-7,
+        err_msg="Fweight covariance differs from the R fixest literal expansion",
     )
 
 
@@ -1529,6 +1629,62 @@ def test_singleton_dropping():
     # np.testing.assert_allclose(
     #    se_py, se_r, rtol=1e-04, atol=1e-04, err_msg="Standard errors do not match."
     # )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero"])
+def test_fepois_frequency_weights_against_fixest(data_fepois, fml, vcov):
+    """Compare FEPoisson fweights with the literal expansion in R fixest."""
+    data = data_fepois.dropna().copy()
+    # A fixed-effect level holding a single physical row with a frequency
+    # weight above one is a singleton for pyfixest but not after literal
+    # expansion. Keeping only levels with more than one physical row makes the
+    # comparison independent of that deliberate deviation.
+    data = data.loc[data.groupby("f1")["f1"].transform("size") > 1]
+    data = data.reset_index(drop=True)
+    data["fweights"] = np.arange(len(data)) % 4 + 1
+    expanded_data = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_fit = pf.fepois(
+        fml=fml,
+        data=data,
+        weights="fweights",
+        weights_type="fweights",
+        vcov=vcov,
+        ssc=py_ssc,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+    )
+    r_fit = fixest.fepois(
+        ro.Formula(fml),
+        data=expanded_data,
+        vcov=vcov,
+        ssc=r_ssc,
+        glm_tol=1e-10,
+        glm_iter=100,
+    )
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit)),
+        rtol=0,
+        atol=1e-6,
+        err_msg="FEPoisson fweights differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        np.asarray(stats.vcov(r_fit)),
+        rtol=0,
+        atol=1e-6,
+        err_msg="FEPoisson fweight covariance differs from the R fixest literal expansion",
+    )
 
 
 @pytest.fixture(scope="module")

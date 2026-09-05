@@ -222,9 +222,8 @@ class QuantregMulti:
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
 
-        del_attributes = ["_X", "_Y"]
+        # `_X` and `_Y` are read-only views, so their backing state is dropped.
         for quantreg in self.all_quantregs.values():
-            for attr in del_attributes:
-                if hasattr(quantreg, attr):
-                    delattr(quantreg, attr)
+            if hasattr(quantreg, "_within_data"):
+                del quantreg._within_data
         gc.collect()

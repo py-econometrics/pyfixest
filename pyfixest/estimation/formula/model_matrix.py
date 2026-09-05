@@ -183,11 +183,11 @@ class ModelMatrix:
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
     def without_rows(self, rows: list[int]) -> ModelMatrix:
-        """Return a copy without ``rows``; they are recorded in ``na_index``.
+        """Return a shallow copy without ``rows``.
 
-        Estimator-level filters such as GLM separation run after construction and
-        call this instead of mutating the retained instance, which is left
-        unchanged.
+        The copied object receives a new filtered data frame and ``na_index``;
+        its unchanged formula metadata remains shared with the original object.
+        An empty ``rows`` sequence returns this instance unchanged.
         """
         if not rows:
             return self

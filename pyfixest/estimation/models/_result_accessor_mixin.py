@@ -10,6 +10,10 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.internals.model_state import (
+        ObservationWeights,
+        WithinLinearData,
+    )
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -128,9 +132,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
-    _Y: np.ndarray
-    _Y_untransformed: pd.Series
+    _observation_weights: "ObservationWeights"
+    _within_data: "WithinLinearData"
+    _response: np.ndarray
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -138,7 +142,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _has_weights: bool
     _is_iv: bool
     _k_fe: pd.Series
-    _N: int
+    _N: int | float
+    _N_rows: int
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
@@ -148,6 +153,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _r2_within: float
     _adj_r2_within: float
     _vcov_type: str
+
+    def _require_fit_arrays(
+        self,
+        method: str,
+        *,
+        arrays: str,
+        remedy: str = "Refit with lean=False.",
+    ) -> None:
+        """Reject a call whose input arrays `lean=True` discarded.
+
+        Implemented by the host class.
+        """
+        raise NotImplementedError
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -303,8 +321,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        Y_within = self._Y
-        Y = self._Y_untransformed.to_numpy()
+        self._require_fit_arrays(
+            "get_performance", arrays="the response and within arrays"
+        )
+        Y_within = self._within_data.response.flatten()
+        Y = self._response
+        observation_weights = self._observation_weights.values
 
         has_intercept = not self._drop_intercept
 
@@ -315,14 +337,25 @@ class ResultAccessorMixin(TidyColumnAccessors):
         else:
             adj_factor = (self._N - has_intercept) / (self._N - self._k)
 
-        ssu = np.sum(self._u_hat**2)
-        ssy = np.sum(self._weights * (Y - np.average(Y, weights=self._weights)) ** 2)
+        if observation_weights is None:
+            ssu = np.sum(self._u_hat**2)
+            y_center = np.mean(Y)
+            ssy = np.sum((Y - y_center) ** 2)
+        else:
+            weights = observation_weights
+            ssu = np.sum(weights * self._u_hat**2)
+            y_center = np.average(Y, weights=weights)
+            ssy = np.sum(weights * (Y - y_center) ** 2)
         self._rmse = np.sqrt(ssu / self._N)
         self._r2 = 1 - (ssu / ssy)
         self._adj_r2 = 1 - (ssu / ssy) * adj_factor
 
         if self._has_fixef:
-            ssy_within = np.sum(Y_within**2)
+            ssy_within = (
+                np.sum(Y_within**2)
+                if observation_weights is None
+                else np.sum(weights * Y_within**2)
+            )
             self._r2_within = 1 - (ssu / ssy_within)
             self._adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
 
@@ -567,8 +600,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Fitted model residuals.
 
-        For weighted models the residuals are rescaled by the square root of the
-        weights, so they are on the scale of the original dependent variable.
+        Residuals are stored and returned on the scale of the original dependent
+        variable. Observation weights are applied only where an estimating
+        equation or diagnostic requires them.
 
         Returns
         -------
@@ -584,4 +618,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
-        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        self._require_fit_arrays("resid", arrays="the residual arrays")
+        return self._u_hat.flatten()

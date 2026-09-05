@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import Mapping
 from dataclasses import replace
@@ -6,12 +8,15 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -20,10 +25,9 @@ class Feiv(Feols):
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
     Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd) function. Note that
-    no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple
-    estimation).
+    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd)
+    function. This class constructs the second-stage and instrument within
+    arrays through the shared ``DemeanCache`` supplied by the estimation runner.
 
     Parameters
     ----------
@@ -123,8 +127,8 @@ class Feiv(Feols):
     _eff_F : scalar
         Effective F-statistics of first stage regression as in Olea and Pflueger 2013
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Deleted if arguments `lean = True`
+        or `store_data = False`.
 
 
     Raises
@@ -167,7 +171,7 @@ class Feiv(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: Literal[
             "np.linalg.lstsq",
             "np.linalg.solve",
@@ -210,59 +214,79 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-    def wls_transform(self) -> None:
-        "Transform variables for WLS estimation."
-        super().wls_transform()
-        if self._has_weights:
-            w = np.sqrt(self._weights)
-            self._endogvar = self._endogvar * w
-            self._Z = self._Z * w
+    def _prepare_within_data(self) -> WithinLinearData:
+        """Return second-stage and instrument arrays on within scale."""
+        linear_data = super()._prepare_within_data()
+        endogenous_frame = self._model_matrix.endogenous
+        instrument_frame = self._model_matrix.instruments
+        assert endogenous_frame is not None
+        assert instrument_frame is not None
 
-    def to_array(self) -> None:
-        "Transform estimation DataFrames to arrays."
-        super().to_array()
-        self._Z = self._Zd.to_numpy()
-        self._endogvar = self._endogvar.to_numpy()
-
-    def demean(self) -> None:
-        "Demean instruments and endogeneous variable."
-        super().demean()
-        if self._has_fixef:
-            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
-                self._endogvar,
-                self._Z,
-                self._fe,
-                self._weights.flatten(),
-                self._na_index,
-                self._demeaner,
+        endogenous = endogenous_frame.to_numpy(dtype=np.float64)
+        instruments = instrument_frame.to_numpy(dtype=np.float64)
+        if self._model_matrix.fixed_effects is not None:
+            endogenous, instruments, _ = self._demean_cache.demean_yx(
+                endogenous,
+                instruments,
+                y_names=endogenous_frame.columns,
+                x_names=instrument_frame.columns,
+                fe=self._model_matrix.fixed_effects.to_numpy(),
+                weights=self._observation_weights.values,
+                na_index=self._na_index,
+                demeaner=self._demeaner,
             )
-        else:
-            self._endogvard = self._endogvar
-            self._Zd = self._Z
 
-    def drop_multicol_vars(self) -> None:
-        "Drop multicollinear variables in matrix of instruments Z."
-        super().drop_multicol_vars()
+        return WithinLinearData(
+            response=linear_data.response,
+            design=linear_data.design,
+            instruments=instruments,
+            endogenous=endogenous,
+        )
+
+    def _drop_multicollinear_within_data(
+        self, within_data: WithinLinearData
+    ) -> WithinLinearData:
+        """Drop collinear second-stage and instrument columns on within scale."""
+        within_data = super()._drop_multicollinear_within_data(within_data)
+        assert within_data.instruments is not None
+        assert self._coefnames_z is not None
         (
-            self._Z,
+            instruments,
             self._coefnames_z,
             self._collin_vars_z,
             self._collin_index_z,
         ) = drop_multicollinear_variables(
-            self._Z,
+            within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
+        return WithinLinearData(
+            response=within_data.response,
+            design=within_data.design,
+            instruments=instruments,
+            endogenous=within_data.endogenous,
+        )
+
+    @property
+    def _endogvar(self) -> NDArray[np.float64]:
+        """Within-scale endogenous regressors."""
+        endogenous = self._within_data.endogenous
+        assert endogenous is not None
+        return endogenous
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        self.demean()
-        self.to_array()
-        self.drop_multicol_vars()
-        self.wls_transform()
+        within_data = self._drop_multicollinear_within_data(self._prepare_within_data())
+        self._set_within_data(within_data)
+        assert within_data.instruments is not None
 
-        # Second stage (2SLS) on prepared arrays
-        fit = fit_iv(X=self._X, Z=self._Z, Y=self._Y, solver=self._solver)
+        fit = fit_iv(
+            X=within_data.design,
+            Z=within_data.instruments,
+            Y=within_data.response,
+            weights=self._observation_weights.values,
+            solver=self._solver,
+        )
 
         self._tZX = fit.tZX
         self._tXZ = fit.tXZ
@@ -276,6 +300,8 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
+        self._require_estimation_data("first_stage")
+
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -312,6 +338,7 @@ class Feiv(Feols):
             collin_tol=self._collin_tol,
             solver=self._solver,
             demeaner=demeaner,
+            store_data=self._store_data,
         )
 
         # Ensure model1 is of type Feols
@@ -338,6 +365,22 @@ class Feiv(Feols):
     def _finalize_fit(self) -> None:
         """Fit and retain the first-stage model after second-stage inference."""
         self.first_stage()
+
+    def _require_first_stage_state(self, method: str) -> None:
+        """Reject a first-stage diagnostic once lean storage discarded the fit."""
+        if not hasattr(self, "_model_1st_stage"):
+            raise RuntimeError(
+                f"{method}() is unavailable when lean=True because the retained "
+                "first-stage fit state was discarded."
+            )
+
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and drop the retained first-stage fit when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            for attr in ("_model_1st_stage", "_X_hat", "_v_hat"):
+                if hasattr(self, attr):
+                    delattr(self, attr)
 
     def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
@@ -419,6 +462,8 @@ class Feiv(Feols):
 
             ```
         """
+        self._require_first_stage_state("IV_Diag")
+
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
@@ -465,6 +510,8 @@ class Feiv(Feols):
         """
         iv_diag_statistics = iv_diag_statistics or []
 
+        self._require_first_stage_state("IV_weakness_test")
+
         if "f_stat" in iv_diag_statistics:
             self._p_iv = len(self._non_exo_instruments)
 
@@ -497,6 +544,8 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
+        self._require_first_stage_state("eff_F")
+
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
@@ -523,8 +572,13 @@ class Feiv(Feols):
         ]
         Z = self._model_1st_stage._X[:, iv_positions]
 
-        # Calculate the cross-product of the instrument matrix
-        Q_zz = Z.T @ Z
+        # Q_zz = Z' A Z uses the observation weights from the first-stage fit.
+        observation_weights = self._model_1st_stage._observation_weights.values
+        Q_zz = (
+            Z.T @ Z
+            if observation_weights is None
+            else Z.T @ (observation_weights[:, None] * Z)
+        )
 
         # Extract the robust variance-covariance matrix
         vcv = self._model_1st_stage._vcov

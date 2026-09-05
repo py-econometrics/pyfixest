@@ -5,10 +5,13 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -56,7 +59,7 @@ class Feglm(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: Literal[
@@ -76,7 +79,7 @@ class Feglm(Feols):
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
         accelerate: bool = True,
-    ):
+    ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -118,13 +121,12 @@ class Feglm(Feols):
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty(0)
 
         self._method = "feglm"
         self._family = family
         self._inference_dist = family.inference_dist
 
-    def prepare_model_matrix(self):
+    def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
 
@@ -136,9 +138,9 @@ class Feglm(Feols):
             and self.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
-                Y=self._Y,
-                X=self._X,
-                fe=self._fe,
+                Y=model_matrix.dependent,
+                X=model_matrix.independent,
+                fe=model_matrix.fixed_effects,
                 fml=self._fml,
                 data=self._data,
                 demeaner=self._demeaner,
@@ -150,51 +152,50 @@ class Feglm(Feols):
             model_matrix = model_matrix.without_rows(na_separation)
             self._publish_model_matrix(model_matrix)
 
-            # Preserve the established GLM sample-size convention after
-            # separation. Frequency-weight policy is handled separately.
-            self._N = self._Y.shape[0]
-            self._N_rows = self._N
-
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
         return model_matrix
 
-    def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
-        if self._offset_df is not None:
-            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
-        if self._fe is not None:
-            self._fe = self._fe.to_numpy()
-            if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N, 1))
-
-    def get_fit(self):
+    def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."
-        self.to_array()
+        model_matrix = self._model_matrix
+        response = model_matrix.dependent.to_numpy()
+        design = model_matrix.independent.to_numpy()
+        fixed_effects = (
+            None
+            if model_matrix.fixed_effects is None
+            else model_matrix.fixed_effects.to_numpy()
+        )
+        offset = (
+            None
+            if model_matrix.offset is None
+            else model_matrix.offset.to_numpy().reshape((-1, 1))
+        )
+        self._offset = offset
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
         ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
+            return self.residualize(
+                v=v,
+                X=X,
+                flist=fixed_effects,
+                weights=weights,
+                tol=tol,
+            )
 
         fit = fit_glm_irls(
-            X=self._X,
-            Y=self._Y,
+            X=design,
+            Y=response,
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
             collin_tol=self._collin_tol,
-            accelerate=self._accelerate and self._fe is not None,
-            offset=self._offset,
-            weights=self._weights if self._has_weights else None,
+            accelerate=self._accelerate and fixed_effects is not None,
+            offset=offset,
+            weights=self._observation_weights.values,
             solver=self._solver,
             maxiter=self.maxiter,
             tol=self.tol,
@@ -204,50 +205,95 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
-        self._X = fit.X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+
+        working_state = fit.working_state
+        self._working_state = working_state
+        design_within = working_state.design_within
+        self._X_is_empty = design_within.shape[1] == 0
+        self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        self._Y_hat_response = fit.mu.flatten()
-        self._Y_hat_link = fit.eta.flatten()
+        self._Y_hat_response = working_state.mu
+        self._Y_hat_link = working_state.eta
 
-        self._weights = fit.W
-        self._irls_weights = fit.W
-        if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N, 1))
+        self._u_hat_response = working_state.response_residuals
+        self._u_hat_working = working_state.working_residuals
+        self._u_hat = self._u_hat_working
 
-        self._u_hat_response = (self._Y.flatten() - fit.mu).flatten()
-        e_final = fit.z_tilde - fit.X_tilde @ self._beta_hat
-        self._u_hat_working = (
-            self._u_hat_response
-            if self._method == "feglm-gaussian"
-            else e_final.flatten()
+        weighted_working_residuals = (
+            working_state.working_weights * working_state.working_residuals
         )
+        # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
+        # any user-supplied observation weight.
+        self._scores = design_within * weighted_working_residuals[:, None]
 
-        self._scores_response = self._u_hat_response[:, None] * self._X
-        self._scores_working = self._u_hat_working[:, None] * self._X
-
-        sqrt_W_vec = fit.sqrt_W.flatten()
-        X_wls = sqrt_W_vec[:, None] * fit.X_tilde
-        z_wls = sqrt_W_vec * fit.z_tilde
-
-        self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
-        self._Y = z_wls
-        self._X = X_wls
-        self._Z = self._X
-
-        self._scores = self._u_hat[:, None] * self._X
-
-        self._tZX = self._Z.T @ self._X
+        weighted_design = working_state.working_weights[:, None] * design_within
+        self._tZX = design_within.T @ weighted_design
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = fit.eta.reshape(-1, 1)
 
-        self._hessian = X_wls.T @ X_wls
+        self._hessian = self._tZX.copy()
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    # Read-only views on the final IRLS state. A GLM never builds the linear
+    # `_within_data`, so these override the base aliases rather than extend them.
+
+    @property
+    def _Y(self) -> NDArray[np.float64]:
+        """Within-scale IRLS working response."""
+        return self._working_state.working_response_within
+
+    @property
+    def _X(self) -> NDArray[np.float64]:
+        """Within-scale IRLS design, not premultiplied by working weights."""
+        return self._working_state.design_within
+
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """The IRLS design; a GLM has no instruments."""
+        return self._working_state.design_within
+
+    @property
+    def _irls_weights(self) -> NDArray[np.float64]:
+        """Final IRLS working weights, never the observation weights."""
+        return self._working_state.working_weights
+
+    @property
+    def _Xbeta(self) -> NDArray[np.float64]:
+        """Linear predictor as a column vector."""
+        return self._working_state.eta.reshape(-1, 1)
+
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and discard large GLM fit arrays when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            # The IRLS aliases are read-only views, so the working state
+            # backing them is what has to go.
+            for attr in (
+                "_working_state",
+                "_u_hat_response",
+                "_u_hat_working",
+                "_offset",
+            ):
+                if hasattr(self, attr):
+                    delattr(self, attr)
+
+    def _normal_equation_weights(self) -> np.ndarray:
+        """Return the final IRLS weights in the fitted normal equations."""
+        return self._working_state.working_weights
+
+    def _fixef_recovery_weights(self) -> np.ndarray | None:
+        """Return weights used by fixed-effect coefficient recovery.
+
+        At convergence, ``eta - offset - X @ beta`` is the fixed-effect
+        contribution, up to solver tolerance. For weighted fits the recovery
+        solve uses the combined IRLS weights, which already contain the
+        observation weights; applying observation weights again would double
+        count them.
+        """
+        return self._working_state.working_weights if self._has_weights else None
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
@@ -267,21 +313,27 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        if type not in ("response", "working"):
+            raise ValueError("type must be one of 'response' or 'working'.")
+        self._require_fit_arrays(
+            "resid",
+            arrays="the response and working residual arrays",
+            remedy="Refit with lean=False to access residuals.",
+        )
         if type == "response":
             return self._u_hat_response.flatten()
-        if type == "working":
-            return self._u_hat_working.flatten()
-        raise ValueError("type must be one of 'response' or 'working'.")
+        return self._u_hat_working.flatten()
 
     def residualize(
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
+        self._require_fit_arrays("residualize", arrays="the demeaning caches")
         if flist is None:
             return v, X
 
@@ -368,16 +420,12 @@ class Feglm(Feols):
         else:
             return yhat
 
-    def _check_dependent_variable(self) -> None:
-        "Validate the dependent variable according to the family's constraints."
-        self._family.check_y(self._Y)
-
     def _validate_response(self) -> None:
-        """Apply family-specific response validation after matrix preparation."""
-        self._check_dependent_variable()
+        """Validate the prepared response against the family's constraints."""
+        self._family.check_y(self._model_matrix.dependent)
 
 
-def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
+def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
     if not isinstance(tol, (int, float)):
