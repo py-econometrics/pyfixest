@@ -961,6 +961,8 @@ class Feols(ResultAccessorMixin):
         if isinstance(demeaner, LsmrDemeaner) and isinstance(
             demeaner.preconditioner, Preconditioner
         ):
+            # A prebuilt factorization belongs to the original FE design. Keep
+            # its algorithmic variant, but rebuild it for the changed row set.
             preconditioner = cast(
                 WithinPreconditionerName,
                 demeaner.preconditioner.variant.lower(),
@@ -981,6 +983,7 @@ class Feols(ResultAccessorMixin):
 
     def _crv3_refit(self, data: pd.DataFrame) -> Feols:
         """Replay OLS for one leave-one-cluster-out sample."""
+        # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
         return fixest_module.feols(
             fml=self._fml,
