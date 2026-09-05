@@ -492,9 +492,10 @@ class Feols(ResultAccessorMixin):
             return ObservationWeights.unweighted(n_rows=n_rows)
 
         assert self._weights_type in ("aweights", "fweights")
+        weights_kind = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
-            kind=cast(WeightsTypeOptions, self._weights_type),
+            kind=weights_kind,
         )
 
     def _prepare_within_data(self) -> WithinLinearData:
@@ -503,18 +504,19 @@ class Feols(ResultAccessorMixin):
         design_frame = self._model_matrix.independent
         response = response_frame.to_numpy(dtype=np.float64)
         design = design_frame.to_numpy(dtype=np.float64)
-        fixed_effects = self._model_matrix.fixed_effects
-        if fixed_effects is not None:
+
+        if self._model_matrix.fixed_effects is not None:
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_names=tuple(response_frame.columns),
-                x_names=tuple(design_frame.columns),
-                fe=fixed_effects.to_numpy(),
+                y_names=response_frame.columns,
+                x_names=design_frame.columns,
+                fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
                 demeaner=self._demeaner,
             )
+
         return WithinLinearData(response=response, design=design)
 
     @property
@@ -1740,6 +1742,8 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
+        fixef_recovery_weights = self._fixef_recovery_weights()
+
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
@@ -1777,7 +1781,6 @@ class Feols(ResultAccessorMixin):
         )
         fixed_effect_design = contrast_coding.matrix
         fixed_effect_design_for_recovery = fixed_effect_design
-        fixef_recovery_weights = self._fixef_recovery_weights()
         if fixef_recovery_weights is not None:
             weights_sqrt = np.sqrt(fixef_recovery_weights).flatten()
             uhat *= weights_sqrt
@@ -1794,8 +1797,6 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        # Weighting changes the recovery metric; fitted FE contributions remain
-        # D alpha in response units (up to solver and convergence tolerance).
         self._sumFE = fixed_effect_design.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
