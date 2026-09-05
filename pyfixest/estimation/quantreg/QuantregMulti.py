@@ -235,5 +235,4 @@ class QuantregMulti:
         "Clear all large non-necessary attributes to free memory."
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
-
         gc.collect()
