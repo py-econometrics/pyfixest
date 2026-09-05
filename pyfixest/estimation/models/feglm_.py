@@ -208,6 +208,7 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
+
         working_state = fit.working_state
         self._working_state = working_state
         design_within = working_state.design_within
@@ -217,6 +218,7 @@ class Feglm(Feols):
         self._beta_hat = fit.beta
         self._Y_hat_response = working_state.mu
         self._Y_hat_link = working_state.eta
+
         self._u_hat_response = working_state.response_residuals
         self._u_hat_working = working_state.working_residuals
         self._u_hat = self._u_hat_working
@@ -227,15 +229,20 @@ class Feglm(Feols):
         # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
         # any user-supplied observation weight.
         self._scores = design_within * weighted_working_residuals[:, None]
+
         weighted_design = working_state.working_weights[:, None] * design_within
         self._tZX = design_within.T @ weighted_design
         self._tZXinv = np.linalg.inv(self._tZX)
+
         self._hessian = self._tZX.copy()
 
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    # Read-only views on the final IRLS state. A GLM never builds the linear
+    # `_within_data`, so these override the base aliases rather than extend them.
 
     @property
     def _Y(self) -> NDArray[np.float64]:
@@ -260,7 +267,7 @@ class Feglm(Feols):
     @property
     def _Xbeta(self) -> NDArray[np.float64]:
         """Linear predictor as a column vector."""
-        return self._working_state.eta.reshape((-1, 1))
+        return self._working_state.eta.reshape(-1, 1)
 
     def _clear_attributes(self) -> None:
         """Apply base cleanup and discard large GLM fit arrays when lean."""
