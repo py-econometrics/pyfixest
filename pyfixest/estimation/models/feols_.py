@@ -1141,6 +1141,9 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
+            raise NotImplementedError(
+                "Wild cluster bootstrap is only supported for unweighted OLS models."
+            )
 
         cluster_list = []
 
@@ -1308,9 +1311,11 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        assert self._supports_cluster_causal_variance, (
-            "The model does not support the causal cluster variance estimator."
-        )
+        if not self._supports_cluster_causal_variance:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is not supported for models "
+                f"of type '{self._method}'."
+            )
         assert isinstance(treatment, str), "treatment must be a string."
         assert isinstance(cluster, str) or cluster is None, (
             "cluster must be a string or None."
@@ -1323,6 +1328,10 @@ class Feols(ResultAccessorMixin):
         if self._has_fixef:
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
+            )
+        if self._has_weights:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is currently not supported for models with weights."
             )
 
         if treatment not in self._coefnames:
@@ -1573,6 +1582,11 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
+        if not self._support_decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for OLS models."
+            )
+
         has_param = param is not None
         has_decomp = decomp_var is not None
 
@@ -2032,6 +2046,10 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
+        if self._method not in {"feols", "fepois"}:
+            raise NotImplementedError(
+                "Randomization Inference is only supported for OLS and Poisson models."
+            )
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2213,7 +2231,8 @@ class Feols(ResultAccessorMixin):
         y_new : np.ndarray
             Outcome values for new data points.
         inplace : bool, optional
-            Whether to update the model object in place. Defaults to False.
+            Must be `False`. In-place updates are unsupported because appending
+            design rows cannot reconstruct the complete fitted-result state.
 
         Returns
         -------
@@ -2224,7 +2243,8 @@ class Feols(ResultAccessorMixin):
         -----
         Updates the coefficients in closed form via the Sherman-Morrison
         identity instead of refitting on the full sample. `X_new` has to include
-        the intercept column. Models with fixed effects are not supported.
+        the intercept column. The returned coefficients do not mutate the fitted
+        result. Models with fixed effects are not supported.
 
         Examples
         --------
@@ -2250,19 +2270,30 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
+        if self._method != "feols":
+            raise NotImplementedError(
+                "The update() method is currently only supported for OLS models."
+            )
+        if self._is_iv:
+            raise NotImplementedError(
+                "The update() method is currently not supported for IV models."
+            )
+        if self._has_weights:
+            raise NotImplementedError(
+                "The update() method is currently not supported for models with weights."
+            )
+        if inplace:
+            raise NotImplementedError(
+                "update(..., inplace=True) is not supported because appending design "
+                "rows cannot safely update the complete fitted-result state; use the "
+                "returned coefficients instead."
+            )
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self._X, X_new))
         epsi_n_plus_1 = y_new - X_new @ self._beta_hat
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
-        if inplace:
-            self._X = X_n_plus_1
-            self._Y = np.append(self._Y, y_new)
-            self._beta_hat = beta_n_plus_1
-            self._u_hat = self._Y - self._X @ self._beta_hat
-            self._N += X_new.shape[0]
-
         return beta_n_plus_1
 
 

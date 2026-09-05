@@ -49,6 +49,15 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Inference Types
 
+- Weighted models now reject `ccv()` explicitly. `Feols.update()` remains a
+  coefficient-only calculation and rejects `inplace=True`, weights, IV, and
+  non-OLS models instead of mixing scales.
+- Non-Poisson GLMs reject `CRV3` instead of silently refitting through the
+  Poisson jackknife. Poisson `CRV3` remains supported.
+- Randomization inference rejects non-OLS/non-Poisson results, the wild
+  bootstrap rejects non-OLS results, and `decompose()` rejects non-OLS results,
+  instead of reinterpreting GLM working state or quantile solver outputs as OLS
+  arrays.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
