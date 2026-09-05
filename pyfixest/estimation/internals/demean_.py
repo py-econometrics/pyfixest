@@ -29,7 +29,7 @@ class DemeanCache:
 
     `Compute once, never forget`:
 
-    - `lookup_demeaned_data`: already-demeaned columns from previous fits.
+    - `lookup_demeaned_data`: already-demeaned named arrays from previous fits.
     - `lookup_preconditioner`: the preconditioner from the first fit on a
        data set / na index combination.
 
@@ -109,7 +109,11 @@ class DemeanCache:
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner | None]:
+    ) -> tuple[
+        NDArray[np.float64],
+        NDArray[np.float64],
+        Preconditioner | None,
+    ]:
         """Demean response and design arrays and cache missing named columns.
 
         New columns are appended to the cache in their requested order. Returned
@@ -134,6 +138,12 @@ class DemeanCache:
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner
             Configured within-transformation strategy.
+
+        Returns
+        -------
+        tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner or None]
+            Demeaned response and design arrays, in their requested column order,
+            plus the preconditioner used when new columns were transformed.
         """
         Y_array = np.asarray(Y, dtype=np.float64)
         X_array = np.asarray(X, dtype=np.float64)
@@ -143,6 +153,7 @@ class DemeanCache:
         y_names_tuple = tuple(y_names)
         x_names_tuple = tuple(x_names)
         requested_names = y_names_tuple + x_names_tuple
+
         cached = self.lookup_demeaned_data.get(na_index)
         used: Preconditioner | None = None
         if cached is None:
@@ -151,7 +162,10 @@ class DemeanCache:
                 requested_data, fe, weights, na_index, demeaner
             )
             requested_values.setflags(write=False)
-            cached = DemeanedData(values=requested_values, columns=requested_names)
+            cached = DemeanedData(
+                values=requested_values,
+                columns=requested_names,
+            )
             self.lookup_demeaned_data[na_index] = cached
         else:
             cached_column_names = cached.columns
@@ -166,7 +180,9 @@ class DemeanCache:
                 new_values, used = self._run_or_raise(
                     requested_data[:, new_positions], fe, weights, na_index, demeaner
                 )
-                new_column_names = tuple(requested_names[i] for i in new_positions)
+                new_column_names = tuple(
+                    requested_names[index] for index in new_positions
+                )
                 cached_values = np.concatenate((cached.values, new_values), axis=1)
                 cached_values.setflags(write=False)
                 cached = DemeanedData(
@@ -177,15 +193,14 @@ class DemeanCache:
             requested_values = self._select_columns(cached, requested_names)
 
         n_response_columns = len(y_names_tuple)
-        return (
-            requested_values[:, :n_response_columns],
-            requested_values[:, n_response_columns:],
-            used,
-        )
+        response_demeaned = requested_values[:, :n_response_columns]
+        design_demeaned = requested_values[:, n_response_columns:]
+        return response_demeaned, design_demeaned, used
 
     @staticmethod
     def _select_columns(
-        cached: DemeanedData, requested_names: tuple[str, ...]
+        cached: DemeanedData,
+        requested_names: tuple[str, ...],
     ) -> NDArray[np.float64]:
         positions_by_name = {
             name: position for position, name in enumerate(cached.columns)
