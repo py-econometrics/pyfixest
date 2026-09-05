@@ -235,7 +235,6 @@ class Feglm(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
 
         self._hessian = self._tZX.copy()
-
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
@@ -273,6 +272,8 @@ class Feglm(Feols):
         """Apply base cleanup and discard large GLM fit arrays when lean."""
         super()._clear_attributes()
         if self._lean:
+            # The IRLS aliases are read-only views, so the working state
+            # backing them is what has to go.
             for attr in (
                 "_working_state",
                 "_u_hat_response",
