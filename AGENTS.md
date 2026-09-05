@@ -72,7 +72,7 @@ flow, the stable-core contract, and the extension-seam table.
 | `pyfixest/did/`, `report/`, `utils/` | DiD estimators, reporting, utilities, and DGPs |
 | `tests/` | Pytest suite, reference scripts, and stored reference outputs |
 | `docs/` | Quarto user documentation; `docs/developer/` is contributor policy and is not rendered |
-| `pyfixest/docs/` | Generated at build time by `docs-bundle` from Quarto's llms output; gitignored, absent in source checkouts, present in installed releases |
+| `pyfixest/docs/` | Generated at build time by `docs-bundle` from Quarto's llms output; gitignored, absent in source checkouts, present in installed releases. Releases use `docs-bundle-fresh`, which executes every page because Quarto's `freeze: auto` never re-executes a page when the package changes; PR CI keeps the frozen results |
 
 ## Wiring recipes
 

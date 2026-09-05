@@ -46,7 +46,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Wheels and source distributions now include the rendered documentation under
   `pyfixest/docs/` (`llms.txt` plus one Markdown page per documentation page,
   with executed output), generated at build time from the same Quarto sources
-  as the website.
+  as the website. The bundled `llms.txt` describes each page, and release builds
+  render every page from scratch so the bundled output matches the released code.
 
 ### Inference Types
 
