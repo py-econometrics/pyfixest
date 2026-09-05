@@ -1388,6 +1388,131 @@ def test_wls_na():
     )
 
 
+@pytest.mark.against_r_core
+def test_jla_leverage_against_fixest():
+    """Compare randomized leverage with exact R fixest hat values."""
+    number_observations = 96
+    observation = np.arange(number_observations)
+    component = observation // 48
+    within_component = observation % 48
+    data = pd.DataFrame(
+        {
+            "y": np.cos(observation / 5) + observation / 100,
+            "x": np.sin(observation / 7) + observation / 50,
+            "f1": 3 * component + within_component % 3,
+            "f2": 4 * component + (within_component // 3) % 4,
+            "weights": 0.5 + (observation % 7) / 3,
+        }
+    )
+
+    fit_py = pf.feols(
+        "y ~ x | f1 + f2",
+        data=data,
+        weights="weights",
+        demeaner=pf.LsmrDemeaner(
+            fixef_atol=1e-12,
+            fixef_btol=1e-12,
+            preconditioner="additive",
+        ),
+    )
+    fit_r = fixest.feols(
+        ro.Formula("y ~ x | f1 + f2"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+    )
+
+    result = fit_py.leverage(
+        number_probes=10_000,
+        seed=8712,
+        compute_monte_carlo_standard_errors=True,
+    )
+    leverage_r = np.asarray(stats.hatvalues(fit_r, exact=True), dtype=np.float64)
+
+    assert result.monte_carlo_standard_errors is not None
+    # These tolerances cover finite-probe Monte Carlo error; the deterministic
+    # projection tests separately exercise solver accuracy at tighter tolerances.
+    np.testing.assert_allclose(
+        result.estimate,
+        leverage_r,
+        rtol=0.06,
+        atol=0.005,
+        err_msg="JLA leverage differs from exact R fixest hat values.",
+    )
+    np.testing.assert_array_less(
+        np.abs(result.estimate - leverage_r),
+        5 * result.monte_carlo_standard_errors + 1e-10,
+        err_msg="JLA leverage error exceeds five Monte Carlo standard errors.",
+    )
+
+
+@pytest.mark.against_r_core
+def test_influence_against_fixest_refits():
+    """Compare OLS influence with direct deleted-observation R fixest refits."""
+    number_observations = 36
+    observation = np.arange(number_observations)
+    data = pd.DataFrame(
+        {
+            "y": np.cos(observation / 5) + observation / 100,
+            "x": np.sin(observation / 7) + observation / 50,
+            "f1": observation % 3,
+            "f2": (observation // 3) % 4,
+            "weights": 0.5 + (observation % 7) / 3,
+        }
+    )
+
+    fit_py = pf.feols(
+        "y ~ x | f1 + f2",
+        data=data,
+        weights="weights",
+        demeaner=pf.LsmrDemeaner(
+            fixef_atol=1e-12,
+            fixef_btol=1e-12,
+            preconditioner="additive",
+        ),
+    )
+    fit_r = fixest.feols(
+        ro.Formula("y ~ x | f1 + f2"),
+        data=data,
+        weights=ro.Formula("~ weights"),
+    )
+
+    result = fit_py.influence(
+        number_probes=20_000,
+        seed=9817,
+        compute_monte_carlo_standard_errors=True,
+    )
+    fitted_r = np.asarray(stats.fitted(fit_r), dtype=np.float64)
+    influence_r = np.empty(number_observations)
+    for index in range(number_observations):
+        leave_one_out_fit_r = fixest.feols(
+            ro.Formula("y ~ x | f1 + f2"),
+            data=data.drop(index=index),
+            weights=ro.Formula("~ weights"),
+        )
+        leave_one_out_prediction_r = np.asarray(
+            stats.predict(leave_one_out_fit_r, newdata=data.iloc[[index]]),
+            dtype=np.float64,
+        )[0]
+        influence_r[index] = fitted_r[index] - leave_one_out_prediction_r
+
+    assert result.monte_carlo_standard_errors is not None
+    np.testing.assert_allclose(
+        result.estimate,
+        influence_r,
+        rtol=0.08,
+        atol=0.005,
+        err_msg="JLA leave-one-out influence differs from direct R fixest refits.",
+    )
+    np.testing.assert_array_less(
+        np.abs(result.estimate - influence_r),
+        5 * result.monte_carlo_standard_errors + 1e-10,
+        err_msg=(
+            "JLA leave-one-out influence error exceeds five Monte Carlo standard "
+            "errors relative to R fixest refits."
+        ),
+    )
+
+
 def _py_fml_to_r_fml(py_fml):
     """
     Covernt pyfixest formula.
