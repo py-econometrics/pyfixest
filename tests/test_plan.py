@@ -324,9 +324,8 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def get_fit(self):
             self.events.append("fit")
 
-        def vcov(self, vcov, vcov_kwargs=None, data=None):
+        def vcov(self, vcov, vcov_kwargs=None):
             assert vcov == "iid"
-            assert data is None
             self.events.append("vcov")
 
         def get_inference(self):

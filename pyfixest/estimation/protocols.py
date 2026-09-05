@@ -32,7 +32,6 @@ class FittedModel(Protocol):
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-        data: Any = None,
     ) -> object:
         """Compute the requested covariance matrix."""
         ...
@@ -134,7 +133,6 @@ class FittedResult(Protocol):
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-        data: Any = None,
     ) -> FittedResult:
         """Replace the covariance estimate and the inference derived from it."""
         ...

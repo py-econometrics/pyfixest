@@ -845,7 +845,6 @@ class BaseRegression(TidyColumnAccessors):
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-        data: DataFrameType | None = None,
     ) -> BaseRegression:
         """
         Compute covariance matrices for an estimated regression model.
@@ -862,18 +861,19 @@ class BaseRegression(TidyColumnAccessors):
             for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
-        data: Optional[DataFrameType], optional
-            The already-filtered estimation sample in its original estimation
-            order. This is required for data-dependent covariance updates when
-            the fitted model does not retain its input data. If None, tries to
-            fetch the data from the model object. Defaults to None.
-
 
         Returns
         -------
         BaseRegression
             The fitted result itself, with the covariance matrix and every
             derived inference quantity replaced.
+
+        Notes
+        -----
+        Cluster, time, and panel variables are read from the model's filtered
+        estimation data and do not need to appear in its formula. For estimators
+        that support them, post-fit clustered or HAC covariance updates require
+        `store_data=True` and `lean=False`.
 
         Examples
         --------
@@ -901,27 +901,12 @@ class BaseRegression(TidyColumnAccessors):
             remedy="Set vcov at estimation time or refit with lean=False.",
         )
 
-        data_to_check: pd.DataFrame | None
-        if data is None:
-            data_to_check = getattr(self, "_data", None)
-        else:
-            try:
-                data_to_check = _narwhals_to_pandas(data)
-            except TypeError as e:
-                raise TypeError(
-                    f"The data set must be a DataFrame type. Received: {type(data)}"
-                ) from e
-            if len(data_to_check) != self._N_rows:
-                raise ValueError(
-                    "`data` passed to vcov() must contain exactly the already-filtered "
-                    "estimation sample in its original estimation order; expected "
-                    f"{self._N_rows} rows, received {len(data_to_check)}."
-                )
+        data = getattr(self, "_data", None)
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
 
         vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
             vcov, self._has_fixef, self._is_iv
@@ -929,10 +914,10 @@ class BaseRegression(TidyColumnAccessors):
 
         # Reject before any inference state is overwritten, so a failed update
         # leaves the previous covariance estimate intact.
-        if vcov_type in {"HAC", "CRV"} and data_to_check is None:
+        if vcov_type in {"HAC", "CRV"} and data is None:
             self._require_estimation_data(
                 "vcov",
-                remedy="Pass the estimation sample via data= or refit with store_data=True.",
+                remedy="Refit with store_data=True and lean=False.",
             )
 
         self._vcov_type = vcov_type
@@ -958,7 +943,7 @@ class BaseRegression(TidyColumnAccessors):
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-            assert data_to_check is not None
+            assert data is not None
             kw = vcov_kwargs or {}
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
@@ -966,10 +951,10 @@ class BaseRegression(TidyColumnAccessors):
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
-                    G=np.unique(data_to_check[self._time_id]).shape[0],
+                    G=np.unique(data[self._time_id]).shape[0],
                 )  # number of unique time periods T used
             )
-            self._vcov = self._ssc * self._vcov_hac(data=data_to_check)
+            self._vcov = self._ssc * self._vcov_hac(data=data)
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -978,9 +963,9 @@ class BaseRegression(TidyColumnAccessors):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            assert data_to_check is not None
+            assert data is not None
             prep = prepare_cluster_state(
-                data=data_to_check,
+                data=data,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -993,7 +978,7 @@ class BaseRegression(TidyColumnAccessors):
                 prep=prep,
                 k=self._k,
                 make_ssc_kwargs=self._make_ssc_kwargs,
-                cluster_vcov=partial(self._vcov_crv_cluster, data=data_to_check),
+                cluster_vcov=partial(self._vcov_crv_cluster, data=data),
             )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
@@ -2288,8 +2273,8 @@ def _check_vcov_input(
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
         if data is None:
             raise RuntimeError(
-                "A vcov column list requires estimation data. Pass data= or fit "
-                "with store_data=True."
+                "A vcov column list requires estimation data. Refit with "
+                "store_data=True and lean=False."
             )
         assert all(v in data.columns for v in vcov), (
             "vcov list must contain columns in the data"
