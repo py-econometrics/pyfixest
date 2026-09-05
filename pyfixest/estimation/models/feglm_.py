@@ -224,8 +224,8 @@ class Feglm(Feols):
         weighted_working_residuals = (
             working_state.working_weights * working_state.working_residuals
         )
-        # The IRLS score is W_i x_i e_i. Working weights already contain any
-        # user-supplied observation weight.
+        # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
+        # any user-supplied observation weight.
         self._scores = design_within * weighted_working_residuals[:, None]
         weighted_design = working_state.working_weights[:, None] * design_within
         self._tZX = design_within.T @ weighted_design
@@ -276,14 +276,17 @@ class Feglm(Feols):
                     delattr(self, attr)
 
     def _normal_equation_weights(self) -> np.ndarray:
-        """Return final IRLS weights used by the normal equations."""
+        """Return the final IRLS weights in the fitted normal equations."""
         return self._working_state.working_weights
 
     def _fixef_recovery_weights(self) -> np.ndarray | None:
-        """Return combined IRLS weights for weighted FE recovery.
+        """Return weights used by fixed-effect coefficient recovery.
 
-        Working weights already include observation weights, so multiplying the
-        observation weights again would double count them.
+        At convergence, ``eta - offset - X @ beta`` is the fixed-effect
+        contribution, up to solver tolerance. For weighted fits the recovery
+        solve uses the combined IRLS weights, which already contain the
+        observation weights; applying observation weights again would double
+        count them.
         """
         return self._working_state.working_weights if self._has_weights else None
 
@@ -412,13 +415,9 @@ class Feglm(Feols):
         else:
             return yhat
 
-    def _check_dependent_variable(self) -> None:
-        "Validate the dependent variable according to the family's constraints."
-        self._family.check_y(self._model_matrix.dependent)
-
     def _validate_response(self) -> None:
-        """Apply family-specific response validation after matrix preparation."""
-        self._check_dependent_variable()
+        """Validate the prepared response against the family's constraints."""
+        self._family.check_y(self._model_matrix.dependent)
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
