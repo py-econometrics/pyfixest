@@ -171,8 +171,11 @@ need a `docs/how-to/` guide or an extension to the nearest existing guide.
 Never hand-edit generated `docs/reference/**`. The hosted pages and the
 `.llms.md` pages bundled into `pyfixest/docs/` are the same Quarto output. The
 `agent-docs` job in `.github/workflows/build-and-release.yaml` produces that
-bundle once per release and hands it to every wheel and the sdist; a
-`workflow_dispatch` run exercises the same path without publishing.
+bundle once per release, rendering every page from scratch rather than from
+frozen results, and hands it to every wheel and the sdist. The `release` job
+then installs one wheel and verifies the bundled pages, their version stamp,
+and the skill before publishing; a `workflow_dispatch` run exercises the same
+path without publishing.
 
 ## Git and review
 
