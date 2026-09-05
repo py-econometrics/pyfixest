@@ -140,7 +140,9 @@ pd.DataFrame(
 ```
 
 ```{python}
-# NW and DK require vcov_kwargs with time_id, panel_id and lag are optional
+# NW and DK need vcov_kwargs with time_id; DK also needs panel_id; NW without
+# panel_id treats the data as one time series and then needs lag and unique
+# time values
 hac_kwargs = {"time_id": "year", "panel_id": "unit"}
 pd.DataFrame(
     {
@@ -155,10 +157,12 @@ pd.DataFrame(
 ```{python}
 # change inference after estimation, and adjust the small-sample correction
 fit = pf.feols("Y ~ X1 | f1", data=data)
-no_ssc = pf.feols("Y ~ X1 | f1", data=data, ssc=pf.ssc(adj=False, cluster_adj=False))
+no_ssc = pf.feols("Y ~ X1 | f1", data=data, ssc=pf.ssc(k_adj=False, G_adj=False))
 pd.DataFrame({"default": fit.se(), "post-hoc CRV1": fit.vcov({"CRV1": "f1"}).se(),
-              "ssc(adj=False)": no_ssc.se()})
+              "ssc(k_adj=False)": no_ssc.se()})
 ```
+
+The cells that raise are pinned by `test_cheatsheet_unsupported_combinations` in `tests/test_errors.py`.
 
 ```{python}
 #| error: true
@@ -180,7 +184,7 @@ pf.quantreg("Y ~ X1", data=data, quantile=0.5, vcov={"CRV1": "f1 + f2"})
 
 ## Post-estimation
 
-Every fitted model shares the accessors below; see [`Feols`](reference/estimation.models.feols_.Feols.qmd).
+The accessors below are shown on an OLS fit. Other estimators inherit them, but not every method is supported; check the support table in [Standard Errors & Inference](tutorials/standard-errors.qmd) before using `ritest()` or `wildboottest()` on anything but `feols`. See [`Feols`](reference/estimation.models.feols_.Feols.qmd) for the full list.
 
 ```{python}
 fit = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "f1"})
