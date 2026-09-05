@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from pyfixest.estimation.internals.literals import InferenceType
+    from pyfixest.estimation.internals.vcov_utils import InferenceState
     from pyfixest.estimation.models.base_regression_ import BaseRegression
 
 
@@ -135,6 +136,19 @@ class FittedResult(Protocol):
         vcov_kwargs: dict[str, str | int] | None = None,
     ) -> FittedResult:
         """Replace the covariance estimate and the inference derived from it."""
+        ...
+
+    def _prepare_vcov(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+    ) -> InferenceState:
+        """Prepare a covariance update without mutating this result."""
+        ...
+
+    def _apply_vcov(self, state: InferenceState) -> None:
+        """Publish one fully prepared covariance update."""
         ...
 
     def get_inference(self, alpha: float = 0.05) -> None:

@@ -8,6 +8,7 @@ from typing import Any, Generic, TypeVar, cast
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.internals.vcov_utils import InferenceState
 from pyfixest.estimation.models._tidy_accessors import TidyColumnAccessors
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import ParsedFormula
@@ -152,8 +153,13 @@ class FixestMulti(TidyColumnAccessors, Generic[ResultT]):
         that support them, post-fit clustered or HAC covariance updates require
         `store_data=True` and `lean=False`.
         """
+        prepared: list[tuple[ResultT, InferenceState]] = []
         for fxst in self.all_fitted_models.values():
-            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            state = fxst._prepare_vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            prepared.append((fxst, state))
+
+        for fxst, state in prepared:
+            fxst._apply_vcov(state)
         return self
 
     def tidy(self) -> pd.DataFrame:

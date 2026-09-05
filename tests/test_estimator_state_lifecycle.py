@@ -7,6 +7,7 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -14,6 +15,8 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+import pyfixest.estimation.models.base_regression_ as base_regression_module
+from pyfixest.errors import NanInClusterVarError, VcovTypeNotSupportedError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
@@ -23,6 +26,59 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     WithinLinearData,
 )
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
+
+INFERENCE_FIELDS = (
+    "_vcov_type",
+    "_vcov_type_detail",
+    "_is_clustered",
+    "_clustervar",
+    "_G",
+    "_bread",
+    "_ssc",
+    "_vcov",
+    "_df_k",
+    "_df_t",
+    "_se",
+    "_tstat",
+    "_pvalue",
+    "_conf_int",
+    "_cluster_df",
+    "_lag",
+    "_time_id",
+    "_panel_id",
+)
+_MISSING = object()
+
+
+def _snapshot_inference(model) -> dict[str, object]:
+    """Copy only covariance metadata and derived inference fields."""
+    snapshot: dict[str, object] = {}
+    for field in INFERENCE_FIELDS:
+        value = getattr(model, field, _MISSING)
+        if isinstance(value, np.ndarray):
+            value = value.copy()
+        elif isinstance(value, pd.DataFrame):
+            value = value.copy(deep=True)
+        elif isinstance(value, list):
+            value = list(value)
+        snapshot[field] = value
+    return snapshot
+
+
+def _assert_inference_unchanged(model, before: dict[str, object]) -> None:
+    """Assert exact preservation of covariance metadata and inference arrays."""
+    after = _snapshot_inference(model)
+    assert after.keys() == before.keys()
+    for field, expected in before.items():
+        actual = after[field]
+        if isinstance(expected, np.ndarray):
+            np.testing.assert_array_equal(actual, expected, err_msg=field)
+        elif isinstance(expected, pd.DataFrame):
+            pd.testing.assert_frame_equal(actual, expected, obj=field)
+        else:
+            assert actual == expected, field
 
 
 @pytest.fixture
@@ -618,6 +674,159 @@ def test_store_data_false_rejects_data_dependent_vcov(
         match=r"vcov\(\).*store_data=False.*Refit with store_data=True",
     ):
         fit.vcov({"CRV1": "fe"})
+
+
+def test_rejected_glm_crv3_preserves_inference_state(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An unsupported covariance request leaves every published field unchanged."""
+    fit = pf.feglm("y ~ x", data=lifecycle_data, family="gaussian", vcov="iid")
+    before = _snapshot_inference(fit)
+
+    with pytest.raises(VcovTypeNotSupportedError, match="CRV3 inference"):
+        fit.vcov({"CRV3": "fe"})
+
+    _assert_inference_unchanged(fit, before)
+
+
+@pytest.mark.parametrize("failure", ["validation", "computation"])
+def test_failed_hac_update_preserves_inference_state(
+    lifecycle_data: pd.DataFrame,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    """HAC validation and kernel failures cannot publish partial metadata."""
+    data = lifecycle_data.assign(time=np.arange(len(lifecycle_data)))
+    if failure == "validation":
+        data["time"] = pd.Series(["invalid"] * len(data), dtype=object)
+    else:
+
+        def fail_hac_computation(**kwargs):
+            raise RuntimeError("forced HAC computation failure")
+
+        monkeypatch.setattr(base_regression_module, "vcov_hac", fail_hac_computation)
+
+    fit = pf.feols("y ~ x", data=data, vcov={"CRV1": "fe"})
+    before = _snapshot_inference(fit)
+    error = ValueError if failure == "validation" else RuntimeError
+    message = (
+        "time variable must be numeric"
+        if failure == "validation"
+        else "forced HAC computation failure"
+    )
+
+    with pytest.raises(error, match=message):
+        fit.vcov("NW", vcov_kwargs={"time_id": "time", "lag": 1})
+
+    _assert_inference_unchanged(fit, before)
+
+
+def test_fixest_multi_vcov_prepares_every_child_before_publish(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A later child's failure leaves every model in a FixestMulti unchanged."""
+    data = lifecycle_data.assign(
+        cluster=np.tile(["g1", "g2", "g3"], 8),
+        time=np.arange(len(lifecycle_data)),
+    )
+    data.loc[0, ["x", "cluster"]] = np.nan
+    fit = pf.feols(
+        "y ~ sw(x, x2)",
+        data=data,
+        vcov="NW",
+        vcov_kwargs={"time_id": "time", "lag": 1},
+    )
+    children = fit.to_list()
+    child_ids = [id(child) for child in children]
+    before = [_snapshot_inference(child) for child in children]
+
+    with pytest.raises(NanInClusterVarError, match="missing values"):
+        fit.vcov({"CRV1": "cluster"})
+
+    assert [id(child) for child in fit.to_list()] == child_ids
+    for child, state in zip(children, before, strict=True):
+        _assert_inference_unchanged(child, state)
+
+
+def test_quantreg_multi_vcov_isolates_later_child_rng_failure(
+    lifecycle_data: pd.DataFrame,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Quantile staging binds a private solver and advances no RNG on failure."""
+    with pytest.warns(FutureWarning, match="experimental"):
+        fit = pf.quantreg(
+            "y ~ x",
+            data=lifecycle_data,
+            quantile=[0.25, 0.75],
+            method="pfn",
+            vcov="iid",
+            seed=42,
+        )
+    children = fit.to_list()
+    wrapper = QuantregMulti.__new__(QuantregMulti)
+    wrapper.all_quantregs = {child._quantile: child for child in children}
+    child_ids = [id(child) for child in children]
+    inference_before = [_snapshot_inference(child) for child in children]
+    rng_before = [
+        deepcopy(child._fit.keywords["rng"].bit_generator.state) for child in children
+    ]
+    rng_objects = [child._fit.keywords["rng"] for child in children]
+    original_vcov_nid = Quantreg._vcov_nid
+
+    def fail_second_child(self: Quantreg) -> np.ndarray:
+        if self._quantile == 0.75:
+            assert self._fit.func.__self__ is self
+            self._fit.keywords["rng"].random()
+            raise RuntimeError("forced quantile covariance failure")
+        return original_vcov_nid(self)
+
+    monkeypatch.setattr(Quantreg, "_vcov_nid", fail_second_child)
+
+    with pytest.raises(RuntimeError, match="forced quantile covariance failure"):
+        wrapper.vcov("nid")
+
+    assert [id(child) for child in wrapper.all_quantregs.values()] == child_ids
+    for child, inference, rng_state in zip(
+        children, inference_before, rng_before, strict=True
+    ):
+        _assert_inference_unchanged(child, inference)
+        assert child._fit.keywords["rng"].bit_generator.state == rng_state
+
+    def successful_nid(self: Quantreg) -> np.ndarray:
+        assert self._fit.func.__self__ is self
+        self._fit.keywords["rng"].random()
+        return self._vcov.copy()
+
+    monkeypatch.setattr(Quantreg, "_vcov_nid", successful_nid)
+    assert wrapper.vcov("nid") is wrapper.all_quantregs
+    for child, rng, rng_state in zip(children, rng_objects, rng_before, strict=True):
+        assert child._fit.keywords["rng"] is rng
+        assert rng.bit_generator.state != rng_state
+
+
+@pytest.mark.parametrize(
+    ("initial_vcov", "vcov_kwargs"),
+    [({"CRV1": "fe"}, None), ("NW", {"time_id": "time", "lag": 1})],
+    ids=["cluster", "hac"],
+)
+def test_successful_vcov_update_resets_type_specific_metadata(
+    lifecycle_data: pd.DataFrame,
+    initial_vcov: str | dict[str, str],
+    vcov_kwargs: dict[str, str | int] | None,
+) -> None:
+    """Publishing IID inference clears metadata owned by prior CRV or HAC state."""
+    data = lifecycle_data.assign(time=np.arange(len(lifecycle_data)))
+    fit = pf.feols("y ~ x", data=data, vcov=initial_vcov, vcov_kwargs=vcov_kwargs)
+
+    assert fit.vcov("iid") is fit
+    assert fit._vcov_type == "iid"
+    assert fit._is_clustered is False
+    assert fit._clustervar == []
+    assert fit._G == []
+    assert fit._cluster_df is None
+    assert fit._lag is None
+    assert fit._time_id is None
+    assert fit._panel_id is None
 
 
 def test_lean_vcov_fails_with_storage_guidance(

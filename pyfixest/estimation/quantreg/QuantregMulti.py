@@ -18,6 +18,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.vcov_utils import InferenceState
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
@@ -207,8 +208,13 @@ class QuantregMulti:
         vcov_kwargs: dict[str, str | int] | None = None,
     ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
+        prepared: list[tuple[Quantreg, InferenceState]] = []
         for quantreg in self.all_quantregs.values():
-            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            state = quantreg._prepare_vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            prepared.append((quantreg, state))
+
+        for quantreg, state in prepared:
+            quantreg._apply_vcov(state)
 
         return self.all_quantregs
 

@@ -280,6 +280,10 @@ We also removed:
 
 ### Bug Fixes
 
+- Post-estimation `vcov()` updates are now transactional. Validation,
+  covariance-computation, or later-child failures preserve the previous
+  covariance metadata and derived inference for single and multiple-estimation
+  results.
 - `lean=True` results keep the formula specification and evaluation context, so
   `predict(newdata=...)` keeps working for models without fixed effects; methods
   that need discarded state now raise an informative `RuntimeError` instead of
