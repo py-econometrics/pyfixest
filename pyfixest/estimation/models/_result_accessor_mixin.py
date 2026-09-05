@@ -157,6 +157,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     def _performance_residuals(self) -> np.ndarray:
         """Return the estimator-specific residual domain for diagnostics."""
         raise NotImplementedError
+
     _rmse: float
     _r2: float
     _adj_r2: float
