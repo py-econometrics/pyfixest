@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -56,7 +57,7 @@ class Feglm(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: Literal[
@@ -139,9 +140,9 @@ class Feglm(Feols):
             and self.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
-                Y=self._Y,
-                X=self._X,
-                fe=self._fe,
+                Y=model_matrix.dependent,
+                X=model_matrix.independent,
+                fe=model_matrix.fixed_effects,
                 fml=self._fml,
                 data=self._data,
                 demeaner=self._demeaner,
@@ -155,7 +156,7 @@ class Feglm(Feols):
 
             # Preserve the established GLM sample-size convention after
             # separation. Frequency-weight policy is handled separately.
-            self._N = self._Y.shape[0]
+            self._N = model_matrix.dependent.shape[0]
             self._N_rows = self._N
 
             self.n_separation_na = len(na_separation)
@@ -167,11 +168,9 @@ class Feglm(Feols):
 
     def to_array(self):
         "Turn estimation DataFrames to np arrays."
-        self._Y, self._X, self._Z = (
-            self._Y.to_numpy(),
-            self._X.to_numpy(),
-            self._X.to_numpy(),
-        )
+        self._Y = self._model_matrix.dependent.to_numpy()
+        self._X = self._model_matrix.independent.to_numpy()
+        self._Z = self._X
         if self._offset_df is not None:
             self._offset = self._offset_df.to_numpy().reshape((-1, 1))
         if self._fe is not None:
@@ -218,7 +217,7 @@ class Feglm(Feols):
         self._weights = fit.W
         self._irls_weights = fit.W
         if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N, 1))
+            self._weights = self._weights.reshape((self._N_rows, 1))
 
         self._u_hat_response = (self._Y.flatten() - fit.mu).flatten()
         e_final = fit.z_tilde - fit.X_tilde @ self._beta_hat
@@ -251,6 +250,22 @@ class Feglm(Feols):
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    def _normal_equation_weights(self) -> np.ndarray | None:
+        """Return no extra weights while the GLM design stays sqrt-weighted."""
+        return None
+
+    def _fixef_recovery_weights(self) -> np.ndarray | None:
+        """Preserve legacy weighted-GLM FE recovery until working-state migration."""
+        return self._weights.flatten() if self._has_weights else None
+
+    def _performance_within_response(self) -> np.ndarray:
+        """Undo legacy solver scaling for Gaussian performance diagnostics."""
+        return self._Y / np.sqrt(self._irls_weights).reshape((-1, 1))
+
+    def _performance_residuals(self) -> np.ndarray:
+        """Return Gaussian response residuals before legacy solver scaling."""
+        return self._u_hat_response
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
@@ -373,7 +388,7 @@ class Feglm(Feols):
 
     def _check_dependent_variable(self) -> None:
         "Validate the dependent variable according to the family's constraints."
-        self._family.check_y(self._Y)
+        self._family.check_y(self._model_matrix.dependent)
 
     def _validate_response(self) -> None:
         """Apply family-specific response validation after matrix preparation."""

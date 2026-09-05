@@ -54,6 +54,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - The shared demeaning cache now stores read-only named arrays, preserves
   requested column order on complete and partial hits, and avoids allocating a
   concatenated request matrix when every requested column is already cached.
+- Linear estimators now retain formula tables, unpremultiplied within arrays,
+  and user-scale observation weights as separate state. Weighted OLS and IV
+  scores, covariance leverage, residuals, diagnostics, and recovered fixed
+  effects use those explicit domains.
 
 ### Inference Types
 

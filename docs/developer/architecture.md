@@ -218,6 +218,21 @@ not replace canonical within data. A fitted result may still expose explicitly
 in-place post-estimation operations, but those operations must not repurpose
 estimation fields.
 
+## Implemented linear array and weight domains
+
+Linear estimators retain formula tables, user-scale `ObservationWeights`, and
+unpremultiplied `WithinLinearData` as distinct state. For IV models, `design`
+is the full structural regressor matrix and `instruments` is the full
+instrument matrix, including exogenous regressors that instrument themselves.
+OLS and IV primitives create square-root-weighted arrays only as solver-local
+temporaries; persisted residuals remain in response units, while scores and
+cross-products contain the full observation weights required by their
+estimating equations.
+
+Frozen state objects prevent field rebinding, but their NumPy arrays remain
+element-mutable unless separately marked read-only. The shared demeaning cache
+does mark published buffers read-only because they are shared across fits.
+
 ## Repository map and extension seams
 
 Step-by-step recipes for estimators, post-estimation features, vcov types,

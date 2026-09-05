@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
@@ -43,10 +42,7 @@ class DemeanCache:
 
     def __init__(
         self,
-        # Kept unparameterized while legacy model constructors still annotate
-        # the shared cache as DataFrame-valued; the adapter below is removed
-        # when those consumers migrate to arrays.
-        lookup_demeaned_data: dict | None = None,
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData] | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
     ) -> None:
         self.lookup_demeaned_data = (
@@ -199,29 +195,3 @@ class DemeanCache:
         if selects_cached_prefix:
             return cached.values[:, : len(positions)]
         return cached.values[:, positions]
-
-    def demean_yx_frames(
-        self,
-        Y: pd.DataFrame,
-        X: pd.DataFrame,
-        fe: pd.DataFrame | None,
-        weights: np.ndarray | None,
-        na_index: frozenset[int],
-        demeaner: AnyDemeaner,
-    ) -> tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]:
-        """Adapt legacy DataFrame model consumers to the named-array cache."""
-        response, design, used = self.demean_yx(
-            Y=Y.to_numpy(dtype=np.float64),
-            X=X.to_numpy(dtype=np.float64),
-            y_names=tuple(Y.columns),
-            x_names=tuple(X.columns),
-            fe=None if fe is None else fe.to_numpy(),
-            weights=weights,
-            na_index=na_index,
-            demeaner=demeaner,
-        )
-        return (
-            pd.DataFrame(response, columns=Y.columns, index=Y.index),
-            pd.DataFrame(design, columns=X.columns, index=X.index),
-            used,
-        )
