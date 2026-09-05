@@ -54,7 +54,7 @@ panel["y"] = (
 | Serial correlation in a time series or panel | `vcov="NW"` with `vcov_kwargs` |
 | Cross-sectional and serial dependence in a panel | `vcov="DK"` with `vcov_kwargs` |
 | Few clusters and an unweighted OLS model | `wildboottest()` |
-| Known random assignment mechanism | `ritest()` |
+| Known random assignment mechanism | `ritest()` on unweighted OLS or Poisson fits |
 
 These choices are not interchangeable. For example, heteroskedasticity-robust
 inference does not allow arbitrary correlation within firms, and clustering by
@@ -155,7 +155,9 @@ Both require a numeric or date-like `time_id`. Panel Newey-West also takes a
 `panel_id`; without it, time values must be unique because the data are treated
 as one time series. Driscoll-Kraay requires both `time_id` and `panel_id`. Set
 the lag explicitly when it is part of the design; a time-series Newey-West call
-without a panel identifier currently requires it.
+without a panel identifier currently requires it. Pass `vcov_kwargs` with a
+`time_id` explicitly: omitting it currently raises an unguarded `KeyError`
+rather than a helpful message.
 
 ```{python}
 fit_nw = pf.feols(
@@ -265,6 +267,18 @@ coefficient; `type="randomization-t"` uses the t statistic and is slower.
 Randomization inference is not supported for IV or weighted models. It cannot
 repair an incorrectly specified assignment mechanism.
 
+`ritest()` is supported for unweighted `feols` fits and for `fepois`; IV and
+weighted fits raise `NotImplementedError`. It is not supported for quantile
+regression or the `feglm` families, which inherit the method from `Feols`
+without a guard: the default `type="randomization-c"` path returns a p-value
+computed from least-squares resampling draws on the stored design without
+raising or warning, and `type="randomization-t"` raises `AttributeError`. On a
+quantile-regression fit the draws are bit-identical to those of `feols` on the
+same formula, yet they are reported next to the quantile point estimate; on a
+`feglm` fit they are least squares on the frozen IRLS working data. Do not use
+`ritest()` on those fits; a guard that raises is a separate change.
+Reproducibility comes from `rng=`, and there is no `seed=` argument.
+
 ## Supported combinations
 
 The most important restrictions are collected here. Estimator-specific pages
@@ -278,7 +292,7 @@ remain authoritative for additional details.
 | Two-way CRV1 | Not quantile regression. |
 | NW, DK | Not quantile regression or frequency weights; require time metadata, and DK requires panel metadata. |
 | Wild bootstrap | Raises for IV, WLS, Poisson, and multiway clustering. On a quantile-regression fit it does not raise but returns the OLS bootstrap; do not use it there. |
-| Randomization inference | Not IV or WLS; the assignment mechanism must match the resampling scheme. |
+| Randomization inference | Only unweighted OLS and Poisson. IV and weighted fits raise; quantile and GLM fits return OLS-based statistics without raising (do not use). The assignment mechanism must match the resampling scheme. |
 
 Multiple-estimation results are held in `FixestMulti`. Set `vcov` and `ssc` in
 the estimation call when possible; use `FixestMulti.vcov()` or
