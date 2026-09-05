@@ -280,6 +280,9 @@ We also removed:
 
 ### Bug Fixes
 
+- CRV3 covariance estimation now rejects leave-one-cluster-out refits that drop,
+  add, or duplicate coefficient names instead of broadcasting or misaligning
+  coefficients.
 - Post-estimation `vcov()` updates are now transactional. Validation,
   covariance-computation, or later-child failures preserve the previous
   covariance metadata and derived inference for single and multiple-estimation
