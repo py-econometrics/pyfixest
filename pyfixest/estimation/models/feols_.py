@@ -31,6 +31,7 @@ from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
+    HacVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -729,27 +730,27 @@ class Feols(ResultAccessorMixin):
             remedy="Set vcov at estimation time or refit with lean=False.",
         )
 
-        data_to_check: pd.DataFrame | None
+        estimation_data: pd.DataFrame | None
         if data is None:
-            data_to_check = getattr(self, "_data", None)
+            estimation_data = getattr(self, "_data", None)
         else:
             try:
-                data_to_check = _narwhals_to_pandas(data)
+                estimation_data = _narwhals_to_pandas(data)
             except TypeError as e:
                 raise TypeError(
                     f"The data set must be a DataFrame type. Received: {type(data)}"
                 ) from e
-            if len(data_to_check) != self._N_rows:
+            if len(estimation_data) != self._N_rows:
                 raise ValueError(
                     "`data` passed to vcov() must contain exactly the already-filtered "
                     "estimation sample in its original estimation order; expected "
-                    f"{self._N_rows} rows, received {len(data_to_check)}."
+                    f"{self._N_rows} rows, received {len(estimation_data)}."
                 )
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=estimation_data)
 
         vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
             vcov, self._has_fixef, self._is_iv
@@ -757,7 +758,7 @@ class Feols(ResultAccessorMixin):
 
         # Reject before any inference state is overwritten, so a failed update
         # leaves the previous covariance estimate intact.
-        if vcov_type in {"HAC", "CRV"} and data_to_check is None:
+        if vcov_type in {"HAC", "CRV"} and estimation_data is None:
             self._require_estimation_data(
                 "vcov",
                 remedy="Pass the estimation sample via data= or refit with store_data=True.",
@@ -786,7 +787,7 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-            assert data_to_check is not None
+            assert estimation_data is not None
             kw = vcov_kwargs or {}
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
@@ -794,10 +795,10 @@ class Feols(ResultAccessorMixin):
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
-                    G=np.unique(data_to_check[self._time_id]).shape[0],
+                    G=np.unique(estimation_data[self._time_id]).shape[0],
                 )  # number of unique time periods T used
             )
-            self._vcov = self._ssc * self._vcov_hac(data=data_to_check)
+            self._vcov = self._ssc * self._vcov_hac(data=estimation_data)
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -806,9 +807,9 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            assert data_to_check is not None
+            assert estimation_data is not None
             prep = prepare_cluster_state(
-                data=data_to_check,
+                data=estimation_data,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -821,7 +822,7 @@ class Feols(ResultAccessorMixin):
                 prep=prep,
                 k=self._k,
                 make_ssc_kwargs=self._make_ssc_kwargs,
-                cluster_vcov=partial(self._vcov_crv_cluster, data=data_to_check),
+                cluster_vcov=partial(self._vcov_crv_cluster, data=estimation_data),
             )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
@@ -883,11 +884,11 @@ class Feols(ResultAccessorMixin):
             weights=self._observation_weights.values,
         )
 
-    def _leverage_weights(self) -> np.ndarray | None:
-        """Return weights used by the fitted normal equations."""
+    def _normal_equation_weights(self) -> np.ndarray | None:
+        """Return the row weights in the fitted normal equations."""
         return self._observation_weights.values
 
-    def _fixef_weights(self) -> np.ndarray | None:
+    def _fixef_recovery_weights(self) -> np.ndarray | None:
         """Return weights used by fixed-effect coefficient recovery."""
         return self._observation_weights.values
 
@@ -897,14 +898,12 @@ class Feols(ResultAccessorMixin):
             scores=self._scores,
             X=self._X,
             tZX=self._tZX,
-            # Only the frequency-weight correction divides by the weights.
-            weights=(
+            frequency_weights=(
                 observation_weights.reshape((-1, 1))
                 if observation_weights is not None and self._weights_type == "fweights"
                 else None
             ),
-            leverage_weights=self._leverage_weights(),
-            weights_type=self._weights_type,
+            normal_equation_weights=self._normal_equation_weights(),
             vcov_type_detail=self._vcov_type_detail,
             bread=self._bread,
             is_iv=self._is_iv,
@@ -944,7 +943,7 @@ class Feols(ResultAccessorMixin):
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=cast(int | None, self._lag),
-            vcov_type_detail=cast(Literal["NW", "DK"], self._vcov_type_detail),
+            vcov_type_detail=cast(HacVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -1850,7 +1849,7 @@ class Feols(ResultAccessorMixin):
         self._require_fit_arrays("fixef", arrays="the fitted arrays")
         self._require_estimation_data("fixef")
 
-        fixef_weights = self._fixef_weights()
+        fixef_recovery_weights = self._fixef_recovery_weights()
 
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
@@ -1888,14 +1887,14 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         fixed_effect_design = contrast_coding.matrix
-        solve_design = fixed_effect_design
-        if fixef_weights is not None:
-            weights_sqrt = np.sqrt(fixef_weights).flatten()
+        fixed_effect_design_for_recovery = fixed_effect_design
+        if fixef_recovery_weights is not None:
+            weights_sqrt = np.sqrt(fixef_recovery_weights).flatten()
             uhat *= weights_sqrt
             weights_diag = diags(weights_sqrt, 0)
-            solve_design = weights_diag.dot(fixed_effect_design)
+            fixed_effect_design_for_recovery = weights_diag.dot(fixed_effect_design)
 
-        alpha = lsqr(solve_design, uhat, atol=atol, btol=btol)[0]
+        alpha = lsqr(fixed_effect_design_for_recovery, uhat, atol=atol, btol=btol)[0]
 
         self._fixef_coefficients = build_fixed_effects(
             fixed_effect_coefficients=alpha,
@@ -1905,7 +1904,7 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = solve_design.dot(alpha)
+        self._sumFE = fixed_effect_design_for_recovery.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 

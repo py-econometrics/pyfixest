@@ -219,7 +219,8 @@ estimation fields.
 ## Implemented array and weight domains
 
 The shared linear and GLM paths now implement the vocabulary above with frozen,
-slotted state values:
+slotted state values. Frozen state prevents field rebinding, but contained NumPy
+arrays remain mutable unless they are explicitly marked read-only:
 
 | State | Persisted contract |
 |---|---|
@@ -271,11 +272,11 @@ results do keep the formula specification and evaluation context, so
 covariance updates remain available after `store_data=False`; cluster and HAC
 updates require the estimation sample through the documented `vcov(data=...)`
 argument. Explicit covariance data must already be filtered to the fitted row
-sample and retain its estimation order; a row-count check rejects misaligned
-inputs before covariance dispatch. Lean results reject post-fit covariance
-updates because their numerical arrays have been discarded. Every other method
-that needs discarded state raises an informative error naming the storage
-option and its remedy.
+sample and retain its estimation order. A row-count check rejects length
+mismatches but cannot establish row identity or ordering. Lean results reject
+post-fit covariance updates because their numerical arrays have been discarded.
+Every other method that needs discarded state raises an informative error naming
+the storage option and its remedy.
 
 Keeping canonical arrays unpremultiplied favors readability without moving
 weight work out of the numerical hot path: each solver still performs the same

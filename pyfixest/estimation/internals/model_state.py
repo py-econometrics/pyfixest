@@ -76,16 +76,18 @@ class ObservationWeights:
     @classmethod
     def from_values(
         cls,
-        values: NDArray[np.float64],
+        weights: NDArray[np.float64],
         *,
         kind: WeightsTypeOptions,
     ) -> ObservationWeights:
-        """Construct canonical weighted state from user-scale values."""
-        canonical_values = np.asarray(values, dtype=np.float64).reshape(-1)
-        n_rows = len(canonical_values)
-        n_effective = n_rows if kind == "aweights" else float(np.sum(canonical_values))
+        """Construct canonical weighted state from user-scale weights."""
+        observation_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+        n_rows = len(observation_weights)
+        n_effective = (
+            n_rows if kind == "aweights" else float(np.sum(observation_weights))
+        )
         return cls(
-            values=canonical_values,
+            values=observation_weights,
             kind=kind,
             n_rows=n_rows,
             n_effective=n_effective,
@@ -102,8 +104,9 @@ class WithinLinearData:
     """Linear-model arrays after within transformation, in original units.
 
     These arrays have not been multiplied by square-root observation weights.
-    Optional IV roles are kept separate so their econometric meaning remains
-    visible throughout the estimator lifecycle.
+    For IV models, ``design`` is the full structural regressor matrix and may
+    include endogenous regressors. ``instruments`` is the full instrument
+    matrix, including exogenous regressors that instrument themselves.
     """
 
     response: NDArray[np.float64]
