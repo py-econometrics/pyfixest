@@ -50,8 +50,12 @@ Code, that is `~/.claude/skills/pyfixest` for every project, or
 `.claude/skills/pyfixest` for one project:
 
 ```bash
-cp -r "$(python -c "import pyfixest, pathlib; print(pathlib.Path(pyfixest.__file__).parents[1] / 'skills' / 'pyfixest')")" ~/.claude/skills/pyfixest
+SRC="$(python -c "import pyfixest, pathlib; print(pathlib.Path(pyfixest.__file__).parents[1] / 'skills' / 'pyfixest')")"
+mkdir -p ~/.claude/skills/pyfixest && cp -R "$SRC"/. ~/.claude/skills/pyfixest/
 ```
+
+Re-run the same two lines after upgrading PyFixest: they update the copy in
+place instead of nesting a second one inside it.
 
 You can also install it straight from the repository, without a local PyFixest:
 
