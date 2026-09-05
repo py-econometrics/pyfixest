@@ -285,15 +285,14 @@ within state, GLM working state, demeaning caches, quantile solver outputs, and
 large first-stage arrays. Lean results do keep the formula specification and
 evaluation context, so `predict(newdata=...)` still works for models without
 fixed effects. Array-only covariance updates remain available after
-`store_data=False`; cluster and HAC updates require the estimation sample
-through the documented `vcov(data=...)` argument. Explicit covariance data must
-already be filtered to the fitted row sample and retain its estimation order; a
-row-count check rejects misaligned inputs before covariance dispatch, and
-`FixestMulti.vcov(data=...)` validates one common sample for every child before
-any child is updated. Lean results reject post-fit covariance updates because
-their numerical arrays have been discarded. Every other method that needs
-discarded state raises an informative error naming the storage option and its
-remedy.
+`store_data=False`; cluster and HAC updates read only the model's retained,
+filtered estimation sample and reject the update after that sample has been
+discarded. Each child in a multiple-estimation result reads its own sample, so
+formula missingness, singleton removal, GLM separation, and sample splitting stay
+aligned with that child's arrays. Lean results reject post-fit covariance updates
+because their numerical arrays have been discarded. Every other method that
+needs discarded state raises an informative error naming the storage option and
+its remedy.
 
 Keeping canonical arrays unpremultiplied favors readability without moving
 weight work out of the numerical hot path: each solver still performs the same

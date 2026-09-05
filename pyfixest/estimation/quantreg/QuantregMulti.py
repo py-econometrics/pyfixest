@@ -20,7 +20,6 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
-from pyfixest.utils.dev_utils import DataFrameType
 
 
 class QuantregMulti:
@@ -206,11 +205,10 @@ class QuantregMulti:
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-        data: DataFrameType | None = None,
     ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
         for quantreg in self.all_quantregs.values():
-            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
+            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
 
         return self.all_quantregs
 
