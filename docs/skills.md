@@ -11,16 +11,23 @@ skill that points at it.
 ## What ships with a release
 
 **The documentation.** Each wheel contains the rendered site as Markdown, next
-to the package. Locate it with:
+to the package. Locate it, and check that it is present:
 
 ```bash
-python -c "import importlib.resources as r; print(r.files('pyfixest') / 'docs')"
+python -c "import importlib.resources as r; p = r.files('pyfixest') / 'docs'; print(p, (p / 'llms.txt').is_file())"
 ```
 
-Start with `cheatsheet.llms.md` — one page with formula syntax, standard errors,
-post-estimation methods, tables, and a table naming the page to read for each
-task. `llms.txt` in the same directory lists every page. Because the corpus
-travels with the wheel, it always describes the installed version.
+If that prints `True`, start with `cheatsheet.llms.md` — one page with formula
+syntax, standard errors, post-estimation methods, tables, and a table naming the
+page to read for each task. `llms.txt` in the same directory lists every page
+and describes each. Because the corpus travels with the wheel, it always
+describes the installed version.
+
+If it prints `False`, `pyfixest` is importable but ships no documentation: it
+comes from a source checkout, or from a release older than the bundled corpus.
+In a checkout, read `docs/` and `AGENTS.md` in the repository. Otherwise read
+<https://pyfixest.org/cheatsheet.html>, which describes the latest release
+rather than the installed one.
 
 **The skill.** `SKILL.md` is a short router: it tells the agent how to find the
 directory above, which page to open for the task at hand, and a handful of core
@@ -57,8 +64,8 @@ Or open
 on GitHub and paste it into whichever skill file your tool reads.
 
 The skill needs `pyfixest` importable in the environment the agent uses, and
-nothing else — no API keys, no extra packages. Without a local PyFixest it falls
-back to <https://pyfixest.org>.
+nothing else — no API keys, no extra packages. Where the bundled documentation
+is missing it falls back to the repository, or to <https://pyfixest.org>.
 
 ## See also
 

@@ -5,14 +5,17 @@ description: Routes coding agents into PyFixest's bundled, version-matched docum
 
 # PyFixest
 
-The installed package ships its own documentation. Locate it once:
+The installed package ships its own documentation. Locate it and check that it
+is present:
 
-    python -c "import importlib.resources as r; print(r.files('pyfixest') / 'docs')"
+    python -c "import importlib.resources as r; p = r.files('pyfixest') / 'docs'; print(p, (p / 'llms.txt').is_file())"
 
-Read `cheatsheet.llms.md` in that directory first (one page: syntax, standard
-errors, methods, and the table below). `llms.txt` lists every page. If
-`pyfixest` is not importable, use https://pyfixest.org/cheatsheet.html and
-https://pyfixest.org/skills.html instead.
+If it prints `True`, read `cheatsheet.llms.md` in that directory first (one
+page: syntax, standard errors, methods, and the table below); `llms.txt`
+lists every page and describes each. If it prints `False`, this is a source
+checkout or a release older than the bundled docs: in a checkout read
+`docs/` and `AGENTS.md`; otherwise use https://pyfixest.org/cheatsheet.html,
+which may describe a different version than the one installed.
 
 ## Where to go for each task
 
