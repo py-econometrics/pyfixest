@@ -50,6 +50,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - An executed cheat sheet (`cheatsheet.qmd`) replaces the hand-maintained skill
   text: every formula, `vcov` spelling, and unsupported combination on it runs
   at render time.
+- Releases ship an installable agent skill at `skills/pyfixest/SKILL.md`; it
+  resolves the bundled documentation at runtime, and a test executes its
+  examples.
 
 ### Inference Types
 
