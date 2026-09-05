@@ -228,7 +228,7 @@ class Feiv(Feols):
         "Demean instruments and endogeneous variable."
         super().demean()
         if self._has_fixef:
-            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx(
+            self._endogvard, self._Zd, _ = self._demean_cache.demean_yx_frames(
                 self._endogvar,
                 self._Z,
                 self._fe,

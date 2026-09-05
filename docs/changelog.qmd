@@ -51,6 +51,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   weights, apply square-root weighting only to solver-local arrays, and return
   residuals and scores in their documented supplied-array and estimating-equation
   domains.
+- The shared demeaning cache now stores read-only named arrays, preserves
+  requested column order on complete and partial hits, and avoids allocating a
+  concatenated request matrix when every requested column is already cached.
 
 ### Inference Types
 

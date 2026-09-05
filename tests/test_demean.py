@@ -9,7 +9,7 @@ import pyfixest as pf
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
-from pyfixest.estimation.internals.demean_ import DemeanCache
+from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
 
@@ -622,16 +622,19 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     """Test DemeanCache.demean_yx when there are no fixed effects."""
     # Create sample data
     N = 1000
-    Y = pd.DataFrame({"y": np.random.randn(N)})
-    X = pd.DataFrame({"x1": np.random.randn(N), "x2": np.random.randn(N)})
+    rng = np.random.default_rng(42)
+    Y = pd.DataFrame({"y": rng.normal(size=N)})
+    X = pd.DataFrame({"x1": rng.normal(size=N), "x2": rng.normal(size=N)})
     weights = np.ones(N)
     cache = DemeanCache()
 
     # Test without fixed effects
     Yd, Xd, _ = benchmark(
         cache.demean_yx,
-        Y=Y,
-        X=X,
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
         fe=None,
         weights=weights,
         na_index=frozenset(),
@@ -639,10 +642,9 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     )
 
     # When no fixed effects, output should equal input
-    assert np.allclose(Y.values, Yd.values)
-    assert np.allclose(X.values, Xd.values)
-    assert Yd.columns.equals(Y.columns)
-    assert Xd.columns.equals(X.columns)
+    assert np.allclose(Y.values, Yd)
+    assert np.allclose(X.values, Xd)
+    assert cache.lookup_demeaned_data == {}
 
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
@@ -662,27 +664,27 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     # Run demean_yx
     Yd, Xd, _ = benchmark(
         cache.demean_yx,
-        Y=Y,
-        X=X,
-        fe=fe,
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
+        fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
     # Verify results are different from input (since we're demeaning)
-    assert not np.allclose(Y.values, Yd.values)
-    assert not np.allclose(X.values, Xd.values)
-
-    # Verify column names are preserved
-    assert Yd.columns.equals(Y.columns)
-    assert Xd.columns.equals(X.columns)
+    assert not np.allclose(Y.values, Yd)
+    assert not np.allclose(X.values, Xd)
 
     # Verify results are cached in lookup_dict
     assert frozenset() in lookup_dict
     cached_data = lookup_dict[frozenset()]
-    assert np.allclose(cached_data[Y.columns].values, Yd.values)
-    assert np.allclose(cached_data[X.columns].values, Xd.values)
+    assert isinstance(cached_data, DemeanedData)
+    assert cached_data.columns == ("y", "x1", "x2")
+    assert np.allclose(cached_data.values[:, :1], Yd)
+    assert np.allclose(cached_data.values[:, 1:], Xd)
 
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
@@ -700,27 +702,31 @@ def test_demean_model_with_weights(benchmark, demeaner):
     # Run with weights
     Yd, Xd, _ = benchmark(
         cache.demean_yx,
-        Y=Y,
-        X=X,
-        fe=fe,
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
+        fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
-    # Run without weights for comparison (fresh cache to avoid cache hit)
+    # Run the explicit unweighted fast path (fresh cache to avoid cache hit)
     Yd_unweighted, Xd_unweighted, _ = DemeanCache().demean_yx(
-        Y=Y,
-        X=X,
-        fe=fe,
-        weights=np.ones(N),
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
+        fe=fe.to_numpy(),
+        weights=None,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
     # Results should be different with weights vs without
-    assert not np.allclose(Yd.values, Yd_unweighted.values)
-    assert not np.allclose(Xd.values, Xd_unweighted.values)
+    assert not np.allclose(Yd, Yd_unweighted)
+    assert not np.allclose(Xd, Xd_unweighted)
 
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
@@ -734,49 +740,113 @@ def test_demean_model_caching(benchmark, demeaner):
     fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
     weights = np.ones(N)
     lookup_dict = {}
+    first_cache = DemeanCache(lookup_dict)
+    assert first_cache.lookup_demeaned_data is lookup_dict
 
     # First run - should compute and cache
-    Yd1, Xd1, _ = DemeanCache(lookup_dict).demean_yx(
-        Y=Y,
-        X=X,
-        fe=fe,
+    Yd1, Xd1, _ = first_cache.demean_yx(
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
+        fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
     # Second run - should use cache (shared lookup, fresh per-model cache)
+    second_cache = DemeanCache(lookup_dict)
+    assert second_cache.lookup_demeaned_data is lookup_dict
     Yd2, Xd2, _ = benchmark(
-        DemeanCache(lookup_dict).demean_yx,
-        Y=Y,
-        X=X,
-        fe=fe,
+        second_cache.demean_yx,
+        Y=Y.to_numpy(),
+        X=X.to_numpy(),
+        y_names=Y.columns,
+        x_names=X.columns,
+        fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
     # Results should be identical
-    assert np.allclose(Yd1.values, Yd2.values)
-    assert np.allclose(Xd1.values, Xd2.values)
+    assert np.allclose(Yd1, Yd2)
+    assert np.allclose(Xd1, Xd2)
+
+    # A complete cache hit still follows the requested order, including the
+    # empty-design case used by fixed-effect-only specifications.
+    _, Xd_reordered, _ = DemeanCache(lookup_dict).demean_yx(
+        Y=Y.to_numpy(),
+        X=X[["x2", "x1"]].to_numpy(),
+        y_names=Y.columns,
+        x_names=("x2", "x1"),
+        fe=fe.to_numpy(),
+        weights=weights,
+        na_index=frozenset(),
+        demeaner=demeaner,
+    )
+    Yd_empty, Xd_empty, _ = DemeanCache(lookup_dict).demean_yx(
+        Y=Y.to_numpy(),
+        X=np.empty((N, 0)),
+        y_names=Y.columns,
+        x_names=(),
+        fe=fe.to_numpy(),
+        weights=weights,
+        na_index=frozenset(),
+        demeaner=demeaner,
+    )
+    np.testing.assert_allclose(
+        Xd_reordered,
+        Xd1[:, ::-1],
+        err_msg="complete cache hit changed demeaned design order",
+    )
+    np.testing.assert_allclose(
+        Yd_empty,
+        Yd1,
+        err_msg="empty-design cache hit changed demeaned response",
+    )
+    assert Xd_empty.shape == (N, 0)
 
     # Add new variable and verify partial caching
-    X_new = X.copy()
-    X_new["x3"] = rng.normal(0, 1, N)
+    X_new = pd.DataFrame(
+        {
+            "x4": rng.normal(0, 1, N),
+            "x1": X["x1"],
+            "x3": rng.normal(0, 1, N),
+            "x2": X["x2"],
+        }
+    )
 
     _, Xd3, _ = DemeanCache(lookup_dict).demean_yx(
-        Y=Y,
-        X=X_new,
-        fe=fe,
+        Y=Y.to_numpy(),
+        X=X_new.to_numpy(),
+        y_names=Y.columns,
+        x_names=X_new.columns,
+        fe=fe.to_numpy(),
+        weights=weights,
+        na_index=frozenset(),
+        demeaner=demeaner,
+    )
+    _, Xd3_fresh, _ = DemeanCache().demean_yx(
+        Y=Y.to_numpy(),
+        X=X_new.to_numpy(),
+        y_names=Y.columns,
+        x_names=X_new.columns,
+        fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
         demeaner=demeaner,
     )
 
-    # Original columns should match previous results
-    assert np.allclose(Xd3[["x1", "x2"]].values, Xd2.values)
-    # New column should be different
-    assert "x3" in Xd3.columns
+    # Requested output order matches an independent solve, while the shared
+    # cache keeps first-seen insertion order and all earlier columns.
+    assert np.allclose(Xd3, Xd3_fresh)
+    assert np.allclose(Xd3[:, [1, 3]], Xd2)
+    cached_data = lookup_dict[frozenset()]
+    assert isinstance(cached_data, DemeanedData)
+    assert cached_data.columns == ("y", "x1", "x2", "x4", "x3")
+    assert not cached_data.values.flags.writeable
 
 
 @pytest.mark.parametrize(
@@ -806,9 +876,11 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
     # Should fail with very small maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
         DemeanCache().demean_yx(
-            Y=Y,
-            X=X,
-            fe=fe,
+            Y=Y.to_numpy(),
+            X=X.to_numpy(),
+            y_names=Y.columns,
+            x_names=X.columns,
+            fe=fe.to_numpy(),
             weights=weights,
             na_index=frozenset(),
             demeaner=demeaner,

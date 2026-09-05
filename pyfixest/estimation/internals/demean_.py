@@ -1,8 +1,28 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class DemeanedData:
+    """Cache entry for named, demeaned columns.
+
+    ``columns`` records the insertion order of the columns in ``values``.
+    ``values`` is marked read-only before publication because cache entries are
+    shared across fitted models. The frozen dataclass prevents field rebinding;
+    the array flag prevents element assignment through ordinary NumPy APIs.
+    """
+
+    values: NDArray[np.float64]
+    columns: tuple[str, ...]
 
 
 class DemeanCache:
@@ -23,13 +43,16 @@ class DemeanCache:
 
     def __init__(
         self,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] | None = None,
+        # Kept unparameterized while legacy model constructors still annotate
+        # the shared cache as DataFrame-valued; the adapter below is removed
+        # when those consumers migrate to arrays.
+        lookup_demeaned_data: dict | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
     ) -> None:
-        self.lookup_demeaned_data: dict[frozenset[int], pd.DataFrame] = (
+        self.lookup_demeaned_data = (
             {} if lookup_demeaned_data is None else lookup_demeaned_data
         )
-        self.lookup_preconditioner: dict[frozenset[int], Preconditioner] = (
+        self.lookup_preconditioner = (
             {} if lookup_preconditioner is None else lookup_preconditioner
         )
 
@@ -81,6 +104,104 @@ class DemeanCache:
 
     def demean_yx(
         self,
+        Y: NDArray[np.float64],
+        X: NDArray[np.float64],
+        *,
+        y_names: Sequence[str],
+        x_names: Sequence[str],
+        fe: np.ndarray | None,
+        weights: NDArray[np.float64] | None,
+        na_index: frozenset[int],
+        demeaner: AnyDemeaner,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner | None]:
+        """Demean response and design arrays and cache missing named columns.
+
+        New columns are appended to the cache in their requested order. Returned
+        arrays always follow ``y_names`` and ``x_names``, independently of the
+        cache's insertion order.
+
+        Parameters
+        ----------
+        Y : NDArray[np.float64]
+            Response array, shape ``(n_rows, n_responses)``.
+        X : NDArray[np.float64]
+            Design array, shape ``(n_rows, n_regressors)``.
+        y_names : Sequence[str]
+            Ordered response names corresponding to the columns of ``Y``.
+        x_names : Sequence[str]
+            Ordered regressor names corresponding to the columns of ``X``.
+        fe : np.ndarray or None
+            Encoded fixed-effect identifiers, or ``None`` for no fixed effects.
+        weights : NDArray[np.float64] or None
+            Observation weights passed to the within transformation.
+        na_index : frozenset[int]
+            Row-removal identity used to share cached data between model fits.
+        demeaner : AnyDemeaner
+            Configured within-transformation strategy.
+        """
+        Y_array = np.asarray(Y, dtype=np.float64)
+        X_array = np.asarray(X, dtype=np.float64)
+        if fe is None:
+            return Y_array, X_array, None
+
+        y_names_tuple = tuple(y_names)
+        x_names_tuple = tuple(x_names)
+        requested_names = y_names_tuple + x_names_tuple
+        cached = self.lookup_demeaned_data.get(na_index)
+        used: Preconditioner | None = None
+        if cached is None:
+            requested_data = np.concatenate((Y_array, X_array), axis=1)
+            requested_values, used = self._run_or_raise(
+                requested_data, fe, weights, na_index, demeaner
+            )
+            requested_values.setflags(write=False)
+            cached = DemeanedData(values=requested_values, columns=requested_names)
+            self.lookup_demeaned_data[na_index] = cached
+        else:
+            cached_column_names = cached.columns
+            cached_name_set = frozenset(cached_column_names)
+            new_positions = tuple(
+                index
+                for index, name in enumerate(requested_names)
+                if name not in cached_name_set
+            )
+            if new_positions:
+                requested_data = np.concatenate((Y_array, X_array), axis=1)
+                new_values, used = self._run_or_raise(
+                    requested_data[:, new_positions], fe, weights, na_index, demeaner
+                )
+                new_column_names = tuple(requested_names[i] for i in new_positions)
+                cached_values = np.concatenate((cached.values, new_values), axis=1)
+                cached_values.setflags(write=False)
+                cached = DemeanedData(
+                    values=cached_values,
+                    columns=cached_column_names + new_column_names,
+                )
+                self.lookup_demeaned_data[na_index] = cached
+            requested_values = self._select_columns(cached, requested_names)
+
+        n_response_columns = len(y_names_tuple)
+        return (
+            requested_values[:, :n_response_columns],
+            requested_values[:, n_response_columns:],
+            used,
+        )
+
+    @staticmethod
+    def _select_columns(
+        cached: DemeanedData, requested_names: tuple[str, ...]
+    ) -> NDArray[np.float64]:
+        positions_by_name = {
+            name: position for position, name in enumerate(cached.columns)
+        }
+        positions = tuple(positions_by_name[name] for name in requested_names)
+        selects_cached_prefix = positions == tuple(range(len(positions)))
+        if selects_cached_prefix:
+            return cached.values[:, : len(positions)]
+        return cached.values[:, positions]
+
+    def demean_yx_frames(
+        self,
         Y: pd.DataFrame,
         X: pd.DataFrame,
         fe: pd.DataFrame | None,
@@ -88,55 +209,19 @@ class DemeanCache:
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]:
-        """Demean a regression model: check cache, demean what's missing, update cache.
-
-        Prior to demeaning, checks whether some of the variables have already
-        been demeaned and reuses values from `self.lookup_demeaned_data` if
-        possible. If the model has no fixed effects, the data is returned
-        undemeaned.
-
-        Returns
-        -------
-        tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]
-            The demeaned `Y`, the demeaned `X`, and the within
-            preconditioner used during the solve (`None` for non-within
-            backends, `preconditioner='off'`, the single-FE MAP fallback,
-            or when no demeaning happened).
-        """
-        used: Preconditioner | None = None
-        YX = pd.concat([Y, X], axis=1)
-        yx_names = YX.columns
-        YX_array = YX.to_numpy()
-        if YX_array.dtype != np.dtype("float64"):
-            YX_array = YX_array.astype(np.float64)
-
-        if fe is None:
-            YX_demeaned = pd.DataFrame(YX_array, columns=yx_names)
-            return YX_demeaned[Y.columns], YX_demeaned[X.columns], None
-
-        fe_array = fe.to_numpy()
-        cached_demeaned = self.lookup_demeaned_data.get(na_index)
-        if cached_demeaned is None:
-            arr, used = self._run_or_raise(
-                YX_array, fe_array, weights, na_index, demeaner
-            )
-            YX_demeaned = pd.DataFrame(arr, columns=yx_names)
-        else:
-            # demean only the not-yet-demeaned columns
-            new_names = list(set(yx_names) - set(cached_demeaned.columns))
-            if new_names:
-                yx_names_list = list(yx_names)
-                new_index = [yx_names_list.index(name) for name in new_names]
-                arr, used = self._run_or_raise(
-                    YX_array[:, new_index], fe_array, weights, na_index, demeaner
-                )
-                YX_demeaned = pd.DataFrame(
-                    np.concatenate([cached_demeaned, arr], axis=1),
-                    columns=list(cached_demeaned.columns) + new_names,
-                )
-            else:
-                # all variables already demeaned
-                YX_demeaned = cached_demeaned[yx_names]
-
-        self.lookup_demeaned_data[na_index] = YX_demeaned
-        return YX_demeaned[Y.columns], YX_demeaned[X.columns], used
+        """Adapt legacy DataFrame model consumers to the named-array cache."""
+        response, design, used = self.demean_yx(
+            Y=Y.to_numpy(dtype=np.float64),
+            X=X.to_numpy(dtype=np.float64),
+            y_names=tuple(Y.columns),
+            x_names=tuple(X.columns),
+            fe=None if fe is None else fe.to_numpy(),
+            weights=weights,
+            na_index=na_index,
+            demeaner=demeaner,
+        )
+        return (
+            pd.DataFrame(response, columns=Y.columns, index=Y.index),
+            pd.DataFrame(design, columns=X.columns, index=X.index),
+            used,
+        )

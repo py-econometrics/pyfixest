@@ -509,7 +509,7 @@ class Feols(ResultAccessorMixin):
     def demean(self):
         "Demean the dependent variable and covariates by the fixed effect(s)."
         if self._has_fixef:
-            self._Yd, self._Xd, _ = self._demean_cache.demean_yx(
+            self._Yd, self._Xd, _ = self._demean_cache.demean_yx_frames(
                 self._Y,
                 self._X,
                 self._fe,
