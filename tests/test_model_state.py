@@ -69,6 +69,42 @@ def test_observation_weights_keep_canonical_user_values(kind, expected_n) -> Non
             },
             "Weight kind must be 'aweights' or 'fweights'",
         ),
+        (
+            {
+                "values": None,
+                "kind": None,
+                "n_rows": -1,
+                "n_effective": -1,
+            },
+            "n_rows must be non-negative",
+        ),
+        (
+            {
+                "values": np.ones((2, 1)),
+                "kind": "aweights",
+                "n_rows": 2,
+                "n_effective": 2,
+            },
+            "Observation weight values must be a flat array",
+        ),
+        (
+            {
+                "values": np.ones(3),
+                "kind": "aweights",
+                "n_rows": 2,
+                "n_effective": 2,
+            },
+            "Observation weights must contain one value per row",
+        ),
+        (
+            {
+                "values": np.ones(2),
+                "kind": "fweights",
+                "n_rows": 2,
+                "n_effective": 3,
+            },
+            "n_effective must match the observation-weight semantics",
+        ),
     ],
 )
 def test_observation_weights_reject_inconsistent_state(kwargs, message) -> None:

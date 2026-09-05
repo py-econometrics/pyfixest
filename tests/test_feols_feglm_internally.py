@@ -104,8 +104,8 @@ def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
         working.working_weights[:, None] * working.design_within
     )
     np.testing.assert_allclose(fit._hessian, expected_hessian)
-    np.testing.assert_allclose(fit._leverage_weights(), working.working_weights)
-    np.testing.assert_allclose(fit._fixef_weights(), working.working_weights)
+    np.testing.assert_allclose(fit._normal_equation_weights(), working.working_weights)
+    np.testing.assert_allclose(fit._fixef_recovery_weights(), working.working_weights)
 
     for group in np.unique(fixed_effect):
         group_rows = fixed_effect == group

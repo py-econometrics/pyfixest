@@ -12,10 +12,12 @@ from pyfixest.demeaners import AnyDemeaner
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DemeanedData:
-    """Array-native cache entry for named, demeaned columns.
+    """Cache entry for named, demeaned columns.
 
     ``columns`` records the insertion order of the columns in ``values``.
-    Cached arrays are treated as read-only after publication.
+    ``values`` is marked read-only before publication because cache entries are
+    shared across fitted models. The frozen dataclass prevents field rebinding;
+    the array flag prevents element assignment through ordinary NumPy APIs.
     """
 
     values: NDArray[np.float64]
@@ -114,11 +116,9 @@ class DemeanCache:
     ]:
         """Demean response and design arrays and cache missing named columns.
 
-        The cache stays array-native. Column names are carried separately so
-        multiple-estimation fits can reuse matching columns without converting
-        solver arrays back into DataFrames. New columns are demeaned and appended
-        in their requested order; cache hits never reorder or discard earlier
-        columns.
+        New columns are appended to the cache in their requested order. Returned
+        arrays always follow ``y_names`` and ``x_names``, independently of the
+        cache's insertion order.
 
         Parameters
         ----------
@@ -153,15 +153,14 @@ class DemeanCache:
         y_names_tuple = tuple(y_names)
         x_names_tuple = tuple(x_names)
         requested_names = y_names_tuple + x_names_tuple
-        YX_array = np.concatenate((Y_array, X_array), axis=1)
 
         cached = self.lookup_demeaned_data.get(na_index)
         used: Preconditioner | None = None
         if cached is None:
+            requested_data = np.concatenate((Y_array, X_array), axis=1)
             requested_values, used = self._run_or_raise(
-                YX_array, fe, weights, na_index, demeaner
+                requested_data, fe, weights, na_index, demeaner
             )
-            # Cached buffers are shared across fits, so publish them read-only.
             requested_values.setflags(write=False)
             cached = DemeanedData(
                 values=requested_values,
@@ -169,28 +168,34 @@ class DemeanCache:
             )
             self.lookup_demeaned_data[na_index] = cached
         else:
-            cached_names = frozenset(cached.columns)
+            cached_column_names = cached.columns
+            cached_name_set = frozenset(cached_column_names)
             new_positions = tuple(
                 index
                 for index, name in enumerate(requested_names)
-                if name not in cached_names
+                if name not in cached_name_set
             )
             if new_positions:
+                requested_data = np.concatenate((Y_array, X_array), axis=1)
                 new_values, used = self._run_or_raise(
-                    YX_array[:, new_positions], fe, weights, na_index, demeaner
+                    requested_data[:, new_positions], fe, weights, na_index, demeaner
+                )
+                new_column_names = tuple(
+                    requested_names[index] for index in new_positions
                 )
                 cached_values = np.concatenate((cached.values, new_values), axis=1)
                 cached_values.setflags(write=False)
                 cached = DemeanedData(
                     values=cached_values,
-                    columns=cached.columns
-                    + tuple(requested_names[index] for index in new_positions),
+                    columns=cached_column_names + new_column_names,
                 )
                 self.lookup_demeaned_data[na_index] = cached
             requested_values = self._select_columns(cached, requested_names)
 
-        n_y = len(y_names_tuple)
-        return requested_values[:, :n_y], requested_values[:, n_y:], used
+        n_response_columns = len(y_names_tuple)
+        response_demeaned = requested_values[:, :n_response_columns]
+        design_demeaned = requested_values[:, n_response_columns:]
+        return response_demeaned, design_demeaned, used
 
     @staticmethod
     def _select_columns(
@@ -201,6 +206,7 @@ class DemeanCache:
             name: position for position, name in enumerate(cached.columns)
         }
         positions = tuple(positions_by_name[name] for name in requested_names)
-        if positions == tuple(range(len(positions))):
+        selects_cached_prefix = positions == tuple(range(len(positions)))
+        if selects_cached_prefix:
             return cached.values[:, : len(positions)]
         return cached.values[:, positions]

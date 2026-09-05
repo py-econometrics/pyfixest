@@ -219,7 +219,8 @@ estimation fields.
 ## Implemented array and weight domains
 
 The shared linear and GLM paths now implement the vocabulary above with frozen,
-slotted state values:
+slotted state values. Frozen state prevents field rebinding, but contained NumPy
+arrays remain mutable unless they are explicitly marked read-only:
 
 | State | Persisted contract |
 |---|---|
@@ -286,10 +287,10 @@ evaluation context, so `predict(newdata=...)` still works for models without
 fixed effects. Array-only covariance updates remain available after
 `store_data=False`; cluster and HAC updates require the estimation sample
 through the documented `vcov(data=...)` argument. Explicit covariance data must
-already be filtered to the fitted row sample and retain its estimation order; a
-row-count check rejects misaligned inputs before covariance dispatch, and
-`FixestMulti.vcov(data=...)` validates one common sample for every child before
-any child is updated. Lean results reject post-fit covariance updates because
+already be filtered to the fitted row sample and retain its estimation order. A
+row-count check rejects length mismatches but cannot establish row identity or
+ordering. `FixestMulti.vcov(data=...)` validates one common sample for every
+child before any child is updated. Lean results reject post-fit covariance updates because
 their numerical arrays have been discarded. Every other method that needs
 discarded state raises an informative error naming the storage option and its
 remedy.

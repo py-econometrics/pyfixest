@@ -109,6 +109,9 @@ def fit_ols(
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
+        # The WLS estimating equation contributes s_i = a_i x_i u_i.
+        # The full weight appears here, not sqrt(a_i): both solver factors
+        # participate when differentiating the weighted squared-error loss.
         scores = X * (weight_values * residuals)[:, None]
     hessian = tZX.copy()
     return OlsFit(
@@ -137,7 +140,8 @@ def fit_iv(
         Design matrix (incl. endogenous regressors), shape (N, k).
         Demeaned but not WLS-transformed.
     Z : np.ndarray
-        Instrument matrix, shape (N, k_z). Demeaned but not WLS-transformed.
+        Full instrument matrix, including exogenous regressors that instrument
+        themselves, shape (N, k_z). Demeaned but not WLS-transformed.
     Y : np.ndarray
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
@@ -174,6 +178,7 @@ def fit_iv(
     if weight_values is None:
         scores = Z * residuals[:, None]
     else:
+        # The weighted IV moment contribution is a_i z_i u_i.
         scores = Z * (weight_values * residuals)[:, None]
     hessian = tZZ
 

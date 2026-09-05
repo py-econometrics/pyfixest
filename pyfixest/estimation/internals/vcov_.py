@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import numpy as np
 
 from pyfixest.core.crv1 import crv1_meat_loop
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
+)
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
     _get_panel_idx,
     _nw_meat_panel,
     _nw_meat_time,
 )
-
-HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
-HacVcovTypeOptions = Literal["NW", "DK"]
 
 
 def _sandwich(
@@ -58,9 +56,8 @@ def vcov_hetero(
     scores: np.ndarray,
     X: np.ndarray,
     tZX: np.ndarray,
-    weights: np.ndarray | None,
-    leverage_weights: np.ndarray | None,
-    weights_type: WeightsTypeOptions | None,
+    frequency_weights: np.ndarray | None,
+    normal_equation_weights: np.ndarray | None,
     vcov_type_detail: HeteroVcovTypeOptions,
     bread: np.ndarray,
     is_iv: bool,
@@ -68,17 +65,15 @@ def vcov_hetero(
     tZZinv: np.ndarray,
 ) -> np.ndarray:
     "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
-    # Frequency weights are the only scheme corrected for here: each row stands
-    # for `weights` identical observations. Unweighted fits pass `weights=None`
-    # and need no correction.
-    frequency_weights = weights if weights_type == "fweights" else None
-
+    # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
+    # rows represent repeated observations, so their per-observation leverage
+    # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
         leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
-        if leverage_weights is not None:
-            leverage = leverage_weights.flatten() * leverage
+        if normal_equation_weights is not None:
+            leverage = normal_equation_weights.flatten() * leverage
         if frequency_weights is not None:
             leverage = leverage / frequency_weights.flatten()
         transformed_scores = (

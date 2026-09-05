@@ -774,6 +774,40 @@ def test_demean_model_caching(benchmark, demeaner):
     assert np.allclose(Yd1, Yd2)
     assert np.allclose(Xd1, Xd2)
 
+    # A complete cache hit still follows the requested order, including the
+    # empty-design case used by fixed-effect-only specifications.
+    _, Xd_reordered, _ = DemeanCache(lookup_dict).demean_yx(
+        Y=Y.to_numpy(),
+        X=X[["x2", "x1"]].to_numpy(),
+        y_names=Y.columns,
+        x_names=("x2", "x1"),
+        fe=fe.to_numpy(),
+        weights=weights,
+        na_index=frozenset(),
+        demeaner=demeaner,
+    )
+    Yd_empty, Xd_empty, _ = DemeanCache(lookup_dict).demean_yx(
+        Y=Y.to_numpy(),
+        X=np.empty((N, 0)),
+        y_names=Y.columns,
+        x_names=(),
+        fe=fe.to_numpy(),
+        weights=weights,
+        na_index=frozenset(),
+        demeaner=demeaner,
+    )
+    np.testing.assert_allclose(
+        Xd_reordered,
+        Xd1[:, ::-1],
+        err_msg="complete cache hit changed demeaned design order",
+    )
+    np.testing.assert_allclose(
+        Yd_empty,
+        Yd1,
+        err_msg="empty-design cache hit changed demeaned response",
+    )
+    assert Xd_empty.shape == (N, 0)
+
     # Add new variable and verify partial caching
     X_new = pd.DataFrame(
         {
@@ -812,6 +846,7 @@ def test_demean_model_caching(benchmark, demeaner):
     cached_data = lookup_dict[frozenset()]
     assert isinstance(cached_data, DemeanedData)
     assert cached_data.columns == ("y", "x1", "x2", "x4", "x3")
+    assert not cached_data.values.flags.writeable
 
 
 @pytest.mark.parametrize(

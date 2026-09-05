@@ -79,5 +79,5 @@ class Fegaussian(Feglm):
             residuals=self._u_hat,
             bread=self._bread,
             N=self._N,
-            weights=self._leverage_weights(),
+            weights=self._observation_weights.values,
         )
