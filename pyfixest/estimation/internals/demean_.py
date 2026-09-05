@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
@@ -197,38 +196,6 @@ class DemeanCache:
         response_demeaned = requested_values[:, :n_response_columns]
         design_demeaned = requested_values[:, n_response_columns:]
         return response_demeaned, design_demeaned, used
-
-    def demean_yx_frames(
-        self,
-        Y: pd.DataFrame,
-        X: pd.DataFrame,
-        fe: pd.DataFrame | None,
-        weights: np.ndarray | None,
-        na_index: frozenset[int],
-        demeaner: AnyDemeaner,
-    ) -> tuple[pd.DataFrame, pd.DataFrame, Preconditioner | None]:
-        """Adapt DataFrame model consumers to the named-array cache.
-
-        Linear and IV models still hold formula tables at this stage; they move
-        to array-native within state in the next layer, which removes this
-        adapter. Column names and row index are preserved so callers see the
-        same frames they passed in.
-        """
-        response, design, used = self.demean_yx(
-            Y.to_numpy(dtype=np.float64),
-            X.to_numpy(dtype=np.float64),
-            y_names=tuple(Y.columns),
-            x_names=tuple(X.columns),
-            fe=None if fe is None else fe.to_numpy(),
-            weights=weights,
-            na_index=na_index,
-            demeaner=demeaner,
-        )
-        return (
-            pd.DataFrame(response, columns=Y.columns, index=Y.index),
-            pd.DataFrame(design, columns=X.columns, index=X.index),
-            used,
-        )
 
     @staticmethod
     def _select_columns(
