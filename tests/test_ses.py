@@ -422,7 +422,11 @@ def test_crv3_aligns_refit_coefficient_names(monkeypatch):
     for coef in refit_coefs:
         centered = coef.reindex(fit._coefnames).to_numpy() - fit._beta_hat
         expected += np.outer(centered, centered)
-    np.testing.assert_allclose(fit._vcov, fit._ssc * expected)
+    np.testing.assert_allclose(
+        fit._vcov,
+        fit._ssc * expected,
+        err_msg="CRV3 covariance differs after coefficient-name alignment",
+    )
 
     invalid_refits = [
         (pd.Series([1.0, 2.0, 3.0], index=["x", "z", "w"]), "unexpected.*w"),
