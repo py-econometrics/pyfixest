@@ -214,7 +214,9 @@ fit.wildboottest(param="X1", reps=99, seed=1234)
 ```
 
 ```{python}
-pf.feols("Y ~ X1 + X2", data=data).ritest(resampvar="X1", reps=99)
+pf.feols("Y ~ X1 + X2", data=data).ritest(
+    resampvar="X1", reps=99, rng=np.random.default_rng(1234)
+)
 ```
 
 ```{python}
@@ -250,6 +252,7 @@ pf.feols("Y ~ 1 + [X1 + X2 ~ Z1 + Z2]", data=data)
 Each estimator takes a long panel with a cohort column; see [Difference-in-Differences Estimation](tutorials/difference-in-differences.qmd).
 
 ```{python}
+#| fig-alt: "Panel view of treatment status by cohort and year, with one row per treatment cohort sorted by treatment timing and cells shaded by treated or untreated status."
 pf.panelview(panel, unit="unit", time="year", treat="treat",
              collapse_to_cohort=True, sort_by_timing=True, figsize=(6, 3))
 ```
@@ -280,13 +283,16 @@ pf.lpdid(**es_args, vcov={"CRV1": "state"}, att=True).tidy()
 `coefplot` plots any coefficients, `iplot` the ones `i()` created; see [Regression Tables](tutorials/regression-tables.qmd).
 
 ```{python}
+#| fig-alt: "Coefficient plot comparing the X1 and X2 estimates from a model without fixed effects and one with f1 absorbed, each point shown with its confidence interval."
 pf.coefplot([pf.feols("Y ~ X1 + X2", data=data),
-             pf.feols("Y ~ X1 + X2 | f1", data=data)], keep="X", coord_flip=False)
+             pf.feols("Y ~ X1 + X2 | f1", data=data)], keep="X", coord_flip=False,
+            plot_backend="matplotlib")
 ```
 
 ```{python}
+#| fig-alt: "Event-study plot of the i(rel_year) coefficients against relative year, with confidence intervals and the period before treatment held out as the reference."
 pf.iplot(pf.feols("dep_var ~ i(rel_year, ref=-1.0)", data=panel),
-         coord_flip=False, figsize=(9, 3))
+         coord_flip=False, figsize=(9, 3), plot_backend="matplotlib")
 ```
 
 ## Multiple testing
