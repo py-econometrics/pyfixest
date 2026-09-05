@@ -11,6 +11,7 @@ from scipy.stats import norm
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     QuantregMultiOptions,
@@ -35,7 +36,7 @@ class QuantregMulti:
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         solver: SolverOptions = "np.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         store_data: bool = True,
@@ -111,11 +112,11 @@ class QuantregMulti:
             fit_kwargs["rng"] = rng
         beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
 
-        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = (
-            Y.flatten() - (X @ beta_hat).flatten()
+        self._publish_fit_state(
+            quantreg=self.all_quantregs[q[q_median_idx]],
+            beta_hat=beta_hat,
+            hessian=hessian,
         )
-        self.all_quantregs[q[q_median_idx]]._hessian = hessian
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -138,9 +139,11 @@ class QuantregMulti:
                 beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
                 )[0]
-                self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
-                self.all_quantregs[q[i]]._hessian = hessian
+                self._publish_fit_state(
+                    quantreg=self.all_quantregs[q[i]],
+                    beta_hat=beta_hat,
+                    hessian=hessian,
+                )
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -164,12 +167,11 @@ class QuantregMulti:
                 M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
-                self.all_quantregs[q[i]]._beta_hat = beta_new
-                self.all_quantregs[q[i]]._u_hat = (
-                    self.all_quantregs[q[i]]._Y.flatten()
-                    - self.all_quantregs[q[i]]._X @ beta_new
+                self._publish_fit_state(
+                    quantreg=self.all_quantregs[q[i]],
+                    beta_hat=beta_new,
+                    hessian=hessian,
                 )
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm2_fun(i, "left")
@@ -188,6 +190,18 @@ class QuantregMulti:
         )
         return self.all_quantregs
 
+    @staticmethod
+    def _publish_fit_state(
+        *, quantreg: Quantreg, beta_hat: np.ndarray, hessian: np.ndarray
+    ) -> None:
+        """Publish canonical child state after a multi-quantile solver step."""
+        y_hat = quantreg._X @ beta_hat
+        quantreg._beta_hat = beta_hat
+        quantreg._Y_hat_link = y_hat
+        quantreg._Y_hat_response = y_hat
+        quantreg._u_hat = quantreg._Y.flatten() - y_hat
+        quantreg._hessian = hessian
+
     def vcov(
         self,
         vcov: str | dict[str, str],
@@ -195,8 +209,17 @@ class QuantregMulti:
         data: DataFrameType | None = None,
     ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
-        for quantreg in self.all_quantregs.values():
-            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
+        quantregs = list(self.all_quantregs.values())
+        candidates = [
+            quantreg._prepare_vcov_update(
+                vcov=vcov,
+                vcov_kwargs=vcov_kwargs,
+                data=data,
+            )
+            for quantreg in quantregs
+        ]
+        for quantreg, candidate in zip(quantregs, candidates, strict=True):
+            quantreg._publish_vcov_update(candidate)
 
         return self.all_quantregs
 
@@ -221,9 +244,4 @@ class QuantregMulti:
         "Clear all large non-necessary attributes to free memory."
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
-
-        # `_X` and `_Y` are read-only views, so their backing state is dropped.
-        for quantreg in self.all_quantregs.values():
-            if hasattr(quantreg, "_within_data"):
-                del quantreg._within_data
         gc.collect()

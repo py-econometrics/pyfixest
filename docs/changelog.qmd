@@ -57,12 +57,24 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   read-only views over the typed state objects.
 - Internal demeaning and covariance code now names column-order, normal-equation,
   and frequency-replication invariants explicitly alongside their formulas.
+- Post-fit covariance updates now prepare covariance metadata and derived
+  inference before publishing them. Multiple-estimation and quantile-process
+  updates likewise prepare every child before changing any child.
 
 ### Inference Types
 
 - Weighted models now reject `ccv()` explicitly. `Feols.update()` remains a
   coefficient-only calculation and rejects `inplace=True`, weights, IV, and
   non-OLS models instead of mixing scales.
+- Non-Poisson GLMs reject `CRV3` instead of silently refitting through the
+  Poisson jackknife. Poisson `CRV3` remains supported.
+- CRV3 jackknife and slow randomization-inference refits now replay the
+  original estimation options (weights, small-sample corrections, singleton
+  handling, solver, demeaner, offset, IRLS tolerances).
+- Randomization inference rejects non-OLS/non-Poisson results, the wild
+  bootstrap rejects non-OLS results, and `decompose()` rejects non-OLS results,
+  instead of reinterpreting GLM working state or quantile solver outputs as OLS
+  arrays.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take
@@ -224,9 +236,19 @@ We also removed:
 - `store_data=False` and `lean=True` now apply to retained IV first stages; lean
   fits also discard demeaning caches, GLM working state, and quantile solver
   outputs.
+- `store_data=False` and `lean=True` now apply to multiple-estimation
+  containers; `FixestMulti.vcov()` accepts a common explicit estimation sample;
+  default multi-quantile results retain the arrays needed for prediction and
+  covariance updates.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
+- Weighted fixed-effect contributions (`_sumFE`) are now stored in response
+  units.
+- Gaussian GLM performance measures now use the estimator's unpremultiplied
+  within response and observation weights, including weighted fixed-effect fits.
+- `IV_Diag()` no longer relabels the main model's covariance type when computing
+  the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
+from copy import copy as shallow_copy
+from dataclasses import replace
 from functools import partial
 from importlib import import_module
 from typing import Any, Literal, cast
@@ -15,7 +17,7 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
@@ -724,6 +726,71 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        candidate = self._prepare_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        self._publish_vcov_update(candidate)
+        return self
+
+    def _prepare_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> Feols:
+        """Compute a covariance update without changing this fitted result.
+
+        The candidate shares fitted input arrays with this result. Covariance
+        callbacks treat those arrays as inputs and allocate their outputs, so
+        only the candidate's inference fields change during computation.
+        """
+        candidate = shallow_copy(self)
+        candidate._compute_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        return candidate
+
+    def _publish_vcov_update(self, candidate: Feols) -> None:
+        """Publish a completely computed covariance and inference state."""
+        inference_attributes = (
+            "_vcov_type",
+            "_vcov_type_detail",
+            "_is_clustered",
+            "_clustervar",
+            "_bread",
+            "_ssc",
+            "_df_k",
+            "_df_t",
+            "_vcov",
+            "_lag",
+            "_time_id",
+            "_panel_id",
+            "_cluster_df",
+            "_G",
+            "_se",
+            "_tstat",
+            "_pvalue",
+            "_conf_int",
+        )
+        for attribute in inference_attributes:
+            if hasattr(candidate, attribute):
+                setattr(self, attribute, getattr(candidate, attribute))
+            elif hasattr(self, attribute):
+                delattr(self, attribute)
+
+    def _compute_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> None:
+        """Compute covariance and derived inference on this candidate."""
         self._require_fit_arrays(
             "vcov",
             arrays="the required estimation arrays",
@@ -756,8 +823,7 @@ class Feols(ResultAccessorMixin):
             vcov, self._has_fixef, self._is_iv
         )
 
-        # Reject before any inference state is overwritten, so a failed update
-        # leaves the previous covariance estimate intact.
+        # Cluster and HAC estimators need columns from the estimation sample.
         if vcov_type in {"HAC", "CRV"} and estimation_data is None:
             self._require_estimation_data(
                 "vcov",
@@ -826,8 +892,6 @@ class Feols(ResultAccessorMixin):
             )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
-
-        return self
 
     def _make_ssc_kwargs(
         self,
@@ -978,6 +1042,43 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return options needed to replay this estimator on modified data."""
+        demeaner = self._demeaner
+        if isinstance(demeaner, LsmrDemeaner) and isinstance(
+            demeaner.preconditioner, Preconditioner
+        ):
+            # A prebuilt factorization belongs to the original FE design. Keep
+            # its algorithmic variant, but rebuild it for the changed row set.
+            preconditioner = cast(
+                WithinPreconditionerName,
+                demeaner.preconditioner.variant.lower(),
+            )
+            demeaner = replace(demeaner, preconditioner=preconditioner)
+
+        return {
+            "weights": self._weights_name,
+            "weights_type": self._weights_type,
+            "ssc": dict(self._ssc_dict),
+            "fixef_rm": "singleton" if self._drop_singletons else "none",
+            "solver": self._solver,
+            "demeaner": demeaner,
+            "drop_intercept": self._drop_intercept,
+            "collin_tol": self._collin_tol,
+            "context": self._context,
+        }
+
+    def _crv3_refit(self, data: pd.DataFrame) -> Feols:
+        """Replay OLS for one leave-one-cluster-out sample."""
+        # lazy loading to avoid circular import
+        fixest_module = import_module("pyfixest.estimation")
+        return fixest_module.feols(
+            fml=self._fml,
+            data=data,
+            vcov="iid",
+            **self._estimation_refit_kwargs(),
+        )
+
     def _vcov_crv3_slow(
         self,
         clustid: np.ndarray,
@@ -987,20 +1088,10 @@ class Feols(ResultAccessorMixin):
     ) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
 
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols if self._method == "feols" else fixest_module.fepois
-
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             refit_data = data[~np.equal(g, cluster_col)]
-            fit = fit_(
-                fml=self._fml,
-                data=refit_data,
-                vcov="iid",
-                weights=self._weights_name,
-                weights_type=self._weights_type,
-            )
+            fit = self._crv3_refit(data=refit_data)
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)
@@ -1264,6 +1355,9 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
+            raise NotImplementedError(
+                "Wild cluster bootstrap is only supported for unweighted OLS models."
+            )
 
         self._require_fit_arrays("wildboottest", arrays="the fitted arrays")
         self._require_estimation_data("wildboottest")
@@ -1741,6 +1835,11 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        if not self._support_decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for OLS models."
+            )
+
         self._require_fit_arrays("decompose", arrays="the fitted arrays")
         # A cluster variable or an absorbed fixed effect is read back from the
         # estimation sample; the plain covariate case works on arrays alone.
@@ -1904,7 +2003,7 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = fixed_effect_design_for_recovery.dot(alpha)
+        self._sumFE = fixed_effect_design.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 
@@ -2187,6 +2286,10 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
+        if self._method not in {"feols", "fepois"}:
+            raise NotImplementedError(
+                "Randomization Inference is only supported for OLS and Poisson models."
+            )
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2268,6 +2371,7 @@ class Feols(ResultAccessorMixin):
                 type=type,
                 rng=rng,
                 model=self._method,
+                refit_kwargs=self._estimation_refit_kwargs(),
             )
 
         else:

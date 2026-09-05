@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from importlib import import_module
 from typing import Any
 
 import numpy as np
@@ -152,6 +153,9 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
+        # The inherited jackknife refit dispatch is valid for Poisson and is a
+        # longstanding public capability. Other GLM families keep this disabled.
+        self._support_crv3_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
@@ -202,6 +206,34 @@ class Fepois(Feglm):
 
         self.deviance = self._family.deviance(
             y_orig, self._Y_hat_response, poisson_summary_weights
+        )
+
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return the full Poisson estimation contract for data-changing refits."""
+        kwargs = super()._estimation_refit_kwargs()
+        kwargs.update(
+            {
+                "offset": self._offset_name,
+                "iwls_tol": self.tol,
+                "iwls_maxiter": self.maxiter,
+                "separation_check": (
+                    None
+                    if self.separation_check is None
+                    else list(self.separation_check)
+                ),
+            }
+        )
+        return kwargs
+
+    def _crv3_refit(self, data: pd.DataFrame) -> Fepois:
+        """Replay Poisson estimation for one leave-one-cluster-out sample."""
+        # lazy loading to avoid circular import
+        fixest_module = import_module("pyfixest.estimation")
+        return fixest_module.fepois(
+            fml=self._fml,
+            data=data,
+            vcov="iid",
+            **self._estimation_refit_kwargs(),
         )
 
     def _clear_attributes(self) -> None:

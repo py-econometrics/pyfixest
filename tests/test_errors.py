@@ -586,6 +586,46 @@ def test_ritest_error(data):
         fit.plot_ritest()
 
 
+@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
+def test_ritest_rejects_non_ols_working_domains(estimator):
+    """RI must not interpret GLM or quantile arrays as OLS solver inputs."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, 1, 1, 0, 1, 0],
+            "x": np.linspace(-1.0, 1.0, 8),
+        }
+    )
+    if estimator == "feglm":
+        fit = pf.feglm("y ~ x", data=data, family="logit")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+
+    with pytest.raises(
+        NotImplementedError, match=r"only supported for OLS and Poisson"
+    ):
+        fit.ritest(resampvar="x", reps=1)
+
+
+@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
+def test_wildboottest_rejects_non_ols_working_domains(estimator):
+    """Wild bootstrap must reject estimator-specific non-OLS array domains."""
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, 1, 1, 0, 1, 0],
+            "x": np.linspace(-1.0, 1.0, 8),
+        }
+    )
+    if estimator == "feglm":
+        fit = pf.feglm("y ~ x", data=data, family="logit")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+
+    with pytest.raises(NotImplementedError, match=r"only supported for unweighted OLS"):
+        fit.wildboottest(param="x", reps=1)
+
+
 def test_wald_test_invalid_distribution():
     data = pd.read_csv("pyfixest/did/data/df_het.csv")
     data = data.iloc[1:3000]
@@ -908,6 +948,23 @@ def test_gelbach_errors():
         )
 
 
+@pytest.mark.parametrize("model_type", ["feglm", "quantreg"])
+def test_decomposition_rejects_unsupported_models(model_type):
+    data = gelbach_data(nobs=100)
+
+    if model_type == "feglm":
+        data["binary_y"] = (data["y"] > data["y"].median()).astype(int)
+        fit = pf.feglm("binary_y ~ x1 + x21", data=data, family="logit")
+    else:
+        fit = pf.quantreg("y ~ x1 + x21", data=data, quantile=0.5)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Decomposition is currently only supported for OLS models\.",
+    ):
+        fit.decompose(decomp_var="x1", only_coef=True)
+
+
 def test_glm_errors():
     "Test that dependent variable must be binary for probit and logit models."
     data = pf.get_data()
@@ -962,6 +1019,39 @@ def test_prediction_errors_glm():
             NotImplementedError, match="Prediction with standard errors"
         ):
             model.predict(se_fit=True)
+
+
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+def test_glm_crv3_is_explicitly_unsupported(family):
+    """Do not silently run Poisson jackknife refits for other GLM families."""
+    data = pf.get_data(model="Fepois").dropna().copy()
+    if family in ("logit", "probit"):
+        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
+
+    with pytest.raises(VcovTypeNotSupportedError, match="CRV3 inference"):
+        pf.feglm(
+            "Y ~ X1",
+            data=data,
+            family=family,
+            vcov={"CRV3": "f1"},
+        )
+
+
+def test_poisson_crv3_remains_supported():
+    """Keep the longstanding Poisson jackknife path across both public APIs."""
+    data = pf.get_data(model="Fepois").dropna().iloc[:120].copy()
+    data["cluster"] = np.arange(len(data)) % 6
+
+    direct_fit = pf.fepois("Y ~ X1", data=data, vcov={"CRV3": "cluster"})
+    glm_fit = pf.feglm(
+        "Y ~ X1",
+        data=data,
+        family="poisson",
+        vcov={"CRV3": "cluster"},
+    )
+
+    np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
+    np.testing.assert_allclose(direct_fit._vcov, glm_fit._vcov)
 
 
 def test_empty_vcov_error():
