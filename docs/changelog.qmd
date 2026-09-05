@@ -46,24 +46,15 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
-
-- Standalone OLS and IV fit primitives now accept user-scale observation
-  weights, apply square-root weighting only to solver-local arrays, and return
-  residuals and scores in their documented supplied-array and estimating-equation
-  domains.
-- The shared demeaning cache now stores read-only named arrays, preserves
-  requested column order on complete and partial hits, and avoids allocating a
-  concatenated request matrix when every requested column is already cached.
-- Linear estimators now retain formula tables, unpremultiplied within arrays,
-  and user-scale observation weights as separate state. Weighted OLS and IV
-  scores, covariance leverage, residuals, diagnostics, and recovered fixed
-  effects use those explicit domains.
-- GLM estimators now retain final within-scale IRLS working state separately
-  from immutable user-scale observation weights. Working weights already
-  include observation weights in scores, Hessians, leverage, and weighted
-  fixed-effect recovery; frequency-weight effective counts survive separation.
+- Estimator internals now keep formula tables, unpremultiplied within arrays,
+  and user-scale observation weights in separate typed domains.
+  Square-root-weighted arrays are local solver temporaries, and linear
+  residuals remain in response units. GLM IRLS working state (working response,
+  design, and weights) is kept separate from observation weights.
 - Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
   read-only views over the typed state objects.
+- Internal demeaning and covariance code now names column-order, normal-equation,
+  and frequency-replication invariants explicitly alongside their formulas.
 
 ### Inference Types
 
@@ -116,6 +107,9 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson and GLM frequency weights now work, including post-separation sample
+  sizes; the 0.60.0 path raised a shape error. Probability weights remain
+  unsupported.
 - Poisson offsets now accept Formulaic transformations such as
   `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
@@ -230,12 +224,21 @@ We also removed:
   `predict(newdata=...)` keeps working for models without fixed effects; methods
   that need discarded state now raise an informative `RuntimeError` instead of
   `AttributeError`.
-- `store_data=False` and `lean=True` now apply to retained IV first stages and
-  multiple-estimation containers; lean fits also discard demeaning caches, GLM
-  working state, and quantile solver outputs.
+- `store_data=False` and `lean=True` now apply to retained IV first stages; lean
+  fits also discard demeaning caches, GLM working state, and quantile solver
+  outputs.
+- `store_data=False` and `lean=True` now apply to multiple-estimation
+  containers; default multi-quantile results retain the arrays needed for
+  prediction and covariance updates.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
+- Weighted fixed-effect contributions (`_sumFE`) are now stored in response
+  units.
+- Gaussian GLM performance measures now use the estimator's unpremultiplied
+  within response and observation weights, including weighted fixed-effect fits.
+- `IV_Diag()` no longer relabels the main model's covariance type when computing
+  the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
