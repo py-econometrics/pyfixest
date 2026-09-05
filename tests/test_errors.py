@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -1145,6 +1147,77 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
+
+
+def _cheatsheet_hc2_with_fixef():
+    return pf.feols("Y ~ X1 | f1", data=pf.get_data().dropna(), vcov="HC2")
+
+
+def _cheatsheet_crv3_with_iv():
+    return pf.feols(
+        "Y ~ 1 + [X1 ~ Z1]", data=pf.get_data().dropna(), vcov={"CRV3": "f1"}
+    )
+
+
+def _cheatsheet_quantreg_multiway_cluster():
+    return pf.quantreg(
+        "Y ~ X1",
+        data=pf.get_data().dropna(),
+        quantile=0.5,
+        vcov={"CRV1": "f1 + f2"},
+    )
+
+
+def _cheatsheet_poisson_wildboottest():
+    fit = pf.fepois("Y ~ X1 | f1", data=pf.get_data(model="Fepois").dropna())
+    return fit.wildboottest(param="X1", reps=99, seed=1234)
+
+
+def _cheatsheet_multiple_endogenous():
+    return pf.feols("Y ~ 1 + [X1 + X2 ~ Z1 + Z2]", data=pf.get_data().dropna())
+
+
+@pytest.mark.parametrize(
+    ("build", "exception", "message"),
+    [
+        (
+            _cheatsheet_hc2_with_fixef,
+            VcovTypeNotSupportedError,
+            "HC2 and HC3 inference types are not supported for regressions with fixed effects.",
+        ),
+        (
+            _cheatsheet_crv3_with_iv,
+            VcovTypeNotSupportedError,
+            "CRV3 inference is not for models of type 'feols'.",
+        ),
+        (
+            _cheatsheet_quantreg_multiway_cluster,
+            NotImplementedError,
+            "Multiway clustering is not (yet) supported for quantile regression.",
+        ),
+        (
+            _cheatsheet_poisson_wildboottest,
+            NotImplementedError,
+            "Wild cluster bootstrap is not supported for Poisson regression.",
+        ),
+        (
+            _cheatsheet_multiple_endogenous,
+            FormulaSyntaxError,
+            "Multiple endogenous variables are currently not supported.",
+        ),
+    ],
+)
+def test_cheatsheet_unsupported_combinations(build, exception, message):
+    """
+    Pin the five `error: true` cells on `docs/cheatsheet.qmd`.
+
+    Quarto's `error: true` only permits an error, so a cell that starts
+    succeeding, or that starts raising something else, renders silently. These
+    assertions fail loudly instead, so the cheat sheet's claims about
+    unsupported combinations stay true.
+    """
+    with pytest.raises(exception, match=re.escape(message)):
+        build()
 
 
 def test_did2s_unestimated_first_stage_fixef():
