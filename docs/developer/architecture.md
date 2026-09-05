@@ -233,6 +233,12 @@ Frozen state objects prevent field rebinding, but their NumPy arrays remain
 element-mutable unless separately marked read-only. The shared demeaning cache
 does mark published buffers read-only because they are shared across fits.
 
+GLMs keep observation weights and final IRLS working weights separate. The
+working weights already incorporate observation weights and are paired with
+the unpremultiplied working response, design, and residuals in
+`GlmWorkingState`; applying observation weights to them again would double
+count those weights.
+
 ## Repository map and extension seams
 
 Step-by-step recipes for estimators, post-estimation features, vcov types,

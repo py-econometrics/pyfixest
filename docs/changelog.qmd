@@ -58,6 +58,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   and user-scale observation weights as separate state. Weighted OLS and IV
   scores, covariance leverage, residuals, diagnostics, and recovered fixed
   effects use those explicit domains.
+- GLM estimators now retain final within-scale IRLS working state separately
+  from immutable user-scale observation weights. Working weights already
+  include observation weights in scores, Hessians, leverage, and weighted
+  fixed-effect recovery; frequency-weight effective counts survive separation.
 
 ### Inference Types
 

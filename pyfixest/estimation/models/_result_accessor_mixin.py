@@ -150,13 +150,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _df_t: int
     _inference_dist: "InferenceDist"
 
-    def _performance_within_response(self) -> np.ndarray:
-        """Return the estimator-specific within response for diagnostics."""
-        raise NotImplementedError
-
-    def _performance_residuals(self) -> np.ndarray:
-        """Return the estimator-specific residual domain for diagnostics."""
-        raise NotImplementedError
     _rmse: float
     _r2: float
     _adj_r2: float
@@ -318,10 +311,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        Y_within = self._performance_within_response()
-        Y = self._Y_untransformed.to_numpy()
+        # `_Y` is the unpremultiplied within response for linear models and the
+        # unpremultiplied final working response for Gaussian GLMs.
+        Y_within = self._Y.flatten()
+        Y = self._Y_untransformed.to_numpy().flatten()
         observation_weights = self._observation_weights.values
-        residuals = self._performance_residuals()
+        residuals = self._u_hat
 
         has_intercept = not self._drop_intercept
 
@@ -337,7 +332,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             y_center = np.mean(Y)
             ssy = np.sum((Y - y_center) ** 2)
         else:
-            weights = observation_weights.reshape((-1, 1))
+            weights = observation_weights
             ssu = np.sum(weights.flatten() * residuals**2)
             y_center = np.average(Y, weights=weights)
             ssy = np.sum(weights * (Y - y_center) ** 2)

@@ -8,6 +8,7 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
@@ -77,7 +78,7 @@ class Feglm(Feols):
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
         accelerate: bool = True,
-    ):
+    ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -122,13 +123,13 @@ class Feglm(Feols):
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty(0)
+        self._Xbeta = np.empty((0, 1))
 
         self._method = "feglm"
         self._family = family
         self._inference_dist = family.inference_dist
 
-    def prepare_model_matrix(self):
+    def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
 
@@ -154,49 +155,50 @@ class Feglm(Feols):
             model_matrix = model_matrix.without_rows(na_separation)
             self._publish_model_matrix(model_matrix)
 
-            # Preserve the established GLM sample-size convention after
-            # separation. Frequency-weight policy is handled separately.
-            self._N = model_matrix.dependent.shape[0]
-            self._N_rows = self._N
-
             self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
         return model_matrix
 
-    def to_array(self):
-        "Turn estimation DataFrames to np arrays."
-        self._Y = self._model_matrix.dependent.to_numpy()
-        self._X = self._model_matrix.independent.to_numpy()
-        self._Z = self._X
-        if self._offset_df is not None:
-            self._offset = self._offset_df.to_numpy().reshape((-1, 1))
-        if self._fe is not None:
-            self._fe = self._fe.to_numpy()
-            if self._fe.ndim == 1:
-                self._fe = self._fe.reshape((self._N, 1))
-
-    def get_fit(self):
+    def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."
-        self.to_array()
+        model_matrix = self._model_matrix
+        response = model_matrix.dependent.to_numpy()
+        design = model_matrix.independent.to_numpy()
+        fixed_effects = (
+            None
+            if model_matrix.fixed_effects is None
+            else model_matrix.fixed_effects.to_numpy()
+        )
+        offset = (
+            None
+            if model_matrix.offset is None
+            else model_matrix.offset.to_numpy().reshape((-1, 1))
+        )
+        self._offset = offset
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
         ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(v=v, X=X, flist=self._fe, weights=weights, tol=tol)
+            return self.residualize(
+                v=v,
+                X=X,
+                flist=fixed_effects,
+                weights=weights,
+                tol=tol,
+            )
 
         fit = fit_glm_irls(
-            X=self._X,
-            Y=self._Y,
+            X=design,
+            Y=response,
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
             collin_tol=self._collin_tol,
-            accelerate=self._accelerate and self._fe is not None,
-            offset=self._offset,
-            weights=self._weights if self._has_weights else None,
+            accelerate=self._accelerate and fixed_effects is not None,
+            offset=offset,
+            weights=self._observation_weights.values,
             solver=self._solver,
             maxiter=self.maxiter,
             tol=self.tol,
@@ -206,68 +208,52 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
-        self._X = fit.X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+        working_state = fit.working_state
+        self._working_state = working_state
+        design_within = working_state.design_within
+        self._X_is_empty = design_within.shape[1] == 0
+        self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        self._Y_hat_response = fit.mu.flatten()
-        self._Y_hat_link = fit.eta.flatten()
+        self._Y_hat_response = working_state.mu
+        self._Y_hat_link = working_state.eta
+        self._u_hat_response = working_state.response_residuals
+        self._u_hat_working = working_state.working_residuals
+        self._u_hat = self._u_hat_working
 
-        self._weights = fit.W
-        self._irls_weights = fit.W
-        if self._weights.ndim == 1:
-            self._weights = self._weights.reshape((self._N_rows, 1))
-
-        self._u_hat_response = (self._Y.flatten() - fit.mu).flatten()
-        e_final = fit.z_tilde - fit.X_tilde @ self._beta_hat
-        self._u_hat_working = (
-            self._u_hat_response
-            if self._method == "feglm-gaussian"
-            else e_final.flatten()
+        weighted_working_residuals = (
+            working_state.working_weights * working_state.working_residuals
         )
-
-        self._scores_response = self._u_hat_response[:, None] * self._X
-        self._scores_working = self._u_hat_working[:, None] * self._X
-
-        sqrt_W_vec = fit.sqrt_W.flatten()
-        X_wls = sqrt_W_vec[:, None] * fit.X_tilde
-        z_wls = sqrt_W_vec * fit.z_tilde
-
-        self._u_hat = (z_wls - X_wls @ self._beta_hat).flatten()
-        self._Y = z_wls
-        self._X = X_wls
-        self._Z = self._X
-
-        self._scores = self._u_hat[:, None] * self._X
-
-        self._tZX = self._Z.T @ self._X
+        # The IRLS score is W_i x_i e_i. Working weights already contain any
+        # user-supplied observation weight.
+        self._scores = design_within * weighted_working_residuals[:, None]
+        weighted_design = working_state.working_weights[:, None] * design_within
+        self._tZX = design_within.T @ weighted_design
         self._tZXinv = np.linalg.inv(self._tZX)
-        self._Xbeta = fit.eta.reshape(-1, 1)
+        self._hessian = self._tZX.copy()
 
-        self._hessian = X_wls.T @ X_wls
+        # Temporary aliases retained until the getter-only alias layer.
+        self._Y = working_state.working_response_within
+        self._X = design_within
+        self._Z = design_within
+        self._irls_weights = working_state.working_weights
+        self._Xbeta = working_state.eta.reshape(-1, 1)
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
 
-    def _normal_equation_weights(self) -> np.ndarray | None:
-        """Return no extra weights while the GLM design stays sqrt-weighted."""
-        return None
+    def _normal_equation_weights(self) -> np.ndarray:
+        """Return final IRLS weights used by the normal equations."""
+        return self._working_state.working_weights
 
     def _fixef_recovery_weights(self) -> np.ndarray | None:
-        """Preserve legacy weighted-GLM FE recovery until working-state migration."""
-        return self._weights.flatten() if self._has_weights else None
+        """Return combined IRLS weights for weighted FE recovery.
 
-    def _performance_within_response(self) -> np.ndarray:
-        """Undo legacy solver scaling for Gaussian performance diagnostics."""
-        response_solver = self._Y.reshape((-1, 1))
-        sqrt_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
-        return response_solver / sqrt_weights
-
-    def _performance_residuals(self) -> np.ndarray:
-        """Return Gaussian response residuals before legacy solver scaling."""
-        return self._u_hat_response
+        Working weights already include observation weights, so multiplying the
+        observation weights again would double count them.
+        """
+        return self._working_state.working_weights if self._has_weights else None
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
@@ -297,7 +283,7 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -397,7 +383,7 @@ class Feglm(Feols):
         self._check_dependent_variable()
 
 
-def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int):
+def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
     if not isinstance(drop_singletons, bool):
         raise TypeError("drop_singletons must be logical.")
     if not isinstance(tol, (int, float)):
