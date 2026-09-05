@@ -230,8 +230,8 @@ class Feols(ResultAccessorMixin):
         "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Deleted if arguments `lean = True`
+        or `store_data = False`.
     _model_name: str
         The name of the model. Usually just the formula string. If split estimation is used,
         the model name will include the split variable and value.
@@ -322,6 +322,9 @@ class Feols(ResultAccessorMixin):
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
+        # Storage cleanup runs at the very end of the fit, so `lean` alone does
+        # not say whether the fit arrays are still there. Estimation itself goes
+        # through the same guarded methods.
         self._fit_state_discarded = False
         self._context = capture_context(context)
 
@@ -485,9 +488,10 @@ class Feols(ResultAccessorMixin):
             return ObservationWeights.unweighted(n_rows=n_rows)
 
         assert self._weights_type in ("aweights", "fweights")
+        weights_kind = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
-            kind=cast(WeightsTypeOptions, self._weights_type),
+            kind=weights_kind,
         )
 
     def _prepare_within_data(self) -> WithinLinearData:
@@ -496,18 +500,19 @@ class Feols(ResultAccessorMixin):
         design_frame = self._model_matrix.independent
         response = response_frame.to_numpy(dtype=np.float64)
         design = design_frame.to_numpy(dtype=np.float64)
-        fixed_effects = self._model_matrix.fixed_effects
-        if fixed_effects is not None:
+
+        if self._model_matrix.fixed_effects is not None:
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_names=tuple(response_frame.columns),
-                x_names=tuple(design_frame.columns),
-                fe=fixed_effects.to_numpy(),
+                y_names=response_frame.columns,
+                x_names=design_frame.columns,
+                fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
                 demeaner=self._demeaner,
             )
+
         return WithinLinearData(response=response, design=design)
 
     @property
@@ -645,7 +650,7 @@ class Feols(ResultAccessorMixin):
         arrays: str,
         remedy: str = "Refit with lean=False.",
     ) -> None:
-        """Reject a call whose input arrays ``lean=True`` discarded."""
+        """Reject a call whose input arrays `lean=True` discarded."""
         if self._lean and self._fit_state_discarded:
             raise RuntimeError(
                 f"{method}() is unavailable after fitting with lean=True because "
@@ -658,7 +663,7 @@ class Feols(ResultAccessorMixin):
         *,
         remedy: str = "Refit with store_data=True.",
     ) -> None:
-        """Reject a call whose estimation data were discarded."""
+        """Reject a call whose estimation data the storage options discarded."""
         if not hasattr(self, "_data"):
             raise RuntimeError(
                 f"{method}() is unavailable when store_data=False or lean=True "
@@ -1029,8 +1034,8 @@ class Feols(ResultAccessorMixin):
                 "_tXZ",
                 "_tZy",
                 "_tZX",
-                "_scores",
                 "_tZZinv",
+                "_scores",
                 "_u_hat",
                 "_Y_hat_link",
                 "_Y_hat_response",
@@ -1701,11 +1706,6 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self._support_decomposition:
-            raise NotImplementedError(
-                "Decomposition is currently only supported for OLS models."
-            )
-
         has_param = param is not None
         has_decomp = decomp_var is not None
 
@@ -1739,7 +1739,14 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        if not self._support_decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for OLS models."
+            )
+
         self._require_fit_arrays("decompose", arrays="the fitted arrays")
+        # A cluster variable or an absorbed fixed effect is read back from the
+        # estimation sample; the plain covariate case works on arrays alone.
         if cluster is not None or self._is_clustered or self._has_fixef:
             self._require_estimation_data("decompose")
 
@@ -1845,6 +1852,8 @@ class Feols(ResultAccessorMixin):
         self._require_fit_arrays("fixef", arrays="the fitted arrays")
         self._require_estimation_data("fixef")
 
+        fixef_recovery_weights = self._fixef_recovery_weights()
+
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
@@ -1882,7 +1891,6 @@ class Feols(ResultAccessorMixin):
         )
         fixed_effect_design = contrast_coding.matrix
         fixed_effect_design_for_recovery = fixed_effect_design
-        fixef_recovery_weights = self._fixef_recovery_weights()
         if fixef_recovery_weights is not None:
             weights_sqrt = np.sqrt(fixef_recovery_weights).flatten()
             uhat *= weights_sqrt
@@ -1899,8 +1907,6 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        # Weighting changes the recovery metric; fitted FE contributions remain
-        # D alpha in response units (up to solver and convergence tolerance).
         self._sumFE = fixed_effect_design.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
@@ -2030,6 +2036,7 @@ class Feols(ResultAccessorMixin):
             # matching how unseen fixed-effect levels are handled below.
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
+                # Fixed-effect levels are recovered from the estimation sample.
                 self._require_fit_arrays(
                     "predict", arrays="the fitted design and residual arrays"
                 )
@@ -2429,19 +2436,20 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."
             )
-        self._require_fit_arrays("update", arrays="the fitted design arrays")
         if inplace:
             raise NotImplementedError(
                 "update(..., inplace=True) is not supported because appending design "
                 "rows cannot safely update the complete fitted-result state; use the "
                 "returned coefficients instead."
             )
+        self._require_fit_arrays("update", arrays="the fitted design arrays")
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self._X, X_new))
         epsi_n_plus_1 = y_new - X_new @ self._beta_hat
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
+
         return beta_n_plus_1
 
 
