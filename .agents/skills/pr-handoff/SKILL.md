@@ -61,6 +61,15 @@ must be testable against its immediate parent and contain no unrelated cleanup.
 
 Before submission, inspect every layer's log/diff and the cumulative diff.
 Identify the immediate parent only when it is not obvious from the PR base.
+When reconstructing a stack, complete and inspect the coherent stack before
+publication by default. Publish an incomplete draft sequence only when the user
+explicitly requests that workflow or a concrete early-CI dependency makes it
+useful.
+
+Committing, pushing, or opening a PR delivers already selected evidence; those
+actions are not revalidation gates. Follow the cadence in
+`docs/developer/testing.md`, reuse revision-scoped evidence that later changes
+did not invalidate, and coordinate one owner for broad cumulative checks.
 
 ## Draft the body and stop
 

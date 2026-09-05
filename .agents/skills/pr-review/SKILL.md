@@ -69,11 +69,23 @@ the exact head SHA and inventory completed CI for that SHA, then run only the
 cheapest check that can answer each remaining review question.
 
 Do not duplicate an expensive successful exact-head CI job locally without a
-concrete reason. Escalate to a broad suite only when a narrow check fails or
-leaves material uncertainty, the diff crosses subsystems, equivalent exact-head
-CI is missing, stale, cancelled, or non-equivalent, or repository policy
-requires that suite. Before starting a multi-minute local check, state which
-unresolved risk it addresses and why existing CI is insufficient.
+concrete reason. During an active feedback batch, escalate to a broad suite only
+when a narrow check fails or leaves material uncertainty, or when a
+cross-subsystem diff creates shared risk that focused checks do not cover.
+Missing, stale, cancelled, or non-equivalent exact-head CI must be reported
+honestly, but does not alone restart broad checks after every edit. Run required
+missing evidence when the change reaches its stabilized acceptance boundary, or
+earlier to resolve an actual review risk. Before starting a multi-minute local
+check, state which unresolved risk or acceptance requirement it addresses and
+why existing evidence is insufficient.
+
+For incremental review, group related feedback into a change batch and reuse
+valid evidence. A new comment, commit, push, or reviewer handoff is not an
+automatic rerun trigger. Record the revision and scope of earlier evidence; do
+not call it exact-head evidence, and rerun only when the intervening diff can
+affect it, a review question remains unresolved, or acceptance explicitly
+requires a newer run. Coordinate one owner for broad checks to avoid duplicating
+the same evidence across author, reviewer, and agents.
 
 For a stack, inspect every layer's diff and run targeted checks wherever
 behavior changes. If the stated acceptance boundary is the cumulative stack, run
