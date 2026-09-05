@@ -317,10 +317,18 @@ lets-plot = ">=4.0.0"
 # docs-preview: Start a local dev server with live reload (does NOT run docs-build first).
 # docs-bundle: Copy the rendered llms.txt and .llms.md pages into pyfixest/docs so
 #   wheels and sdists ship version-matched documentation (gitignored, build-time only).
+# docs-render-fresh / docs-bundle-fresh: the release path. `freeze: auto` re-executes a
+#   page only when its own source changes, never when pyfixest changes, so a committed
+#   frozen result can predate the release by many versions. Quarto has no flag to bypass
+#   the freeze, so these tasks delete docs/_freeze and docs/_site and execute every page
+#   (roughly an hour). docs-render and docs-bundle must keep the freeze: they run on
+#   every PR, where frozen results are the point.
 docs-build = { cmd = "cd docs && rm -rf reference && quartodoc build --verbose --config _quarto.yml", depends-on = ["_setup"], description = "Build API docs with quartodoc" }
 docs-render = { cmd = "quarto render docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs with Quarto" }
 docs-preview = { cmd = "quarto preview docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Preview docs locally" }
 docs-bundle = { cmd = "python scripts/bundle_agent_docs.py", depends-on = ["docs-render"], description = "Bundle rendered agent docs into pyfixest/docs" }
+docs-render-fresh = { cmd = "rm -rf docs/_freeze docs/_site && quarto render docs", depends-on = ["docs-build"], env = { PYTHONWARNINGS = "ignore", KMP_WARNINGS = "0" }, description = "Render docs from scratch, ignoring frozen results (release builds)" }
+docs-bundle-fresh = { cmd = "python scripts/bundle_agent_docs.py", depends-on = ["docs-render-fresh"], description = "Fresh render, then bundle into pyfixest/docs (release builds)" }
 
 # -- lint feature ----------------------------------------------------------------------
 
