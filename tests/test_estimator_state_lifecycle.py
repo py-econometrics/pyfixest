@@ -9,6 +9,7 @@ import pytest
 import pyfixest as pf
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
+    GlmWorkingState,
     ObservationWeights,
     WithinLinearData,
 )
@@ -86,6 +87,81 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     np.testing.assert_allclose(fit._hessian, fit._X.T @ (weights[:, None] * fit._X))
     with pytest.raises(FrozenInstanceError):
         fit._within_data.response = fit._within_data.design  # type: ignore[misc]
+
+
+@pytest.mark.parametrize("alias", ["_Y", "_X", "_Z", "_weights"])
+def test_array_aliases_are_read_only_views(
+    lifecycle_data: pd.DataFrame,
+    alias: str,
+) -> None:
+    """The typed state objects stay the single writable representation."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+
+    with pytest.raises(AttributeError):
+        setattr(fit, alias, np.zeros((fit._N_rows, 1)))
+    with pytest.raises(AttributeError):
+        delattr(fit, alias)
+
+
+def test_unweighted_weight_alias_is_materialized_on_access(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An unweighted fit stores no weight vector but still exposes one."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+
+    assert fit._observation_weights.values is None
+    np.testing.assert_array_equal(fit._weights, np.ones((fit._N_rows, 1)))
+    assert fit._weights is not fit._weights
+
+
+def test_quantreg_multi_retains_default_post_estimation_state() -> None:
+    """Default multi-quantile results support prediction and vcov updates."""
+    rng = np.random.default_rng(20260901)
+    x = rng.normal(size=200)
+    data = pd.DataFrame({"y": 1 + 2 * x + rng.normal(size=200), "x": x})
+    with pytest.warns(FutureWarning, match="experimental"):
+        multi = pf.quantreg("y ~ x", data=data, quantile=[0.25, 0.75], vcov="iid")
+        single = pf.quantreg("y ~ x", data=data, quantile=0.25, vcov="hetero")
+
+    multi.vcov("hetero")
+
+    for model in multi.to_list():
+        assert np.isfinite(model.predict()).all()
+        assert np.isfinite(model.se()).all()
+
+    first_quantile = multi.fetch_model(0, print_fml=False)
+    np.testing.assert_allclose(first_quantile.predict(), single.predict())
+    np.testing.assert_allclose(first_quantile.se(), single.se())
+
+
+def test_feglm_keeps_observation_and_working_weights_distinct() -> None:
+    rng = np.random.default_rng(8675309)
+    n_obs = 160
+    covariate = rng.normal(size=n_obs)
+    probability = 1 / (1 + np.exp(-(-0.2 + 0.8 * covariate)))
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
+    data = pd.DataFrame(
+        {
+            "y": rng.binomial(1, probability),
+            "x": covariate,
+            "observation_weight": observation_weights,
+        }
+    )
+    fit = pf.feglm(
+        "y ~ x",
+        data=data,
+        family="logit",
+        weights="observation_weight",
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+    working = fit._working_state
+    assert isinstance(working, GlmWorkingState)
+    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+    np.testing.assert_allclose(fit._irls_weights, working.working_weights)
+    assert not np.allclose(working.working_weights, observation_weights)
+    assert fit._X is working.design_within
+    assert fit._Y is working.working_response_within
 
 
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(

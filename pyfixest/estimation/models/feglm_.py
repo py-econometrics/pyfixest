@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
@@ -123,7 +124,6 @@ class Feglm(Feols):
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty((0, 1))
 
         self._method = "feglm"
         self._family = family
@@ -232,16 +232,35 @@ class Feglm(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._hessian = self._tZX.copy()
 
-        # Temporary aliases retained until the getter-only alias layer.
-        self._Y = working_state.working_response_within
-        self._X = design_within
-        self._Z = design_within
-        self._irls_weights = working_state.working_weights
-        self._Xbeta = working_state.eta.reshape(-1, 1)
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    @property
+    def _Y(self) -> NDArray[np.float64]:
+        """Within-scale IRLS working response."""
+        return self._working_state.working_response_within
+
+    @property
+    def _X(self) -> NDArray[np.float64]:
+        """Within-scale IRLS design, not premultiplied by working weights."""
+        return self._working_state.design_within
+
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """The IRLS design; a GLM has no instruments."""
+        return self._working_state.design_within
+
+    @property
+    def _irls_weights(self) -> NDArray[np.float64]:
+        """Final IRLS working weights, never the observation weights."""
+        return self._working_state.working_weights
+
+    @property
+    def _Xbeta(self) -> NDArray[np.float64]:
+        """Linear predictor as a column vector."""
+        return self._working_state.eta.reshape((-1, 1))
 
     def _normal_equation_weights(self) -> np.ndarray:
         """Return final IRLS weights used by the normal equations."""

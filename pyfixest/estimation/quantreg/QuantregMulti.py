@@ -223,9 +223,4 @@ class QuantregMulti:
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
 
-        del_attributes = ["_X", "_Y"]
-        for quantreg in self.all_quantregs.values():
-            for attr in del_attributes:
-                if hasattr(quantreg, attr):
-                    delattr(quantreg, attr)
         gc.collect()

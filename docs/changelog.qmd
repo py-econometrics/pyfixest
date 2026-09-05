@@ -62,6 +62,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   from immutable user-scale observation weights. Working weights already
   include observation weights in scores, Hessians, leverage, and weighted
   fixed-effect recovery; frequency-weight effective counts survive separation.
+- Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
+  read-only views over the typed state objects.
 
 ### Inference Types
 
