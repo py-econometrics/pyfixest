@@ -261,7 +261,9 @@ class Feglm(Feols):
 
     def _performance_within_response(self) -> np.ndarray:
         """Undo legacy solver scaling for Gaussian performance diagnostics."""
-        return self._Y / np.sqrt(self._irls_weights).reshape((-1, 1))
+        response_solver = self._Y.reshape((-1, 1))
+        sqrt_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
+        return response_solver / sqrt_weights
 
     def _performance_residuals(self) -> np.ndarray:
         """Return Gaussian response residuals before legacy solver scaling."""

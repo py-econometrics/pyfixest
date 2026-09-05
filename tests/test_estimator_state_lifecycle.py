@@ -176,3 +176,13 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssy = np.sum(observation_weights * (response - center) ** 2)
     np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit._N))
     np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
+    if fit._has_fixef:
+        assert observation_weights is not None
+        weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
+        group_mean = weighted_y.groupby(lifecycle_data["fe"]).transform("sum")
+        group_mean /= (
+            lifecycle_data["weight"].groupby(lifecycle_data["fe"]).transform("sum")
+        )
+        response_within = response - group_mean.to_numpy()
+        ssy_within = np.sum(observation_weights * response_within**2)
+        np.testing.assert_allclose(fit._r2_within, 1 - ssu / ssy_within)
