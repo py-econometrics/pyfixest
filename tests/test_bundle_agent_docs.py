@@ -14,8 +14,29 @@ LLMS_TXT = """\
 - [Guide](guide.llms.md)
 - [Tutorials](tutorials/index.llms.md)
 - [Tutorial](tutorials/tutorial.llms.md)
+- [estimation.feols](reference/estimation.feols.llms.md)
 - [PyFixest](index.llms.md)
 """
+
+GUIDE_SOURCE = """\
+---
+title: "Guide"
+description: "How to fit  models with PyFixest's 'feols' API."
+categories: [guide]
+---
+
+# Guide
+"""
+
+TUTORIALS_INDEX_SOURCE = """\
+---
+title: "Tutorials"
+---
+
+# Tutorials
+"""
+
+TUTORIAL_SOURCE = "# Tutorial\n"
 
 GUIDE = """\
 # Guide
@@ -65,8 +86,19 @@ def site(tmp_path: Path) -> Path:
     _write(site / "guide.llms.md", GUIDE)
     _write(site / "tutorials" / "index.llms.md", "# Tutorials\n")
     _write(site / "tutorials" / "tutorial.llms.md", "# Tutorial\n")
+    _write(site / "reference" / "estimation.feols.llms.md", "# feols\n")
     _write(site / "index.llms.md", "# PyFixest\n\nGo to [docs](guide.llms.md).\n")
     return site
+
+
+@pytest.fixture
+def docs_dir(tmp_path: Path) -> Path:
+    """Build a source tree where only the guide has a front-matter description."""
+    docs = tmp_path / "docs"
+    _write(docs / "guide.qmd", GUIDE_SOURCE)
+    _write(docs / "tutorials" / "index.qmd", TUTORIALS_INDEX_SOURCE)
+    _write(docs / "tutorials" / "tutorial.md", TUTORIAL_SOURCE)
+    return docs
 
 
 @pytest.fixture
@@ -76,16 +108,16 @@ def version_file(tmp_path: Path) -> Path:
     return path
 
 
-def _bundle(site: Path, tmp_path: Path, version_file: Path) -> Path:
-    output = tmp_path / "docs"
-    bundle(site=site, output=output, version_file=version_file)
+def _bundle(site: Path, tmp_path: Path, version_file: Path, docs_dir: Path) -> Path:
+    output = tmp_path / "bundled"
+    bundle(site=site, output=output, version_file=version_file, docs_dir=docs_dir)
     return output
 
 
 def test_bundle_copies_pages_without_the_redirect_stub(
-    site: Path, tmp_path: Path, version_file: Path
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
 ) -> None:
-    output = _bundle(site, tmp_path, version_file)
+    output = _bundle(site, tmp_path, version_file, docs_dir)
 
     assert sorted(
         path.relative_to(output).as_posix()
@@ -94,15 +126,16 @@ def test_bundle_copies_pages_without_the_redirect_stub(
     ) == [
         "guide.llms.md",
         "llms.txt",
+        "reference/estimation.feols.llms.md",
         "tutorials/index.llms.md",
         "tutorials/tutorial.llms.md",
     ]
 
 
 def test_index_drops_the_stub_entry_and_stamps_the_version(
-    site: Path, tmp_path: Path, version_file: Path
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
 ) -> None:
-    index = (_bundle(site, tmp_path, version_file) / "llms.txt").read_text(
+    index = (_bundle(site, tmp_path, version_file, docs_dir) / "llms.txt").read_text(
         encoding="utf-8"
     )
 
@@ -115,18 +148,38 @@ def test_index_drops_the_stub_entry_and_stamps_the_version(
         "\n"
         "## Pages\n"
         "\n"
-        "- [Guide](guide.llms.md)\n"
+        "- [Guide](guide.llms.md): How to fit models with PyFixest's 'feols' API.\n"
         "- [Tutorials](tutorials/index.llms.md)\n"
         "- [Tutorial](tutorials/tutorial.llms.md)\n"
+        "- [estimation.feols](reference/estimation.feols.llms.md)\n"
     )
+
+
+def test_index_entries_carry_the_source_description(
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
+) -> None:
+    index = (_bundle(site, tmp_path, version_file, docs_dir) / "llms.txt").read_text(
+        encoding="utf-8"
+    )
+
+    # Quotes are stripped, inner quotes and repeated whitespace are not mangled.
+    assert (
+        "- [Guide](guide.llms.md): How to fit models with PyFixest's 'feols' API."
+        in index
+    )
+    # Front matter without a description, and a page without front matter.
+    assert "- [Tutorials](tutorials/index.llms.md)\n" in index
+    assert "- [Tutorial](tutorials/tutorial.llms.md)\n" in index
+    # quartodoc reference pages have no source to describe them.
+    assert "- [estimation.feols](reference/estimation.feols.llms.md)\n" in index
 
 
 def test_images_become_placeholders_and_badges_disappear(
-    site: Path, tmp_path: Path, version_file: Path
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
 ) -> None:
-    guide = (_bundle(site, tmp_path, version_file) / "guide.llms.md").read_text(
-        encoding="utf-8"
-    )
+    guide = (
+        _bundle(site, tmp_path, version_file, docs_dir) / "guide.llms.md"
+    ).read_text(encoding="utf-8")
 
     assert "[Figure: Benchmark chart]" in guide
     assert "[Figure]" in guide
@@ -139,26 +192,29 @@ def test_images_become_placeholders_and_badges_disappear(
 
 
 def test_code_blocks_stay_literal(
-    site: Path, tmp_path: Path, version_file: Path
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
 ) -> None:
-    guide = (_bundle(site, tmp_path, version_file) / "guide.llms.md").read_text(
-        encoding="utf-8"
-    )
+    guide = (
+        _bundle(site, tmp_path, version_file, docs_dir) / "guide.llms.md"
+    ).read_text(encoding="utf-8")
 
     assert FENCED_BLOCK in guide
 
 
 def test_bundling_twice_is_idempotent(
-    site: Path, tmp_path: Path, version_file: Path
+    site: Path, tmp_path: Path, version_file: Path, docs_dir: Path
 ) -> None:
-    output = _bundle(site, tmp_path, version_file)
+    output = _bundle(site, tmp_path, version_file, docs_dir)
     first = {
         path.relative_to(output): path.read_bytes()
         for path in output.rglob("*")
         if path.is_file()
     }
 
-    assert bundle(site=site, output=output, version_file=version_file) == 3
+    assert (
+        bundle(site=site, output=output, version_file=version_file, docs_dir=docs_dir)
+        == 4
+    )
     assert {
         path.relative_to(output): path.read_bytes()
         for path in output.rglob("*")
@@ -166,7 +222,9 @@ def test_bundling_twice_is_idempotent(
     } == first
 
 
-def test_manifest_without_a_package_version_raises(site: Path, tmp_path: Path) -> None:
+def test_manifest_without_a_package_version_raises(
+    site: Path, tmp_path: Path, docs_dir: Path
+) -> None:
     manifest = tmp_path / "no-version.toml"
     _write(
         manifest,
@@ -174,21 +232,40 @@ def test_manifest_without_a_package_version_raises(site: Path, tmp_path: Path) -
     )
 
     with pytest.raises(AgentDocsBundleError, match=r"No \[package\] version"):
-        bundle(site=site, output=tmp_path / "docs", version_file=manifest)
+        bundle(
+            site=site,
+            output=tmp_path / "bundled",
+            version_file=manifest,
+            docs_dir=docs_dir,
+        )
 
 
-def test_missing_llms_index_raises(tmp_path: Path, version_file: Path) -> None:
+def test_missing_llms_index_raises(
+    tmp_path: Path, version_file: Path, docs_dir: Path
+) -> None:
     empty = tmp_path / "empty"
     empty.mkdir()
 
     with pytest.raises(AgentDocsBundleError, match="Missing Quarto llms index"):
-        bundle(site=empty, output=tmp_path / "docs", version_file=version_file)
+        bundle(
+            site=empty,
+            output=tmp_path / "bundled",
+            version_file=version_file,
+            docs_dir=docs_dir,
+        )
 
 
-def test_site_without_pages_raises(tmp_path: Path, version_file: Path) -> None:
+def test_site_without_pages_raises(
+    tmp_path: Path, version_file: Path, docs_dir: Path
+) -> None:
     stub_only = tmp_path / "stub-only"
     _write(stub_only / "llms.txt", LLMS_TXT)
     _write(stub_only / "index.llms.md", "# PyFixest\n")
 
     with pytest.raises(AgentDocsBundleError, match=r"No Quarto \.llms\.md pages"):
-        bundle(site=stub_only, output=tmp_path / "docs", version_file=version_file)
+        bundle(
+            site=stub_only,
+            output=tmp_path / "bundled",
+            version_file=version_file,
+            docs_dir=docs_dir,
+        )

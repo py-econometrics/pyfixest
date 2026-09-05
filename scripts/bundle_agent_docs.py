@@ -20,7 +20,11 @@ _HTML_BADGE_RE = re.compile(r"<a\b[^>]*>\s*<img\b[^>]*>\s*</a>", re.IGNORECASE)
 _HTML_ALT_RE = re.compile(r"\balt=(['\"])(.*?)\1", re.IGNORECASE)
 _FIG_ALT_RE = re.compile(r"\bfig-alt=(['\"])(.*?)\1", re.IGNORECASE)
 _FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+_INDEX_ENTRY_RE = re.compile(r"^- \[(?P<title>[^\]]*)\]\((?P<href>[^)]+\.llms\.md)\)$")
+_FRONT_MATTER_FENCE = "---"
+_BLOCK_SCALARS = frozenset({"|", ">", "|-", ">-", "|+", ">+"})
 _STUB = "index.llms.md"
+_SOURCE_SUFFIXES = (".qmd", ".md")
 
 
 class AgentDocsBundleError(ValueError):
@@ -73,11 +77,57 @@ def _package_version(version_file: Path) -> str:
     return version[1]
 
 
-def _index_text(site: Path, version_file: Path) -> str:
-    """Drop the redirect stub from llms.txt and stamp the package version."""
+def _source_page(href: str, docs_dir: Path) -> Path | None:
+    """Find the Quarto source behind an `.llms.md` entry in the index."""
+    stem = href[: -len(".llms.md")]
+    for suffix in _SOURCE_SUFFIXES:
+        source = docs_dir / (stem + suffix)
+        if source.is_file():
+            return source
+    return None
+
+
+def _unquote(value: str) -> str:
+    """Strip matching surrounding quotes, leaving inner quotes untouched."""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
+def _description(source: Path) -> str:
+    """Read a single-line `description:` from the YAML front matter, if any."""
+    lines = source.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != _FRONT_MATTER_FENCE:
+        return ""
+    for line in lines[1:]:
+        if line.strip() == _FRONT_MATTER_FENCE:
+            return ""
+        if not line.startswith("description:"):
+            continue
+        value = line[len("description:") :].strip()
+        if value in _BLOCK_SCALARS:
+            return ""
+        return " ".join(_unquote(value).split())
+    return ""
+
+
+def _describe(line: str, docs_dir: Path) -> str:
+    """Append the source page's description to an index entry, when it has one."""
+    entry = _INDEX_ENTRY_RE.match(line)
+    if entry is None:
+        return line
+    source = _source_page(entry["href"], docs_dir)
+    if source is None:
+        return line
+    description = _description(source)
+    return f"{line}: {description}" if description else line
+
+
+def _index_text(site: Path, version_file: Path, docs_dir: Path) -> str:
+    """Drop the redirect stub from llms.txt, stamp the version, describe pages."""
     version = _package_version(version_file)
     lines = (site / "llms.txt").read_text(encoding="utf-8").splitlines()
-    kept = [line for line in lines if f"]({_STUB})" not in line]
+    kept = [_describe(line, docs_dir) for line in lines if f"]({_STUB})" not in line]
     after = next((i for i, line in enumerate(kept) if line.startswith(">")), 0) + 1
     while after < len(kept) and kept[after].startswith(">"):
         after += 1
@@ -85,7 +135,7 @@ def _index_text(site: Path, version_file: Path) -> str:
     return "\n".join(kept) + "\n"
 
 
-def bundle(*, site: Path, output: Path, version_file: Path) -> int:
+def bundle(*, site: Path, output: Path, version_file: Path, docs_dir: Path) -> int:
     """Copy Quarto's llms output into the package and return the page count."""
     if not (site / "llms.txt").is_file():
         raise AgentDocsBundleError(f"Missing Quarto llms index: {site / 'llms.txt'}")
@@ -96,7 +146,7 @@ def bundle(*, site: Path, output: Path, version_file: Path) -> int:
 
     shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True)
-    index = _index_text(site, version_file)
+    index = _index_text(site, version_file, docs_dir)
     (output / "llms.txt").write_text(index, encoding="utf-8")
     for page in pages:
         destination = output / page.relative_to(site)
@@ -111,10 +161,14 @@ def main() -> int:
     parser.add_argument("--site", type=Path, default=Path("docs/_site"))
     parser.add_argument("--output", type=Path, default=Path("pyfixest/docs"))
     parser.add_argument("--version-file", type=Path, default=Path("Cargo.toml"))
+    parser.add_argument("--docs-dir", type=Path, default=Path("docs"))
     args = parser.parse_args()
     try:
         pages = bundle(
-            site=args.site, output=args.output, version_file=args.version_file
+            site=args.site,
+            output=args.output,
+            version_file=args.version_file,
+            docs_dir=args.docs_dir,
         )
     except AgentDocsBundleError as exc:
         parser.exit(1, f"agent docs bundling failed:\n{exc}\n")
