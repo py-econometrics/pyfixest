@@ -10,10 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-    from pyfixest.estimation.internals.model_state import (
-        ObservationWeights,
-        WithinLinearData,
-    )
+    from pyfixest.estimation.internals.model_state import ObservationWeights
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -133,7 +130,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _conf_int: np.ndarray
     _u_hat: np.ndarray
     _observation_weights: "ObservationWeights"
-    _within_data: "WithinLinearData"
     _response: np.ndarray
     _coefnames: list[str]
     _method: str
@@ -158,6 +154,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
     @property
     def _Y(self) -> np.ndarray:
         """Estimator-specific within-response view."""
+        raise NotImplementedError
+
+    def _require_fit_arrays(
+        self,
+        method: str,
+        *,
+        arrays: str,
+        remedy: str = "Refit with lean=False.",
+    ) -> None:
+        """Reject a call whose input arrays ``lean=True`` discarded."""
         raise NotImplementedError
 
     def _bind_report_methods(self):
@@ -314,6 +320,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
+        self._require_fit_arrays(
+            "get_performance", arrays="the response and within arrays"
+        )
         # `_Y` is the unpremultiplied within response for linear models and the
         # unpremultiplied final working response for Gaussian GLMs.
         Y_within = self._Y.flatten()
@@ -611,4 +620,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        self._require_fit_arrays("resid", arrays="the residual arrays")
         return self._u_hat.flatten()

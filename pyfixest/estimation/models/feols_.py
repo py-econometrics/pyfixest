@@ -321,6 +321,7 @@ class Feols(ResultAccessorMixin):
         self._store_data = store_data
         self._copy_data = copy_data
         self._lean = lean
+        self._fit_state_discarded = False
         self._context = capture_context(context)
 
         self._support_crv3_inference = True
@@ -519,6 +520,7 @@ class Feols(ResultAccessorMixin):
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
+        self._require_fit_arrays("preconditioner", arrays="the demeaning caches")
         return self._demean_cache.lookup_preconditioner.get(self._na_index)
 
     def _drop_multicollinear_within_data(
@@ -635,6 +637,33 @@ class Feols(ResultAccessorMixin):
         """Yield this fitted result to the result container."""
         return (self,)
 
+    def _require_fit_arrays(
+        self,
+        method: str,
+        *,
+        arrays: str,
+        remedy: str = "Refit with lean=False.",
+    ) -> None:
+        """Reject a call whose input arrays ``lean=True`` discarded."""
+        if self._lean and self._fit_state_discarded:
+            raise RuntimeError(
+                f"{method}() is unavailable after fitting with lean=True because "
+                f"{arrays} were discarded. {remedy}"
+            )
+
+    def _require_estimation_data(
+        self,
+        method: str,
+        *,
+        remedy: str = "Refit with store_data=True.",
+    ) -> None:
+        """Reject a call whose estimation data were discarded."""
+        if not hasattr(self, "_data"):
+            raise RuntimeError(
+                f"{method}() is unavailable when store_data=False or lean=True "
+                f"because the estimation data were discarded. {remedy}"
+            )
+
     def vcov(
         self,
         vcov: str | dict[str, str],
@@ -686,20 +715,25 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
-        # Assuming `data` is the DataFrame in question
+        self._require_fit_arrays(
+            "vcov",
+            arrays="the required estimation arrays",
+            remedy="Set vcov at estimation time or refit with lean=False.",
+        )
 
-        data_to_check = data if data is not None else self._data
-        try:
-            data_to_check = _narwhals_to_pandas(data_to_check)
-        except TypeError as e:
-            raise TypeError(
-                f"The data set must be a DataFrame type. Received: {type(data)}"
-            ) from e
+        data_to_check = getattr(self, "_data", None) if data is None else data
+        if data_to_check is not None:
+            try:
+                data_to_check = _narwhals_to_pandas(data_to_check)
+            except TypeError as e:
+                raise TypeError(
+                    f"The data set must be a DataFrame type. Received: {type(data)}"
+                ) from e
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
 
         (
             self._vcov_type,
@@ -707,6 +741,12 @@ class Feols(ResultAccessorMixin):
             self._is_clustered,
             self._clustervar,
         ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
+
+        if self._vcov_type in {"HAC", "CRV"} and data_to_check is None:
+            self._require_estimation_data(
+                "vcov",
+                remedy="Pass the estimation sample via data= or refit with store_data=True.",
+            )
 
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
@@ -726,6 +766,7 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
+            assert data_to_check is not None
             kw = vcov_kwargs or {}
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
@@ -733,7 +774,7 @@ class Feols(ResultAccessorMixin):
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
+                    G=np.unique(data_to_check[self._time_id]).shape[0],
                 )  # number of unique time periods T used
             )
             self._vcov = self._ssc * self._vcov_hac()
@@ -745,8 +786,9 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
+            assert data_to_check is not None
             prep = prepare_cluster_state(
-                data=data if data is not None else self._data,
+                data=data_to_check,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -952,8 +994,12 @@ class Feols(ResultAccessorMixin):
             # backing them are what has to go.
             attributes += [
                 "_data",
+                "_model_matrix",
                 "_within_data",
                 "_observation_weights",
+                "_demean_cache",
+                "_fe",
+                "_response",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
@@ -963,13 +1009,14 @@ class Feols(ResultAccessorMixin):
                 "_u_hat",
                 "_Y_hat_link",
                 "_Y_hat_response",
-                "_response",
-                "_model_matrix",
             ]
 
         for attr in attributes:
             if hasattr(self, attr):
                 delattr(self, attr)
+
+        if self._lean:
+            self._fit_state_discarded = True
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
@@ -1186,6 +1233,9 @@ class Feols(ResultAccessorMixin):
                 "Wild cluster bootstrap is only supported for unweighted OLS models."
             )
 
+        self._require_fit_arrays("wildboottest", arrays="the fitted arrays")
+        self._require_estimation_data("wildboottest")
+
         cluster_list = []
 
         if cluster is not None and isinstance(cluster, str):
@@ -1379,6 +1429,9 @@ class Feols(ResultAccessorMixin):
             raise ValueError(
                 f"Variable {treatment} not found in the model's coefficients."
             )
+
+        self._require_fit_arrays("ccv", arrays="the fitted arrays")
+        self._require_estimation_data("ccv")
 
         if cluster is None:
             if self._clustervar is None:
@@ -1661,6 +1714,10 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        self._require_fit_arrays("decompose", arrays="the fitted arrays")
+        if cluster is not None or self._is_clustered or self._has_fixef:
+            self._require_estimation_data("decompose")
+
         nthreads_int = -1 if nthreads is None else nthreads
 
         rng = (
@@ -1759,6 +1816,9 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The fixef() method is currently not supported for IV models."
             )
+
+        self._require_fit_arrays("fixef", arrays="the fitted arrays")
+        self._require_estimation_data("fixef")
 
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
@@ -1913,6 +1973,11 @@ class Feols(ResultAccessorMixin):
         if interval is not None:
             _validate_literal_argument(interval, PredictionErrorOptions)
 
+        if newdata is None or se_fit or interval == "prediction":
+            self._require_fit_arrays(
+                "predict", arrays="the fitted design and residual arrays"
+            )
+
         if newdata is None:
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
@@ -1940,6 +2005,10 @@ class Feols(ResultAccessorMixin):
             # matching how unseen fixed-effect levels are handled below.
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self._has_fixef:
+                self._require_fit_arrays(
+                    "predict", arrays="the fitted design and residual arrays"
+                )
+                self._require_estimation_data("predict")
                 fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
                 check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
@@ -2097,6 +2166,9 @@ class Feols(ResultAccessorMixin):
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
+
+        self._require_fit_arrays("ritest", arrays="the fitted arrays")
+        self._require_estimation_data("ritest")
 
         if cluster is not None and cluster not in self._data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
@@ -2331,6 +2403,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."
             )
+        self._require_fit_arrays("update", arrays="the fitted design arrays")
         if inplace:
             raise NotImplementedError(
                 "update(..., inplace=True) is not supported because appending design "
@@ -2349,7 +2422,7 @@ class Feols(ResultAccessorMixin):
 def _check_vcov_input(
     vcov: str | dict[str, str],
     vcov_kwargs: dict[str, Any] | None,
-    data: pd.DataFrame,
+    data: pd.DataFrame | None,
 ):
     """
     Check the input for the vcov argument in the Feols class.
@@ -2360,8 +2433,8 @@ def _check_vcov_input(
         The vcov argument passed to the Feols class.
     vcov_kwargs : Optional[dict[str, Any]]
         The vcov_kwargs argument passed to the Feols class.
-    data : pd.DataFrame
-        The data passed to the Feols class.
+    data : pd.DataFrame or None
+        The estimation sample, or None when the fitted model retains none.
 
     Returns
     -------
@@ -2381,6 +2454,11 @@ def _check_vcov_input(
 
     if isinstance(vcov, list):
         assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
+        if data is None:
+            raise RuntimeError(
+                "A vcov column list requires estimation data. Pass data= or fit "
+                "with store_data=True."
+            )
         assert all(v in data.columns for v in vcov), (
             "vcov list must contain columns in the data"
         )

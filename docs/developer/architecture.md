@@ -280,6 +280,15 @@ bootstrap and `decompose()` reject non-OLS results, so none of them
 reinterprets GLM working state or quantile solver outputs as linear-model
 arrays.
 
+Storage policy follows the full result graph. Multiple-estimation containers
+keep no copy of the input frame under `store_data=False` or `lean=True`,
+retained IV first stages honor `store_data=False`, and lean results discard
+within state, GLM working state, demeaning caches, quantile solver outputs, and
+large first-stage arrays. Lean results keep the formula specification and
+evaluation context so `predict(newdata=...)` remains available for models
+without fixed effects. Methods that need discarded state raise an informative
+error naming the storage option and remedy.
+
 Every estimator or inference feature specifies behavior for weights, fixed
 effects, IV, multiple estimation, `lean=True`, and `store_data=False`.
 Unsupported combinations fail explicitly. Silent fallback is never acceptable.

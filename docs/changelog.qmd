@@ -226,6 +226,13 @@ We also removed:
 
 ### Bug Fixes
 
+- `lean=True` results keep the formula specification and evaluation context, so
+  `predict(newdata=...)` keeps working for models without fixed effects; methods
+  that need discarded state now raise an informative `RuntimeError` instead of
+  `AttributeError`.
+- `store_data=False` and `lean=True` now apply to retained IV first stages and
+  multiple-estimation containers; lean fits also discard demeaning caches, GLM
+  working state, and quantile solver outputs.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.

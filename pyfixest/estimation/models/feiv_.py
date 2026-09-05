@@ -299,6 +299,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
+        self._require_estimation_data("first_stage")
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -335,6 +336,7 @@ class Feiv(Feols):
             collin_tol=self._collin_tol,
             solver=self._solver,
             demeaner=demeaner,
+            store_data=self._store_data,
         )
 
         # Ensure model1 is of type Feols
@@ -361,6 +363,22 @@ class Feiv(Feols):
     def _finalize_fit(self) -> None:
         """Fit and retain the first-stage model after second-stage inference."""
         self.first_stage()
+
+    def _require_first_stage_state(self, method: str) -> None:
+        """Reject a first-stage diagnostic once lean storage discarded the fit."""
+        if not hasattr(self, "_model_1st_stage"):
+            raise RuntimeError(
+                f"{method}() is unavailable when lean=True because the retained "
+                "first-stage fit state was discarded."
+            )
+
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and drop the retained first-stage fit when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            for attr in ("_model_1st_stage", "_X_hat", "_v_hat"):
+                if hasattr(self, attr):
+                    delattr(self, attr)
 
     def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
@@ -442,6 +460,8 @@ class Feiv(Feols):
 
             ```
         """
+        self._require_first_stage_state("IV_Diag")
+
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
@@ -488,6 +508,8 @@ class Feiv(Feols):
         """
         iv_diag_statistics = iv_diag_statistics or []
 
+        self._require_first_stage_state("IV_weakness_test")
+
         if "f_stat" in iv_diag_statistics:
             self._p_iv = len(self._non_exo_instruments)
 
@@ -520,6 +542,7 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
+        self._require_first_stage_state("eff_F")
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":

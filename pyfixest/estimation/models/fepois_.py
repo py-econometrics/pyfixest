@@ -205,6 +205,12 @@ class Fepois(Feglm):
             y_orig, self._Y_hat_response, user_weights
         )
 
+    def _clear_attributes(self) -> None:
+        """Apply GLM cleanup and discard the Poisson null-fit array when lean."""
+        super()._clear_attributes()
+        if self._lean and hasattr(self, "_y_hat_null"):
+            del self._y_hat_null
+
     def predict(
         self,
         newdata: DataFrameType | None = None,

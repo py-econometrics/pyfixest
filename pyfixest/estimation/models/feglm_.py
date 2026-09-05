@@ -262,6 +262,19 @@ class Feglm(Feols):
         """Linear predictor as a column vector."""
         return self._working_state.eta.reshape((-1, 1))
 
+    def _clear_attributes(self) -> None:
+        """Apply base cleanup and discard large GLM fit arrays when lean."""
+        super()._clear_attributes()
+        if self._lean:
+            for attr in (
+                "_working_state",
+                "_u_hat_response",
+                "_u_hat_working",
+                "_offset",
+            ):
+                if hasattr(self, attr):
+                    delattr(self, attr)
+
     def _normal_equation_weights(self) -> np.ndarray:
         """Return final IRLS weights used by the normal equations."""
         return self._working_state.working_weights
@@ -292,11 +305,16 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        if type not in ("response", "working"):
+            raise ValueError("type must be one of 'response' or 'working'.")
+        self._require_fit_arrays(
+            "resid",
+            arrays="the response and working residual arrays",
+            remedy="Refit with lean=False to access residuals.",
+        )
         if type == "response":
             return self._u_hat_response.flatten()
-        if type == "working":
-            return self._u_hat_working.flatten()
-        raise ValueError("type must be one of 'response' or 'working'.")
+        return self._u_hat_working.flatten()
 
     def residualize(
         self,
@@ -307,6 +325,7 @@ class Feglm(Feols):
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         "Residualize v and X by flist using weights."
+        self._require_fit_arrays("residualize", arrays="the demeaning caches")
         if flist is None:
             return v, X
 
