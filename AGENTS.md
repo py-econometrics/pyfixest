@@ -139,10 +139,9 @@ owns reference selection, markers, tolerances, the runtime tiers, and the
 selection matrix that decides which checks a change requires; the
 `change-verification` skill applies it.
 
-For internal or backend refactors that must not change results, route the
-release contract (`test-release-contract`) through the risk-based cadence in
-`docs/developer/testing.md`. It replays the public estimator matrix against a
-pinned pyfixest release and is a regression alarm, not an external correctness
+For internal or backend refactors that must not change results, the release
+contract (`test-release-contract`) replays the public estimator matrix against a
+pinned pyfixest release. It is a regression alarm, not an external correctness
 reference; a released pyfixest result never substitutes for R.
 
 Four rules that are easy to get wrong:

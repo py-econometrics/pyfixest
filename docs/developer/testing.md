@@ -17,26 +17,8 @@ selection affect wall time.
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
 
-During a related batch of initial edits or review feedback, run the focused
-behavior and caller tests plus lightweight checks that can expose the affected
-seam. Once the batch stabilizes, satisfy its selected requirements with evidence
-that still applies and run missing or invalidated checks. A new edit, commit,
-review comment, agent handoff, push, or PR opening is not by itself a reason to
-repeat a check. Rerun evidence when later work invalidates it, a material risk
-remains unresolved, or an explicit acceptance requirement calls for a newer
-run. Do not repeatedly launch `test-r-fixest`, `test-r-core`, or `test-all`
-while iterating.
-
-Coherent layers that work against their immediate parent need their applicable
-focused checks, not the full acceptance suite after every edit. For a stack or
-other multi-batch change, coordinate one owner for each broad check and normally
-run it once on the stabilized cumulative head against the trunk. Run broad
-checks per layer only when the layers must be independently releasable or an
-acceptance requirement says so. A required long check may be deferred to
-exact-head CI at implementation handoff when the report names the check and
-destination.
-Deferred is never equivalent to passed, and the change is not merge-ready
-until all required merge evidence is green.
+Which checks to run when, and when to repeat them, is defined in
+`## Verification cadence`.
 
 `test-py` is the broad Python-only regression baseline. It does not compare
 results with R or another external implementation, so it cannot establish
@@ -48,6 +30,42 @@ does not install the CRAN-only packages from `r_test_requirements.R`, so those
 tests can skip. Exhaustive release evidence requires installing those packages,
 running `test-r-extended`, and combining the available suite with the relevant
 platform CI and benchmarks.
+
+## Verification cadence
+
+A **change batch** is a related set of initial edits or review feedback worked
+as a unit; it is **stabilized** once no further edits are planned before handoff
+or acceptance. Evidence is **invalidated** when the later diff — including
+dependency, environment, or test-configuration changes — could affect its tested
+scope. The **broad-check owner** is the single person or agent responsible for
+running a given broad check once on the cumulative head.
+
+While a batch is active, run the focused behavior and caller tests plus the
+lightweight checks that expose the affected seam; do not repeatedly launch
+`test-r-fixest`, `test-r-core`, or `test-all` while iterating.
+
+At stabilization, satisfy the selection matrix with still-valid evidence and run
+what is missing or invalidated. An edit, commit, review comment, agent handoff,
+push, or PR opening is not by itself a rerun trigger; rerun on invalidation,
+unresolved material risk, or an explicit acceptance requirement.
+
+Name one broad-check owner for each broad check. Broad suites run normally once
+on the stabilized cumulative head against the trunk, and per layer only when the
+layers must be independently releasable or an acceptance requirement says so.
+
+The release contract follows this cadence. Run it earlier only when focused
+tests leave shared numerical risk unresolved, or when it is needed to
+investigate the change or establish a baseline.
+
+Keep the record compact: for each material check record revision, environment,
+scope, command, and result. Evidence from an earlier revision may still cover an
+unchanged seam, but is never reported as exact-head evidence; state what changed
+and rerun only what it invalidated.
+
+A required long check may be deferred to exact-head CI at implementation handoff
+when the report names the check and destination. Deferred is never equivalent to
+passed, and the change is not merge-ready until all required merge evidence is
+green.
 
 ## Commands
 
@@ -100,7 +118,7 @@ This matrix is authoritative for which checks a change requires.
 
 | Change | Required edit or handoff evidence | Merge or long evidence |
 |---|---|---|
-| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` once stabilized | affected reference-page render when applicable |
+| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
 | Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
@@ -118,13 +136,10 @@ selecting no tests.
 
 Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
 it is not a general Markdown validator. Do not run it for changes limited to
-`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
-Do not run it for plain prose or changelog changes either. Where new evidence is
-needed, run it once after a change to public docstrings, API-reference
-configuration, or documentation imports has stabilized. For changed examples or
-prose under `docs/`, execute or render only the affected evidence where useful.
-Reserve the full `docs-render` task for changes that can affect the site broadly,
-and rebuild affected evidence only when a later edit invalidates it.
+`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata,
+or for plain prose or changelog changes. For changed examples or prose under
+`docs/`, execute or render only the affected evidence. Reserve the full
+`docs-render` task for changes that can affect the site broadly.
 
 ## Release contract
 
@@ -184,23 +199,7 @@ as a numerics change. Declare the difference in
 the "Estimation or inference numerics" row requires, and record it in the
 changelog.
 
-For an invariant internal or backend refactor, satisfy the release-contract
-requirement when the related change batch stabilizes using still-applicable
-evidence. Where a new run is needed, run the full contract normally once on the
-cumulative head. Run it earlier when shared numerical risk is not covered by
-focused tests, or when the contract is needed to investigate the change or
-establish a baseline. It is not an automatic gate for every iteration.
-
-## Evidence records
-
-Keep the verification record compact. Record the revision, environment, scope,
-command, and result for material checks, and name one owner for each coordinated
-broad check. Evidence from an earlier revision may remain relevant when the
-later diff cannot affect it, but do not describe it as exact-head evidence.
-State what changed since the run and rerun only the evidence that change
-invalidated. Changes to dependencies, environments, or test configuration can
-invalidate a result even when the tested source is unchanged. Final merge
-requirements and exact-head CI gates remain unchanged.
+Its timing follows `## Verification cadence`.
 
 ## External numerical references
 

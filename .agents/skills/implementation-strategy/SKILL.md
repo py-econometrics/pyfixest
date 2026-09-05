@@ -41,9 +41,8 @@ carry the durable parts into the PR body's opening paragraph:
 7. the external numerical reference and permanent-test location, chosen by the
    preference order in `docs/developer/testing.md`;
 8. documentation, exports, and changelog wiring;
-9. whether results are intended to be invariant. If yes, route release-contract
-   timing through the risk-based cadence in `docs/developer/testing.md`; any
-   failure is a regression. If no, list the quantities and estimators expected
+9. whether results are intended to be invariant. If yes, any release-contract
+   failure is a regression; if no, list the quantities and estimators expected
    to move, because each becomes a `reason`ed declaration in
    `tests/test_release_contract.py`.
 
