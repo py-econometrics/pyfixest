@@ -80,8 +80,8 @@ class Fepois(Feglm):
     weights_type : Optional[str]
         Type of weights variable.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Deleted if arguments `lean = True`
+        or `store_data = False`.
 
     Examples
     --------

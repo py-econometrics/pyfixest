@@ -127,8 +127,8 @@ class Feiv(Feols):
     _eff_F : scalar
         Effective F-statistics of first stage regression as in Olea and Pflueger 2013
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Deleted if arguments `lean = True`
+        or `store_data = False`.
 
 
     Raises
@@ -215,22 +215,22 @@ class Feiv(Feols):
         self._support_decomposition = False
 
     def _prepare_within_data(self) -> WithinLinearData:
-        """Return second-stage and full instrument arrays on within scale."""
+        """Return second-stage and instrument arrays on within scale."""
         linear_data = super()._prepare_within_data()
         endogenous_frame = self._model_matrix.endogenous
         instrument_frame = self._model_matrix.instruments
         assert endogenous_frame is not None
         assert instrument_frame is not None
+
         endogenous = endogenous_frame.to_numpy(dtype=np.float64)
         instruments = instrument_frame.to_numpy(dtype=np.float64)
-        fixed_effects = self._model_matrix.fixed_effects
-        if fixed_effects is not None:
+        if self._model_matrix.fixed_effects is not None:
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=tuple(endogenous_frame.columns),
-                x_names=tuple(instrument_frame.columns),
-                fe=fixed_effects.to_numpy(),
+                y_names=endogenous_frame.columns,
+                x_names=instrument_frame.columns,
+                fe=self._model_matrix.fixed_effects.to_numpy(),
                 weights=self._observation_weights.values,
                 na_index=self._na_index,
                 demeaner=self._demeaner,
@@ -279,6 +279,7 @@ class Feiv(Feols):
         within_data = self._drop_multicollinear_within_data(self._prepare_within_data())
         self._set_within_data(within_data)
         assert within_data.instruments is not None
+
         fit = fit_iv(
             X=within_data.design,
             Z=within_data.instruments,
@@ -300,6 +301,7 @@ class Feiv(Feols):
     def first_stage(self) -> None:
         """Implement First stage regression."""
         self._require_estimation_data("first_stage")
+
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -543,6 +545,7 @@ class Feiv(Feols):
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         self._require_first_stage_state("eff_F")
+
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
