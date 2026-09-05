@@ -11,6 +11,7 @@ on:
       - master
     tags:
       - '*'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,9 +28,36 @@ jobs:
       - name: Check tag matches Cargo.toml version
         run: python .github/check_version.py
 
+  agent-docs:
+    # Renders the documentation once per release and hands the bundled corpus
+    # to every build job, so that all archives ship identical docs.
+    # docs-bundle-fresh deletes docs/_freeze and executes every page (45-70
+    # minutes) instead of reusing frozen results, so the bundled output is
+    # produced by the code being released rather than by an older version.
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: false
+          frozen: true
+          environments: docs
+      - name: Render and bundle agent docs
+        run: pixi run -e docs docs-bundle-fresh
+      - name: Upload agent docs
+        uses: actions/upload-artifact@v7
+        with:
+          name: agent-docs
+          path: pyfixest/docs
+          if-no-files-found: error
+
   linux:
-    needs: [check-version]
-    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') }}
+    needs: [check-version, agent-docs]
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.agent-docs.result == 'success' || needs.agent-docs.result == 'skipped') }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -51,6 +79,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: 3.x
+      - name: Download agent docs
+        if: ${{ needs.agent-docs.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-docs
+          path: pyfixest/docs
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -65,8 +99,8 @@ jobs:
           path: dist
 
   musllinux:
-    needs: [check-version]
-    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') }}
+    needs: [check-version, agent-docs]
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.agent-docs.result == 'success' || needs.agent-docs.result == 'skipped') }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -84,6 +118,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: 3.x
+      - name: Download agent docs
+        if: ${{ needs.agent-docs.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-docs
+          path: pyfixest/docs
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -98,8 +138,8 @@ jobs:
           path: dist
 
   windows:
-    needs: [check-version]
-    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') }}
+    needs: [check-version, agent-docs]
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.agent-docs.result == 'success' || needs.agent-docs.result == 'skipped') }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -114,6 +154,12 @@ jobs:
         with:
           python-version: 3.x
           architecture: ${{ matrix.platform.target }}
+      - name: Download agent docs
+        if: ${{ needs.agent-docs.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-docs
+          path: pyfixest/docs
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -127,8 +173,8 @@ jobs:
           path: dist
 
   macos:
-    needs: [check-version]
-    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') }}
+    needs: [check-version, agent-docs]
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.agent-docs.result == 'success' || needs.agent-docs.result == 'skipped') }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -142,6 +188,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: 3.x
+      - name: Download agent docs
+        if: ${{ needs.agent-docs.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-docs
+          path: pyfixest/docs
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -155,11 +207,17 @@ jobs:
           path: dist
 
   sdist:
-    needs: [check-version]
-    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') }}
+    needs: [check-version, agent-docs]
+    if: ${{ always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped') && (needs.agent-docs.result == 'success' || needs.agent-docs.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Download agent docs
+        if: ${{ needs.agent-docs.result == 'success' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-docs
+          path: pyfixest/docs
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -189,6 +247,112 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'wheels-*/*'
+      # Checked out into a subdirectory on purpose: a checkout of the workspace
+      # root would delete the artifacts downloaded above, and a `pyfixest/`
+      # source tree next to the script would shadow the installed wheel.
+      - uses: actions/checkout@v7
+        with:
+          path: repo
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Check bundled docs in archives
+        # PR #1473 adds skills/pyfixest/SKILL.md; extend REQUIRED with
+        # "skills/pyfixest/SKILL.md" once that file is on master.
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import tarfile
+          import zipfile
+
+          REQUIRED = ["pyfixest/docs/llms.txt"]
+
+          archives = sorted(glob.glob("wheels-*/*.whl")) + sorted(glob.glob("wheels-sdist/*.tar.gz"))
+          if not archives:
+              sys.exit("no wheels or sdist found to check")
+
+          for archive in archives:
+              if archive.endswith(".whl"):
+                  with zipfile.ZipFile(archive) as handle:
+                      names = handle.namelist()
+              else:
+                  with tarfile.open(archive) as handle:
+                      names = handle.getnames()
+              for required in REQUIRED:
+                  if not any(name.endswith(required) for name in names):
+                      sys.exit(f"{archive} does not contain {required}")
+              print(f"{archive}: ok")
+          PY
+      - name: Install a wheel and verify the bundled docs
+        run: |
+          python -m pip install --upgrade pip
+          WHEEL=$(ls wheels-linux-x86_64/pyfixest-*-cp312-cp312-manylinux*_x86_64*.whl | head -n 1)
+          test -n "$WHEEL"
+          python -m pip install "$WHEEL"
+          python - <<'PY'
+          import importlib.resources
+          import os
+          import pathlib
+          import re
+          import sys
+
+          # Reuse the version rules of the check-version job so both gates agree,
+          # including on pre-releases ("0.60.0-alpha.1" -> "0.60.0a1").
+          sys.path.insert(0, "repo/.github")
+          from check_version import cargo_to_python_version, get_cargo_version  # noqa: E402
+
+          import pyfixest  # noqa: E402
+
+          docs = importlib.resources.files("pyfixest") / "docs"
+          problems = []
+
+          for name in ("llms.txt", "cheatsheet.llms.md"):
+              if (docs / name).is_file():
+                  print(f"ok: installed pyfixest/docs/{name}")
+              else:
+                  problems.append(f"the installed wheel has no pyfixest/docs/{name}")
+          if problems:
+              sys.exit("\n".join(problems))
+
+          if os.environ.get("GITHUB_REF_TYPE") == "tag":
+              expected = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+              source = "the git tag"
+          else:
+              expected = cargo_to_python_version(get_cargo_version())
+              source = "Cargo.toml"
+
+          text = (docs / "llms.txt").read_text(encoding="utf-8")
+          stamp = re.search(r"^Version:\s*(\S+)\s*$", text, re.MULTILINE)
+          if stamp is None:
+              sys.exit("the bundled llms.txt carries no 'Version:' line")
+
+          bundled = cargo_to_python_version(stamp[1])
+          if bundled == expected:
+              print(f"ok: bundled docs are stamped {bundled!r} ({source})")
+          else:
+              problems.append(f"bundled docs are stamped {bundled!r}, expected {expected!r} from {source}")
+
+          if pyfixest.__version__ == expected:
+              print(f"ok: installed pyfixest reports {pyfixest.__version__!r}")
+          else:
+              problems.append(f"installed pyfixest reports {pyfixest.__version__!r}, expected {expected!r} from {source}")
+
+          # PR #1473 adds skills/pyfixest/SKILL.md; this check turns itself on as
+          # soon as that file is in the checkout, and stays quiet until then.
+          if (pathlib.Path("repo") / "skills" / "pyfixest" / "SKILL.md").is_file():
+              skill = pathlib.Path(pyfixest.__file__).parents[1] / "skills" / "pyfixest" / "SKILL.md"
+              if skill.is_file():
+                  print(f"ok: installed {skill}")
+              else:
+                  problems.append(f"the installed wheel has no skills/pyfixest/SKILL.md at {skill}")
+          else:
+              print("skip: skills/pyfixest/SKILL.md is not in the checkout yet")
+
+          if problems:
+              sys.exit("\n".join(problems))
+          print("installed wheel verified")
+          PY
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: PyO3/maturin-action@v1
