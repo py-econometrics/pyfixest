@@ -10,10 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-    from pyfixest.estimation.internals.model_state import (
-        ObservationWeights,
-        WithinLinearData,
-    )
+    from pyfixest.estimation.internals.model_state import ObservationWeights
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -133,7 +130,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _conf_int: np.ndarray
     _u_hat: np.ndarray
     _observation_weights: "ObservationWeights"
-    _within_data: "WithinLinearData"
     _response: np.ndarray
     _coefnames: list[str]
     _method: str
@@ -153,6 +149,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _r2_within: float
     _adj_r2_within: float
     _vcov_type: str
+
+    @property
+    def _Y(self) -> np.ndarray:
+        """Estimator-specific within-response view."""
+        raise NotImplementedError
 
     def _require_fit_arrays(
         self,
@@ -324,7 +325,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         self._require_fit_arrays(
             "get_performance", arrays="the response and within arrays"
         )
-        Y_within = self._within_data.response.flatten()
+        # Shared result code must use the estimator's within-response view:
+        # linear models expose WithinLinearData, while Gaussian GLMs expose the
+        # final unpremultiplied IRLS working response through the same alias.
+        # For Gaussian GLMs this is within(y - offset); the global denominator
+        # below deliberately remains centered on the raw response y.
+        Y_within = self._Y.flatten()
         Y = self._response
         observation_weights = self._observation_weights.values
 

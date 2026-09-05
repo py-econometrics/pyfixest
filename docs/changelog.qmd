@@ -55,6 +55,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   read-only views over the typed state objects.
 - Internal demeaning and covariance code now names column-order, normal-equation,
   and frequency-replication invariants explicitly alongside their formulas.
+- Post-fit covariance updates now prepare covariance metadata and derived
+  inference before publishing them. Multiple-estimation and quantile-process
+  updates likewise prepare every child before changing any child.
 
 ### Inference Types
 
@@ -240,6 +243,8 @@ We also removed:
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
 - Weighted fixed-effect contributions (`_sumFE`) are now stored in response
   units.
+- Gaussian GLM performance measures now use the estimator's unpremultiplied
+  within response and observation weights, including weighted fixed-effect fits.
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.

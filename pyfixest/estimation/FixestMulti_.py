@@ -186,8 +186,17 @@ class FixestMulti(TidyColumnAccessors):
                     "already-filtered estimation sample instead."
                 )
 
-        for fxst in self.all_fitted_models.values():
-            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_forward)
+        models = list(self.all_fitted_models.values())
+        candidates = [
+            model._prepare_vcov_update(
+                vcov=vcov,
+                vcov_kwargs=vcov_kwargs,
+                data=data_to_forward,
+            )
+            for model in models
+        ]
+        for model, candidate in zip(models, candidates, strict=True):
+            model._publish_vcov_update(candidate)
         return self
 
     def tidy(self) -> pd.DataFrame:

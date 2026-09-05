@@ -680,6 +680,33 @@ def test_feglm_gaussian_reference_behavior():
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
     )
+    py_glm.get_performance()
+    py_ols.get_performance()
+    for attribute in ("_rmse", "_r2", "_adj_r2"):
+        np.testing.assert_allclose(
+            getattr(py_glm, attribute),
+            getattr(py_ols, attribute),
+            rtol=0,
+            atol=1e-10,
+            err_msg=f"Gaussian GLM and OLS {attribute} differ",
+        )
+    r_lm_residuals = np.asarray(stats.residuals(r_lm))
+    np.testing.assert_allclose(
+        py_glm._rmse,
+        np.sqrt(np.mean(r_lm_residuals**2)),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM RMSE differs from base R lm residuals",
+    )
+    np.testing.assert_allclose(
+        py_glm._r2,
+        1
+        - np.sum(r_lm_residuals**2)
+        / np.sum((data["Y"].to_numpy() - data["Y"].mean()) ** 2),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM R-squared differs from base R lm",
+    )
 
     for r_fit, label in (
         (r_lm, "base R lm"),

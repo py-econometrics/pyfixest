@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
+from copy import copy as shallow_copy
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
@@ -725,6 +726,71 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        candidate = self._prepare_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        self._publish_vcov_update(candidate)
+        return self
+
+    def _prepare_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> Feols:
+        """Compute a covariance update without changing this fitted result.
+
+        The candidate shares fitted input arrays with this result. Covariance
+        callbacks treat those arrays as inputs and allocate their outputs, so
+        only the candidate's inference fields change during computation.
+        """
+        candidate = shallow_copy(self)
+        candidate._compute_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        return candidate
+
+    def _publish_vcov_update(self, candidate: Feols) -> None:
+        """Publish a completely computed covariance and inference state."""
+        inference_attributes = (
+            "_vcov_type",
+            "_vcov_type_detail",
+            "_is_clustered",
+            "_clustervar",
+            "_bread",
+            "_ssc",
+            "_df_k",
+            "_df_t",
+            "_vcov",
+            "_lag",
+            "_time_id",
+            "_panel_id",
+            "_cluster_df",
+            "_G",
+            "_se",
+            "_tstat",
+            "_pvalue",
+            "_conf_int",
+        )
+        for attribute in inference_attributes:
+            if hasattr(candidate, attribute):
+                setattr(self, attribute, getattr(candidate, attribute))
+            elif hasattr(self, attribute):
+                delattr(self, attribute)
+
+    def _compute_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> None:
+        """Compute covariance and derived inference on this candidate."""
         self._require_fit_arrays(
             "vcov",
             arrays="the required estimation arrays",
@@ -757,8 +823,7 @@ class Feols(ResultAccessorMixin):
             vcov, self._has_fixef, self._is_iv
         )
 
-        # Reject before any inference state is overwritten, so a failed update
-        # leaves the previous covariance estimate intact.
+        # Cluster and HAC estimators need columns from the estimation sample.
         if vcov_type in {"HAC", "CRV"} and estimation_data is None:
             self._require_estimation_data(
                 "vcov",
@@ -827,8 +892,6 @@ class Feols(ResultAccessorMixin):
             )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
-
-        return self
 
     def _make_ssc_kwargs(
         self,

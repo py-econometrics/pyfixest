@@ -209,8 +209,17 @@ class QuantregMulti:
         data: DataFrameType | None = None,
     ) -> dict[float, Quantreg]:
         "Compute variance-covariance matrices for all models in the quantile regression process."
-        for quantreg in self.all_quantregs.values():
-            quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
+        quantregs = list(self.all_quantregs.values())
+        candidates = [
+            quantreg._prepare_vcov_update(
+                vcov=vcov,
+                vcov_kwargs=vcov_kwargs,
+                data=data,
+            )
+            for quantreg in quantregs
+        ]
+        for quantreg, candidate in zip(quantregs, candidates, strict=True):
+            quantreg._publish_vcov_update(candidate)
 
         return self.all_quantregs
 
