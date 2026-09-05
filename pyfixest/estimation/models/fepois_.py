@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from importlib import import_module
 from typing import Any
 
 import numpy as np
@@ -210,6 +211,33 @@ class Fepois(Feglm):
         super()._clear_attributes()
         if self._lean and hasattr(self, "_y_hat_null"):
             del self._y_hat_null
+
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return the full Poisson estimation contract for data-changing refits."""
+        kwargs = super()._estimation_refit_kwargs()
+        kwargs.update(
+            {
+                "offset": self._offset_name,
+                "iwls_tol": self.tol,
+                "iwls_maxiter": self.maxiter,
+                "separation_check": (
+                    None
+                    if self.separation_check is None
+                    else list(self.separation_check)
+                ),
+            }
+        )
+        return kwargs
+
+    def _crv3_refit(self, data: pd.DataFrame) -> Fepois:
+        """Replay Poisson estimation for one leave-one-cluster-out sample."""
+        fixest_module = import_module("pyfixest.estimation")
+        return fixest_module.fepois(
+            fml=self._fml,
+            data=data,
+            vcov="iid",
+            **self._estimation_refit_kwargs(),
+        )
 
     def predict(
         self,

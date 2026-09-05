@@ -172,6 +172,58 @@ def test_fepois_ritest():
     assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=0.01, atol=0.01)
 
 
+def test_fepois_slow_ritest_replays_estimation_contract(monkeypatch):
+    import pyfixest.estimation as estimation
+
+    data = pf.get_data(model="Fepois").dropna().iloc[:96].copy()
+    data["treatment"] = (data["X2"] > data["X2"].median()).astype(int)
+    data["exposure"] = np.random.default_rng(20260901).uniform(0.5, 3.0, len(data))
+
+    def shift(values):
+        return values + 0.125
+
+    demeaner = pf.MapDemeaner(fixef_tol=1e-8, fixef_maxiter=20_000)
+    ssc_config = pf.ssc(k_adj=False, G_adj=False)
+    real_fepois = estimation.fepois
+    fit = real_fepois(
+        "Y ~ treatment + shift(X1) | f1",
+        data=data,
+        offset="log(exposure)",
+        ssc=ssc_config,
+        fixef_rm="none",
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        collin_tol=1e-8,
+        separation_check=[],
+        solver="np.linalg.lstsq",
+        demeaner=demeaner,
+        drop_intercept=True,
+        context={"shift": shift},
+    )
+    refit_calls = []
+
+    def recording_fepois(fml, *, data, vcov, **kwargs):
+        refit_calls.append((fml, vcov, kwargs))
+        return real_fepois(fml=fml, data=data, vcov=vcov, **kwargs)
+
+    monkeypatch.setattr(estimation, "fepois", recording_fepois)
+    fit.ritest(
+        resampvar="treatment",
+        reps=3,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(1234),
+    )
+
+    assert len(refit_calls) == 3
+    for fml, vcov, kwargs in refit_calls:
+        assert fml == "Y ~ treatment_resampled + shift(X1) | f1"
+        assert vcov == "iid"
+        assert kwargs["ssc"] == ssc_config
+        assert kwargs["demeaner"] is demeaner
+        assert kwargs["offset"] == "log(exposure)"
+        assert kwargs["context"]["shift"] is shift
+
+
 @pytest.fixture
 def data_r_vs_t():
     return pf.get_data(N=5000, seed=2999)

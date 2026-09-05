@@ -1,6 +1,9 @@
 import numpy as np
+import pandas as pd
 import pytest
 
+import pyfixest.estimation as estimation
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
 
@@ -218,6 +221,101 @@ def run_crv3_poisson():
         vcov={"CRV3": "f1"},
         ssc=ssc(k_adj=False, G_adj=False),
     )
+
+
+def test_fepois_crv3_replays_estimation_contract(monkeypatch):
+    rng = np.random.default_rng(20260901)
+    n_clusters = 6
+    rows_per_cluster = 12
+    n = n_clusters * rows_per_cluster
+    cluster = np.repeat(np.arange(n_clusters), rows_per_cluster)
+    fixed_effect = np.tile(np.arange(6), n // 6)
+    x = rng.normal(size=n)
+    exposure = rng.uniform(0.5, 3.0, size=n)
+    weight = rng.uniform(0.75, 1.5, size=n)
+
+    def shift(values):
+        return values + 0.125
+
+    eta = 0.35 * shift(x) + np.linspace(-0.25, 0.25, 6)[fixed_effect] + np.log(exposure)
+    data = pd.DataFrame(
+        {
+            "y": rng.poisson(np.exp(eta)),
+            "x": x,
+            "exposure": exposure,
+            "weight": weight,
+            "fixed_effect": fixed_effect,
+            "cluster": cluster,
+        }
+    )
+    demeaner = MapDemeaner(fixef_tol=1e-8, fixef_maxiter=20_000)
+    ssc_config = ssc(k_adj=False, G_adj=False)
+    real_fepois = estimation.fepois
+    refit_calls = []
+
+    def recording_fepois(*, data, **kwargs):
+        refit_calls.append((data, kwargs))
+        return real_fepois(data=data, **kwargs)
+
+    monkeypatch.setattr(estimation, "fepois", recording_fepois)
+    real_fepois(
+        "y ~ shift(x) | fixed_effect",
+        data=data,
+        vcov={"CRV3": "cluster"},
+        weights="weight",
+        weights_type="aweights",
+        offset="log(exposure)",
+        ssc=ssc_config,
+        fixef_rm="none",
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        collin_tol=1e-8,
+        separation_check=[],
+        solver="np.linalg.lstsq",
+        demeaner=demeaner,
+        drop_intercept=True,
+        context={"shift": shift},
+    )
+
+    assert len(refit_calls) == n_clusters
+    for refit_data, kwargs in refit_calls:
+        assert refit_data["cluster"].nunique() == n_clusters - 1
+        assert kwargs["weights"] == "weight"
+        assert kwargs["ssc"] == ssc_config
+        assert kwargs["demeaner"] is demeaner
+        assert kwargs["offset"] == "log(exposure)"
+        assert kwargs["context"]["shift"] is shift
+
+
+def test_crv3_rebuilds_preconditioner_for_each_changed_design():
+    rng = np.random.default_rng(20260902)
+    n_groups = 6
+    rows_per_group = 6
+    n = n_groups * rows_per_group
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=n),
+            "x": rng.normal(size=n),
+            "group": np.repeat(np.arange(n_groups), rows_per_group),
+            "time": np.tile(np.arange(rows_per_group), n_groups),
+        }
+    )
+    base = feols(
+        "y ~ x | group + time",
+        data=data,
+        vcov="iid",
+        demeaner=LsmrDemeaner(backend="within"),
+    )
+    assert base.preconditioner is not None
+    reused = LsmrDemeaner(backend="within", preconditioner=base.preconditioner)
+
+    fit = feols(
+        "y ~ x | group + time",
+        data=data,
+        vcov={"CRV3": "group"},
+        demeaner=reused,
+    )
+    assert np.isfinite(fit._vcov).all()
 
 
 @pytest.mark.parametrize("vcov", ["NW", "DK"])

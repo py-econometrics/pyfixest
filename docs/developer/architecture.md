@@ -278,7 +278,9 @@ configuration; Poisson keeps its longstanding jackknife-refit path.
 Randomization inference rejects non-OLS/non-Poisson results, and the wild
 bootstrap and `decompose()` reject non-OLS results, so none of them
 reinterprets GLM working state or quantile solver outputs as linear-model
-arrays.
+arrays. Poisson CRV3 and slow randomization refits replay the original
+estimation options; prebuilt LSMR preconditioners are rebuilt for each changed
+row sample.
 
 Storage policy follows the full result graph. Multiple-estimation containers
 keep no copy of the input frame under `store_data=False` or `lean=True`,
