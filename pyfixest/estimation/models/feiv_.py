@@ -568,13 +568,12 @@ class Feiv(Feols):
         ]
         Z = self._model_1st_stage._X[:, iv_positions]
 
-        # Calculate the same weighted cross-product used by the first-stage fit
-        # without relying on a persisted square-root-weighted design.
-        first_stage_weights = self._model_1st_stage._observation_weights.values
+        # Q_zz = Z' A Z uses the observation weights from the first-stage fit.
+        observation_weights = self._model_1st_stage._observation_weights.values
         Q_zz = (
             Z.T @ Z
-            if first_stage_weights is None
-            else Z.T @ (first_stage_weights[:, None] * Z)
+            if observation_weights is None
+            else Z.T @ (observation_weights[:, None] * Z)
         )
 
         # Extract the robust variance-covariance matrix
