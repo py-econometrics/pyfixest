@@ -571,14 +571,6 @@ class Feols(ResultAccessorMixin):
         self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
         self._Y_hat_response = self._Y_hat_link
 
-    def _performance_within_response(self) -> np.ndarray:
-        """Return the unpremultiplied within response used by diagnostics."""
-        return self._within_data.response
-
-    def _performance_residuals(self) -> np.ndarray:
-        """Return response-scale residuals used by diagnostics."""
-        return self._u_hat
-
     def get_fit(self) -> None:
         """
         Fit an OLS model.
