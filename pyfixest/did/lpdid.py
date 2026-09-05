@@ -26,7 +26,7 @@ class LPDID(DID):
         The name of the time variable.
     gname : str
         The name of the group variable.
-    xfml : str
+    xfml : str, optional
         The transformation to apply to the data.
     att : str
         The attribute to consider in the model.
@@ -49,7 +49,7 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
         vcov: VcovTypeOptions | dict[str, str] | None = None,

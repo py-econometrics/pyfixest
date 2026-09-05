@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import formulaic
 import formulaic.formula
@@ -20,19 +20,55 @@ from pyfixest.estimation.formula.transforms.factor_interaction import (
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
 
+# One side of a parsed formula: a flat list of terms, or, for an IV
+# specification, formulaic's nested `[endogenous ~ instruments]` container.
+FormulaSide: TypeAlias = (
+    formulaic.formula.SimpleFormula | formulaic.formula.StructuredFormula
+)
+
 
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
-def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
+def formula_lhs(
+    formula: formulaic.formula.Formula,
+) -> formulaic.formula.SimpleFormula:
+    """Return the dependent-variable side of a parsed formulaic formula."""
+    # formulaic internal: `StructuredFormula` serves `lhs`, `rhs` and `root`
+    # from `Structured.__getattr__`, so they are invisible to a type checker
+    # on the `Formula` base class the parser is declared to return.
+    return formula.lhs  # ty: ignore[unresolved-attribute]
+
+
+def formula_rhs(
+    formula: formulaic.formula.Formula,
+) -> FormulaSide | tuple[FormulaSide, ...]:
+    """
+    Return the covariate side of a parsed formulaic formula.
+
+    A `|`-separated (MULTIPART) formula returns one entry per part.
+    """
+    # formulaic internal: see `formula_lhs`.
+    return formula.rhs  # ty: ignore[unresolved-attribute]
+
+
+def simple_formula(terms: Iterable[Any]) -> formulaic.formula.SimpleFormula:
+    """Build a flat formulaic formula from an iterable of terms."""
+    # formulaic internal: the `Formula` metaclass annotates `__call__` as
+    # returning the `Formula` base class, also for `SimpleFormula(...)`, and
+    # only accepts a materialized sequence of terms.
+    return cast(
+        "formulaic.formula.SimpleFormula",
+        formulaic.formula.SimpleFormula(list(terms)),
+    )
+
+
+def terms_without_intercept(
+    formula: formulaic.formula.SimpleFormula,
+) -> Iterator[Any]:
     """Yield formula terms excluding Formulaic's intercept term."""
     return (term for term in formula if term != "1")
-
-
-def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
-    """Return whether formulaic parsed an IV RHS as a StructuredFormula."""
-    return isinstance(rhs, formulaic.formula.StructuredFormula)
 
 
 def count_multistage_blocks(rhs: formulaic.formula.Formula) -> int:
@@ -45,14 +81,14 @@ def count_multistage_blocks(rhs: formulaic.formula.Formula) -> int:
 
 def get_first_multistage_lhs(
     rhs: formulaic.formula.Formula,
-) -> formulaic.formula.Formula:
+) -> formulaic.formula.SimpleFormula:
     """Return the endogenous formula from a formulaic MULTISTAGE RHS."""
     return _get_single_multistage_block(rhs).lhs
 
 
 def get_first_multistage_rhs(
     rhs: formulaic.formula.Formula,
-) -> formulaic.formula.Formula:
+) -> formulaic.formula.SimpleFormula:
     """Return the instrument formula from a formulaic MULTISTAGE RHS."""
     return _get_single_multistage_block(rhs).rhs
 
@@ -75,7 +111,7 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
 
 
 def filter_multistage_endogenous_terms(
-    exogenous: formulaic.formula.Formula,
+    exogenous: formulaic.formula.StructuredFormula,
     endogenous_terms: Iterable[Any],
 ) -> formulaic.formula.SimpleFormula:
     """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
@@ -90,8 +126,8 @@ def filter_multistage_endogenous_terms(
             "formulaic MULTISTAGE endogenous suffix changed: expected generated "
             f"second-stage terms {sorted(missing)} to be present before filtering."
         )
-    return formulaic.formula.SimpleFormula(
-        [term for term in terms if str(term) not in generated_endogenous]
+    return simple_formula(
+        term for term in terms if str(term) not in generated_endogenous
     )
 
 
@@ -109,7 +145,11 @@ def materialize_model_spec_with_unseen_mask(
 ) -> tuple[formulaic.ModelMatrix, np.ndarray]:
     """Materialize a prediction matrix and flag unseen categorical levels."""
     materializer = rhs_spec.get_materializer(newdata, context=context)
-    model_matrix = materializer.get_model_matrix(rhs_spec)
+    # formulaic returns its structured `ModelMatrices` container only for a
+    # structured spec; a single `ModelSpec` always materializes one matrix.
+    model_matrix = cast(
+        "formulaic.ModelMatrix", materializer.get_model_matrix(rhs_spec)
+    )
     unseen = rows_with_unseen_contrast_levels(
         rhs_spec, newdata, materializer.factor_cache
     )

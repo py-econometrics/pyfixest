@@ -13,6 +13,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  type-check:
+    name: "Type Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: py312
+
+      - name: Type-check with ty
+        run: pixi run -e py312 type-check
+
   test-python:
     name: "Tests Python (${{ matrix.environment }}, ${{ matrix.os }})"
     runs-on: ${{ matrix.os }}

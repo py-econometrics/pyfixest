@@ -164,7 +164,10 @@ def event_study(
         fit._att = saturated._att
 
         fit._method = "saturated"
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
+        # Rebinding the saturated event-study methods onto a plain `Feols`
+        # replaces `Feols.iplot`, which is a `functools.partial` attribute.
+        # Follow-up: give the saturated estimator its own result class.
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # ty: ignore[invalid-assignment]
         fit.test_treatment_heterogeneity = (
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
         )
@@ -321,7 +324,7 @@ def lpdid(
     post_window: int | None = None,
     never_treated: int = 0,
     att: bool = True,
-    xfml=None,
+    xfml: str | None = None,
 ) -> LPDID:
     """
     Local projections approach to estimation.
