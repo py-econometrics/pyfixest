@@ -56,11 +56,13 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
-def test_cluster_vcov_without_stored_or_explicit_data_is_informative():
-    """Data-dependent vcov updates explain how to supply stripped data."""
+def test_cluster_vcov_without_stored_data_is_informative():
+    """Data-dependent vcov updates explain that the model must be refit."""
     data = get_data()
     fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
+    with pytest.raises(
+        RuntimeError, match=r"store_data=False.*Refit with store_data=True"
+    ):
         fit.vcov({"CRV1": "f2"})
 
 
