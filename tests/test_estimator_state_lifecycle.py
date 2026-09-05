@@ -552,7 +552,11 @@ def test_vcov_uses_filtered_model_data_for_non_formula_cluster(
     assert fit._data.index.equals(fit._model_matrix.dependent.index)
     fit.vcov({"CRV1": "cluster"})
 
-    np.testing.assert_allclose(fit._vcov, expected._vcov)
+    np.testing.assert_allclose(
+        fit._vcov,
+        expected._vcov,
+        err_msg="CRV1 covariance differs between post-fit update and initial fit",
+    )
 
 
 def test_glm_vcov_uses_post_separation_model_data() -> None:
@@ -579,7 +583,11 @@ def test_glm_vcov_uses_post_separation_model_data() -> None:
     assert fit._data.index.equals(fit._model_matrix.dependent.index)
     fit.vcov({"CRV1": "cluster"})
 
-    np.testing.assert_allclose(fit._vcov, expected._vcov)
+    np.testing.assert_allclose(
+        fit._vcov,
+        expected._vcov,
+        err_msg="Poisson CRV1 covariance differs after separation filtering",
+    )
 
 
 def test_fixest_multi_vcov_uses_each_split_child_sample(
@@ -604,7 +612,11 @@ def test_fixest_multi_vcov_uses_each_split_child_sample(
     assert {child._N_rows for child in fit.to_list()} == {11, 12}
     for child, expected_child in zip(fit.to_list(), expected.to_list(), strict=True):
         assert child._data.index.equals(child._model_matrix.dependent.index)
-        np.testing.assert_allclose(child._vcov, expected_child._vcov)
+        np.testing.assert_allclose(
+            child._vcov,
+            expected_child._vcov,
+            err_msg="Split-child CRV1 covariance differs from initial fit",
+        )
 
 
 def test_store_data_false_rejects_data_dependent_vcov(
