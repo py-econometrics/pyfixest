@@ -47,6 +47,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
 
+- Standalone OLS and IV fit primitives now accept user-scale observation
+  weights, apply square-root weighting only to solver-local arrays, and return
+  residuals and scores in their documented supplied-array and estimating-equation
+  domains.
+
 ### Inference Types
 
 - Weighted models now reject `ccv()` explicitly. `Feols.update()` remains a
