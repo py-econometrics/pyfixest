@@ -1,7 +1,10 @@
+from __future__ import annotations
+
+import copy
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -15,6 +18,8 @@ from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.utils.utils import capture_context
+
+_ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -42,6 +47,11 @@ class ModelMatrix:
     [feols()](/reference/estimation.api.feols.feols.qmd). See the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd) for the syntax.
 
+    Once constructed, the instance is the formula state a fitted model retains
+    and is treated as read-only. Estimator-level row filters such as GLM
+    separation call `without_rows`, which returns a filtered copy instead of
+    mutating the instance.
+
     Attributes
     ----------
     dependent : pd.DataFrame
@@ -56,8 +66,8 @@ class ModelMatrix:
         Instrumental variables for IV estimation.
     weights : pd.DataFrame or None
         Observation weights for weighted estimation.
-    model_spec : formulaic.ModelSpec
-        The underlying formulaic model specification.
+    model_spec : Mapping[str, formulaic.ModelSpec]
+        The underlying formulaic model specifications keyed by role.
     na_index : frozenset[int]
         Indices of rows that were dropped.
     """
@@ -70,7 +80,7 @@ class ModelMatrix:
         drop_intercept: bool = False,
     ) -> None:
         self._drop_intercept = drop_intercept
-        self._model_spec = model_matrix.model_spec
+        self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -171,6 +181,20 @@ class ModelMatrix:
         self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
+
+    def without_rows(self, rows: list[int]) -> ModelMatrix:
+        """Return a copy without ``rows``; they are recorded in ``na_index``.
+
+        Estimator-level filters such as GLM separation run after construction and
+        call this instead of mutating the retained instance, which is left
+        unchanged.
+        """
+        if not rows:
+            return self
+        filtered = copy.copy(self)
+        filtered._data = self._data.drop(index=rows)
+        filtered._na_index = self._na_index.union(rows)
+        return filtered
 
     @property
     def dependent(self) -> pd.DataFrame:
@@ -286,21 +310,20 @@ class ModelMatrix:
             return self._data.loc[:, self._offset]
 
     @property
-    def model_spec(self) -> formulaic.ModelSpec:
+    def model_spec(self) -> _ModelSpecMapping:
         """
         Get the underlying formulaic model specification.
 
         Returns
         -------
-        formulaic.ModelSpec
-            The formulaic ModelSpec object containing metadata about the
-            model structure and transformations.
+        Mapping[str, formulaic.ModelSpec]
+            Formulaic specifications keyed by model-matrix role.
         """
         return self._model_spec
 
     @property
     def na_index(self) -> frozenset[int]:
-        """Integer positions of rows dropped in model matrix creation."""
+        """Integer positions of dropped rows, including ``without_rows`` drops."""
         return self._na_index
 
 

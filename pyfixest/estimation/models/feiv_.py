@@ -335,6 +335,10 @@ class Feiv(Feols):
 
         self.IV_weakness_test(["f_stat"])
 
+    def _finalize_fit(self) -> None:
+        """Fit and retain the first-stage model after second-stage inference."""
+        self.first_stage()
+
     def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
 
