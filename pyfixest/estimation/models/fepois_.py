@@ -162,7 +162,7 @@ class Fepois(Feglm):
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
         y_orig = self._model_matrix.dependent.to_numpy().flatten()
         observation_weights = self._observation_weights.values
-        user_weights = (
+        poisson_summary_weights = (
             np.ones_like(y_orig, dtype=np.float64)
             if observation_weights is None
             else observation_weights
@@ -171,11 +171,11 @@ class Fepois(Feglm):
         super().get_fit()
 
         self._y_hat_null = np.full_like(
-            y_orig, np.average(y_orig, weights=user_weights), dtype=float
+            y_orig, np.average(y_orig, weights=poisson_summary_weights), dtype=float
         )
 
         self._loglik = np.sum(
-            user_weights
+            poisson_summary_weights
             * (
                 y_orig * np.log(self._Y_hat_response)
                 - self._Y_hat_response
@@ -189,7 +189,7 @@ class Fepois(Feglm):
             self._pseudo_r2 = None
         else:
             self._loglik_null = np.sum(
-                user_weights
+                poisson_summary_weights
                 * (
                     y_orig * np.log(self._y_hat_null)
                     - self._y_hat_null
@@ -198,11 +198,13 @@ class Fepois(Feglm):
             )
             self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = np.sum(
-            user_weights * (y_orig - self._Y_hat_response) ** 2 / self._Y_hat_response
+            poisson_summary_weights
+            * (y_orig - self._Y_hat_response) ** 2
+            / self._Y_hat_response
         )
 
         self.deviance = self._family.deviance(
-            y_orig, self._Y_hat_response, user_weights
+            y_orig, self._Y_hat_response, poisson_summary_weights
         )
 
     def predict(
