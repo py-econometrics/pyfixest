@@ -510,6 +510,29 @@ def test_non_ols_update_is_explicitly_unsupported():
             fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
+def test_coef_update_inplace_is_explicitly_unsupported():
+    rng = np.random.default_rng(1234)
+    data = get_data().dropna(subset=["Y", "X1", "X2"])
+    data_subsample = data.sample(frac=0.3, random_state=1234)
+    m = feols("Y ~ X1 + X2", data=data_subsample)
+    original_coef = m.coef().copy()
+    new_points_id = rng.choice(
+        data.index.difference(data_subsample.index), 5, replace=False
+    )
+    X_new, y_new = (
+        np.c_[
+            data.loc[new_points_id][
+                ["X1", "X2"]
+            ].values  # only pass columns; let `update` add the intercept
+        ],
+        data.loc[new_points_id]["Y"].values,
+    )
+    with pytest.raises(NotImplementedError, match=r"inplace=True.*not supported"):
+        m.update(X_new, y_new, inplace=True)
+
+    pd.testing.assert_series_equal(m.coef(), original_coef)
+
+
 def test_errors_confint():
     data = get_data()
     fit = feols("Y ~ X1", data=data)
@@ -960,7 +983,7 @@ def test_decomposition_rejects_unsupported_models(model_type):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for OLS models\.",
+        match=r"Decomposition is currently only supported for regression models",
     ):
         fit.decompose(decomp_var="x1", only_coef=True)
 
