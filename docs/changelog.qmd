@@ -61,18 +61,23 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Inference Types
 
-- Weighted models now reject `ccv()` explicitly. `Feols.update()` remains a
-  coefficient-only calculation and rejects `inplace=True`, weights, IV, and
-  non-OLS models instead of mixing scales.
-- Non-Poisson GLMs reject `CRV3` instead of silently refitting through the
+- `ccv()` now rejects weighted models instead of estimating from a mix of
+  weighting scales.
+- `ccv()` now raises `NotImplementedError` instead of `AssertionError` for
+  model types it does not support.
+- `Feols.update()` now rejects `inplace=True`. It remains a coefficient-only
+  Sherman-Morrison calculation, and no longer leaves the fitted result in a
+  partially updated state.
+- `Feols.update()` now rejects weighted models, IV models, and non-OLS models.
+- Non-Poisson GLMs now reject `CRV3` instead of silently refitting through the
   Poisson jackknife. Poisson `CRV3` remains supported.
 - CRV3 jackknife and slow randomization-inference refits now replay the
   original estimation options (weights, small-sample corrections, singleton
   handling, solver, demeaner, offset, IRLS tolerances).
-- Randomization inference rejects non-OLS/non-Poisson results, the wild
-  bootstrap rejects non-OLS results, and `decompose()` rejects non-OLS results,
-  instead of reinterpreting GLM working state or quantile solver outputs as OLS
-  arrays.
+- Randomization inference now rejects non-OLS and non-Poisson results instead
+  of reinterpreting GLM working state or quantile solver output as OLS arrays.
+- The wild cluster bootstrap now rejects non-OLS results.
+- `decompose()` now rejects models that were not estimated via `feols()`.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take

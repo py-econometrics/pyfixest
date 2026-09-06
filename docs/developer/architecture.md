@@ -258,25 +258,26 @@ access instead of keeping one alive for the lifetime of the result. New code
 should consume the typed state values rather than infer semantics from these
 aliases.
 
-`ccv()` explicitly rejects weighted models. `update()` can compute and return
-coefficient-only Sherman-Morrison updates for unweighted, non-IV OLS without
-fixed effects, but rejects `inplace=True`: design rows alone cannot reconstruct
-the complete formula, prediction, inference, and performance state of a fitted
-result.
+Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
+the outer model's covariance label untouched.
 
-Post-estimation paths reject the estimators they cannot represent instead of
-reading their arrays as OLS state. Non-Poisson GLMs reject `CRV3` until their
-leave-cluster-out refits can retain the original family and solver
-configuration; Poisson keeps its longstanding jackknife-refit path.
-Randomization inference rejects non-OLS/non-Poisson results, and the wild
-bootstrap and `decompose()` reject non-OLS results, so none of them
-reinterprets GLM working state or quantile solver outputs as linear-model
-arrays. Poisson CRV3 and slow randomization refits replay the original
+CRV3 jackknife and slow randomization-inference refits replay the original
 estimation options. A prebuilt LSMR preconditioner is the sole exception: its
 factorization belongs to one fixed-effect design, so refits keep its variant
-but rebuild it for the changed row set. Weighted `fixef()` stores `_sumFE` in
-response units, and `IV_Diag()` leaves the outer model's covariance label
-untouched.
+but rebuild it for the changed row set.
+
+A post-estimation path states which estimators, weighting schemes, and design
+features it can represent, and rejects the rest. Declare support as a
+capability flag on the result class, check it before any estimation state is
+read, and raise `NotImplementedError` naming the unsupported combination.
+Reinterpreting one estimator's arrays as another estimator's domain, such as
+reading GLM working state or a quantile solver's output as linear-model arrays,
+is a silently wrong result rather than a fallback. A path whose refits cannot
+yet replay the original estimation contract rejects the estimator until they
+can.
+
+An operation that cannot reconstruct the complete state of a fitted result
+returns its value instead of mutating the result in place.
 
 Storage policy follows the full result graph. Multiple-estimation containers
 keep no copy of the input frame under `store_data=False` or `lean=True`,

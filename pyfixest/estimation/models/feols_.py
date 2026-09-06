@@ -1837,7 +1837,8 @@ class Feols(ResultAccessorMixin):
 
         if not self._support_decomposition:
             raise NotImplementedError(
-                "Decomposition is currently only supported for OLS models."
+                "Decomposition is currently only supported for regression models "
+                "estimated via feols()."
             )
 
         self._require_fit_arrays("decompose", arrays="the fitted arrays")
