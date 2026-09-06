@@ -68,7 +68,6 @@ def test_fweights_ols(fml, cols, vcov_types):
     _assert_fit_equal(fit_raw, fit_agg, vcov_types)
 
 
-@pytest.mark.skip(reason="Poisson fweights has a separate bug - see issue #367")
 @pytest.mark.parametrize(
     "fml,fe_col",
     [
@@ -79,6 +78,7 @@ def test_fweights_ols(fml, cols, vcov_types):
 def test_fweights_poisson(fml, fe_col):
     """Test that fweights are correctly implemented for Poisson models."""
     data = pf.get_data(model="Fepois")
+    iwls_tol = 1e-10
 
     cols = ["Y", "X1"]
     if fe_col:
@@ -88,13 +88,14 @@ def test_fweights_poisson(fml, fe_col):
         data[cols].groupby(cols).size().reset_index().rename(columns={0: "count"})
     )
 
-    fit_raw = pf.fepois(fml, data=data, vcov="iid")
+    fit_raw = pf.fepois(fml, data=data, vcov="iid", iwls_tol=iwls_tol)
     fit_agg = pf.fepois(
         fml,
         data=data_agg,
         weights="count",
         weights_type="fweights",
         vcov="iid",
+        iwls_tol=iwls_tol,
     )
 
     # Poisson only supports HC1 for hetero-robust SEs
