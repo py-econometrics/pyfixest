@@ -287,10 +287,17 @@ large first-stage arrays. Lean results do keep the formula specification and
 evaluation context, so `predict(newdata=...)` still works for models without
 fixed effects. Array-only covariance updates remain available after
 `store_data=False`; cluster and HAC updates require the estimation sample
-through the documented `vcov(data=...)` argument. Lean results reject post-fit
-covariance updates because their numerical arrays have been discarded. Every
-other method that needs discarded state raises an informative error naming the
-storage option and its remedy.
+through the documented `vcov(data=...)` argument. Explicit covariance data must
+already be filtered to the fitted row sample and retain its estimation order. A
+row-count check rejects length mismatches but cannot establish row identity or
+ordering. Single-model covariance updates compute covariance metadata and
+derived inference on a detached candidate before publishing any fields.
+`FixestMulti.vcov(data=...)` validates one common sample, and both multiple-
+estimation containers prepare every child before publishing any child, while
+preserving the child objects themselves. Lean results reject post-fit covariance
+updates because their numerical arrays have been discarded. Every other method
+that needs discarded state raises an informative error naming the storage option
+and its remedy.
 
 Keeping canonical arrays unpremultiplied favors readability without moving
 weight work out of the numerical hot path: each solver still performs the same

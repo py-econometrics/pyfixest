@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
+from copy import copy as shallow_copy
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -31,6 +33,7 @@ from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
+    HacVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -692,8 +695,10 @@ class Feols(ResultAccessorMixin):
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+            The already-filtered estimation sample in its original estimation
+            order. This is required for data-dependent covariance updates when
+            the fitted model does not retain its input data. If None, tries to
+            fetch the data from the model object. Defaults to None.
 
 
         Returns
@@ -721,38 +726,114 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        candidate = self._prepare_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        self._publish_vcov_update(candidate)
+        return self
+
+    def _prepare_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> Feols:
+        """Compute a covariance update without changing this fitted result.
+
+        The candidate shares fitted input arrays with this result. Covariance
+        callbacks treat those arrays as inputs and allocate their outputs, so
+        only the candidate's inference fields change during computation.
+        """
+        candidate = shallow_copy(self)
+        candidate._compute_vcov_update(
+            vcov=vcov,
+            vcov_kwargs=vcov_kwargs,
+            data=data,
+        )
+        return candidate
+
+    def _publish_vcov_update(self, candidate: Feols) -> None:
+        """Publish a completely computed covariance and inference state."""
+        inference_attributes = (
+            "_vcov_type",
+            "_vcov_type_detail",
+            "_is_clustered",
+            "_clustervar",
+            "_bread",
+            "_ssc",
+            "_df_k",
+            "_df_t",
+            "_vcov",
+            "_lag",
+            "_time_id",
+            "_panel_id",
+            "_cluster_df",
+            "_G",
+            "_se",
+            "_tstat",
+            "_pvalue",
+            "_conf_int",
+        )
+        for attribute in inference_attributes:
+            if hasattr(candidate, attribute):
+                setattr(self, attribute, getattr(candidate, attribute))
+            elif hasattr(self, attribute):
+                delattr(self, attribute)
+
+    def _compute_vcov_update(
+        self,
+        *,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None,
+        data: DataFrameType | None,
+    ) -> None:
+        """Compute covariance and derived inference on this candidate."""
         self._require_fit_arrays(
             "vcov",
             arrays="the required estimation arrays",
             remedy="Set vcov at estimation time or refit with lean=False.",
         )
 
-        data_to_check = getattr(self, "_data", None) if data is None else data
-        if data_to_check is not None:
+        estimation_data: pd.DataFrame | None
+        if data is None:
+            estimation_data = getattr(self, "_data", None)
+        else:
             try:
-                data_to_check = _narwhals_to_pandas(data_to_check)
+                estimation_data = _narwhals_to_pandas(data)
             except TypeError as e:
                 raise TypeError(
                     f"The data set must be a DataFrame type. Received: {type(data)}"
                 ) from e
+            if len(estimation_data) != self._N_rows:
+                raise ValueError(
+                    "`data` passed to vcov() must contain exactly the already-filtered "
+                    "estimation sample in its original estimation order; expected "
+                    f"{self._N_rows} rows, received {len(estimation_data)}."
+                )
 
         # assign estimated fixed effects, and fixed effects nested within cluster.
 
         # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
+        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=estimation_data)
 
-        (
-            self._vcov_type,
-            self._vcov_type_detail,
-            self._is_clustered,
-            self._clustervar,
-        ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
+        vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
+            vcov, self._has_fixef, self._is_iv
+        )
 
-        if self._vcov_type in {"HAC", "CRV"} and data_to_check is None:
+        # Cluster and HAC estimators need columns from the estimation sample.
+        if vcov_type in {"HAC", "CRV"} and estimation_data is None:
             self._require_estimation_data(
                 "vcov",
                 remedy="Pass the estimation sample via data= or refit with store_data=True.",
             )
+
+        self._vcov_type = vcov_type
+        self._vcov_type_detail = vcov_type_detail
+        self._is_clustered = is_clustered
+        self._clustervar = clustervar
 
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
@@ -772,7 +853,7 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_hetero()
 
         elif self._vcov_type == "HAC":
-            assert data_to_check is not None
+            assert estimation_data is not None
             kw = vcov_kwargs or {}
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
@@ -780,10 +861,10 @@ class Feols(ResultAccessorMixin):
             self._ssc, self._df_k, self._df_t = get_ssc(
                 **self._make_ssc_kwargs(
                     vcov_type="HAC",
-                    G=np.unique(data_to_check[self._time_id]).shape[0],
+                    G=np.unique(estimation_data[self._time_id]).shape[0],
                 )  # number of unique time periods T used
             )
-            self._vcov = self._ssc * self._vcov_hac()
+            self._vcov = self._ssc * self._vcov_hac(data=estimation_data)
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -792,9 +873,9 @@ class Feols(ResultAccessorMixin):
             self._vcov = self._ssc * self._vcov_nid()
 
         elif self._vcov_type == "CRV":
-            assert data_to_check is not None
+            assert estimation_data is not None
             prep = prepare_cluster_state(
-                data=data_to_check,
+                data=estimation_data,
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
@@ -807,12 +888,10 @@ class Feols(ResultAccessorMixin):
                 prep=prep,
                 k=self._k,
                 make_ssc_kwargs=self._make_ssc_kwargs,
-                cluster_vcov=self._vcov_crv_cluster,
+                cluster_vcov=partial(self._vcov_crv_cluster, data=estimation_data),
             )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
-
-        return self
 
     def _make_ssc_kwargs(
         self,
@@ -838,7 +917,11 @@ class Feols(ResultAccessorMixin):
         }
 
     def _vcov_crv_cluster(
-        self, clustid: np.ndarray, cluster_col: np.ndarray
+        self,
+        clustid: np.ndarray,
+        cluster_col: np.ndarray,
+        *,
+        data: pd.DataFrame,
     ) -> np.ndarray:
         "Pick CRV1 / CRV3-fast / CRV3-slow for one cluster column."
         if self._vcov_type_detail == "CRV1":
@@ -849,8 +932,13 @@ class Feols(ResultAccessorMixin):
                 f"CRV3 inference is not for models of type '{self._method}'."
             )
         use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
-        crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
-        return crv3(clustid=clustid, cluster_col=cluster_col)
+        if use_fast:
+            return self._vcov_crv3_fast(clustid=clustid, cluster_col=cluster_col)
+        return self._vcov_crv3_slow(
+            clustid=clustid,
+            cluster_col=cluster_col,
+            data=data,
+        )
 
     def _vcov_iid(self):
         return vcov_iid_ols(
@@ -887,10 +975,9 @@ class Feols(ResultAccessorMixin):
             tZZinv=self._tZZinv,
         )
 
-    def _vcov_hac(self):
+    def _vcov_hac(self, *, data: pd.DataFrame):
         _time_id = self._time_id
         _panel_id = self._panel_id
-        _data = self._data
 
         if not self._support_hac_inference:
             raise NotImplementedError(
@@ -905,22 +992,22 @@ class Feols(ResultAccessorMixin):
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
-            _data[_time_id], np.datetime64
+        if not np.issubdtype(data[_time_id], np.number) and not np.issubdtype(
+            data[_time_id], np.datetime64
         ):
             raise ValueError(
                 "The time variable must be numeric or date, else we cannot sort by time."
             )
 
-        _time_arr = _data[_time_id].to_numpy()
-        _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+        _time_arr = data[_time_id].to_numpy()
+        _panel_arr = data[_panel_id].to_numpy() if _panel_id is not None else None
 
         return vcov_hac(
             scores=self._scores,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
-            lag=self._lag,
-            vcov_type_detail=self._vcov_type_detail,
+            lag=cast(int | None, self._lag),
+            vcov_type_detail=cast(HacVcovTypeOptions, self._vcov_type_detail),
             bread=self._bread,
             is_iv=self._is_iv,
             tXZ=self._tXZ,
@@ -992,13 +1079,19 @@ class Feols(ResultAccessorMixin):
             **self._estimation_refit_kwargs(),
         )
 
-    def _vcov_crv3_slow(self, clustid, cluster_col):
+    def _vcov_crv3_slow(
+        self,
+        clustid: np.ndarray,
+        cluster_col: np.ndarray,
+        *,
+        data: pd.DataFrame,
+    ) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
-            data = self._data[~np.equal(g, cluster_col)]
-            fit = self._crv3_refit(data=data)
+            refit_data = data[~np.equal(g, cluster_col)]
+            fit = self._crv3_refit(data=refit_data)
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)

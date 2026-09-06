@@ -65,6 +65,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   read-only views over the typed state objects.
 - Internal demeaning and covariance code now names column-order, normal-equation,
   and frequency-replication invariants explicitly alongside their formulas.
+- Post-fit covariance updates now prepare covariance metadata and derived
+  inference before publishing them. Multiple-estimation and quantile-process
+  updates likewise prepare every child before changing any child.
 
 ### Inference Types
 
@@ -241,13 +244,15 @@ We also removed:
 - `lean=True` results keep the formula specification and evaluation context, so
   `predict(newdata=...)` keeps working for models without fixed effects; methods
   that need discarded state now raise an informative `RuntimeError` instead of
-  `AttributeError`.
+  `AttributeError`. `vcov(..., data=...)` now validates that the explicit sample
+  matches the fitted rows.
 - `store_data=False` and `lean=True` now apply to retained IV first stages; lean
   fits also discard demeaning caches, GLM working state, and quantile solver
   outputs.
 - `store_data=False` and `lean=True` now apply to multiple-estimation
-  containers; default multi-quantile results retain the arrays needed for
-  prediction and covariance updates.
+  containers; `FixestMulti.vcov()` accepts a common explicit estimation sample;
+  default multi-quantile results retain the arrays needed for prediction and
+  covariance updates.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
