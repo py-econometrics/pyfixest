@@ -57,6 +57,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `DataFrame` call sites through a thin adapter until array-native within
   state lands.
 
+### Documentation
+
+- The Standard Errors & Inference tutorial now documents IID,
+  heteroskedasticity-robust, clustered, HAC, bootstrap, and randomization-based
+  inference with executed examples and explicit support limits, and records
+  which fits `ritest()` supports. The `fepois` docstring no longer claims
+  wild-bootstrap support.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of

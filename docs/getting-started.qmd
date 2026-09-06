@@ -85,21 +85,17 @@ fit_naive.se()
 fit_naive.tidy()
 ```
 
-Common model-level fit statistics are stored on the fitted object:
+Use `summary()` for a model-level overview that includes fit statistics, or
+`etable()` when comparing models:
 
 ```{python}
-fit_naive._N        # number of observations
-fit_naive._rmse     # root mean squared error
-fit_naive._r2       # R-squared
-fit_naive._adj_r2   # adjusted R-squared
+fit_naive.summary()
+pf.etable([fit_naive, fit_fe])
 ```
 
-For models with fixed effects, within R-squared measures are also available:
-
-```{python}
-fit_fe._r2_within
-fit_fe._adj_r2_within
-```
+Underscore-prefixed attributes hold implementation state and are not part of
+the public API. Prefer the public result methods and reporting functions above
+so code remains stable across PyFixest releases.
 
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
