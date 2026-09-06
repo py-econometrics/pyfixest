@@ -48,9 +48,31 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
+- The internal demeaning cache now stores named `float64` arrays instead of a
+  `DataFrame`, so cached columns are selected by position rather than rebuilt
+  as a frame on every fit, and the returned response and regressor columns
+  follow the order the model asked for regardless of the order the cache
+  filled up in. Cached data is handed out read-only, so one fit cannot corrupt
+  the demeaned columns another model reuses. Linear and IV models keep their
+  `DataFrame` call sites through a thin adapter until array-native within
+  state lands.
 
 ### Inference Types
 
+- `ccv()` now rejects weighted models instead of estimating from a mix of
+  weighting scales.
+- `ccv()` now raises `NotImplementedError` instead of `AssertionError` for
+  model types it does not support.
+- `Feols.update()` now rejects `inplace=True`. It remains a coefficient-only
+  Sherman-Morrison calculation, and no longer leaves the fitted result in a
+  partially updated state.
+- `Feols.update()` now rejects weighted models, IV models, and non-OLS models.
+- Non-Poisson GLMs now reject `CRV3` instead of silently refitting through the
+  Poisson jackknife. Poisson `CRV3` remains supported.
+- Randomization inference now rejects non-OLS and non-Poisson results instead
+  of reinterpreting GLM working state or quantile solver output as OLS arrays.
+- The wild cluster bootstrap now rejects non-OLS results.
+- `decompose()` now rejects models that were not estimated via `feols()`.
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
   `confint()` takes `"regular"` (pointwise, the default), `"simult"`
   (simultaneous / joint intervals), or `"savi"`; `tidy()` and `summary()` take

@@ -244,6 +244,19 @@ function with keyword arguments, and stores or returns the result. Numerical
 functions operate on arrays and return small typed dataclasses whose docstrings
 state array shapes.
 
+A post-estimation path states which estimators, weighting schemes, and design
+features it can represent, and rejects the rest. Declare support as a
+capability flag on the result class, check it before any estimation state is
+read, and raise `NotImplementedError` naming the unsupported combination.
+Reinterpreting one estimator's arrays as another estimator's domain, such as
+reading GLM working state or a quantile solver's output as linear-model arrays,
+is a silently wrong result rather than a fallback. A path whose refits cannot
+yet replay the original estimation contract rejects the estimator until they
+can.
+
+An operation that cannot reconstruct the complete state of a fitted result
+returns its value instead of mutating the result in place.
+
 Every estimator or inference feature specifies behavior for weights, fixed
 effects, IV, multiple estimation, `lean=True`, and `store_data=False`.
 Unsupported combinations fail explicitly. Silent fallback is never acceptable.

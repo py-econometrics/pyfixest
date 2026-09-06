@@ -10,6 +10,7 @@ from scipy.special import gammaln
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
@@ -104,7 +105,7 @@ class Fepois(Feglm):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: SolverOptions = "np.linalg.solve",
@@ -147,6 +148,7 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
+        self._support_crv3_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 

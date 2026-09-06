@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -56,7 +57,7 @@ class Feglm(Feols):
         weights: str | None,
         weights_type: str | None,
         collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
         solver: Literal[
@@ -110,9 +111,12 @@ class Feglm(Feols):
         self.separation_check = separation_check
         self._accelerate = accelerate
 
-        self._support_crv3_inference = True
+        # The inherited slow jackknife refits with the linear/Poisson APIs and
+        # cannot yet preserve a generic GLM family's estimation contract.
+        self._support_crv3_inference = False
         self._support_iid_inference = True
         self._support_hac_inference = True
+        self._supports_wildboottest = False
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 

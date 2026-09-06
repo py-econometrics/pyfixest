@@ -89,34 +89,6 @@ def test_coef_update():
     np.testing.assert_allclose(updated_coefs, full_coefs)
 
 
-def test_coef_update_inplace():
-    rng = np.random.default_rng(1234)
-    data = get_data().dropna(subset=["Y", "X1", "X2"])
-    data_subsample = data.sample(frac=0.3, random_state=1234)
-    m = feols("Y ~ X1 + X2", data=data_subsample)
-    new_points_id = rng.choice(
-        data.index.difference(data_subsample.index), 5, replace=False
-    )
-    X_new, y_new = (
-        np.c_[
-            data.loc[new_points_id][
-                ["X1", "X2"]
-            ].values  # only pass columns; let `update` add the intercept
-        ],
-        data.loc[new_points_id]["Y"].values,
-    )
-    m.update(X_new, y_new, inplace=True)
-    full_coefs = (
-        feols(
-            "Y ~ X1 + X2",
-            data=data.loc[data_subsample.index.append(pd.Index(new_points_id))],
-        )
-        .coef()
-        .values
-    )
-    np.testing.assert_allclose(m.coef().values, full_coefs)
-
-
 def test_rename_categoricals():
     coefnames = ["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"]
     renamed = rename_categoricals(coefnames)
