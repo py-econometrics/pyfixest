@@ -113,8 +113,6 @@ def fit_ols(
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
-        # The full weight appears here, not sqrt(a_i): both solver factors
-        # participate when differentiating the weighted squared-error loss.
         scores = X * (weight_values * residuals)[:, None]
     hessian = tZX.copy()
     return OlsFit(
