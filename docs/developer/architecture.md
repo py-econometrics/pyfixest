@@ -274,6 +274,19 @@ can.
 An operation that cannot reconstruct the complete state of a fitted result
 returns its value instead of mutating the result in place.
 
+Storage policy follows the full result graph. Multiple-estimation containers
+keep no copy of the input frame under `store_data=False` or `lean=True`,
+retained IV first stages honor `store_data=False`, and lean results discard
+within state, GLM working state, demeaning caches, quantile solver outputs, and
+large first-stage arrays. Lean results do keep the formula specification and
+evaluation context, so `predict(newdata=...)` still works for models without
+fixed effects. Array-only covariance updates remain available after
+`store_data=False`; cluster and HAC updates require the estimation sample
+through the documented `vcov(data=...)` argument. Lean results reject post-fit
+covariance updates because their numerical arrays have been discarded. Every
+other method that needs discarded state raises an informative error naming the
+storage option and its remedy.
+
 Keeping canonical arrays unpremultiplied favors readability without moving
 weight work out of the numerical hot path: each solver still performs the same
 vectorized square-root transform locally.

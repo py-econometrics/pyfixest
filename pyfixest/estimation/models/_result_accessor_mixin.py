@@ -10,10 +10,7 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
-    from pyfixest.estimation.internals.model_state import (
-        ObservationWeights,
-        WithinLinearData,
-    )
+    from pyfixest.estimation.internals.model_state import ObservationWeights
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -133,7 +130,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _conf_int: np.ndarray
     _u_hat: np.ndarray
     _observation_weights: "ObservationWeights"
-    _within_data: "WithinLinearData"
     _response: np.ndarray
     _coefnames: list[str]
     _method: str
@@ -147,7 +143,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
-
     _rmse: float
     _r2: float
     _adj_r2: float
@@ -158,6 +153,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
     @property
     def _Y(self) -> np.ndarray:
         """Estimator-specific within-response view."""
+        raise NotImplementedError
+
+    def _require_fit_arrays(
+        self,
+        method: str,
+        *,
+        arrays: str,
+        remedy: str = "Refit with lean=False.",
+    ) -> None:
+        """Reject a call whose input arrays `lean=True` discarded.
+
+        Implemented by the host class.
+        """
         raise NotImplementedError
 
     def _bind_report_methods(self):
@@ -314,12 +322,17 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        # `_Y` is the unpremultiplied within response for linear models and the
-        # unpremultiplied final working response for Gaussian GLMs.
+        self._require_fit_arrays(
+            "get_performance", arrays="the response and within arrays"
+        )
+        # Shared result code must use the estimator's within-response view:
+        # linear models expose WithinLinearData, while Gaussian GLMs expose the
+        # final unpremultiplied IRLS working response through the same alias.
+        # For Gaussian GLMs this is within(y - offset); the global denominator
+        # below deliberately remains centered on the raw response y.
         Y_within = self._Y.flatten()
         Y = self._response
         observation_weights = self._observation_weights.values
-        residuals = self._u_hat
 
         has_intercept = not self._drop_intercept
 
@@ -331,12 +344,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
             adj_factor = (self._N - has_intercept) / (self._N - self._k)
 
         if observation_weights is None:
-            ssu = np.sum(residuals**2)
+            ssu = np.sum(self._u_hat**2)
             y_center = np.mean(Y)
             ssy = np.sum((Y - y_center) ** 2)
         else:
             weights = observation_weights
-            ssu = np.sum(weights.flatten() * residuals**2)
+            ssu = np.sum(weights * self._u_hat**2)
             y_center = np.average(Y, weights=weights)
             ssy = np.sum(weights * (Y - y_center) ** 2)
         self._rmse = np.sqrt(ssu / self._N)
@@ -611,4 +624,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        self._require_fit_arrays("resid", arrays="the residual arrays")
         return self._u_hat.flatten()
