@@ -1,5 +1,6 @@
 ---
 title: How much do Covariates Matter?
+description: "Use the Gelbach decomposition to attribute the change in a treatment coefficient to individual covariates, illustrated on the gender wage gap."
 aliases:
   - /regression_decomposition.html
 jupyter: python3

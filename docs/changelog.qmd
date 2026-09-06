@@ -1,8 +1,8 @@
 ---
+title: Changelog
+description: "Release notes for every PyFixest version, covering new features, behavior changes, deprecations, and bug fixes."
 freeze: auto
 ---
-
-# Changelog
 
 ```{python}
 import pyfixest as pf
@@ -215,6 +215,11 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
+
+### Documentation
+
+- Every documentation page now carries a title, which names it in `llms.txt`,
+  and a one-sentence description, which the listing pages and page metadata use.
 
 
 ## PyFixest 0.60.0
