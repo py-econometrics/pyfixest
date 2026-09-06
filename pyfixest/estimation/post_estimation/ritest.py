@@ -58,7 +58,8 @@ def _get_ritest_stats_slow(
     reps : int
         The number of repetitions.
     model : str
-        The model to estimate. Must be one of 'feols' or 'fepois'.
+        The public estimation function to replay, for example 'feols',
+        'fepois', or 'feglm'.
     rng : np.random.Generator
         The random number generator.
     vcov : str or dict[str, str]
