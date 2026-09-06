@@ -158,7 +158,8 @@ class DemeanCache:
         -------
         tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner or None]
             Demeaned response and design arrays, in their requested column order,
-            plus the preconditioner used when new columns were transformed.
+            plus the preconditioner used when new columns were transformed. Both
+            arrays are read-only: they are backed by the shared cache entry.
         """
         Y_array = np.asarray(Y, dtype=np.float64)
         X_array = np.asarray(X, dtype=np.float64)
@@ -258,5 +259,11 @@ class DemeanCache:
         positions = tuple(cached_position_by_name[name] for name in yx_names)
         selects_cached_prefix = positions == tuple(range(len(positions)))
         if selects_cached_prefix:
+            # Basic slicing gives a view, which inherits the read-only flag.
             return cached.values[:, : len(positions)]
-        return cached.values[:, positions]
+        # Fancy indexing gives a fresh, writable copy. Flag it too, so that
+        # whether a caller may write into its demeaned data never depends on
+        # the order the cache happened to fill up in.
+        reordered = cached.values[:, positions]
+        reordered.setflags(write=False)
+        return reordered
