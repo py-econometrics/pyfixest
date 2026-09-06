@@ -106,6 +106,13 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
   matching `fixest` and base R's `glm()`. It previously returned the IRLS
   working residual, which is still available as `resid(type="working")`.
 
+### New Features
+
+- `Feols.dfm_heterogeneity_test()` adds an omnibus test for systematic treatment
+  effect heterogeneity (Ding, Feller, Miratrix 2019): it fits separate OLS by
+  treatment arm and jointly tests whether the treatment effect varies with the
+  model's covariates.
+
 ### Formula Parsing on `formulaic`
 
 Formula parsing no longer splits strings by hand. `feols()` and friends now hand
