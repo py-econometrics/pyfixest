@@ -262,7 +262,9 @@ Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
 the outer model's covariance label untouched.
 
 CRV3 jackknife and slow randomization-inference refits replay the original
-estimation options. A prebuilt LSMR preconditioner is the sole exception: its
+estimation options through the estimator's own public entry point, so a GLM
+refits through `feglm()` with its family rather than through a linear or
+Poisson approximation of it. A prebuilt LSMR preconditioner is the sole exception: its
 factorization belongs to one fixed-effect design, so refits keep its variant
 but rebuild it for the changed row set.
 

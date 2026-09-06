@@ -113,9 +113,7 @@ class Feglm(Feols):
         self.separation_check = separation_check
         self._accelerate = accelerate
 
-        # The inherited slow jackknife refits with the linear/Poisson APIs and
-        # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
+        self._support_crv3_inference = True
         self._support_iid_inference = True
         self._support_hac_inference = True
         self._supports_wildboottest = False
@@ -422,6 +420,29 @@ class Feglm(Feols):
             )
         else:
             return yhat
+
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return the full GLM estimation contract for data-changing refits."""
+        kwargs = super()._estimation_refit_kwargs()
+        kwargs.update(
+            {
+                "offset": self._offset_name,
+                "iwls_tol": self.tol,
+                "iwls_maxiter": self.maxiter,
+                "separation_check": (
+                    None
+                    if self.separation_check is None
+                    else list(self.separation_check)
+                ),
+            }
+        )
+        return kwargs
+
+    def _refit_entry_point(self) -> tuple[str, dict[str, Any]]:
+        """Replay GLMs through `feglm()`, which needs the family and IRLS setup."""
+        _, kwargs = super()._refit_entry_point()
+        kwargs.update({"family": self._family.name, "accelerate": self._accelerate})
+        return "feglm", kwargs
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""

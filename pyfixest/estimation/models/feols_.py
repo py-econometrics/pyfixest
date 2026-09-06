@@ -1068,15 +1068,25 @@ class Feols(ResultAccessorMixin):
             "context": self._context,
         }
 
+    def _refit_entry_point(self) -> tuple[str, dict[str, Any]]:
+        """Return the public estimation function that replays this estimator.
+
+        The name and the options are consumed by every path that re-estimates
+        the model on modified data: the CRV3 cluster jackknife and slow
+        randomization inference.
+        """
+        return "feols", self._estimation_refit_kwargs()
+
     def _crv3_refit(self, data: pd.DataFrame) -> Feols:
-        """Replay OLS for one leave-one-cluster-out sample."""
+        """Replay the estimator for one leave-one-cluster-out sample."""
+        entry_point, refit_kwargs = self._refit_entry_point()
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        return fixest_module.feols(
+        return getattr(fixest_module, entry_point)(
             fml=self._fml,
             data=data,
             vcov="iid",
-            **self._estimation_refit_kwargs(),
+            **refit_kwargs,
         )
 
     def _vcov_crv3_slow(
