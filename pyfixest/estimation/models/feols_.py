@@ -332,6 +332,7 @@ class Feols(ResultAccessorMixin):
         self._context = capture_context(context)
 
         self._support_crv3_inference = True
+        self._supports_ritest = True
         self._support_hac_inference = True
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
@@ -2297,9 +2298,10 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
-        if self._method not in {"feols", "fepois"}:
+        if not self._supports_ritest:
             raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
+                "Randomization Inference is not supported for models of type "
+                f"'{self._method}'."
             )
 
         # check that resampvar in _coefnames
@@ -2355,7 +2357,9 @@ class Feols(ResultAccessorMixin):
                 """
             )
 
-        if choose_algorithm == "slow" or self._method == "fepois":
+        # The fast algorithm demeans and solves OLS arrays; every other
+        # estimator replays its own public API through the slow path.
+        if choose_algorithm == "slow" or self._method != "feols":
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2372,6 +2376,7 @@ class Feols(ResultAccessorMixin):
             if type == "randomization-c":
                 vcov_input = "iid"
 
+            ritest_entry_point, ritest_refit_kwargs = self._refit_entry_point()
             ri_stats = _get_ritest_stats_slow(
                 data=self._data,
                 resampvar=resampvar_,
@@ -2381,8 +2386,8 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self._method,
-                refit_kwargs=self._estimation_refit_kwargs(),
+                model=ritest_entry_point,
+                refit_kwargs=ritest_refit_kwargs,
             )
 
         else:

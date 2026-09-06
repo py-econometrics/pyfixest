@@ -609,24 +609,18 @@ def test_ritest_error(data):
         fit.plot_ritest()
 
 
-@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
-def test_ritest_rejects_non_ols_working_domains(estimator):
-    """RI must not interpret GLM or quantile arrays as OLS solver inputs."""
+def test_ritest_rejects_quantile_working_domains():
+    """RI must not interpret quantile solver output as OLS solver inputs."""
     data = pd.DataFrame(
         {
             "y": [0, 1, 0, 1, 1, 0, 1, 0],
             "x": np.linspace(-1.0, 1.0, 8),
         }
     )
-    if estimator == "feglm":
-        fit = pf.feglm("y ~ x", data=data, family="logit")
-    else:
-        with pytest.warns(FutureWarning, match="experimental"):
-            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
+    with pytest.warns(FutureWarning, match="experimental"):
+        fit = pf.quantreg("y ~ x", data=data, maxiter=100)
 
-    with pytest.raises(
-        NotImplementedError, match=r"only supported for OLS and Poisson"
-    ):
+    with pytest.raises(NotImplementedError, match=r"not supported for models of type"):
         fit.ritest(resampvar="x", reps=1)
 
 

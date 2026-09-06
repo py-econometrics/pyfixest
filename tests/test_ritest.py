@@ -235,6 +235,112 @@ def test_fepois_slow_ritest_replays_estimation_contract(monkeypatch):
         assert kwargs["context"]["shift"] is shift
 
 
+def test_feglm_ritest_matches_ols_for_gaussian_family():
+    """A Gaussian GLM is OLS, so both slow RI paths must resample identically."""
+    data = pf.get_data().dropna()
+
+    ols = pf.feols("Y ~ X1 + X2", data=data)
+    ols.ritest(
+        resampvar="X1",
+        reps=25,
+        rng=np.random.default_rng(9),
+        choose_algorithm="slow",
+        store_ritest_statistics=True,
+    )
+
+    glm = pf.feglm("Y ~ X1 + X2", data=data, family="gaussian")
+    glm.ritest(
+        resampvar="X1",
+        reps=25,
+        rng=np.random.default_rng(9),
+        store_ritest_statistics=True,
+    )
+
+    np.testing.assert_allclose(
+        ols._ritest_statistics, glm._ritest_statistics, rtol=1e-08, atol=1e-08
+    )
+    assert ols._ritest_pvalue == glm._ritest_pvalue
+
+
+def test_feglm_ritest_is_centered_under_the_null():
+    """Resampling a treatment with no effect must center the statistics at zero."""
+    rng = np.random.default_rng(4242)
+    N = 400
+    data = pd.DataFrame(
+        {
+            "x": rng.normal(size=N),
+            "d": rng.binomial(1, 0.5, size=N),
+        }
+    )
+    data["y"] = rng.binomial(1, 1 / (1 + np.exp(-0.4 * data["x"])))
+
+    fit = pf.feglm("y ~ d + x", data=data, family="logit")
+    fit.ritest(
+        resampvar="d",
+        reps=100,
+        rng=np.random.default_rng(11),
+        store_ritest_statistics=True,
+    )
+
+    ri_stats = fit._ritest_statistics[1:]
+    standard_error = np.std(ri_stats, ddof=1) / np.sqrt(len(ri_stats))
+    assert abs(np.mean(ri_stats)) < 3 * standard_error
+    assert 0.0 <= fit._ritest_pvalue <= 1.0
+
+
+def test_feglm_slow_ritest_replays_estimation_contract(monkeypatch):
+    """GLM refits must keep the family and the IRLS configuration of the fit."""
+    import pyfixest.estimation as estimation
+
+    rng = np.random.default_rng(20260906)
+    N = 120
+    data = pd.DataFrame(
+        {
+            "x1": rng.normal(size=N),
+            "treatment": rng.binomial(1, 0.5, size=N),
+            "f1": np.arange(N) % 4,
+        }
+    )
+    data["y"] = rng.binomial(1, 0.5, size=N)
+
+    ssc_config = pf.ssc(k_adj=False, G_adj=False)
+    real_feglm = estimation.feglm
+    fit = real_feglm(
+        "y ~ treatment + x1 | f1",
+        data=data,
+        family="logit",
+        ssc=ssc_config,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+        separation_check=[],
+        accelerate=False,
+    )
+    refit_calls = []
+
+    def recording_feglm(fml, *, data, vcov, **kwargs):
+        refit_calls.append((fml, vcov, kwargs))
+        return real_feglm(fml=fml, data=data, vcov=vcov, **kwargs)
+
+    monkeypatch.setattr(estimation, "feglm", recording_feglm)
+    fit.ritest(
+        resampvar="treatment",
+        reps=3,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(1234),
+    )
+
+    assert len(refit_calls) == 3
+    for fml, vcov, kwargs in refit_calls:
+        assert fml == "y ~ treatment_resampled + x1 | f1"
+        assert vcov == "iid"
+        assert kwargs["family"] == "logit"
+        assert kwargs["ssc"] == ssc_config
+        assert kwargs["iwls_tol"] == 1e-10
+        assert kwargs["iwls_maxiter"] == 100
+        assert kwargs["separation_check"] == []
+        assert kwargs["accelerate"] is False
+
+
 @pytest.fixture
 def data_r_vs_t():
     return pf.get_data(N=5000, seed=2999)
