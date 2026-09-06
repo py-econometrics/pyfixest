@@ -74,6 +74,41 @@ def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     )
 
 
+def _make_frequency_weighted_linear_data():
+    """Return deterministic aggregate linear and IV data (seed 20260901)."""
+    rng = np.random.default_rng(20260901)
+    n_per_group = 12
+    fixed_effect = np.repeat(list("abcd"), n_per_group)
+    fixed_effect_value = np.repeat([-0.8, -0.2, 0.3, 0.9], n_per_group)
+    x = rng.normal(size=4 * n_per_group)
+    z = rng.normal(size=4 * n_per_group)
+    d = (
+        0.9 * z
+        + 0.3 * x
+        + 0.25 * fixed_effect_value
+        + rng.normal(scale=0.35, size=len(x))
+    )
+    y = (
+        1.0
+        + 0.8 * d
+        - 0.5 * x
+        + fixed_effect_value
+        + rng.normal(scale=0.45, size=len(x))
+    )
+
+    data = pd.DataFrame(
+        {
+            "y": y,
+            "x": x,
+            "d": d,
+            "z": z,
+            "fe": fixed_effect,
+            "fweights": rng.integers(1, 5, size=len(x)),
+        }
+    )
+    return data
+
+
 rng = np.random.default_rng(8760985)
 
 
@@ -545,6 +580,71 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ x",
+        "y ~ x | fe",
+        "y ~ x | d ~ z",
+        "y ~ x | fe | d ~ z",
+    ],
+)
+def test_frequency_weighted_linear_models_against_fixest(fml):
+    """Compare fweight OLS and IV covariance to R fixest literal expansion."""
+    data = _make_frequency_weighted_linear_data()
+    expanded_data = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_fit = pf.feols(
+        fml=fml,
+        data=data,
+        weights="fweights",
+        weights_type="fweights",
+        vcov="hetero",
+        ssc=py_ssc,
+    )
+    r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
+
+    ro.globalenv[".fweight_r_fit"] = r_fit
+    r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
+    r_vcov_names = list(ro.r("rownames(vcov(.fweight_r_fit))"))
+    py_coefficient_names = list(py_fit.coef().index)
+    is_iv = "d ~ z" in fml
+    r_name_by_py_name = {
+        "Intercept": "(Intercept)",
+        "d": "fit_d" if is_iv else "d",
+    }
+    r_order = [
+        r_coefficient_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+    r_vcov_order = [
+        r_vcov_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit))[r_order],
+        rtol=0,
+        atol=1e-8,
+        err_msg="Fweight coefficients differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
+        rtol=0,
+        atol=1e-7,
+        err_msg="Fweight covariance differs from the R fixest literal expansion",
+    )
+
+
+@pytest.mark.against_r_core
 def test_feglm_gaussian_reference_behavior():
     """Lock in pyfixest's Gaussian-GLM compatibility decision."""
     data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
@@ -579,6 +679,33 @@ def test_feglm_gaussian_reference_behavior():
         rtol=0,
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
+    )
+    py_glm.get_performance()
+    py_ols.get_performance()
+    for attribute in ("_rmse", "_r2", "_adj_r2"):
+        np.testing.assert_allclose(
+            getattr(py_glm, attribute),
+            getattr(py_ols, attribute),
+            rtol=0,
+            atol=1e-10,
+            err_msg=f"Gaussian GLM and OLS {attribute} differ",
+        )
+    r_lm_residuals = np.asarray(stats.residuals(r_lm))
+    np.testing.assert_allclose(
+        py_glm._rmse,
+        np.sqrt(np.mean(r_lm_residuals**2)),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM RMSE differs from base R lm residuals",
+    )
+    np.testing.assert_allclose(
+        py_glm._r2,
+        1
+        - np.sum(r_lm_residuals**2)
+        / np.sum((data["Y"].to_numpy() - data["Y"].mean()) ** 2),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM R-squared differs from base R lm",
     )
 
     for r_fit, label in (

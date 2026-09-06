@@ -56,6 +56,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   the demeaned columns another model reuses. Linear and IV models keep their
   `DataFrame` call sites through a thin adapter until array-native within
   state lands.
+- Estimator internals now keep formula tables, unpremultiplied within arrays,
+  and user-scale observation weights in separate typed domains.
+  Square-root-weighted arrays are local solver temporaries, and linear
+  residuals remain in response units.
+- Internal demeaning and covariance code now names column-order and
+  normal-equation invariants explicitly alongside their formulas.
 
 ### Inference Types
 
@@ -226,6 +232,12 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
+- Weighted fixed-effect contributions (`_sumFE`) are now stored in response
+  units.
+- Gaussian GLM performance measures now use the estimator's unpremultiplied
+  within response and observation weights, including weighted fixed-effect fits.
+- `IV_Diag()` no longer relabels the main model's covariance type when computing
+  the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

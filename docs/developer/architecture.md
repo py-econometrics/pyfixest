@@ -60,11 +60,9 @@ shared estimator API
   -> prepare_model_matrix
   -> estimator-specific get_fit
        -> feols / feiv
-            -> demean
-            -> to_array
-            -> drop_multicol_vars
-            -> wls_transform
-            -> solve OLS / 2SLS
+            -> construct within-scale arrays
+            -> drop collinear columns
+            -> solve OLS / 2SLS with local weight transforms
        -> fepois / feglm
             -> IRLS with weighted demeaning and solving inside each iteration
        -> quantreg
@@ -218,6 +216,47 @@ not replace canonical within data. A fitted result may still expose explicitly
 in-place post-estimation operations, but those operations must not repurpose
 estimation fields.
 
+## Implemented array and weight domains
+
+The shared linear path now implements the vocabulary above with frozen, slotted
+state values. Frozen state prevents field rebinding, but contained NumPy arrays
+remain mutable unless they are explicitly marked read-only:
+
+| State | Persisted contract |
+|---|---|
+| `ModelMatrix` | Formula-materialized pandas tables remain on formula scale and keep dependent, independent, fixed-effect, IV, weight, and offset roles separate. |
+| `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
+| `WithinLinearData` | Unpremultiplied within-scale arrays, with response, design, instruments, and endogenous variables in named roles. |
+| `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
+
+Analytic weights keep the retained row count as the effective sample size;
+frequency weights use the sum of their user-scale values. Probability weights
+(`pweights`) remain unsupported. Fixed-effect projection may use observation
+weights, but the returned arrays remain within scale. OLS and IV fit primitives
+create square-root-weighted design and response arrays only as local solver
+temporaries. They persist response-unit residuals and weighted scores or
+cross-products, not solver-scale copies of canonical data.
+
+Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
+the outer model's covariance label untouched.
+
+A post-estimation path states which estimators, weighting schemes, and design
+features it can represent, and rejects the rest. Declare support as a
+capability flag on the result class, check it before any estimation state is
+read, and raise `NotImplementedError` naming the unsupported combination.
+Reinterpreting one estimator's arrays as another estimator's domain, such as
+reading GLM working state or a quantile solver's output as linear-model arrays,
+is a silently wrong result rather than a fallback. A path whose refits cannot
+yet replay the original estimation contract rejects the estimator until they
+can.
+
+An operation that cannot reconstruct the complete state of a fitted result
+returns its value instead of mutating the result in place.
+
+Keeping canonical arrays unpremultiplied favors readability without moving
+weight work out of the numerical hot path: each solver still performs the same
+vectorized square-root transform locally.
+
 ## Repository map and extension seams
 
 Step-by-step recipes for estimators, post-estimation features, vcov types,
@@ -243,19 +282,6 @@ A model method validates inputs, unpacks model state, calls a module-level
 function with keyword arguments, and stores or returns the result. Numerical
 functions operate on arrays and return small typed dataclasses whose docstrings
 state array shapes.
-
-A post-estimation path states which estimators, weighting schemes, and design
-features it can represent, and rejects the rest. Declare support as a
-capability flag on the result class, check it before any estimation state is
-read, and raise `NotImplementedError` naming the unsupported combination.
-Reinterpreting one estimator's arrays as another estimator's domain, such as
-reading GLM working state or a quantile solver's output as linear-model arrays,
-is a silently wrong result rather than a fallback. A path whose refits cannot
-yet replay the original estimation contract rejects the estimator until they
-can.
-
-An operation that cannot reconstruct the complete state of a fitted result
-returns its value instead of mutating the result in place.
 
 Every estimator or inference feature specifies behavior for weights, fixed
 effects, IV, multiple estimation, `lean=True`, and `store_data=False`.

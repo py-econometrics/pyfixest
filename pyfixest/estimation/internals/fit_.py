@@ -20,8 +20,7 @@ class OlsFit:
         Residuals Y - X @ beta, shape (N,). Always on the scale of the
         supplied Y; weights never rescale them.
     scores : np.ndarray
-        Score matrix W X * residuals, shape (N, k), where W is the identity
-        when no weights are supplied.
+        Weighted score matrix W X * residuals, shape (N, k).
     hessian : np.ndarray
         Weighted Hessian X' W X, shape (k, k).
     tZX : np.ndarray
@@ -50,8 +49,7 @@ class IvFit:
         Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
         of the supplied Y; weights never rescale them.
     scores : np.ndarray
-        Score matrix W Z * residuals, shape (N, k_z), where W is the identity
-        when no weights are supplied.
+        Weighted score matrix W Z * residuals, shape (N, k_z).
     hessian : np.ndarray
         Weighted instrument cross-product Z' W Z, shape (k_z, k_z).
     tZX : np.ndarray
@@ -81,18 +79,18 @@ def fit_ols(
     weights: np.ndarray | None = None,
     solver: SolverOptions = "np.linalg.solve",
 ) -> OlsFit:
-    """Fit OLS/WLS on caller-supplied arrays.
+    """Fit OLS/WLS while keeping inputs and residuals in response scale.
 
     Parameters
     ----------
     X : np.ndarray
-        Design matrix, shape (N, k), used in the units supplied by the caller.
+        Design matrix, shape (N, k). Demeaned but not WLS-transformed.
     Y : np.ndarray
-        Dependent variable, shape (N, 1), used in the units supplied by the caller.
+        Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        applies no additional weighting. Otherwise, the square-root transform
-        is local to this function.
+        selects the unweighted path without creating unit weights or transformed
+        copies. Otherwise, the square-root transform is local to this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
@@ -133,22 +131,22 @@ def fit_iv(
     weights: np.ndarray | None = None,
     solver: SolverOptions = "np.linalg.solve",
 ) -> IvFit:
-    """Fit 2SLS on caller-supplied arrays.
+    """Fit 2SLS while keeping inputs and residuals in response scale.
 
     Parameters
     ----------
     X : np.ndarray
         Design matrix (incl. endogenous regressors), shape (N, k).
-        Used in the units supplied by the caller.
+        Demeaned but not WLS-transformed.
     Z : np.ndarray
         Full instrument matrix, including exogenous regressors that instrument
-        themselves, shape (N, k_z). Used in the units supplied by the caller.
+        themselves, shape (N, k_z). Demeaned but not WLS-transformed.
     Y : np.ndarray
-        Dependent variable, shape (N, 1), used in the units supplied by the caller.
+        Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        applies no additional weighting. Otherwise, the square-root transform
-        is local to this function.
+        selects the unweighted path without creating unit weights or transformed
+        copies. Otherwise, the square-root transform is local to this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """

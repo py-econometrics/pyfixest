@@ -247,6 +247,81 @@ def test_feglm_resid_vs_fixest(data, family, fml):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    ("weights_name", "weights_type"),
+    [("weights", "aweights"), ("fweights", "fweights")],
+)
+def test_weighted_fixef_is_on_response_scale(data, weights_name, weights_type):
+    """Weighted fixed effects and predictions stay in response units."""
+    group_size = data.groupby("f1")["f1"].transform("size")
+    weighted_data = data.loc[group_size > 1].copy().reset_index(drop=True)
+    weighted_data["fweights"] = np.arange(len(weighted_data)) % 4 + 1
+
+    fit = pf.feols(
+        "Y ~ X1 | f1",
+        data=weighted_data,
+        weights=weights_name,
+        weights_type=weights_type,
+    )
+    fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
+
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1 | f1"),
+        data=weighted_data,
+        weights=ro.Formula(f"~{weights_name}"),
+    )
+    ro.globalenv[".pyfixest_weighted_fixef_fit"] = fit_r
+    fixed_effects_r = ro.r["fixef"](fit_r).rx2("f1")
+    fixed_effect_levels_r = np.asarray(
+        ro.r("names(fixef(.pyfixest_weighted_fixef_fit)$f1)"), dtype=float
+    )
+
+    response_scale_fixed_effect = fit.predict() - weighted_data[
+        "X1"
+    ].to_numpy() * fit.coef().xs("X1")
+    np.testing.assert_allclose(
+        fit._sumFE,
+        response_scale_fixed_effect,
+        rtol=1e-8,
+        atol=1e-8,
+    )
+    np.testing.assert_allclose(
+        fit._sumFE,
+        np.asarray(fit_r.rx2("sumFE")),
+        rtol=1e-8,
+        atol=1e-8,
+    )
+
+    fixed_effects_by_level = fixed_effects.set_index(
+        fixed_effects["level"].astype(float)
+    )["coefficient"].sort_index()
+    fixed_effects_r_by_level = pd.Series(
+        np.asarray(fixed_effects_r),
+        index=fixed_effect_levels_r,
+    ).sort_index()
+    np.testing.assert_allclose(
+        fixed_effects_by_level,
+        fixed_effects_r_by_level,
+        rtol=1e-8,
+        atol=1e-8,
+    )
+
+    np.testing.assert_allclose(
+        fit.predict(),
+        np.asarray(fit_r.rx2("fitted.values")),
+        rtol=1e-8,
+        atol=1e-8,
+    )
+    newdata = weighted_data.iloc[:100]
+    np.testing.assert_allclose(
+        fit.predict(newdata=newdata),
+        np.asarray(stats.predict(fit_r, newdata=newdata)),
+        rtol=1e-8,
+        atol=1e-8,
+    )
+
+
+@pytest.mark.against_r_core
 def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
