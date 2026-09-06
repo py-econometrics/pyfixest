@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
+from dataclasses import replace
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -14,7 +15,7 @@ from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
@@ -954,23 +955,50 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _vcov_crv3_slow(self, clustid, cluster_col):
-        beta_jack = np.zeros((len(clustid), self._k))
+    def _estimation_refit_kwargs(self) -> dict[str, Any]:
+        """Return options needed to replay this estimator on modified data."""
+        demeaner = self._demeaner
+        if isinstance(demeaner, LsmrDemeaner) and isinstance(
+            demeaner.preconditioner, Preconditioner
+        ):
+            # A prebuilt factorization belongs to the original FE design. Keep
+            # its algorithmic variant, but rebuild it for the changed row set.
+            preconditioner = cast(
+                WithinPreconditionerName,
+                demeaner.preconditioner.variant.lower(),
+            )
+            demeaner = replace(demeaner, preconditioner=preconditioner)
 
+        return {
+            "weights": self._weights_name,
+            "weights_type": self._weights_type,
+            "ssc": dict(self._ssc_dict),
+            "fixef_rm": "singleton" if self._drop_singletons else "none",
+            "solver": self._solver,
+            "demeaner": demeaner,
+            "drop_intercept": self._drop_intercept,
+            "collin_tol": self._collin_tol,
+            "context": self._context,
+        }
+
+    def _crv3_refit(self, data: pd.DataFrame) -> Feols:
+        """Replay OLS for one leave-one-cluster-out sample."""
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols if self._method == "feols" else fixest_module.fepois
+        return fixest_module.feols(
+            fml=self._fml,
+            data=data,
+            vcov="iid",
+            **self._estimation_refit_kwargs(),
+        )
+
+    def _vcov_crv3_slow(self, clustid, cluster_col):
+        beta_jack = np.zeros((len(clustid), self._k))
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = fit_(
-                fml=self._fml,
-                data=data,
-                vcov="iid",
-                weights=self._weights_name,
-                weights_type=self._weights_type,
-            )
+            fit = self._crv3_refit(data=data)
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)
@@ -2251,6 +2279,7 @@ class Feols(ResultAccessorMixin):
                 type=type,
                 rng=rng,
                 model=self._method,
+                refit_kwargs=self._estimation_refit_kwargs(),
             )
 
         else:
