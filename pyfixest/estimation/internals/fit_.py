@@ -17,7 +17,8 @@ class OlsFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Residuals Y - X @ beta in the supplied Y units, shape (N,).
+        Residuals Y - X @ beta, shape (N,). Always on the scale of the
+        supplied Y; weights never rescale them.
     scores : np.ndarray
         Score matrix W X * residuals, shape (N, k), where W is the identity
         when no weights are supplied.
@@ -46,7 +47,8 @@ class IvFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Second-stage residuals Y - X @ beta in the supplied Y units, shape (N,).
+        Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
+        of the supplied Y; weights never rescale them.
     scores : np.ndarray
         Score matrix W Z * residuals, shape (N, k_z), where W is the identity
         when no weights are supplied.
@@ -111,9 +113,6 @@ def fit_ols(
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
-        # The WLS estimating equation contributes s_i = a_i x_i u_i.
-        # The full weight appears here, not sqrt(a_i): both solver factors
-        # participate when differentiating the weighted squared-error loss.
         scores = X * (weight_values * residuals)[:, None]
     hessian = tZX.copy()
     return OlsFit(
@@ -180,7 +179,6 @@ def fit_iv(
     if weight_values is None:
         scores = Z * residuals[:, None]
     else:
-        # The weighted IV moment contribution is a_i z_i u_i.
         scores = Z * (weight_values * residuals)[:, None]
     hessian = tZZ
 
