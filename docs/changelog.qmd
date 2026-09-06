@@ -24,6 +24,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   preparation for contributors and coding agents.
 - PR reviews now select verification from unresolved risk, reuse successful
   exact-head CI evidence, and avoid redundant broad local test runs.
+- PR reviews now also trace numerical meaning, array ownership, and state
+  lifetime so correctness arguments remain understandable from the code.
 - A new `test-r-fixest-fast` task runs a compact edit-time comparison of
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
