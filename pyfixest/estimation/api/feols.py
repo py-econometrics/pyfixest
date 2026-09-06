@@ -144,7 +144,7 @@ def feols(
         `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
-        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+        [Demeaner Backends vignette](/how-to/demeaner-backends.qmd).
 
         .. deprecated::
             The ``cupy`` / ``scipy`` LSMR backends are deprecated and will

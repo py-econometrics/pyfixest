@@ -57,6 +57,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `DataFrame` call sites through a thin adapter until array-native within
   state lands.
 
+### Documentation
+
+- CI now checks that every rendered page is listed in `llms.txt` and that
+  internal links in the machine-readable pages resolve.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of
