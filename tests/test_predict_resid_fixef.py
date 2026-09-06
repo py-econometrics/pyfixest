@@ -433,3 +433,35 @@ def test_context_capture_with_out_of_sample_predict():
         np.testing.assert_almost_equal(
             context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
         )
+
+
+def test_predict_honors_lsqr_tolerance_after_caching():
+    """`atol`/`btol` must apply on every call, not only the first one."""
+    rng = np.random.default_rng(11)
+    n = 500
+    df = pd.DataFrame(
+        {
+            "x1": rng.normal(size=n),
+            "x2": rng.normal(size=n),
+            "f1": rng.integers(0, 10, size=n).astype(str),
+            "f2": rng.integers(0, 4, size=n).astype(str),
+        }
+    )
+    df["y"] = 1 + 2 * df["x1"] - df["x2"] + rng.normal(size=n)
+    fml = "y ~ x1 + x2 | f1 + f2"
+
+    fresh = pf.feols(fml, data=df)
+    tight = fresh.predict(newdata=df, atol=1e-12, btol=1e-12)
+
+    cached = pf.feols(fml, data=df)
+    cached.predict(newdata=df)
+    after_cache = cached.predict(newdata=df, atol=1e-12, btol=1e-12)
+
+    np.testing.assert_allclose(after_cache, tight, rtol=0, atol=1e-10)
+
+    # a looser later request must not discard already tighter fixed effects
+    downgraded = pf.feols(fml, data=df)
+    downgraded.fixef(atol=1e-12, btol=1e-12)
+    np.testing.assert_allclose(
+        downgraded.predict(newdata=df), tight, rtol=0, atol=1e-10
+    )
