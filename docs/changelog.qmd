@@ -89,6 +89,22 @@ mixture_precision = pf.optimal_mixture_precision(
 fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 ```
 
+### Gelbach Decomposition
+
+- Analytical Gelbach decomposition inference now supports IID and one- or
+  two-way CRV1 covariance estimators through `Feols.decompose(vcov=...)`, in
+  addition to the existing HC1 estimator. Clustered fits pass their CRV1
+  specification through by default, and all analytical estimators use the
+  model's small-sample-correction settings. `"hetero"` and `"HC1"` are
+  equivalent aliases. Inference for partial mediator groupings now includes
+  the unreported mediators in the unexplained effect, while sparse grouping
+  and shared CRV orchestration reduce memory use and duplicated bookkeeping.
+- Internal SSC context calls now use `compute()` so they are distinct from the
+  public `get_ssc()` calculation they delegate to.
+- Stata `b1x2` reference tests now compare uncorrected Gelbach covariance
+  matrices and separately verify small-sample corrections for HC1 and one-way
+  CRV1 inference, including analytical and frequency weights.
+
 ### GLM API and Behavior
 
 - Poisson offsets now accept Formulaic transformations such as

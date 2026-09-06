@@ -1,0 +1,208 @@
+------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/damandhaliwal/Documents/Side Projects/pyfixest/tests/data/gelbach_b1x2_weighted.txt
+  log type:  text
+ opened on:   5 Aug 2026, 20:45:01
+
+.
+. which b1x2
+/Users/damandhaliwal/Library/Application Support/Stata/ado/plus/b/b1x2.ado
+*!Version 4.1.0 20Jan10, by Jonah B. Gelbach
+
+. use "tests/data/gelbach.dta", clear
+
+.
+. gen double aw = 0.75 + mod(_n, 7) / 4
+
+. gen long fw = 1 + mod(_n, 3)
+
+.
+. tempfile results_file
+
+. tempname results
+
+. postfile `results' str8 weights_type str32 effect double coefficient using "`results_file'", replace
+(note: file /var/folders/gj/7j_q9my14d74rjf6s657cvc80000gn/T//S_20681.000001 not found)
+
+.
+. foreach weights_type in aweights fweights {
+  2.     if "`weights_type'" == "aweights" {
+  3.         local stata_weight "aweight"
+  4.         local weight_variable "aw"
+  5.     }
+  6.     else {
+  7.         local stata_weight "fweight"
+  8.         local weight_variable "fw"
+  9.     }
+ 10.
+.     b1x2 y [`stata_weight'=`weight_variable'], x1all(x1) x2all(x21 x22 x23) ///
+>         x2delta(g1 = x21 x22 : g2 = x23) x1only(x1) robust
+ 11.
+.     matrix b1base = e(b1base)
+ 12.     matrix b1full = e(b1full)
+ 13.     matrix delta = e(Delta)
+ 14.
+.     scalar direct_effect = b1base[1, 1]
+ 15.     scalar full_effect = b1full[1, 1]
+ 16.     scalar g1 = delta[1, 1]
+ 17.     scalar g2 = delta[1, 2]
+ 18.     scalar explained_effect = delta[1, 3]
+ 19.     scalar unexplained_effect = direct_effect - explained_effect
+ 20.
+.     assert reldif(full_effect, unexplained_effect) < 1e-10
+ 21.
+.     post `results' ("`weights_type'") ("direct_effect") (direct_effect)
+ 22.     post `results' ("`weights_type'") ("full_effect") (full_effect)
+ 23.     post `results' ("`weights_type'") ("explained_effect") (explained_effect)
+ 24.     post `results' ("`weights_type'") ("unexplained_effect") (unexplained_effect)
+ 25.     post `results' ("`weights_type'") ("g1") (g1)
+ 26.     post `results' ("`weights_type'") ("g2") (g2)
+ 27. }
+
+                                                      Number of obs = 500
+
+
+Restricted regression:
+
+. b1x2: reg y x1   [aweight=aw] , robust
+
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          x1 |   4.322139   .1613587    26.79   0.000     4.005882    4.638396
+       _cons |   -.077351   .1555608    -0.50   0.619    -.3822447    .2275426
+------------------------------------------------------------------------------
+
+Unrestricted regression:
+
+. b1x2: reg y x1  x21 x22 x23   [aweight=aw] , robust
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          x1 |   .8593581    .072717    11.82   0.000     .7168354    1.001881
+         x21 |    1.99235   .0636069    31.32   0.000     1.867683    2.117017
+         x22 |    .542785   .0458025    11.85   0.000     .4530138    .6325563
+         x23 |   .7270884   .0449109    16.19   0.000     .6390647    .8151121
+       _cons |   .0241025   .0465241     0.52   0.604     -.067083     .115288
+------------------------------------------------------------------------------
+
+Decomposition of changes in coefficients on x1 vars:
+
+       x1
+
+into parts due to these groups:
+
+g1  = x21 x22
+
+g2  = x23
+
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+x1           |
+          g1 |   2.464409    .131703    18.71   0.000     2.206276    2.722542
+          g2 |   .9983713   .0751344    13.29   0.000     .8511106    1.145632
+        __TC |   3.462781   .1557971    22.23   0.000     3.157424    3.768137
+------------------------------------------------------------------------------
+
+Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+      The reported covariance between this coef and all others is zero.
+      This is NOT correct!!
+
+Done with -b1x2-.
+
+
+                                                      Number of obs = 500
+
+
+Restricted regression:
+
+. b1x2: reg y x1   [fweight=fw] , robust
+
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          x1 |   4.364465   .1106483    39.44   0.000     4.147598    4.581331
+       _cons |  -.0467892   .1062903    -0.44   0.660    -.2551143     .161536
+------------------------------------------------------------------------------
+
+Unrestricted regression:
+
+. b1x2: reg y x1  x21 x22 x23   [fweight=fw] , robust
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+          x1 |   .9246773   .0509667    18.14   0.000     .8247844     1.02457
+         x21 |   1.956763   .0415306    47.12   0.000     1.875364    2.038161
+         x22 |     .54166    .030814    17.58   0.000     .4812656    .6020544
+         x23 |   .7373907    .030658    24.05   0.000     .6773021    .7974793
+       _cons |   .0046821   .0316448     0.15   0.882    -.0573407    .0667048
+------------------------------------------------------------------------------
+
+Decomposition of changes in coefficients on x1 vars:
+
+       x1
+
+into parts due to these groups:
+
+g1  = x21 x22
+
+g2  = x23
+
+------------------------------------------------------------------------------
+           y |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+x1           |
+          g1 |   2.427607   .0886281    27.39   0.000     2.253899    2.601315
+          g2 |    1.01218   .0529178    19.13   0.000     .9084634    1.115897
+        __TC |   3.439787   .1088179    31.61   0.000     3.226508    3.653066
+------------------------------------------------------------------------------
+
+Note: The __TC...  line is the sum of all x2 variables' impacts on each x1.
+      The reported covariance between this coef and all others is zero.
+      This is NOT correct!!
+
+Done with -b1x2-.
+
+
+.
+. postclose `results'
+
+. use "`results_file'", clear
+
+. sort weights_type effect
+
+. format coefficient %24.17g
+
+. export delimited using "tests/data/gelbach_b1x2_weighted.csv", replace datafmt
+(note: file tests/data/gelbach_b1x2_weighted.csv not found)
+file tests/data/gelbach_b1x2_weighted.csv saved
+
+. list, noobs abbreviate(32)
+
+  +--------------------------------------------------------+
+  | weights_type               effect          coefficient |
+  |--------------------------------------------------------|
+  |     aweights        direct_effect   4.3221387950379899 |
+  |     aweights     explained_effect   3.4627807012872296 |
+  |     aweights          full_effect   .85935809375076022 |
+  |     aweights                   g1    2.464409412779037 |
+  |     aweights                   g2   .99837128850819234 |
+  |--------------------------------------------------------|
+  |     aweights   unexplained_effect   .85935809375076033 |
+  |     fweights        direct_effect    4.364464611490563 |
+  |     fweights     explained_effect   3.4397872979325435 |
+  |     fweights          full_effect   .92467731355801952 |
+  |     fweights                   g1   2.4276069434475698 |
+  |--------------------------------------------------------|
+  |     fweights                   g2   1.0121803544849739 |
+  |     fweights   unexplained_effect   .92467731355801952 |
+  +--------------------------------------------------------+
+
+.
+. log close
+      name:  <unnamed>
+       log:  /Users/damandhaliwal/Documents/Side Projects/pyfixest/tests/data/gelbach_b1x2_weighted.txt
+  log type:  text
+ closed on:   5 Aug 2026, 20:45:01
+------------------------------------------------------------------------------------------------------------------------------------------------

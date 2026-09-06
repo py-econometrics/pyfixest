@@ -29,6 +29,8 @@ from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
+    DecompositionInference,
+    DecompositionVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -42,14 +44,17 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    SscContext,
     _compute_bread,
+    assemble_crv_vcov,
     prepare_cluster_state,
-    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
+    GelbachVcovConfig,
     _decompose_arg_check,
+    prepare_decomposition_vcov,
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffect,
@@ -66,10 +71,7 @@ from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
 )
-from pyfixest.utils.utils import (
-    capture_context,
-    get_ssc,
-)
+from pyfixest.utils.utils import capture_context
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -686,17 +688,18 @@ class Feols(ResultAccessorMixin):
         self._bread = _compute_bread(
             self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
         )
+        ssc_context = self._ssc_context()
 
         if self._vcov_type == "iid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="iid", G=1)
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
+                vcov_type="iid", G=1
             )
             self._vcov = self._ssc * self._vcov_iid()
 
         elif self._vcov_type == "hetero":
             # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
+                vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_hetero()
 
@@ -705,17 +708,15 @@ class Feols(ResultAccessorMixin):
             self._lag = kw.get("lag")
             self._time_id = kw.get("time_id")
             self._panel_id = kw.get("panel_id")
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
-                )  # number of unique time periods T used
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
+                vcov_type="HAC",
+                G=np.unique(self._data[self._time_id]).shape[0],
             )
             self._vcov = self._ssc * self._vcov_hac()
 
         elif self._vcov_type == "nid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+            self._ssc, self._df_k, self._df_t = ssc_context.compute(
+                vcov_type="hetero", G=self._N
             )
             self._vcov = self._ssc * self._vcov_nid()
 
@@ -730,10 +731,10 @@ class Feols(ResultAccessorMixin):
             )
             self._cluster_df = prep.cluster_df
             self._G = prep.G
-            self._vcov, self._ssc, self._df_k, self._df_t = run_crv_loop(
+            self._vcov, self._ssc, self._df_k, self._df_t = assemble_crv_vcov(
                 prep=prep,
                 k=self._k,
-                make_ssc_kwargs=self._make_ssc_kwargs,
+                ssc_context=ssc_context,
                 cluster_vcov=self._vcov_crv_cluster,
             )
         # update p-value, t-stat, standard error, confint
@@ -741,28 +742,15 @@ class Feols(ResultAccessorMixin):
 
         return self
 
-    def _make_ssc_kwargs(
-        self,
-        *,
-        vcov_type: str,
-        G: int | list[int],
-        vcov_sign: int = 1,
-        k_fe_nested: int = 0,
-        n_fe_fully_nested: int = 0,
-    ) -> dict:
-        "Bundle model-level and vcov-type-specific args for get_ssc()."
-        return {
-            "ssc_dict": self._ssc_dict,
-            "N": self._N,
-            "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
-            "n_fe": self._n_fe,
-            "vcov_type": vcov_type,
-            "G": G,
-            "vcov_sign": vcov_sign,
-            "k_fe_nested": k_fe_nested,
-            "n_fe_fully_nested": n_fe_fully_nested,
-        }
+    def _ssc_context(self) -> SscContext:
+        "Bundle model quantities shared across small-sample corrections."
+        return SscContext(
+            ssc_dict=self._ssc_dict,
+            N=int(self._N),
+            k=self._k,
+            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
+            n_fe=self._n_fe,
+        )
 
     def _vcov_crv_cluster(
         self, clustid: np.ndarray, cluster_col: np.ndarray
@@ -1479,12 +1467,14 @@ class Feols(ResultAccessorMixin):
         decomp_var: str | None = None,
         type: decomposition_type = "gelbach",
         cluster: str | None = None,
-        combine_covariates: dict[str, list[str]] | None = None,
+        vcov: DecompositionVcovTypeOptions | dict[str, str] | None = None,
+        combine_covariates: dict[str, list[str] | re.Pattern[str]] | None = None,
         reps: int = 1000,
         seed: int | None = None,
         nthreads: int | None = None,
         agg_first: bool | None = None,
         only_coef: bool = False,
+        inference: DecompositionInference = "analytic",
         digits=4,
     ) -> GelbachDecomposition:
         """
@@ -1498,8 +1488,7 @@ class Feols(ResultAccessorMixin):
         an ungated version of the paper on SSRN under the following link:
         https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
 
-        When the initial regression is weighted, weights are interpreted as frequency
-        weights. Inference is not yet supported for weighted models.
+        Analytical inference supports both analytical and frequency weights.
 
         Parameters
         ----------
@@ -1515,14 +1504,24 @@ class Feols(ResultAccessorMixin):
         type : str, optional
             The type of decomposition method to use. Defaults to "gelbach", which
             currently is the only supported option.
-        cluster: Optional
-            The name of the cluster variable. If None, uses the cluster variable
-            from the model fit. Defaults to None.
-        combine_covariates: Optional.
+        cluster: str, optional
+            The name of the cluster variable. For analytical inference, this is
+            shorthand for `vcov={"CRV1": cluster}`. For bootstrap inference, it
+            identifies the clusters to resample. If None and the fitted model uses
+            CRV1 inference, analytical inference inherits its cluster variable(s).
+        vcov : str or dict, optional
+            Variance estimator for analytical inference. Supports `"iid"`,
+            `"hetero"` (or `"HC1"`), and `{"CRV1": "cluster"}`. Two-way CRV1
+            can be requested as `{"CRV1": "cluster1 + cluster2"}`. Defaults to
+            `"hetero"` unless `cluster` is provided or the fitted model is clustered.
+            HC2, HC3, CRV2, and CRV3 are not currently supported.
+        combine_covariates : dict[str, list[str] | re.Pattern[str]] | None
             A dictionary that specifies which covariates to combine into groups.
-            See the example for how to use this argument. Defaults to None.
+            Values can be lists of coefficient names or compiled regular
+            expressions. Defaults to None.
         reps : int, optional
-            The number of bootstrap iterations to run. Defaults to 1000.
+            The number of bootstrap iterations to run when `inference="bootstrap"`.
+            Defaults to 1000.
         seed : int, optional
             An integer to set the random seed. Defaults to None.
         nthreads : int, optional
@@ -1537,6 +1536,11 @@ class Feols(ResultAccessorMixin):
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
             If True, skips the inference step and only returns the decomposition results.
+        inference : str, optional
+            Inference method for the decomposition. Defaults to "analytic", which uses
+            HC1 delta-method analytical standard errors and confidence intervals.
+            The analytical variance estimator can be changed with `vcov`.
+            Use "bootstrap" to compute percentile bootstrap confidence intervals.
         digits : int, optional
             The number of digits to round the results to. Defaults to 4.
 
@@ -1549,21 +1553,28 @@ class Feols(ResultAccessorMixin):
         Examples
         --------
         ```{python}
+        import numpy as np
         import re
         import pyfixest as pf
         from pyfixest.utils.dgps import gelbach_data
 
         data = gelbach_data(nobs = 1000)
+        data["cluster_id"] = np.arange(len(data)) // 20
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-        # simple decomposition
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1)
+        # simple decomposition with analytical inference
+        gb = fit.decompose(decomp_var = "x1")
         type(gb)
 
         gb.tidy()
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
+        gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"])
         # combine covariates
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        gb = fit.decompose(decomp_var = "x1", combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
+        # iid and cluster-robust analytical inference
+        gb_iid = fit.decompose(decomp_var = "x1", vcov = "iid")
+        gb_crv = fit.decompose(decomp_var = "x1", vcov = {"CRV1": "cluster_id"})
+        # bootstrap inference
+        gb = fit.decompose(decomp_var = "x1", inference = "bootstrap", reps = 10, nthreads = 1)
         # supress inference
         gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
         # print results
@@ -1604,34 +1615,66 @@ class Feols(ResultAccessorMixin):
             is_iv=self._is_iv,
             method=self._method,
             only_coef=only_coef,
+            inference=inference,
         )
+
+        if inference == "bootstrap" and vcov is not None:
+            raise ValueError(
+                "The 'vcov' argument is only used with inference='analytic'."
+            )
+
+        if self._lean:
+            raise AttributeError(
+                "Decomposition requires model matrices that are unavailable when "
+                "`lean=True`. Refit with `lean=False`."
+            )
+
+        model_data = getattr(self, "_data", None)
+        if self._has_fixef and model_data is None:
+            raise AttributeError(
+                "Decomposition with fixed effects requires stored model data. "
+                "Refit with `store_data=True`."
+            )
+
+        vcov_config = GelbachVcovConfig()
+        if inference == "analytic":
+            vcov_config = prepare_decomposition_vcov(
+                vcov=vcov,
+                cluster=cluster,
+                parent_is_clustered=self._is_clustered,
+                parent_vcov_detail=self._vcov_type_detail,
+                parent_clustervar=self._clustervar,
+                only_coef=only_coef,
+                data=model_data,
+                ssc_context=self._ssc_context(),
+                fixef=self._fixef,
+                fe=self._fe,
+                k_fe=self._k_fe,
+            )
 
         nthreads_int = -1 if nthreads is None else nthreads
-
-        rng = (
-            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
-        )
 
         if agg_first is None:
             agg_first = combine_covariates is not None
 
         cluster_df: pd.Series | None = None
-        if cluster is not None:
-            cluster_df = self._data[cluster]
-        elif self._is_clustered:
-            cluster_df = self._data[self._clustervar[0]]
-        else:
-            cluster_df = None
+        if inference == "bootstrap":
+            if cluster is not None:
+                if model_data is None:
+                    raise AttributeError(
+                        "Cluster bootstrap requires stored model data. Refit with "
+                        "`store_data=True`."
+                    )
+                cluster_df = model_data[cluster]
+            elif self._is_clustered:
+                if model_data is None:
+                    raise AttributeError(
+                        "Cluster bootstrap requires stored model data. Refit with "
+                        "`store_data=True`."
+                    )
+                cluster_df = model_data[self._clustervar[0]]
 
         Y, X, xnames = self._model_matrix_one_hot(output="sparse")
-
-        if combine_covariates is not None:
-            for key, value in combine_covariates.items():
-                if isinstance(value, re.Pattern):
-                    matched = [x for x in xnames if value.search(x)]
-                    if len(matched) == 0:
-                        raise ValueError(f"No covariates match the regex {value}.")
-                    combine_covariates[key] = matched
 
         med = GelbachDecomposition(
             decomp_var=cast(str, decomp_var),
@@ -1643,6 +1686,9 @@ class Feols(ResultAccessorMixin):
             combine_covariates=combine_covariates,
             agg_first=agg_first,
             only_coef=only_coef,
+            inference=inference,
+            vcov_config=vcov_config,
+            weights_type=self._weights_type if self._has_weights else None,
             atol=1e-12,
             btol=1e-12,
         )
@@ -1650,11 +1696,12 @@ class Feols(ResultAccessorMixin):
         med.fit(
             X=X,
             Y=Y,
-            weights=self._weights,
+            weights=self._weights if self._has_weights else None,
             store=True,
         )
 
-        if not only_coef:
+        if not only_coef and inference == "bootstrap":
+            rng = np.random.default_rng(seed)
             med.bootstrap(rng=rng, B=reps)
 
         self.GelbachDecompositionResults = med
