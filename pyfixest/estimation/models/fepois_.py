@@ -152,8 +152,6 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
-        # The inherited jackknife refit dispatch is valid for Poisson and is a
-        # longstanding public capability. Other GLM families keep this disabled.
         self._support_crv3_inference = True
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
