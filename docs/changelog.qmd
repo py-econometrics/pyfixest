@@ -46,8 +46,6 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
-- Square-root-weighted arrays are local solver temporaries, and linear
-  residuals remain in response units.
 
 ### Inference Types
 
