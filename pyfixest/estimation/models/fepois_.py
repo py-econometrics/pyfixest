@@ -32,21 +32,25 @@ class Fepois(Feglm):
 
     Inherits from the Feglm class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    Note that no demeaning is performed in this class: demeaning is performed in the
-    FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
+    IRLS residualization is orchestrated by ``Feglm`` through the shared
+    ``DemeanCache`` supplied by the estimation runner.
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
 
     Attributes
     ----------
     _Y : np.ndarray
-        The demeaned dependent variable, a two-dimensional numpy array.
+        Final within-scale IRLS working response. It is not multiplied by the
+        square root of the working weights.
     _X : np.ndarray
-        The demeaned independent variables, a two-dimensional numpy array.
-    _fe : np.ndarray
-        Fixed effects, a two-dimensional numpy array or None.
-    weights : np.ndarray
-        Weights, a one-dimensional numpy array or None.
+        Final within-scale IRLS design. It is not multiplied by the square root
+        of the working weights.
+    _fe : pd.DataFrame or None
+        Formula-scale fixed effects.
+    _weights : np.ndarray
+        Compatibility alias containing observation weights only.
+    _irls_weights : np.ndarray
+        Final IRLS working weights.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
@@ -119,7 +123,7 @@ class Fepois(Feglm):
         sample_split_value: str | int | None = None,
         separation_check: list[str] | None = None,
         offset: str | None = None,
-    ):
+    ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -155,16 +159,21 @@ class Fepois(Feglm):
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
         y_orig = self._model_matrix.dependent.to_numpy().flatten()
-        user_weights = self._weights.flatten().copy()
+        observation_weights = self._observation_weights.values
+        poisson_summary_weights = (
+            np.ones_like(y_orig, dtype=np.float64)
+            if observation_weights is None
+            else observation_weights
+        )
 
         super().get_fit()
 
         self._y_hat_null = np.full_like(
-            y_orig, np.average(y_orig, weights=user_weights), dtype=float
+            y_orig, np.average(y_orig, weights=poisson_summary_weights), dtype=float
         )
 
         self._loglik = np.sum(
-            user_weights
+            poisson_summary_weights
             * (
                 y_orig * np.log(self._Y_hat_response)
                 - self._Y_hat_response
@@ -178,7 +187,7 @@ class Fepois(Feglm):
             self._pseudo_r2 = None
         else:
             self._loglik_null = np.sum(
-                user_weights
+                poisson_summary_weights
                 * (
                     y_orig * np.log(self._y_hat_null)
                     - self._y_hat_null
@@ -187,11 +196,13 @@ class Fepois(Feglm):
             )
             self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = np.sum(
-            user_weights * (y_orig - self._Y_hat_response) ** 2 / self._Y_hat_response
+            poisson_summary_weights
+            * (y_orig - self._Y_hat_response) ** 2
+            / self._Y_hat_response
         )
 
         self.deviance = self._family.deviance(
-            y_orig, self._Y_hat_response, user_weights
+            y_orig, self._Y_hat_response, poisson_summary_weights
         )
 
     def predict(

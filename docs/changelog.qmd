@@ -59,9 +59,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Estimator internals now keep formula tables, unpremultiplied within arrays,
   and user-scale observation weights in separate typed domains.
   Square-root-weighted arrays are local solver temporaries, and linear
-  residuals remain in response units.
-- Internal demeaning and covariance code now names column-order and
-  normal-equation invariants explicitly alongside their formulas.
+  residuals remain in response units. GLM IRLS working state (working response,
+  design, and weights) is kept separate from observation weights.
+- Internal demeaning and covariance code now names column-order, normal-equation,
+  and frequency-replication invariants explicitly alongside their formulas.
 
 ### Inference Types
 
@@ -119,6 +120,9 @@ fit.confint(inference_type="savi", mixture_precision=mixture_precision)
 
 ### GLM API and Behavior
 
+- Poisson and GLM frequency weights now work, including post-separation sample
+  sizes; the 0.60.0 path raised a shape error. Probability weights remain
+  unsupported.
 - Poisson offsets now accept Formulaic transformations such as
   `offset="log(exposure)"` when the expression evaluates to one numeric column.
 - `feglm()` now accepts `weights`, `weights_type`, and `offset`, and supports
