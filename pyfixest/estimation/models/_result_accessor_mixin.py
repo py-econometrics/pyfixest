@@ -132,11 +132,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
     _observation_weights: "ObservationWeights"
     _within_data: "WithinLinearData"
-    _Y: np.ndarray
-    _Y_untransformed: pd.DataFrame
+    _response: np.ndarray
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -156,6 +154,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _r2_within: float
     _adj_r2_within: float
     _vcov_type: str
+
+    @property
+    def _Y(self) -> np.ndarray:
+        """Estimator-specific within-response view."""
+        raise NotImplementedError
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -314,7 +317,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         # `_Y` is the unpremultiplied within response for linear models and the
         # unpremultiplied final working response for Gaussian GLMs.
         Y_within = self._Y.flatten()
-        Y = self._Y_untransformed.to_numpy().flatten()
+        Y = self._response
         observation_weights = self._observation_weights.values
         residuals = self._u_hat
 

@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
@@ -123,7 +124,6 @@ class Feglm(Feols):
 
         self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty((0, 1))
 
         self._method = "feglm"
         self._family = family
@@ -208,6 +208,7 @@ class Feglm(Feols):
         self._coefnames = fit.coefnames
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
+
         working_state = fit.working_state
         self._working_state = working_state
         design_within = working_state.design_within
@@ -217,6 +218,7 @@ class Feglm(Feols):
         self._beta_hat = fit.beta
         self._Y_hat_response = working_state.mu
         self._Y_hat_link = working_state.eta
+
         self._u_hat_response = working_state.response_residuals
         self._u_hat_working = working_state.working_residuals
         self._u_hat = self._u_hat_working
@@ -227,21 +229,45 @@ class Feglm(Feols):
         # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
         # any user-supplied observation weight.
         self._scores = design_within * weighted_working_residuals[:, None]
+
         weighted_design = working_state.working_weights[:, None] * design_within
         self._tZX = design_within.T @ weighted_design
         self._tZXinv = np.linalg.inv(self._tZX)
+
         self._hessian = self._tZX.copy()
 
-        # Temporary aliases retained until the getter-only alias layer.
-        self._Y = working_state.working_response_within
-        self._X = design_within
-        self._Z = design_within
-        self._irls_weights = working_state.working_weights
-        self._Xbeta = working_state.eta.reshape(-1, 1)
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    # Read-only views on the final IRLS state. A GLM never builds the linear
+    # `_within_data`, so these override the base aliases rather than extend them.
+
+    @property
+    def _Y(self) -> NDArray[np.float64]:
+        """Within-scale IRLS working response."""
+        return self._working_state.working_response_within
+
+    @property
+    def _X(self) -> NDArray[np.float64]:
+        """Within-scale IRLS design, not premultiplied by working weights."""
+        return self._working_state.design_within
+
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """The IRLS design; a GLM has no instruments."""
+        return self._working_state.design_within
+
+    @property
+    def _irls_weights(self) -> NDArray[np.float64]:
+        """Final IRLS working weights, never the observation weights."""
+        return self._working_state.working_weights
+
+    @property
+    def _Xbeta(self) -> NDArray[np.float64]:
+        """Linear predictor as a column vector."""
+        return self._working_state.eta.reshape(-1, 1)
 
     def _normal_equation_weights(self) -> np.ndarray:
         """Return the final IRLS weights in the fitted normal equations."""

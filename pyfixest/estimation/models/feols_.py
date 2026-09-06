@@ -9,6 +9,7 @@ from typing import Any, Literal, cast
 import formulaic
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
 from scipy.stats import chi2, f, t
@@ -432,10 +433,8 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula and observation-weight state."""
         self._model_matrix = model_matrix
-        self._Y_untransformed = model_matrix.dependent.copy()
+        self._response = model_matrix.dependent.to_numpy(dtype=np.float64).flatten()
         self._fe = model_matrix.fixed_effects
-        self._weights_df = model_matrix.weights
-        self._offset_df = model_matrix.offset
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         independent = model_matrix.independent
@@ -473,14 +472,6 @@ class Feols(ResultAccessorMixin):
         self._observation_weights = self._set_observation_weights()
         self._N = self._observation_weights.n_effective
         self._N_rows = self._observation_weights.n_rows
-        values = self._observation_weights.values
-        # Temporary compatibility state for GLM and quantile consumers. Linear
-        # estimation below uses `_observation_weights` directly.
-        self._weights = (
-            np.ones((self._N_rows, 1), dtype=np.float64)
-            if values is None
-            else values.reshape((-1, 1))
-        )
 
     def _validate_response(self) -> None:
         """Validate estimator-specific response constraints, if any."""
@@ -557,20 +548,49 @@ class Feols(ResultAccessorMixin):
         )
 
     def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish canonical within data and stable array compatibility aliases."""
+        """Publish canonical within data for this fit."""
         self._within_data = within_data
-        self._Y = within_data.response
-        self._X = within_data.design
-        self._Z = (
+        self._X_is_empty = within_data.design.shape[1] == 0
+        self._k = within_data.design.shape[1]
+
+    # Read-only views on the canonical state objects. They exist so that long
+    # established attribute names keep working, but there is exactly one stored
+    # representation: assigning or deleting them is a programming error.
+
+    @property
+    def _Y(self) -> NDArray[np.float64]:
+        """Within-scale dependent variable, in response units."""
+        return self._within_data.response
+
+    @property
+    def _X(self) -> NDArray[np.float64]:
+        """Within-scale design matrix, not premultiplied by weights."""
+        return self._within_data.design
+
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """Within-scale instruments; the design itself outside IV models."""
+        within_data = self._within_data
+        return (
             within_data.design
             if within_data.instruments is None
             else within_data.instruments
         )
-        self._X_is_empty = within_data.design.shape[1] == 0
-        self._k = within_data.design.shape[1]
+
+    @property
+    def _weights(self) -> NDArray[np.float64]:
+        """Observation weights as a column vector.
+
+        Unweighted fits store no weight vector, so the ones column is built on
+        access rather than kept alive for the lifetime of the result.
+        """
+        values = self._observation_weights.values
+        if values is None:
+            return np.ones((self._observation_weights.n_rows, 1), dtype=np.float64)
+        return values.reshape((-1, 1))
 
     def _get_predictors(self) -> None:
-        self._Y_hat_link = self._Y_untransformed.to_numpy().flatten() - self.resid()
+        self._Y_hat_link = self._response - self.resid()
         self._Y_hat_response = self._Y_hat_link
 
     def get_fit(self) -> None:
@@ -930,22 +950,22 @@ class Feols(ResultAccessorMixin):
             attributes += ["_data", "_model_matrix"]
 
         if self._lean:
+            # The array aliases are read-only views, so the state objects
+            # backing them are what has to go.
             attributes += [
                 "_data",
-                "_X",
-                "_Y",
-                "_Z",
+                "_within_data",
+                "_observation_weights",
                 "_cluster_df",
                 "_tXZ",
                 "_tZy",
                 "_tZX",
-                "_weights",
                 "_scores",
                 "_tZZinv",
                 "_u_hat",
                 "_Y_hat_link",
                 "_Y_hat_response",
-                "_Y_untransformed",
+                "_response",
                 "_model_matrix",
             ]
 
@@ -1688,7 +1708,7 @@ class Feols(ResultAccessorMixin):
         med.fit(
             X=X,
             Y=Y,
-            weights=self._weights,
+            weights=self._observation_weights.values,
             store=True,
         )
 
@@ -2156,7 +2176,13 @@ class Feols(ResultAccessorMixin):
             )
 
         else:
-            weights = self._weights.flatten()
+            observation_weights = self._observation_weights.values
+            # The demeaning kernel behind the fast path always needs a vector.
+            weights = (
+                np.ones(self._N_rows, dtype=np.float64)
+                if observation_weights is None
+                else observation_weights
+            )
             fval_df = (
                 self._data[self._fixef.split("+")] if self._fixef is not None else None
             )

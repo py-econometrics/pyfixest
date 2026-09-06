@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
@@ -266,10 +267,12 @@ class Feiv(Feols):
             endogenous=within_data.endogenous,
         )
 
-    def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish IV within state and stable array compatibility aliases."""
-        super()._set_within_data(within_data)
-        self._endogvar = within_data.endogenous
+    @property
+    def _endogvar(self) -> NDArray[np.float64]:
+        """Within-scale endogenous regressors."""
+        endogenous = self._within_data.endogenous
+        assert endogenous is not None
+        return endogenous
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""

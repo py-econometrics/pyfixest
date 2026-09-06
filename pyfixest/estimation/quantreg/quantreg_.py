@@ -9,7 +9,6 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -180,29 +179,14 @@ class Quantreg(Feols):
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
     def to_array(self):
-        "Publish quantile-regression arrays from the immutable formula state."
-        response = self._model_matrix.dependent.to_numpy(dtype=np.float64)
-        design = self._model_matrix.independent.to_numpy(dtype=np.float64)
-        self._Y = response
-        self._X = design
-        self._Z = design
+        "Publish quantile-regression within data from the formula state."
+        # Quantile regression supports neither fixed effects nor weights, so
+        # the shared preparation reduces to the formula arrays themselves.
+        self._set_within_data(self._prepare_within_data())
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear quantile-regression covariates."
-        if self._X.shape[1] > 0:
-            (
-                self._X,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = drop_multicollinear_variables(
-                self._X,
-                self._coefnames,
-                self._collin_tol,
-            )
-        self._Z = self._X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+        self._set_within_data(self._drop_multicollinear_within_data(self._within_data))
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
