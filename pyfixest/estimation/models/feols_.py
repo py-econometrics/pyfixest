@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
-from scipy.stats import chi2, f, t
+from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
@@ -61,7 +61,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.post_estimation.wald import wald_test
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -248,6 +248,12 @@ class Feols(ResultAccessorMixin):
     iplot_aggregate: Callable[..., Any]
 
     """
+
+    _dfd: Any
+    _dfn: Any
+    _wald_statistic: Any
+    _f_statistic: Any
+    _p_value: Any
 
     def __init__(
         self,
@@ -992,49 +998,7 @@ class Feols(ResultAccessorMixin):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
-
-        # If R is None, default to the identity matrix
-        R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
-
-        W, self._dfn = _wald_statistic(
-            beta_hat=self._beta_hat,
-            vcov=self._vcov,
-            R=R,
-            q=q,
-        )
-
-        if self._is_clustered:
-            self._dfd = np.min(np.array(self._G)) - 1
-        else:
-            self._dfd = self._N - self._k - k_fe
-
-        self._wald_statistic = W
-
-        # The F distribution is only used for the joint test that all
-        # coefficients are zero (R identity, q zero).
-        if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
-        ):
-            warnings.warn(
-                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
-            )
-            distribution = "chi2"
-
-        if distribution == "F":
-            self._f_statistic = W / self._dfn
-            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
-            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
-        elif distribution == "chi2":
-            self._f_statistic = W / self._dfn
-            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
-            res = pd.Series(
-                {"statistic": self._wald_statistic, "pvalue": self._p_value}
-            )
-        else:
-            raise ValueError("Distribution must be F or chi2")
-
-        return res
+        return wald_test(self, R=R, q=q, distribution=distribution)
 
     def wildboottest(
         self,
