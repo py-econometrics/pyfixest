@@ -109,7 +109,9 @@ def test_glm_crv3_matches_r_cluster_jackknife(glm_cluster_data, family, depvar):
         atol=atol,
     )
 
-    centered = beta_jack[fit._coefnames].to_numpy() - beta_full[fit._coefnames].to_numpy()
+    centered = (
+        beta_jack[fit._coefnames].to_numpy() - beta_full[fit._coefnames].to_numpy()
+    )
     expected_vcov = centered.T @ centered
 
     np.testing.assert_allclose(fit._vcov, expected_vcov, rtol=rtol, atol=atol)
