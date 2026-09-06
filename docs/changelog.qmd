@@ -49,6 +49,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
 
+### Documentation
+
+- Executed documentation examples now use fixed seeds and index-based fixed
+  effects instead of `hash()`, and every figure carries alt text.
+
 ### Inference Types
 
 - `tidy()`, `confint()`, and `summary()` gain an `inference_type` argument.
@@ -405,7 +410,7 @@ We recently came together for a PyFixest sprint with the team from AppliedAI, an
 
 The new solver is exposed via `pf.LsmrDemeaner(backend="within")` and is a significant performance improvement for sparse fixed effects structures - such as matched employer-employee data, patient-doctor panels, or trade networks - where the standard MAP algorithm might struggle. On well-connected graphs, `pf.MapDemeaner(backend="rust")` remains competitive, but on sparse graphs the within-based solver is dramatically faster.
 
-![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
+![](explanation/figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center" fig-alt="Sparse fixed-effects benchmark comparing MAP with within LSMR."}
 
 *Benchmark on a sparse fixed effects structure: vanilla MAP degrades dramatically, while `within` LSMR via `pf.LsmrDemeaner()` remains fast.*
 
@@ -655,9 +660,15 @@ import pyfixest as pf
 
 # Generate test data using gelbach_data
 data = gelbach_data(nobs=500)
-data["w"] = np.random.rand(500)
+data["w"] = np.random.default_rng(123).random(500)
 fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
+gb = fit.decompose(
+    decomp_var = "x1",
+    x1_vars = ["x21"],
+    reps = 10,
+    seed = 123,
+    nthreads = 1,
+)
 print(type(gb))
 ```
 
@@ -695,6 +706,7 @@ We find pretty great performance improvements and want to make the Rust backend 
 To back up the performance claim, here is a benchmark:
 
 ```{python}
+#| output: false
 import pyfixest as pf
 import numpy as np
 import pandas as pd
@@ -1039,14 +1051,14 @@ fit2.coef()[0:8]
 - Adds support for simultaneous confidence intervals via a multiplier bootstrap. Thanks to [@apoorvalal](https://github.com/apoorvalal) for the contribution!
 
   ```{python}
-  fit.confint(joint = True)
+  fit.confint(joint = True, seed = 123)
   ```
 
 - Adds support for the causal cluster variance estimator by [Abadie et al. (QJE, 2023)](https://academic.oup.com/qje/article/138/1/1/6750017)
   for OLS via the `.ccv()` method.
 
   ```{python}
-  fit.ccv(treatment = "D", cluster = "group_id")
+  fit.ccv(treatment = "D", cluster = "group_id", seed = 123)
   ```
 
 
