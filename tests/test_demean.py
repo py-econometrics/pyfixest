@@ -808,6 +808,18 @@ def test_demean_model_caching(benchmark, demeaner):
     )
     assert Xd_empty.shape == (N, 0)
 
+    # Returned arrays are backed by the shared cache entry, so none of them may
+    # be written to - whichever selection path produced them. Xd1 comes from a
+    # cache miss, Xd2 from an in-order hit (a view), Xd_reordered from an
+    # out-of-order hit (a copy).
+    for name, demeaned in (
+        ("miss", Xd1),
+        ("in-order hit", Xd2),
+        ("out-of-order hit", Xd_reordered),
+        ("response", Yd1),
+    ):
+        assert not demeaned.flags.writeable, f"{name} returned a writable array"
+
     # Add new variable and verify partial caching
     X_new = pd.DataFrame(
         {
