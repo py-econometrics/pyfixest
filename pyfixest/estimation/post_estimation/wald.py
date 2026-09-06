@@ -2,7 +2,66 @@
 
 from __future__ import annotations
 
+import warnings
+from typing import TYPE_CHECKING
+
 import numpy as np
+import pandas as pd
+from scipy.stats import chi2, f
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
+
+
+def wald_test(
+    model: Feols,
+    R: np.ndarray | None = None,
+    q: float | np.ndarray | None = None,
+    distribution: str = "F",
+) -> pd.Series:
+    """Conduct a Wald test for a fitted model."""
+    k_fe = np.sum(np.asarray(model._k_fe.values)) if model._has_fixef else 0
+
+    R = np.eye(model._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+
+    W, model._dfn = _wald_statistic(
+        beta_hat=model._beta_hat,
+        vcov=model._vcov,
+        R=R,
+        q=q,
+    )
+
+    if model._is_clustered:
+        model._dfd = np.min(np.array(model._G)) - 1
+    else:
+        model._dfd = model._N - model._k - k_fe
+
+    model._wald_statistic = W
+
+    # The F distribution is only used for the joint test that all
+    # coefficients are zero (R identity, q zero).
+    if distribution == "F" and (
+        not np.array_equal(R, np.eye(model._k)) or (q is not None and np.any(q))
+    ):
+        warnings.warn(
+            "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+        )
+        distribution = "chi2"
+
+    if distribution == "F":
+        model._f_statistic = W / model._dfn
+        model._p_value = 1 - f.cdf(
+            model._f_statistic,
+            dfn=model._dfn,
+            dfd=model._dfd,
+        )
+        return pd.Series({"statistic": model._f_statistic, "pvalue": model._p_value})
+    if distribution == "chi2":
+        model._f_statistic = W / model._dfn
+        model._p_value = chi2.sf(model._wald_statistic, model._dfn)
+        return pd.Series({"statistic": model._wald_statistic, "pvalue": model._p_value})
+
+    raise ValueError("Distribution must be F or chi2")
 
 
 def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarray:
