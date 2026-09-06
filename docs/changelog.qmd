@@ -24,6 +24,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   preparation for contributors and coding agents.
 - PR reviews now select verification from unresolved risk, reuse successful
   exact-head CI evidence, and avoid redundant broad local test runs.
+- PR reviews now also trace numerical meaning, array ownership, and state
+  lifetime so correctness arguments remain understandable from the code.
 - A new `test-r-fixest-fast` task runs a compact edit-time comparison of
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
@@ -46,6 +48,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
+- The internal demeaning cache now stores named `float64` arrays instead of a
+  `DataFrame`, so cached columns are selected by position rather than rebuilt
+  as a frame on every fit, and the returned response and regressor columns
+  follow the order the model asked for regardless of the order the cache
+  filled up in. Cached data is handed out read-only, so one fit cannot corrupt
+  the demeaned columns another model reuses. Linear and IV models keep their
+  `DataFrame` call sites through a thin adapter until array-native within
+  state lands.
 - Estimator internals now keep formula tables, unpremultiplied within arrays,
   and user-scale observation weights in separate typed domains.
   Square-root-weighted arrays are local solver temporaries, and linear
