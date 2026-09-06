@@ -48,8 +48,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   independently.
 - Square-root-weighted arrays are local solver temporaries, and linear
   residuals remain in response units.
-- Internal demeaning code now names column-order invariants explicitly
-  alongside their formulas.
+- The internal demeaning cache now stores named `float64` arrays instead of a
+  `DataFrame`, so cached columns are selected by position rather than rebuilt
+  as a frame on every fit, and the returned response and regressor columns
+  follow the order the model asked for regardless of the order the cache
+  filled up in. Cached data is handed out read-only, so one fit cannot corrupt
+  the demeaned columns another model reuses. Linear and IV models keep their
+  `DataFrame` call sites through a thin adapter until array-native within
+  state lands.
 
 ### Inference Types
 
