@@ -70,10 +70,15 @@ cheapest check that can answer each remaining review question.
 
 Do not duplicate an expensive successful exact-head CI job locally without a
 concrete reason. Escalate to a broad suite only when a narrow check fails or
-leaves material uncertainty, the diff crosses subsystems, equivalent exact-head
-CI is missing, stale, cancelled, or non-equivalent, or repository policy
-requires that suite. Before starting a multi-minute local check, state which
-unresolved risk it addresses and why existing CI is insufficient.
+leaves material uncertainty, the diff crosses subsystems with shared risk that
+focused checks do not cover, or repository policy requires that suite. Missing,
+stale, cancelled, or non-equivalent exact-head CI must be reported honestly.
+Before starting a multi-minute local check, state which unresolved risk or
+acceptance requirement it addresses and why existing evidence is insufficient.
+
+Incremental review follows the verification cadence in
+`docs/developer/testing.md`; a new comment, commit, push, or reviewer handoff is
+not by itself a rerun trigger.
 
 For a stack, inspect every layer's diff and run targeted checks wherever
 behavior changes. If the stated acceptance boundary is the cumulative stack, run

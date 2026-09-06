@@ -41,10 +41,10 @@ carry the durable parts into the PR body's opening paragraph:
 7. the external numerical reference and permanent-test location, chosen by the
    preference order in `docs/developer/testing.md`;
 8. documentation, exports, and changelog wiring;
-9. whether results are intended to be invariant. If yes, the release contract
-   is the edit-loop gate and any failure is a regression; if no, list the
-   quantities and estimators expected to move, because each becomes a
-   `reason`ed declaration in `tests/test_release_contract.py`.
+9. whether results are intended to be invariant. If yes, any release-contract
+   failure is a regression; if no, list the quantities and estimators expected
+   to move, because each becomes a `reason`ed declaration in
+   `tests/test_release_contract.py`.
 
 If the support matrix or external reference is unresolved, resolve it before
 implementation rather than allowing the code to choose policy implicitly.

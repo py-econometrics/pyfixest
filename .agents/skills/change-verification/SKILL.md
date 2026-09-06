@@ -17,20 +17,18 @@ is authoritative, including for which changes justify a documentation build.
 For a change confined to the documentation or workflow-metadata rows of that
 matrix, the row is the whole procedure: run its listed checks and report them.
 
-For a refactor declared invariant, run the release contract first and on every
-iteration; it is the cheapest check that can falsify the whole change. Cite it
-only when it reports passed cases: a skip means no baseline, not success. A
-failure ends the refactor classification. Fix it or follow the numerics row.
-Never widen a contract tolerance to get green.
+For a refactor declared invariant, follow the release contract's rules and
+timing in `docs/developer/testing.md`. Cite it only when it reports passed
+cases, and treat a failure as the end of the refactor classification: fix it or
+follow the numerics row.
 
 Start with targeted tests and changed-file format/lint/type checks. Once the
-implementation stabilizes, run the selected broader baseline once and assign
-each required long check to a local run or exact-head CI.
+implementation stabilizes, identify and satisfy still-missing required evidence,
+and assign each required long check to a local run or exact-head CI.
 
-Unknown paths require the conservative PR baseline. For a stack, run targeted
-checks for each layer against its immediate parent and the broad suites once on
-the cumulative top against the trunk, unless each layer must be independently
-releasable.
+Unknown paths require the conservative PR baseline. For a stack, run focused
+checks for each layer against its immediate parent and follow the broad-check
+ownership rule in `docs/developer/testing.md`.
 
 Complete the required edit and handoff checks locally. A long check listed as
 merge evidence may be deferred to exact-head CI when a local run would add no
@@ -44,6 +42,7 @@ For every applicable check record:
 
 - status: passed, failed, deferred, or not run;
 - exact command;
+- revision, environment, and tested scope;
 - elapsed time;
 - reason and destination for a deferred check;
 - for the release contract, the passed case count or the skip reason.

@@ -6,9 +6,10 @@ description: Curate agent-owned pyfixest commits and prepare a reviewer-ready si
 # Hand off work for review
 
 Use this skill after implementation and required verification stabilize, before
-the first remote submission. Required long checks may still be running in
-exact-head CI when clearly reported. Branch, commit, and PR-body conventions
-live in `docs/developer/git-and-pr-style.md`.
+the first remote submission; submission itself is not a revalidation gate (see
+the verification cadence in `docs/developer/testing.md`). Required long checks
+may still be running in exact-head CI when clearly reported. Branch, commit, and
+PR-body conventions live in `docs/developer/git-and-pr-style.md`.
 
 ## Decide whether history needs curation
 
@@ -61,6 +62,10 @@ must be testable against its immediate parent and contain no unrelated cleanup.
 
 Before submission, inspect every layer's log/diff and the cumulative diff.
 Identify the immediate parent only when it is not obvious from the PR base.
+When reconstructing a stack, complete and inspect the coherent stack before
+publication by default. Publish an incomplete draft sequence only when the user
+explicitly requests that workflow or a concrete early-CI dependency makes it
+useful.
 
 ## Draft the body and stop
 

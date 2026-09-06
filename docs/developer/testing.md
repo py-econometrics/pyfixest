@@ -17,13 +17,8 @@ selection affect wall time.
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
 
-Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
-`test-r-core`, or `test-all` while iterating. Use a targeted test or
-`test-r-fixest-fast` instead. Once the design is stable, run the selected
-baseline once. A required long check may be deferred to exact-head CI at
-implementation handoff when the report names the check and destination.
-Deferred is never equivalent to passed, and the change is not merge-ready
-until all required merge evidence is green.
+Which checks to run when, and when to repeat them, is defined in
+`## Verification cadence`.
 
 `test-py` is the broad Python-only regression baseline. It does not compare
 results with R or another external implementation, so it cannot establish
@@ -35,6 +30,42 @@ does not install the CRAN-only packages from `r_test_requirements.R`, so those
 tests can skip. Exhaustive release evidence requires installing those packages,
 running `test-r-extended`, and combining the available suite with the relevant
 platform CI and benchmarks.
+
+## Verification cadence
+
+A **change batch** is a related set of initial edits or review feedback worked
+as a unit; it is **stabilized** once no further edits are planned before handoff
+or acceptance. Evidence is **invalidated** when the later diff — including
+dependency, environment, or test-configuration changes — could affect its tested
+scope. The **broad-check owner** is the single person or agent responsible for
+running a given broad check once on the cumulative head.
+
+While a batch is active, run the focused behavior and caller tests plus the
+lightweight checks that expose the affected seam; do not repeatedly launch
+`test-r-fixest`, `test-r-core`, or `test-all` while iterating.
+
+At stabilization, satisfy the selection matrix with still-valid evidence and run
+what is missing or invalidated. An edit, commit, review comment, agent handoff,
+push, or PR opening is not by itself a rerun trigger; rerun on invalidation,
+unresolved material risk, or an explicit acceptance requirement.
+
+Name one broad-check owner for each broad check. Broad suites run normally once
+on the stabilized cumulative head against the trunk, and per layer only when the
+layers must be independently releasable or an acceptance requirement says so.
+
+The release contract follows this cadence. Run it earlier only when focused
+tests leave shared numerical risk unresolved, or when it is needed to
+investigate the change or establish a baseline.
+
+Keep the record compact: for each material check record revision, environment,
+scope, command, and result. Evidence from an earlier revision may still cover an
+unchanged seam, but is never reported as exact-head evidence; state what changed
+and rerun only what it invalidated.
+
+A required long check may be deferred to exact-head CI at implementation handoff
+when the report names the check and destination. Deferred is never equivalent to
+passed, and the change is not merge-ready until all required merge evidence is
+green.
 
 ## Commands
 
@@ -105,8 +136,9 @@ selecting no tests.
 
 Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
 it is not a general Markdown validator. Do not run it for changes limited to
-`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
-For prose under `docs/`, prefer an affected-page render. Reserve the full
+`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata,
+or for plain prose or changelog changes. For changed examples or prose under
+`docs/`, execute or render only the affected evidence. Reserve the full
 `docs-render` task for changes that can affect the site broadly.
 
 ## Release contract
@@ -166,6 +198,8 @@ as a numerics change. Declare the difference in
 `tests/test_release_contract.py` with a `reason`, add the external comparison
 the "Estimation or inference numerics" row requires, and record it in the
 changelog.
+
+Its timing follows `## Verification cadence`.
 
 ## External numerical references
 
