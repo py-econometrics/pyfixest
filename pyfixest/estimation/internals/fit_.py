@@ -89,8 +89,8 @@ def fit_ols(
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        selects the unweighted path without creating unit weights or transformed
-        copies. Otherwise, the square-root transform is local to this function.
+        applies no weights. Otherwise, the square-root transform is local to
+        this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
@@ -145,8 +145,8 @@ def fit_iv(
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        selects the unweighted path without creating unit weights or transformed
-        copies. Otherwise, the square-root transform is local to this function.
+        applies no weights. Otherwise, the square-root transform is local to
+        this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
