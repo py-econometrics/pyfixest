@@ -9,8 +9,8 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.performance_ import performance_measures
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
-from pyfixest.estimation.models._result_accessor_mixin import _performance_measures
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -87,7 +87,7 @@ class Fegaussian(Feglm):
         sqrt(W) recovers the within response in the units of Y.
         """
         sqrt_irls_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
-        measures = _performance_measures(
+        measures = performance_measures(
             Y=self._Y_untransformed.to_numpy(),
             Y_within=self._Y.reshape((-1, 1)) / sqrt_irls_weights,
             residuals=self._u_hat_response,
