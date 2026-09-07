@@ -33,6 +33,33 @@ Prioritize findings that can produce silently wrong numbers:
 Check that a new estimator is an add-on and that every claimed support path is
 tested or rejected explicitly.
 
+## Make correctness understandable from the code being reviewed
+
+For numerical changes and estimator-state refactors, trace each changed value
+through construction, fitting, inference, post-estimation, and cleanup. Identify
+its mathematical role and scale, row and column ordering, ownership, and
+lifetime. Map changed scores, weights, projections, and covariance expressions
+to the estimator equations, including weight factors already incorporated into
+another value.
+
+Check whether accurate econometric names, meaningful intermediate results, and
+control flow expose the invariants needed to verify the implementation. For
+copies, shared array views, read-only flags, and frozen objects, distinguish
+attribute rebinding from element mutation and state who may mutate the
+underlying data. Identify the concrete correctness guarantee or avoided work
+behind an optimization; do not make performance claims without measurements.
+
+Keep enduring contracts and useful mathematical explanations in code
+documentation. Put migration history and review-only motivation in the PR or a
+design note. Before removing a wrapper or shared accessor, audit its callers,
+subclass overrides, and supported estimator paths; fewer abstractions are not
+automatically clearer or safer.
+
+Separate demonstrated defects, pre-existing issues, intentional compatibility
+decisions, questions, and optional maintainability improvements. Answer
+questions directly and support disagreements with evidence rather than treating
+unfamiliar syntax or a naming preference as a correctness bug.
+
 ## Spend verification budget on unresolved risk
 
 Select checks with the `change-verification` skill, but review differs from

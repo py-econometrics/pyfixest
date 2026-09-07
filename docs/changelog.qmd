@@ -24,6 +24,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   preparation for contributors and coding agents.
 - PR reviews now select verification from unresolved risk, reuse successful
   exact-head CI evidence, and avoid redundant broad local test runs.
+- PR reviews now also trace numerical meaning, array ownership, and state
+  lifetime so correctness arguments remain understandable from the code.
 - A new `test-r-fixest-fast` task runs a compact edit-time comparison of
   `feols`, `fepois`, and `feglm` with R `fixest`, and `quantreg` with R
   `quantreg`. The existing estimator-specific R suites remain the authoritative
@@ -46,15 +48,19 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
-- Estimator internals now keep formula tables, unpremultiplied within arrays,
-  and user-scale observation weights in separate typed domains.
-  Square-root-weighted arrays are local solver temporaries, and linear
-  residuals remain in response units. GLM IRLS working state (working response,
-  design, and weights) is kept separate from observation weights.
-- Legacy estimator attributes such as `_X`, `_Y`, `_Z`, and `_weights` are now
-  read-only views over the typed state objects.
-- Internal demeaning and covariance code now names column-order, normal-equation,
-  and frequency-replication invariants explicitly alongside their formulas.
+- The internal demeaning cache now stores named `float64` arrays instead of a
+  `DataFrame`, so cached columns are selected by position rather than rebuilt
+  as a frame on every fit, and the returned response and regressor columns
+  follow the order the model asked for regardless of the order the cache
+  filled up in. Cached data is handed out read-only, so one fit cannot corrupt
+  the demeaned columns another model reuses.
+- Linear models no longer store `sqrt(w)`-scaled `X` and `Y`. The demeaned
+  arrays and the weights are kept separately and weighting happens inside the
+  solver; residuals are always on the scale of the dependent variable. GLM
+  IRLS working state (working response, design, and weights) is kept separate
+  from observation weights.
+- Legacy estimator attributes such as `_X`, `_Y`, and `_weights` are now
+  read-only views over the typed state objects; `_Z` exists only on IV models.
 - Post-fit covariance updates now prepare covariance metadata and derived
   inference before publishing them. Multiple-estimation and quantile-process
   updates likewise prepare every child before changing any child.
@@ -249,10 +255,15 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
-- Weighted fixed-effect contributions (`_sumFE`) are now stored in response
-  units.
-- Gaussian GLM performance measures now use the estimator's unpremultiplied
-  within response and observation weights, including weighted fixed-effect fits.
+- For weighted models, `_sumFE` was stored as `sqrt(w) * D @ alpha`. It is now
+  `D @ alpha`, on the scale of the dependent variable, matching fixest's
+  `sumFE`. `predict()` was unaffected: it uses the fixed-effect coefficients,
+  which were already estimated on the correct scale.
+- `get_performance()` now raises `NotImplementedError` for non-Gaussian
+  `feglm()` families and for `quantreg()`. For GLMs it previously returned
+  R²-type values computed from IRLS working arrays; for `quantreg()` it was a
+  silent no-op that left the measures `NaN`. Gaussian `feglm()` results are
+  unchanged.
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.

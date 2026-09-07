@@ -17,7 +17,8 @@ class OlsFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Response-scale residuals Y - X @ beta, shape (N,).
+        Residuals Y - X @ beta, shape (N,). Always on the scale of the
+        supplied Y; weights never rescale them.
     scores : np.ndarray
         Weighted score matrix W X * residuals, shape (N, k).
     hessian : np.ndarray
@@ -45,7 +46,8 @@ class IvFit:
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     residuals : np.ndarray
-        Response-scale second-stage residuals Y - X @ beta, shape (N,).
+        Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
+        of the supplied Y; weights never rescale them.
     scores : np.ndarray
         Weighted score matrix W Z * residuals, shape (N, k_z).
     hessian : np.ndarray
@@ -87,8 +89,8 @@ def fit_ols(
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        selects the unweighted path without creating unit weights or transformed
-        copies. Otherwise, the square-root transform is local to this function.
+        applies no weights. Otherwise, the square-root transform is local to
+        this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
@@ -109,9 +111,6 @@ def fit_ols(
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
-        # The WLS estimating equation contributes s_i = a_i x_i u_i.
-        # The full weight appears here, not sqrt(a_i): both solver factors
-        # participate when differentiating the weighted squared-error loss.
         scores = X * (weight_values * residuals)[:, None]
     hessian = tZX.copy()
     return OlsFit(
@@ -146,8 +145,8 @@ def fit_iv(
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
         Non-negative observation weights, shape (N,) or (N, 1). ``None``
-        selects the unweighted path without creating unit weights or transformed
-        copies. Otherwise, the square-root transform is local to this function.
+        applies no weights. Otherwise, the square-root transform is local to
+        this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
@@ -178,7 +177,6 @@ def fit_iv(
     if weight_values is None:
         scores = Z * residuals[:, None]
     else:
-        # The weighted IV moment contribution is a_i z_i u_i.
         scores = Z * (weight_values * residuals)[:, None]
     hessian = tZZ
 

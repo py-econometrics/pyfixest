@@ -250,16 +250,13 @@ residuals and working residuals likewise have separate fields.
 The compatibility aliases are still available, but they are read-only
 properties over the typed state rather than cross-type workspaces: the state
 objects are the single writable representation, and assigning or deleting an
-alias raises. For linear and IV fits, `_Y`, `_X`, and `_Z` view within-scale
-arrays; for GLMs they view the final within-scale working response and design.
+alias raises. For linear fits `_Y` and `_X` view within-scale arrays and IV fits add
+`_Z`; for GLMs they view the final within-scale working response and design.
 `_weights` always means observation weights, never square-root solver weights
 or GLM working weights, and an unweighted fit materializes its ones column on
 access instead of keeping one alive for the lifetime of the result. New code
 should consume the typed state values rather than infer semantics from these
 aliases.
-
-Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
-the outer model's covariance label untouched.
 
 CRV3 jackknife and slow randomization-inference refits replay the original
 estimation options through the estimator's own public entry point, so a GLM
@@ -300,10 +297,6 @@ preserving the child objects themselves. Lean results reject post-fit covariance
 updates because their numerical arrays have been discarded. Every other method
 that needs discarded state raises an informative error naming the storage option
 and its remedy.
-
-Keeping canonical arrays unpremultiplied favors readability without moving
-weight work out of the numerical hot path: each solver still performs the same
-vectorized square-root transform locally.
 
 ## Repository map and extension seams
 
