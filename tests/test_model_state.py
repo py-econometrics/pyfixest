@@ -73,6 +73,7 @@ def test_within_linear_data_is_structurally_immutable() -> None:
     assert state.design is design
     assert not hasattr(state, "__dict__")
     assert not hasattr(state, "instruments")
+    assert not hasattr(state, "endogenous")
     with pytest.raises(FrozenInstanceError):
         state.response = design  # type: ignore[misc]
     with pytest.raises(TypeError):

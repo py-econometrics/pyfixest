@@ -271,6 +271,7 @@ class Feiv(Feols):
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._drop_multicollinear_within_data(self._demean())
+        # Narrow the base return type so `within_data.instruments` type-checks.
         assert isinstance(within_data, WithinIvData)
         self._set_within_data(within_data)
         fit = fit_iv(
