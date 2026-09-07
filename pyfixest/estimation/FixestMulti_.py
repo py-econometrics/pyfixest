@@ -13,6 +13,7 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import ParsedFormula
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 
 
 class FixestMulti(TidyColumnAccessors):
@@ -120,7 +121,8 @@ class FixestMulti(TidyColumnAccessors):
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
-    ):
+        data: DataFrameType | None = None,
+    ) -> FixestMulti:
         """
         Update regression inference "on the fly".
 
@@ -138,13 +140,63 @@ class FixestMulti(TidyColumnAccessors):
             for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
+        data : DataFrameType, optional
+            The common, already-filtered estimation sample in its original order.
+            Required for data-dependent covariance updates when the fitted models
+            were created with `store_data=False`. Defaults to None.
 
         Returns
         -------
-            An instance of the "Fixest" class with updated inference.
+        FixestMulti
+            This result container with updated inference.
         """
-        for fxst in self.all_fitted_models.values():
-            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+        data_to_forward = data
+        if data is not None:
+            try:
+                data_to_forward = _narwhals_to_pandas(data)
+            except TypeError as exc:
+                raise TypeError(
+                    f"The data set must be a DataFrame type. Received: {type(data)}"
+                ) from exc
+
+            models = list(self.all_fitted_models.values())
+            expected_rows = sorted({model._N_rows for model in models})
+            received_rows = len(data_to_forward)
+            if any(n_rows != received_rows for n_rows in expected_rows):
+                raise ValueError(
+                    "`data` passed to FixestMulti.vcov() must contain the common, "
+                    "already-filtered estimation sample in its original order for "
+                    "every child model; expected child row counts "
+                    f"{expected_rows}, received {received_rows}. Fetch each child "
+                    "model and call vcov(..., data=...) separately when estimation "
+                    "samples differ."
+                )
+
+            reference = models[0] if models else None
+            if reference is not None and any(
+                model._sample_split_var != reference._sample_split_var
+                or model._sample_split_value != reference._sample_split_value
+                or model._na_index != reference._na_index
+                for model in models[1:]
+            ):
+                raise ValueError(
+                    "`data` cannot be forwarded by FixestMulti.vcov() because its "
+                    "child models use different estimation samples. Fetch each "
+                    "child model and call vcov(..., data=...) with that model's "
+                    "already-filtered estimation sample instead."
+                )
+
+        models = list(self.all_fitted_models.values())
+        candidates = [
+            model._prepare_vcov_update(
+                vcov=vcov,
+                vcov_kwargs=vcov_kwargs,
+                data=data_to_forward,
+            )
+            for model in models
+        ]
+        for model, candidate in zip(models, candidates, strict=True):
+            model._publish_vcov_update(candidate)
         return self
 
     def tidy(self) -> pd.DataFrame:

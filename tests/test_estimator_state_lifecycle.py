@@ -7,6 +7,7 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -23,6 +24,60 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     WithinLinearData,
 )
+from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
+
+INFERENCE_STATE_ATTRIBUTES = (
+    "_vcov_type",
+    "_vcov_type_detail",
+    "_is_clustered",
+    "_clustervar",
+    "_bread",
+    "_ssc",
+    "_df_k",
+    "_df_t",
+    "_vcov",
+    "_lag",
+    "_time_id",
+    "_panel_id",
+    "_cluster_df",
+    "_G",
+    "_se",
+    "_tstat",
+    "_pvalue",
+    "_conf_int",
+)
+
+
+def _inference_snapshot(model) -> dict[str, tuple[bool, object | None]]:
+    return {
+        attribute: (
+            hasattr(model, attribute),
+            deepcopy(getattr(model, attribute)) if hasattr(model, attribute) else None,
+        )
+        for attribute in INFERENCE_STATE_ATTRIBUTES
+    }
+
+
+def _assert_inference_unchanged(
+    model, expected: dict[str, tuple[bool, object | None]]
+) -> None:
+    for attribute, (was_present, value) in expected.items():
+        assert hasattr(model, attribute) is was_present, (
+            f"failed covariance update changed presence of {attribute}"
+        )
+        if not was_present:
+            continue
+        observed = getattr(model, attribute)
+        if isinstance(value, np.ndarray):
+            np.testing.assert_array_equal(
+                observed,
+                value,
+                err_msg=f"failed covariance update changed {attribute}",
+            )
+        elif isinstance(value, pd.DataFrame):
+            pd.testing.assert_frame_equal(observed, value)
+        else:
+            assert observed == value, f"failed covariance update changed {attribute}"
 
 
 @pytest.fixture
@@ -523,6 +578,162 @@ def test_store_data_false_allows_array_only_vcov_updates(
     assert not hasattr(stripped, "_data")
 
 
+def test_store_data_false_vcov_uses_explicit_estimation_sample(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Data-dependent covariance updates use the documented data argument."""
+    stripped = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid", store_data=False)
+    expected = pf.feols("y ~ x | fe", data=lifecycle_data, vcov={"CRV1": "fe"})
+
+    metadata_before = deepcopy(
+        (
+            stripped._vcov_type,
+            stripped._vcov_type_detail,
+            stripped._is_clustered,
+            stripped._clustervar,
+            stripped._G,
+            stripped._df_k,
+            stripped._df_t,
+        )
+    )
+    arrays_before = {
+        attr: getattr(stripped, attr).copy()
+        for attr in (
+            "_bread",
+            "_ssc",
+            "_vcov",
+            "_se",
+            "_tstat",
+            "_pvalue",
+            "_conf_int",
+        )
+    }
+
+    with pytest.raises(RuntimeError, match=r"store_data=False.*Pass.*data="):
+        stripped.vcov({"CRV1": "fe"})
+
+    assert (
+        stripped._vcov_type,
+        stripped._vcov_type_detail,
+        stripped._is_clustered,
+        stripped._clustervar,
+        stripped._G,
+        stripped._df_k,
+        stripped._df_t,
+    ) == metadata_before
+    for attr, value in arrays_before.items():
+        np.testing.assert_array_equal(getattr(stripped, attr), value)
+
+    stripped.vcov({"CRV1": "fe"}, data=lifecycle_data)
+
+    np.testing.assert_allclose(stripped._vcov, expected._vcov)
+    assert not hasattr(stripped, "_data")
+
+
+def test_failed_vcov_update_preserves_complete_inference_state(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A failure during covariance computation publishes no partial state."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+    inference_before = _inference_snapshot(fit)
+
+    with pytest.raises(KeyError, match="fe"):
+        fit.vcov({"CRV1": "fe"}, data=lifecycle_data.drop(columns="fe"))
+
+    _assert_inference_unchanged(fit, inference_before)
+
+
+def test_failed_inference_finalization_preserves_complete_inference_state(
+    lifecycle_data: pd.DataFrame,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Derived inference is prepared before covariance state is published."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+    inference_before = _inference_snapshot(fit)
+
+    def fail_inference(_self) -> None:
+        raise RuntimeError("inference finalization failed")
+
+    monkeypatch.setattr(type(fit), "get_inference", fail_inference)
+    with pytest.raises(RuntimeError, match="inference finalization failed"):
+        fit.vcov("hetero")
+
+    _assert_inference_unchanged(fit, inference_before)
+
+
+def test_fixest_multi_forwards_explicit_vcov_data(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Multiple-estimation covariance updates forward an explicit sample."""
+    stripped = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=lifecycle_data,
+        vcov="iid",
+        store_data=False,
+    )
+    expected = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=lifecycle_data,
+        vcov={"CRV1": "fe"},
+    )
+    child_ids = [id(child) for child in stripped.to_list()]
+
+    stripped.vcov({"CRV1": "fe"}, data=lifecycle_data)
+
+    assert [id(child) for child in stripped.to_list()] == child_ids
+    for stripped_model, expected_model in zip(
+        stripped.to_list(), expected.to_list(), strict=True
+    ):
+        np.testing.assert_allclose(stripped_model._vcov, expected_model._vcov)
+        assert not hasattr(stripped_model, "_data")
+
+
+def test_fixest_multi_vcov_is_atomic_after_later_child_failure(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Every child covariance is prepared before any child is updated."""
+    data = lifecycle_data.assign(time=np.arange(len(lifecycle_data)))
+    fit = pf.feols("y ~ sw(x, x2)", data=data, vcov="iid")
+    children = fit.to_list()
+    child_ids = [id(child) for child in children]
+    inference_before = [_inference_snapshot(child) for child in children]
+    children[1]._support_hac_inference = False
+
+    with pytest.raises(NotImplementedError, match="HAC inference is not supported"):
+        fit.vcov("NW", vcov_kwargs={"time_id": "time", "lag": 1})
+
+    assert [id(child) for child in fit.to_list()] == child_ids
+    for child, expected in zip(children, inference_before, strict=True):
+        _assert_inference_unchanged(child, expected)
+
+
+def test_quantreg_multi_vcov_is_atomic_after_later_child_failure(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Quantile-process inference also commits only after all children succeed."""
+    fit = pf.quantreg(
+        "y ~ x",
+        data=lifecycle_data,
+        quantile=[0.25, 0.75],
+        vcov="iid",
+        seed=1324,
+    )
+    children = fit.to_list()
+    quantreg_multi = QuantregMulti.__new__(QuantregMulti)
+    quantreg_multi.all_quantregs = dict(zip((0.25, 0.75), children, strict=True))
+    child_ids = [id(child) for child in children]
+    inference_before = [_inference_snapshot(child) for child in children]
+    children[1]._lean = True
+    children[1]._fit_state_discarded = True
+
+    with pytest.raises(RuntimeError, match=r"vcov\(\).*lean=True"):
+        quantreg_multi.vcov("hetero")
+
+    assert [id(child) for child in quantreg_multi.all_quantregs.values()] == child_ids
+    for child, expected in zip(children, inference_before, strict=True):
+        _assert_inference_unchanged(child, expected)
+
+
 @pytest.mark.parametrize(
     ("fml", "weights", "weights_type"),
     [
@@ -600,6 +811,124 @@ def test_lean_gaussian_glm_rejects_performance_update(
 
     with pytest.raises(RuntimeError, match=r"get_performance\(\).*lean=True"):
         fit.get_performance()
+
+
+def test_fixest_multi_vcov_preflights_different_estimation_samples(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """A common-sample mismatch leaves every child model unchanged."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[:3], "x2"] = np.nan
+    fit = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=r"common, already-filtered estimation sample.*\[21, 24\], received 24",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=data)
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
+
+
+def test_fixest_multi_vcov_rejects_equal_size_split_samples(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Equal row counts do not make distinct split samples interchangeable."""
+    data = lifecycle_data.assign(sample=np.tile(["left", "right"], 12))
+    fit = pf.feols(
+        "y ~ x | fe",
+        data=data,
+        split="sample",
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+    left_sample = data.loc[data["sample"] == "left"]
+
+    with pytest.raises(
+        ValueError,
+        match=r"child models use different estimation samples.*Fetch each child",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=left_sample)
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
+
+
+def test_fixest_multi_vcov_rejects_equal_size_distinct_na_masks(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Equal-sized formula expansions must retain the same source rows."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[0], "x"] = np.nan
+    data.loc[data.index[1], "x2"] = np.nan
+    fit = pf.feols(
+        "y ~ sw(x, x2) | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    children = fit.to_list()
+    inference_before = [
+        (child._vcov_type_detail, child._vcov.copy()) for child in children
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=r"child models use different estimation samples.*Fetch each child",
+    ):
+        fit.vcov({"CRV1": "fe"}, data=data.drop(index=0))
+
+    for child, (vcov_type_detail, vcov) in zip(children, inference_before, strict=True):
+        assert child._vcov_type_detail == vcov_type_detail
+        np.testing.assert_array_equal(child._vcov, vcov)
+
+
+def test_vcov_rejects_unfiltered_explicit_data(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An explicit covariance sample must align with the fitted row arrays."""
+    data = lifecycle_data.copy()
+    data.loc[data.index[0], "y"] = np.nan
+    estimation_sample = data.dropna(subset=["y", "x", "fe"])
+    stripped = pf.feols(
+        "y ~ x | fe",
+        data=data,
+        vcov="iid",
+        store_data=False,
+    )
+    expected = pf.feols(
+        "y ~ x | fe",
+        data=estimation_sample,
+        vcov={"CRV1": "fe"},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"already-filtered estimation sample.*original estimation order; "
+            r"expected 23 rows, received 24"
+        ),
+    ):
+        stripped.vcov({"CRV1": "fe"}, data=data)
+
+    stripped.vcov({"CRV1": "fe"}, data=estimation_sample)
+    np.testing.assert_allclose(stripped._vcov, expected._vcov)
 
 
 def test_lean_vcov_fails_with_storage_guidance(
