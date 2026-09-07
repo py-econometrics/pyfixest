@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
+from dataclasses import replace
 from importlib import import_module
 from typing import Any, Literal, cast
 
@@ -482,15 +483,19 @@ class Feols(ResultAccessorMixin):
         if self._model_matrix.weights is None:
             return ObservationWeights.unweighted(n_rows=n_rows)
 
-        assert self._weights_type in ("aweights", "fweights")
+        # `weights_type` is validated at the API boundary (estimation/api/utils.py).
         weights_kind = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
             kind=weights_kind,
         )
 
-    def _prepare_within_data(self) -> WithinLinearData:
-        """Return fixed-effect-residualized arrays in their original units."""
+    def _demean(self) -> WithinLinearData:
+        """Convert formula tables to arrays and residualize them on the fixed effects.
+
+        The returned arrays are in the units of the data; they are not
+        multiplied by square-root weights.
+        """
         response_frame = self._model_matrix.dependent
         design_frame = self._model_matrix.independent
         response = response_frame.to_numpy(dtype=np.float64)
@@ -540,12 +545,7 @@ class Feols(ResultAccessorMixin):
                 self._collin_tol,
             )
 
-        return WithinLinearData(
-            response=within_data.response,
-            design=design,
-            instruments=within_data.instruments,
-            endogenous=within_data.endogenous,
-        )
+        return replace(within_data, design=design)
 
     def _set_within_data(self, within_data: WithinLinearData) -> None:
         """Publish canonical within data for this fit."""
@@ -569,13 +569,11 @@ class Feols(ResultAccessorMixin):
 
     @property
     def _Z(self) -> NDArray[np.float64]:
-        """Within-scale instruments; the design itself outside IV models."""
-        within_data = self._within_data
-        return (
-            within_data.design
-            if within_data.instruments is None
-            else within_data.instruments
-        )
+        """Within-scale instruments; defined only for IV models."""
+        within_data = getattr(self, "_within_data", None)
+        if within_data is None or within_data.instruments is None:
+            raise AttributeError("_Z is only defined for IV models.")
+        return within_data.instruments
 
     @property
     def _weights(self) -> NDArray[np.float64]:
@@ -601,7 +599,7 @@ class Feols(ResultAccessorMixin):
         -------
         None
         """
-        within_data = self._drop_multicollinear_within_data(self._prepare_within_data())
+        within_data = self._drop_multicollinear_within_data(self._demean())
         self._set_within_data(within_data)
 
         if self._X_is_empty:
@@ -814,14 +812,6 @@ class Feols(ResultAccessorMixin):
             weights=self._observation_weights.values,
         )
 
-    def _normal_equation_weights(self) -> np.ndarray | None:
-        """Return the row weights in the fitted normal equations."""
-        return self._observation_weights.values
-
-    def _fixef_recovery_weights(self) -> np.ndarray | None:
-        """Return weights used by fixed-effect coefficient recovery."""
-        return self._observation_weights.values
-
     def _vcov_hetero(self):
         observation_weights = self._observation_weights.values
         return vcov_hetero(
@@ -833,7 +823,7 @@ class Feols(ResultAccessorMixin):
                 if observation_weights is not None and self._weights_type == "fweights"
                 else None
             ),
-            normal_equation_weights=self._normal_equation_weights(),
+            normal_equation_weights=observation_weights,
             vcov_type_detail=self._vcov_type_detail,
             bread=self._bread,
             is_iv=self._is_iv,
@@ -1763,8 +1753,6 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        fixef_recovery_weights = self._fixef_recovery_weights()
-
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
@@ -1800,15 +1788,15 @@ class Feols(ResultAccessorMixin):
                 _ModelMatrixKey.fixed_effects
             ].transform_state,
         )
-        fixed_effect_design = contrast_coding.matrix
-        fixed_effect_design_for_recovery = fixed_effect_design
-        if fixef_recovery_weights is not None:
-            weights_sqrt = np.sqrt(fixef_recovery_weights).flatten()
+        D = contrast_coding.matrix
+        D_w = D
+        if self._has_weights:
+            # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
+            weights_sqrt = np.sqrt(self._weights).flatten()
             uhat *= weights_sqrt
-            weights_diag = diags(weights_sqrt, 0)
-            fixed_effect_design_for_recovery = weights_diag.dot(fixed_effect_design)
+            D_w = diags(weights_sqrt, 0).dot(D)
 
-        alpha = lsqr(fixed_effect_design_for_recovery, uhat, atol=atol, btol=btol)[0]
+        alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
         self._fixef_coefficients = build_fixed_effects(
             fixed_effect_coefficients=alpha,
@@ -1818,7 +1806,8 @@ class Feols(ResultAccessorMixin):
             ].transform_state,
         )
         self._alpha = alpha
-        self._sumFE = fixed_effect_design.dot(alpha)
+        # Fixed-effect contribution per observation, in the units of Y.
+        self._sumFE = D.dot(alpha)
 
         return fixed_effects_to_frame(self._fixef_coefficients)
 

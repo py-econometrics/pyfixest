@@ -16,7 +16,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.model_state import WithinLinearData
+from pyfixest.estimation.internals.model_state import WithinIvData
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -214,9 +214,9 @@ class Feiv(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-    def _prepare_within_data(self) -> WithinLinearData:
+    def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
-        linear_data = super()._prepare_within_data()
+        linear_data = super()._demean()
         endogenous_frame = self._model_matrix.endogenous
         instrument_frame = self._model_matrix.instruments
         assert endogenous_frame is not None
@@ -236,35 +236,11 @@ class Feiv(Feols):
                 demeaner=self._demeaner,
             )
 
-        return WithinLinearData(
+        return WithinIvData(
             response=linear_data.response,
             design=linear_data.design,
             instruments=instruments,
             endogenous=endogenous,
-        )
-
-    def _drop_multicollinear_within_data(
-        self, within_data: WithinLinearData
-    ) -> WithinLinearData:
-        """Drop collinear second-stage and instrument columns on within scale."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
-        assert within_data.instruments is not None
-        assert self._coefnames_z is not None
-        (
-            instruments,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = drop_multicollinear_variables(
-            within_data.instruments,
-            self._coefnames_z,
-            self._collin_tol,
-        )
-        return WithinLinearData(
-            response=within_data.response,
-            design=within_data.design,
-            instruments=instruments,
-            endogenous=within_data.endogenous,
         )
 
     @property
@@ -276,9 +252,26 @@ class Feiv(Feols):
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_within_data(self._prepare_within_data())
+        iv_data = self._demean()
+        linear_data = self._drop_multicollinear_within_data(iv_data)
+        assert self._coefnames_z is not None
+        (
+            instruments,
+            self._coefnames_z,
+            self._collin_vars_z,
+            self._collin_index_z,
+        ) = drop_multicollinear_variables(
+            iv_data.instruments,
+            self._coefnames_z,
+            self._collin_tol,
+        )
+        within_data = WithinIvData(
+            response=linear_data.response,
+            design=linear_data.design,
+            instruments=instruments,
+            endogenous=iv_data.endogenous,
+        )
         self._set_within_data(within_data)
-        assert within_data.instruments is not None
         fit = fit_iv(
             X=within_data.design,
             Z=within_data.instruments,
@@ -545,7 +538,7 @@ class Feiv(Feols):
         ]
         Z = self._model_1st_stage._X[:, iv_positions]
 
-        # Q_zz = Z' A Z uses the observation weights from the first-stage fit.
+        # Q_zz = Z'WZ
         observation_weights = self._model_1st_stage._observation_weights.values
         Q_zz = (
             Z.T @ Z

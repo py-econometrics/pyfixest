@@ -182,7 +182,7 @@ class Quantreg(Feols):
         "Publish quantile-regression within data from the formula state."
         # Quantile regression supports neither fixed effects nor weights, so
         # the shared preparation reduces to the formula arrays themselves.
-        self._set_within_data(self._prepare_within_data())
+        self._set_within_data(self._demean())
 
     def drop_multicol_vars(self):
         "Detect and drop multicollinear quantile-regression covariates."
@@ -454,8 +454,8 @@ class Quantreg(Feols):
         "Compute the total loss of the quantile regression model."
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
 
-    def get_performance(self):
-        "Compute performance metrics for the quantile regression model."
-        # self._pseudo_r2 = 1 -
-        pass
-        # self.objective_value
+    def get_performance(self) -> None:
+        "Reject linear R² measures; quantile regression has no such diagnostics yet."
+        raise NotImplementedError(
+            "get_performance() is not supported for quantreg() fits."
+        )
