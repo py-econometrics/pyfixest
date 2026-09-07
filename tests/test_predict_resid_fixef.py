@@ -324,6 +324,68 @@ def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_ty
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1 | f1", "Y ~ X1 + X2 | f1 + f2"])
+def test_weighted_poisson_fixef_vs_fixest(data, fml):
+    """Weighted Poisson fixed effects match fixest's `sumFE` on the link scale."""
+    group_size = data.groupby("f1")["f1"].transform("size")
+    weighted_data = data.loc[group_size > 1].copy().reset_index(drop=True)
+
+    # Keep singleton fixed-effect groups on both sides so the row samples match,
+    # and tighten IRLS so the comparison is not limited by convergence.
+    fit = pf.fepois(
+        fml,
+        data=weighted_data,
+        weights="weights",
+        fixef_rm="none",
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
+    )
+    fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
+
+    fit_r = fixest.fepois(
+        ro.Formula(fml),
+        data=weighted_data,
+        weights=ro.Formula("~weights"),
+        **{"fixef.rm": "none", "glm.tol": 1e-10, "glm.iter": 100},
+    )
+    ro.globalenv[".pyfixest_weighted_poisson_fixef_fit"] = fit_r
+    fixed_effects_r = ro.r["fixef"](fit_r).rx2("f1")
+    fixed_effect_levels_r = np.asarray(
+        ro.r("names(fixef(.pyfixest_weighted_poisson_fixef_fit)$f1)"), dtype=float
+    )
+
+    # For Poisson, sumFE lives on the link scale: eta = X beta + sumFE.
+    link_scale_fixed_effect = (
+        fit.predict(type="link")
+        - weighted_data[fit._coefnames].to_numpy() @ fit.coef().to_numpy()
+    )
+    tol = {"rtol": 1e-7, "atol": 1e-7}
+    np.testing.assert_allclose(fit._sumFE, link_scale_fixed_effect, **tol)
+    np.testing.assert_allclose(fit._sumFE, np.asarray(fit_r.rx2("sumFE")), **tol)
+
+    # With two fixed effects the per-level values depend on the normalization
+    # of the second effect, so compare levels only for the single-FE model.
+    if fit._n_fe == 1:
+        fixed_effects_by_level = fixed_effects.set_index(
+            fixed_effects["level"].astype(float)
+        )["coefficient"].sort_index()
+        fixed_effects_r_by_level = pd.Series(
+            np.asarray(fixed_effects_r),
+            index=fixed_effect_levels_r,
+        ).sort_index()
+        np.testing.assert_allclose(
+            fixed_effects_by_level,
+            fixed_effects_r_by_level,
+            rtol=1e-8,
+            atol=1e-8,
+        )
+
+    np.testing.assert_allclose(
+        fit.predict(type="response"), np.asarray(fit_r.rx2("fitted.values")), **tol
+    )
+
+
+@pytest.mark.against_r_core
 def test_predict_nas():
     # tests to fix #246: https://github.com/py-econometrics/pyfixest/issues/246
 
