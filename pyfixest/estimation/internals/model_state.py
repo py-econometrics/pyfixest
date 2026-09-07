@@ -81,20 +81,20 @@ class WithinLinearData:
     """Linear-model arrays after within transformation, in original units.
 
     These arrays have not been multiplied by square-root observation weights.
-    For IV models, ``design`` is the full structural regressor matrix and may
-    include endogenous regressors. ``instruments`` is the full instrument
-    matrix, including exogenous regressors that instrument themselves.
     """
 
     response: NDArray[np.float64]
     design: NDArray[np.float64]
-    instruments: NDArray[np.float64] | None = None
-    endogenous: NDArray[np.float64] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WithinIvData(WithinLinearData):
-    """Within-scale IV arrays whose instrument and endogenous roles are present."""
+    """Within-scale IV arrays with instrument and endogenous roles.
+
+    ``design`` is the full structural regressor matrix, including the
+    endogenous regressors. ``instruments`` is the full instrument matrix,
+    including exogenous regressors that instrument themselves.
+    """
 
     instruments: NDArray[np.float64]
     endogenous: NDArray[np.float64]

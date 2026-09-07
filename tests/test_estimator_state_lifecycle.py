@@ -20,6 +20,7 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
+    WithinIvData,
     WithinLinearData,
 )
 
@@ -130,9 +131,7 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     )
 
     within = fit._within_data
-    assert isinstance(within, WithinLinearData)
-    assert within.instruments is not None
-    assert within.endogenous is not None
+    assert isinstance(within, WithinIvData)
     assert fit._Y is within.response
     assert fit._X is within.design
     assert fit._Z is within.instruments

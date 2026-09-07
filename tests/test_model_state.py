@@ -68,21 +68,15 @@ def test_observation_weights_reject_inconsistent_state(kwargs, message) -> None:
 def test_within_linear_data_is_structurally_immutable() -> None:
     response = np.arange(3.0)[:, None]
     design = np.column_stack((np.ones(3), np.arange(3.0)))
-    instruments = np.arange(6.0).reshape(3, 2)
-    endogenous = np.arange(3.0)[:, None]
-    state = WithinLinearData(
-        response=response,
-        design=design,
-        instruments=instruments,
-        endogenous=endogenous,
-    )
+    state = WithinLinearData(response=response, design=design)
     assert state.response is response
     assert state.design is design
-    assert state.instruments is instruments
-    assert state.endogenous is endogenous
     assert not hasattr(state, "__dict__")
+    assert not hasattr(state, "instruments")
     with pytest.raises(FrozenInstanceError):
         state.response = design  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        WithinLinearData(response=response, design=design, instruments=design)  # type: ignore[call-arg]
 
 
 def test_within_iv_data_requires_instrument_roles() -> None:

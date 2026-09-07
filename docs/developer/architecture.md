@@ -226,7 +226,8 @@ remain mutable unless they are explicitly marked read-only:
 |---|---|
 | `ModelMatrix` | Formula-materialized pandas tables remain on formula scale and keep dependent, independent, fixed-effect, IV, weight, and offset roles separate. |
 | `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
-| `WithinLinearData` | Unpremultiplied within-scale arrays, with response, design, instruments, and endogenous variables in named roles. |
+| `WithinLinearData` | Unpremultiplied within-scale response and design arrays. |
+| `WithinIvData` | Extends `WithinLinearData` with the instrument and endogenous arrays that only IV models carry. |
 | `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
 
 Analytic weights keep the retained row count as the effective sample size;
