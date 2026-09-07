@@ -232,8 +232,9 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
-- For weighted models, `_sumFE` was stored as `sqrt(w) * D @ alpha`. It is now
-  `D @ alpha`, on the scale of the dependent variable, matching fixest's
+- For weighted models, `_sumFE` was stored as `sqrt(w) * D @ alpha`, with the
+  IRLS working weights in place of `w` for `fepois()` and `feglm()`. It is now
+  `D @ alpha`, on the scale of the linear predictor, matching fixest's
   `sumFE`. `predict()` was unaffected: it uses the fixed-effect coefficients,
   which were already estimated on the correct scale.
 - `get_performance()` now raises `NotImplementedError` for non-Gaussian

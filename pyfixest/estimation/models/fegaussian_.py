@@ -8,8 +8,8 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.performance_ import performance_measures
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
-from pyfixest.estimation.models._result_accessor_mixin import _performance_measures
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -91,7 +91,7 @@ class Fegaussian(Feglm):
         in the units of Y.
         """
         working_state = self._working_state
-        measures = _performance_measures(
+        measures = performance_measures(
             Y=self._Y_untransformed.to_numpy(),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,

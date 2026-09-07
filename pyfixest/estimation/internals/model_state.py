@@ -18,7 +18,7 @@ class ObservationWeights:
     ----------
     values : NDArray[np.float64] or None
         Flat, user-scale observation weights. ``None`` for an unweighted fit.
-    kind : {"aweights", "fweights"} or None
+    weights_type : {"aweights", "fweights"} or None
         Weight type. ``None`` for an unweighted fit.
     n_rows : int
         Number of physical rows used for estimation.
@@ -28,15 +28,15 @@ class ObservationWeights:
     """
 
     values: NDArray[np.float64] | None
-    kind: WeightsTypeOptions | None
+    weights_type: WeightsTypeOptions | None
     n_rows: int
     n_effective: int | float
 
     def __post_init__(self) -> None:
         # `unweighted()` and `from_values()` are the only constructors used by
         # the estimators; these two guards catch direct misconstruction.
-        if self.values is not None and self.kind is None:
-            raise ValueError("Weighted observations must declare a weight kind.")
+        if self.values is not None and self.weights_type is None:
+            raise ValueError("Weighted observations must declare a `weights_type`.")
         if self.values is not None and len(self.values) != self.n_rows:
             raise ValueError("Observation weights must contain one value per row.")
 
@@ -45,7 +45,7 @@ class ObservationWeights:
         """Construct the representation of an unweighted fit."""
         return cls(
             values=None,
-            kind=None,
+            weights_type=None,
             n_rows=n_rows,
             n_effective=n_rows,
         )
@@ -55,17 +55,17 @@ class ObservationWeights:
         cls,
         weights: NDArray[np.float64],
         *,
-        kind: WeightsTypeOptions,
+        weights_type: WeightsTypeOptions,
     ) -> ObservationWeights:
         """Construct canonical weighted state from user-scale weights."""
         observation_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
         n_rows = len(observation_weights)
         n_effective = (
-            n_rows if kind == "aweights" else float(np.sum(observation_weights))
+            n_rows if weights_type == "aweights" else float(np.sum(observation_weights))
         )
         return cls(
             values=observation_weights,
-            kind=kind,
+            weights_type=weights_type,
             n_rows=n_rows,
             n_effective=n_effective,
         )
@@ -81,20 +81,20 @@ class WithinLinearData:
     """Linear-model arrays after within transformation, in original units.
 
     These arrays have not been multiplied by square-root observation weights.
-    For IV models, ``design`` is the full structural regressor matrix and may
-    include endogenous regressors. ``instruments`` is the full instrument
-    matrix, including exogenous regressors that instrument themselves.
     """
 
     response: NDArray[np.float64]
     design: NDArray[np.float64]
-    instruments: NDArray[np.float64] | None = None
-    endogenous: NDArray[np.float64] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WithinIvData(WithinLinearData):
-    """Within-scale IV arrays whose instrument and endogenous roles are present."""
+    """Within-scale IV arrays with instrument and endogenous roles.
+
+    ``design`` is the full structural regressor matrix, including the
+    endogenous regressors. ``instruments`` is the full instrument matrix,
+    including exogenous regressors that instrument themselves.
+    """
 
     instruments: NDArray[np.float64]
     endogenous: NDArray[np.float64]

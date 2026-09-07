@@ -493,10 +493,10 @@ class Feols(ResultAccessorMixin):
             return ObservationWeights.unweighted(n_rows=n_rows)
 
         # `weights_type` is validated at the API boundary (estimation/api/utils.py).
-        weights_kind = cast(WeightsTypeOptions, self._weights_type)
+        weights_type = cast(WeightsTypeOptions, self._weights_type)
         return ObservationWeights.from_values(
             self._model_matrix.weights.to_numpy().reshape(-1),
-            kind=weights_kind,
+            weights_type=weights_type,
         )
 
     def _demean(self) -> WithinLinearData:

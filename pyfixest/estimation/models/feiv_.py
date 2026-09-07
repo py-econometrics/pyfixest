@@ -242,16 +242,12 @@ class Feiv(Feols):
             endogenous=endogenous,
         )
 
-    def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish IV within state and the `_Z`/`_endogvar` array aliases."""
-        super()._set_within_data(within_data)
-        self._Z = within_data.instruments
-        self._endogvar = within_data.endogenous
-
-    def get_fit(self) -> None:
-        """Fit a IV model using a 2SLS estimator."""
-        iv_data = self._demean()
-        linear_data = self._drop_multicollinear_within_data(iv_data)
+    def _drop_multicollinear_within_data(
+        self, within_data: WithinLinearData
+    ) -> WithinLinearData:
+        """Drop collinear columns from the second-stage design and the instruments."""
+        within_data = super()._drop_multicollinear_within_data(within_data)
+        assert isinstance(within_data, WithinIvData)
         assert self._coefnames_z is not None
         (
             instruments,
@@ -259,16 +255,24 @@ class Feiv(Feols):
             self._collin_vars_z,
             self._collin_index_z,
         ) = drop_multicollinear_variables(
-            iv_data.instruments,
+            within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
-        within_data = WithinIvData(
-            response=linear_data.response,
-            design=linear_data.design,
-            instruments=instruments,
-            endogenous=iv_data.endogenous,
-        )
+        return replace(within_data, instruments=instruments)
+
+    def _set_within_data(self, within_data: WithinLinearData) -> None:
+        """Publish IV within state and the `_Z`/`_endogvar` array aliases."""
+        assert isinstance(within_data, WithinIvData)
+        super()._set_within_data(within_data)
+        self._Z = within_data.instruments
+        self._endogvar = within_data.endogenous
+
+    def get_fit(self) -> None:
+        """Fit a IV model using a 2SLS estimator."""
+        within_data = self._drop_multicollinear_within_data(self._demean())
+        # Narrow the base return type so `within_data.instruments` type-checks.
+        assert isinstance(within_data, WithinIvData)
         self._set_within_data(within_data)
         fit = fit_iv(
             X=within_data.design,
