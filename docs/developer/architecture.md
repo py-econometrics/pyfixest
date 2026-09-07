@@ -258,6 +258,11 @@ access instead of keeping one alive for the lifetime of the result. New code
 should consume the typed state values rather than infer semantics from these
 aliases.
 
+CRV3 jackknife and slow randomization-inference refits replay the original
+estimation options. A prebuilt LSMR preconditioner is the sole exception: its
+factorization belongs to one fixed-effect design, so refits keep its variant
+but rebuild it for the changed row set.
+
 A post-estimation path states which estimators, weighting schemes, and design
 features it can represent, and rejects the rest. Declare support as a
 capability flag on the result class, check it before any estimation state is

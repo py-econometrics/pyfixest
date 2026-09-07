@@ -36,6 +36,7 @@ def _get_ritest_stats_slow(
     model: str,
     rng: np.random.Generator,
     vcov: str | dict[str, str],
+    refit_kwargs: dict | None = None,
     clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
@@ -62,6 +63,9 @@ def _get_ritest_stats_slow(
         The random number generator.
     vcov : str or dict[str, str]
         The type of covarianc estimator. See `feols` or `fepois` for details.
+    refit_kwargs : dict, optional
+        Estimator options from the original fit that must be replayed on each
+        resampled data set. Defaults to no additional options.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -77,6 +81,7 @@ def _get_ritest_stats_slow(
 
     fixest_module = import_module("pyfixest.estimation")
     fit_ = getattr(fixest_module, model)
+    fit_kwargs = {} if refit_kwargs is None else refit_kwargs
 
     resampvar_arr = data_resampled[resampvar].to_numpy()
 
@@ -92,7 +97,12 @@ def _get_ritest_stats_slow(
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
 
-        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_(
+            fml_update,
+            data=data_resampled,
+            vcov=vcov,
+            **fit_kwargs,
+        )
         if type == "randomization-c":
             ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:
