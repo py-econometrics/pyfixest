@@ -89,7 +89,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit._observation_weights.values, weights)
     np.testing.assert_array_equal(fit._weights.flatten(), weights)
-    assert fit._observation_weights.kind == weights_type
+    assert fit._observation_weights.weights_type == weights_type
     assert expected_n == fit._N
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(

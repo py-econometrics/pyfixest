@@ -13,7 +13,7 @@ from pyfixest.estimation.internals.model_state import (
 def test_observation_weights_unweighted_fast_path() -> None:
     weights = ObservationWeights.unweighted(n_rows=4)
     assert weights.values is None
-    assert weights.kind is None
+    assert weights.weights_type is None
     assert weights.n_rows == 4
     assert weights.n_effective == 4
     assert isinstance(weights.n_effective, int)
@@ -21,15 +21,19 @@ def test_observation_weights_unweighted_fast_path() -> None:
     assert not hasattr(weights, "__dict__")
 
 
-@pytest.mark.parametrize(("kind", "expected_n"), [("aweights", 3.0), ("fweights", 6.0)])
-def test_observation_weights_keep_canonical_user_values(kind, expected_n) -> None:
+@pytest.mark.parametrize(
+    ("weights_type", "expected_n"), [("aweights", 3.0), ("fweights", 6.0)]
+)
+def test_observation_weights_keep_canonical_user_values(
+    weights_type, expected_n
+) -> None:
     user_weights = np.array([[1.0], [2.0], [3.0]])
-    weights = ObservationWeights.from_values(user_weights, kind=kind)
+    weights = ObservationWeights.from_values(user_weights, weights_type=weights_type)
     np.testing.assert_array_equal(weights.values, user_weights.flatten())
-    assert weights.kind == kind
+    assert weights.weights_type == weights_type
     assert weights.n_rows == 3
     assert weights.n_effective == expected_n
-    assert isinstance(weights.n_effective, int if kind == "aweights" else float)
+    assert isinstance(weights.n_effective, int if weights_type == "aweights" else float)
     assert weights.is_weighted
 
 
@@ -37,11 +41,21 @@ def test_observation_weights_keep_canonical_user_values(kind, expected_n) -> Non
     ("kwargs", "message"),
     [
         (
-            {"values": np.ones(2), "kind": None, "n_rows": 2, "n_effective": 2.0},
-            "Weighted observations must declare a weight kind",
+            {
+                "values": np.ones(2),
+                "weights_type": None,
+                "n_rows": 2,
+                "n_effective": 2.0,
+            },
+            "Weighted observations must declare a `weights_type`",
         ),
         (
-            {"values": np.ones(3), "kind": "aweights", "n_rows": 2, "n_effective": 2},
+            {
+                "values": np.ones(3),
+                "weights_type": "aweights",
+                "n_rows": 2,
+                "n_effective": 2,
+            },
             "Observation weights must contain one value per row",
         ),
     ],
