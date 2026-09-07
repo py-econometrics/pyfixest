@@ -79,8 +79,8 @@ class Fepois(Feglm):
     weights_type : Optional[str]
         Type of weights variable.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Deleted if arguments `lean = True`
+        or `store_data = False`.
 
     Examples
     --------
@@ -204,6 +204,12 @@ class Fepois(Feglm):
         self.deviance = self._family.deviance(
             y_orig, self._Y_hat_response, poisson_summary_weights
         )
+
+    def _clear_attributes(self) -> None:
+        """Apply GLM cleanup and discard the Poisson null-fit array when lean."""
+        super()._clear_attributes()
+        if self._lean and hasattr(self, "_y_hat_null"):
+            del self._y_hat_null
 
     def predict(
         self,

@@ -90,6 +90,7 @@ class Fegaussian(Feglm):
         so the within working response and the response residuals are already
         in the units of Y.
         """
+        self._require_fit_arrays("get_performance", arrays="the working state")
         working_state = self._working_state
         measures = _performance_measures(
             Y=self._response,

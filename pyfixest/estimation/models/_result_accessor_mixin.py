@@ -238,6 +238,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """Estimator-specific within-response view."""
         raise NotImplementedError
 
+    def _require_fit_arrays(
+        self,
+        method: str,
+        *,
+        arrays: str,
+        remedy: str = "Refit with lean=False.",
+    ) -> None:
+        """Reject a call whose input arrays `lean=True` discarded.
+
+        Implemented by the host class.
+        """
+        raise NotImplementedError
+
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
@@ -392,6 +405,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
+        self._require_fit_arrays(
+            "get_performance", arrays="the response and within arrays"
+        )
         measures = _performance_measures(
             Y=self._response,
             Y_within=self._within_data.response,
@@ -676,4 +692,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        self._require_fit_arrays("resid", arrays="the residual arrays")
         return self._u_hat.flatten()

@@ -67,10 +67,11 @@ class FixestMulti(TidyColumnAccessors):
         context : Mapping[str, Any]
             Captured evaluation scope (from `capture_context`).
         """
-        self._config = config
         self._parsed = parsed
-        self._data = data
-        self._context = context
+        if config.store_data and not config.lean:
+            self._config = config
+            self._data = data
+            self._context = context
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
