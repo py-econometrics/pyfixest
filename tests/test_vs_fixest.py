@@ -29,6 +29,7 @@ from tests._feols_test_cases import (
 fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
+sandwich = importr("sandwich")
 
 # note: tolerances are lowered below for
 # fepois inference as it is not as precise as feols
@@ -641,6 +642,38 @@ def test_frequency_weighted_linear_models_against_fixest(fml):
         rtol=0,
         atol=1e-7,
         err_msg="Fweight covariance differs from the R fixest literal expansion",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("vcov_type", ["HC2", "HC3"])
+def test_fepois_hc2_hc3_against_sandwich(vcov_type):
+    """Poisson HC2/HC3 leverage uses the IRLS-weighted design, as in R sandwich.
+
+    `sandwich::vcovHC()` applies no small-sample adjustment for HC2/HC3, so
+    both pyfixest adjustments are switched off.
+    """
+    data = pf.get_data(N=500, seed=3021, model="Fepois").dropna()
+    fml = "Y ~ X1 + X2"
+    py_fit = pf.fepois(
+        fml,
+        data=data,
+        vcov=vcov_type,
+        ssc=pf.ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-12,
+    )
+    r_glm = stats.glm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.poisson(),
+        control=ro.r("glm.control(epsilon = 1e-14, maxit = 100)"),
+    )
+    np.testing.assert_allclose(
+        py_fit._vcov,
+        np.asarray(sandwich.vcovHC(r_glm, type=vcov_type)),
+        rtol=1e-6,
+        atol=0,
+        err_msg=f"Poisson {vcov_type} covariance differs from R sandwich::vcovHC",
     )
 
 

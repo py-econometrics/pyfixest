@@ -36,9 +36,8 @@ def vcov_iid_ols(
 ) -> np.ndarray:
     """Compute IID OLS covariance from response-scale residuals.
 
-    ``weights=None`` selects the allocation-free unweighted path. Otherwise,
-    the residual sum of squares is evaluated in the weighted estimating
-    equation without materializing square-root-weighted residuals.
+    ``weights=None`` applies no weights. Otherwise, the residual sum of
+    squares is weighted by the observation weights.
     """
     squared_residuals = residuals.flatten() ** 2
     if weights is not None:
@@ -64,7 +63,18 @@ def vcov_hetero(
     tXZ: np.ndarray,
     tZZinv: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
+    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
+
+    Parameters
+    ----------
+    frequency_weights : np.ndarray or None
+        User-scale weights when ``weights_type == "fweights"``, else ``None``.
+        Each row then stands for ``f_i`` repeated observations.
+    normal_equation_weights : np.ndarray or None
+        Row weights ``w_i`` of the normal equations when ``X`` is *not*
+        pre-multiplied by ``sqrt(w)``. ``None`` when the caller passes a
+        square-root-weighted design, as GLMs do in this layer.
+    """
     # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
     # rows represent repeated observations, so their per-observation leverage
     # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
