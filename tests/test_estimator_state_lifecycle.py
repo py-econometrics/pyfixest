@@ -82,7 +82,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     assert isinstance(fit._within_data, WithinLinearData)
     assert fit._Y is fit._within_data.response
     assert fit._X is fit._within_data.design
-    assert fit._Z is fit._within_data.design
+    assert not hasattr(fit, "_Z")
     assert not hasattr(fit, "_Yd")
     assert not hasattr(fit, "_Xd")
 

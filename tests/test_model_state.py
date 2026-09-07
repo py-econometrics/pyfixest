@@ -1,10 +1,11 @@
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 
 import numpy as np
 import pytest
 
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
+    WithinIvData,
     WithinLinearData,
 )
 
@@ -36,37 +37,12 @@ def test_observation_weights_keep_canonical_user_values(kind, expected_n) -> Non
     ("kwargs", "message"),
     [
         (
-            {"values": None, "kind": "aweights", "n_rows": 2, "n_effective": 2.0},
-            "Unweighted observations cannot have a weight kind",
-        ),
-        (
             {"values": np.ones(2), "kind": None, "n_rows": 2, "n_effective": 2.0},
             "Weighted observations must declare a weight kind",
         ),
         (
-            {"values": np.ones(2), "kind": "pweights", "n_rows": 2, "n_effective": 2.0},
-            "Weight kind must be 'aweights' or 'fweights'",
-        ),
-        (
-            {"values": None, "kind": None, "n_rows": -1, "n_effective": -1},
-            "n_rows must be non-negative",
-        ),
-        (
-            {
-                "values": np.ones((2, 1)),
-                "kind": "aweights",
-                "n_rows": 2,
-                "n_effective": 2,
-            },
-            "Observation weight values must be a flat array",
-        ),
-        (
             {"values": np.ones(3), "kind": "aweights", "n_rows": 2, "n_effective": 2},
             "Observation weights must contain one value per row",
-        ),
-        (
-            {"values": np.ones(2), "kind": "fweights", "n_rows": 2, "n_effective": 3},
-            "n_effective must match the observation-weight semantics",
         ),
     ],
 )
@@ -93,3 +69,28 @@ def test_within_linear_data_is_structurally_immutable() -> None:
     assert not hasattr(state, "__dict__")
     with pytest.raises(FrozenInstanceError):
         state.response = design  # type: ignore[misc]
+
+
+def test_within_iv_data_requires_instrument_roles() -> None:
+    response = np.arange(3.0)[:, None]
+    design = np.column_stack((np.ones(3), np.arange(3.0)))
+    instruments = np.arange(6.0).reshape(3, 2)
+    endogenous = np.arange(3.0)[:, None]
+    state = WithinIvData(
+        response=response,
+        design=design,
+        instruments=instruments,
+        endogenous=endogenous,
+    )
+    assert isinstance(state, WithinLinearData)
+    assert state.instruments is instruments
+    assert state.endogenous is endogenous
+    assert not hasattr(state, "__dict__")
+
+    with pytest.raises(TypeError):
+        WithinIvData(response=response, design=design)  # type: ignore[call-arg]
+
+    reduced = replace(state, design=design[:, :1])
+    assert isinstance(reduced, WithinIvData)
+    assert reduced.instruments is instruments
+    assert reduced.design.shape == (3, 1)

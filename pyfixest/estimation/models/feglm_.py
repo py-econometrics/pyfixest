@@ -13,7 +13,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
+from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -251,26 +251,32 @@ class Feglm(Feols):
         if self.convergence:
             self._convergence = True
 
-    def _normal_equation_weights(self) -> np.ndarray | None:
-        """Return no extra weights while the GLM design stays sqrt-weighted."""
-        return None
-
-    def _fixef_recovery_weights(self) -> np.ndarray | None:
-        """Preserve legacy weighted-GLM FE recovery until working-state migration."""
-        return self._weights.flatten() if self._has_weights else None
-
-    def _performance_within_response(self) -> np.ndarray:
-        """Undo legacy solver scaling for Gaussian performance diagnostics."""
-        response_solver = self._Y.reshape((-1, 1))
-        sqrt_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
-        return response_solver / sqrt_weights
-
-    def _performance_residuals(self) -> np.ndarray:
-        """Return Gaussian response residuals before legacy solver scaling."""
-        return self._u_hat_response
-
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
+
+    def _vcov_hetero(self):
+        # `_X` is the sqrt(W)-scaled IRLS design in this layer, so the HC2/HC3
+        # leverage already carries W. Frequency weights are rejected at
+        # construction.
+        return vcov_hetero(
+            scores=self._scores,
+            X=self._X,
+            tZX=self._tZX,
+            frequency_weights=None,
+            normal_equation_weights=None,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+        )
+
+    def get_performance(self) -> None:
+        """Reject linear R² measures; only the Gaussian family reports them."""
+        raise NotImplementedError(
+            f"get_performance() is not supported for family='{self._family.name}'; "
+            "only feols() and Gaussian feglm() fits report R² measures."
+        )
 
     def resid(self, type: str = "response") -> np.ndarray:
         """
