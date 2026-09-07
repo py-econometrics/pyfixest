@@ -10,9 +10,17 @@ from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.internals.model_state import (
+        ObservationWeights,
+        WithinLinearData,
+    )
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
+)
+from pyfixest.estimation.internals.performance_ import (
+    PerformanceMeasures,
+    performance_measures,
 )
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
@@ -129,8 +137,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _conf_int: np.ndarray
     _u_hat: np.ndarray
     _weights: np.ndarray
+    _observation_weights: "ObservationWeights"
+    _within_data: "WithinLinearData"
     _Y: np.ndarray
-    _Y_untransformed: pd.Series
+    _Y_untransformed: pd.DataFrame
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -138,7 +148,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _has_weights: bool
     _is_iv: bool
     _k_fe: pd.Series
-    _N: int
+    _N: int | float
+    _N_rows: int
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
@@ -303,28 +314,30 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        Y_within = self._Y
-        Y = self._Y_untransformed.to_numpy()
+        measures = performance_measures(
+            Y=self._Y_untransformed.to_numpy(),
+            Y_within=self._within_data.response,
+            residuals=self._u_hat,
+            weights=self._observation_weights.values,
+            N=self._N,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
+        self._store_performance(measures)
 
-        has_intercept = not self._drop_intercept
+    def _n_fixef_coefficients(self) -> int:
+        """Return the number of fixed-effect coefficients, zero without fixed effects."""
+        return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
 
-        if self._has_fixef:
-            k_fe = np.sum(self._k_fe - 1) + 1
-            adj_factor = (self._N - has_intercept) / (self._N - self._k - k_fe)
-            adj_factor_within = (self._N - k_fe) / (self._N - self._k - k_fe)
-        else:
-            adj_factor = (self._N - has_intercept) / (self._N - self._k)
-
-        ssu = np.sum(self._u_hat**2)
-        ssy = np.sum(self._weights * (Y - np.average(Y, weights=self._weights)) ** 2)
-        self._rmse = np.sqrt(ssu / self._N)
-        self._r2 = 1 - (ssu / ssy)
-        self._adj_r2 = 1 - (ssu / ssy) * adj_factor
-
-        if self._has_fixef:
-            ssy_within = np.sum(Y_within**2)
-            self._r2_within = 1 - (ssu / ssy_within)
-            self._adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
+    def _store_performance(self, measures: PerformanceMeasures) -> None:
+        """Publish goodness-of-fit measures on the fitted model."""
+        self._rmse = measures.rmse
+        self._r2 = measures.r2
+        self._adj_r2 = measures.adj_r2
+        self._r2_within = measures.r2_within
+        self._adj_r2_within = measures.adj_r2_within
 
     def tidy(
         self,
@@ -567,8 +580,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Fitted model residuals.
 
-        For weighted models the residuals are rescaled by the square root of the
-        weights, so they are on the scale of the original dependent variable.
+        Residuals are stored and returned on the scale of the original dependent
+        variable. Observation weights are applied only where an estimating
+        equation or diagnostic requires them.
 
         Returns
         -------
@@ -584,4 +598,4 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
-        return self._u_hat.flatten() / np.sqrt(self._weights.flatten())
+        return self._u_hat.flatten()

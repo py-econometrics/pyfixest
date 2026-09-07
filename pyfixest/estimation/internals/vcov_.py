@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import numpy as np
 
 from pyfixest.core.crv1 import crv1_meat_loop
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
+)
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
     _get_panel_idx,
     _nw_meat_panel,
     _nw_meat_time,
 )
-
-HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
-HacVcovTypeOptions = Literal["NW", "DK"]
 
 
 def _sandwich(
@@ -30,9 +28,21 @@ def _sandwich(
     return bread @ projected_meat @ bread
 
 
-def vcov_iid_ols(residuals: np.ndarray, bread: np.ndarray, N: int) -> np.ndarray:
-    "IID Variance-Covariance Matrix for OLS."
-    sigma2 = np.sum(residuals.flatten() ** 2) / (N - 1)
+def vcov_iid_ols(
+    residuals: np.ndarray,
+    bread: np.ndarray,
+    N: int | float,
+    weights: np.ndarray | None = None,
+) -> np.ndarray:
+    """Compute IID OLS covariance from response-scale residuals.
+
+    ``weights=None`` applies no weights. Otherwise, the residual sum of
+    squares is weighted by the observation weights.
+    """
+    squared_residuals = residuals.flatten() ** 2
+    if weights is not None:
+        squared_residuals = weights.flatten() * squared_residuals
+    sigma2 = np.sum(squared_residuals) / (N - 1)
     return bread * sigma2
 
 
@@ -45,21 +55,37 @@ def vcov_hetero(
     scores: np.ndarray,
     X: np.ndarray,
     tZX: np.ndarray,
-    weights: np.ndarray,
-    weights_type: WeightsTypeOptions | None,
+    frequency_weights: np.ndarray | None,
+    normal_equation_weights: np.ndarray | None,
     vcov_type_detail: HeteroVcovTypeOptions,
     bread: np.ndarray,
     is_iv: bool,
     tXZ: np.ndarray,
     tZZinv: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3)."
+    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
+
+    Parameters
+    ----------
+    frequency_weights : np.ndarray or None
+        User-scale weights when ``weights_type == "fweights"``, else ``None``.
+        Each row then stands for ``f_i`` repeated observations.
+    normal_equation_weights : np.ndarray or None
+        Row weights ``w_i`` of the normal equations when ``X`` is *not*
+        pre-multiplied by ``sqrt(w)``. ``None`` when the caller passes a
+        square-root-weighted design, as GLMs do in this layer.
+    """
+    # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
+    # rows represent repeated observations, so their per-observation leverage
+    # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
         leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
-        if weights_type == "fweights":
-            leverage = leverage / weights.flatten()
+        if normal_equation_weights is not None:
+            leverage = normal_equation_weights.flatten() * leverage
+        if frequency_weights is not None:
+            leverage = leverage / frequency_weights.flatten()
         transformed_scores = (
             scores / np.sqrt(1 - leverage)[:, None]
             if vcov_type_detail == "HC2"
@@ -70,9 +96,8 @@ def vcov_hetero(
             f"vcov_type_detail must be one of {HeteroVcovTypeOptions}, got {vcov_type_detail}."
         )
 
-    # for fweights, need to divide by sqrt(weights)
-    if weights_type == "fweights":
-        transformed_scores = transformed_scores / np.sqrt(weights)
+    if frequency_weights is not None:
+        transformed_scores = transformed_scores / np.sqrt(frequency_weights)
 
     Omega = transformed_scores.T @ transformed_scores
 
@@ -187,20 +212,31 @@ def _jackknife_vcov(beta_jack: np.ndarray, beta_center: np.ndarray) -> np.ndarra
 def vcov_crv3_fast(
     X: np.ndarray,
     Y: np.ndarray,
+    weights: np.ndarray | None,
     beta_hat: np.ndarray,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled CRV3 vcov via the closed-form cluster jackknife (no fixed effects)."
+    """Compute unscaled CRV3 from within-scale arrays without retaining WLS data."""
     beta_jack = np.zeros((len(clustid), X.shape[1]))
 
-    tXX = X.T @ X
-    tXy = X.T @ Y
+    if weights is None:
+        X_solver = X
+        Y_solver = Y.reshape(-1, 1)
+    else:
+        sqrt_weights = np.sqrt(weights).reshape(-1, 1)
+        X_solver = X * sqrt_weights
+        Y_solver = Y.reshape(-1, 1) * sqrt_weights
+
+    tXX = X_solver.T @ X_solver
+    tXy = X_solver.T @ Y_solver
 
     for ixg, g in enumerate(clustid):
-        Xg = X[np.equal(g, cluster_col)]
-        Yg = Y[np.equal(g, cluster_col)]
+        group = np.equal(g, cluster_col)
+        Xg = X_solver[group]
+        Yg = Y_solver[group]
         tXgXg = Xg.T @ Xg
-        beta_jack[ixg, :] = (np.linalg.pinv(tXX - tXgXg) @ (tXy - Xg.T @ Yg)).flatten()
+        tXgyg = Xg.T @ Yg
+        beta_jack[ixg, :] = (np.linalg.pinv(tXX - tXgXg) @ (tXy - tXgyg)).flatten()
 
     return _jackknife_vcov(beta_jack=beta_jack, beta_center=beta_hat)

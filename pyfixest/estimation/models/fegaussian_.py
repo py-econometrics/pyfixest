@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
+import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
@@ -8,6 +9,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.performance_ import performance_measures
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -76,3 +78,24 @@ class Fegaussian(Feglm):
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
         return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+
+    def get_performance(self) -> None:
+        """Compute R² measures from response-scale arrays.
+
+        In this layer `_Y` is the sqrt(W)-scaled IRLS within response. For the
+        Gaussian family W equals the observation weights, so dividing by
+        sqrt(W) recovers the within response in the units of Y.
+        """
+        sqrt_irls_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
+        measures = performance_measures(
+            Y=self._Y_untransformed.to_numpy(),
+            Y_within=self._Y.reshape((-1, 1)) / sqrt_irls_weights,
+            residuals=self._u_hat_response,
+            weights=self._observation_weights.values,
+            N=self._N,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
+        self._store_performance(measures)

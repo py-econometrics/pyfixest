@@ -53,9 +53,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   as a frame on every fit, and the returned response and regressor columns
   follow the order the model asked for regardless of the order the cache
   filled up in. Cached data is handed out read-only, so one fit cannot corrupt
-  the demeaned columns another model reuses. Linear and IV models keep their
-  `DataFrame` call sites through a thin adapter until array-native within
-  state lands.
+  the demeaned columns another model reuses.
+- Linear models no longer store `sqrt(w)`-scaled `X` and `Y`. The demeaned
+  arrays and the weights are kept separately and weighting happens inside the
+  solver; residuals are always on the scale of the dependent variable.
 
 ### Inference Types
 
@@ -226,6 +227,21 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
+- For weighted models, `_sumFE` was stored as `sqrt(w) * D @ alpha`, with the
+  IRLS working weights in place of `w` for `fepois()` and `feglm()`. It is now
+  `D @ alpha`, on the scale of the linear predictor, matching fixest's
+  `sumFE`. `predict()` was unaffected: it uses the fixed-effect coefficients,
+  which were already estimated on the correct scale.
+- `get_performance()` now raises `NotImplementedError` for non-Gaussian
+  `feglm()` families and for `quantreg()`. For GLMs it previously returned
+  R²-type values computed from IRLS working arrays; for `quantreg()` it was a
+  silent no-op that left the measures `NaN`. Gaussian `feglm()` results are
+  unchanged.
+- `feglm()` and `fepois()` reject `weights_type="fweights"` until
+  frequency-weighted GLM inference is verified against a reference
+  implementation (#367).
+- `IV_Diag()` no longer relabels the main model's covariance type when computing
+  the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order

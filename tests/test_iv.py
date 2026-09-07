@@ -266,3 +266,43 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
         atol=1e-8,
         err_msg="F-Stats p-value mismatch in first stage between IV and OLS",
     )
+
+
+def test_iv_diag_does_not_relabel_vcov_type():
+    # The effective F stat refits the first stage with "hetero" errors, but the
+    # outer model must keep the covariance type it was estimated with.
+    data = get_data()
+
+    fit_iid = feols("Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, weights="weights", vcov="iid")
+    vcov_type_detail_before = fit_iid._vcov_type_detail
+    se_before = fit_iid.se().copy()
+
+    fit_iid.IV_Diag()
+
+    assert vcov_type_detail_before == "iid"
+    assert fit_iid._vcov_type_detail == "iid", (
+        "IV_Diag() relabelled the main model's covariance type"
+    )
+    np.testing.assert_allclose(
+        fit_iid.se(),
+        se_before,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="IV_Diag() changed the main model's standard errors",
+    )
+    assert np.isfinite(fit_iid._eff_F)
+
+    # The effective F is computed from the heteroskedasticity-robust first
+    # stage, so it does not depend on the outer model's covariance type.
+    fit_hetero = feols(
+        "Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, weights="weights", vcov="hetero"
+    )
+    fit_hetero.IV_Diag()
+
+    np.testing.assert_allclose(
+        fit_iid._eff_F,
+        fit_hetero._eff_F,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="Effective F differs between iid and hetero specifications",
+    )
