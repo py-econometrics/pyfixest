@@ -247,9 +247,6 @@ never changes after formula preparation, while each IRLS iteration computes
 working weights and the final values live in `GlmWorkingState`. Response
 residuals and working residuals likewise have separate fields.
 
-Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
-the outer model's covariance label untouched.
-
 A post-estimation path states which estimators, weighting schemes, and design
 features it can represent, and rejects the rest. Declare support as a
 capability flag on the result class, check it before any estimation state is
@@ -262,10 +259,6 @@ can.
 
 An operation that cannot reconstruct the complete state of a fitted result
 returns its value instead of mutating the result in place.
-
-Keeping canonical arrays unpremultiplied favors readability without moving
-weight work out of the numerical hot path: each solver still performs the same
-vectorized square-root transform locally.
 
 ## Repository map and extension seams
 

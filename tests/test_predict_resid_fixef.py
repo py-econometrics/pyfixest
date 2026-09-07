@@ -42,9 +42,13 @@ def test_ols_prediction_internally(data, fml, weights):
     """
     # predict via pf.feols, without fixed effect
     mod = pf.feols(fml=fml, data=data, vcov="iid", weights=weights)
+    if mod._has_fixef:
+        # predict(newdata=...) adds fixed effects recovered by fixef(); solve
+        # them tightly so the comparison is not limited by lsqr's default 1e-6.
+        mod.fixef(atol=1e-12, btol=1e-12)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)
-    np.allclose(original_prediction, updated_prediction)
+    np.testing.assert_allclose(original_prediction, updated_prediction, rtol=1e-6)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
@@ -59,9 +63,11 @@ def test_ols_prediction_internally(data, fml, weights):
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
     mod = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
+    if mod._has_fixef:
+        mod.fixef(atol=1e-12, btol=1e-12)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)
-    np.allclose(original_prediction, updated_prediction)
+    np.testing.assert_allclose(original_prediction, updated_prediction, rtol=1e-6)
     assert mod._data.shape[0] == original_prediction.shape[0]
     assert mod._data.shape[0] == updated_prediction.shape[0]
 
@@ -247,28 +253,32 @@ def test_feglm_resid_vs_fixest(data, family, fml):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1 | f1", "Y ~ X1 + X2 | f1 + f2"])
 @pytest.mark.parametrize(
     ("weights_name", "weights_type"),
     [("weights", "aweights"), ("fweights", "fweights")],
 )
-def test_weighted_fixef_is_on_response_scale(data, weights_name, weights_type):
+def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_type):
     """Weighted fixed effects and predictions stay in response units."""
     group_size = data.groupby("f1")["f1"].transform("size")
     weighted_data = data.loc[group_size > 1].copy().reset_index(drop=True)
     weighted_data["fweights"] = np.arange(len(weighted_data)) % 4 + 1
 
+    # Keep singleton fixed-effect groups on both sides so the row samples match.
     fit = pf.feols(
-        "Y ~ X1 | f1",
+        fml,
         data=weighted_data,
         weights=weights_name,
         weights_type=weights_type,
+        fixef_rm="none",
     )
     fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
 
     fit_r = fixest.feols(
-        ro.Formula("Y ~ X1 | f1"),
+        ro.Formula(fml),
         data=weighted_data,
         weights=ro.Formula(f"~{weights_name}"),
+        **{"fixef.rm": "none"},
     )
     ro.globalenv[".pyfixest_weighted_fixef_fit"] = fit_r
     fixed_effects_r = ro.r["fixef"](fit_r).rx2("f1")
@@ -276,48 +286,40 @@ def test_weighted_fixef_is_on_response_scale(data, weights_name, weights_type):
         ro.r("names(fixef(.pyfixest_weighted_fixef_fit)$f1)"), dtype=float
     )
 
-    response_scale_fixed_effect = fit.predict() - weighted_data[
-        "X1"
-    ].to_numpy() * fit.coef().xs("X1")
-    np.testing.assert_allclose(
-        fit._sumFE,
-        response_scale_fixed_effect,
-        rtol=1e-8,
-        atol=1e-8,
+    response_scale_fixed_effect = (
+        fit.predict() - weighted_data[fit._coefnames].to_numpy() @ fit.coef().to_numpy()
     )
-    np.testing.assert_allclose(
-        fit._sumFE,
-        np.asarray(fit_r.rx2("sumFE")),
-        rtol=1e-8,
-        atol=1e-8,
-    )
+    # With two fixed effects, iterative demeaning and the lsqr fixed-effect
+    # solve agree with fixest to about 1e-8.
+    tol = {"rtol": 1e-7, "atol": 1e-7}
+    np.testing.assert_allclose(fit._sumFE, response_scale_fixed_effect, **tol)
+    np.testing.assert_allclose(fit._sumFE, np.asarray(fit_r.rx2("sumFE")), **tol)
 
-    fixed_effects_by_level = fixed_effects.set_index(
-        fixed_effects["level"].astype(float)
-    )["coefficient"].sort_index()
-    fixed_effects_r_by_level = pd.Series(
-        np.asarray(fixed_effects_r),
-        index=fixed_effect_levels_r,
-    ).sort_index()
-    np.testing.assert_allclose(
-        fixed_effects_by_level,
-        fixed_effects_r_by_level,
-        rtol=1e-8,
-        atol=1e-8,
-    )
+    # With two fixed effects the per-level values depend on the normalization
+    # of the second effect, so compare levels only for the single-FE model.
+    if fit._n_fe == 1:
+        fixed_effects_by_level = fixed_effects.set_index(
+            fixed_effects["level"].astype(float)
+        )["coefficient"].sort_index()
+        fixed_effects_r_by_level = pd.Series(
+            np.asarray(fixed_effects_r),
+            index=fixed_effect_levels_r,
+        ).sort_index()
+        np.testing.assert_allclose(
+            fixed_effects_by_level,
+            fixed_effects_r_by_level,
+            rtol=1e-8,
+            atol=1e-8,
+        )
 
     np.testing.assert_allclose(
-        fit.predict(),
-        np.asarray(fit_r.rx2("fitted.values")),
-        rtol=1e-8,
-        atol=1e-8,
+        fit.predict(), np.asarray(fit_r.rx2("fitted.values")), **tol
     )
     newdata = weighted_data.iloc[:100]
     np.testing.assert_allclose(
         fit.predict(newdata=newdata),
         np.asarray(stats.predict(fit_r, newdata=newdata)),
-        rtol=1e-8,
-        atol=1e-8,
+        **tol,
     )
 
 

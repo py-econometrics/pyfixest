@@ -9,6 +9,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
+from pyfixest.estimation.models._result_accessor_mixin import _performance_measures
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -81,3 +82,24 @@ class Fegaussian(Feglm):
             N=self._N,
             weights=self._observation_weights.values,
         )
+
+    def get_performance(self) -> None:
+        """Compute R² measures from the Gaussian working state.
+
+        For the Gaussian family the working response is the response itself,
+        so the within working response and the response residuals are already
+        in the units of Y.
+        """
+        working_state = self._working_state
+        measures = _performance_measures(
+            Y=self._Y_untransformed.to_numpy(),
+            Y_within=working_state.working_response_within.reshape((-1, 1)),
+            residuals=working_state.response_residuals,
+            weights=self._observation_weights.values,
+            N=self._N,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
+        self._store_performance(measures)

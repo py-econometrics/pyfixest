@@ -53,16 +53,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   as a frame on every fit, and the returned response and regressor columns
   follow the order the model asked for regardless of the order the cache
   filled up in. Cached data is handed out read-only, so one fit cannot corrupt
-  the demeaned columns another model reuses. Linear and IV models keep their
-  `DataFrame` call sites through a thin adapter until array-native within
-  state lands.
-- Estimator internals now keep formula tables, unpremultiplied within arrays,
-  and user-scale observation weights in separate typed domains.
-  Square-root-weighted arrays are local solver temporaries, and linear
-  residuals remain in response units. GLM IRLS working state (working response,
-  design, and weights) is kept separate from observation weights.
-- Internal demeaning and covariance code now names column-order, normal-equation,
-  and frequency-replication invariants explicitly alongside their formulas.
+  the demeaned columns another model reuses.
+- Linear models no longer store `sqrt(w)`-scaled `X` and `Y`. The demeaned
+  arrays and the weights are kept separately and weighting happens inside the
+  solver; residuals are always on the scale of the dependent variable. GLM
+  IRLS working state (working response, design, and weights) is kept separate
+  from observation weights.
 
 ### Inference Types
 
@@ -236,10 +232,15 @@ We also removed:
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
-- Weighted fixed-effect contributions (`_sumFE`) are now stored in response
-  units.
-- Gaussian GLM performance measures now use the estimator's unpremultiplied
-  within response and observation weights, including weighted fixed-effect fits.
+- For weighted models, `_sumFE` was stored as `sqrt(w) * D @ alpha`. It is now
+  `D @ alpha`, on the scale of the dependent variable, matching fixest's
+  `sumFE`. `predict()` was unaffected: it uses the fixed-effect coefficients,
+  which were already estimated on the correct scale.
+- `get_performance()` now raises `NotImplementedError` for non-Gaussian
+  `feglm()` families and for `quantreg()`. For GLMs it previously returned
+  R²-type values computed from IRLS working arrays; for `quantreg()` it was a
+  silent no-op that left the measures `NaN`. Gaussian `feglm()` results are
+  unchanged.
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
