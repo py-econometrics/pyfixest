@@ -287,7 +287,6 @@ def test_multiple_estimation_shares_array_native_demean_cache(
     [
         ("y ~ x", None, "aweights"),
         ("y ~ x | fe", "weight", "aweights"),
-        ("y ~ x | fe", "weight", "fweights"),
     ],
 )
 def test_gaussian_glm_performance_uses_explicit_response_domains(

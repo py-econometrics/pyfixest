@@ -78,6 +78,12 @@ class Feglm(Feols):
         context: int | Mapping[str, Any] = 0,
         accelerate: bool = True,
     ):
+        if weights is not None and weights_type == "fweights":
+            raise NotImplementedError(
+                "Frequency weights are not supported for feglm() and fepois() yet; "
+                "see https://github.com/py-econometrics/pyfixest/issues/367."
+            )
+
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,

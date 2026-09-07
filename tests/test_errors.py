@@ -211,6 +211,21 @@ def test_poisson_errors():
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
 
 
+def test_glm_frequency_weights_not_supported():
+    data = pf.get_data(model="Fepois").dropna()
+    data["fw"] = np.arange(len(data)) % 3 + 1
+    with pytest.raises(NotImplementedError, match="Frequency weights"):
+        pf.fepois("Y ~ X1", data=data, weights="fw", weights_type="fweights")
+    with pytest.raises(NotImplementedError, match="Frequency weights"):
+        pf.feglm(
+            "Y ~ X1",
+            data=data,
+            family="gaussian",
+            weights="fw",
+            weights_type="fweights",
+        )
+
+
 def test_get_performance_not_supported():
     data = pf.get_data(model="Fepois").dropna()
     with pytest.raises(NotImplementedError, match="family='poisson'"):

@@ -83,8 +83,8 @@ def fepois(
 
     weights_type: WeightsTypeOptions, optional
         Options include `aweights` or `fweights`. `aweights` implement analytic or
-        precision weights, while `fweights` implement frequency weights. Frequency weights
-        are useful for compressed count data where identical observations are aggregated.
+        precision weights, while `fweights` implement frequency weights. Frequency
+        weights are not supported yet and raise `NotImplementedError` (#367).
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     offset : str | None, optional
