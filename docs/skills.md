@@ -30,9 +30,10 @@ In a checkout, read `docs/` and `AGENTS.md` in the repository. Otherwise read
 rather than the installed one.
 
 **The skill.** `SKILL.md` is a short router: it tells the agent how to find the
-directory above, which page to open for the task at hand, and a handful of core
-facts (formula grammar, `vcov` spellings, one `etable()` call) that PyFixest's
-test suite executes on every run.
+directory above and use the cheat sheet's task table to choose a page. The task
+table is maintained only in the cheat sheet. The skill also includes a handful
+of core facts (formula grammar, `vcov` spellings, one `etable()` call) that
+PyFixest's test suite executes on every run.
 
 ## Where the skill lands
 
@@ -73,8 +74,7 @@ is missing it falls back to the repository, or to <https://pyfixest.org>.
 
 ## See also
 
-- [PyFixest Cheat Sheet](cheatsheet.qmd) — the same task table, executed, on one
-  page.
+- [PyFixest Cheat Sheet](cheatsheet.qmd) — the task table and executed API examples.
 - [llms.txt](llms.txt) — the machine-readable index of this site.
 - [py-econometrics/pyfixest](https://github.com/py-econometrics/pyfixest) — the
   source repository, including `AGENTS.md` for agents working *on* PyFixest.

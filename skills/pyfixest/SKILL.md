@@ -10,34 +10,12 @@ is present:
 
     python -c "import importlib.resources as r; p = r.files('pyfixest') / 'docs'; print(p, (p / 'llms.txt').is_file())"
 
-If it prints `True`, read `cheatsheet.llms.md` in that directory first (one
-page: syntax, standard errors, methods, and the table below); `llms.txt`
-lists every page and describes each. If it prints `False`, this is a source
-checkout or a release older than the bundled docs: in a checkout read
-`docs/` and `AGENTS.md`; otherwise use https://pyfixest.org/cheatsheet.html,
+If it prints `True`, open `cheatsheet.llms.md` in that directory and use its
+"Where to go for each task" table to choose the relevant documentation.
+`llms.txt` lists every page and describes each. If it prints `False`, this is a
+source checkout or a release older than the bundled docs: in a checkout start
+with `docs/cheatsheet.qmd`; otherwise use https://pyfixest.org/cheatsheet.html,
 which may describe a different version than the one installed.
-
-## Where to go for each task
-
-| Task | Start here | Then |
-|---|---|---|
-| Fit a first model | `getting-started.llms.md` | `tutorials/ols-fixed-effects.llms.md` |
-| Formulas, fixed effects, interactions, multiple estimation | `tutorials/formula-syntax.llms.md` | `reference/estimation.api.feols.feols.llms.md` |
-| Instrumental variables | `tutorials/instrumental-variables.llms.md` | `reference/estimation.api.feols.feols.llms.md` |
-| Poisson or GLM | `tutorials/poisson-glm.llms.md` | `reference/estimation.api.fepois.fepois.llms.md`, `reference/estimation.api.feglm.feglm.llms.md` |
-| Quantile regression | `tutorials/quantile-regression.llms.md` | `reference/estimation.api.quantreg.quantreg.llms.md` |
-| Choose or change standard errors | `tutorials/standard-errors.llms.md` | `reference/estimation.models.feols_.Feols.vcov.llms.md` |
-| Tables, summaries, coefficient plots | `tutorials/regression-tables.llms.md` | `reference/index.llms.md` |
-| Difference-in-differences, event studies | `tutorials/difference-in-differences.llms.md` | `reference/index.llms.md#difference-in-differences` |
-| Predictions, residuals, fixed-effect estimates | `reference/estimation.models.feols_.Feols.predict.llms.md` | `reference/estimation.models.feols_.Feols.resid.llms.md`, `reference/estimation.models.feols_.Feols.fixef.llms.md` |
-| Hypothesis tests, decomposition | `reference/estimation.models.feols_.Feols.wald_test.llms.md` | `how-to/regression_decomposition.llms.md` |
-| Multiple-hypothesis corrections | `reference/estimation.post_estimation.multcomp.rwolf.llms.md` | `reference/estimation.post_estimation.multcomp.wyoung.llms.md`, `reference/estimation.post_estimation.multcomp.bonferroni.llms.md` |
-| Anytime-valid / sequential inference | `how-to/anytime-valid-inference.llms.md` | `reference/estimation.models.feols_.Feols.evalue.llms.md`, `reference/estimation.models.feols_.Feols.pvalue_savi.llms.md` |
-| Marginal effects | `how-to/marginaleffects.llms.md` | `reference/index.llms.md` |
-| AB tests with panel data | `how-to/panel_variance_reduction.llms.md` | `tutorials/difference-in-differences.llms.md` |
-| Slow or failing fixed-effects fits | `explanation/difficult-fixed-effects.llms.md` | `how-to/demeaner-backends.llms.md` |
-| Translate from R or Stata | `explanation/compare-fixest-pyfixest.llms.md` | `how-to/stata-2-pyfixest.llms.md` |
-| Exact signatures | `reference/index.llms.md` | `llms.txt` |
 
 ## Core facts
 
@@ -65,13 +43,13 @@ pf.etable([pf.feols("Y ~ X1 | f1", data=data)], type="md", keep="X1")
 
 ## Workflow
 
-1. Choose the closest task in the table above and open its narrative
+1. Choose the closest task in the cheat sheet's task table and open its narrative
    documentation.
 2. Before choosing `vcov`, check the support-limits table in
    `tutorials/standard-errors.llms.md`; before writing a formula, check
    `tutorials/formula-syntax.llms.md`.
 3. Check the installed API reference or function signature before writing code.
-4. Search `llms.txt` only when the table above does not identify a suitable
+4. Search `llms.txt` only when the cheat sheet does not identify a suitable
    page.
 5. Prefer public `pyfixest` functions and result methods; do not depend on
    underscore-prefixed state.

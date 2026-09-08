@@ -51,8 +51,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   text: every formula, `vcov` spelling, and unsupported combination on it runs
   at render time.
 - Releases ship an installable agent skill at `skills/pyfixest/SKILL.md`; it
-  resolves the bundled documentation at runtime, and a test executes its
-  examples.
+  resolves the bundled documentation at runtime and routes tasks through the
+  cheat sheet's single maintained task table. A test executes its examples.
 
 ### Inference Types
 
