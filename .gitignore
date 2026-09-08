@@ -62,7 +62,8 @@ benchmarks/data/
 .claude/
 .serena/
 # A stray root SKILL.md (e.g. copied from docs/skills.md). Repository skills
-# live in .agents/skills/ and are tracked.
+# live in .agents/skills/ and the user-facing skill lives in skills/pyfixest/;
+# both are tracked.
 /SKILL.md
 
 # Platform-local pyfixest release baseline (see docs/developer/testing.md)

@@ -68,6 +68,8 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+# The installable agent skill ships with every release; see docs/skills.md.
+include = [{ path = "skills/pyfixest/**/*", format = ["wheel", "sdist"] }]
 exclude = [
     "tests/**",
     "docs/**",
