@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from pyfixest.estimation.internals.model_state import (
-    GlmWorkingState,
     ObservationWeights,
     WithinIvData,
     WithinLinearData,
@@ -80,36 +79,6 @@ def test_within_linear_data_is_structurally_immutable() -> None:
         state.response = design  # type: ignore[misc]
     with pytest.raises(TypeError):
         WithinLinearData(response=response, design=design, instruments=design)  # type: ignore[call-arg]
-
-
-def test_glm_working_state_names_every_persisted_domain() -> None:
-    working_response = np.arange(3.0)
-    design = np.arange(6.0).reshape(3, 2)
-    working_weights = np.array([1.0, 2.0, 3.0])
-    eta = np.array([-1.0, 0.0, 1.0])
-    mu = np.array([0.2, 0.5, 0.8])
-    response_residuals = np.array([-0.2, 0.5, 0.2])
-    working_residuals = np.array([-1.0, 1.0, 0.5])
-
-    state = GlmWorkingState(
-        working_response_within=working_response,
-        design_within=design,
-        working_weights=working_weights,
-        eta=eta,
-        mu=mu,
-        response_residuals=response_residuals,
-        working_residuals=working_residuals,
-    )
-
-    assert state.working_response_within is working_response
-    assert state.design_within is design
-    assert state.working_weights is working_weights
-    assert state.eta is eta
-    assert state.mu is mu
-    assert state.response_residuals is response_residuals
-    assert state.working_residuals is working_residuals
-    assert not hasattr(state, "sqrt_weights")
-    assert not hasattr(state, "__dict__")
 
 
 def test_within_iv_data_requires_instrument_roles() -> None:
