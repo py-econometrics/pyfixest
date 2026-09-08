@@ -59,6 +59,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   solver; residuals are always on the scale of the dependent variable. GLM
   IRLS working state (working response, design, and weights) is kept separate
   from observation weights.
+- `lean=True` now discards the retained GLM working state so its design and
+  working-response arrays are released with the other estimation matrices.
 
 ### Inference Types
 

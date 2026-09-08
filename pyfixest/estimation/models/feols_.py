@@ -934,6 +934,7 @@ class Feols(ResultAccessorMixin):
                 "_Y_hat_response",
                 "_Y_untransformed",
                 "_model_matrix",
+                "_working_state",
             ]
 
         for attr in attributes:

@@ -333,13 +333,31 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     assert fit._model_1st_stage.preconditioner.nrows == preconditioner.nrows
 
 
-def test_lean():
-    data = pf.get_data()
-    fit = pf.feols("Y ~ X1 + X2 | f1", data=data, lean=True)
+@pytest.mark.parametrize(
+    "estimator,kwargs",
+    [
+        (pf.feols, {}),
+        (pf.fepois, {}),
+        (pf.feglm, {"family": "gaussian"}),
+    ],
+)
+@pytest.mark.parametrize("lean", [False, True])
+@pytest.mark.parametrize("store_data", [False, True])
+def test_lean(estimator, kwargs, lean, store_data):
+    data = pf.get_data(model="Fepois")
+    fit = estimator(
+        "Y ~ X1 + X2 | f1",
+        data=data,
+        lean=lean,
+        store_data=store_data,
+        **kwargs,
+    )
 
-    assert not hasattr(fit, "_data")
-    assert not hasattr(fit, "_X")
-    assert not hasattr(fit, "_Y")
+    assert hasattr(fit, "_data") == (store_data and not lean)
+    assert hasattr(fit, "_X") == (not lean)
+    assert hasattr(fit, "_Y") == (not lean)
+    if estimator is not pf.feols:
+        assert hasattr(fit, "_working_state") == (not lean)
 
 
 def test_duckdb_input():
