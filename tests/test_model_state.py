@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.model_state import (
 
 def test_observation_weights_unweighted_fast_path() -> None:
     weights = ObservationWeights.unweighted(n_rows=4)
+
     assert weights.values is None
     assert weights.weights_type is None
     assert weights.n_rows == 4

@@ -1,7 +1,6 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
@@ -77,20 +76,25 @@ class Fegaussian(Feglm):
 
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
-        return vcov_iid_ols(residuals=self._u_hat, bread=self._bread, N=self._N)
+        return vcov_iid_ols(
+            residuals=self._u_hat,
+            bread=self._bread,
+            N=self._N,
+            weights=self._observation_weights.values,
+        )
 
     def get_performance(self) -> None:
-        """Compute R² measures from response-scale arrays.
+        """Compute R² measures from the Gaussian working state.
 
-        In this layer `_Y` is the sqrt(W)-scaled IRLS within response. For the
-        Gaussian family W equals the observation weights, so dividing by
-        sqrt(W) recovers the within response in the units of Y.
+        For the Gaussian family the working response is the response itself,
+        so the within working response and the response residuals are already
+        in the units of Y.
         """
-        sqrt_irls_weights = np.sqrt(self._irls_weights).reshape((-1, 1))
+        working_state = self._working_state
         measures = performance_measures(
             Y=self._Y_untransformed.to_numpy(),
-            Y_within=self._Y.reshape((-1, 1)) / sqrt_irls_weights,
-            residuals=self._u_hat_response,
+            Y_within=working_state.working_response_within.reshape((-1, 1)),
+            residuals=working_state.response_residuals,
             weights=self._observation_weights.values,
             N=self._N,
             k=self._k,

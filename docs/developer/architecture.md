@@ -64,7 +64,7 @@ shared estimator API
             -> drop collinear columns
             -> solve OLS / 2SLS with local weight transforms
        -> fepois / feglm
-            -> IRLS with weighted demeaning and solving inside each iteration
+            -> IRLS with explicit observation and working weights
        -> quantreg
             -> Frisch-Newton solve (absorbed fixed effects are unsupported)
   -> vcov
@@ -218,9 +218,9 @@ estimation fields.
 
 ## Implemented array and weight domains
 
-The shared linear path now implements the vocabulary above with frozen, slotted
-state values. Frozen state prevents field rebinding, but contained NumPy arrays
-remain mutable unless they are explicitly marked read-only:
+The shared linear and GLM paths now implement the vocabulary above with frozen,
+slotted state values. Frozen state prevents field rebinding, but contained NumPy
+arrays remain mutable unless they are explicitly marked read-only:
 
 | State | Persisted contract |
 |---|---|
@@ -228,15 +228,24 @@ remain mutable unless they are explicitly marked read-only:
 | `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
 | `WithinLinearData` | Unpremultiplied within-scale response and design arrays. |
 | `WithinIvData` | Extends `WithinLinearData` with the instrument and endogenous arrays that only IV models carry. |
+| `GlmWorkingState` | Final within-scale working response and design, IRLS working weights, predictors, means, and response- and working-residual domains. |
 | `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
 
 Analytic weights keep the retained row count as the effective sample size;
 frequency weights use the sum of their user-scale values. Probability weights
-(`pweights`) remain unsupported. Fixed-effect projection may use observation
-weights, but the returned arrays remain within scale. OLS and IV fit primitives
-create square-root-weighted design and response arrays only as local solver
-temporaries. They persist response-unit residuals and weighted scores or
-cross-products, not solver-scale copies of canonical data.
+(`pweights`) remain unsupported. Fixed-effect projection may use observation or
+IRLS weights, but the returned arrays remain within scale. OLS, IV, and IRLS
+fit primitives create square-root-weighted design and response arrays only as
+local solver temporaries. They persist response-unit residuals and weighted
+scores or cross-products, not solver-scale copies of canonical data.
+Singleton fixed-effect detection counts physical rows even under frequency
+weights, as in fixest: an aggregate row alone in its level is dropped although
+its literal expansion would not be.
+
+GLMs keep two weight concepts deliberately separate. `ObservationWeights`
+never changes after formula preparation, while each IRLS iteration computes
+working weights and the final values live in `GlmWorkingState`. Response
+residuals and working residuals likewise have separate fields.
 
 A post-estimation path states which estimators, weighting schemes, and design
 features it can represent, and rejects the rest. Declare support as a

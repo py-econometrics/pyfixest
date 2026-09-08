@@ -118,8 +118,6 @@ def feglm(
     weights_type : WeightsTypeOptions, optional
         Type of weights variable. Either "aweights" (analytic / precision
         weights) or "fweights" (frequency weights). Defaults to "aweights".
-        Frequency weights are not supported yet and raise `NotImplementedError`
-        (#367).
 
     offset : str | None, optional
         Default is None. Formulaic expression that evaluates to one numeric

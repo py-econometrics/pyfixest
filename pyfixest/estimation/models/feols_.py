@@ -475,9 +475,8 @@ class Feols(ResultAccessorMixin):
         self._N = self._observation_weights.n_effective
         self._N_rows = self._observation_weights.n_rows
         values = self._observation_weights.values
-        # (n_rows, 1) weights read by `fixef()`, `ritest()`, `decompose()` and
-        # the GLM estimators, which overwrite them with IRLS weights. Linear
-        # estimation and inference use `_observation_weights`.
+        # (n_rows, 1) observation weights read by `fixef()`, `ritest()` and
+        # `decompose()`. Estimation and inference use `_observation_weights`.
         self._weights = (
             np.ones((self._N_rows, 1), dtype=np.float64)
             if values is None
@@ -935,6 +934,7 @@ class Feols(ResultAccessorMixin):
                 "_Y_hat_response",
                 "_Y_untransformed",
                 "_model_matrix",
+                "_working_state",
             ]
 
         for attr in attributes:
