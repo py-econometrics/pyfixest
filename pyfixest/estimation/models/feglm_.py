@@ -15,7 +15,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import vcov_iid_glm
+from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -220,6 +220,8 @@ class Feglm(Feols):
         self._Y_hat_link = working_state.eta
 
         self._u_hat_response = working_state.response_residuals
+        # The shared inference residual is the working residual; resid()
+        # exposes the response and working domains separately.
         self._u_hat_working = working_state.working_residuals
         self._u_hat = self._u_hat_working
 
@@ -255,11 +257,6 @@ class Feglm(Feols):
         return self._working_state.design_within
 
     @property
-    def _Z(self) -> NDArray[np.float64]:
-        """The IRLS design; a GLM has no instruments."""
-        return self._working_state.design_within
-
-    @property
     def _irls_weights(self) -> NDArray[np.float64]:
         """Final IRLS working weights, never the observation weights."""
         return self._working_state.working_weights
@@ -269,23 +266,36 @@ class Feglm(Feols):
         """Linear predictor as a column vector."""
         return self._working_state.eta.reshape(-1, 1)
 
-    def _normal_equation_weights(self) -> np.ndarray:
-        """Return the final IRLS weights in the fitted normal equations."""
-        return self._working_state.working_weights
-
-    def _fixef_recovery_weights(self) -> np.ndarray | None:
-        """Return weights used by fixed-effect coefficient recovery.
-
-        At convergence, ``eta - offset - X @ beta`` is the fixed-effect
-        contribution, up to solver tolerance. For weighted fits the recovery
-        solve uses the combined IRLS weights, which already contain the
-        observation weights; applying observation weights again would double
-        count them.
-        """
-        return self._working_state.working_weights if self._has_weights else None
-
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
+
+    def _vcov_hetero(self):
+        # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
+        # final IRLS weights, which already contain the observation weights.
+        observation_weights = self._observation_weights.values
+        return vcov_hetero(
+            scores=self._scores,
+            X=self._X,
+            tZX=self._tZX,
+            frequency_weights=(
+                observation_weights.reshape((-1, 1))
+                if observation_weights is not None and self._weights_type == "fweights"
+                else None
+            ),
+            normal_equation_weights=self._working_state.working_weights,
+            vcov_type_detail=self._vcov_type_detail,
+            bread=self._bread,
+            is_iv=self._is_iv,
+            tXZ=self._tXZ,
+            tZZinv=self._tZZinv,
+        )
+
+    def get_performance(self) -> None:
+        """Reject linear R² measures; only the Gaussian family reports them."""
+        raise NotImplementedError(
+            f"get_performance() is not supported for family='{self._family.name}'; "
+            "only feols() and Gaussian feglm() fits report R² measures."
+        )
 
     def resid(self, type: str = "response") -> np.ndarray:
         """

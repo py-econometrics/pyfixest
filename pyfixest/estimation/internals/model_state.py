@@ -12,17 +12,14 @@ from pyfixest.estimation.internals.literals import WeightsTypeOptions
 class ObservationWeights:
     """Canonical observation weights retained by a fitted model.
 
-    ``values`` are always the user-scale weights, never their square roots or
-    an estimator-specific working weight.  ``None`` is the explicit unweighted
-    fast path: callers must not allocate a vector of ones merely to represent
-    an unweighted fit.
+    ``values`` are always user-scale weights; ``None`` means no weights.
 
     Parameters
     ----------
     values : NDArray[np.float64] or None
         Flat, user-scale observation weights. ``None`` for an unweighted fit.
-    kind : {"aweights", "fweights"} or None
-        Weight semantics. ``None`` for an unweighted fit.
+    weights_type : {"aweights", "fweights"} or None
+        Weight type. ``None`` for an unweighted fit.
     n_rows : int
         Number of physical rows used for estimation.
     n_effective : int or float
@@ -31,44 +28,24 @@ class ObservationWeights:
     """
 
     values: NDArray[np.float64] | None
-    kind: WeightsTypeOptions | None
+    weights_type: WeightsTypeOptions | None
     n_rows: int
     n_effective: int | float
 
     def __post_init__(self) -> None:
-        if self.n_rows < 0:
-            raise ValueError("n_rows must be non-negative.")
-
-        if self.values is None:
-            if self.kind is not None:
-                raise ValueError("Unweighted observations cannot have a weight kind.")
-            if self.n_effective != self.n_rows:
-                raise ValueError(
-                    "Unweighted observations must have n_effective equal to n_rows."
-                )
-            return
-
-        if self.kind is None:
-            raise ValueError("Weighted observations must declare a weight kind.")
-        if self.kind not in ("aweights", "fweights"):
-            raise ValueError("Weight kind must be 'aweights' or 'fweights'.")
-        if self.values.ndim != 1:
-            raise ValueError("Observation weight values must be a flat array.")
-        if len(self.values) != self.n_rows:
+        # `unweighted()` and `from_values()` are the only constructors used by
+        # the estimators; these two guards catch direct misconstruction.
+        if self.values is not None and self.weights_type is None:
+            raise ValueError("Weighted observations must declare a `weights_type`.")
+        if self.values is not None and len(self.values) != self.n_rows:
             raise ValueError("Observation weights must contain one value per row.")
-
-        expected_n = (
-            self.n_rows if self.kind == "aweights" else float(np.sum(self.values))
-        )
-        if self.n_effective != expected_n:
-            raise ValueError("n_effective must match the observation-weight semantics.")
 
     @classmethod
     def unweighted(cls, *, n_rows: int) -> ObservationWeights:
-        """Construct the allocation-free representation of an unweighted fit."""
+        """Construct the representation of an unweighted fit."""
         return cls(
             values=None,
-            kind=None,
+            weights_type=None,
             n_rows=n_rows,
             n_effective=n_rows,
         )
@@ -78,17 +55,17 @@ class ObservationWeights:
         cls,
         weights: NDArray[np.float64],
         *,
-        kind: WeightsTypeOptions,
+        weights_type: WeightsTypeOptions,
     ) -> ObservationWeights:
         """Construct canonical weighted state from user-scale weights."""
         observation_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
         n_rows = len(observation_weights)
         n_effective = (
-            n_rows if kind == "aweights" else float(np.sum(observation_weights))
+            n_rows if weights_type == "aweights" else float(np.sum(observation_weights))
         )
         return cls(
             values=observation_weights,
-            kind=kind,
+            weights_type=weights_type,
             n_rows=n_rows,
             n_effective=n_effective,
         )
@@ -104,23 +81,36 @@ class WithinLinearData:
     """Linear-model arrays after within transformation, in original units.
 
     These arrays have not been multiplied by square-root observation weights.
-    For IV models, ``design`` is the full structural regressor matrix and may
-    include endogenous regressors. ``instruments`` is the full instrument
-    matrix, including exogenous regressors that instrument themselves.
     """
 
     response: NDArray[np.float64]
     design: NDArray[np.float64]
-    instruments: NDArray[np.float64] | None = None
-    endogenous: NDArray[np.float64] | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WithinIvData(WithinLinearData):
+    """Within-scale IV arrays with instrument and endogenous roles.
+
+    ``design`` is the full structural regressor matrix, including the
+    endogenous regressors. ``instruments`` is the full instrument matrix,
+    including exogenous regressors that instrument themselves.
+    """
+
+    instruments: NDArray[np.float64]
+    endogenous: NDArray[np.float64]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmWorkingState:
     """Final GLM IRLS state in within scale.
 
-    ``working_weights`` are the final IRLS weights themselves.  Square-root
-    weighted arrays are solver-local temporaries and deliberately absent.
+    ``working_weights`` are the IRLS weights of the last iteration,
+    ``W_i = w_i / (g'(mu_i)^2 V(mu_i))``, where ``w_i`` is the user-supplied
+    observation weight (one when unweighted). They therefore already contain
+    the observation weights, which live separately and unchanged in
+    ``ObservationWeights``; nothing downstream multiplies by ``w`` again. For
+    the Gaussian family ``W`` equals ``w``. Square-root weighted arrays are
+    solver-local temporaries and deliberately absent.
     """
 
     working_response_within: NDArray[np.float64]

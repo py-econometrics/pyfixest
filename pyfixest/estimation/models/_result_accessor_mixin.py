@@ -18,6 +18,10 @@ from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
 )
+from pyfixest.estimation.internals.performance_ import (
+    PerformanceMeasures,
+    performance_measures,
+)
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
@@ -147,18 +151,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
-
     _rmse: float
     _r2: float
     _adj_r2: float
     _r2_within: float
     _adj_r2_within: float
     _vcov_type: str
-
-    @property
-    def _Y(self) -> np.ndarray:
-        """Estimator-specific within-response view."""
-        raise NotImplementedError
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -314,43 +312,30 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
-        # `_Y` is the unpremultiplied within response for linear models and the
-        # unpremultiplied final working response for Gaussian GLMs.
-        Y_within = self._Y.flatten()
-        Y = self._response
-        observation_weights = self._observation_weights.values
-        residuals = self._u_hat
+        measures = performance_measures(
+            Y=self._response.reshape((-1, 1)),
+            Y_within=self._within_data.response,
+            residuals=self._u_hat,
+            weights=self._observation_weights.values,
+            N=self._N,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
+        self._store_performance(measures)
 
-        has_intercept = not self._drop_intercept
+    def _n_fixef_coefficients(self) -> int:
+        """Return the number of fixed-effect coefficients, zero without fixed effects."""
+        return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
 
-        if self._has_fixef:
-            k_fe = np.sum(self._k_fe - 1) + 1
-            adj_factor = (self._N - has_intercept) / (self._N - self._k - k_fe)
-            adj_factor_within = (self._N - k_fe) / (self._N - self._k - k_fe)
-        else:
-            adj_factor = (self._N - has_intercept) / (self._N - self._k)
-
-        if observation_weights is None:
-            ssu = np.sum(residuals**2)
-            y_center = np.mean(Y)
-            ssy = np.sum((Y - y_center) ** 2)
-        else:
-            weights = observation_weights
-            ssu = np.sum(weights.flatten() * residuals**2)
-            y_center = np.average(Y, weights=weights)
-            ssy = np.sum(weights * (Y - y_center) ** 2)
-        self._rmse = np.sqrt(ssu / self._N)
-        self._r2 = 1 - (ssu / ssy)
-        self._adj_r2 = 1 - (ssu / ssy) * adj_factor
-
-        if self._has_fixef:
-            ssy_within = (
-                np.sum(Y_within**2)
-                if observation_weights is None
-                else np.sum(weights * Y_within**2)
-            )
-            self._r2_within = 1 - (ssu / ssy_within)
-            self._adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
+    def _store_performance(self, measures: PerformanceMeasures) -> None:
+        """Publish goodness-of-fit measures on the fitted model."""
+        self._rmse = measures.rmse
+        self._r2 = measures.r2
+        self._adj_r2 = measures.adj_r2
+        self._r2_within = measures.r2_within
+        self._adj_r2_within = measures.adj_r2_within
 
     def tidy(
         self,

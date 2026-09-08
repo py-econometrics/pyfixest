@@ -75,13 +75,12 @@ shared estimator API
 `FixestMulti` is a container for fitted results. Numerical behavior belongs in
 the individual models and shared primitives, not in the container.
 
-## Historical estimator-state lifecycle (pre-refactor)
+## Current estimator-state lifecycle
 
-Before the immutable-state refactor, fitted-model classes used themselves as
-both a work area and a result object. Several private attributes therefore
-changed representation and numerical scale while a model was fitted. This
-section preserves that baseline as migration history; it is not the current
-contract for new code.
+The fitted-model classes currently use themselves as both a work area and a
+result object. Several private attributes therefore change representation and
+numerical scale while a model is fitted. This section records that status quo;
+it is not a contract for new code.
 
 For linear models, the transformations are:
 
@@ -191,9 +190,10 @@ constructors only assemble configuration and child objects; for example,
 `QuantregMulti` prepares its children in `prepare_model_matrix`, not during
 construction.
 
-This established the representation foundation. The within/weight cleanup
-described below completes that layer by moving numerical primitives and
-inference consumers to explicit within-scale inputs.
+This is the representation foundation, not the final within/weight cleanup.
+The compatibility fields documented above still move through their established
+DataFrame, within-array, and solver-array states until the numerical primitives
+and inference consumers move to explicit within-scale inputs.
 
 ## Estimation-state vocabulary
 
@@ -226,7 +226,8 @@ arrays remain mutable unless they are explicitly marked read-only:
 |---|---|
 | `ModelMatrix` | Formula-materialized pandas tables remain on formula scale and keep dependent, independent, fixed-effect, IV, weight, and offset roles separate. |
 | `ObservationWeights` | Canonical user-scale weights and their `aweights` or `fweights` semantics. `values=None` is the allocation-free unweighted path. |
-| `WithinLinearData` | Unpremultiplied within-scale arrays, with response, design, instruments, and endogenous variables in named roles. |
+| `WithinLinearData` | Unpremultiplied within-scale response and design arrays. |
+| `WithinIvData` | Extends `WithinLinearData` with the instrument and endogenous arrays that only IV models carry. |
 | `GlmWorkingState` | Final within-scale working response and design, IRLS working weights, predictors, means, and response- and working-residual domains. |
 | `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
 
@@ -238,9 +239,8 @@ fit primitives create square-root-weighted design and response arrays only as
 local solver temporaries. They persist response-unit residuals and weighted
 scores or cross-products, not solver-scale copies of canonical data.
 Singleton fixed-effect detection counts physical rows even under frequency
-weights, so an aggregate row alone in its level is dropped although its literal
-expansion would not be; this deliberate deviation is documented in
-`tests/test_wls_types.py`.
+weights, as in fixest: an aggregate row alone in its level is dropped although
+its literal expansion would not be.
 
 GLMs keep two weight concepts deliberately separate. `ObservationWeights`
 never changes after formula preparation, while each IRLS iteration computes
@@ -250,16 +250,13 @@ residuals and working residuals likewise have separate fields.
 The compatibility aliases are still available, but they are read-only
 properties over the typed state rather than cross-type workspaces: the state
 objects are the single writable representation, and assigning or deleting an
-alias raises. For linear and IV fits, `_Y`, `_X`, and `_Z` view within-scale
-arrays; for GLMs they view the final within-scale working response and design.
+alias raises. For linear fits `_Y` and `_X` view within-scale arrays and IV fits add
+`_Z`; for GLMs they view the final within-scale working response and design.
 `_weights` always means observation weights, never square-root solver weights
 or GLM working weights, and an unweighted fit materializes its ones column on
 access instead of keeping one alive for the lifetime of the result. New code
 should consume the typed state values rather than infer semantics from these
 aliases.
-
-Weighted `fixef()` stores `_sumFE` in response units, and `IV_Diag()` leaves
-the outer model's covariance label untouched.
 
 A post-estimation path states which estimators, weighting schemes, and design
 features it can represent, and rejects the rest. Declare support as a
@@ -273,10 +270,6 @@ can.
 
 An operation that cannot reconstruct the complete state of a fitted result
 returns its value instead of mutating the result in place.
-
-Keeping canonical arrays unpremultiplied favors readability without moving
-weight work out of the numerical hot path: each solver still performs the same
-vectorized square-root transform locally.
 
 ## Repository map and extension seams
 

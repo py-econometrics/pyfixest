@@ -21,6 +21,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
     GlmWorkingState,
     ObservationWeights,
+    WithinIvData,
     WithinLinearData,
 )
 
@@ -83,14 +84,14 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     assert isinstance(fit._within_data, WithinLinearData)
     assert fit._Y is fit._within_data.response
     assert fit._X is fit._within_data.design
-    assert fit._Z is fit._within_data.design
+    assert not hasattr(fit, "_Z")
     assert not hasattr(fit, "_Yd")
     assert not hasattr(fit, "_Xd")
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit._observation_weights.values, weights)
     np.testing.assert_array_equal(fit._weights.flatten(), weights)
-    assert fit._observation_weights.kind == weights_type
+    assert fit._observation_weights.weights_type == weights_type
     assert expected_n == fit._N
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(
@@ -156,7 +157,7 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     )
 
     within = fit._within_data
-    assert isinstance(within, WithinLinearData)
+    assert isinstance(within, WithinIvData)
     assert within.instruments is not None
     assert within.endogenous is not None
     assert fit._Y is within.response
