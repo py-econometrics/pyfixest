@@ -104,8 +104,13 @@ class WithinIvData(WithinLinearData):
 class GlmWorkingState:
     """Final GLM IRLS state in within scale.
 
-    ``working_weights`` are the final IRLS weights themselves.  Square-root
-    weighted arrays are solver-local temporaries and deliberately absent.
+    ``working_weights`` are the IRLS weights of the last iteration,
+    ``W_i = w_i / (g'(mu_i)^2 V(mu_i))``, where ``w_i`` is the user-supplied
+    observation weight (one when unweighted). They therefore already contain
+    the observation weights, which live separately and unchanged in
+    ``ObservationWeights``; nothing downstream multiplies by ``w`` again. For
+    the Gaussian family ``W`` equals ``w``. Square-root weighted arrays are
+    solver-local temporaries and deliberately absent.
     """
 
     working_response_within: NDArray[np.float64]
