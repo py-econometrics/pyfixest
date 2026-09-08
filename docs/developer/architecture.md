@@ -239,9 +239,8 @@ fit primitives create square-root-weighted design and response arrays only as
 local solver temporaries. They persist response-unit residuals and weighted
 scores or cross-products, not solver-scale copies of canonical data.
 Singleton fixed-effect detection counts physical rows even under frequency
-weights, so an aggregate row alone in its level is dropped although its literal
-expansion would not be; this deliberate deviation is documented in
-`tests/test_wls_types.py`.
+weights, as in fixest: an aggregate row alone in its level is dropped although
+its literal expansion would not be.
 
 GLMs keep two weight concepts deliberately separate. `ObservationWeights`
 never changes after formula preparation, while each IRLS iteration computes
