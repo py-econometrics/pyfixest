@@ -218,6 +218,10 @@ class Feglm(Feols):
         self._Y_hat_response = working_state.mu
         self._Y_hat_link = working_state.eta
         self._u_hat_response = working_state.response_residuals
+        # ``_u_hat`` is the generic residual read by the shared inference and
+        # result code. For GLMs it is the working residual, so ``_u_hat`` and
+        # ``_u_hat_working`` are the same array; ``resid()`` exposes both
+        # domains by name.
         self._u_hat_working = working_state.working_residuals
         self._u_hat = self._u_hat_working
 
