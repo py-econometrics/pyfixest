@@ -8,7 +8,6 @@ from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.internals.model_state import _readonly_array
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -158,13 +157,14 @@ class DemeanCache:
         -------
         tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner or None]
             Demeaned response and design arrays, in their requested column order,
-            plus the preconditioner used when new columns were transformed. Both
-            arrays are read-only: they are backed by the shared cache entry.
+            plus the preconditioner used when new columns were transformed.
+            Cached arrays and their selections are read-only. Without fixed
+            effects, inputs pass through without changing their writeability.
         """
         Y_array = np.asarray(Y, dtype=np.float64)
         X_array = np.asarray(X, dtype=np.float64)
         if fe is None:
-            return _readonly_array(Y_array), _readonly_array(X_array), None
+            return Y_array, X_array, None
 
         y_names_tuple = tuple(y_names)
         x_names_tuple = tuple(x_names)
@@ -178,7 +178,7 @@ class DemeanCache:
                 YX, fe, weights, na_index, demeaner
             )
             # Callers get slices of this array; see DemeanedData.
-            YX_demeaned = _readonly_array(YX_demeaned, copy=False)
+            YX_demeaned.setflags(write=False)
             cached = DemeanedData(
                 values=YX_demeaned,
                 columns=yx_names,
@@ -201,7 +201,7 @@ class DemeanCache:
                 cached_demeaned = np.concatenate(
                     (cached.values, uncached_demeaned), axis=1
                 )
-                cached_demeaned = _readonly_array(cached_demeaned, copy=False)
+                cached_demeaned.setflags(write=False)
                 cached = DemeanedData(
                     values=cached_demeaned,
                     columns=cached_names + uncached_names,
@@ -233,5 +233,5 @@ class DemeanCache:
         # whether a caller may write into its demeaned data never depends on
         # the order the cache happened to fill up in.
         reordered = cached.values[:, positions]
-        reordered = _readonly_array(reordered, copy=False)
+        reordered.setflags(write=False)
         return reordered

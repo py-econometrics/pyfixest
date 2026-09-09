@@ -139,9 +139,9 @@ class Feglm(Feols):
             and self.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
-                Y=model_matrix._table("dependent"),
-                X=model_matrix._table("independent"),
-                fe=model_matrix._table("fixed_effects"),
+                Y=model_matrix.dependent,
+                X=model_matrix.independent,
+                fe=model_matrix.fixed_effects,
                 fml=self._fml,
                 data=self._data,
                 demeaner=self._demeaner,
@@ -162,10 +162,10 @@ class Feglm(Feols):
     def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."
         model_matrix = self.model_matrix
-        response = model_matrix._table("dependent").to_numpy()
-        design = model_matrix._table("independent").to_numpy()
-        fixed_effect_frame = model_matrix._table("fixed_effects")
-        offset_frame = model_matrix._table("offset")
+        response = model_matrix.dependent.to_numpy()
+        design = model_matrix.independent.to_numpy()
+        fixed_effect_frame = model_matrix.fixed_effects
+        offset_frame = model_matrix.offset
         fixed_effects = (
             None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
         )
@@ -384,7 +384,7 @@ class Feglm(Feols):
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
-        self._family.check_y(self.model_matrix._table("dependent").to_numpy())
+        self._family.check_y(self.model_matrix.dependent.to_numpy())
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:

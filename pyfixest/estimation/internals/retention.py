@@ -41,15 +41,17 @@ def _detach_component(component):
     for field in fields(component):
         value = getattr(component, field.name)
         if isinstance(value, np.ndarray) and value.base is not None:
-            # Array components may wrap a read-only memoryview of a cache
-            # selection. Copy only the retained component, never the cache.
+            # Native-backed arrays and memoryviews can also own a larger
+            # cache selection. Copy only the retained component, never the cache.
             owner = value
+            allocation_bytes = value.nbytes
             while isinstance(owner, (np.ndarray, memoryview)):
+                allocation_bytes = max(allocation_bytes, owner.nbytes)
                 parent = owner.base if isinstance(owner, np.ndarray) else owner.obj
                 if parent is None:
                     break
                 owner = parent
-            if isinstance(owner, np.ndarray) and owner.nbytes > value.nbytes:
+            if allocation_bytes > value.nbytes:
                 updates[field.name] = value.copy()
     return replace(component, **updates) if updates else component
 

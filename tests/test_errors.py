@@ -1500,3 +1500,14 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
+
+
+def test_poisson_crv3_requires_retained_data():
+    from pyfixest.errors import MissingModelDataError
+
+    data = get_data(model="Fepois")
+    fit = fepois("Y ~ X1", data, store_data=False)
+    with pytest.raises(
+        MissingModelDataError, match=r"vcov\(CRV3\) requires retained _data"
+    ):
+        fit.vcov({"CRV3": "f1"}, data=data)

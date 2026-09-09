@@ -41,13 +41,6 @@ def test_observation_weights_keep_canonical_user_values(
     assert isinstance(weights.n_effective, int if weights_type == "aweights" else float)
     assert weights.is_weighted
     assert user_weights.flags.writeable == input_writeable
-    user_weights.setflags(write=True)
-    user_weights[:] = 99
-    np.testing.assert_array_equal(
-        weights.values,
-        [1.0, 2.0, 3.0],
-        err_msg="caller mutation changed the retained observation weights",
-    )
 
 
 @pytest.mark.parametrize(

@@ -216,13 +216,13 @@ class Feiv(Feols):
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
         linear_data = super()._demean()
-        endogenous_frame = self.model_matrix._table("endogenous")
-        instrument_frame = self.model_matrix._table("instruments")
+        endogenous_frame = self.model_matrix.endogenous
+        instrument_frame = self.model_matrix.instruments
         assert endogenous_frame is not None
         assert instrument_frame is not None
         endogenous = endogenous_frame.to_numpy(dtype=np.float64)
         instruments = instrument_frame.to_numpy(dtype=np.float64)
-        fixed_effects = self.model_matrix._table("fixed_effects")
+        fixed_effects = self.model_matrix.fixed_effects
         if fixed_effects is not None:
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
@@ -234,7 +234,6 @@ class Feiv(Feols):
                 na_index=self._na_index,
                 demeaner=self._demeaner,
             )
-
         return WithinIvData(
             response=linear_data.response,
             design=linear_data.design,

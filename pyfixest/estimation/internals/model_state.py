@@ -1,40 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
-
-
-def _readonly_array(values: NDArray, *, copy: bool = True) -> NDArray:
-    """Protect an array, copying externally owned writable storage by default.
-
-    Already protected buffers can be shared. A read-only buffer view also
-    protects arrays owned by native kernels, whose non-NumPy owners do not
-    otherwise prevent ``setflags(write=True)`` on a NumPy view.
-    """
-    owner = values
-    while isinstance(owner.base, np.ndarray):
-        owner = owner.base
-    if isinstance(owner.base, memoryview) and owner.base.readonly:
-        return values
-    protected = np.array(values, copy=True, order="K") if copy else values
-    if not copy:
-        owner.setflags(write=False)
-    protected.setflags(write=False)
-    return np.asarray(memoryview(protected).toreadonly())
-
-
-def _protect_arrays(
-    state: ObservationWeights | WithinLinearData | GlmWorkingState,
-) -> None:
-    """Publish each array in a frozen state value as a protected snapshot."""
-    for field in fields(state):
-        value = getattr(state, field.name)
-        if isinstance(value, np.ndarray):
-            object.__setattr__(state, field.name, _readonly_array(value))
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57,7 +28,9 @@ class ObservationWeights:
 
     Notes
     -----
-    Values are protected snapshots. See [fitted state](/how-to/fitted-state.qmd).
+    Arrays are exposed for inspection. Mutating their contents is unsupported
+    and may invalidate fitted results.
+    See [fitted state](/how-to/fitted-state.qmd).
 
     Examples
     --------
@@ -81,7 +54,6 @@ class ObservationWeights:
             raise ValueError("Weighted observations must declare a `weights_type`.")
         if self.values is not None and len(self.values) != self.n_rows:
             raise ValueError("Observation weights must contain one value per row.")
-        _protect_arrays(self)
 
     @classmethod
     def unweighted(cls, *, n_rows: int) -> ObservationWeights:
@@ -124,7 +96,9 @@ class WithinLinearData:
     """Linear-model arrays after within transformation, in original units.
 
     These arrays have not been multiplied by square-root observation weights.
-    Arrays are protected snapshots; see [fitted state](/how-to/fitted-state.qmd).
+    Arrays are exposed for inspection. Mutating their contents is unsupported
+    and may invalidate fitted results.
+    See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
     ----------
@@ -145,9 +119,6 @@ class WithinLinearData:
 
     response: NDArray[np.float64]
     design: NDArray[np.float64]
-
-    def __post_init__(self) -> None:
-        _protect_arrays(self)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -194,7 +165,9 @@ class GlmWorkingState:
     the observation weights, which live separately and unchanged in
     ``ObservationWeights``; nothing downstream multiplies by ``w`` again. For
     the Gaussian family ``W`` equals ``w``. Square-root weighted arrays are
-    solver-local temporaries and deliberately absent.
+    solver-local temporaries and deliberately absent. Arrays are exposed for
+    inspection; mutating their contents may invalidate fitted results and is
+    unsupported.
     See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
@@ -231,6 +204,3 @@ class GlmWorkingState:
     mu: NDArray[np.float64]
     response_residuals: NDArray[np.float64]
     working_residuals: NDArray[np.float64]
-
-    def __post_init__(self) -> None:
-        _protect_arrays(self)

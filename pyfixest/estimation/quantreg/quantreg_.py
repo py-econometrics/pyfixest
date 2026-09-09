@@ -180,9 +180,9 @@ class Quantreg(Feols):
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
 
     def to_array(self):
-        "Publish quantile-regression arrays from the immutable formula state."
-        response = self.model_matrix._table("dependent").to_numpy(dtype=np.float64)
-        design = self.model_matrix._table("independent").to_numpy(dtype=np.float64)
+        "Publish quantile-regression arrays from the formula state."
+        response = self.model_matrix.dependent.to_numpy(dtype=np.float64)
+        design = self.model_matrix.independent.to_numpy(dtype=np.float64)
         self.within_data = WithinLinearData(response=response, design=design)
 
     def drop_multicol_vars(self):

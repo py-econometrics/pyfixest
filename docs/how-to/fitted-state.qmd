@@ -29,17 +29,21 @@ GLM working weights already include observation weights. Do not multiply them
 by observation weights again. Formula tables retain their original domain;
 solver-weighted arrays are temporary calculation inputs.
 
-Component arrays are read-only, including selections shared across multiple
-fits. Copy an array before editing it. Public formula-table access returns a
-detached DataFrame, so editing it cannot change the model. Preparing a fit does
-not change the writeability of the caller's data.
+Components expose fitted state for inspection. Mutating their arrays or tables
+is unsupported and may invalidate results. Internal calculations and user
+inspection use the same component properties; access does not promise an
+independent snapshot. Input-data isolation follows the estimator's existing
+`copy_data` option. Fitting does not change caller-array writeability.
+
+Shared demeaning-cache buffers remain read-only to catch accidental writes
+that could corrupt another fit. Other component arrays are not guaranteed to
+be read-only. Make an explicit copy for your own calculations:
 
 ```{python}
 design_copy = fit.within_data.design.copy()
 design_copy[:] = 0
-response_table = fit.model_matrix.dependent
+response_table = fit.model_matrix.dependent.copy()
 response_table.iloc[0, 0] = 0
-assert not fit.within_data.design.flags.writeable
 ```
 
 Continue using `coef()`, `resid()`, `predict()`, `fixef()`, and `tidy()` for
@@ -74,7 +78,7 @@ excluded rows and be reordered; rows are selected by their retained identities.
 A filtered frame with a newly reset index cannot safely identify the sample.
 IID and heteroskedastic covariance need only retained numerical state. Cluster
 and HAC updates need supplemental cluster/time columns when raw data was
-omitted. CRV3 refits with absorbed effects require retained raw data.
+omitted. CRV3 refits for Poisson or absorbed effects require retained raw data.
 Default `fixef()` formats retained coefficients when raw data was omitted;
 nondefault recovery tolerances require a fit with `store_data=True`.
 
@@ -86,7 +90,7 @@ separate work.
 
 | Former model fields | Meaning/domain | Writer and lifetime | Readers and destination |
 |---|---|---|---|
-| `_model_matrix`, `_fe`, `_weights_df`, `_offset_df`, `_Y_untransformed` | Formula-materialized roles, including the original response | Formula preparation; replaced by `without_rows()` after separation; omitted by existing storage options | Preparation, performance, clustering, and recovery read `model_matrix`; public tables are detached copies of its private storage. The duplicate response copy is removed. |
+| `_model_matrix`, `_fe`, `_weights_df`, `_offset_df`, `_Y_untransformed` | Formula-materialized roles, including the original response | Formula preparation; replaced by `without_rows()` after separation; omitted by existing storage options | Preparation, performance, clustering, and recovery read `model_matrix`; table properties expose its formula roles without promising detached copies. The duplicate response copy is removed. |
 | `_observation_weights`, `_weights` | User-scale analytic/frequency weights | Formula preparation; retained with numerical state, omitted for lean models | Fitting, covariance, recovery, decomposition, and randomization read `observation_weights`. Consumers that need unit weights allocate them locally. |
 | `_within_data`, `_X`, `_Y`, IV `_Z` and `_endogvar` | Unpremultiplied within response, selected design, instruments and endogenous regressors | Demeaning/column selection; retained until lean cleanup | Fitting, inference, first stages, and post-estimation read `within_data`; cache buffers are shared only after protection. |
 | `_working_state`, GLM `_X`, `_Y`, `_Z`, `_irls_weights`, `_Xbeta`, `_u_hat_response`, `_u_hat_working`, `_u_hat`, `_Y_hat_link`, `_Y_hat_response` | Final working arrays, means, predictors and residual domains | IRLS completion; retained until lean cleanup | GLM covariance, residuals, performance and prediction read `working_state`. Iteration scratch remains writable. |

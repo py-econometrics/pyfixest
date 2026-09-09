@@ -20,7 +20,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ### Fitted Model State
 
 - Apply storage options recursively to components and IV first stages, release execution caches, and raise `MissingModelDataError` when an operation needs omitted state.
-- Publish protected estimator components and remove superseded private array aliases; see [fitted-state access](/how-to/fitted-state.qmd).
+- Publish estimator components for inspection and remove superseded private array aliases; see [fitted-state access](/how-to/fitted-state.qmd).
 - Complete Gaussian performance before storage cleanup, and retain usable predictions for both multi-quantile methods.
 
 ### Contributor Workflow

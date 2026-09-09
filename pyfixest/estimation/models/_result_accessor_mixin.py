@@ -331,7 +331,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if not hasattr(self, "model_matrix"):
             return
         measures = performance_measures(
-            Y=self.model_matrix._table("dependent").to_numpy(),
+            Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,
             residuals=self._u_hat,
             weights=self.observation_weights.values,
