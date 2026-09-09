@@ -63,7 +63,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   working-response arrays are released with the other estimation matrices.
 
 - Legacy estimator attributes such as `_X`, `_Y`, and `_weights` are now
-  read-only views over the typed state objects; `_Z` exists only on IV models.
+  getter-only views over the typed state objects; `_Z` and `_endogvar` are
+  defined only on IV models. The views prevent alias assignment and deletion,
+  while preserving the underlying arrays' mutability. Fixed-effect recovery
+  reads canonical observation weights, including for GLMs.
 
 ### Inference Types
 

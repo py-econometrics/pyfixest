@@ -250,8 +250,10 @@ residuals and working residuals likewise have separate fields.
 The compatibility aliases are still available, but they are read-only
 properties over the typed state rather than cross-type workspaces: the state
 objects are the single writable representation, and assigning or deleting an
-alias raises. For linear fits `_Y` and `_X` view within-scale arrays and IV fits add
-`_Z`; for GLMs they view the final within-scale working response and design.
+existing alias raises. These properties do not make the underlying arrays
+immutable or copy them. For linear fits `_Y` and `_X` view within-scale arrays;
+only `Feiv` defines `_Z` and `_endogvar`, exposing the instrument and endogenous
+roles. For GLMs `_Y` and `_X` view the final within-scale working response and design.
 `_weights` always means observation weights, never square-root solver weights
 or GLM working weights, and an unweighted fit materializes its ones column on
 access instead of keeping one alive for the lifetime of the result. New code

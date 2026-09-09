@@ -119,18 +119,69 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
         fit._within_data.response = fit._within_data.design  # type: ignore[misc]
 
 
-@pytest.mark.parametrize("alias", ["_Y", "_X", "_Z", "_weights"])
-def test_array_aliases_are_read_only_views(
+@pytest.mark.parametrize(
+    ("estimator", "present_aliases"),
+    [
+        pytest.param("feols", ("_Y", "_X", "_weights"), id="feols"),
+        pytest.param(
+            "feiv",
+            ("_Y", "_X", "_Z", "_endogvar", "_weights"),
+            id="feiv",
+        ),
+        pytest.param(
+            "feglm",
+            ("_Y", "_X", "_weights", "_irls_weights", "_Xbeta"),
+            id="feglm",
+        ),
+        pytest.param(
+            "fepois",
+            ("_Y", "_X", "_weights", "_irls_weights", "_Xbeta"),
+            id="fepois",
+        ),
+        pytest.param("quantreg", ("_Y", "_X", "_weights"), id="quantreg"),
+    ],
+)
+def test_array_aliases_reject_rebinding_and_deletion(
     lifecycle_data: pd.DataFrame,
-    alias: str,
+    estimator: str,
+    present_aliases: tuple[str, ...],
 ) -> None:
-    """The typed state objects stay the single writable representation."""
-    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+    """Every estimator exposes only its own aliases as read-only properties."""
+    if estimator == "feols":
+        fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+    elif estimator == "feiv":
+        fit = pf.feols(
+            "y ~ x + [endog ~ z] | fe",
+            data=lifecycle_data,
+            vcov="iid",
+        )
+    elif estimator == "feglm":
+        fit = pf.feglm(
+            "y ~ x",
+            data=lifecycle_data,
+            family="gaussian",
+            vcov="iid",
+        )
+    elif estimator == "fepois":
+        poisson_data = lifecycle_data.assign(
+            y=np.arange(len(lifecycle_data), dtype=np.float64) % 5,
+        )
+        fit = pf.fepois("y ~ x", data=poisson_data, vcov="iid")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=lifecycle_data, vcov="iid")
 
-    with pytest.raises(AttributeError):
-        setattr(fit, alias, np.zeros((fit._N_rows, 1)))
-    with pytest.raises(AttributeError):
-        delattr(fit, alias)
+    for alias in present_aliases:
+        assert hasattr(fit, alias)
+
+        with pytest.raises(AttributeError):
+            setattr(fit, alias, np.zeros((fit._N_rows, 1)))
+        with pytest.raises(AttributeError):
+            delattr(fit, alias)
+
+    if estimator != "feiv":
+        assert not hasattr(fit, "_Z")
+        assert not hasattr(fit, "_endogvar")
 
 
 def test_unweighted_weight_alias_is_materialized_on_access(
@@ -144,15 +195,21 @@ def test_unweighted_weight_alias_is_materialized_on_access(
     assert fit._weights is not fit._weights
 
 
+@pytest.mark.parametrize(
+    ("weights_type", "expected_n"),
+    [("aweights", 24), ("fweights", 52)],
+)
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     lifecycle_data: pd.DataFrame,
+    weights_type: str,
+    expected_n: int,
 ) -> None:
     """IV state names response, design, endogenous, and instrument roles."""
     fit = pf.feols(
         "y ~ x + [endog ~ z] | fe",
         data=lifecycle_data,
         weights="weight",
-        weights_type="aweights",
+        weights_type=weights_type,
         vcov="iid",
     )
 
@@ -170,6 +227,10 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     assert not hasattr(fit, "_endogvard")
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
+    np.testing.assert_array_equal(fit._observation_weights.values, weights)
+    np.testing.assert_array_equal(fit._weights.flatten(), weights)
+    assert fit._observation_weights.weights_type == weights_type
+    assert expected_n == fit._N
     weighted_design = weights[:, None] * within.design
     weighted_response = weights[:, None] * within.response
     np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
@@ -413,21 +474,39 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         )
 
 
-def test_quantreg_multi_retains_default_post_estimation_state() -> None:
+@pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
+def test_quantreg_multi_retains_default_post_estimation_state(
+    multi_method: str,
+) -> None:
     """Default multi-quantile results support prediction and vcov updates."""
     rng = np.random.default_rng(20260901)
     x = rng.normal(size=200)
     data = pd.DataFrame({"y": 1 + 2 * x + rng.normal(size=200), "x": x})
     with pytest.warns(FutureWarning, match="experimental"):
-        multi = pf.quantreg("y ~ x", data=data, quantile=[0.25, 0.75], vcov="iid")
-        single = pf.quantreg("y ~ x", data=data, quantile=0.25, vcov="hetero")
+        multi = pf.quantreg(
+            "y ~ x",
+            data=data,
+            quantile=[0.25, 0.75],
+            multi_method=multi_method,
+            vcov="iid",
+        )
 
     multi.vcov("hetero")
 
     for model in multi.to_list():
-        assert np.isfinite(model.predict()).all()
+        prediction = model.predict()
+        residual = model.resid()
+        assert prediction.shape == residual.shape == (len(data),)
+        np.testing.assert_allclose(
+            prediction + residual,
+            data["y"].to_numpy(),
+            err_msg=f"{multi_method} child state does not reconstruct the response",
+        )
         assert np.isfinite(model.se()).all()
 
-    first_quantile = multi.fetch_model(0, print_fml=False)
-    np.testing.assert_allclose(first_quantile.predict(), single.predict())
-    np.testing.assert_allclose(first_quantile.se(), single.se())
+    if multi_method == "cfm1":
+        with pytest.warns(FutureWarning, match="experimental"):
+            single = pf.quantreg("y ~ x", data=data, quantile=0.25, vcov="hetero")
+        first_quantile = multi.fetch_model(0, print_fml=False)
+        np.testing.assert_allclose(first_quantile.predict(), single.predict())
+        np.testing.assert_allclose(first_quantile.se(), single.se())

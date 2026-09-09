@@ -244,12 +244,16 @@ class Feiv(Feols):
         )
 
     @property
+    def _Z(self) -> NDArray[np.float64]:
+        """Within-scale instruments, including the exogenous regressors."""
+        assert isinstance(self._within_data, WithinIvData)
+        return self._within_data.instruments
+
+    @property
     def _endogvar(self) -> NDArray[np.float64]:
         """Within-scale endogenous regressors."""
         assert isinstance(self._within_data, WithinIvData)
-        endogenous = self._within_data.endogenous
-        assert endogenous is not None
-        return endogenous
+        return self._within_data.endogenous
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""

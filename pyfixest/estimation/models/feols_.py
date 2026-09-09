@@ -39,7 +39,6 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
-    WithinIvData,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.vcov_ import (
@@ -557,6 +556,7 @@ class Feols(ResultAccessorMixin):
     # Read-only views on the canonical state objects. They exist so that long
     # established attribute names keep working, but there is exactly one stored
     # representation: assigning or deleting them is a programming error.
+    # The properties do not change the mutability of the underlying arrays.
 
     @property
     def _Y(self) -> NDArray[np.float64]:
@@ -567,15 +567,6 @@ class Feols(ResultAccessorMixin):
     def _X(self) -> NDArray[np.float64]:
         """Within-scale design matrix, not premultiplied by weights."""
         return self._within_data.design
-
-    @property
-    def _Z(self) -> NDArray[np.float64]:
-        """Within-scale instruments; defined only for IV models."""
-        within_data = getattr(self, "_within_data", None)
-        if not isinstance(within_data, WithinIvData):
-            # AttributeError keeps hasattr() false outside IV fits.
-            raise AttributeError("_Z is only defined for IV models.")  # noqa: TRY004
-        return within_data.instruments
 
     @property
     def _weights(self) -> NDArray[np.float64]:
@@ -1793,9 +1784,10 @@ class Feols(ResultAccessorMixin):
         )
         D = contrast_coding.matrix
         D_w = D
-        if self._has_weights:
+        observation_weights = self._observation_weights.values
+        if observation_weights is not None:
             # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
-            weights_sqrt = np.sqrt(self._weights).flatten()
+            weights_sqrt = np.sqrt(observation_weights)
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
 
