@@ -39,18 +39,12 @@ class Fepois(Feglm):
 
     Attributes
     ----------
-    _Y : np.ndarray
-        Final within-scale IRLS working response. It is not multiplied by the
-        square root of the working weights.
-    _X : np.ndarray
-        Final within-scale IRLS design. It is not multiplied by the square root
-        of the working weights.
-    _fe : pd.DataFrame or None
-        Formula-scale fixed effects.
-    _weights : np.ndarray
-        Compatibility alias containing observation weights only.
-    _irls_weights : np.ndarray
-        Final IRLS working weights.
+    model_matrix : ModelMatrix
+        Formula-scale inputs; public tables are detached copies.
+    observation_weights : ObservationWeights
+        Protected user-scale observation weights.
+    working_state : GlmWorkingState
+        Final within-scale IRLS design, response, weights, predictors and residuals.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool
@@ -158,10 +152,10 @@ class Fepois(Feglm):
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        y_orig = self._model_matrix.dependent.to_numpy().flatten()
+        y_orig = self.model_matrix._table("dependent").to_numpy().flatten()
         # ``None`` is the allocation-free unweighted path shared with the rest
         # of the estimation core; no vector of ones is materialised.
-        observation_weights = self._observation_weights.values
+        observation_weights = self.observation_weights.values
 
         def _weighted_sum(values: np.ndarray) -> float:
             if observation_weights is None:
@@ -175,8 +169,8 @@ class Fepois(Feglm):
         )
 
         self._loglik = _weighted_sum(
-            y_orig * np.log(self._Y_hat_response)
-            - self._Y_hat_response
+            y_orig * np.log(self.working_state.mu)
+            - self.working_state.mu
             - gammaln(y_orig + 1)
         )
 
@@ -192,11 +186,11 @@ class Fepois(Feglm):
             )
             self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
         self._pearson_chi2 = _weighted_sum(
-            (y_orig - self._Y_hat_response) ** 2 / self._Y_hat_response
+            (y_orig - self.working_state.mu) ** 2 / self.working_state.mu
         )
 
         self.deviance = self._family.deviance(
-            y_orig, self._Y_hat_response, observation_weights
+            y_orig, self.working_state.mu, observation_weights
         )
 
     def predict(

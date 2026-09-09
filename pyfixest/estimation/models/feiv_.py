@@ -216,13 +216,13 @@ class Feiv(Feols):
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
         linear_data = super()._demean()
-        endogenous_frame = self._model_matrix.endogenous
-        instrument_frame = self._model_matrix.instruments
+        endogenous_frame = self.model_matrix._table("endogenous")
+        instrument_frame = self.model_matrix._table("instruments")
         assert endogenous_frame is not None
         assert instrument_frame is not None
         endogenous = endogenous_frame.to_numpy(dtype=np.float64)
         instruments = instrument_frame.to_numpy(dtype=np.float64)
-        fixed_effects = self._model_matrix.fixed_effects
+        fixed_effects = self.model_matrix._table("fixed_effects")
         if fixed_effects is not None:
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
@@ -230,7 +230,7 @@ class Feiv(Feols):
                 y_names=tuple(endogenous_frame.columns),
                 x_names=tuple(instrument_frame.columns),
                 fe=fixed_effects.to_numpy(),
-                weights=self._observation_weights.values,
+                weights=self.observation_weights.values,
                 na_index=self._na_index,
                 demeaner=self._demeaner,
             )
@@ -261,13 +261,6 @@ class Feiv(Feols):
         )
         return replace(within_data, instruments=instruments)
 
-    def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish IV within state and the `_Z`/`_endogvar` array aliases."""
-        assert isinstance(within_data, WithinIvData)
-        super()._set_within_data(within_data)
-        self._Z = within_data.instruments
-        self._endogvar = within_data.endogenous
-
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._drop_multicollinear_within_data(self._demean())
@@ -278,7 +271,7 @@ class Feiv(Feols):
             X=within_data.design,
             Z=within_data.instruments,
             Y=within_data.response,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             solver=self._solver,
         )
 
@@ -339,8 +332,8 @@ class Feiv(Feols):
 
             # Use fitted values from the first stage
             self._X_hat = (
-                model1._X @ model1._beta_hat
-            )  # note that model1._X is demeaned
+                model1.within_data.design @ model1._beta_hat
+            )  # note that model1.within_data.design is demeaned
 
             # Residuals from the first stage
             self._v_hat = model1._u_hat
@@ -538,10 +531,10 @@ class Feiv(Feols):
             self._coefnames_z.index(instrument)
             for instrument in self._non_exo_instruments
         ]
-        Z = self._model_1st_stage._X[:, iv_positions]
+        Z = self._model_1st_stage.within_data.design[:, iv_positions]
 
         # Q_zz = Z'WZ
-        observation_weights = self._model_1st_stage._observation_weights.values
+        observation_weights = self._model_1st_stage.observation_weights.values
         Q_zz = (
             Z.T @ Z
             if observation_weights is None

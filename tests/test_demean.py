@@ -819,6 +819,8 @@ def test_demean_model_caching(benchmark, demeaner):
         ("response", Yd1),
     ):
         assert not demeaned.flags.writeable, f"{name} returned a writable array"
+        with pytest.raises(ValueError, match="WRITEABLE"):
+            demeaned.setflags(write=True)
 
     # Add new variable and verify partial caching
     X_new = pd.DataFrame(

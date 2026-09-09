@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
+    from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
         ObservationWeights,
@@ -136,11 +137,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
-    _observation_weights: "ObservationWeights"
-    _within_data: "WithinLinearData"
-    _Y: np.ndarray
-    _Y_untransformed: pd.DataFrame
+    model_matrix: "ModelMatrix"
+    observation_weights: "ObservationWeights"
+    within_data: "WithinLinearData"
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -314,11 +313,15 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit._r2, fit._adj_r2, fit._r2_within
         ```
         """
+        # Formula inputs may already have been discarded. The measures computed
+        # during fitting remain available without retaining a duplicate response.
+        if not hasattr(self, "model_matrix"):
+            return
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
-            Y_within=self._within_data.response,
+            Y=self.model_matrix._table("dependent").to_numpy(),
+            Y_within=self.within_data.response,
             residuals=self._u_hat,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             N=self._N,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),

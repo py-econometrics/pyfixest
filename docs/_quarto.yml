@@ -233,13 +233,21 @@ quartodoc:
         - utils.dgps.get_twin_data
         - utils.dgps.get_worker_panel
         - utils.dgps.get_motherhood_event_study_data
+    - title: Fitted State
+      desc: |
+        Protected estimator components; see [Inspecting fitted model state](/how-to/fitted-state.qmd).
+      contents:
+        - estimation.state.ModelMatrix
+        - estimation.state.ObservationWeights
+        - estimation.state.WithinLinearData
+        - estimation.state.WithinIvData
+        - estimation.state.GlmWorkingState
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.
       contents:
         - estimation.formula.parse.Formula
         - estimation.formula.model_matrix.create_model_matrix
-        - estimation.formula.model_matrix.ModelMatrix
         - estimation.formula.transforms.factor_interaction.factor_interaction
     - title: Demeaning
       desc: |

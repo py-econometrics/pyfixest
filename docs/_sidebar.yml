@@ -66,9 +66,15 @@ website:
       - reference/utils.dgps.get_motherhood_event_study_data.qmd
       section: Data Sets
     - contents:
+      - reference/estimation.state.ModelMatrix.qmd
+      - reference/estimation.state.ObservationWeights.qmd
+      - reference/estimation.state.WithinLinearData.qmd
+      - reference/estimation.state.WithinIvData.qmd
+      - reference/estimation.state.GlmWorkingState.qmd
+      section: Fitted State
+    - contents:
       - reference/estimation.formula.parse.Formula.qmd
       - reference/estimation.formula.model_matrix.create_model_matrix.qmd
-      - reference/estimation.formula.model_matrix.ModelMatrix.qmd
       - reference/estimation.formula.transforms.factor_interaction.factor_interaction.qmd
       section: Formula Parsing & Model Matrix
     - contents:

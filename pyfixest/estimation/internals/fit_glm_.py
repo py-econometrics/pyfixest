@@ -9,7 +9,7 @@ from pyfixest.errors import NonConvergenceError
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.literals import SolverOptions
-from pyfixest.estimation.internals.model_state import GlmWorkingState
+from pyfixest.estimation.internals.model_state import GlmWorkingState, _readonly_array
 from pyfixest.estimation.internals.solvers import solve_ols
 
 DemeanFn = Callable[
@@ -295,13 +295,13 @@ def fit_glm_irls(
 
     working_residuals = z_tilde_final - X_tilde_final @ beta_final
     working_state = GlmWorkingState(
-        working_response_within=z_tilde_final,
-        design_within=X_tilde_final,
-        working_weights=working_weights_final.flatten(),
-        eta=eta.flatten(),
-        mu=mu.flatten(),
-        response_residuals=Y_flat - mu.flatten(),
-        working_residuals=working_residuals.flatten(),
+        working_response_within=_readonly_array(z_tilde_final),
+        design_within=_readonly_array(X_tilde_final),
+        working_weights=_readonly_array(working_weights_final.flatten()),
+        eta=_readonly_array(eta.flatten()),
+        mu=_readonly_array(mu.flatten()),
+        response_residuals=_readonly_array(Y_flat - mu.flatten()),
+        working_residuals=_readonly_array(working_residuals.flatten()),
     )
 
     return GlmFit(

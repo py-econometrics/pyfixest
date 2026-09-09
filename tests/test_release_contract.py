@@ -262,7 +262,15 @@ def test_single_fit_fepois(data_fepois, inference, fml, weights, offset, baselin
     _check_fit_at_x1(baseline, mod, **FEPOIS_TOLERANCE)
     baseline.check("deviance", mod.deviance)
     baseline.check("resid", mod.resid()[0:5], **FEPOIS_TOLERANCE)
-    baseline.check("irls_weights", mod._irls_weights.flatten()[0:5], **FEPOIS_TOLERANCE)
+    baseline.check(
+        "irls_weights",
+        (
+            mod.working_state.working_weights
+            if hasattr(mod, "working_state")
+            else mod._irls_weights
+        ).flatten()[0:5],
+        **FEPOIS_TOLERANCE,
+    )
 
 
 # fweights are only exercised here; test_vs_fixest.py crosses IV with
@@ -314,8 +322,24 @@ def test_single_fit_feglm(data_fepois, family, inference, fml, baseline):
     # returns the response residual now, so both are compared through the
     # attributes that mean the same thing in either version.
     tolerance = {} if family == "gaussian" else GLM_BINOMIAL_TOLERANCE
-    baseline.check("resid_response", mod._u_hat_response[0:5], **tolerance)
-    baseline.check("resid_working", mod._u_hat_working[0:5], **tolerance)
+    baseline.check(
+        "resid_response",
+        (
+            mod.working_state.response_residuals
+            if hasattr(mod, "working_state")
+            else mod._u_hat_response
+        )[0:5],
+        **tolerance,
+    )
+    baseline.check(
+        "resid_working",
+        (
+            mod.working_state.working_residuals
+            if hasattr(mod, "working_state")
+            else mod._u_hat_working
+        )[0:5],
+        **tolerance,
+    )
 
     if family == "gaussian":
         # Coefficients and residuals still agree to machine precision; only the

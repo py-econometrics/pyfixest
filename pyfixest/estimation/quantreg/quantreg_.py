@@ -9,12 +9,12 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -181,34 +181,19 @@ class Quantreg(Feols):
 
     def to_array(self):
         "Publish quantile-regression arrays from the immutable formula state."
-        response = self._model_matrix.dependent.to_numpy(dtype=np.float64)
-        design = self._model_matrix.independent.to_numpy(dtype=np.float64)
-        self._Y = response
-        self._X = design
-        self._Z = design
+        response = self.model_matrix._table("dependent").to_numpy(dtype=np.float64)
+        design = self.model_matrix._table("independent").to_numpy(dtype=np.float64)
+        self.within_data = WithinLinearData(response=response, design=design)
 
     def drop_multicol_vars(self):
-        "Detect and drop multicollinear quantile-regression covariates."
-        if self._X.shape[1] > 0:
-            (
-                self._X,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = drop_multicollinear_variables(
-                self._X,
-                self._coefnames,
-                self._collin_tol,
-            )
-        self._Z = self._X
-        self._X_is_empty = self._X.shape[1] == 0
-        self._k = self._X.shape[1]
+        """Select the quantile design using the shared rank check."""
+        self._set_within_data(self._drop_multicollinear_within_data(self.within_data))
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        if self._fe is not None:
+        if self._has_fixef:
             raise NotImplementedError(
                 "Fixed effects are not yet supported for Quantile Regression."
             )
@@ -218,7 +203,7 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        res = self._fit(X=self._X, Y=self._Y)
+        res = self._fit(X=self.within_data.design, Y=self.within_data.response)
 
         self._beta_hat = res[0]
         self._has_converged = res[1]
@@ -229,11 +214,14 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
-        self._Y_hat_link = self._X @ self._beta_hat
+        self._Y_hat_link = self.within_data.design @ self._beta_hat
         self._Y_hat_response = self._Y_hat_link
 
-        self._u_hat = self._Y.flatten() - self._X @ self._beta_hat
-        self._hessian = self._X.T @ self._X
+        self._u_hat = (
+            self.within_data.response.flatten()
+            - self.within_data.design @ self._beta_hat
+        )
+        self._hessian = self.within_data.design.T @ self.within_data.design
         self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
@@ -413,8 +401,8 @@ class Quantreg(Feols):
 
     def _vcov_iid(self):
         return vcov_iid_qreg(
-            X=self._X,
-            Y=self._Y,
+            X=self.within_data.design,
+            Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self._N_rows,
@@ -422,8 +410,8 @@ class Quantreg(Feols):
 
     def _vcov_hetero(self):
         return vcov_hetero_qreg(
-            X=self._X,
-            Y=self._Y,
+            X=self.within_data.design,
+            Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self._N_rows,
@@ -438,8 +426,8 @@ class Quantreg(Feols):
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
         return vcov_nid_qreg(
-            X=self._X,
-            Y=self._Y,
+            X=self.within_data.design,
+            Y=self.within_data.response,
             beta_hat=self._beta_hat,
             q=self._quantile,
             N=self._N_rows,
@@ -458,7 +446,7 @@ class Quantreg(Feols):
             )
 
         return vcov_crv1_qreg(
-            X=self._X,
+            X=self.within_data.design,
             u_hat=self._u_hat,
             q=self._quantile,
             clustid=clustid,

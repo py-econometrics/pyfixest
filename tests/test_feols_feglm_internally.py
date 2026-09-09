@@ -75,20 +75,16 @@ def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
         iwls_tol=1e-10,
     )
 
-    assert isinstance(fit._model_matrix.dependent, pd.DataFrame)
-    assert isinstance(fit._model_matrix.independent, pd.DataFrame)
-    assert isinstance(fit._fe, pd.DataFrame)
+    assert isinstance(fit.model_matrix.dependent, pd.DataFrame)
+    assert isinstance(fit.model_matrix.independent, pd.DataFrame)
+    assert isinstance(fit.model_matrix.fixed_effects, pd.DataFrame)
     np.testing.assert_allclose(
-        fit._observation_weights.values,
+        fit.observation_weights.values,
         observation_weights,
     )
-    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+    np.testing.assert_allclose(fit.observation_weights.values, observation_weights)
 
-    working = fit._working_state
-    assert fit._X is working.design_within
-    assert fit._Y is working.working_response_within
-    assert fit._Z is working.design_within
-    assert fit._irls_weights is working.working_weights
+    working = fit.working_state
     assert not hasattr(working, "sqrt_working_weights")
     assert not hasattr(working, "design_solver")
     assert not hasattr(working, "response_solver")
@@ -146,8 +142,20 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     check_absolute_diff(
         fit_ols.coef().xs("X1"), fit_gaussian.coef().xs("X1"), tol=1e-10
     )
-    check_absolute_diff(fit_ols._weights[0:5], fit_gaussian._weights[0:5], tol=1e-10)
-    check_absolute_diff(fit_ols._u_hat[0:5], fit_gaussian._u_hat[0:5], tol=1e-10)
+    if weights is None:
+        assert fit_ols.observation_weights.values is None
+        assert fit_gaussian.observation_weights.values is None
+    else:
+        check_absolute_diff(
+            fit_ols.observation_weights.values[0:5],
+            fit_gaussian.observation_weights.values[0:5],
+            tol=1e-10,
+        )
+    check_absolute_diff(
+        fit_ols._u_hat[0:5],
+        fit_gaussian.working_state.working_residuals[0:5],
+        tol=1e-10,
+    )
     check_absolute_diff(fit_ols._scores[0, :], fit_gaussian._scores[0, :], tol=1e-10)
 
     if inference == "iid":

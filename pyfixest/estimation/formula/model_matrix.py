@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final, TypeAlias, cast
+from typing import Any, Final, Literal, TypeAlias, cast, overload
 
 import formulaic
 import numpy as np
@@ -40,12 +40,30 @@ class ModelMatrix:
     variables, and weights. It handles missing data, singleton observations,
     and ensures proper formatting for estimation procedures.
 
-    An internal API. Instances are built by the `prepare_model_matrix` step of
-    the fit pipeline from a materialized `formulaic.ModelMatrix` and are not
-    constructed directly. There is therefore no standalone example. Formulas are
-    written as strings and passed to
-    [feols()](/reference/estimation.api.feols.feols.qmd). See the
-    [formula syntax tutorial](/tutorials/formula-syntax.qmd) for the syntax.
+    Obtain this component from ``fit.model_matrix``. Formula tables returned by
+    its public properties are detached copies. Internal calculations use the
+    controlled private storage. See [fitted state](/how-to/fitted-state.qmd) and
+    the [formula syntax tutorial](/tutorials/formula-syntax.qmd).
+
+    Parameters
+    ----------
+    model_matrix : formulaic.ModelMatrix
+        Materialized formula roles; normally supplied by the fitting pipeline.
+    drop_rows : frozenset[int]
+        Row positions already excluded during formula materialization.
+    drop_singletons : bool, default True
+        Whether to remove singleton fixed-effect groups.
+    drop_intercept : bool, default False
+        Whether to remove the structural intercept.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.model_matrix.dependent.head()
+    ```
 
     Once constructed, the instance is the formula state a fitted model retains
     and is treated as read-only. Estimator-level row filters such as GLM
@@ -72,6 +90,8 @@ class ModelMatrix:
         Indices of rows that were dropped.
     """
 
+    _data: pd.DataFrame
+
     def __init__(
         self,
         model_matrix: formulaic.ModelMatrix,
@@ -85,6 +105,7 @@ class ModelMatrix:
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
         self._process(drop_singletons=drop_singletons)
+        self._data = self._data.copy(deep=True)
 
     @staticmethod
     def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
@@ -196,6 +217,19 @@ class ModelMatrix:
         filtered._na_index = self._na_index.union(rows)
         return filtered
 
+    @overload
+    def _table(self, role: Literal["dependent", "independent"]) -> pd.DataFrame: ...
+
+    @overload
+    def _table(self, role: str) -> pd.DataFrame | None: ...
+
+    def _table(self, role: str) -> pd.DataFrame | None:
+        """Read a formula role internally without the public defensive copy."""
+        columns = getattr(self, "_" + role)
+        if columns is None and role in {"dependent", "independent"}:
+            columns = []
+        return None if columns is None else self._data.loc[:, columns]
+
     @property
     def dependent(self) -> pd.DataFrame:
         """
@@ -208,7 +242,7 @@ class ModelMatrix:
             of the main equation).
         """
         cols = self._dependent or []
-        return self._data[cols]
+        return self._data[cols].copy(deep=True)
 
     @property
     def independent(self) -> pd.DataFrame:
@@ -223,7 +257,7 @@ class ModelMatrix:
             effects are present.
         """
         cols = self._independent or []
-        return self._data[cols]
+        return self._data[cols].copy(deep=True)
 
     @property
     def fixed_effects(self) -> pd.DataFrame | None:
@@ -239,7 +273,7 @@ class ModelMatrix:
         if self._fixed_effects is None:
             return None
         else:
-            return self._data.loc[:, self._fixed_effects]
+            return self._data.loc[:, self._fixed_effects].copy(deep=True)
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
@@ -256,7 +290,7 @@ class ModelMatrix:
         if self._endogenous is None:
             return None
         else:
-            return self._data.loc[:, self._endogenous]
+            return self._data.loc[:, self._endogenous].copy(deep=True)
 
     @property
     def instruments(self) -> pd.DataFrame | None:
@@ -274,7 +308,7 @@ class ModelMatrix:
         if self._instruments is None:
             return None
         else:
-            return self._data.loc[:, self._instruments]
+            return self._data.loc[:, self._instruments].copy(deep=True)
 
     @property
     def weights(self) -> pd.DataFrame | None:
@@ -290,7 +324,7 @@ class ModelMatrix:
         if self._weights is None:
             return None
         else:
-            return self._data.loc[:, self._weights]
+            return self._data.loc[:, self._weights].copy(deep=True)
 
     @property
     def offset(self) -> pd.DataFrame | None:
@@ -307,7 +341,7 @@ class ModelMatrix:
         if self._offset is None:
             return None
         else:
-            return self._data.loc[:, self._offset]
+            return self._data.loc[:, self._offset].copy(deep=True)
 
     @property
     def model_spec(self) -> _ModelSpecMapping:

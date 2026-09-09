@@ -17,6 +17,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Fitted Model State
+
+- Publish protected estimator components and remove superseded private array aliases; see [fitted-state access](/how-to/fitted-state.qmd).
+- Complete Gaussian performance before storage cleanup, and retain usable predictions for both multi-quantile methods.
+
 ### Contributor Workflow
 
 - Repository-local skills and developer guides now define architecture,

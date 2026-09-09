@@ -77,11 +77,15 @@ class Fegaussian(Feglm):
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
         return vcov_iid_ols(
-            residuals=self._u_hat,
+            residuals=self.working_state.working_residuals,
             bread=self._bread,
             N=self._N,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
         )
+
+    def _finalize_fit(self) -> None:
+        """Complete Gaussian measures while formula-scale inputs are available."""
+        self.get_performance()
 
     def get_performance(self) -> None:
         """Compute R² measures from the Gaussian working state.
@@ -90,12 +94,14 @@ class Fegaussian(Feglm):
         so the within working response and the response residuals are already
         in the units of Y.
         """
-        working_state = self._working_state
+        if not hasattr(self, "model_matrix"):
+            return
+        working_state = self.working_state
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
+            Y=self.model_matrix._table("dependent").to_numpy(),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             N=self._N,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
