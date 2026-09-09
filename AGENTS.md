@@ -34,11 +34,7 @@ policy, and neither should skills or ad hoc prompts.
 
 ## Contributor workflow skills
 
-The skills under `.agents/skills/` are procedures shared by every coding tool.
-Codex discovers that directory itself; Claude Code discovers the same files
-through the symlinks in `.claude/skills/`. Either way, when a trigger applies,
-follow the `SKILL.md`. Skills apply the policy in `docs/developer/` and never
-restate it, so every rule has one home. A change flows plan → implement →
+The skills under `.agents/skills/` are procedures shared by every coding tool. When a trigger applies, follow the `SKILL.md`. Skills apply the policy in `docs/developer/` and never restate it, so every rule has one home. A change flows plan → implement →
 verify → self-review → hand off, and the table is in that order. (The
 user-facing analytics prompt at `docs/skills.md` is unrelated.)
 
@@ -51,12 +47,8 @@ user-facing analytics prompt at `docs/skills.md` is unrelated.)
 
 ## Architecture in one paragraph
 
-Keep the shared estimation core narrow: formula parsing, model-matrix
-construction, demeaning, generic fit and inference primitives, result
-interfaces, and backend kernels. New estimators are standalone add-ons that
-compose those primitives; estimator-specific switches do not belong in generic
-runners or model classes. `docs/developer/architecture.md` has the estimation
-flow, the stable-core contract, and the extension-seam table.
+We want to keep the shared estimation core narrow: formula parsing, model-matrix construction, demeaning, generic fit and inference primitives, result interfaces, and backend kernels. New estimators are standalone add-ons that compose those primitives; estimator-specific switches do not belong in generic
+runners or model classes. `docs/developer/architecture.md` has the estimation flow, the stable-core contract, and the extension-seam table.
 
 ## Repo map
 
@@ -156,7 +148,11 @@ pixi run -e lint prek run ruff-check --files <changed files>        # changed-fi
 pixi task list                                                      # everything else
 ```
 
-Always update `docs/changelog.qmd`. Documentation ships with the feature. New
+Add a `docs/changelog.qmd` entry only for what a user or contributor needs to
+know: new features, behavior or default changes, bug fixes, deprecations,
+performance changes, and new contributor tooling. Keep it to one or two lines.
+Internal refactors, guidance edits, CI tweaks, and typo fixes need no entry.
+Documentation ships with the feature. New
 public functions/classes require quartodoc registration; user workflows usually
 need a `docs/how-to/` guide or an extension to the nearest existing guide.
 Never hand-edit generated `docs/reference/**`.
@@ -177,3 +173,7 @@ A human maintainer reviews every PR, and every layer of a stack, before merge.
 - `docs/_freeze/**`, generated `docs/reference/**`, `.coverage`,
   `coverage.xml`, or `docs/_site/**`.
 - Unrelated user changes or files changed only by broad formatting.
+- `AGENTS.md`, `.agents/skills/`, and `docs/developer/`, unless the task is the
+  guidance itself. When a task reveals a gap or a wrong rule, propose the
+  change in the handoff message instead of editing; a fix baked into a skill
+  during unrelated work is easy to miss in review.
