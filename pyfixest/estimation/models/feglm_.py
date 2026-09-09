@@ -280,6 +280,7 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        self._require_state("resid", "working_state")
         if type == "response":
             return self.working_state.response_residuals.flatten()
         if type == "working":

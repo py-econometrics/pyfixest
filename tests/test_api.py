@@ -269,7 +269,7 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     models = list(fit.all_fitted_models.values())
 
     assert len(models) == 3
-    assert len({id(model._demean_cache.lookup_preconditioner) for model in models}) == 1
+    assert all(not hasattr(model, "_demean_cache") for model in models)
 
     first, second, third = models
     assert first._na_index == second._na_index
@@ -280,10 +280,6 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     assert first.preconditioner is second.preconditioner
     assert isinstance(third.preconditioner, pf.Preconditioner)
     assert third.preconditioner is not first.preconditioner
-    assert set(first._demean_cache.lookup_preconditioner) == {
-        first._na_index,
-        third._na_index,
-    }
 
 
 def test_within_preconditioner_off_yields_no_cached_preconditioner():

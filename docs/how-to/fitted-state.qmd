@@ -48,6 +48,36 @@ formula storage is dropped, so their existing access remains available. With `st
 with `lean=True`, observation-sized components are omitted as well. These
 access paths do not expand estimator or post-estimation support.
 
+Storage options apply to every child of a multiple-estimation result and to IV
+first stages. Execution caches and unused captured context are released after
+fitting. `store_data=False` retains numerical components, formula metadata, and
+supported fixed-effect coefficients; `lean=True` retains coefficient inference,
+sample counts, and completed performance summaries. Lean quantile results also
+retain the scalar objective value.
+
+Operations that need omitted inputs raise `pyfixest.errors.MissingModelDataError`
+with the operation, missing state, and remedy. Estimator support errors remain
+separate. For example, lean results support `tidy()` but require a refit with
+`lean=False` for residuals or covariance recalculation.
+
+```{python}
+data = pf.get_data()
+compact = pf.feols("Y ~ X1 | f1", data, store_data=False)
+compact.vcov("hetero")
+compact.vcov({"CRV1": "f1"}, data=data)
+compact.predict(newdata=data.head())
+```
+
+Supplemental covariance data must preserve the original positional row index
+(the index after resetting the input once before fitting). It may include
+excluded rows and be reordered; rows are selected by their retained identities.
+A filtered frame with a newly reset index cannot safely identify the sample.
+IID and heteroskedastic covariance need only retained numerical state. Cluster
+and HAC updates need supplemental cluster/time columns when raw data was
+omitted. CRV3 refits with absorbed effects require retained raw data.
+Default `fixef()` formats retained coefficients when raw data was omitted;
+nondefault recovery tolerances require a fit with `store_data=True`.
+
 ## Ownership ledger for the published components
 
 The table records the fields migrated in this change. Counts, coefficient

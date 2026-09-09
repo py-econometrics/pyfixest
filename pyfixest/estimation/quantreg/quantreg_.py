@@ -456,7 +456,14 @@ class Quantreg(Feols):
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
+        if hasattr(self, "_objective_value"):
+            return self._objective_value
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
+
+    def _clear_attributes(self) -> None:
+        """Retain the scalar objective before discarding quantile solver state."""
+        self._objective_value = self.objective_value
+        super()._clear_attributes()
 
     def get_performance(self) -> None:
         "Reject linear R² measures; quantile regression has no such diagnostics yet."

@@ -57,10 +57,12 @@ def test_cluster_na():
 
 
 def test_cluster_but_no_data():
-    """Test if AttributeError if self._data is not stored."""
+    """Missing clustering inputs identify the storage option and remedy."""
+    from pyfixest.errors import MissingModelDataError
+
     data = get_data()
     fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(AttributeError):
+    with pytest.raises(MissingModelDataError, match="vcov requires estimation data"):
         fit.vcov({"CRV1": "f2"})
 
 
