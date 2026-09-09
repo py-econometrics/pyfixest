@@ -87,7 +87,7 @@ def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
     working = fit._working_state
     assert fit._X is working.design_within
     assert fit._Y is working.working_response_within
-    assert fit._Z is working.design_within
+    assert not hasattr(fit, "_Z")
     assert fit._irls_weights is working.working_weights
     assert not hasattr(working, "sqrt_working_weights")
     assert not hasattr(working, "design_solver")

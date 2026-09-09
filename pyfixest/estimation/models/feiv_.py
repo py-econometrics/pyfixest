@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
@@ -15,7 +16,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.model_state import WithinIvData, WithinLinearData
+from pyfixest.estimation.internals.model_state import WithinIvData
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -242,12 +243,22 @@ class Feiv(Feols):
             endogenous=endogenous,
         )
 
-    def _drop_multicollinear_within_data(
-        self, within_data: WithinLinearData
-    ) -> WithinLinearData:
-        """Drop collinear columns from the second-stage design and the instruments."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
-        assert isinstance(within_data, WithinIvData)
+    @property
+    def _Z(self) -> NDArray[np.float64]:
+        """Within-scale instruments, including the exogenous regressors."""
+        assert isinstance(self._within_data, WithinIvData)
+        return self._within_data.instruments
+
+    @property
+    def _endogvar(self) -> NDArray[np.float64]:
+        """Within-scale endogenous regressors."""
+        assert isinstance(self._within_data, WithinIvData)
+        return self._within_data.endogenous
+
+    def get_fit(self) -> None:
+        """Fit a IV model using a 2SLS estimator."""
+        iv_data = self._demean()
+        linear_data = self._drop_multicollinear_within_data(iv_data)
         assert self._coefnames_z is not None
         (
             instruments,
@@ -255,24 +266,16 @@ class Feiv(Feols):
             self._collin_vars_z,
             self._collin_index_z,
         ) = drop_multicollinear_variables(
-            within_data.instruments,
+            iv_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
-        return replace(within_data, instruments=instruments)
-
-    def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish IV within state and the `_Z`/`_endogvar` array aliases."""
-        assert isinstance(within_data, WithinIvData)
-        super()._set_within_data(within_data)
-        self._Z = within_data.instruments
-        self._endogvar = within_data.endogenous
-
-    def get_fit(self) -> None:
-        """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_within_data(self._demean())
-        # Narrow the base return type so `within_data.instruments` type-checks.
-        assert isinstance(within_data, WithinIvData)
+        within_data = WithinIvData(
+            response=linear_data.response,
+            design=linear_data.design,
+            instruments=instruments,
+            endogenous=iv_data.endogenous,
+        )
         self._set_within_data(within_data)
         fit = fit_iv(
             X=within_data.design,

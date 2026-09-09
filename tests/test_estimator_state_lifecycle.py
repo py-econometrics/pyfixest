@@ -19,6 +19,7 @@ from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_m
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
+    GlmWorkingState,
     ObservationWeights,
     WithinIvData,
     WithinLinearData,
@@ -118,20 +119,104 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
         fit._within_data.response = fit._within_data.design  # type: ignore[misc]
 
 
+@pytest.mark.parametrize(
+    ("estimator", "present_aliases"),
+    [
+        pytest.param("feols", ("_Y", "_X", "_weights"), id="feols"),
+        pytest.param(
+            "feiv",
+            ("_Y", "_X", "_Z", "_endogvar", "_weights"),
+            id="feiv",
+        ),
+        pytest.param(
+            "feglm",
+            ("_Y", "_X", "_weights", "_irls_weights", "_Xbeta"),
+            id="feglm",
+        ),
+        pytest.param(
+            "fepois",
+            ("_Y", "_X", "_weights", "_irls_weights", "_Xbeta"),
+            id="fepois",
+        ),
+        pytest.param("quantreg", ("_Y", "_X", "_weights"), id="quantreg"),
+    ],
+)
+def test_array_aliases_reject_rebinding_and_deletion(
+    lifecycle_data: pd.DataFrame,
+    estimator: str,
+    present_aliases: tuple[str, ...],
+) -> None:
+    """Every estimator exposes only its own aliases as read-only properties."""
+    if estimator == "feols":
+        fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+    elif estimator == "feiv":
+        fit = pf.feols(
+            "y ~ x + [endog ~ z] | fe",
+            data=lifecycle_data,
+            vcov="iid",
+        )
+    elif estimator == "feglm":
+        fit = pf.feglm(
+            "y ~ x",
+            data=lifecycle_data,
+            family="gaussian",
+            vcov="iid",
+        )
+    elif estimator == "fepois":
+        poisson_data = lifecycle_data.assign(
+            y=np.arange(len(lifecycle_data), dtype=np.float64) % 5,
+        )
+        fit = pf.fepois("y ~ x", data=poisson_data, vcov="iid")
+    else:
+        with pytest.warns(FutureWarning, match="experimental"):
+            fit = pf.quantreg("y ~ x", data=lifecycle_data, vcov="iid")
+
+    for alias in present_aliases:
+        assert hasattr(fit, alias)
+
+        with pytest.raises(AttributeError):
+            setattr(fit, alias, np.zeros((fit._N_rows, 1)))
+        with pytest.raises(AttributeError):
+            delattr(fit, alias)
+
+    if estimator != "feiv":
+        assert not hasattr(fit, "_Z")
+        assert not hasattr(fit, "_endogvar")
+
+
+def test_unweighted_weight_alias_is_materialized_on_access(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """An unweighted fit stores no weight vector but still exposes one."""
+    fit = pf.feols("y ~ x | fe", data=lifecycle_data, vcov="iid")
+
+    assert fit._observation_weights.values is None
+    np.testing.assert_array_equal(fit._weights, np.ones((fit._N_rows, 1)))
+    assert fit._weights is not fit._weights
+
+
+@pytest.mark.parametrize(
+    ("weights_type", "expected_n"),
+    [("aweights", 24), ("fweights", 52)],
+)
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     lifecycle_data: pd.DataFrame,
+    weights_type: str,
+    expected_n: int,
 ) -> None:
     """IV state names response, design, endogenous, and instrument roles."""
     fit = pf.feols(
         "y ~ x + [endog ~ z] | fe",
         data=lifecycle_data,
         weights="weight",
-        weights_type="aweights",
+        weights_type=weights_type,
         vcov="iid",
     )
 
     within = fit._within_data
     assert isinstance(within, WithinIvData)
+    assert within.instruments is not None
+    assert within.endogenous is not None
     assert fit._Y is within.response
     assert fit._X is within.design
     assert fit._Z is within.instruments
@@ -142,6 +227,10 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     assert not hasattr(fit, "_endogvard")
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
+    np.testing.assert_array_equal(fit._observation_weights.values, weights)
+    np.testing.assert_array_equal(fit._weights.flatten(), weights)
+    assert fit._observation_weights.weights_type == weights_type
+    assert expected_n == fit._N
     weighted_design = weights[:, None] * within.design
     weighted_response = weights[:, None] * within.response
     np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
@@ -281,6 +370,46 @@ def test_multiple_estimation_shares_array_native_demean_cache(
     assert all(model._X is model._within_data.design for model in models)
 
 
+def test_feglm_keeps_observation_and_working_weights_distinct() -> None:
+    """The stable observation-weight alias is never replaced by IRLS weights."""
+    rng = np.random.default_rng(8675309)
+    n_obs = 160
+    covariate = rng.normal(size=n_obs)
+    probability = 1 / (1 + np.exp(-(-0.2 + 0.8 * covariate)))
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
+    data = pd.DataFrame(
+        {
+            "y": rng.binomial(1, probability),
+            "x": covariate,
+            "observation_weight": observation_weights,
+        }
+    )
+
+    fit = pf.feglm(
+        "y ~ x",
+        data=data,
+        family="logit",
+        weights="observation_weight",
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+
+    working = fit._working_state
+    assert isinstance(working, GlmWorkingState)
+    np.testing.assert_allclose(fit._weights.flatten(), observation_weights)
+    np.testing.assert_allclose(fit._observation_weights.values, observation_weights)
+    np.testing.assert_allclose(fit._irls_weights, working.working_weights)
+    assert not np.allclose(working.working_weights, observation_weights)
+    assert fit._X is working.design_within
+    assert fit._Y is working.working_response_within
+    np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
+    np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
+    np.testing.assert_allclose(
+        fit._scores,
+        fit._X * (working.working_weights * working.working_residuals)[:, None],
+    )
+
+
 @pytest.mark.parametrize(
     ("fml", "weights", "weights_type"),
     [
@@ -295,6 +424,7 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     weights: str | None,
     weights_type: str,
 ) -> None:
+    """Gaussian performance uses raw totals and unpremultiplied within arrays."""
     fit = pf.feglm(
         fml,
         data=lifecycle_data,
@@ -304,26 +434,79 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         vcov="iid",
         iwls_tol=1e-10,
     )
+
     fit.get_performance()
-    response = lifecycle_data["y"].to_numpy()
+
     observation_weights = fit._observation_weights.values
-    residuals = fit._u_hat_response
     if observation_weights is None:
-        ssu = np.sum(residuals**2)
-        ssy = np.sum((response - np.mean(response)) ** 2)
+        ssu = np.sum(fit._u_hat**2)
+        response_center = np.mean(fit._response)
+        ssy = np.sum((fit._response - response_center) ** 2)
     else:
-        ssu = np.sum(observation_weights * residuals**2)
-        center = np.average(response, weights=observation_weights)
-        ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit._N))
-    np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
+        ssu = np.sum(observation_weights * fit._u_hat**2)
+        response_center = np.average(fit._response, weights=observation_weights)
+        ssy = np.sum(observation_weights * (fit._response - response_center) ** 2)
+
+    np.testing.assert_allclose(
+        fit._rmse,
+        np.sqrt(ssu / fit._N),
+        err_msg="Gaussian GLM RMSE used the wrong residual domain",
+    )
+    np.testing.assert_allclose(
+        fit._r2,
+        1 - ssu / ssy,
+        err_msg="Gaussian GLM R-squared used the wrong response domain",
+    )
     if fit._has_fixef:
+        data = lifecycle_data
         assert observation_weights is not None
-        weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
-        group_mean = weighted_y.groupby(lifecycle_data["fe"]).transform("sum")
-        group_mean /= (
-            lifecycle_data["weight"].groupby(lifecycle_data["fe"]).transform("sum")
+        weighted_response = data["weight"] * data["y"]
+        weighted_group_mean = weighted_response.groupby(data["fe"], observed=True).sum()
+        weighted_group_mean /= data["weight"].groupby(data["fe"], observed=True).sum()
+        response_within = (
+            data["y"].to_numpy() - data["fe"].map(weighted_group_mean).to_numpy()
         )
-        response_within = response - group_mean.to_numpy()
         ssy_within = np.sum(observation_weights * response_within**2)
-        np.testing.assert_allclose(fit._r2_within, 1 - ssu / ssy_within)
+        np.testing.assert_allclose(
+            fit._r2_within,
+            1 - ssu / ssy_within,
+            err_msg="Gaussian GLM within R-squared used the wrong within response",
+        )
+
+
+@pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
+def test_quantreg_multi_retains_default_post_estimation_state(
+    multi_method: str,
+) -> None:
+    """Default multi-quantile results support prediction and vcov updates."""
+    rng = np.random.default_rng(20260901)
+    x = rng.normal(size=200)
+    data = pd.DataFrame({"y": 1 + 2 * x + rng.normal(size=200), "x": x})
+    with pytest.warns(FutureWarning, match="experimental"):
+        multi = pf.quantreg(
+            "y ~ x",
+            data=data,
+            quantile=[0.25, 0.75],
+            multi_method=multi_method,
+            vcov="iid",
+        )
+
+    multi.vcov("hetero")
+
+    for model in multi.to_list():
+        prediction = model.predict()
+        residual = model.resid()
+        assert prediction.shape == residual.shape == (len(data),)
+        np.testing.assert_allclose(
+            prediction + residual,
+            data["y"].to_numpy(),
+            err_msg=f"{multi_method} child state does not reconstruct the response",
+        )
+        assert np.isfinite(model.se()).all()
+
+    if multi_method == "cfm1":
+        with pytest.warns(FutureWarning, match="experimental"):
+            single = pf.quantreg("y ~ x", data=data, quantile=0.25, vcov="hetero")
+        first_quantile = multi.fetch_model(0, print_fml=False)
+        np.testing.assert_allclose(first_quantile.predict(), single.predict())
+        np.testing.assert_allclose(first_quantile.se(), single.se())

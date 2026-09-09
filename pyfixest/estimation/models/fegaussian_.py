@@ -92,7 +92,7 @@ class Fegaussian(Feglm):
         """
         working_state = self._working_state
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
+            Y=self._response.reshape((-1, 1)),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
             weights=self._observation_weights.values,

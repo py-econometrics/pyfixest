@@ -136,11 +136,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
     _observation_weights: "ObservationWeights"
     _within_data: "WithinLinearData"
-    _Y: np.ndarray
-    _Y_untransformed: pd.DataFrame
+    _response: np.ndarray
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -315,7 +313,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ```
         """
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
+            Y=self._response.reshape((-1, 1)),
             Y_within=self._within_data.response,
             residuals=self._u_hat,
             weights=self._observation_weights.values,

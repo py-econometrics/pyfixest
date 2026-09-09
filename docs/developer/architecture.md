@@ -247,6 +247,19 @@ never changes after formula preparation, while each IRLS iteration computes
 working weights and the final values live in `GlmWorkingState`. Response
 residuals and working residuals likewise have separate fields.
 
+The compatibility aliases are still available, but they are read-only
+properties over the typed state rather than cross-type workspaces: the state
+objects are the single writable representation, and assigning or deleting an
+existing alias raises. These properties do not make the underlying arrays
+immutable or copy them. For linear fits `_Y` and `_X` view within-scale arrays;
+only `Feiv` defines `_Z` and `_endogvar`, exposing the instrument and endogenous
+roles. For GLMs `_Y` and `_X` view the final within-scale working response and design.
+`_weights` always means observation weights, never square-root solver weights
+or GLM working weights, and an unweighted fit materializes its ones column on
+access instead of keeping one alive for the lifetime of the result. New code
+should consume the typed state values rather than infer semantics from these
+aliases.
+
 A post-estimation path states which estimators, weighting schemes, and design
 features it can represent, and rejects the rest. Declare support as a
 capability flag on the result class, check it before any estimation state is

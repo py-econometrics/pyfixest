@@ -62,6 +62,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - `lean=True` now discards the retained GLM working state so its design and
   working-response arrays are released with the other estimation matrices.
 
+- Legacy estimator attributes such as `_X`, `_Y`, and `_weights` are now
+  getter-only views over the typed state objects; `_Z` and `_endogvar` are
+  defined only on IV models. The views prevent alias assignment and deletion,
+  while preserving the underlying arrays' mutability. Fixed-effect recovery
+  reads canonical observation weights, including for GLMs.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of
@@ -230,6 +236,9 @@ We also removed:
 - Removed `pf.dtable()`; use `maketables.DTable()` directly instead.
 
 ### Bug Fixes
+
+- Default multi-quantile results retain the arrays needed for prediction and
+  covariance updates.
 
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
