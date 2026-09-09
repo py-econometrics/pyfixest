@@ -17,6 +17,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Post-Estimation
+
+- `Feols.leverage()` computes approximate leverage values for OLS models with
+  high-dimensional fixed effects using Johnson--Lindenstrauss approximation.
+- `Feols.influence()` calculates the leave-one-out influence values for OLS
+  models with high-dimensional fixed effects using the Johnson--Lindenstrauss
+  approximation.
+
 ### Contributor Workflow
 
 - Repository-local skills and developer guides now define architecture,
