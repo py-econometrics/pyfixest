@@ -1,56 +1,47 @@
 ---
 name: change-verification
-description: Select, run, and report pyfixest checks before handing off code, tests, documentation, CI, or metadata changes.
+description: Selects, runs, and reports the checks a pyfixest change requires. Use after an implementation stabilizes and before handing off any code, test, documentation, CI, or metadata change, and whenever a handoff message or PR body needs a verification report.
 ---
 
 # Verify a pyfixest change
 
-Use this skill after implementation stabilizes and before handoff.
+Test policy lives in `docs/developer/testing.md`; this skill is the procedure
+that applies its "Runtime tiers", "Selection matrix", and "Release contract"
+sections. Read those sections rather than the whole file.
 
-## Select checks by risk
+Input: the diff against the resolved base, established as described under
+"Establish the base" in `docs/developer/git-and-pr-style.md`. Output: the
+report below, written into the handoff message or PR body rather than a
+separate generated artifact.
 
-Resolve and record the actual PR base and merge base as described in
-`docs/developer/git-and-pr-style.md`; do not assume local `master` is current.
-Inspect every changed path against that base, then classify the change and pick
-its checks with the selection matrix in `docs/developer/testing.md`. That matrix
-is authoritative, including for which changes justify a documentation build.
-For a change confined to the documentation or workflow-metadata rows of that
-matrix, the row is the whole procedure: run its listed checks and report them.
+## Procedure
 
-For a refactor declared invariant, run the release contract first and on every
-iteration; it is the cheapest check that can falsify the whole change. Cite it
-only when it reports passed cases: a skip means no baseline, not success. A
-failure ends the refactor classification. Fix it or follow the numerics row.
-Never widen a contract tolerance to get green.
+1. List every changed path against the resolved base and classify the change
+   with the "Selection matrix". Unknown or cross-cutting paths take the PR
+   baseline. For a change confined to the documentation or workflow-metadata
+   rows, the row is the whole procedure.
+2. For a refactor declared invariant, run the release contract first and on
+   every iteration; it is the cheapest check that can falsify the whole
+   change. A failure reclassifies the change as numerics, as "Release
+   contract" describes.
+3. While editing, run the targeted tests and the changed-file lint and type
+   checks for the touched seam. Once the implementation stabilizes, run the
+   selected broader baseline once.
+4. Assign each required long check to a local run or to exact-head CI. Defer
+   only under the conditions in "Runtime tiers", after the targeted checks pass,
+   never a failing check or a targeted check needed to understand unresolved
+   risk, and name the check, the reason for deferral, the destination, and the
+   head SHA under test.
 
-Start with targeted tests and changed-file format/lint/type checks. Once the
-implementation stabilizes, run the selected broader baseline once and assign
-each required long check to a local run or exact-head CI.
-
-Unknown paths require the conservative PR baseline. For a stack, run targeted
-checks for each layer against its immediate parent and the broad suites once on
-the cumulative top against the trunk, unless each layer must be independently
-releasable.
-
-Complete the required edit and handoff checks locally. A long check listed as
-merge evidence may be deferred to exact-head CI when a local run would add no
-diagnostic value. Defer only after the targeted checks pass, and identify the
-check, destination, and head under test. Never defer a failing check or a
-targeted check needed to understand unresolved risk.
-
-## Report truthfully
+## Report
 
 For every applicable check record:
 
 - status: passed, failed, deferred, or not run;
-- exact command;
-- elapsed time;
-- reason and destination for a deferred check;
+- the exact command and elapsed time;
+- for a deferred check, the reason, destination, and head SHA;
 - for the release contract, the passed case count or the skip reason.
 
-Do not claim implementation handoff while required local checks are unreported
-or failing, and do not claim merge readiness until all required exact-head
-evidence has passed.
-
-Write this report directly in the handoff or PR body. Do not introduce a
-generated verification artifact unless the task specifically requires one.
+Do not claim implementation handoff while a required local check is
+unreported or failing, and do not claim merge readiness until all required
+merge evidence has passed on the exact head.

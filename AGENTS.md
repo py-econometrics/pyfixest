@@ -30,15 +30,17 @@ policy, and neither should skills or ad hoc prompts.
 | [`architecture.md`](docs/developer/architecture.md) | Core boundaries, estimation flow, extension seams |
 | [`testing.md`](docs/developer/testing.md) | Runtime tiers, check-selection matrix, references, tolerances, test design |
 | [`fixest-compatibility.md`](docs/developer/fixest-compatibility.md) | Intentional deviations from R `fixest` |
-| [`git-and-pr-style.md`](docs/developer/git-and-pr-style.md) | Branch, commit, and PR-body conventions |
+| [`git-and-pr-style.md`](docs/developer/git-and-pr-style.md) | Base resolution, branch, commit, stack, and PR-body conventions |
 
 ## Contributor workflow skills
 
-The skills under `.agents/skills/` are plain files shared by every coding tool,
-not tool-registered commands: when a trigger applies, read the `SKILL.md` and
-follow it. A change flows plan → implement → verify → self-review → hand off,
-and the table is in that order. (The user-facing analytics prompt at
-`docs/skills.md` is unrelated.)
+The skills under `.agents/skills/` are procedures shared by every coding tool.
+Codex discovers that directory itself; Claude Code discovers the same files
+through the symlinks in `.claude/skills/`. Either way, when a trigger applies,
+follow the `SKILL.md`. Skills apply the policy in `docs/developer/` and never
+restate it, so every rule has one home. A change flows plan → implement →
+verify → self-review → hand off, and the table is in that order. (The
+user-facing analytics prompt at `docs/skills.md` is unrelated.)
 
 | Skill | Trigger |
 |---|---|
@@ -49,12 +51,11 @@ and the table is in that order. (The user-facing analytics prompt at
 
 ## Architecture in one paragraph
 
-Keep the shared estimation core narrow and stable: formula parsing, model-matrix
+Keep the shared estimation core narrow: formula parsing, model-matrix
 construction, demeaning, generic fit and inference primitives, result
-interfaces, and backend kernels. New estimators start as standalone add-on
-functions in their own API or domain modules and compose those primitives. Do
-not add estimator-specific switches to generic runners or grow model classes
-with numerical logic. See `docs/developer/architecture.md` for the estimation
+interfaces, and backend kernels. New estimators are standalone add-ons that
+compose those primitives; estimator-specific switches do not belong in generic
+runners or model classes. `docs/developer/architecture.md` has the estimation
 flow, the stable-core contract, and the extension-seam table.
 
 ## Repo map
@@ -127,23 +128,14 @@ root-relative `.qmd` links, and a linked paper for econometric methods.
 
 ## Evidence
 
-Every new estimator must be tested permanently against existing software, and
-numerical changes to existing estimators require an external comparison wherever
-overlapping software exists. Simulation properties, shape checks, and internal
-reimplementations are additional evidence, never substitutes. If no external
-implementation is available, the estimator is not merge-ready.
-
-Use `pixi run` for every Python, pytest, lint, docs, and R command; bare tools
-may miss dependencies or the compiled extension. `docs/developer/testing.md`
-owns reference selection, markers, tolerances, the runtime tiers, and the
-selection matrix that decides which checks a change requires; the
-`change-verification` skill applies it.
-
-For internal or backend refactors that must not change results, the release
-contract (`test-release-contract`) is the edit-loop gate: it replays the public
-estimator matrix against a pinned pyfixest release in seconds. It is a
-regression alarm, not an external correctness reference; a released pyfixest
-result never substitutes for R.
+Every new estimator needs a permanent comparison against existing software,
+and a numerical change to an existing estimator needs one wherever overlapping
+software exists; simulations, shape checks, and internal reimplementations
+never substitute for it. Use `pixi run` for every Python, pytest, lint, docs,
+and R command; bare tools may miss dependencies or the compiled extension.
+`docs/developer/testing.md` owns the runtime tiers, the selection matrix,
+references, tolerances, and the release contract; the `change-verification`
+skill applies it.
 
 Four rules that are easy to get wrong:
 
@@ -151,8 +143,9 @@ Four rules that are easy to get wrong:
 - `test-r-fixest-fast` is edit feedback, not merge evidence.
 - Report every applicable check as passed, failed, deferred, or not run. A
   deferred or CI-only check is never a pass.
-- `test-release-contract` **skips** without a recorded baseline, and so does
-  `test-py`. Confirm it reports passed cases, not skipped, before citing it.
+- `test-release-contract` is a regression alarm against a pinned pyfixest
+  release, not an external reference, and it **skips** without a recorded
+  baseline, as does `test-py`. Cite it only when it reports passed cases.
 
 ```bash
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov   # targeted
@@ -171,22 +164,12 @@ Never hand-edit generated `docs/reference/**`.
 ## Git and review
 
 Follow `docs/developer/git-and-pr-style.md` for branch names, commit messages,
-and PR bodies; the `pr-handoff` skill covers history rewriting and submission.
-Never commit to `master` or use an agent identity as a branch prefix.
-
-Prefer a GitHub stacked PR when work has two or more independently reviewable
-layers. Split by dependency and reviewer concern, not file count. Every layer
-must be coherent, testable against its immediate parent, and small enough for
-independent human review.
-
-Rewriting history always requires explicit user approval for that specific
-rewrite; general permission to implement or open a PR is not rewrite approval.
-Never rewrite a contributor-owned branch or rewrite silently after review starts.
-
-Agents prepare draft PRs and respond to review. Agents never merge their own
-work or invoke `gh stack merge`. Human maintainer review is required before
-every merge, including every layer of a stack; automated review and green CI
-supplement that gate rather than replacing it.
+PR bodies, and when to split work into a stack; the `pr-handoff` skill covers
+history curation and submission. Never commit to `master` or use an agent
+identity as a branch prefix. Rewriting history always requires the user's
+explicit approval for that specific rewrite. Agents prepare draft PRs and
+respond to review; they never merge their own work or invoke `gh stack merge`.
+A human maintainer reviews every PR, and every layer of a stack, before merge.
 
 ## Do not touch unless the task requires it
 
