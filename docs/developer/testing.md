@@ -5,6 +5,20 @@ evidence once the implementation stabilizes, and require the affected
 long-running suites before merge. Always use `pixi run`; bare Python or pytest
 may not have the compiled extension or the right optional dependencies.
 
+## Contents
+
+- [Runtime tiers](#runtime-tiers): edit, stabilized, merge, and exhaustive
+  stages; what exact-head CI means; deferral semantics
+- [Commands](#commands): the `pixi run` tasks for each stage
+- [Selection matrix](#selection-matrix): which checks each kind of change
+  requires
+- [Release contract](#release-contract): the pinned-release regression alarm,
+  its baseline, and declared differences
+- [External numerical references](#external-numerical-references): reference
+  preference order, rpy2 rules, and the [tolerance contract](#tolerance-contract)
+- [Test design](#test-design): controlling suite growth, error-path tests,
+  fixtures, and edge coverage
+
 ## Runtime tiers
 
 Runtime labels are qualitative because machine, compiler cache, and test
@@ -17,11 +31,16 @@ selection affect wall time.
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
 
+Merge evidence must run against the exact PR head SHA. This document and the
+skills call a CI run on that SHA *exact-head CI*; a run on an older head is
+stale and does not count.
+
 Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
 `test-r-core`, or `test-all` while iterating. Use a targeted test or
 `test-r-fixest-fast` instead. Once the design is stable, run the selected
 baseline once. A required long check may be deferred to exact-head CI at
-implementation handoff when the report names the check and destination.
+implementation handoff when a local run would add no diagnostic value and
+the report names the check, reason for deferral, destination, and head SHA.
 Deferred is never equivalent to passed, and the change is not merge-ready
 until all required merge evidence is green.
 

@@ -59,7 +59,8 @@ readme.ipynb
 benchmarks/data/
 
 # Local dev files
-.claude/
+.claude/*
+!.claude/skills/
 .serena/
 # A stray root SKILL.md (e.g. copied from docs/skills.md). Repository skills
 # live in .agents/skills/ and are tracked.

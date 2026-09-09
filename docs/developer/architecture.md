@@ -3,6 +3,27 @@
 This document is the authoritative overview for contributors and coding agents.
 Preserve public behavior and numerical correctness while extending pyfixest.
 
+## Contents
+
+- [Design principles](#design-principles)
+- [Stable core](#stable-core): the contracts that need design approval
+- [Estimator add-ons](#estimator-add-ons): where a new estimator lives
+- [Estimation flow](#estimation-flow): the shared pipeline diagram
+- [Current estimator-state lifecycle](#current-estimator-state-lifecycle):
+  status quo of in-place model mutation for
+  [linear and IV](#linear-and-iv-models),
+  [GLM, Poisson, and quantile](#glm-poisson-and-quantile-models) models, and
+  [shared caches and cleanup](#shared-caches-result-completion-and-cleanup)
+- [Formula-state and lifecycle boundaries](#formula-state-and-lifecycle-boundaries)
+- [Estimation-state vocabulary](#estimation-state-vocabulary): the terms new
+  shared-core work must use
+- [Implemented array and weight domains](#implemented-array-and-weight-domains):
+  the frozen state values and their contracts
+- [Repository map and extension seams](#repository-map-and-extension-seams)
+- [Result and numerical boundaries](#result-and-numerical-boundaries): the
+  support-matrix requirement
+- [Compatibility changes](#compatibility-changes)
+
 ## Design principles
 
 1. Mirror R `fixest` behavior, names, and defaults unless an intentional

@@ -13,8 +13,10 @@ PR, read `baseRefName` from GitHub. Fetch the corresponding remote branch when
 network access permits, then record the base ref and merge-base SHA. If a fetch
 fails, use the available remote-tracking ref and report that it may be stale.
 
-For a stack, record each layer's immediate parent. Review and verify each layer
-against that parent, then inspect the cumulative top layer against the trunk.
+For a stack, record each layer's immediate parent. Review and run targeted
+checks for each layer against that parent, and run the broad suites once on
+the cumulative top layer against the trunk, unless each layer must be
+independently releasable.
 
 ## Branch names
 
@@ -23,8 +25,15 @@ Use `<type>/<short-kebab-case-intent>`, where `type` is normally `feat`, `fix`,
 reviewer-visible outcome, not the authoring tool, agent, issue number alone, or
 position in a stack.
 
-Examples: `feat/oriv`, `fix/cluster-df`, `docs/agent-workflow`. Each stack
-branch names its independently reviewable layer.
+Examples: `feat/oriv`, `fix/cluster-df`, `docs/agent-workflow`.
+
+## Stacks
+
+Use one PR for a small cohesive change. Prefer a GitHub stacked PR when the
+work has two or more independently reviewable layers. Split by dependency and
+reviewer concern, not file count: each layer must be coherent, testable against
+its immediate parent, free of unrelated cleanup, and small enough for a human
+to review on its own. Each stack branch names its layer's outcome.
 
 ## Commits
 
@@ -62,6 +71,13 @@ template. Keep ordinary PR bodies under about 200 words: one outcome-first
 paragraph and at most a few bullets for material review risks or non-obvious
 decisions. Use a longer body only when a support matrix or numerical deviation
 genuinely needs it.
+
+For numerical or estimator changes, add only the material facts: `fixest`
+parity or the intentional deviation and its support limits, the external
+reference and tolerance rationale, failed or deferred verification, and any
+performance impact. Link to the tests or policy instead of copying the support
+matrix into the body. Documentation, CI, and maintenance PRs carry none of
+that boilerplate.
 
 GitHub already shows the files, commits, branches, and base SHA; do not repeat
 them as file lists, commit-by-commit narratives, or implementation diaries.
