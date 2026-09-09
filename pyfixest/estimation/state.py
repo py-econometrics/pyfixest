@@ -1,6 +1,7 @@
 """Public components of fitted estimator state.
 
-Formula tables are detached on access; published numerical arrays are read-only.
+Components expose fitted state for inspection. Mutating their contents is
+unsupported and may invalidate results.
 See the [fitted-state guide](/how-to/fitted-state.qmd) for domains and retention.
 """
 

@@ -429,7 +429,7 @@ class Feols(ResultAccessorMixin):
         self.model_matrix = model_matrix
         self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
-        independent = model_matrix._table("independent")
+        independent = model_matrix.independent
         is_icovar = (
             independent.columns.str.contains(r"^.+::.+$")
             if not independent.empty
@@ -445,13 +445,13 @@ class Feols(ResultAccessorMixin):
 
         self._coefnames = independent.columns.tolist()
         self._coefnames_z = (
-            model_matrix._table("instruments").columns.tolist()
-            if model_matrix._table("instruments") is not None
+            model_matrix.instruments.columns.tolist()
+            if model_matrix.instruments is not None
             else None
         )
-        self._depvar = model_matrix._table("dependent").columns[0]
+        self._depvar = model_matrix.dependent.columns[0]
 
-        self._has_fixef = self.model_matrix._table("fixed_effects") is not None
+        self._has_fixef = self.model_matrix.fixed_effects is not None
         self._fixef = (
             str(self.FixestFormula.fixed_effects).replace(" ", "")
             if self.FixestFormula.is_fixed_effects
@@ -459,9 +459,7 @@ class Feols(ResultAccessorMixin):
         )
 
         self._k_fe = (
-            self.model_matrix._table("fixed_effects").nunique(axis=0)
-            if self._has_fixef
-            else None
+            self.model_matrix.fixed_effects.nunique(axis=0) if self._has_fixef else None
         )
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
@@ -474,8 +472,8 @@ class Feols(ResultAccessorMixin):
 
     def _set_observation_weights(self) -> ObservationWeights:
         """Build canonical user-scale observation weights for this row sample."""
-        n_rows = len(self.model_matrix._table("dependent"))
-        weights = self.model_matrix._table("weights")
+        n_rows = len(self.model_matrix.dependent)
+        weights = self.model_matrix.weights
         if weights is None:
             return ObservationWeights.unweighted(n_rows=n_rows)
 
@@ -492,12 +490,12 @@ class Feols(ResultAccessorMixin):
         The returned arrays are in the units of the data; they are not
         multiplied by square-root weights.
         """
-        response_frame = self.model_matrix._table("dependent")
-        design_frame = self.model_matrix._table("independent")
+        response_frame = self.model_matrix.dependent
+        design_frame = self.model_matrix.independent
         response = response_frame.to_numpy(dtype=np.float64)
         design = design_frame.to_numpy(dtype=np.float64)
 
-        fixed_effects = self.model_matrix._table("fixed_effects")
+        fixed_effects = self.model_matrix.fixed_effects
         if fixed_effects is not None:
             response, design, _ = self._demean_cache.demean_yx(
                 response,
@@ -509,7 +507,6 @@ class Feols(ResultAccessorMixin):
                 na_index=self._na_index,
                 demeaner=self._demeaner,
             )
-
         return WithinLinearData(response=response, design=design)
 
     @property
@@ -560,7 +557,7 @@ class Feols(ResultAccessorMixin):
 
     def _get_predictors(self) -> None:
         self._Y_hat_link = (
-            self.model_matrix._table("dependent").to_numpy().flatten() - self.resid()
+            self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         )
         self._Y_hat_response = self._Y_hat_link
 
@@ -723,7 +720,7 @@ class Feols(ResultAccessorMixin):
                 clustervar=self._clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
-                fe=self.model_matrix._table("fixed_effects"),
+                fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
             )
             self._cluster_df = prep.cluster_df
@@ -1747,7 +1744,7 @@ class Feols(ResultAccessorMixin):
                 # that _sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
                 if self._offset_name is not None:
-                    offset = self.model_matrix._table("offset")
+                    offset = self.model_matrix.offset
                     assert offset is not None
                     Y = Y - offset.to_numpy().flatten()
             uhat = (Y - X @ self._beta_hat).flatten()

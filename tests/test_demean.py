@@ -629,10 +629,12 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     cache = DemeanCache()
 
     # Test without fixed effects
+    response = Y.to_numpy(copy=True)
+    design = X.to_numpy(copy=True)
     Yd, Xd, _ = benchmark(
         cache.demean_yx,
-        Y=Y.to_numpy(),
-        X=X.to_numpy(),
+        Y=response,
+        X=design,
         y_names=Y.columns,
         x_names=X.columns,
         fe=None,
@@ -645,6 +647,8 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
     assert np.allclose(Y.values, Yd)
     assert np.allclose(X.values, Xd)
     assert cache.lookup_demeaned_data == {}
+    assert response.flags.writeable
+    assert design.flags.writeable
 
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
@@ -773,6 +777,10 @@ def test_demean_model_caching(benchmark, demeaner):
     # Results should be identical
     assert np.allclose(Yd1, Yd2)
     assert np.allclose(Xd1, Xd2)
+    original_entry = lookup_dict[frozenset()]
+    assert np.shares_memory(Xd1, original_entry.values)
+    assert np.shares_memory(Xd2, original_entry.values)
+    original_values = original_entry.values.copy()
 
     # A complete cache hit still follows the requested order, including the
     # empty-design case used by fixed-effect-only specifications.
@@ -819,8 +827,8 @@ def test_demean_model_caching(benchmark, demeaner):
         ("response", Yd1),
     ):
         assert not demeaned.flags.writeable, f"{name} returned a writable array"
-        with pytest.raises(ValueError, match="WRITEABLE"):
-            demeaned.setflags(write=True)
+        with pytest.raises(ValueError, match="read-only"):
+            demeaned.flat[0] = 0
 
     # Add new variable and verify partial caching
     X_new = pd.DataFrame(
@@ -852,6 +860,10 @@ def test_demean_model_caching(benchmark, demeaner):
         na_index=frozenset(),
         demeaner=demeaner,
     )
+    assert lookup_dict[frozenset()] is not original_entry
+    np.testing.assert_array_equal(original_entry.values, original_values)
+    assert np.shares_memory(Xd1, original_entry.values)
+    assert np.shares_memory(Xd2, original_entry.values)
 
     # Requested output order matches an independent solve, while the shared
     # cache keeps first-seen insertion order and all earlier columns.

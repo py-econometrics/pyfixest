@@ -289,6 +289,8 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
 
     assert step_calls == 2
     assert demean_calls == 3
+    assert X.flags.writeable
+    assert Y.flags.writeable
 
 
 def test_glm_raises_after_iwls_maxiter_without_convergence():

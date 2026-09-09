@@ -152,7 +152,7 @@ class Fepois(Feglm):
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
-        y_orig = self.model_matrix._table("dependent").to_numpy().flatten()
+        y_orig = self.model_matrix.dependent.to_numpy().flatten()
         # ``None`` is the allocation-free unweighted path shared with the rest
         # of the estimation core; no vector of ones is materialised.
         observation_weights = self.observation_weights.values

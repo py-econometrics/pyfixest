@@ -334,19 +334,19 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     [
         (pf.feols, "y ~ x + x2", {}),
         (pf.feols, "y ~ x + I(2 * x)", {}),
+        (pf.feols, "y ~ x + [endog ~ z]", {"weights": "weight"}),
         (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
+        (pf.feglm, "y ~ x", {"family": "gaussian", "weights": "weight"}),
         (pf.feglm, "y ~ x | fe", {"family": "gaussian", "weights": "weight"}),
         (pf.feols, "y ~ x | fe", {"weights": "weight", "weights_type": "fweights"}),
         (pf.fepois, "weight ~ x | fe", {"offset": "x2", "weights": "weight"}),
         (pf.quantreg, "y ~ x", {}),
     ],
 )
-def test_published_components_protect_storage(
+def test_published_components_preserve_inputs(
     lifecycle_data, copy_data, estimator, formula, kwargs
 ):
-    """Public state rejects writes without changing caller-owned data buffers."""
-    from dataclasses import fields
-
+    """Publication exposes canonical components without modifying caller data."""
     from pyfixest.estimation.state import GlmWorkingState, ModelMatrix
 
     original = lifecycle_data.copy(deep=True)
@@ -357,30 +357,6 @@ def test_published_components_protect_storage(
     component = fit.working_state if hasattr(fit, "working_state") else fit.within_data
     if isinstance(component, GlmWorkingState):
         assert not hasattr(fit, "within_data")
-    for state in (component, fit.observation_weights):
-        for field in fields(state):
-            array = getattr(state, field.name)
-            if not isinstance(array, np.ndarray):
-                continue
-            assert not array.flags.writeable
-            with pytest.raises(ValueError, match="read-only"):
-                array.flat[0] = 0
-            with pytest.raises(ValueError, match="WRITEABLE"):
-                array.setflags(write=True)
-    for role in (
-        "dependent",
-        "independent",
-        "fixed_effects",
-        "instruments",
-        "endogenous",
-        "weights",
-        "offset",
-    ):
-        table = getattr(fit.model_matrix, role)
-        if table is not None and not table.empty:
-            expected = table.copy(deep=True)
-            table.iloc[0, 0] = 999
-            pd.testing.assert_frame_equal(getattr(fit.model_matrix, role), expected)
     removed = (
         "_model_matrix",
         "_observation_weights",
@@ -406,42 +382,8 @@ def test_published_components_protect_storage(
     assert input_array.flags.writeable == writeable_before
 
 
-def test_internal_consumers_do_not_read_public_formula_tables(
-    lifecycle_data, monkeypatch
-):
-    """Estimation, inference, recovery and prediction avoid defensive table copies."""
-
-    def unexpected_public_read(self):
-        raise AssertionError("internal consumer read a public formula table")
-
-    for role in (
-        "dependent",
-        "independent",
-        "fixed_effects",
-        "instruments",
-        "endogenous",
-        "weights",
-        "offset",
-    ):
-        monkeypatch.setattr(ModelMatrix, role, property(unexpected_public_read))
-    for estimator, formula, kwargs in (
-        (pf.feols, "y ~ x | fe", {"weights": "weight"}),
-        (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
-        (pf.feglm, "y ~ x | fe", {"family": "gaussian", "weights": "weight"}),
-        (pf.quantreg, "y ~ x", {}),
-    ):
-        fit = estimator(formula, lifecycle_data, **kwargs)
-        fit.tidy()
-        if fit._is_iv:
-            continue
-        fit.predict()
-        if fit._has_fixef:
-            fit.fixef()
-            fit.predict(lifecycle_data.iloc[:3])
-
-
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
-def test_multi_quantile_children_publish_protected_design_and_predictions(
+def test_multi_quantile_children_publish_design_and_predictions(
     lifecycle_data, multi_method
 ):
     """Both process solvers expose the same retained state contract as single fits."""
@@ -453,8 +395,6 @@ def test_multi_quantile_children_publish_protected_design_and_predictions(
         seed=42,
     )
     for child in fit.to_list():
-        assert not child.within_data.design.flags.writeable
-        assert not child.within_data.response.flags.writeable
         assert not hasattr(child, "_X")
         assert not hasattr(child, "_Y")
         np.testing.assert_allclose(
