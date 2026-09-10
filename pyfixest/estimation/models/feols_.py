@@ -486,7 +486,7 @@ class Feols(ResultAccessorMixin):
         )
 
     def _demean(self) -> WithinLinearData:
-        """Convert formula tables to arrays and residualize them on the fixed effects.
+        """Convert model frames to arrays and residualize them on the fixed effects.
 
         The returned arrays are in the units of the data; they are not
         multiplied by square-root weights.
