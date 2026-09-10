@@ -998,7 +998,26 @@ class Feols(ResultAccessorMixin):
         print(f"Python p_stat: {p_stat}")
         ```
         """
-        return wald_test(self, R=R, q=q, distribution=distribution)
+        k_fe = np.sum(np.asarray(self._k_fe.values)) if self._has_fixef else 0
+        df_denom = (
+            np.min(np.array(self._G)) - 1
+            if self._is_clustered
+            else self._N - self._k - k_fe
+        )
+        result = wald_test(
+            beta_hat=self._beta_hat,
+            vcov=self._vcov,
+            df_denom=df_denom,
+            R=R,
+            q=q,
+            distribution=distribution,
+        )
+        self._dfd = df_denom
+        self._dfn = result.dfn
+        self._wald_statistic = result.wald_statistic
+        self._f_statistic = result.f_statistic
+        self._p_value = result.pvalue
+        return pd.Series({"statistic": result.statistic, "pvalue": result.pvalue})
 
     def wildboottest(
         self,
