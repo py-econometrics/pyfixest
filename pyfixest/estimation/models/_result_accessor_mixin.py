@@ -298,6 +298,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
         `_adj_r2_within`. The `_within` variants are computed on the demeaned
         dependent variable and are only defined for models with fixed effects.
+        After ``store_data=False`` or ``lean=True`` removes formula data, this
+        method leaves the measures computed during fitting unchanged.
 
         Examples
         --------

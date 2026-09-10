@@ -43,7 +43,6 @@ class ModelMatrix:
     Obtain this component from ``fit.model_matrix``. Its properties expose
     formula tables for inspection and internal calculations. Mutating these
     tables is unsupported and may invalidate fitted results. See
-    [fitted state](/how-to/fitted-state.qmd) and the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     Parameters

@@ -126,7 +126,8 @@ class Feols(ResultAccessorMixin):
         Indicates whether instrumental variables are used, initialized as False.
 
     model_matrix : ModelMatrix
-        Formula-scale inputs; public table access returns detached copies.
+        Formula-scale inputs exposed for inspection without guaranteeing detached
+        copies. Mutating these tables is unsupported and may invalidate results.
     within_data : WithinLinearData
         Protected response and selected design on unpremultiplied within scale.
     _X_is_empty : bool

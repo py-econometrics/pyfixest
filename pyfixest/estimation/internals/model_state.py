@@ -30,7 +30,6 @@ class ObservationWeights:
     -----
     Arrays are exposed for inspection. Mutating their contents is unsupported
     and may invalidate fitted results.
-    See [fitted state](/how-to/fitted-state.qmd).
 
     Examples
     --------
@@ -98,7 +97,6 @@ class WithinLinearData:
     These arrays have not been multiplied by square-root observation weights.
     Arrays are exposed for inspection. Mutating their contents is unsupported
     and may invalidate fitted results.
-    See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
     ----------
@@ -128,7 +126,6 @@ class WithinIvData(WithinLinearData):
     ``design`` is the full structural regressor matrix, including the
     endogenous regressors. ``instruments`` is the full instrument matrix,
     including exogenous regressors that instrument themselves.
-    See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
     ----------
@@ -168,7 +165,6 @@ class GlmWorkingState:
     solver-local temporaries and deliberately absent. Arrays are exposed for
     inspection; mutating their contents may invalidate fitted results and is
     unsupported.
-    See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
     ----------

@@ -40,7 +40,8 @@ class Fepois(Feglm):
     Attributes
     ----------
     model_matrix : ModelMatrix
-        Formula-scale inputs; public tables are detached copies.
+        Formula-scale inputs exposed for inspection without guaranteeing detached
+        copies. Mutating these tables is unsupported and may invalidate results.
     observation_weights : ObservationWeights
         Protected user-scale observation weights.
     working_state : GlmWorkingState

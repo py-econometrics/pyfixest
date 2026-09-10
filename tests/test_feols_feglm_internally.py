@@ -78,10 +78,6 @@ def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
     assert isinstance(fit.model_matrix.dependent, pd.DataFrame)
     assert isinstance(fit.model_matrix.independent, pd.DataFrame)
     assert isinstance(fit.model_matrix.fixed_effects, pd.DataFrame)
-    np.testing.assert_allclose(
-        fit.observation_weights.values,
-        observation_weights,
-    )
     np.testing.assert_allclose(fit.observation_weights.values, observation_weights)
 
     working = fit.working_state

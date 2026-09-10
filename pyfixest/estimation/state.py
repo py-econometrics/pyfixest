@@ -2,7 +2,6 @@
 
 Components expose fitted state for inspection. Mutating their contents is
 unsupported and may invalidate results.
-See the [fitted-state guide](/how-to/fitted-state.qmd) for domains and retention.
 """
 
 from pyfixest.estimation.formula.model_matrix import ModelMatrix

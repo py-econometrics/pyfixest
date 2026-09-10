@@ -383,20 +383,29 @@ def test_published_components_preserve_inputs(
 
 
 @pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
-def test_multi_quantile_children_publish_design_and_predictions(
-    lifecycle_data, multi_method
+@pytest.mark.parametrize("store_data", [False, True])
+@pytest.mark.parametrize("lean", [False, True])
+def test_multi_quantile_children_follow_ols_retention(
+    lifecycle_data, multi_method, store_data, lean
 ):
-    """Both process solvers expose the same retained state contract as single fits."""
+    """Both process solvers apply the OLS storage policy to every child."""
     fit = pf.quantreg(
         "y ~ x",
         lifecycle_data,
         quantile=[0.25, 0.5, 0.75],
         multi_method=multi_method,
         seed=42,
+        store_data=store_data,
+        lean=lean,
     )
+    ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
     for child in fit.to_list():
-        assert not hasattr(child, "_X")
-        assert not hasattr(child, "_Y")
+        for name in ("_data", "model_matrix", "within_data", "observation_weights"):
+            assert hasattr(child, name) == hasattr(ols, name), name
+        if lean:
+            assert not hasattr(child, "within_data")
+            continue
+        assert isinstance(child.within_data, WithinLinearData)
         np.testing.assert_allclose(
             child.predict()[:3],
             child.predict(lifecycle_data.iloc[:3]),

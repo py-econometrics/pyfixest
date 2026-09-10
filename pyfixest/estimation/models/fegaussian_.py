@@ -93,6 +93,8 @@ class Fegaussian(Feglm):
         For the Gaussian family the working response is the response itself,
         so the within working response and the response residuals are already
         in the units of Y.
+        After ``store_data=False`` or ``lean=True`` removes formula data, this
+        method leaves the measures computed during fitting unchanged.
         """
         if not hasattr(self, "model_matrix"):
             return

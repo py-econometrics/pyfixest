@@ -75,8 +75,8 @@ def test_within_linear_data_is_structurally_immutable() -> None:
     response = np.arange(3.0)[:, None]
     design = np.column_stack((np.ones(3), np.arange(3.0)))
     state = WithinLinearData(response=response, design=design)
-    np.testing.assert_array_equal(state.response, response)
-    np.testing.assert_array_equal(state.design, design)
+    assert state.response is response
+    assert state.design is design
     assert not hasattr(state, "__dict__")
     assert not hasattr(state, "instruments")
     assert not hasattr(state, "endogenous")
@@ -98,8 +98,8 @@ def test_within_iv_data_requires_instrument_roles() -> None:
         endogenous=endogenous,
     )
     assert isinstance(state, WithinLinearData)
-    np.testing.assert_array_equal(state.instruments, instruments)
-    np.testing.assert_array_equal(state.endogenous, endogenous)
+    assert state.instruments is instruments
+    assert state.endogenous is endogenous
     assert not hasattr(state, "__dict__")
 
     with pytest.raises(TypeError):

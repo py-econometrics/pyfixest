@@ -19,8 +19,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Fitted Model State
 
-- Publish estimator components for inspection and remove superseded private array aliases; see [fitted-state access](/how-to/fitted-state.qmd).
-- Complete Gaussian performance before storage cleanup, and retain usable predictions for both multi-quantile methods.
+- Publish estimator components for inspection and remove superseded private array aliases.
+- Complete Gaussian performance before storage cleanup. Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
+- GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
 
 ### Contributor Workflow
 
