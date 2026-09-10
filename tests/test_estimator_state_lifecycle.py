@@ -303,7 +303,6 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         iwls_tol=1e-10,
         store_data=store_data,
     )
-    fit.get_performance()
     response = lifecycle_data["y"].to_numpy()
     observation_weights = fit.observation_weights.values
     residuals = fit.working_state.response_residuals

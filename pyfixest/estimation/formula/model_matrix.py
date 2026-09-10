@@ -42,8 +42,7 @@ class ModelMatrix:
 
     Obtain this component from ``fit.model_matrix``. Its properties expose
     the model frames as pandas DataFrames for inspection and internal
-    calculations. Mutating these DataFrames is unsupported and may invalidate
-    fitted results. See the
+    calculations. See the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     Parameters
@@ -67,8 +66,8 @@ class ModelMatrix:
     fit.model_matrix.dependent.head()
     ```
 
-    Once constructed, the instance is the formula state a fitted model retains
-    and is treated as read-only. Estimator-level row filters such as GLM
+    This instance retains the model frames after construction.
+    Estimator-level row filters such as GLM
     separation call `without_rows`, which returns a filtered copy instead of
     mutating the instance.
 

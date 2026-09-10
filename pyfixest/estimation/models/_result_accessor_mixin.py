@@ -281,7 +281,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def get_performance(self) -> None:
         """
-        Get Goodness-of-Fit measures.
+        Compute and store goodness-of-fit measures during fit finalization.
 
         Compute multiple additional measures commonly reported with linear
         regression output, including R-squared and adjusted R-squared. Note that
@@ -298,27 +298,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
         `_adj_r2_within`. The `_within` variants are computed on the demeaned
         dependent variable and are only defined for models with fixed effects.
-        After ``store_data=False`` or ``lean=True`` removes formula data, this
-        method leaves the measures computed during fitting unchanged.
-
-        Examples
-        --------
-        The estimation functions call this during fitting, so the measures are
-        available on any fitted model.
-
-        ```{python}
-        import pyfixest as pf
-
-        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
-        fit.get_performance()
-
-        fit._r2, fit._adj_r2, fit._r2_within
-        ```
+        Called internally before storage cleanup, while model_matrix,
+        within_data, and observation_weights are available.
         """
-        # Formula inputs may already have been discarded. The measures computed
-        # during fitting remain available without retaining a duplicate response.
-        if not hasattr(self, "model_matrix"):
-            return
         measures = performance_measures(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,

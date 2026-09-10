@@ -204,7 +204,6 @@ quartodoc:
         - estimation.models.feols_.Feols.vcov
         - estimation.models.feols_.Feols.predict
         - estimation.models.feols_.Feols.fixef
-        - estimation.models.feols_.Feols.get_performance
         - estimation.models.feols_.Feols.wald_test
         - estimation.models.feols_.Feols.wildboottest
         - estimation.models.feols_.Feols.ritest

@@ -186,14 +186,18 @@ class Quantreg(Feols):
         self.within_data = WithinLinearData(response=response, design=design)
 
     def drop_multicol_vars(self):
-        """Select the quantile design using the shared rank check."""
+        """Remove collinear regressors using the same rank check as OLS.
+
+        Quantile models do not support fixed effects, so within_data holds
+        the original response and regressor arrays without demeaning.
+        """
         self._set_within_data(self._drop_multicollinear_within_data(self.within_data))
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()
 
-        if self._has_fixef:
+        if self.model_matrix.fixed_effects is not None:
             raise NotImplementedError(
                 "Fixed effects are not yet supported for Quantile Regression."
             )

@@ -713,8 +713,6 @@ def test_feglm_gaussian_reference_behavior():
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
     )
-    py_glm.get_performance()
-    py_ols.get_performance()
     for attribute in ("_rmse", "_r2", "_adj_r2"):
         np.testing.assert_allclose(
             getattr(py_glm, attribute),
