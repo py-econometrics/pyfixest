@@ -22,6 +22,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Publish estimator components for inspection and remove superseded private array aliases.
 - Complete Gaussian performance before storage cleanup. Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
+- Saturated OLS and Gaussian fits now return `NaN` for undefined adjusted R² measures instead of failing during performance calculation.
 
 ### Contributor Workflow
 

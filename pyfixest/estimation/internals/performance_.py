@@ -50,6 +50,11 @@ def performance_measures(
         Number of fixed-effect coefficients. Ignored when ``has_fixef`` is False.
     has_intercept, has_fixef : bool
         Whether the model has an intercept and fixed effects.
+
+    Notes
+    -----
+    Adjusted R² measures are undefined and returned as NaN when residual
+    degrees of freedom are nonpositive. Other measures remain available.
     """
     if weights is None:
         ssu = np.sum(residuals**2)
@@ -59,15 +64,13 @@ def performance_measures(
         ssu = np.sum(w.flatten() * residuals**2)
         ssy = np.sum(w * (Y - np.average(Y, weights=w)) ** 2)
 
-    if has_fixef:
-        adj_factor = (N - has_intercept) / (N - k - k_fe)
-    else:
-        adj_factor = (N - has_intercept) / (N - k)
+    df_resid = N - k - (k_fe if has_fixef else 0)
+    adj_factor = (N - has_intercept) / df_resid if df_resid > 0 else np.nan
 
     r2_within = adj_r2_within = np.nan
     if has_fixef:
         ssy_within = np.sum(Y_within**2) if weights is None else np.sum(w * Y_within**2)
-        adj_factor_within = (N - k_fe) / (N - k - k_fe)
+        adj_factor_within = (N - k_fe) / df_resid if df_resid > 0 else np.nan
         r2_within = 1 - (ssu / ssy_within)
         adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
 

@@ -780,6 +780,81 @@ def test_feglm_gaussian_reference_behavior():
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("estimator", ["feols", "feglm"])
+@pytest.mark.parametrize("has_fixef", [False, True])
+@pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
+@pytest.mark.parametrize("storage", [{}, {"store_data": False}, {"lean": True}])
+def test_saturated_linear_performance_against_r_lm(
+    estimator, has_fixef, weights_type, storage
+):
+    """Undefined adjusted R² must not abort a completed saturated fit."""
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 3.0, 2.0, 5.0],
+            "x": [0.0, 1.0, 0.0, 0.0],
+            "z": [0.0, 0.0, 0.0, 1.0],
+            "w": [0.0, 0.0, 1.0, 1.0],
+            "fe": ["a", "a", "b", "b"],
+            "weight": [1.0, 2.0, 3.0, 4.0] if weights_type == "aweights" else 1.0,
+        }
+    )
+    fml = "y ~ x + z | fe" if has_fixef else "y ~ x + z + w"
+    r_fml = "y ~ x + z + factor(fe)" if has_fixef else fml
+    weight_kwargs = (
+        {}
+        if weights_type is None
+        else {"weights": "weight", "weights_type": weights_type}
+    )
+    fit = getattr(pf, estimator)(
+        fml,
+        data,
+        ssc=pf.ssc(k_adj=False),
+        **({"family": "gaussian"} if estimator == "feglm" else {}),
+        **weight_kwargs,
+        **storage,
+    )
+    r_fit = stats.lm(
+        ro.Formula(r_fml), data=data, weights=ro.FloatVector(data["weight"])
+    )
+    r_summary = ro.r["summary"](r_fit)
+    r_coef = stats.coef(r_fit)
+    r_coefnames = ro.r("function(model) names(coef(model))")(r_fit)
+    reference = pd.Series(np.asarray(r_coef), index=list(r_coefnames)).rename(
+        index={"(Intercept)": "Intercept"}
+    )
+    np.testing.assert_allclose(
+        fit.coef(),
+        reference.loc[fit.coef().index],
+        rtol=0,
+        atol=1e-10,
+        err_msg="saturated coefficients differ from R lm",
+    )
+    np.testing.assert_allclose(
+        fit._r2,
+        np.asarray(r_summary.rx2("r.squared"))[0],
+        rtol=0,
+        atol=1e-12,
+        err_msg="saturated R² differs from R lm",
+    )
+    assert np.isnan(fit._adj_r2), "saturated adjusted R² must be undefined"
+    assert np.isnan(np.asarray(r_summary.rx2("adj.r.squared"))[0])
+    if has_fixef:
+        assert np.isnan(fit._adj_r2_within), (
+            "saturated adjusted within R² must be undefined"
+        )
+
+    # R fixest 0.14.0 also returns the fit, but its direct adjusted-R² formula
+    # can yield -Inf. Use the explicit undefined value from base R lm instead.
+    r_fixest = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        weights=ro.Formula("~weight"),
+        ssc=fixest.ssc(False, "nonnested", False, True, "min", "min"),
+    )
+    assert not np.isfinite(np.asarray(fixest.r2(r_fixest, "ar2"))[0])
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
 def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
     """Compare transformed-offset estimation and prediction with fixest."""
