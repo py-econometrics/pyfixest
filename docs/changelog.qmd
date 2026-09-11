@@ -25,7 +25,6 @@ Other things:
 
 - Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
-- Saturated OLS fits now return `NaN` for undefined adjusted R² measures instead of failing during performance calculation.
 
 ### Contributor Workflow
 
