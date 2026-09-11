@@ -46,12 +46,12 @@ def make_trade_data(seed=123, n_exporters=15, n_importers=15, years=range(2010, 
 
     rows = []
     for y in years:
-        for e in exporters:
-            for i in importers:
+        for exporter_index, e in enumerate(exporters):
+            for importer_index, i in enumerate(importers):
                 dist = rng.uniform(200, 9000)
                 fta = rng.binomial(1, 0.15)
-                exporter_fe = hash(e) % 7
-                importer_fe = hash(i) % 6
+                exporter_fe = exporter_index % 7
+                importer_fe = importer_index % 6
                 year_fe = y - min(years)
 
                 # mean function for PPML
@@ -109,13 +109,13 @@ def make_count_did(seed=42, n_states=30, years=range(2010, 2018)):
     post_start = 2014
 
     for y in years:
-        for s in states:
+        for state_index, s in enumerate(states):
             treated = int(s in treated_states)
             post = int(y >= post_start)
             did = treated * post
 
             # latent state/year effects + treatment effect in post
-            state_fe = (hash(s) % 9) / 10
+            state_fe = (state_index % 9) / 10
             year_fe = (y - min(years)) / 10
             eta = 1.2 + state_fe + year_fe + 0.20 * did
             mu = np.exp(eta)
