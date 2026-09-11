@@ -1,5 +1,6 @@
 ---
 title: Does `PyFixest` match `fixest`?
+description: "Fits the same OLS and Poisson models in both packages and checks that coefficients, standard errors, and p-values agree."
 aliases:
   - /compare-fixest-pyfixest.html
 toc: true

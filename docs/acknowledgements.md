@@ -1,4 +1,7 @@
-# Acknowledgements
+---
+title: Acknowledgements
+description: "The software, papers, and algorithms behind PyFixest's API conventions and numerical choices, starting with R's fixest."
+---
 
 Like many open-source software projects, PyFixest builds on work and ideas first developed in other packages. In this section, we want to acknowledge and express our appreciation for the authors of these packages and their creativity and hard work.
 
