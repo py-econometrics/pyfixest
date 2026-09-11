@@ -649,8 +649,12 @@ class Feols(ResultAccessorMixin):
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+            The data used for estimation. If None, uses the data stored on the
+            model object. Required for cluster-robust and HAC inference after a
+            fit with `store_data=False`. The frame must keep the row index of
+            the original estimation data; it may be reordered or include rows
+            excluded from the sample, but a frame with a freshly reset index
+            cannot identify the estimation sample. Defaults to None.
 
 
         Returns
