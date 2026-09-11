@@ -49,6 +49,26 @@ The stable core contains:
 Changes to these contracts affect multiple estimators and require maintainer
 design approval before implementation.
 
+### Public and internal estimator methods
+
+All `get_*` methods on estimator/result classes (`Feols`, `Feglm`, their
+subclasses and mixins, and `QuantregMulti`) are internal operations, even where
+their current names lack a leading underscore. This includes `get_fit()`,
+`get_inference()`, and `get_performance()`. Do not present them as user APIs or
+preserve their unprefixed names as compatibility aliases. Unrelated APIs such
+as the dataset helper `get_data()` are outside this convention.
+
+`vcov()` is both a public API and an internal entry point. Its internal callers
+do not make it private. Preserve its public contract until the separately
+planned migration to `with_vcov()`. Public entry points handle unsupported
+operations and missing retained data; internal methods rely on their callers
+to satisfy their documented input requirements. Internal does not mean
+fit-time-only: for example, `vcov()` recomputes inference after fitting.
+
+The [estimator-state migration plan](estimator-state-plan.md) schedules a
+separate naming PR to prefix estimator `get_*` methods with `_`, followed by
+their removal as typed transformations replace the mutating lifecycle.
+
 ## Estimator add-ons
 
 A new estimator starts as a standalone public function in
