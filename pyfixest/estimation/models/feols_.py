@@ -44,6 +44,7 @@ from pyfixest.estimation.internals.retention import (
     RetentionPolicy,
     formula_context,
     omitted_attributes,
+    require_retained,
 )
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
@@ -682,7 +683,7 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
-        self._require_state("vcov", "observation_weights")
+        require_retained(self, "vcov", "observation_weights")
         data_to_check = self._inference_data(data)
         _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data_to_check)
         vcov_type, detail, _, _ = _deparse_vcov_input(
@@ -694,7 +695,7 @@ class Feols(ResultAccessorMixin):
                 "Pass data= with the original row index or refit with store_data=True."
             )
         if detail == "CRV3" and (self._has_fixef or self._method != "feols"):
-            self._require_state("vcov(CRV3)", "_data")
+            require_retained(self, "vcov(CRV3)", "_data")
 
         (
             self._vcov_type,
@@ -1178,7 +1179,7 @@ class Feols(ResultAccessorMixin):
                 "Wild cluster bootstrap is only supported for unweighted OLS models."
             )
 
-        self._require_state("wildboottest", "_data", "model_matrix")
+        require_retained(self, "wildboottest", "_data", "model_matrix")
 
         cluster_list = []
 
@@ -1385,7 +1386,7 @@ class Feols(ResultAccessorMixin):
                 cluster = self._clustervar[0]
 
         # check that cluster is in data
-        self._require_state("ccv", "_data", "within_data")
+        require_retained(self, "ccv", "_data", "within_data")
         if cluster not in self._data.columns:
             raise ValueError(
                 f"Cluster variable {cluster} not found in the data used for the model fit."
@@ -1657,7 +1658,7 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
-        self._require_state("decompose", "_data", "within_data")
+        require_retained(self, "decompose", "_data", "within_data")
         nthreads_int = -1 if nthreads is None else nthreads
 
         rng = (
@@ -1761,7 +1762,7 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        self._require_state("fixef", "_data", "model_matrix")
+        require_retained(self, "fixef", "_data", "model_matrix")
 
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
@@ -1918,14 +1919,14 @@ class Feols(ResultAccessorMixin):
             _validate_literal_argument(interval, PredictionErrorOptions)
 
         if newdata is None:
-            self._require_state("predict", "observation_weights")
+            require_retained(self, "predict", "observation_weights")
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             X = self._prediction_design()
             y_hat = self._predict_in_sample(type=type)
             n_observations = self._N_rows
         else:
-            self._require_state("predict", "_model_spec", "_context")
+            require_retained(self, "predict", "_model_spec", "_context")
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
             n_observations = newdata.shape[0]
             context = FORMULAIC_TRANSFORMS | {**self._context}
@@ -2100,7 +2101,7 @@ class Feols(ResultAccessorMixin):
         if resampvar_ not in self._coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
-        self._require_state("ritest", "_data", "observation_weights")
+        require_retained(self, "ritest", "_data", "observation_weights")
 
         if cluster is not None and cluster not in self._data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
@@ -2339,7 +2340,7 @@ class Feols(ResultAccessorMixin):
                 "rows cannot safely update the complete fitted-result state; use the "
                 "returned coefficients instead."
             )
-        self._require_state("update", "within_data")
+        require_retained(self, "update", "within_data")
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self.within_data.design, X_new))

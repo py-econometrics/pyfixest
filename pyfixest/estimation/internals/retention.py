@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from pyfixest.errors import MissingModelDataError
+
 
 @dataclass(frozen=True, slots=True)
 class RetentionPolicy:
@@ -52,6 +54,20 @@ def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
     if policy.lean:
         names += _OBSERVATION_ATTRIBUTES
     return names
+
+
+def require_retained(model, operation: str, *names: str) -> None:
+    """Fail before `operation` touches attributes omitted by the retention policy."""
+    missing = [name for name in names if not hasattr(model, name)]
+    if missing:
+        remedy = (
+            "Refit with store_data=True and lean=False."
+            if any(name in _DATA_ATTRIBUTES for name in missing)
+            else "Refit with lean=False."
+        )
+        raise MissingModelDataError(
+            f"{operation} requires retained {', '.join(missing)}. {remedy}"
+        )
 
 
 def formula_context(model_spec, context: Mapping[str, Any]) -> dict[str, Any]:

@@ -13,6 +13,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -288,7 +289,7 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
-        self._require_state("resid", "working_state")
+        require_retained(self, "resid", "working_state")
         if type == "response":
             return self.working_state.response_residuals.flatten()
         if type == "working":

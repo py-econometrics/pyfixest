@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import WithinIvData, WithinLinearData
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -286,7 +287,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-        self._require_state("first_stage", "_data", "within_data")
+        require_retained(self, "first_stage", "_data", "within_data")
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -519,7 +520,7 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
-        self._require_state("eff_F", "within_data", "observation_weights")
+        require_retained(self, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
