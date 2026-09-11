@@ -1754,13 +1754,6 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        if (
-            not hasattr(self, "_data")
-            and self._fixef_coefficients
-            and atol == 1e-6
-            and btol == 1e-6
-        ):
-            return fixed_effects_to_frame(self._fixef_coefficients)
         self._require_state("fixef", "_data", "model_matrix")
 
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(

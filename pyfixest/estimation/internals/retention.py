@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, replace
 from typing import Any, cast
-
-import numpy as np
 
 from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
 from pyfixest.demeaners import LsmrDemeaner
@@ -35,37 +33,8 @@ def formula_context(model_spec, context: Mapping[str, Any]) -> dict[str, Any]:
     return {name: context[name] for name in names if name in context}
 
 
-def _detach_component(component):
-    """Release larger allocations kept alive by a retained component's views."""
-    updates = {}
-    for field in fields(component):
-        value = getattr(component, field.name)
-        if isinstance(value, np.ndarray) and value.base is not None:
-            # Native-backed arrays and memoryviews can also own a larger
-            # cache selection. Copy only the retained component, never the cache.
-            owner = value
-            allocation_bytes = value.nbytes
-            while isinstance(owner, (np.ndarray, memoryview)):
-                allocation_bytes = max(allocation_bytes, owner.nbytes)
-                parent = owner.base if isinstance(owner, np.ndarray) else owner.obj
-                if parent is None:
-                    break
-                owner = parent
-            if allocation_bytes > value.nbytes:
-                updates[field.name] = value.copy()
-    return replace(component, **updates) if updates else component
-
-
 def apply_retention(model, *, policy: RetentionPolicy) -> None:
     """Apply storage policy recursively after the fitting lifecycle completes."""
-    if (
-        not policy.store_data
-        and not policy.lean
-        and model._has_fixef
-        and not model._is_iv
-        and hasattr(model, "_data")
-    ):
-        model.fixef()
     first_stage = getattr(model, "_model_1st_stage", None)
     if first_stage is not None:
         apply_retention(first_stage, policy=policy)
@@ -123,9 +92,3 @@ def apply_retention(model, *, policy: RetentionPolicy) -> None:
             "_preconditioner",
         ):
             model.__dict__.pop(name, None)
-        model._fixef_coefficients = {}
-    elif not policy.store_data:
-        for name in ("within_data", "working_state", "observation_weights"):
-            component = getattr(model, name, None)
-            if component is not None:
-                setattr(model, name, _detach_component(component))

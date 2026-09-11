@@ -187,10 +187,11 @@ def feglm(
         Whether to store the data in the model object, by default True.
         If set to False, the data is not stored in the model object, which can
         improve performance and save memory. Numerical components and formula
-        metadata are retained, so coefficients, `predict()`, and iid or
-        heteroskedastic `vcov()` updates stay available. Cluster-robust and HAC
-        `vcov()` updates then need the original data passed as `data=`, and
-        methods that need the stored data raise `MissingModelDataError`. The
+        metadata are retained, so coefficients, in-sample predictions, and iid
+        or heteroskedastic `vcov()` updates stay available. Cluster-robust and
+        HAC `vcov()` updates then need the original data passed as `data=`, and
+        `fixef()`, predictions on new data for models with fixed effects, and
+        other methods that need the stored data raise `MissingModelDataError`. The
         option applies to every model of a multiple estimation.
 
     lean: bool, optional
