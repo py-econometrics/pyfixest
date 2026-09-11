@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
-from typing import Any, cast
-
-from pyfixest.core.demean import Preconditioner, WithinPreconditionerName
-from pyfixest.demeaners import LsmrDemeaner
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,18 +44,6 @@ def apply_retention(model, *, policy: RetentionPolicy) -> None:
         model._preconditioner = cache.lookup_preconditioner.get(model._na_index)
     model.__dict__.pop("_demean_cache", None)
     model.__dict__.pop("_input_index", None)
-    if (
-        policy.lean
-        and isinstance(model._demeaner, LsmrDemeaner)
-        and isinstance(model._demeaner.preconditioner, Preconditioner)
-    ):
-        model._demeaner = replace(
-            model._demeaner,
-            preconditioner=cast(
-                WithinPreconditionerName,
-                model._demeaner.preconditioner.variant.lower(),
-            ),
-        )
 
     if not policy.store_data or policy.lean:
         model.__dict__.pop("_data", None)
@@ -89,6 +74,5 @@ def apply_retention(model, *, policy: RetentionPolicy) -> None:
             "_model_spec",
             "_context",
             "_sample_index",
-            "_preconditioner",
         ):
             model.__dict__.pop(name, None)
