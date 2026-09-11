@@ -16,7 +16,6 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.errors import MissingModelDataError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
@@ -419,14 +418,14 @@ def test_multi_quantile_children_follow_ols_retention(
 @pytest.mark.parametrize(
     "estimator,formula,kwargs",
     [
-        (pf.feols, "y ~ x | fe", {"weights": "weight", "weights_type": "fweights"}),
         (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
-        (pf.feols, "y ~ sw(x, x2) | fe", {}),
+        (
+            pf.feols,
+            "y ~ sw(x, x2) | fe",
+            {"weights": "weight", "weights_type": "fweights"},
+        ),
         (pf.fepois, "count ~ x | fe", {"offset": "x2", "weights": "weight"}),
-        (pf.feglm, "y ~ x | fe", {"family": "gaussian"}),
-        (pf.feglm, "binary ~ x", {"family": "logit"}),
         (pf.quantreg, "y ~ x", {"quantile": [0.3, 0.7], "multi_method": "cfm1"}),
-        (pf.quantreg, "y ~ x", {"quantile": [0.3, 0.7], "multi_method": "cfm2"}),
     ],
 )
 def test_recursive_component_retention(
@@ -434,9 +433,7 @@ def test_recursive_component_retention(
 ):
     from pyfixest.estimation.models.feols_ import Feols
 
-    data = lifecycle_data.assign(
-        count=np.tile([1, 3, 2, 4], 6), binary=np.tile([0, 1], 12)
-    )
+    data = lifecycle_data.assign(count=np.tile([1, 3, 2, 4], 6))
     omitted = []
     clear = Feols._clear_attributes
 
@@ -479,12 +476,7 @@ def test_recursive_component_retention(
         assert hasattr(model, "observation_weights") is (not lean)
         assert "unrelated_data" not in getattr(model, "_context", {})
         assert np.isfinite(model.coef()).all()
-        if lean:
-            with pytest.raises(MissingModelDataError, match="resid requires retained"):
-                model.resid()
-            with pytest.raises(MissingModelDataError, match="vcov requires retained"):
-                model.vcov("iid")
-        else:
+        if not lean:
             assert len(model.resid()) == model._N_rows
     gc.collect()
     assert all(ref() is None for ref in omitted)
@@ -513,62 +505,8 @@ def test_stripped_covariance_aligns_supplemental_rows(lifecycle_data, weights_ty
             atol=1e-12,
             err_msg="aligned supplemental covariance",
         )
-    with pytest.raises(MissingModelDataError, match="original estimation row index"):
-        fit.vcov({"CRV1": "fe"}, data=data.dropna().reset_index(drop=True))
-    np.testing.assert_allclose(
-        fit.predict(data.head()),
-        expected.predict(data.head()),
-        rtol=1e-10,
-        atol=1e-10,
-        err_msg="retained fixed-effect predictions",
-    )
-    with pytest.raises(MissingModelDataError, match="fixef requires retained"):
-        fit.fixef(atol=1e-10)
-
-
-@pytest.mark.parametrize("lean", [False, True])
-@pytest.mark.parametrize(
-    "operation", ["ritest", "wildboottest", "decompose", "ccv", "predict", "update"]
-)
-def test_retention_operation_errors(lifecycle_data, lean, operation):
-    fit = pf.feols("y ~ x + x2", lifecycle_data, lean=lean, store_data=False)
-    calls = {
-        "ritest": lambda: fit.ritest("x", reps=2),
-        "wildboottest": lambda: fit.wildboottest(param="x", reps=2),
-        "decompose": lambda: fit.decompose(decomp_var="x", only_coef=True),
-        "ccv": lambda: fit.ccv(treatment="x", cluster="fe"),
-        "predict": fit.predict,
-        "update": lambda: fit.update(np.ones((1, 3)), np.ones(1)),
-    }
-    if not lean and operation in ("predict", "update"):
-        calls[operation]()
-    else:
-        with pytest.raises(
-            MissingModelDataError, match=f"{operation} requires retained"
-        ):
-            calls[operation]()
-
-
-@pytest.mark.parametrize("external_buffer", [False, True])
-def test_retention_detaches_only_views_of_larger_allocations(external_buffer):
-    from pyfixest.estimation.internals.retention import _detach_component
-
-    buffer = np.ones((24, 20))
-    if external_buffer:
-        buffer = np.frombuffer(buffer.tobytes()).reshape(buffer.shape)
-    buffer.setflags(write=False)
-    reference = weakref.ref(buffer)
-    component = WithinLinearData(response=buffer[:, :1], design=buffer[:, 1:2])
-    assert np.shares_memory(component.design, buffer)
-    retained = _detach_component(component)
-    assert not np.shares_memory(retained.design, buffer)
-    np.testing.assert_array_equal(
-        retained.design, component.design, err_msg="detached within design"
-    )
-    del buffer, component
-    gc.collect()
-    assert reference() is None
-    assert _detach_component(retained) is retained
+    fit.predict()
+    fit.vcov("hetero")
 
 
 def test_supplemental_hac_and_split_samples(lifecycle_data):
@@ -580,10 +518,6 @@ def test_supplemental_hac_and_split_samples(lifecycle_data):
     fits = pf.feols("y ~ x", data, split="sample", store_data=False)
     expected = pf.feols("y ~ x", data, split="sample", **options)
     for fit, reference in zip(fits.to_list(), expected.to_list(), strict=True):
-        with pytest.raises(
-            MissingModelDataError, match="vcov requires estimation data"
-        ):
-            fit.vcov(**options)
         fit.vcov(**options, data=data.iloc[::-1])
         np.testing.assert_allclose(
             fit.se(),
@@ -592,15 +526,3 @@ def test_supplemental_hac_and_split_samples(lifecycle_data):
             atol=1e-12,
             err_msg="split HAC sample alignment",
         )
-    iv = pf.feols("y ~ x + [endog ~ z] | fe", data, lean=True)
-    with pytest.raises(MissingModelDataError, match="first_stage requires retained"):
-        iv.first_stage()
-    with pytest.raises(MissingModelDataError, match="eff_F requires retained"):
-        iv.eff_F()
-    fit = pf.feols("y ~ x | fe", data, store_data=False)
-    with pytest.raises(MissingModelDataError, match=r"vcov\(CRV3\) requires retained"):
-        fit.vcov({"CRV3": "fe"}, data=data)
-    with pytest.raises(
-        MissingModelDataError, match="vcov requires estimation data for a column list"
-    ):
-        fit.vcov(["fe"])

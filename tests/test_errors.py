@@ -9,6 +9,7 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
+    MissingModelDataError,
     NanInClusterVarError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
@@ -56,14 +57,152 @@ def test_cluster_na():
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
-def test_cluster_but_no_data():
-    """Missing clustering inputs identify the storage option and remedy."""
-    from pyfixest.errors import MissingModelDataError
-
-    data = get_data()
-    fit = feols("Y ~ X1", data=data, store_data=False)
-    with pytest.raises(MissingModelDataError, match="vcov requires estimation data"):
-        fit.vcov({"CRV1": "f2"})
+@pytest.mark.parametrize(
+    "estimator,fml,storage,operation,match",
+    [
+        (
+            feols,
+            "Y ~ X1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov({"CRV1": "f2"}),
+            "vcov requires estimation data",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov(["f1"]),
+            "vcov requires estimation data for a column list",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov("NW", vcov_kwargs={"time_id": "f2", "lag": 1}),
+            "vcov requires estimation data",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov(
+                {"CRV1": "f1"}, data=data.dropna().reset_index(drop=True)
+            ),
+            "original estimation row index",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov({"CRV3": "f1"}, data=data),
+            r"vcov\(CRV3\) requires retained _data",
+        ),
+        (
+            fepois,
+            "Y ~ X1",
+            {"store_data": False},
+            lambda fit, data: fit.vcov({"CRV3": "f1"}, data=data),
+            r"vcov\(CRV3\) requires retained _data",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {"store_data": False},
+            lambda fit, data: fit.fixef(),
+            "fixef requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {"store_data": False},
+            lambda fit, data: fit.predict(newdata=data.head()),
+            "fixef requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"store_data": False},
+            lambda fit, data: fit.ritest("X1", reps=2),
+            "ritest requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"store_data": False},
+            lambda fit, data: fit.wildboottest(param="X1", reps=2),
+            "wildboottest requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"store_data": False},
+            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
+            "decompose requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"store_data": False},
+            lambda fit, data: fit.ccv(treatment="X1", cluster="f1"),
+            "ccv requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"lean": True},
+            lambda fit, data: fit.predict(),
+            "predict requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"lean": True},
+            lambda fit, data: fit.update(np.ones((1, 3)), np.ones(1)),
+            "update requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"lean": True},
+            lambda fit, data: fit.resid(),
+            "resid requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {"lean": True},
+            lambda fit, data: fit.vcov("iid"),
+            "vcov requires retained",
+        ),
+        (
+            fepois,
+            "Y ~ X1",
+            {"lean": True},
+            lambda fit, data: fit.resid(),
+            "resid requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1] | f1",
+            {"lean": True},
+            lambda fit, data: fit.first_stage(),
+            "first_stage requires retained",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1] | f1",
+            {"lean": True},
+            lambda fit, data: fit.eff_F(),
+            "eff_F requires retained",
+        ),
+    ],
+)
+def test_missing_model_data_errors(estimator, fml, storage, operation, match):
+    """Methods that need attributes dropped by store_data/lean name the remedy."""
+    data = get_data(model="Fepois") if estimator is fepois else get_data()
+    fit = estimator(fml, data=data, **storage)
+    with pytest.raises(MissingModelDataError, match=match):
+        operation(fit, data)
 
 
 def test_error_hc23_fe():
@@ -1503,14 +1642,3 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
-
-
-def test_poisson_crv3_requires_retained_data():
-    from pyfixest.errors import MissingModelDataError
-
-    data = get_data(model="Fepois")
-    fit = fepois("Y ~ X1", data, store_data=False)
-    with pytest.raises(
-        MissingModelDataError, match=r"vcov\(CRV3\) requires retained _data"
-    ):
-        fit.vcov({"CRV3": "f1"}, data=data)
