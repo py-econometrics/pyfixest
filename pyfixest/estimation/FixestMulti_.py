@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
 
 import pandas as pd
 
-from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
@@ -45,27 +42,13 @@ class FixestMulti(TidyColumnAccessors):
     ```
     """
 
-    def __init__(
-        self,
-        *,
-        config: EstimationConfig,
-        parsed: ParsedFormula,
-        data: pd.DataFrame,
-        context: Mapping[str, Any],
-    ) -> None:
+    def __init__(self, *, parsed: ParsedFormula) -> None:
         """.
 
         Parameters
         ----------
-        config : EstimationConfig
-            Immutable record of every option the public API requested.
         parsed : ParsedFormula
             Result of `plan_.parse_formula(config)`.
-        data : pandas.DataFrame
-            The input data after narwhals→pandas conversion, optional copy,
-            and index reset.
-        context : Mapping[str, Any]
-            Captured evaluation scope (from `capture_context`).
         """
         self._parsed = parsed
 

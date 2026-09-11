@@ -61,7 +61,7 @@ def run_estimation(
     context: Mapping[str, Any] = capture_context(config.context)
     run_full, run_split, splitvar = _split_plan(config)
 
-    fixest = FixestMulti(config=config, parsed=parsed, data=data, context=context)
+    fixest = FixestMulti(parsed=parsed)
 
     all_splits = build_all_splits(
         run_full=run_full,

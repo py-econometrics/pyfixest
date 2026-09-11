@@ -466,6 +466,11 @@ def test_recursive_component_retention(
         **kwargs,
     )
     models = result.to_list() if isinstance(result, FixestMulti) else [result]
+    if isinstance(result, FixestMulti):
+        # The container must not own the input frame or captured scope either.
+        assert not any(
+            hasattr(result, name) for name in ("_config", "_data", "_context")
+        )
     for model in list(models):
         if model._is_iv:
             models.append(model._model_1st_stage)
