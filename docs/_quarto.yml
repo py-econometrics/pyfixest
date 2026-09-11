@@ -11,10 +11,9 @@ project:
     # Contributor policy, not user documentation: kept out of the site and
     # llms.txt. contributing.qmd links to it on GitHub.
     - "!developer/"
-    # Draft outlines: excluded from the site and llms.txt until finished.
-    # (Both open with an explicit "outline" callout.) Delete the matching line
-    # to publish one. Complete-but-unlinked pages are left to render normally.
-    - "!tutorials/standard-errors.qmd"
+    # Draft outline: excluded from the site and llms.txt until finished.
+    # (It opens with an explicit "outline" callout.) Delete the line below to
+    # publish it. Complete-but-unlinked pages are left to render normally.
     - "!how-to/surrogate-indices-experimental-selection.qmd"
 
 execute:
@@ -64,8 +63,8 @@ website:
           file: tutorials/ols-fixed-effects.qmd
         - text: "Formula Syntax"
           file: tutorials/formula-syntax.qmd
-        #- text: "Standard Errors"
-        #  file: tutorials/standard-errors.qmd
+        - text: "Standard Errors"
+          file: tutorials/standard-errors.qmd
         - text: "Instrumental Variables"
           file: tutorials/instrumental-variables.qmd
         #- text: "Poisson & GLMs"
