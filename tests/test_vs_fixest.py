@@ -713,6 +713,8 @@ def test_feglm_gaussian_reference_behavior():
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
     )
+    py_glm.get_performance()
+    py_ols.get_performance()
     for attribute in ("_rmse", "_r2", "_adj_r2"):
         np.testing.assert_allclose(
             getattr(py_glm, attribute),
@@ -778,13 +780,10 @@ def test_feglm_gaussian_reference_behavior():
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("estimator", ["feols", "feglm"])
 @pytest.mark.parametrize("has_fixef", [False, True])
 @pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
 @pytest.mark.parametrize("storage", [{}, {"store_data": False}, {"lean": True}])
-def test_saturated_linear_performance_against_r_lm(
-    estimator, has_fixef, weights_type, storage
-):
+def test_saturated_linear_performance_against_r_lm(has_fixef, weights_type, storage):
     """Undefined adjusted R² must not abort a completed saturated fit."""
     data = pd.DataFrame(
         {
@@ -803,11 +802,10 @@ def test_saturated_linear_performance_against_r_lm(
         if weights_type is None
         else {"weights": "weight", "weights_type": weights_type}
     )
-    fit = getattr(pf, estimator)(
+    fit = pf.feols(
         fml,
         data,
         ssc=pf.ssc(k_adj=False),
-        **({"family": "gaussian"} if estimator == "feglm" else {}),
         **weight_kwargs,
         **storage,
     )

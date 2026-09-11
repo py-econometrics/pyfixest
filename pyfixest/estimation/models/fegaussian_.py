@@ -83,23 +83,14 @@ class Fegaussian(Feglm):
             weights=self.observation_weights.values,
         )
 
-    def _finalize_fit(self) -> None:
-        """Compute Gaussian fit statistics before the planner clears model data.
-
-        Feols._finalize_fit only handles OLS, so Gaussian fits need this hook
-        to populate their fit statistics during the same finalization phase.
-        """
-        self.get_performance()
-
     def get_performance(self) -> None:
-        """Compute and store Gaussian fit statistics during finalization.
+        """Compute and store Gaussian fit statistics from retained model data.
 
         Gaussian fits retain their demeaned response and residuals in
         working_state rather than the linear model's within_data and _u_hat.
         The identity link puts those arrays in the units of Y, so they can
         be passed to the same performance_measures helper used for OLS.
         The original response comes from model_matrix for the overall R².
-        All inputs are available here because finalization precedes cleanup.
         """
         working_state = self.working_state
         measures = performance_measures(

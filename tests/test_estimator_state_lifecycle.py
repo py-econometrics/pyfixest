@@ -285,13 +285,13 @@ def test_multiple_estimation_shares_array_native_demean_cache(
         ("y ~ x | fe", "weight", "fweights"),
     ],
 )
-@pytest.mark.parametrize("store_data", [False, True])
+@pytest.mark.parametrize("storage", [{}, {"store_data": False}, {"lean": True}])
 def test_gaussian_glm_performance_uses_explicit_response_domains(
     lifecycle_data: pd.DataFrame,
     fml: str,
     weights: str | None,
     weights_type: str,
-    store_data: bool,
+    storage: dict,
 ) -> None:
     fit = pf.feglm(
         fml,
@@ -301,8 +301,14 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         weights_type=weights_type,
         vcov="iid",
         iwls_tol=1e-10,
-        store_data=store_data,
+        **storage,
     )
+    # Gaussian fitting does not yet populate performance statistics.
+    for attribute in ("_rmse", "_r2", "_adj_r2", "_r2_within", "_adj_r2_within"):
+        assert np.isnan(getattr(fit, attribute)), attribute
+    if storage:
+        return
+    fit.get_performance()
     response = lifecycle_data["y"].to_numpy()
     observation_weights = fit.observation_weights.values
     residuals = fit.working_state.response_residuals

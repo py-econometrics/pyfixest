@@ -20,7 +20,7 @@ issue and investigate them before adding them to this ledger.
 | Area | Pyfixest behavior | `fixest` behavior | Rationale | Tests | Status |
 |---|---|---|---|---|---|
 | Gaussian GLM inference | `feglm(family="gaussian")` matches `feols()`, base R `lm`, base R `glm`, and `fixest::feols` for OLS behavior and small-sample corrections. | `fixest::feglm(family="gaussian")` applies GLM small-sample corrections that differ slightly from `fixest::feols`. | A Gaussian identity-link model should agree with pyfixest OLS and base R's Gaussian linear-model behavior. | `tests/test_vs_fixest.py::test_feglm_gaussian_reference_behavior`; confirmed with R 4.5.3 and `fixest` 0.14.0 on 2026-08-25 | Intentional; documented for 0.70.0 |
-| Adjusted R² without residual degrees of freedom | OLS and Gaussian GLM return `NaN` for adjusted R² measures when residual degrees of freedom are nonpositive. | `fixest::feols` 0.14.0 returns the saturated fit, but its direct adjusted-R² formula can yield `-Inf`. | Preserve the fitted result and explicitly mark an undefined measure, matching base R `lm` for saturated fits. | `tests/test_vs_fixest.py::test_saturated_linear_performance_against_r_lm`; R 4.5.3 and `fixest` 0.14.0 | Intentional; documented for 0.70.0 |
+| Adjusted R² without residual degrees of freedom | OLS returns `NaN` for adjusted R² measures when residual degrees of freedom are nonpositive. | `fixest::feols` 0.14.0 returns the saturated fit, but its direct adjusted-R² formula can yield `-Inf`. | Preserve the fitted result and explicitly mark an undefined measure, matching base R `lm` for saturated fits. | `tests/test_vs_fixest.py::test_saturated_linear_performance_against_r_lm`; R 4.5.3 and `fixest` 0.14.0 | Intentional; documented for 0.70.0 |
 
 ## Adding an entry
 
