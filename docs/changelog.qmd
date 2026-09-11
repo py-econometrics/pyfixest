@@ -25,6 +25,7 @@ Other things:
 
 - Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
+- `store_data=False` and `lean=True` now also apply to each model of a multiple estimation and to IV first stages, and fitted models no longer keep the shared demeaning cache alive. Methods that need data or components dropped by these options raise `MissingModelDataError`, which names the missing state and the storage option to change, instead of `AttributeError`.
 
 ### Contributor Workflow
 

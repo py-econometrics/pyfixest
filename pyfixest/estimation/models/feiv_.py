@@ -286,6 +286,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
+        self._require_state("first_stage", "_data", "within_data")
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -308,7 +309,8 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
+        cache = getattr(self, "_demean_cache", None)
+        cached_pre = cache.lookup_preconditioner.get(self._na_index) if cache else None
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
@@ -326,6 +328,7 @@ class Feiv(Feols):
 
         # Ensure model1 is of type Feols
         if isinstance(model1, Feols):
+            model1._sample_index = self._sample_index[model1._sample_index].copy()
             # Store the first stage coefficients
             self._pi_hat = model1._beta_hat
 
@@ -507,6 +510,7 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
+        self._require_state("eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":

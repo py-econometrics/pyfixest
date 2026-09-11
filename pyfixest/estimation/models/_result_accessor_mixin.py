@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from pyfixest.errors import EmptyVcovError
+from pyfixest.errors import EmptyVcovError, MissingModelDataError
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -158,6 +158,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _r2_within: float
     _adj_r2_within: float
     _vcov_type: str
+
+    def _require_state(self, operation: str, *names: str) -> None:
+        """Fail before accessing components omitted by the retention policy."""
+        missing = [name for name in names if not hasattr(self, name)]
+        if missing:
+            remedy = (
+                "Refit with store_data=True and lean=False."
+                if "_data" in missing or "model_matrix" in missing
+                else "Refit with lean=False."
+            )
+            raise MissingModelDataError(
+                f"{operation} requires retained {', '.join(missing)}. {remedy}"
+            )
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -585,4 +598,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        self._require_state("resid", "_u_hat")
         return self._u_hat.flatten()

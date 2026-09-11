@@ -58,6 +58,10 @@ class EmptyVcovError(Exception):  # noqa: D101
     pass
 
 
+class MissingModelDataError(RuntimeError):
+    """A method needs model attributes dropped after estimation by `store_data=False` or `lean=True`."""
+
+
 class FormulaSyntaxError(Exception):  # noqa: D101
     pass
 
@@ -74,6 +78,7 @@ __all__ = [
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
+    "MissingModelDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
     "UnderDeterminedIVError",

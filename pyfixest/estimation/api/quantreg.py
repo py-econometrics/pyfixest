@@ -137,13 +137,19 @@ def quantreg(
     store_data : bool, optional
         Whether to store the data in the model object, by default True.
         If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object.
+        improve performance and save memory. Numerical components and formula
+        metadata are retained, so coefficients, `predict()`, and iid or
+        heteroskedastic `vcov()` updates stay available. Cluster-robust and HAC
+        `vcov()` updates then need the original data passed as `data=`, and
+        methods that need the stored data raise `MissingModelDataError`. The
+        option applies to every model of a multiple estimation.
 
     lean : bool, optional
-        False by default. If True, then all large objects are removed from the
-        returned result: this will save memory but will block the possibility
-        to use many methods. It is recommended to use the argument vcov
+        False by default. If True, the stored data and all observation-sized
+        components are removed from the returned result: this saves memory but
+        blocks the methods that need them, which raise `MissingModelDataError`.
+        Coefficients, inference, sample counts, and completed performance
+        measures are retained. It is recommended to use the argument vcov
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 

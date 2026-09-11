@@ -7,6 +7,8 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
+import gc
+import weakref
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -17,7 +19,6 @@ import pyfixest as pf
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     WithinIvData,
@@ -251,7 +252,7 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert len(model_matrix.dependent) == len(lifecycle_data)
 
 
-def test_multiple_estimation_shares_array_native_demean_cache(
+def test_multiple_estimation_releases_execution_caches(
     lifecycle_data: pd.DataFrame,
 ) -> None:
     """Multiple fits share one ordered array cache without DataFrame round trips."""
@@ -266,14 +267,7 @@ def test_multiple_estimation_shares_array_native_demean_cache(
     models = list(fit.all_fitted_models.values())
     assert len(models) == 2
 
-    demeaned_caches = [model._demean_cache.lookup_demeaned_data for model in models]
-    preconditioner_caches = [
-        model._demean_cache.lookup_preconditioner for model in models
-    ]
-    assert demeaned_caches[0] is demeaned_caches[1]
-    assert preconditioner_caches[0] is preconditioner_caches[1]
-    assert demeaned_caches[0]
-    assert all(isinstance(value, DemeanedData) for value in demeaned_caches[0].values())
+    assert all(not hasattr(model, "_demean_cache") for model in models)
     assert all(isinstance(model.within_data, WithinLinearData) for model in models)
 
 
@@ -417,4 +411,118 @@ def test_multi_quantile_children_follow_ols_retention(
             rtol=1e-12,
             atol=1e-12,
             err_msg="multi-quantile retained and newdata predictions disagree",
+        )
+
+
+@pytest.mark.parametrize("lean", [False, True])
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs",
+    [
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
+        (
+            pf.feols,
+            "y ~ sw(x, x2) | fe",
+            {"weights": "weight", "weights_type": "fweights"},
+        ),
+        (pf.fepois, "count ~ x | fe", {"offset": "x2", "weights": "weight"}),
+        (pf.quantreg, "y ~ x", {"quantile": [0.3, 0.7], "multi_method": "cfm1"}),
+    ],
+)
+def test_recursive_component_retention(
+    lifecycle_data, lean, estimator, formula, kwargs, monkeypatch
+):
+    from pyfixest.estimation.models.feols_ import Feols
+
+    data = lifecycle_data.assign(count=np.tile([1, 3, 2, 4], 6))
+    omitted = []
+    clear = Feols._clear_attributes
+
+    def record_storage(model):
+        if hasattr(model, "_data"):
+            omitted.extend(
+                [weakref.ref(model._data), weakref.ref(model.model_matrix._data)]
+            )
+        if lean:
+            component = getattr(
+                model, "within_data", getattr(model, "working_state", None)
+            )
+            if component is not None:
+                from dataclasses import fields
+
+                omitted.extend(
+                    weakref.ref(getattr(component, field.name))
+                    for field in fields(component)
+                )
+        clear(model)
+
+    # The unrelated context value must not keep an omitted input frame alive.
+    monkeypatch.setattr(Feols, "_clear_attributes", record_storage)
+    result = estimator(
+        formula,
+        data,
+        store_data=False,
+        lean=lean,
+        context={"unrelated_data": data},
+        **kwargs,
+    )
+    models = result.to_list() if isinstance(result, FixestMulti) else [result]
+    for model in list(models):
+        if model._is_iv:
+            models.append(model._model_1st_stage)
+    for model in models:
+        assert not hasattr(model, "_data")
+        assert not hasattr(model, "model_matrix")
+        assert not hasattr(model, "_demean_cache")
+        assert hasattr(model, "observation_weights") is (not lean)
+        assert "unrelated_data" not in getattr(model, "_context", {})
+        assert np.isfinite(model.coef()).all()
+        if not lean:
+            assert len(model.resid()) == model._N_rows
+    gc.collect()
+    assert all(ref() is None for ref in omitted)
+
+
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+def test_stripped_covariance_aligns_supplemental_rows(lifecycle_data, weights_type):
+    data = lifecycle_data.copy()
+    data.loc[3, "x"] = np.nan
+    fit = pf.feols(
+        "y ~ x | fe",
+        data,
+        weights="weight",
+        weights_type=weights_type,
+        store_data=False,
+    )
+    for vcov in ["iid", "hetero", {"CRV1": "fe"}]:
+        expected = pf.feols(
+            "y ~ x | fe", data, weights="weight", weights_type=weights_type, vcov=vcov
+        )
+        fit.vcov(vcov, data=data.sample(frac=1, random_state=3))
+        np.testing.assert_allclose(
+            fit.se(),
+            expected.se(),
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg="aligned supplemental covariance",
+        )
+    fit.predict()
+    fit.vcov("hetero")
+
+
+def test_supplemental_hac_and_split_samples(lifecycle_data):
+    data = lifecycle_data.assign(
+        time=np.arange(len(lifecycle_data)), sample=np.tile([0, 1], 12)
+    )
+    data.loc[2, "x"] = np.nan
+    options = {"vcov": "NW", "vcov_kwargs": {"time_id": "time", "lag": 1}}
+    fits = pf.feols("y ~ x", data, split="sample", store_data=False)
+    expected = pf.feols("y ~ x", data, split="sample", **options)
+    for fit, reference in zip(fits.to_list(), expected.to_list(), strict=True):
+        fit.vcov(**options, data=data.iloc[::-1])
+        np.testing.assert_allclose(
+            fit.se(),
+            reference.se(),
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg="split HAC sample alignment",
         )
