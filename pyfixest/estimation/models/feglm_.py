@@ -134,7 +134,7 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            self._has_fixef
+            model_matrix.fixed_effects is not None
             and self.separation_check is not None
             and self.separation_check  # not an empty list
         ):
@@ -227,11 +227,19 @@ class Feglm(Feols):
             self._convergence = True
 
     def _prediction_design(self) -> np.ndarray:
-        """Return the final working design for prediction uncertainty."""
+        """Supply the final IRLS design to the inherited predict() method.
+
+        Unlike linear models, GLMs store this coefficient-ordered design in
+        working_state. It is not multiplied by square-root working weights.
+        """
         return self.working_state.design_within
 
     def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Return the completed mean or linear predictor."""
+        """Supply cached GLM predictions to predict() and fixef().
+
+        eta includes fixed effects and any offset; mu is the inverse-link
+        response mean. Fixed-effect recovery requests eta, not mu.
+        """
         return self.working_state.eta if type == "link" else self.working_state.mu
 
     def _vcov_iid(self):

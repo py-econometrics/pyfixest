@@ -26,12 +26,6 @@ class ObservationWeights:
         Effective observation count: ``n_rows`` for unweighted fits and
         analytic weights, and ``sum(values)`` for frequency weights.
 
-    Notes
-    -----
-    Arrays are exposed for inspection. Mutating their contents is unsupported
-    and may invalidate fitted results.
-    See [fitted state](/how-to/fitted-state.qmd).
-
     Examples
     --------
     ```{python}
@@ -93,19 +87,19 @@ class ObservationWeights:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WithinLinearData:
-    """Linear-model arrays after within transformation, in original units.
+    """Response and regressors after demeaning by the fixed effects.
 
+    Without fixed effects, the arrays retain their original values. When
+    observation weights are supplied, demeaning uses those weights.
     These arrays have not been multiplied by square-root observation weights.
-    Arrays are exposed for inspection. Mutating their contents is unsupported
-    and may invalidate fitted results.
-    See [fitted state](/how-to/fitted-state.qmd).
 
     Parameters
     ----------
     response : NDArray[np.float64]
-        Within-scale response, shape (n_rows, 1).
+        Demeaned response, shape (n_rows, 1).
     design : NDArray[np.float64]
-        Selected within-scale structural design, shape (n_rows, n_coefficients).
+        Demeaned regressors after removing collinear columns,
+        shape (n_rows, n_coefficients).
 
     Examples
     --------
@@ -123,23 +117,27 @@ class WithinLinearData:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WithinIvData(WithinLinearData):
-    """Within-scale IV arrays with instrument and endogenous roles.
+    """Response, regressors, and instruments after demeaning by the fixed effects.
 
     ``design`` is the full structural regressor matrix, including the
     endogenous regressors. ``instruments`` is the full instrument matrix,
     including exogenous regressors that instrument themselves.
-    See [fitted state](/how-to/fitted-state.qmd).
+    Every array is demeaned using the observation weights when supplied, but
+    is not multiplied by their square roots. Without fixed effects, the
+    arrays retain their original values.
 
     Parameters
     ----------
     response : NDArray[np.float64]
-        Within-scale structural response, shape (n_rows, 1).
+        Demeaned response, shape (n_rows, 1).
     design : NDArray[np.float64]
-        Selected structural design, shape (n_rows, n_coefficients).
+        Demeaned regressors, including endogenous regressors, after removing
+        collinear columns, shape (n_rows, n_coefficients).
     instruments : NDArray[np.float64]
-        Selected full instrument matrix, shape (n_rows, n_instruments).
+        Demeaned instruments, including exogenous regressors, after removing
+        collinear columns, shape (n_rows, n_instruments).
     endogenous : NDArray[np.float64]
-        Endogenous regressor, shape (n_rows, 1).
+        Demeaned endogenous regressor, shape (n_rows, 1).
 
     Examples
     --------
@@ -165,17 +163,15 @@ class GlmWorkingState:
     the observation weights, which live separately and unchanged in
     ``ObservationWeights``; nothing downstream multiplies by ``w`` again. For
     the Gaussian family ``W`` equals ``w``. Square-root weighted arrays are
-    solver-local temporaries and deliberately absent. Arrays are exposed for
-    inspection; mutating their contents may invalidate fitted results and is
-    unsupported.
-    See [fitted state](/how-to/fitted-state.qmd).
+    solver-local temporaries and deliberately absent.
 
     Parameters
     ----------
     working_response_within : NDArray[np.float64]
         Final within-scale working response, shape (n_rows,).
     design_within : NDArray[np.float64]
-        Selected within-scale working design, shape (n_rows, n_coefficients).
+        Demeaned working regressors after removing collinear columns,
+        shape (n_rows, n_coefficients).
     working_weights : NDArray[np.float64]
         Final IRLS weights including observation weights, shape (n_rows,).
     eta : NDArray[np.float64]

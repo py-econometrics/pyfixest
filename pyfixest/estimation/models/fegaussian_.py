@@ -83,19 +83,15 @@ class Fegaussian(Feglm):
             weights=self.observation_weights.values,
         )
 
-    def _finalize_fit(self) -> None:
-        """Complete Gaussian measures while formula-scale inputs are available."""
-        self.get_performance()
-
     def get_performance(self) -> None:
-        """Compute R² measures from the Gaussian working state.
+        """Compute and store Gaussian fit statistics from retained model data.
 
-        For the Gaussian family the working response is the response itself,
-        so the within working response and the response residuals are already
-        in the units of Y.
+        Gaussian fits retain their demeaned response and residuals in
+        working_state rather than the linear model's within_data and _u_hat.
+        The identity link puts those arrays in the units of Y, so they can
+        be passed to the same performance_measures helper used for OLS.
+        The original response comes from model_matrix for the overall R².
         """
-        if not hasattr(self, "model_matrix"):
-            return
         working_state = self.working_state
         measures = performance_measures(
             Y=self.model_matrix.dependent.to_numpy(),

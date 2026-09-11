@@ -131,9 +131,10 @@ class Feols(ResultAccessorMixin):
         Indicates whether instrumental variables are used, initialized as False.
 
     model_matrix : ModelMatrix
-        Formula-scale inputs; public table access returns detached copies.
+        Model frames containing the response, regressors, and other model inputs.
     within_data : WithinLinearData
-        Protected response and selected design on unpremultiplied within scale.
+        Response and regressors after demeaning by fixed effects and removing
+        collinear regressor columns, without multiplication by square-root weights.
     _X_is_empty : bool
         Indicates whether the X array is empty.
     _collin_tol : float
@@ -494,7 +495,7 @@ class Feols(ResultAccessorMixin):
         )
 
     def _demean(self) -> WithinLinearData:
-        """Convert formula tables to arrays and residualize them on the fixed effects.
+        """Convert model frames to arrays and residualize them on the fixed effects.
 
         The returned arrays are in the units of the data; they are not
         multiplied by square-root weights.
@@ -560,11 +561,20 @@ class Feols(ResultAccessorMixin):
         self._k = within_data.design.shape[1]
 
     def _prediction_design(self) -> np.ndarray:
-        """Return the retained design used for prediction uncertainty."""
+        """Return the coefficient-ordered design for the shared predict() method.
+
+        Linear and quantile models retain it in within_data. The GLM override
+        reads the corresponding final IRLS design from working_state.
+        """
         return self.within_data.design
 
     def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Return fitted values in the requested prediction domain."""
+        """Return cached fitted values for predict() and fixed-effect recovery.
+
+        These values include the fixed-effect contribution. Link and response
+        predictions coincide for linear models; GLMs override this method to
+        distinguish the linear predictor from the response mean.
+        """
         return self._Y_hat_link if type == "link" else self._Y_hat_response
 
     def _get_predictors(self) -> None:
@@ -1764,7 +1774,7 @@ class Feols(ResultAccessorMixin):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._predict_in_sample(type="link")
-                # _Y_hat_link contains the offset as part of eta; subtract it so
+                # The linear predictor includes the offset; subtract it so
                 # that _sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
                 if self._offset_name is not None:

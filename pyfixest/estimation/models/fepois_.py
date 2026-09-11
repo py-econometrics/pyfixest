@@ -40,9 +40,9 @@ class Fepois(Feglm):
     Attributes
     ----------
     model_matrix : ModelMatrix
-        Formula-scale inputs; public tables are detached copies.
+        Model frames containing the response, regressors, and other model inputs.
     observation_weights : ObservationWeights
-        Protected user-scale observation weights.
+        User-scale observation weights.
     working_state : GlmWorkingState
         Final within-scale IRLS design, response, weights, predictors and residuals.
     coefnames : list[str]

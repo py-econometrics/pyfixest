@@ -41,17 +41,17 @@ class ModelMatrix:
     and ensures proper formatting for estimation procedures.
 
     Obtain this component from ``fit.model_matrix``. Its properties expose
-    formula tables for inspection and internal calculations. Mutating these
-    tables is unsupported and may invalidate fitted results. See
-    [fitted state](/how-to/fitted-state.qmd) and the
+    the model frames as pandas DataFrames for inspection and internal
+    calculations. See the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     Parameters
     ----------
     model_matrix : formulaic.ModelMatrix
-        Materialized formula roles; normally supplied by the fitting pipeline.
+        Model frames produced by formulaic, containing the response, regressors,
+        and any fixed effects, instruments, weights, or offsets.
     drop_rows : frozenset[int]
-        Row positions already excluded during formula materialization.
+        Row positions already removed when constructing the model frames.
     drop_singletons : bool, default True
         Whether to remove singleton fixed-effect groups.
     drop_intercept : bool, default False
@@ -66,8 +66,8 @@ class ModelMatrix:
     fit.model_matrix.dependent.head()
     ```
 
-    Once constructed, the instance is the formula state a fitted model retains
-    and is treated as read-only. Estimator-level row filters such as GLM
+    This instance retains the model frames after construction.
+    Estimator-level row filters such as GLM
     separation call `without_rows`, which returns a filtered copy instead of
     mutating the instance.
 
