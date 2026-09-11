@@ -237,7 +237,7 @@ def test_fweights_glm_sample_sizes_after_separation():
     assert fit_weighted._N == fit_expanded._N == 19
     assert fit_weighted._N_rows == 9
     assert fit_expanded._N_rows == 19
-    assert fit_weighted._observation_weights.n_effective == 19
+    assert fit_weighted.observation_weights.n_effective == 19
     np.testing.assert_allclose(fit_weighted.coef(), fit_expanded.coef(), atol=1e-10)
     np.testing.assert_allclose(fit_weighted._vcov, fit_expanded._vcov, atol=1e-10)
 

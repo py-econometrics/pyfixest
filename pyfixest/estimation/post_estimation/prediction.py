@@ -54,7 +54,7 @@ def _compute_prediction_error(
     prediction_df = pd.DataFrame(np.nan, index=range(nobs), columns=columns)
 
     z_crit = t.ppf(1 - alpha / 2, model._N - model._k)
-    sigma2 = np.sum(model._u_hat**2) / (model._N - model._k)
+    sigma2 = np.sum(model.resid() ** 2) / (model._N - model._k)
 
     prediction_df["fit"] = yhat
     prediction_df["se_fit"] = _get_prediction_se(model=model, X=X)

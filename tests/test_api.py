@@ -354,10 +354,10 @@ def test_lean(estimator, kwargs, lean, store_data):
     )
 
     assert hasattr(fit, "_data") == (store_data and not lean)
-    assert hasattr(fit, "_X") == (not lean)
-    assert hasattr(fit, "_Y") == (not lean)
+    assert hasattr(fit, "within_data") == (estimator is pf.feols and not lean)
+    assert hasattr(fit, "model_matrix") == (store_data and not lean)
     if estimator is not pf.feols:
-        assert hasattr(fit, "_working_state") == (not lean)
+        assert hasattr(fit, "working_state") == (not lean)
 
 
 def test_duckdb_input():

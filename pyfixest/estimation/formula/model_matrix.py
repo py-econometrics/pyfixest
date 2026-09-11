@@ -40,15 +40,34 @@ class ModelMatrix:
     variables, and weights. It handles missing data, singleton observations,
     and ensures proper formatting for estimation procedures.
 
-    An internal API. Instances are built by the `prepare_model_matrix` step of
-    the fit pipeline from a materialized `formulaic.ModelMatrix` and are not
-    constructed directly. There is therefore no standalone example. Formulas are
-    written as strings and passed to
-    [feols()](/reference/estimation.api.feols.feols.qmd). See the
-    [formula syntax tutorial](/tutorials/formula-syntax.qmd) for the syntax.
+    Obtain this component from ``fit.model_matrix``. Its properties expose
+    the model frames as pandas DataFrames for inspection and internal
+    calculations. See the
+    [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
-    Once constructed, the instance is the formula state a fitted model retains
-    and is treated as read-only. Estimator-level row filters such as GLM
+    Parameters
+    ----------
+    model_matrix : formulaic.ModelMatrix
+        Model frames produced by formulaic, containing the response, regressors,
+        and any fixed effects, instruments, weights, or offsets.
+    drop_rows : frozenset[int]
+        Row positions already removed when constructing the model frames.
+    drop_singletons : bool, default True
+        Whether to remove singleton fixed-effect groups.
+    drop_intercept : bool, default False
+        Whether to remove the structural intercept.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.model_matrix.dependent.head()
+    ```
+
+    This instance retains the model frames after construction.
+    Estimator-level row filters such as GLM
     separation call `without_rows`, which returns a filtered copy instead of
     mutating the instance.
 
@@ -71,6 +90,8 @@ class ModelMatrix:
     na_index : frozenset[int]
         Indices of rows that were dropped.
     """
+
+    _data: pd.DataFrame
 
     def __init__(
         self,
@@ -98,19 +119,27 @@ class ModelMatrix:
             return None
 
     def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
-        self._dependent = self._get_columns(model_matrix, _ModelMatrixKey.main, "lhs")
-        self._independent = self._get_columns(model_matrix, _ModelMatrixKey.main, "rhs")
-        self._fixed_effects = self._get_columns(
+        self._dependent_column_names = self._get_columns(
+            model_matrix, _ModelMatrixKey.main, "lhs"
+        )
+        self._independent_column_names = self._get_columns(
+            model_matrix, _ModelMatrixKey.main, "rhs"
+        )
+        self._fixed_effects_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
-        self._endogenous = self._get_columns(
+        self._endogenous_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
         )
-        self._instruments = self._get_columns(
+        self._instruments_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
         )
-        self._weights = self._get_columns(model_matrix, _ModelMatrixKey.weights)
-        self._offset = self._get_columns(model_matrix, _ModelMatrixKey.offset)
+        self._weights_column_names = self._get_columns(
+            model_matrix, _ModelMatrixKey.weights
+        )
+        self._offset_column_names = self._get_columns(
+            model_matrix, _ModelMatrixKey.offset
+        )
 
     def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
         datas = flatten_model_matrix(model_matrix)
@@ -122,15 +151,18 @@ class ModelMatrix:
     def _process(self, drop_singletons: bool = False) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
-        elif self._dependent is None or len(self._dependent) != 1:
+        elif (
+            self._dependent_column_names is None
+            or len(self._dependent_column_names) != 1
+        ):
             raise TypeError("The model must contain exactly one dependent variable.")
 
-        if self._endogenous is not None:
+        if self._endogenous_column_names is not None:
             if self.model_spec[
                 _ModelMatrixKey.instrumental_variable
             ].lhs.factor_contrasts:
                 raise TypeError("The endogenous variable must be numeric.")
-            elif len(self._endogenous) != 1:
+            elif len(self._endogenous_column_names) != 1:
                 raise TypeError(
                     "The model must contain exactly one endogenous variable."
                 )
@@ -141,30 +173,30 @@ class ModelMatrix:
             ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
             "rows with infinite values",
         )
-        if self._fixed_effects is not None:
+        if self._fixed_effects_column_names is not None:
             # Ensure fixed effects are `int32`
-            self._data[self._fixed_effects] = self._data[self._fixed_effects].astype(
-                "int32"
-            )
+            self._data[self._fixed_effects_column_names] = self._data[
+                self._fixed_effects_column_names
+            ].astype("int32")
 
-        if self._offset is not None:
+        if self._offset_column_names is not None:
             if self.model_spec[_ModelMatrixKey.offset].factor_contrasts:
                 raise TypeError("The offset must be numeric.")
-            elif len(self._offset) != 1:
+            elif len(self._offset_column_names) != 1:
                 raise ValueError("The offset must evaluate to exactly one column.")
 
-        if self._fixed_effects is not None or self._drop_intercept:
-            if self._independent is not None:
-                self._independent = [
-                    col for col in self._independent if col != "Intercept"
+        if self._fixed_effects_column_names is not None or self._drop_intercept:
+            if self._independent_column_names is not None:
+                self._independent_column_names = [
+                    col for col in self._independent_column_names if col != "Intercept"
                 ]
-            if self._instruments is not None:
-                self._instruments = [
-                    col for col in self._instruments if col != "Intercept"
+            if self._instruments_column_names is not None:
+                self._instruments_column_names = [
+                    col for col in self._instruments_column_names if col != "Intercept"
                 ]
         # Drop singletons if specified
-        if drop_singletons and self._fixed_effects is not None:
-            fixed_effects = self._data.loc[:, self._fixed_effects]
+        if drop_singletons and self._fixed_effects_column_names is not None:
+            fixed_effects = self._data.loc[:, self._fixed_effects_column_names]
             self._drop(
                 detect_singletons(fixed_effects.to_numpy()),
                 "singleton fixed effect(s)",
@@ -207,8 +239,7 @@ class ModelMatrix:
             DataFrame containing the dependent variable(s) (left-hand side
             of the main equation).
         """
-        cols = self._dependent or []
-        return self._data[cols]
+        return self._data.loc[:, self._dependent_column_names or []]
 
     @property
     def independent(self) -> pd.DataFrame:
@@ -222,8 +253,7 @@ class ModelMatrix:
             of the main equation). Intercept columns are excluded when fixed
             effects are present.
         """
-        cols = self._independent or []
-        return self._data[cols]
+        return self._data.loc[:, self._independent_column_names or []]
 
     @property
     def fixed_effects(self) -> pd.DataFrame | None:
@@ -236,10 +266,9 @@ class ModelMatrix:
             DataFrame containing the fixed effects variables encoded as integers,
             or None if no fixed effects are specified in the model.
         """
-        if self._fixed_effects is None:
+        if self._fixed_effects_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._fixed_effects]
+        return self._data.loc[:, self._fixed_effects_column_names]
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
@@ -253,10 +282,9 @@ class ModelMatrix:
             of the first-stage equation in IV estimation), or None if not
             using instrumental variables.
         """
-        if self._endogenous is None:
+        if self._endogenous_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._endogenous]
+        return self._data.loc[:, self._endogenous_column_names]
 
     @property
     def instruments(self) -> pd.DataFrame | None:
@@ -271,10 +299,9 @@ class ModelMatrix:
             using instrumental variables. Intercept columns are excluded when
             fixed effects are present.
         """
-        if self._instruments is None:
+        if self._instruments_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._instruments]
+        return self._data.loc[:, self._instruments_column_names]
 
     @property
     def weights(self) -> pd.DataFrame | None:
@@ -287,10 +314,9 @@ class ModelMatrix:
             DataFrame containing the observation weights (must be non-negative
             numeric values), or None if no weights are specified.
         """
-        if self._weights is None:
+        if self._weights_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._weights]
+        return self._data.loc[:, self._weights_column_names]
 
     @property
     def offset(self) -> pd.DataFrame | None:
@@ -304,10 +330,9 @@ class ModelMatrix:
             added to the linear predictor with a fixed coefficient of 1, or
             None if no offset is specified.
         """
-        if self._offset is None:
+        if self._offset_column_names is None:
             return None
-        else:
-            return self._data.loc[:, self._offset]
+        return self._data.loc[:, self._offset_column_names]
 
     @property
     def model_spec(self) -> _ModelSpecMapping:

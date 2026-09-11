@@ -94,8 +94,8 @@ class QuantregMulti:
         q_median = q[q_median_idx]
 
         # data fixed across qregs, just need take from first one
-        X = self.all_quantregs[q[q_median_idx]]._X
-        Y = self.all_quantregs[q[q_median_idx]]._Y
+        X = self.all_quantregs[q[q_median_idx]].within_data.design
+        Y = self.all_quantregs[q[q_median_idx]].within_data.response
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]]._N
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)
@@ -167,8 +167,8 @@ class QuantregMulti:
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
                 self.all_quantregs[q[i]]._u_hat = (
-                    self.all_quantregs[q[i]]._Y.flatten()
-                    - self.all_quantregs[q[i]]._X @ beta_new
+                    self.all_quantregs[q[i]].within_data.response.flatten()
+                    - self.all_quantregs[q[i]].within_data.design @ beta_new
                 )
                 self.all_quantregs[q[i]]._hessian = hessian
 
@@ -182,6 +182,9 @@ class QuantregMulti:
             raise ValueError(
                 f"Multi method needs to be of type 'cfm1' or 'cfm2' but is {self.multi_method}."
             )
+
+        for quantreg in self.all_quantregs.values():
+            quantreg._get_predictors()
 
         # sort self.all_quantregs by q
         self.all_quantregs = dict(
@@ -223,9 +226,4 @@ class QuantregMulti:
         for quantreg in self.all_quantregs.values():
             quantreg._clear_attributes()
 
-        del_attributes = ["_X", "_Y"]
-        for quantreg in self.all_quantregs.values():
-            for attr in del_attributes:
-                if hasattr(quantreg, attr):
-                    delattr(quantreg, attr)
         gc.collect()

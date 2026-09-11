@@ -17,6 +17,15 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Fitted Model State
+
+Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
+
+Other things:
+
+- Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
+- GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
+
 ### Contributor Workflow
 
 - Repository-local skills and developer guides now define architecture,

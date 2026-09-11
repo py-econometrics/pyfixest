@@ -157,8 +157,9 @@ class DemeanCache:
         -------
         tuple[NDArray[np.float64], NDArray[np.float64], Preconditioner or None]
             Demeaned response and design arrays, in their requested column order,
-            plus the preconditioner used when new columns were transformed. Both
-            arrays are read-only: they are backed by the shared cache entry.
+            plus the preconditioner used when new columns were transformed.
+            Cached arrays and their selections are read-only. Without fixed
+            effects, inputs pass through without changing their writeability.
         """
         Y_array = np.asarray(Y, dtype=np.float64)
         X_array = np.asarray(X, dtype=np.float64)

@@ -121,9 +121,7 @@ class Feglm(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-        self._Y_hat_response = np.empty(0)
         self.deviance = None
-        self._Xbeta = np.empty((0, 1))
 
         self._method = "feglm"
         self._family = family
@@ -136,7 +134,7 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            self._fe is not None
+            model_matrix.fixed_effects is not None
             and self.separation_check is not None
             and self.separation_check  # not an empty list
         ):
@@ -163,20 +161,17 @@ class Feglm(Feols):
 
     def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."
-        model_matrix = self._model_matrix
+        model_matrix = self.model_matrix
         response = model_matrix.dependent.to_numpy()
         design = model_matrix.independent.to_numpy()
+        fixed_effect_frame = model_matrix.fixed_effects
+        offset_frame = model_matrix.offset
         fixed_effects = (
-            None
-            if model_matrix.fixed_effects is None
-            else model_matrix.fixed_effects.to_numpy()
+            None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
         )
         offset = (
-            None
-            if model_matrix.offset is None
-            else model_matrix.offset.to_numpy().reshape((-1, 1))
+            None if offset_frame is None else offset_frame.to_numpy().reshape((-1, 1))
         )
-        self._offset = offset
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
@@ -198,7 +193,7 @@ class Feglm(Feols):
             collin_tol=self._collin_tol,
             accelerate=self._accelerate and fixed_effects is not None,
             offset=offset,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             solver=self._solver,
             maxiter=self.maxiter,
             tol=self.tol,
@@ -209,22 +204,12 @@ class Feglm(Feols):
         self._collin_vars = fit.collin_vars
         self._collin_index = fit.collin_index
         working_state = fit.working_state
-        self._working_state = working_state
+        self.working_state = working_state
         design_within = working_state.design_within
         self._X_is_empty = design_within.shape[1] == 0
         self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        self._Y_hat_response = working_state.mu
-        self._Y_hat_link = working_state.eta
-        self._u_hat_response = working_state.response_residuals
-        # ``_u_hat`` is the generic residual read by the shared inference and
-        # result code. For GLMs it is the working residual, so ``_u_hat`` and
-        # ``_u_hat_working`` are the same array; ``resid()`` exposes both
-        # domains by name.
-        self._u_hat_working = working_state.working_residuals
-        self._u_hat = self._u_hat_working
-
         weighted_working_residuals = (
             working_state.working_weights * working_state.working_residuals
         )
@@ -236,16 +221,26 @@ class Feglm(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._hessian = self._tZX.copy()
 
-        # Temporary aliases retained until the getter-only alias layer.
-        self._Y = working_state.working_response_within
-        self._X = design_within
-        self._Z = design_within
-        self._irls_weights = working_state.working_weights
-        self._Xbeta = working_state.eta.reshape(-1, 1)
         self.deviance = fit.deviance
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
+
+    def _prediction_design(self) -> np.ndarray:
+        """Supply the final IRLS design to the inherited predict() method.
+
+        Unlike linear models, GLMs store this coefficient-ordered design in
+        working_state. It is not multiplied by square-root working weights.
+        """
+        return self.working_state.design_within
+
+    def _predict_in_sample(self, *, type: str) -> np.ndarray:
+        """Supply cached GLM predictions to predict() and fixef().
+
+        eta includes fixed effects and any offset; mu is the inverse-link
+        response mean. Fixed-effect recovery requests eta, not mu.
+        """
+        return self.working_state.eta if type == "link" else self.working_state.mu
 
     def _vcov_iid(self):
         return vcov_iid_glm(bread=self._bread)
@@ -253,17 +248,17 @@ class Feglm(Feols):
     def _vcov_hetero(self):
         # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
         # final IRLS weights, which already contain the observation weights.
-        observation_weights = self._observation_weights.values
+        observation_weights = self.observation_weights.values
         return vcov_hetero(
             scores=self._scores,
-            X=self._X,
+            X=self.working_state.design_within,
             tZX=self._tZX,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
                 if observation_weights is not None and self._weights_type == "fweights"
                 else None
             ),
-            normal_equation_weights=self._working_state.working_weights,
+            normal_equation_weights=self.working_state.working_weights,
             vcov_type_detail=self._vcov_type_detail,
             bread=self._bread,
             is_iv=self._is_iv,
@@ -294,9 +289,9 @@ class Feglm(Feols):
             A flat array with the requested residuals.
         """
         if type == "response":
-            return self._u_hat_response.flatten()
+            return self.working_state.response_residuals.flatten()
         if type == "working":
-            return self._u_hat_working.flatten()
+            return self.working_state.working_residuals.flatten()
         raise ValueError("type must be one of 'response' or 'working'.")
 
     def residualize(
@@ -396,7 +391,7 @@ class Feglm(Feols):
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
-        self._family.check_y(self._model_matrix.dependent)
+        self._family.check_y(self.model_matrix.dependent.to_numpy())
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:

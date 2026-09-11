@@ -1106,7 +1106,10 @@ def test_errors_quantreg(data):
         pf.quantreg("Y ~ X1", data=data, quantile=["0.1", "0.2"])
 
     # error when fixed effects in formula
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(
+        NotImplementedError,
+        match="Fixed effects are not yet supported for Quantile Regression",
+    ):
         pf.quantreg("Y ~ X1 | f1", data=data)
 
     # error for invalid method

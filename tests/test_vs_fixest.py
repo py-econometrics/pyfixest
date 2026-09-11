@@ -493,7 +493,7 @@ def test_single_fit_fepois(
     py_nobs = mod._N
     py_deviance = mod.deviance
     py_resid = mod.resid()
-    py_irls_weights = mod._irls_weights.flatten()
+    py_irls_weights = mod.working_state.working_weights.flatten()
     py_df_k = int(mod._df_k)
     py_df_t = int(mod._df_t)
     py_n_coefs = mod.coef().values.size
@@ -888,7 +888,7 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     py_nobs = mod._N
     py_deviance = mod.deviance
     py_resid = mod.resid()
-    py_irls_weights = mod._irls_weights.flatten()
+    py_irls_weights = mod.working_state.working_weights.flatten()
     py_df_k = int(mod._df_k)
     py_df_t = int(mod._df_t)
     py_n_coefs = mod.coef().values.size
@@ -1134,7 +1134,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare IRLS weights
-        py_irls_weights = fit_py._irls_weights.flatten()
+        py_irls_weights = fit_py.working_state.working_weights.flatten()
         r_irls_weights = fit_r.rx2("irls_weights")
         check_absolute_diff(
             py_irls_weights[0:5],
@@ -1144,7 +1144,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare residuals - working
-        py_resid_working = fit_py._u_hat_working
+        py_resid_working = fit_py.working_state.working_residuals
         r_resid_working = stats.resid(fit_r, type="working")
         check_absolute_diff(
             py_resid_working[10:15],
@@ -1154,7 +1154,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare residuals - response
-        py_resid_response = fit_py._u_hat_response
+        py_resid_response = fit_py.working_state.response_residuals
         r_resid_response = stats.resid(fit_r, type="response")
         check_absolute_diff(
             py_resid_response[10:15],

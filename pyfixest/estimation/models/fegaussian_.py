@@ -77,25 +77,27 @@ class Fegaussian(Feglm):
     def _vcov_iid(self):
         # we set gaussian glms to match pf.feols exactly
         return vcov_iid_ols(
-            residuals=self._u_hat,
+            residuals=self.working_state.working_residuals,
             bread=self._bread,
             N=self._N,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
         )
 
     def get_performance(self) -> None:
-        """Compute R² measures from the Gaussian working state.
+        """Compute and store Gaussian fit statistics from retained model data.
 
-        For the Gaussian family the working response is the response itself,
-        so the within working response and the response residuals are already
-        in the units of Y.
+        Gaussian fits retain their demeaned response and residuals in
+        working_state rather than the linear model's within_data and _u_hat.
+        The identity link puts those arrays in the units of Y, so they can
+        be passed to the same performance_measures helper used for OLS.
+        The original response comes from model_matrix for the overall R².
         """
-        working_state = self._working_state
+        working_state = self.working_state
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
+            Y=self.model_matrix.dependent.to_numpy(),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             N=self._N,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),

@@ -9,6 +9,7 @@ import pandas as pd
 from pyfixest.errors import EmptyVcovError
 
 if TYPE_CHECKING:
+    from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
         ObservationWeights,
@@ -136,11 +137,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _pvalue: np.ndarray
     _conf_int: np.ndarray
     _u_hat: np.ndarray
-    _weights: np.ndarray
-    _observation_weights: "ObservationWeights"
-    _within_data: "WithinLinearData"
-    _Y: np.ndarray
-    _Y_untransformed: pd.DataFrame
+    model_matrix: "ModelMatrix"
+    observation_weights: "ObservationWeights"
+    within_data: "WithinLinearData"
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -282,7 +281,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def get_performance(self) -> None:
         """
-        Get Goodness-of-Fit measures.
+        Compute and store goodness-of-fit measures during fit finalization.
 
         Compute multiple additional measures commonly reported with linear
         regression output, including R-squared and adjusted R-squared. Note that
@@ -299,26 +298,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
         `_adj_r2_within`. The `_within` variants are computed on the demeaned
         dependent variable and are only defined for models with fixed effects.
-
-        Examples
-        --------
-        The estimation functions call this during fitting, so the measures are
-        available on any fitted model.
-
-        ```{python}
-        import pyfixest as pf
-
-        fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
-        fit.get_performance()
-
-        fit._r2, fit._adj_r2, fit._r2_within
-        ```
+        Called internally before storage cleanup, while model_matrix,
+        within_data, and observation_weights are available.
         """
         measures = performance_measures(
-            Y=self._Y_untransformed.to_numpy(),
-            Y_within=self._within_data.response,
+            Y=self.model_matrix.dependent.to_numpy(),
+            Y_within=self.within_data.response,
             residuals=self._u_hat,
-            weights=self._observation_weights.values,
+            weights=self.observation_weights.values,
             N=self._N,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
