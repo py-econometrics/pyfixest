@@ -15,6 +15,45 @@ class RetentionPolicy:
     lean: bool = False
 
 
+# The stored data and the formula state built from it.
+_DATA_ATTRIBUTES: tuple[str, ...] = ("_data", "model_matrix", "_cluster_df")
+
+# Components and transitional fit products whose size depends on observations.
+# Compact inference and performance measures are retained.
+_OBSERVATION_ATTRIBUTES: tuple[str, ...] = (
+    "within_data",
+    "working_state",
+    "observation_weights",
+    "_scores",
+    "_u_hat",
+    "_Y_hat_link",
+    "_Y_hat_response",
+    "_X_hat",
+    "_v_hat",
+    "_sumFE",
+    "_alpha",
+    "_y_hat_null",
+    "_x_final",
+    "_s_final",
+    "_z_final",
+    "_w_final",
+    "_y_final",
+    "_model_spec",
+    "_context",
+    "_sample_index",
+)
+
+
+def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
+    """Name the attributes a fitted model drops under `policy`."""
+    names: tuple[str, ...] = ()
+    if not policy.store_data or policy.lean:
+        names += _DATA_ATTRIBUTES
+    if policy.lean:
+        names += _OBSERVATION_ATTRIBUTES
+    return names
+
+
 def formula_context(model_spec, context: Mapping[str, Any]) -> dict[str, Any]:
     """Keep only context names used by materialized formula factors.
 
@@ -28,51 +67,3 @@ def formula_context(model_spec, context: Mapping[str, Any]) -> dict[str, Any]:
         for variable in spec.variables
     }
     return {name: context[name] for name in names if name in context}
-
-
-def apply_retention(model, *, policy: RetentionPolicy) -> None:
-    """Apply storage policy recursively after the fitting lifecycle completes."""
-    first_stage = getattr(model, "_model_1st_stage", None)
-    if first_stage is not None:
-        apply_retention(first_stage, policy=policy)
-
-    model._store_data = policy.store_data
-    model._lean = policy.lean
-    # Mutable caches belong to the execution block, not to statistical results.
-    cache = getattr(model, "_demean_cache", None)
-    if cache is not None:
-        model._preconditioner = cache.lookup_preconditioner.get(model._na_index)
-    model.__dict__.pop("_demean_cache", None)
-    model.__dict__.pop("_input_index", None)
-
-    if not policy.store_data or policy.lean:
-        model.__dict__.pop("_data", None)
-        model.__dict__.pop("model_matrix", None)
-        model.__dict__.pop("_cluster_df", None)
-
-    if policy.lean:
-        # These are the components and transitional fit products whose size
-        # depends on observations. Compact inference/performance is retained.
-        for name in (
-            "within_data",
-            "working_state",
-            "observation_weights",
-            "_scores",
-            "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
-            "_X_hat",
-            "_v_hat",
-            "_sumFE",
-            "_alpha",
-            "_y_hat_null",
-            "_x_final",
-            "_s_final",
-            "_z_final",
-            "_w_final",
-            "_y_final",
-            "_model_spec",
-            "_context",
-            "_sample_index",
-        ):
-            model.__dict__.pop(name, None)

@@ -42,8 +42,8 @@ from pyfixest.estimation.internals.model_state import (
 )
 from pyfixest.estimation.internals.retention import (
     RetentionPolicy,
-    apply_retention,
     formula_context,
+    omitted_attributes,
 )
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
@@ -952,9 +952,16 @@ class Feols(ResultAccessorMixin):
         return vcov_mat
 
     def _clear_attributes(self):
-        apply_retention(
-            self, policy=RetentionPolicy(store_data=self._store_data, lean=self._lean)
-        )
+        """Apply the storage options once the fitting lifecycle completes."""
+        policy = RetentionPolicy(store_data=self._store_data, lean=self._lean)
+        # The shared demeaning cache belongs to the estimation run, not to the
+        # result; only the preconditioner this fit used stays reusable.
+        cache = getattr(self, "_demean_cache", None)
+        if cache is not None:
+            self._preconditioner = cache.lookup_preconditioner.get(self._na_index)
+        for attr in ("_demean_cache", "_input_index", *omitted_attributes(policy)):
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """

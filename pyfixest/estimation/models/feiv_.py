@@ -352,6 +352,15 @@ class Feiv(Feols):
         """Fit and retain the first-stage model after second-stage inference."""
         self.first_stage()
 
+    def _clear_attributes(self) -> None:
+        """Apply the storage options to the retained first stage as well."""
+        first_stage = getattr(self, "_model_1st_stage", None)
+        if first_stage is not None:
+            first_stage._store_data = self._store_data
+            first_stage._lean = self._lean
+            first_stage._clear_attributes()
+        super()._clear_attributes()
+
     def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
 
