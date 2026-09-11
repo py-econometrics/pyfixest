@@ -59,7 +59,7 @@ class EmptyVcovError(Exception):  # noqa: D101
 
 
 class MissingModelDataError(RuntimeError):
-    """An operation needs fitted state omitted by a storage option."""
+    """A method needs model attributes dropped after estimation by `store_data=False` or `lean=True`."""
 
 
 class FormulaSyntaxError(Exception):  # noqa: D101

@@ -158,8 +158,7 @@ def fepois(
         heteroskedastic `vcov()` updates stay available. Cluster-robust and HAC
         `vcov()` updates then need the original data passed as `data=`, and
         methods that need the stored data raise `MissingModelDataError`. The
-        option applies to every model of a multiple estimation and to IV first
-        stages.
+        option applies to every model of a multiple estimation.
 
     lean: bool, optional
         False by default. If True, the stored data and all observation-sized
