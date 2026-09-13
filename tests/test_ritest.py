@@ -8,6 +8,77 @@ import pyfixest as pf
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+@pytest.mark.parametrize("exceedances", [0, 1, 40, 99, 100])
+@pytest.mark.parametrize("level", [0.8, 0.9, 0.95, 0.99, np.nextafter(1.0, 0.0)])
+def test_ritest_monte_carlo_uncertainty_against_statsmodels(exceedances, level):
+    """Monte Carlo uncertainty follows the binomial normal approximation."""
+    from statsmodels.stats.proportion import proportion_confint, std_prop
+
+    from pyfixest.estimation.post_estimation.ritest import _get_ritest_pvalue
+
+    draws = np.concatenate((np.full(exceedances, 2.0), np.zeros(100 - exceedances)))
+    pvalue, standard_error, interval = _get_ritest_pvalue(
+        sample_stat=np.array(1.0),
+        ri_stats=draws,
+        method="two-sided",
+        level=level,
+        h0_value=0.0,
+    )
+    expected_interval = proportion_confint(
+        exceedances, 100, alpha=1 - level, method="normal"
+    )
+    np.testing.assert_allclose(pvalue, exceedances / 100, rtol=0, atol=1e-15)
+    np.testing.assert_allclose(
+        standard_error,
+        std_prop(exceedances / 100, 100),
+        rtol=0,
+        atol=1e-15,
+        err_msg="RI Monte Carlo standard error differs from statsmodels",
+    )
+    np.testing.assert_allclose(
+        interval,
+        expected_interval,
+        rtol=0,
+        atol=1e-15,
+        err_msg="RI probability interval differs from statsmodels' normal interval",
+    )
+
+
+@pytest.mark.parametrize("algorithm", ["fast", "slow"])
+def test_ritest_standard_error_independent_of_level(algorithm):
+    """Changing confidence coverage must not change the reported standard error."""
+    from statsmodels.stats.proportion import proportion_confint, std_prop
+
+    data = pf.get_data(N=80, seed=891).dropna()
+    fit = pf.feols("Y ~ X1", data)
+    results = []
+    for level in (0.9, 0.95):
+        result = fit.ritest(
+            "X1",
+            reps=40,
+            level=level,
+            rng=np.random.default_rng(42),
+            choose_algorithm=algorithm,
+            store_ritest_statistics=True,
+        )
+        results.append(result)
+        draws = fit._ritest_statistics[1:]
+        successes = np.count_nonzero(np.abs(draws) >= np.abs(fit._ritest_sample_stat))
+        np.testing.assert_allclose(
+            result["Std. Error (Pr(>|t|))"],
+            std_prop(successes / len(draws), len(draws)),
+            rtol=0,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(
+            result.iloc[-2:].to_numpy(dtype=float),
+            proportion_confint(successes, len(draws), alpha=1 - level, method="normal"),
+            rtol=0,
+            atol=1e-15,
+        )
+    assert results[0]["Std. Error (Pr(>|t|))"] == results[1]["Std. Error (Pr(>|t|))"]
+
+
 def test_fast_ritest_requires_numba(monkeypatch):
     """Fast ritest must surface a clear ImportError when numba is missing."""
     import pyfixest.estimation.post_estimation.ritest as ritest
