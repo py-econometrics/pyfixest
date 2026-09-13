@@ -88,7 +88,7 @@ def test_cluster_na():
             lambda fit, data: fit.vcov(
                 {"CRV1": "f1"}, data=data.dropna().reset_index(drop=True)
             ),
-            "original estimation row index",
+            "estimation data unchanged",
         ),
         (
             feols,
@@ -203,6 +203,21 @@ def test_missing_model_data_errors(estimator, fml, storage, operation, match):
     fit = estimator(fml, data=data, **storage)
     with pytest.raises(MissingModelDataError, match=match):
         operation(fit, data)
+
+
+@pytest.mark.parametrize("change", ["shuffle", "reset_index", "subset"])
+def test_supplemental_covariance_rejects_changed_frame(change):
+    """Supplemental covariance accepts only the full original row layout."""
+    data = get_data().iloc[:100].copy()
+    data.index = pd.Index([f"row-{i}" for i in range(len(data))])
+    fit = feols("Y ~ X1", data, store_data=False)
+    changed = {
+        "shuffle": data.sample(frac=1, random_state=2),
+        "reset_index": data.reset_index(drop=True),
+        "subset": data.iloc[:-1],
+    }[change]
+    with pytest.raises(MissingModelDataError, match="estimation data unchanged"):
+        fit.vcov({"CRV1": "f1"}, data=changed)
 
 
 def test_error_hc23_fe():

@@ -294,14 +294,17 @@ class Feols(ResultAccessorMixin):
         self._inference_dist: InferenceDist = T_DIST
         self.FixestFormula = FixestFormula
 
-        if self._sample_split_var is None:
-            pass
-        elif self._sample_split_value is _ALL_SAMPLE:
-            data = data.loc[data[sample_split_var].notnull()]
-        else:
-            data = data.loc[data[self._sample_split_var] == sample_split_value]
-
         self._input_index = data.index.copy()
+        self._input_positions: pd.Index | np.ndarray = pd.RangeIndex(len(data))
+        if self._sample_split_var is not None:
+            mask = (
+                data[self._sample_split_var].notnull()
+                if self._sample_split_value is _ALL_SAMPLE
+                else data[self._sample_split_var] == sample_split_value
+            )
+            self._input_positions = np.flatnonzero(mask.fillna(False))
+            data = data.iloc[self._input_positions]
+
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if copy_data else data
@@ -452,7 +455,7 @@ class Feols(ResultAccessorMixin):
         self._model_spec = model_matrix.model_spec
         self._context = formula_context(self._model_spec, self._context)
         retained_positions = self._data.index[~self._data.index.isin(self._na_index)]
-        self._sample_index = self._input_index[retained_positions].copy()
+        self._sample_positions = self._input_positions[retained_positions].copy()
 
         self._coefnames = independent.columns.tolist()
         self._coefnames_z = (
@@ -652,10 +655,11 @@ class Feols(ResultAccessorMixin):
         data: Optional[DataFrameType], optional
             The data used for estimation. If None, uses the data stored on the
             model object. Required for cluster-robust and HAC inference after a
-            fit with `store_data=False`. The frame must keep the row index of
-            the original estimation data; it may be reordered or include rows
-            excluded from the sample, but a frame with a freshly reset index
-            cannot identify the estimation sample. Defaults to None.
+            fit with `store_data=False`. Pass the full original frame, including
+            excluded rows and all splits, with unchanged values, row order, and
+            index. Length and index equality are checked; fitted rows are selected
+            by position. Changed values or a reorder followed by restoring the
+            original index cannot be detected. Defaults to None.
 
 
         Returns
@@ -692,7 +696,8 @@ class Feols(ResultAccessorMixin):
         if vcov_type in ("CRV", "HAC") and data_to_check is None:
             raise MissingModelDataError(
                 "vcov requires estimation data for clusters or time identifiers. "
-                "Pass data= with the original row index or refit with store_data=True."
+                "Pass the unchanged estimation frame as data= or refit with "
+                "store_data=True."
             )
         if detail == "CRV3" and (self._has_fixef or self._method != "feols"):
             require_retained(self, "vcov(CRV3)", "_data")
@@ -763,17 +768,19 @@ class Feols(ResultAccessorMixin):
         return self
 
     def _inference_data(self, data):
-        """Align supplemental data by retained row identities, never row count."""
+        """Select fitted positions from the unchanged full estimation frame."""
         if data is None:
             return getattr(self, "_data", None)
         data = _narwhals_to_pandas(data)
-        if not data.index.is_unique or not self._sample_index.isin(data.index).all():
+        if len(data) != len(self._input_index) or not data.index.equals(
+            self._input_index
+        ):
             raise MissingModelDataError(
-                "vcov requires data containing the original estimation row index. "
-                "Pass the original data (including excluded rows), without resetting "
-                "or replacing its index."
+                "vcov requires the estimation data unchanged: same rows, order, "
+                "and index, including excluded rows and all splits. Pass the "
+                "full original frame without resetting or replacing its index."
             )
-        return data.loc[self._sample_index]
+        return data.iloc[self._sample_positions]
 
     def _inference_fixed_effects(self, data):
         """Materialize FE codes locally when full formula storage was omitted."""
@@ -960,7 +967,7 @@ class Feols(ResultAccessorMixin):
         cache = getattr(self, "_demean_cache", None)
         if cache is not None:
             self._preconditioner = cache.lookup_preconditioner.get(self._na_index)
-        for attr in ("_demean_cache", "_input_index", *omitted_attributes(policy)):
+        for attr in ("_demean_cache", "_input_positions", *omitted_attributes(policy)):
             if hasattr(self, attr):
                 delattr(self, attr)
 

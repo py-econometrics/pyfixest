@@ -329,7 +329,10 @@ class Feiv(Feols):
 
         # Ensure model1 is of type Feols
         if isinstance(model1, Feols):
-            model1._sample_index = self._sample_index[model1._sample_index].copy()
+            model1._input_index = self._input_index
+            model1._sample_positions = self._sample_positions[
+                model1._sample_positions
+            ].copy()
             # Store the first stage coefficients
             self._pi_hat = model1._beta_hat
 

@@ -131,8 +131,8 @@ def quantreg(
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `quantreg`.
+        If False, preparation may reuse input storage to reduce copying.
+        The caller's index is preserved with either setting.
 
     store_data : bool, optional
         Whether to store the data in the model object, by default True.

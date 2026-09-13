@@ -143,12 +143,8 @@ def fepois(
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
-        For example, the input data set is re-index within the function.
-        As far as I know, the only other relevant case is
-        when using interacted fixed effects, in which case you'll find
-        a column with interacted fixed effects in the data set.
+        If False, preparation may reuse input storage to reduce copying.
+        The caller's index is preserved with either setting.
 
     store_data : bool, optional
         Whether to store the data in the model object, by default True.

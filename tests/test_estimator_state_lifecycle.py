@@ -225,6 +225,10 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert model_matrix.na_index == frozenset({0, 1, 5})
     assert len(model_matrix.dependent) == fit._N_rows
     assert fit.n_separation_na == 2
+    assert fit._sample_positions.tolist() == [2, 3, 4]
+    expected_se = fit.se().copy()
+    fit.vcov("hetero", data=data)
+    np.testing.assert_allclose(fit.se(), expected_se, rtol=1e-12, atol=1e-12)
 
 
 def test_model_matrix_without_rows_returns_filtered_copy(
@@ -453,6 +457,8 @@ def test_recursive_component_retention(
     from pyfixest.estimation.models.feols_ import Feols
 
     data = lifecycle_data.assign(count=np.tile([1, 3, 2, 4], 6))
+    data.loc[3, "x"] = np.nan
+    data.index = pd.Index([f"row-{i}" for i in range(len(data))])
     omitted = []
     clear = Feols._clear_attributes
 
@@ -502,26 +508,46 @@ def test_recursive_component_retention(
         assert np.isfinite(model.coef()).all()
         if not lean:
             assert len(model.resid()) == model._N_rows
+            expected_se = model.se().copy()
+            vcov = (
+                {model._vcov_type_detail: model._clustervar[0]}
+                if model._is_clustered
+                else model._vcov_type_detail
+            )
+            model.vcov(vcov, data=data)
+            np.testing.assert_allclose(model.se(), expected_se, rtol=1e-12, atol=1e-12)
     gc.collect()
     assert all(ref() is None for ref in omitted)
 
 
 @pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
-def test_stripped_covariance_aligns_supplemental_rows(lifecycle_data, weights_type):
+@pytest.mark.parametrize("store_data", [False, True])
+@pytest.mark.parametrize("index_kind", ["range", "permuted", "strings", "duplicates"])
+def test_stripped_covariance_aligns_supplemental_rows(
+    lifecycle_data, weights_type, store_data, index_kind
+):
     data = lifecycle_data.copy()
     data.loc[3, "x"] = np.nan
+    if index_kind == "permuted":
+        data = data.sample(frac=1, random_state=3)
+    elif index_kind == "strings":
+        data.index = pd.Index([f"row-{i}" for i in range(len(data))])
+    elif index_kind == "duplicates":
+        data.index = pd.Index(np.arange(len(data)) // 2)
+    original_index = data.index.copy()
     fit = pf.feols(
         "y ~ x | fe",
         data,
         weights="weight",
         weights_type=weights_type,
-        store_data=False,
+        store_data=store_data,
+        copy_data=False,
     )
     for vcov in ["iid", "hetero", {"CRV1": "fe"}]:
         expected = pf.feols(
             "y ~ x | fe", data, weights="weight", weights_type=weights_type, vcov=vcov
         )
-        fit.vcov(vcov, data=data.sample(frac=1, random_state=3))
+        fit.vcov(vcov, data=data)
         np.testing.assert_allclose(
             fit.se(),
             expected.se(),
@@ -531,6 +557,7 @@ def test_stripped_covariance_aligns_supplemental_rows(lifecycle_data, weights_ty
         )
     fit.predict()
     fit.vcov("hetero")
+    pd.testing.assert_index_equal(data.index, original_index)
 
 
 def test_supplemental_hac_and_split_samples(lifecycle_data):
@@ -538,11 +565,12 @@ def test_supplemental_hac_and_split_samples(lifecycle_data):
         time=np.arange(len(lifecycle_data)), sample=np.tile([0, 1], 12)
     )
     data.loc[2, "x"] = np.nan
+    data = data.sample(frac=1, random_state=4)
     options = {"vcov": "NW", "vcov_kwargs": {"time_id": "time", "lag": 1}}
     fits = pf.feols("y ~ x", data, split="sample", store_data=False)
     expected = pf.feols("y ~ x", data, split="sample", **options)
     for fit, reference in zip(fits.to_list(), expected.to_list(), strict=True):
-        fit.vcov(**options, data=data.iloc[::-1])
+        fit.vcov(**options, data=data)
         np.testing.assert_allclose(
             fit.se(),
             reference.se(),

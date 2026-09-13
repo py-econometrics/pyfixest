@@ -23,15 +23,10 @@ from pyfixest.utils.utils import capture_context
 
 
 def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
-    """Convert input data to pandas with a clean RangeIndex.
-
-    Reindexing is required because formulaic's model matrix starts from 0:N
-    and downstream `dropna()` calls would otherwise produce mis-aligned indices.
-    """
+    """Convert input to pandas, preserving caller labels until model preparation."""
     data = _narwhals_to_pandas(config.data)
     if config.copy_data:
         data = data.copy()
-    data.reset_index(drop=True, inplace=True)
     return data
 
 

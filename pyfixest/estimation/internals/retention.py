@@ -42,7 +42,8 @@ _OBSERVATION_ATTRIBUTES: tuple[str, ...] = (
     "_y_final",
     "_model_spec",
     "_context",
-    "_sample_index",
+    "_input_index",
+    "_sample_positions",
 )
 
 
