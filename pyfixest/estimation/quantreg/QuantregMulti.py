@@ -215,7 +215,9 @@ class QuantregMulti:
         """Quantile regression has no additional response constraint."""
 
     def _finalize_fit(self) -> None:
-        """Quantile models require no additional post-fit orchestration."""
+        """Complete each quantile's summaries before applying retention."""
+        for quantreg in self.all_quantregs.values():
+            quantreg._finalize_fit()
 
     def _iter_fitted_models(self) -> tuple[Quantreg, ...]:
         """Yield each fitted quantile to the result container."""

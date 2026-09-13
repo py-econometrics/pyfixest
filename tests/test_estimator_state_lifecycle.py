@@ -381,24 +381,43 @@ def test_published_components_preserve_inputs(
     assert input_array.flags.writeable == writeable_before
 
 
-@pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
+@pytest.mark.parametrize("multi_method", [None, "cfm1", "cfm2"])
 @pytest.mark.parametrize("store_data", [False, True])
 @pytest.mark.parametrize("lean", [False, True])
 def test_multi_quantile_children_follow_ols_retention(
-    lifecycle_data, multi_method, store_data, lean
+    lifecycle_data, multi_method, store_data, lean, monkeypatch
 ):
-    """Both process solvers apply the OLS storage policy to every child."""
+    """Single/process fits complete objectives before OLS-style retention."""
+    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+
+    objectives = {}
+    clear = Feols._clear_attributes
+
+    def record_completed_objective(model):
+        if isinstance(model, Quantreg):
+            # Reading the objective must already be independent of residuals.
+            residuals = model._u_hat
+            del model._u_hat
+            try:
+                objectives[model._quantile] = model.objective_value
+            finally:
+                model._u_hat = residuals
+        clear(model)
+
+    monkeypatch.setattr(Feols, "_clear_attributes", record_completed_objective)
     fit = pf.quantreg(
         "y ~ x",
         lifecycle_data,
-        quantile=[0.25, 0.5, 0.75],
-        multi_method=multi_method,
+        quantile=[0.25, 0.5, 0.75] if multi_method else 0.5,
+        multi_method=multi_method or "cfm1",
         seed=42,
         store_data=store_data,
         lean=lean,
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
-    for child in fit.to_list():
+    for child in fit.to_list() if multi_method else [fit]:
+        assert child.objective_value == objectives[child._quantile]
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
         if lean:
