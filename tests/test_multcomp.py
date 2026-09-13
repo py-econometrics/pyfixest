@@ -8,8 +8,10 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.post_estimation.multcomp import (
     _get_rwolf_pval,
+    _get_wyoung_pval,
     bonferroni,
     rwolf,
+    wyoung,
 )
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data
@@ -21,6 +23,48 @@ broom = importr("broom")
 # Extended R packages
 if import_check := check_r_install("wildrwolf", strict=False):
     wildrwolf = importr("wildrwolf")
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("adjustment", [rwolf, wyoung])
+def test_clustered_ri_uses_requested_replications(adjustment):
+    """RI replications are independent of wild-bootstrap sign enumeration."""
+    rng = np.random.default_rng(410)
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=80),
+            "y2": rng.normal(size=80),
+            "x": rng.normal(size=80),
+            "group": np.repeat(np.arange(4), 20),
+        }
+    )
+    fit = feols("sw(y, y2) ~ x", data, vcov={"CRV1": "group"})
+    reps = 20  # Exceeds the 2**4 possible wild-bootstrap cluster sign vectors.
+    result = adjustment(fit, "x", reps=reps, seed=234, sampling_method="ri")
+    sample_statistics, draws = [], []
+    for model in fit.to_list():
+        model.ritest(
+            "x",
+            reps=reps,
+            rng=np.random.default_rng(234),
+            type="randomization-t",
+            store_ritest_statistics=True,
+        )
+        assert model._ritest_statistics.shape == (reps,)
+        sample_statistics.append(model._ritest_sample_stat)
+        draws.append(model._ritest_statistics)
+    samples = np.asarray(sample_statistics)
+    resampled = np.column_stack(draws)
+    if adjustment is rwolf:
+        expected = _get_rwolf_pval(samples, resampled)
+        row = "RW Pr(>|t|)"
+    else:
+        # Use R's Student distribution for the existing clustered df convention.
+        pvalues = 2 * stats.pt(-np.abs(samples), df=3)
+        resampled_pvalues = 2 * stats.pt(-np.abs(resampled), df=3)
+        expected = _get_wyoung_pval(pvalues, resampled_pvalues)
+        row = "WY Pr(>|t|)"
+    np.testing.assert_allclose(result.loc[row], expected, rtol=0, atol=1e-14)
 
 
 @pytest.mark.against_r_core
