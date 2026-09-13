@@ -302,7 +302,7 @@ def _multcomp_resample(
                 f"Parameter '{param}' not found in the model {model._fml}."
             )
 
-        if model._is_clustered:
+        if sampling_method == "wild-bootstrap" and model._is_clustered:
             # model._G a list of length 3
             # for oneway clusering: repeated three times
             G = min(model._G)
