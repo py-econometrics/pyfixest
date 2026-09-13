@@ -17,6 +17,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+- Fixed-effect-only GLMs now recover effects on the link scale, giving correct predictions on new data, including models with weights and Poisson offsets.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
