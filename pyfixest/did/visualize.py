@@ -173,6 +173,7 @@ def panelview(
             subsamp=subsamp,
             collapse_to_cohort=collapse_to_cohort,
             sort_by_timing=sort_by_timing,
+            units_to_plot=units_to_plot,
         )
 
         return _plot_panelview(
@@ -334,7 +335,11 @@ def _prepare_df_for_panelview(
     subsamp: int | None = None,
     collapse_to_cohort: bool | None = None,
     sort_by_timing: bool | None = None,
+    units_to_plot: list | None = None,
 ) -> pd.DataFrame:
+    if units_to_plot:
+        data = data[data[unit].isin(units_to_plot)]
+
     treatment_quilt = data.pivot(index=unit, columns=time, values=treat)
     treatment_quilt = treatment_quilt.sample(subsamp) if subsamp else treatment_quilt
     if collapse_to_cohort:
