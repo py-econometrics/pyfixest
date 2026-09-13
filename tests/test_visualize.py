@@ -223,6 +223,43 @@ def test_panelview():
     plt.close()
 
 
+@pytest.mark.parametrize("selected_units", [[2], [3, 1]])
+@pytest.mark.parametrize("sort_by_timing", [False, True])
+def test_panelview_treatment_selected_units(selected_units, sort_by_timing):
+    data = pd.DataFrame(
+        {
+            "unit": np.repeat([1, 2, 3], 3),
+            "time": np.tile([1, 2, 3], 3),
+            "treat": [0, 0, 0, 0, 1, 1, 0, 0, 1],
+        }
+    )
+    original = data.copy()
+    ax = panelview(
+        data,
+        unit="unit",
+        time="time",
+        treat="treat",
+        units_to_plot=selected_units,
+        sort_by_timing=sort_by_timing,
+    )
+    try:
+        # Unit 3 is treated before unit 1 (which is never treated).
+        order = (
+            [3, 1]
+            if sort_by_timing and len(selected_units) > 1
+            else sorted(selected_units)
+        )
+        expected = data.set_index(["unit", "time"])["treat"].unstack().loc[order]
+        np.testing.assert_array_equal(
+            ax.images[0].get_array(),
+            expected,
+            err_msg="Treatment plot must contain only the selected units",
+        )
+        pd.testing.assert_frame_equal(data, original)
+    finally:
+        plt.close(ax.figure)
+
+
 def test_panelview_raises():
     data = pd.DataFrame(
         {
