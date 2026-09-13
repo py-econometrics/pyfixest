@@ -59,15 +59,15 @@ def performance_measures(
         ssu = np.sum(w.flatten() * residuals**2)
         ssy = np.sum(w * (Y - np.average(Y, weights=w)) ** 2)
 
-    if has_fixef:
-        adj_factor = (N - has_intercept) / (N - k - k_fe)
-    else:
-        adj_factor = (N - has_intercept) / (N - k)
+    residual_df = N - k - (k_fe if has_fixef else 0)
+    # A full-rank saturated model still identifies its coefficients, but the
+    # residual-variance adjustment is undefined without residual degrees of freedom.
+    adj_factor = (N - has_intercept) / residual_df if residual_df > 0 else np.nan
 
     r2_within = adj_r2_within = np.nan
     if has_fixef:
         ssy_within = np.sum(Y_within**2) if weights is None else np.sum(w * Y_within**2)
-        adj_factor_within = (N - k_fe) / (N - k - k_fe)
+        adj_factor_within = (N - k_fe) / residual_df if residual_df > 0 else np.nan
         r2_within = 1 - (ssu / ssy_within)
         adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
 
