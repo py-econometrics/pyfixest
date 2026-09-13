@@ -57,16 +57,22 @@ class DID(ABC):
         self._att = att
         self._cluster = cluster
 
-        # check if tname and gname are of type int (either int 64, 32, 8)
-
+        # Normalize integer storage before computing signed relative periods.
         for var in [self._tname, self._gname]:
-            if self._data[var].dtype not in [
-                "int64",
-                "int32",
-                "int8",
-                "float64",
-                "float32",
-            ]:
+            if pd.api.types.is_integer_dtype(self._data[var].dtype):
+                if self._data[var].isna().any():
+                    raise ValueError(
+                        f"The variable {var} must not contain missing values."
+                    )
+                if (
+                    pd.api.types.is_unsigned_integer_dtype(self._data[var].dtype)
+                    and (self._data[var] > np.iinfo(np.int64).max).any()
+                ):
+                    raise ValueError(
+                        f"The variable {var} must fit in a signed 64-bit integer."
+                    )
+                self._data[var] = self._data[var].astype(np.int64)
+            elif self._data[var].dtype not in ["float64", "float32"]:
                 raise ValueError(
                     f"""The variable {var} must be of a numeric type, and more
                     specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
