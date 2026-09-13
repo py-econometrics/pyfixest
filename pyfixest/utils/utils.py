@@ -429,8 +429,8 @@ def simultaneous_crit_val(
     Parameters
     ----------
     C: numpy.ndarray
-        Covariance matrix. Symmetric, and contains as many rows/columns
-        as parameters of interest.
+        Positive semidefinite covariance matrix. Symmetric, with as many
+        rows/columns as parameters of interest.
     S: int
         Number of replications
     alpha: float
@@ -441,13 +441,28 @@ def simultaneous_crit_val(
     Returns
     -------
     float
-        Critical value, larger than 1.96
-        (which is the crit-value for pointwise intervals)
+        Estimated (1 - alpha) quantile of the largest absolute Gaussian coordinate.
+
+    Raises
+    ------
+    ValueError
+        If the covariance matrix has negative eigenvalues exceeding
+        floating-point roundoff.
     """
 
     def msqrt(C: np.ndarray) -> np.ndarray:
         eig_vals, eig_vecs = np.linalg.eigh(C)
-        return eig_vecs @ np.diag(np.sqrt(eig_vals)) @ np.linalg.inv(eig_vecs)
+        # Rank-deficient cluster covariance matrices can have tiny negative
+        # eigenvalues from roundoff. The tolerance scales with matrix size and
+        # spectral norm; genuinely indefinite matrices are not valid covariances.
+        tolerance = np.finfo(eig_vals.dtype).eps * C.shape[0] * np.max(np.abs(eig_vals))
+        if np.min(eig_vals) < -tolerance:
+            raise ValueError("Covariance matrix must be positive semidefinite.")
+        return (
+            eig_vecs
+            @ np.diag(np.sqrt(np.maximum(eig_vals, 0)))
+            @ np.linalg.inv(eig_vecs)
+        )
 
     rng = _create_rng(seed)
     p = C.shape[0]
