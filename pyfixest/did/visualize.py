@@ -362,7 +362,7 @@ def _plot_panelview(
 
     if not ax:
         _, ax = plt.subplots(figsize=figsize)
-    cax = ax.matshow(treatment_quilt, cmap="viridis", aspect="auto")
+    cax = ax.matshow(treatment_quilt.astype(float), cmap="viridis", aspect="auto")
     if legend:
         ax.figure.colorbar(cax, ax=ax)
     ax.set_xlabel(xlab) if xlab else None
