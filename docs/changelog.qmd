@@ -240,6 +240,8 @@ We also removed:
 
 ### Bug Fixes
 
+- `FixestMulti.tidy()` and `confint()` now forward confidence levels and
+  inference options to each fitted model, preserving formula/coefficient labels.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
