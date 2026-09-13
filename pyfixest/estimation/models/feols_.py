@@ -2073,11 +2073,15 @@ class Feols(ResultAccessorMixin):
         if cluster is not None and cluster not in self._data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
+        # Sorted integer codes preserve the existing numeric-cluster draw order
+        # and allow categorical labels to reach the numba resampling kernels.
         clustervar_arr = (
-            self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+            pd.factorize(self._data[cluster].to_numpy(), sort=True)[0].reshape(-1, 1)
+            if cluster is not None
+            else None
         )
 
-        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+        if clustervar_arr is not None and np.any(clustervar_arr == -1):
             raise ValueError(
                 """
             The cluster variable contains missing values. This is not allowed
