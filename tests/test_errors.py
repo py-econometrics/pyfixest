@@ -249,18 +249,6 @@ def test_missing_unrelated_to_retention_remains_attribute_error():
         fit.vcov("iid")
 
 
-def test_glm_resid_validation_precedes_retention_error():
-    fit = fepois("Y ~ X1", data=get_data(model="Fepois"), lean=True)
-    with pytest.raises(ValueError, match="type must be one of"):
-        fit.resid(type="invalid")
-
-
-def test_weighted_ritest_unsupported_precedes_retention_error():
-    fit = feols("Y ~ X1", data=get_data(), weights="weights", store_data=False)
-    with pytest.raises(NotImplementedError, match="Weights are not supported"):
-        fit.ritest("X1", reps=2)
-
-
 def test_error_hc23_fe():
     """
     Test if HC2 & HC3 inference with fixed effects regressions raises an error.
@@ -789,8 +777,8 @@ def test_ritest_error(data):
         fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
         fit_iv.ritest(resampvar="X1", reps=100)
 
-    with pytest.raises(NotImplementedError):
-        fit_wls = pf.feols("Y ~ X1", data=data, weights="weights")
+    fit_wls = pf.feols("Y ~ X1", data=data, weights="weights", store_data=False)
+    with pytest.raises(NotImplementedError, match="Weights are not supported"):
         fit_wls.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
@@ -1238,6 +1226,12 @@ def test_prediction_errors_glm():
             NotImplementedError, match="Prediction with standard errors"
         ):
             model.predict(se_fit=True)
+
+
+def test_glm_resid_rejects_invalid_type():
+    fit = fepois("Y ~ X1", data=get_data(model="Fepois"), lean=True)
+    with pytest.raises(ValueError, match="type must be one of"):
+        fit.resid(type="invalid")
 
 
 @pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
