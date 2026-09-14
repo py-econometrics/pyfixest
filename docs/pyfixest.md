@@ -1,4 +1,4 @@
-![](figures/pyfixest-logo.png)
+![](figures/pyfixest-logo.png){fig-alt="PyFixest logo"}
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
@@ -129,7 +129,7 @@ For more examples, see the [quickstart](https://pyfixest.org/getting-started.htm
 
 The DGPs follow the "simple" and "difficult" designs from the [fixest benchmarks](https://github.com/kylebutts/fixest_benchmarks). The figure timings for regressions with `k=10` covariates and plots the median runtime across three runs for PyFixest MAP, PyFixest within, PyFixest torch on CUDA GPU, fixest, and FixedEffectModels.jl.
 
-<img src="explanation/figures/base-benchmarks/bench_readme.png" width="100%" alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl">
+![](explanation/figures/base-benchmarks/bench_readme.png){width=100% fig-alt="Fixed-effects OLS benchmark for k=10 comparing PyFixest MAP, PyFixest within, PyFixest torch GPU, fixest, and FixedEffectModels.jl"}
 
 To reproduce the benchmarks, run the modular benchmark script:
 
@@ -156,7 +156,7 @@ For a full list of software packages and papers that have influenced PyFixest, p
 
 We thank all institutions that have funded or supported work on PyFixest!
 
-<img src="figures/aai-institute-logo.svg" width="185">
+![](figures/aai-institute-logo.svg){width=185 fig-alt="AAI Institute logo"}
 
 ## How to Cite
 
