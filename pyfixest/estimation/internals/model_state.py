@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
@@ -83,6 +84,101 @@ class ObservationWeights:
     def is_weighted(self) -> bool:
         """Whether this state contains user-supplied observation weights."""
         return self.values is not None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ExclusionCounts:
+    """Rows excluded from the fitted sample, counted by the stage that removed them.
+
+    Each stage counts only the rows it newly removed from the rows that survived
+    the earlier stages, so the counts sum to the number of excluded rows and
+    never double-count. Stages run in field order: formula missing-value
+    handling, the nonfinite filter, singleton fixed-effect removal, and GLM
+    separation. A sample split selects each child's input rows before these
+    stages and is not an exclusion.
+
+    Parameters
+    ----------
+    missing : int
+        Rows with a missing value in any formula variable.
+    nonfinite : int
+        Rows with an infinite value in a materialized column.
+    singleton : int
+        Rows removed as singleton fixed-effect levels (``fixef_rm="singleton"``).
+    separation : int
+        Rows removed by the GLM separation check.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.sample.exclusions
+    ```
+    """
+
+    missing: int = 0
+    nonfinite: int = 0
+    singleton: int = 0
+    separation: int = 0
+
+    @property
+    def total(self) -> int:
+        """Number of excluded rows over all stages."""
+        return self.missing + self.nonfinite + self.singleton + self.separation
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SampleInfo:
+    """The row sample a model was fitted on.
+
+    ``retained_index`` identifies the fitted rows by their labels in the
+    estimation frame the estimator received, in estimation order; a sample
+    split keeps the labels of the full frame, and an IV first stage keeps the
+    labels of its second stage. ``excluded_positions`` are formula-local
+    positions in that frame after the split, which is also how the demeaning
+    cache keys a row sample.
+
+    Parameters
+    ----------
+    retained_index : pd.Index or None
+        Row labels of the fitted rows. ``None`` after ``lean=True`` cleanup,
+        which drops this observation-sized index.
+    excluded_positions : frozenset[int]
+        Positions of the rows excluded by any filtering stage.
+    n_rows : int
+        Number of physical fitted rows.
+    n_effective : int or float
+        Effective observation count: ``n_rows`` for unweighted fits and
+        analytic weights, and the weight sum for frequency weights.
+    exclusions : ExclusionCounts
+        Excluded rows by filtering stage; their total equals
+        ``len(excluded_positions)``.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.sample.n_rows, fit.sample.n_effective, fit.sample.exclusions.missing
+    ```
+    """
+
+    retained_index: pd.Index | None
+    excluded_positions: frozenset[int]
+    n_rows: int
+    n_effective: int | float
+    exclusions: ExclusionCounts
+
+    def __post_init__(self) -> None:
+        if self.retained_index is not None and len(self.retained_index) != self.n_rows:
+            raise ValueError("SampleInfo must contain one retained row label per row.")
+        if self.exclusions.total != len(self.excluded_positions):
+            raise ValueError(
+                "Exclusion counts must sum to the number of excluded positions."
+            )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

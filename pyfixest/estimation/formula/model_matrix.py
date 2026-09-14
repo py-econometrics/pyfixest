@@ -3,8 +3,8 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import Any, Final, TypeAlias, cast
+from dataclasses import dataclass, replace
+from typing import Any, Final, Literal, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -17,9 +17,13 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSF
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.model_state import ExclusionCounts, SampleInfo
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
+# The filtering stages that run after formulaic's missing-value handling.
+_ExclusionStage: TypeAlias = Literal["nonfinite", "singleton", "separation"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -56,6 +60,12 @@ class ModelMatrix:
         Whether to remove singleton fixed-effect groups.
     drop_intercept : bool, default False
         Whether to remove the structural intercept.
+    row_labels : pd.Index
+        Labels of every row of the estimation frame, in order, so that the
+        fitted rows can be identified in the caller's frame.
+    weights_type : {"aweights", "fweights"} or None, default None
+        Interpretation of the weights column, which decides whether the
+        effective observation count is the row count or the weight sum.
 
     Examples
     --------
@@ -87,6 +97,9 @@ class ModelMatrix:
         Observation weights for weighted estimation.
     model_spec : Mapping[str, formulaic.ModelSpec]
         The underlying formulaic model specifications keyed by role.
+    sample : SampleInfo
+        The fitted row sample: retained row labels, excluded positions,
+        observation counts, and exclusion counts by filtering stage.
     na_index : frozenset[int]
         Indices of rows that were dropped.
     """
@@ -99,12 +112,24 @@ class ModelMatrix:
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
+        *,
+        row_labels: pd.Index,
+        weights_type: WeightsTypeOptions | None = None,
     ) -> None:
         self._drop_intercept = drop_intercept
+        self._weights_type = weights_type
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
-        self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
+        # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
+        # the later stages update this sample as they exclude rows.
+        self._sample = SampleInfo(
+            retained_index=row_labels.take(self._data.index.to_numpy()),
+            excluded_positions=drop_rows,
+            n_rows=len(self._data),
+            n_effective=self._effective_count(self._data),
+            exclusions=ExclusionCounts(missing=len(drop_rows)),
+        )
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
@@ -172,6 +197,7 @@ class ModelMatrix:
         self._drop(
             ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
             "rows with infinite values",
+            stage="nonfinite",
         )
         if self._fixed_effects_column_names is not None:
             # Ensure fixed effects are `int32`
@@ -200,32 +226,65 @@ class ModelMatrix:
             self._drop(
                 detect_singletons(fixed_effects.to_numpy()),
                 "singleton fixed effect(s)",
+                stage="singleton",
             )
 
-    def _drop(self, is_dropped: NDArray[np.bool_], reason: str) -> None:
-        """Drop the masked rows from `self._data` and add their labels to `na_index`.
+    def _effective_count(self, data: pd.DataFrame) -> int | float:
+        """Count the observations in `data`, summing frequency weights as fixest does."""
+        if self._weights_type == "fweights" and self._weights_column_names:
+            return float(data[self._weights_column_names].to_numpy().sum())
+        return len(data)
+
+    def _sample_without(
+        self, is_dropped: NDArray[np.bool_], *, stage: _ExclusionStage
+    ) -> SampleInfo:
+        """Describe the sample after `stage` excludes the masked rows of `self._data`."""
+        sample = self._sample
+        assert sample.retained_index is not None
+        kept = ~is_dropped
+        exclusions = sample.exclusions
+        return SampleInfo(
+            retained_index=sample.retained_index[kept],
+            excluded_positions=sample.excluded_positions.union(
+                self._data.index[is_dropped].tolist()
+            ),
+            n_rows=int(kept.sum()),
+            n_effective=self._effective_count(self._data.loc[kept]),
+            exclusions=replace(
+                exclusions,
+                **{stage: getattr(exclusions, stage) + int(is_dropped.sum())},
+            ),
+        )
+
+    def _drop(
+        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: _ExclusionStage
+    ) -> None:
+        """Drop the masked rows from `self._data` and count them under `stage`.
 
         `reason` completes the warning "{n} {reason} dropped from the model."
         """
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
+        self._sample = self._sample_without(is_dropped, stage=stage)
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
     def without_rows(self, rows: list[int]) -> ModelMatrix:
         """Return a shallow copy without ``rows``.
 
-        The copied object receives a new filtered data frame and ``na_index``;
-        its unchanged formula metadata remains shared with the original object.
-        An empty ``rows`` sequence returns this instance unchanged.
+        The copied object receives a new filtered data frame and a ``sample``
+        that counts ``rows`` as separation exclusions, the only estimator-level
+        filter; its unchanged formula metadata remains shared with the original
+        object. An empty ``rows`` sequence returns this instance unchanged.
         """
         if not rows:
             return self
         filtered = copy.copy(self)
         filtered._data = self._data.drop(index=rows)
-        filtered._na_index = self._na_index.union(rows)
+        filtered._sample = self._sample_without(
+            self._data.index.isin(rows), stage="separation"
+        )
         return filtered
 
     @property
@@ -347,9 +406,14 @@ class ModelMatrix:
         return self._model_spec
 
     @property
+    def sample(self) -> SampleInfo:
+        """The fitted row sample after every filtering stage, including ``without_rows``."""
+        return self._sample
+
+    @property
     def na_index(self) -> frozenset[int]:
         """Integer positions of dropped rows, including ``without_rows`` drops."""
-        return self._na_index
+        return self._sample.excluded_positions
 
 
 def create_model_matrix(
@@ -361,6 +425,8 @@ def create_model_matrix(
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
     context: int | Mapping[str, Any] = 0,
+    row_labels: pd.Index | None = None,
+    weights_type: WeightsTypeOptions | None = None,
 ) -> ModelMatrix:
     """
     Create a ModelMatrix from a formula and data.
@@ -399,6 +465,13 @@ def create_model_matrix(
         Additional context variables for formulaic during model matrix creation.
         Can be an integer (stack frame depth) or a dictionary of variables to
         make available in the formula environment (e.g., custom transformations).
+    row_labels : pd.Index or None, default=None
+        Labels identifying the rows of `data` in the caller's frame, recorded
+        as ``sample.retained_index`` for the fitted rows. Defaults to the index
+        of `data` before it is reset.
+    weights_type : {"aweights", "fweights"} or None, default=None
+        Interpretation of the weights column. Frequency weights count their
+        sum as ``sample.n_effective``; otherwise the row count is used.
 
     Returns
     -------
@@ -420,6 +493,10 @@ def create_model_matrix(
     ```
     """
     # Process input data
+    if row_labels is None:
+        row_labels = data.index
+    elif len(row_labels) != data.shape[0]:
+        raise ValueError("`row_labels` must contain one label per row of `data`.")
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
@@ -441,6 +518,8 @@ def create_model_matrix(
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
+        row_labels=row_labels,
+        weights_type=weights_type,
     )
 
 
