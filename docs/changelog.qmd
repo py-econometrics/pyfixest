@@ -71,6 +71,11 @@ Other things:
 - `lean=True` now discards the retained GLM working state so its design and
   working-response arrays are released with the other estimation matrices.
 
+### Documentation
+
+- The package docstring, README, and landing page now point agents at the
+  machine-readable documentation and the repository.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of
