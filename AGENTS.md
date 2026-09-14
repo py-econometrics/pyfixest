@@ -32,6 +32,10 @@ policy, and neither should skills or ad hoc prompts.
 | [`fixest-compatibility.md`](docs/developer/fixest-compatibility.md) | Intentional deviations from R `fixest` |
 | [`git-and-pr-style.md`](docs/developer/git-and-pr-style.md) | Base resolution, branch, commit, stack, and PR-body conventions |
 
+Before creating or editing GitHub issues, read the
+["Issues" section](docs/developer/git-and-pr-style.md#issues) in
+`docs/developer/git-and-pr-style.md`.
+
 ## Contributor workflow skills
 
 The skills under `.agents/skills/` are procedures shared by every coding tool. When a trigger applies, follow the `SKILL.md`. Skills apply the policy in `docs/developer/` and never restate it, so every rule has one home. A change flows plan → implement →
