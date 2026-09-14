@@ -302,6 +302,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Called internally before storage cleanup, while model_matrix,
         within_data, and observation_weights are available.
         """
+        require_retained(
+            self,
+            "get_performance",
+            "model_matrix",
+            "within_data",
+            "_u_hat",
+            "observation_weights",
+        )
         measures = performance_measures(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,

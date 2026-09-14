@@ -287,7 +287,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
-        require_retained(self, "first_stage", "_data", "within_data")
+        require_retained(self, "first_stage", "_data")
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -310,8 +310,7 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        cache = getattr(self, "_demean_cache", None)
-        cached_pre = cache.lookup_preconditioner.get(self._na_index) if cache else None
+        cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
@@ -329,10 +328,6 @@ class Feiv(Feols):
 
         # Ensure model1 is of type Feols
         if isinstance(model1, Feols):
-            model1._input_index = self._input_index
-            model1._sample_positions = self._sample_positions[
-                model1._sample_positions
-            ].copy()
             # Store the first stage coefficients
             self._pi_hat = model1._beta_hat
 
@@ -357,7 +352,7 @@ class Feiv(Feols):
         self.first_stage()
 
     def _clear_attributes(self) -> None:
-        """Apply the storage options to the retained first stage as well."""
+        """Apply the parent's retention policy to the retained first stage."""
         first_stage = getattr(self, "_model_1st_stage", None)
         if first_stage is not None:
             first_stage._store_data = self._store_data
@@ -523,11 +518,13 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
-        require_retained(self, "eff_F", "within_data", "observation_weights")
+        first_stage = self._model_1st_stage
+        require_retained(first_stage, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
-            self._model_1st_stage.vcov("hetero")
+            require_retained(first_stage, "eff_F", "_data")
+            first_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013
         # 1. Extract First Stage Coefficients and Variance-Covariance Matrix:
@@ -542,15 +539,15 @@ class Feiv(Feols):
 
         # Extract coefficients for the non-exogenous instruments
 
-        pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        pi_hat = np.array(first_stage.coef()[self._non_exo_instruments])
         iv_positions = [
             self._coefnames_z.index(instrument)
             for instrument in self._non_exo_instruments
         ]
-        Z = self._model_1st_stage.within_data.design[:, iv_positions]
+        Z = first_stage.within_data.design[:, iv_positions]
 
         # Q_zz = Z'WZ
-        observation_weights = self._model_1st_stage.observation_weights.values
+        observation_weights = first_stage.observation_weights.values
         Q_zz = (
             Z.T @ Z
             if observation_weights is None
@@ -558,7 +555,7 @@ class Feiv(Feols):
         )
 
         # Extract the robust variance-covariance matrix
-        vcv = self._model_1st_stage._vcov
+        vcv = first_stage._vcov
 
         # Map the instrument names to their indices in the parameter list
         # Number of rows/columns in vcv

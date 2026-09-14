@@ -23,10 +23,15 @@ from pyfixest.utils.utils import capture_context
 
 
 def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
-    """Convert input to pandas, preserving caller labels until model preparation."""
+    """Convert input data to pandas with a clean RangeIndex.
+
+    Reindexing is required because formulaic's model matrix starts from 0:N
+    and downstream `dropna()` calls would otherwise produce mis-aligned indices.
+    """
     data = _narwhals_to_pandas(config.data)
     if config.copy_data:
         data = data.copy()
+    data.reset_index(drop=True, inplace=True)
     return data
 
 
@@ -56,7 +61,7 @@ def run_estimation(
     context: Mapping[str, Any] = capture_context(config.context)
     run_full, run_split, splitvar = _split_plan(config)
 
-    fixest = FixestMulti(parsed=parsed)
+    fixest = FixestMulti(config=config, parsed=parsed, data=data, context=context)
 
     all_splits = build_all_splits(
         run_full=run_full,

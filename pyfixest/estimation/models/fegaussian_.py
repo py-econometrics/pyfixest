@@ -9,6 +9,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.performance_ import performance_measures
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -92,6 +93,13 @@ class Fegaussian(Feglm):
         be passed to the same performance_measures helper used for OLS.
         The original response comes from model_matrix for the overall R².
         """
+        require_retained(
+            self,
+            "get_performance",
+            "model_matrix",
+            "working_state",
+            "observation_weights",
+        )
         working_state = self.working_state
         measures = performance_measures(
             Y=self.model_matrix.dependent.to_numpy(),

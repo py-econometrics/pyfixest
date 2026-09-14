@@ -7,8 +7,6 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
-import gc
-import weakref
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -19,6 +17,7 @@ import pyfixest as pf
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     WithinIvData,
@@ -225,10 +224,6 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert model_matrix.na_index == frozenset({0, 1, 5})
     assert len(model_matrix.dependent) == fit._N_rows
     assert fit.n_separation_na == 2
-    assert fit._sample_positions.tolist() == [2, 3, 4]
-    expected_se = fit.se().copy()
-    fit.vcov("hetero", data=data)
-    np.testing.assert_allclose(fit.se(), expected_se, rtol=1e-12, atol=1e-12)
 
 
 def test_model_matrix_without_rows_returns_filtered_copy(
@@ -256,7 +251,7 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert len(model_matrix.dependent) == len(lifecycle_data)
 
 
-def test_multiple_estimation_releases_execution_caches(
+def test_multiple_estimation_shares_array_native_demean_cache(
     lifecycle_data: pd.DataFrame,
 ) -> None:
     """Multiple fits share one ordered array cache without DataFrame round trips."""
@@ -271,7 +266,14 @@ def test_multiple_estimation_releases_execution_caches(
     models = list(fit.all_fitted_models.values())
     assert len(models) == 2
 
-    assert all(not hasattr(model, "_demean_cache") for model in models)
+    demeaned_caches = [model._demean_cache.lookup_demeaned_data for model in models]
+    preconditioner_caches = [
+        model._demean_cache.lookup_preconditioner for model in models
+    ]
+    assert demeaned_caches[0] is demeaned_caches[1]
+    assert preconditioner_caches[0] is preconditioner_caches[1]
+    assert demeaned_caches[0]
+    assert all(isinstance(value, DemeanedData) for value in demeaned_caches[0].values())
     assert all(isinstance(model.within_data, WithinLinearData) for model in models)
 
 
@@ -385,43 +387,24 @@ def test_published_components_preserve_inputs(
     assert input_array.flags.writeable == writeable_before
 
 
-@pytest.mark.parametrize("multi_method", [None, "cfm1", "cfm2"])
+@pytest.mark.parametrize("multi_method", ["cfm1", "cfm2"])
 @pytest.mark.parametrize("store_data", [False, True])
 @pytest.mark.parametrize("lean", [False, True])
 def test_multi_quantile_children_follow_ols_retention(
-    lifecycle_data, multi_method, store_data, lean, monkeypatch
+    lifecycle_data, multi_method, store_data, lean
 ):
-    """Single/process fits complete objectives before OLS-style retention."""
-    from pyfixest.estimation.models.feols_ import Feols
-    from pyfixest.estimation.quantreg.quantreg_ import Quantreg
-
-    objectives = {}
-    clear = Feols._clear_attributes
-
-    def record_completed_objective(model):
-        if isinstance(model, Quantreg):
-            # Reading the objective must already be independent of residuals.
-            residuals = model._u_hat
-            del model._u_hat
-            try:
-                objectives[model._quantile] = model.objective_value
-            finally:
-                model._u_hat = residuals
-        clear(model)
-
-    monkeypatch.setattr(Feols, "_clear_attributes", record_completed_objective)
+    """Both process solvers apply the OLS storage policy to every child."""
     fit = pf.quantreg(
         "y ~ x",
         lifecycle_data,
-        quantile=[0.25, 0.5, 0.75] if multi_method else 0.5,
-        multi_method=multi_method or "cfm1",
+        quantile=[0.25, 0.5, 0.75],
+        multi_method=multi_method,
         seed=42,
         store_data=store_data,
         lean=lean,
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
-    for child in fit.to_list() if multi_method else [fit]:
-        assert child.objective_value == objectives[child._quantile]
+    for child in fit.to_list():
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
         if lean:
@@ -437,144 +420,243 @@ def test_multi_quantile_children_follow_ols_retention(
         )
 
 
-@pytest.mark.parametrize("lean", [False, True])
-@pytest.mark.parametrize(
-    "estimator,formula,kwargs",
-    [
-        (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
-        (
-            pf.feols,
-            "y ~ sw(x, x2) | fe",
-            {"weights": "weight", "weights_type": "fweights"},
-        ),
-        (pf.fepois, "count ~ x | fe", {"offset": "x2", "weights": "weight"}),
-        (pf.quantreg, "y ~ x", {"quantile": [0.3, 0.7], "multi_method": "cfm1"}),
-    ],
-)
-def test_recursive_component_retention(
-    lifecycle_data, lean, estimator, formula, kwargs, monkeypatch
-):
-    from pyfixest.estimation.models.feols_ import Feols
-
-    data = lifecycle_data.assign(count=np.tile([1, 3, 2, 4], 6))
-    data.loc[3, "x"] = np.nan
-    data.index = pd.Index([f"row-{i}" for i in range(len(data))])
-    omitted = []
-    clear = Feols._clear_attributes
-
-    def record_storage(model):
-        if hasattr(model, "_data"):
-            omitted.extend(
-                [weakref.ref(model._data), weakref.ref(model.model_matrix._data)]
-            )
-        if lean:
-            component = getattr(
-                model, "within_data", getattr(model, "working_state", None)
-            )
-            if component is not None:
-                from dataclasses import fields
-
-                omitted.extend(
-                    weakref.ref(getattr(component, field.name))
-                    for field in fields(component)
-                )
-        clear(model)
-
-    # The unrelated context value must not keep an omitted input frame alive.
-    monkeypatch.setattr(Feols, "_clear_attributes", record_storage)
-    result = estimator(
-        formula,
-        data,
-        store_data=False,
-        lean=lean,
-        context={"unrelated_data": data},
-        **kwargs,
-    )
-    models = result.to_list() if isinstance(result, FixestMulti) else [result]
-    if isinstance(result, FixestMulti):
-        # The container must not own the input frame or captured scope either.
-        assert not any(
-            hasattr(result, name) for name in ("_config", "_data", "_context")
-        )
-    for model in list(models):
-        if model._is_iv:
-            models.append(model._model_1st_stage)
-    for model in models:
-        assert not hasattr(model, "_data")
-        assert not hasattr(model, "model_matrix")
-        assert not hasattr(model, "_demean_cache")
-        assert hasattr(model, "observation_weights") is (not lean)
-        assert "unrelated_data" not in getattr(model, "_context", {})
-        assert np.isfinite(model.coef()).all()
-        if not lean:
-            assert len(model.resid()) == model._N_rows
-            expected_se = model.se().copy()
-            vcov = (
-                {model._vcov_type_detail: model._clustervar[0]}
-                if model._is_clustered
-                else model._vcov_type_detail
-            )
-            model.vcov(vcov, data=data)
-            np.testing.assert_allclose(model.se(), expected_se, rtol=1e-12, atol=1e-12)
-    gc.collect()
-    assert all(ref() is None for ref in omitted)
-
-
-@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 @pytest.mark.parametrize("store_data", [False, True])
-@pytest.mark.parametrize("index_kind", ["range", "permuted", "strings", "duplicates"])
-def test_stripped_covariance_aligns_supplemental_rows(
-    lifecycle_data, weights_type, store_data, index_kind
-):
-    data = lifecycle_data.copy()
-    data.loc[3, "x"] = np.nan
-    if index_kind == "permuted":
-        data = data.sample(frac=1, random_state=3)
-    elif index_kind == "strings":
-        data.index = pd.Index([f"row-{i}" for i in range(len(data))])
-    elif index_kind == "duplicates":
-        data.index = pd.Index(np.arange(len(data)) // 2)
-    original_index = data.index.copy()
+@pytest.mark.parametrize("lean", [False, True])
+def test_retention_options_remove_exact_legacy_attributes(
+    lifecycle_data: pd.DataFrame, store_data: bool, lean: bool
+) -> None:
+    """Each storage combination follows the pre-existing deletion table."""
     fit = pf.feols(
         "y ~ x | fe",
-        data,
-        weights="weight",
-        weights_type=weights_type,
+        lifecycle_data,
+        vcov={"CRV1": "fe"},
         store_data=store_data,
-        copy_data=False,
+        lean=lean,
     )
-    for vcov in ["iid", "hetero", {"CRV1": "fe"}]:
-        expected = pf.feols(
-            "y ~ x | fe", data, weights="weight", weights_type=weights_type, vcov=vcov
+
+    expected_removed = set()
+    if not store_data:
+        expected_removed.update({"_data", "model_matrix"})
+    if lean:
+        expected_removed.update(
+            {
+                "_data",
+                "model_matrix",
+                "_cluster_df",
+                "_tXZ",
+                "_tZy",
+                "_tZX",
+                "_scores",
+                "_tZZinv",
+                "_u_hat",
+                "_Y_hat_link",
+                "_Y_hat_response",
+                "within_data",
+                "observation_weights",
+            }
         )
-        fit.vcov(vcov, data=data)
-        np.testing.assert_allclose(
-            fit.se(),
-            expected.se(),
-            rtol=1e-12,
-            atol=1e-12,
-            err_msg="aligned supplemental covariance",
-        )
-    fit.predict()
-    fit.vcov("hetero")
-    pd.testing.assert_index_equal(data.index, original_index)
+
+    checked = {
+        "_data",
+        "model_matrix",
+        "_cluster_df",
+        "_tXZ",
+        "_tZy",
+        "_tZX",
+        "_scores",
+        "_tZZinv",
+        "_u_hat",
+        "_Y_hat_link",
+        "_Y_hat_response",
+        "within_data",
+        "observation_weights",
+    }
+    for attribute in checked:
+        assert hasattr(fit, attribute) is (attribute not in expected_removed), attribute
+
+    glm = pf.feglm(
+        "y ~ x",
+        lifecycle_data,
+        family="gaussian",
+        store_data=store_data,
+        lean=lean,
+    )
+    assert hasattr(glm, "working_state") is (not lean)
 
 
-def test_supplemental_hac_and_split_samples(lifecycle_data):
-    data = lifecycle_data.assign(
-        time=np.arange(len(lifecycle_data)), sample=np.tile([0, 1], 12)
+@pytest.mark.parametrize("store_data", [False, True])
+@pytest.mark.parametrize("lean", [False, True])
+def test_iv_first_stage_follows_parent_retention(
+    lifecycle_data: pd.DataFrame, store_data: bool, lean: bool
+) -> None:
+    """IV cleanup keeps completed diagnostics while stripping parent and child."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+        store_data=store_data,
+        lean=lean,
     )
-    data.loc[2, "x"] = np.nan
-    data = data.sample(frac=1, random_state=4)
-    options = {"vcov": "NW", "vcov_kwargs": {"time_id": "time", "lag": 1}}
-    fits = pf.feols("y ~ x", data, split="sample", store_data=False)
-    expected = pf.feols("y ~ x", data, split="sample", **options)
-    for fit, reference in zip(fits.to_list(), expected.to_list(), strict=True):
-        fit.vcov(**options, data=data)
+    first_stage = fit._model_1st_stage
+
+    for model in (fit, first_stage):
+        assert hasattr(model, "_data") is (store_data and not lean)
+        assert hasattr(model, "model_matrix") is (store_data and not lean)
+        assert hasattr(model, "within_data") is (not lean)
+        assert hasattr(model, "observation_weights") is (not lean)
+        assert np.isfinite(model.coef()).all()
+        assert np.isfinite(model.se()).all()
+
+    retained_f = fit._f_stat_1st_stage
+    fit.IV_weakness_test(["f_stat"])
+    np.testing.assert_allclose(
+        fit._f_stat_1st_stage,
+        retained_f,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="IV first-stage F statistic changed after retained-state cleanup",
+    )
+
+
+def test_store_data_false_retains_robust_effective_f(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    reference = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+    )
+    fit = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+        store_data=False,
+    )
+
+    reference.eff_F()
+    fit.eff_F()
+
+    np.testing.assert_allclose(
+        fit._model_1st_stage.coef(),
+        reference._model_1st_stage.coef(),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained first-stage coefficients",
+    )
+    np.testing.assert_allclose(
+        fit._model_1st_stage.se(),
+        reference._model_1st_stage.se(),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained first-stage inference",
+    )
+    np.testing.assert_allclose(
+        fit._f_stat_1st_stage,
+        reference._f_stat_1st_stage,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained first-stage F statistic",
+    )
+    np.testing.assert_allclose(
+        fit._eff_F,
+        reference._eff_F,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed robust effective-F",
+    )
+
+
+@pytest.mark.parametrize(
+    "estimator,kwargs",
+    [
+        (pf.feols, {}),
+        (pf.fepois, {}),
+        (pf.feglm, {"family": "gaussian"}),
+        (pf.quantreg, {}),
+    ],
+)
+def test_lean_prediction_on_new_data_without_fixed_effects(
+    lifecycle_data: pd.DataFrame, estimator, kwargs
+) -> None:
+    data = lifecycle_data.assign(y_count=np.tile([1, 2, 3, 4], 6))
+    outcome = "y_count" if estimator is pf.fepois else "y"
+    reference = estimator(f"{outcome} ~ x", data, **kwargs)
+    fit = estimator(f"{outcome} ~ x", data, lean=True, **kwargs)
+
+    expected = reference.predict(newdata=data.iloc[:3])
+    prediction = fit.predict(newdata=data.iloc[:3])
+
+    np.testing.assert_allclose(
+        prediction,
+        expected,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="lean cleanup changed no-FE new-data predictions",
+    )
+
+
+def test_quantile_objective_remains_lazy_when_residuals_are_retained(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    reference = pf.quantreg("y ~ x", lifecycle_data, quantile=0.35)
+    fit = pf.quantreg("y ~ x", lifecycle_data, quantile=0.35, store_data=False)
+
+    assert not hasattr(fit, "_objective_value")
+    np.testing.assert_allclose(
+        fit.objective_value,
+        reference.objective_value,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed the lazy quantile objective",
+    )
+
+
+def test_store_data_false_preserves_no_fe_post_estimation(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Methods needing only retained arrays stay available without raw data."""
+    reference = pf.feols("y ~ x + x2", lifecycle_data)
+    fit = pf.feols("y ~ x + x2", lifecycle_data, store_data=False)
+
+    np.testing.assert_allclose(
+        fit.coef(),
+        reference.coef(),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained coefficients",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        reference.se(),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained inference",
+    )
+    np.testing.assert_allclose(
+        fit.resid(),
+        reference.resid(),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed retained residuals",
+    )
+
+    reference_boot = reference.wildboottest(param="x", reps=99, seed=42)
+    stripped_boot = fit.wildboottest(param="x", reps=99, seed=42)
+    np.testing.assert_allclose(
+        stripped_boot[["t value", "Pr(>|t|)"]].to_numpy(dtype=float),
+        reference_boot[["t value", "Pr(>|t|)"]].to_numpy(dtype=float),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed no-FE heteroskedastic bootstrap results",
+    )
+
+    reference_decomposition = reference.decompose(decomp_var="x", only_coef=True)
+    stripped_decomposition = fit.decompose(decomp_var="x", only_coef=True)
+    for name, expected in reference_decomposition.results.absolute.items():
         np.testing.assert_allclose(
-            fit.se(),
-            reference.se(),
+            stripped_decomposition.results.absolute[name],
+            expected,
             rtol=1e-12,
             atol=1e-12,
-            err_msg="split HAC sample alignment",
+            err_msg=f"store_data=False changed decomposition quantity {name}",
         )

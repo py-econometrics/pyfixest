@@ -58,166 +58,207 @@ def test_cluster_na():
 
 
 @pytest.mark.parametrize(
-    "estimator,fml,storage,operation,match",
+    "estimator,fml,estimator_kwargs,storage,operation,match",
     [
-        (
-            feols,
-            "Y ~ X1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov({"CRV1": "f2"}),
-            "vcov requires estimation data",
-        ),
-        (
-            feols,
-            "Y ~ X1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov(["f1"]),
-            "vcov requires estimation data for a column list",
-        ),
-        (
-            feols,
-            "Y ~ X1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov("NW", vcov_kwargs={"time_id": "f2", "lag": 1}),
-            "vcov requires estimation data",
-        ),
-        (
-            feols,
-            "Y ~ X1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov(
-                {"CRV1": "f1"}, data=data.dropna().reset_index(drop=True)
-            ),
-            "estimation data unchanged",
-        ),
-        (
-            feols,
-            "Y ~ X1 | f1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov({"CRV3": "f1"}, data=data),
-            r"vcov\(CRV3\) requires retained _data",
-        ),
+        (feols, "Y ~ X1", {}, {"lean": True}, lambda fit, data: fit.resid(), "resid"),
         (
             fepois,
             "Y ~ X1",
-            {"store_data": False},
-            lambda fit, data: fit.vcov({"CRV3": "f1"}, data=data),
-            r"vcov\(CRV3\) requires retained _data",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.resid(),
+            "resid",
         ),
         (
             feols,
-            "Y ~ X1 | f1",
-            {"store_data": False},
-            lambda fit, data: fit.fixef(),
-            "fixef requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 | f1",
-            {"store_data": False},
-            lambda fit, data: fit.predict(newdata=data.head()),
-            "fixef requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"store_data": False},
-            lambda fit, data: fit.ritest("X1", reps=2),
-            "ritest requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"store_data": False},
-            lambda fit, data: fit.wildboottest(param="X1", reps=2),
-            "wildboottest requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"store_data": False},
-            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
-            "decompose requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"store_data": False},
-            lambda fit, data: fit.ccv(treatment="X1", cluster="f1"),
-            "ccv requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
+            "Y ~ X1",
+            {},
             {"lean": True},
             lambda fit, data: fit.predict(),
-            "predict requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"lean": True},
-            lambda fit, data: fit.update(np.ones((1, 3)), np.ones(1)),
-            "update requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"lean": True},
-            lambda fit, data: fit.resid(),
-            "resid requires retained",
-        ),
-        (
-            feols,
-            "Y ~ X1 + X2",
-            {"lean": True},
-            lambda fit, data: fit.vcov("iid"),
-            "vcov requires retained",
+            "predict",
         ),
         (
             fepois,
             "Y ~ X1",
+            {},
             {"lean": True},
-            lambda fit, data: fit.resid(),
-            "resid requires retained",
+            lambda fit, data: fit.predict(),
+            "predict",
         ),
         (
             feols,
-            "Y ~ X1 + [X2 ~ Z1] | f1",
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.predict(newdata=data.head()),
+            "predict",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
             {"lean": True},
+            lambda fit, data: fit.predict(newdata=data.head(), interval="prediction"),
+            "resid",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.vcov("iid", data=data),
+            "vcov",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.get_performance(),
+            "get_performance",
+        ),
+        (
+            pf.feglm,
+            "Y ~ X1",
+            {"family": "gaussian"},
+            {"store_data": False},
+            lambda fit, data: fit.get_performance(),
+            "get_performance",
+        ),
+        (
+            feols,
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.fixef(),
+            "fixef",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.wildboottest(param="X1", cluster="f1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.wildboottest(param="X1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.ritest("X1", reps=2),
+            "ritest",
+        ),
+        (
+            feols,
+            "Y ~ X1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.ccv(treatment="X1", cluster="f1"),
+            "ccv",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
+            "decompose",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.decompose(decomp_var="X1", only_coef=True),
+            "decompose",
+        ),
+        (
+            feols,
+            "Y ~ X1 + X2",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.update(np.ones((1, 3)), np.ones(1)),
+            "update",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1]",
+            {},
+            {"store_data": False},
             lambda fit, data: fit.first_stage(),
-            "first_stage requires retained",
+            "first_stage",
         ),
         (
             feols,
-            "Y ~ X1 + [X2 ~ Z1] | f1",
+            "Y ~ X1 + [X2 ~ Z1]",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.eff_F(),
+            "eff_F",
+        ),
+        (
+            feols,
+            "Y ~ X1 + [X2 ~ Z1]",
+            {"vcov": "hetero"},
             {"lean": True},
             lambda fit, data: fit.eff_F(),
-            "eff_F requires retained",
+            "eff_F",
+        ),
+        (
+            pf.quantreg,
+            "Y ~ X1",
+            {},
+            {"lean": True},
+            lambda fit, data: fit.objective_value,
+            "objective_value",
         ),
     ],
 )
-def test_missing_model_data_errors(estimator, fml, storage, operation, match):
-    """Methods that need attributes dropped by store_data/lean name the remedy."""
+def test_missing_model_data_errors(
+    estimator, fml, estimator_kwargs, storage, operation, match
+):
+    """Public operations identify state deliberately omitted after estimation."""
     data = get_data(model="Fepois") if estimator is fepois else get_data()
-    fit = estimator(fml, data=data, **storage)
-    with pytest.raises(MissingModelDataError, match=match):
+    fit = estimator(fml, data=data, **estimator_kwargs, **storage)
+    remedy = (
+        "Refit with lean=False"
+        if storage.get("lean") and storage.get("store_data", True)
+        else "Refit with store_data=True and lean=False"
+    )
+    with pytest.raises(
+        MissingModelDataError,
+        match=rf"{match} requires retained model state.*{remedy}",
+    ):
         operation(fit, data)
 
 
-@pytest.mark.parametrize("change", ["shuffle", "reset_index", "subset"])
-def test_supplemental_covariance_rejects_changed_frame(change):
-    """Supplemental covariance accepts only the full original row layout."""
-    data = get_data().iloc[:100].copy()
-    data.index = pd.Index([f"row-{i}" for i in range(len(data))])
-    fit = feols("Y ~ X1", data, store_data=False)
-    changed = {
-        "shuffle": data.sample(frac=1, random_state=2),
-        "reset_index": data.reset_index(drop=True),
-        "subset": data.iloc[:-1],
-    }[change]
-    with pytest.raises(MissingModelDataError, match="estimation data unchanged"):
-        fit.vcov({"CRV1": "f1"}, data=changed)
+def test_missing_unrelated_to_retention_remains_attribute_error():
+    """The retention guard does not relabel independently corrupted model state."""
+    fit = feols("Y ~ X1", data=get_data())
+    del fit._data
+    with pytest.raises(AttributeError, match="_data"):
+        fit.vcov("iid")
+
+
+def test_glm_resid_validation_precedes_retention_error():
+    fit = fepois("Y ~ X1", data=get_data(model="Fepois"), lean=True)
+    with pytest.raises(ValueError, match="type must be one of"):
+        fit.resid(type="invalid")
+
+
+def test_weighted_ritest_unsupported_precedes_retention_error():
+    fit = feols("Y ~ X1", data=get_data(), weights="weights", store_data=False)
+    with pytest.raises(NotImplementedError, match="Weights are not supported"):
+        fit.ritest("X1", reps=2)
 
 
 def test_error_hc23_fe():

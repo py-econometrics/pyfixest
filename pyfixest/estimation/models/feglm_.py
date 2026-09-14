@@ -233,6 +233,7 @@ class Feglm(Feols):
         Unlike linear models, GLMs store this coefficient-ordered design in
         working_state. It is not multiplied by square-root working weights.
         """
+        require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
     def _predict_in_sample(self, *, type: str) -> np.ndarray:
@@ -289,12 +290,12 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        if type not in {"response", "working"}:
+            raise ValueError("type must be one of 'response' or 'working'.")
         require_retained(self, "resid", "working_state")
         if type == "response":
             return self.working_state.response_residuals.flatten()
-        if type == "working":
-            return self.working_state.working_residuals.flatten()
-        raise ValueError("type must be one of 'response' or 'working'.")
+        return self.working_state.working_residuals.flatten()
 
     def residualize(
         self,

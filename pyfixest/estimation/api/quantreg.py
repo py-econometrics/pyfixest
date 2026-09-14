@@ -131,25 +131,22 @@ def quantreg(
 
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
-        If False, preparation may reuse input storage to reduce copying.
-        The caller's index is preserved with either setting.
+        If set to False, the data is not copied, which can save memory but
+        may lead to unintended changes in the input data outside of `quantreg`.
 
     store_data : bool, optional
         Whether to store the data in the model object, by default True.
         If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. Numerical components and formula
-        metadata are retained, so coefficients, `predict()`, and iid or
-        heteroskedastic `vcov()` updates stay available. Cluster-robust and HAC
-        `vcov()` updates then need the original data passed as `data=`, and
-        methods that need the stored data raise `MissingModelDataError`. The
-        option applies to every model of a multiple estimation.
+        improve performance and save memory. However, it will no longer be possible
+        to access the data via the `data` attribute of the model object. This has
+        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
+        or `vcov()`. Such methods raise a `MissingModelDataError`.
 
-    lean : bool, optional
-        False by default. If True, the stored data and all observation-sized
-        components are removed from the returned result: this saves memory but
-        blocks the methods that need them, which raise `MissingModelDataError`.
-        Coefficients, inference, sample counts, and completed performance
-        measures are retained. It is recommended to use the argument vcov
+    lean: bool, optional
+        False by default. If True, then all large objects are removed from the
+        returned result: this will save memory but will block the possibility
+        to use many methods, which raise `MissingModelDataError` when required
+        attributes were removed. It is recommended to use the argument vcov
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
