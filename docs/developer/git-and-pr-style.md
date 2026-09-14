@@ -27,6 +27,14 @@ position in a stack.
 
 Examples: `feat/oriv`, `fix/cluster-df`, `docs/agent-workflow`.
 
+## Change scope
+
+Define the smallest observable outcome that satisfies the request. Include
+adjacent fixes or refactors only when requested, explicitly accepted, or needed
+for that outcome. Discovering a pre-existing defect does not make it a
+prerequisite; assign independent work to a follow-up issue. A new abstraction
+does not itself authorize broader behavior.
+
 ## Stacks
 
 Use one PR for a small cohesive change. Prefer a GitHub stacked PR when the
