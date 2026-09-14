@@ -189,11 +189,13 @@ def fepois(
     -----
     `Fepois` inherits from
     [Feglm](/reference/estimation.models.feglm_.Feglm.qmd), which inherits from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd). A Poisson fit
-    therefore supports the same post-estimation methods as an OLS fit, among
-    them `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()`, `fixef()`,
-    `wildboottest()` and `ritest()`. See the Post-Estimation Methods section of
-    the function reference for the full list.
+    [Feols](/reference/estimation.models.feols_.Feols.qmd). A Poisson fit shares
+    common result accessors such as `tidy()`, `coef()`, and `confint()`, and
+    supports methods including `vcov()`, `predict()`, `fixef()`, and `ritest()`
+    when their required model state is retained. `wildboottest()` is not
+    supported for Poisson regression. See
+    [Standard Errors & Inference](/tutorials/standard-errors.qmd) for supported
+    inference combinations.
 
     `predict()` does not support `se_fit=True` for Poisson models.
 

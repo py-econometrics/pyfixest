@@ -71,6 +71,14 @@ Other things:
 - `lean=True` now discards the retained GLM working state so its design and
   working-response arrays are released with the other estimation matrices.
 
+### Documentation
+
+- The Standard Errors & Inference tutorial now documents IID,
+  heteroskedasticity-robust, clustered, HAC, bootstrap, and randomization-based
+  inference with executed examples and explicit support limits, and records
+  which fits `ritest()` supports. The `fepois` docstring no longer claims
+  wild-bootstrap support.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of
