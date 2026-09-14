@@ -186,7 +186,7 @@ def _coefficient_evalues(
         model._tstat**2,
         dfn=1,
         dfd=model._df_t,
-        nobs=model._N,
+        nobs=model.sample.n_effective,
         mixture_precision=mixture_precision,
     )
     return pd.Series(values, index=model._coefnames, name="e_value")
@@ -231,7 +231,7 @@ def _confint(
     critical_value = _savi_confidence_radius(
         alpha=alpha,
         mixture_precision=mixture_precision,
-        nobs=model._N,
+        nobs=model.sample.n_effective,
         dfd=model._df_t,
     )
     standard_errors = model._se[coef_indices]

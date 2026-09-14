@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
         ObservationWeights,
+        SampleInfo,
         WithinLinearData,
     )
 from pyfixest.estimation.internals.literals import (
@@ -140,6 +141,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
     observation_weights: "ObservationWeights"
+    sample: "SampleInfo"
     within_data: "WithinLinearData"
     _coefnames: list[str]
     _method: str
@@ -148,8 +150,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _has_weights: bool
     _is_iv: bool
     _k_fe: pd.Series
-    _N: int | float
-    _N_rows: int
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
@@ -315,7 +315,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             Y_within=self.within_data.response,
             residuals=self._u_hat,
             weights=self.observation_weights.values,
-            N=self._N,
+            N=self.sample.n_effective,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self._drop_intercept,

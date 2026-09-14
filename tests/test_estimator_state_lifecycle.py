@@ -7,6 +7,7 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import FrozenInstanceError
 
 import numpy as np
@@ -19,7 +20,9 @@ from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_m
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
+    ExclusionCounts,
     ObservationWeights,
+    SampleInfo,
     WithinIvData,
     WithinLinearData,
 )
@@ -88,7 +91,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit.observation_weights.values, weights)
     assert fit.observation_weights.weights_type == weights_type
-    assert expected_n == fit._N
+    assert expected_n == fit.sample.n_effective
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(
         lifecycle_data["fe"]
@@ -190,8 +193,8 @@ def test_unweighted_effective_n_remains_integer_for_prediction_errors(
     """An integer physical row count remains usable by prediction allocation."""
     fit = pf.feols("y ~ x", data=lifecycle_data, vcov="iid")
 
-    assert isinstance(fit._N, int)
-    assert isinstance(fit.observation_weights.n_effective, int)
+    assert isinstance(fit.sample.n_effective, int)
+    assert fit.sample.n_rows == len(lifecycle_data)
     assert fit.predict(se_fit=True).shape == (len(lifecycle_data),)
 
 
@@ -222,20 +225,27 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert model_matrix.fixed_effects.index.equals(fit._data.index)
     # Row 5 is a formula-stage singleton; rows 0 and 1 are separated.
     assert model_matrix.na_index == frozenset({0, 1, 5})
-    assert len(model_matrix.dependent) == fit._N_rows
-    assert fit.n_separation_na == 2
+    assert len(model_matrix.dependent) == fit.sample.n_rows
+    assert fit.sample.exclusions == ExclusionCounts(
+        missing=0, singleton=1, separation=2
+    )
+    assert fit.sample is model_matrix.sample
 
 
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 def test_model_matrix_without_rows_returns_filtered_copy(
-    lifecycle_data: pd.DataFrame,
+    lifecycle_data: pd.DataFrame, weights_type: str
 ) -> None:
     """Estimator-level row filters yield a new ModelMatrix and keep the source."""
+    row_labels = pd.Index(range(100, 100 + len(lifecycle_data)))
     model_matrix = create_model_matrix(
         formula=Formula.parse("y ~ x | fe")[0],
-        data=lifecycle_data.copy(),
+        data=lifecycle_data.set_axis(row_labels),
         weights="weight",
+        weights_type=weights_type,
     )
     kept_index = model_matrix.dependent.index.drop([0, 5])
+    source_sample = model_matrix.sample
 
     filtered = model_matrix.without_rows([0, 5])
 
@@ -249,6 +259,22 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert filtered.instruments is None
     assert filtered.offset is None
     assert len(model_matrix.dependent) == len(lifecycle_data)
+
+    # The source keeps its sample; the copy counts the rows as separation.
+    assert model_matrix.sample is source_sample
+    assert source_sample.exclusions == ExclusionCounts()
+    assert source_sample.retained_index.equals(row_labels)
+    assert filtered.sample.exclusions == ExclusionCounts(separation=2)
+    assert filtered.sample.excluded_positions == frozenset({0, 5})
+    assert filtered.sample.n_rows == len(lifecycle_data) - 2
+    assert filtered.sample.retained_index.equals(row_labels.drop([100, 105]))
+    kept_weights = lifecycle_data["weight"].drop([0, 5])
+    if weights_type == "fweights":
+        assert source_sample.n_effective == lifecycle_data["weight"].sum()
+        assert filtered.sample.n_effective == kept_weights.sum()
+    else:
+        assert source_sample.n_effective == len(lifecycle_data)
+        assert filtered.sample.n_effective == filtered.sample.n_rows
 
 
 def test_multiple_estimation_shares_array_native_demean_cache(
@@ -319,7 +345,7 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit._N))
+    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit.sample.n_effective))
     np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
     if fit._has_fixef:
         assert observation_weights is not None
@@ -446,6 +472,14 @@ def test_iv_first_stage_follows_parent_retention(
         assert hasattr(model, "observation_weights") is (not lean)
         assert np.isfinite(model.coef()).all()
         assert np.isfinite(model.se()).all()
+        # Counts and exclusions survive every storage option; only the
+        # observation-sized row labels are dropped by lean cleanup.
+        assert model.sample.n_rows == len(lifecycle_data)
+        assert model.sample.exclusions == ExclusionCounts()
+        if lean:
+            assert model.sample.retained_index is None
+        else:
+            assert model.sample.retained_index.equals(lifecycle_data.index)
 
     retained_f = fit._f_stat_1st_stage
     fit.IV_weakness_test(["f_stat"])
@@ -540,4 +574,101 @@ def test_store_data_false_preserves_no_fe_post_estimation(
             rtol=1e-12,
             atol=1e-12,
             err_msg=f"store_data=False changed decomposition quantity {name}",
+        )
+
+
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs,expected_separation",
+    [
+        (pf.feols, "y ~ x | fe", {}, 0),
+        (pf.feols, "y ~ x | fe", {"weights": "weight", "weights_type": "fweights"}, 0),
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {}, 0),
+        (pf.feols, "y ~ csw(x, x2) | fe", {}, 0),
+        (pf.fepois, "count ~ x | fe", {"separation_check": ["fe"]}, 6),
+        (pf.feglm, "binary ~ x | fe", {"family": "logit"}, 0),
+        (pf.quantreg, "y ~ x", {"quantile": 0.5}, 0),
+    ],
+)
+def test_sample_info_counts_exclusions_by_stage(
+    lifecycle_data, estimator, formula, kwargs, expected_separation
+):
+    """Every estimator reports its final row sample and the stage of each exclusion."""
+    data = lifecycle_data.assign(
+        count=np.tile([1, 3, 2, 4], 6), binary=np.tile([0, 1], 12)
+    )
+    data.loc[1, "x"] = np.nan  # formula missing-value handling
+    data.loc[1, "fe"] = "solo"  # would be a singleton, but is already missing
+    data.loc[2, "x"] = np.inf  # nonfinite filter
+    data.loc[[2, 4], "fe"] = "pair"  # row 4 becomes a singleton once 2 is dropped
+    data.loc[3, "fe"] = "solo"  # singleton fixed-effect level
+    data.loc[data["fe"] == "b", "count"] = 0  # level b is separated for fepois
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = estimator(formula, data, **kwargs)
+    models = result.to_list() if isinstance(result, FixestMulti) else [result]
+    uses_fe = "| fe" in formula
+    expected_exclusions = ExclusionCounts(
+        missing=1,
+        nonfinite=1,
+        singleton=2 * int(uses_fe),
+        separation=expected_separation,
+    )
+    expected_index = data.index.drop([1, 2] + ([3, 4] if uses_fe else []))
+    if expected_separation:
+        expected_index = expected_index.drop(
+            data.index[(data["fe"] == "b") & (data["count"] == 0)]
+        )
+    for model in models:
+        sample = model.sample
+        assert isinstance(sample, SampleInfo)
+        assert sample is model.model_matrix.sample
+        assert sample.exclusions == expected_exclusions
+        assert sample.exclusions.total == len(sample.excluded_positions)
+        assert sample.n_rows == len(data) - expected_exclusions.total
+        assert sample.n_rows == len(model.resid())
+        assert sample.retained_index.equals(expected_index)
+        assert set(sample.excluded_positions) == set(
+            data.index.difference(expected_index)
+        )
+        if kwargs.get("weights_type") == "fweights":
+            # Singletons are physical rows; the effective count sums weights.
+            assert sample.n_effective == data.loc[expected_index, "weight"].sum()
+            assert isinstance(sample.n_effective, float)
+        else:
+            assert sample.n_effective == sample.n_rows
+            assert isinstance(sample.n_effective, int)
+        if model._is_iv:
+            # The first stage is refit on the retained rows: it owns a sample
+            # with no exclusions of its own and the parent's row labels.
+            first_stage = model._model_1st_stage.sample
+            assert first_stage is not sample
+            assert first_stage.exclusions == ExclusionCounts()
+            assert first_stage.n_rows == sample.n_rows
+            assert first_stage.retained_index.equals(sample.retained_index)
+    assert len({id(model.sample) for model in models}) == len(models)
+
+
+def test_split_samples_keep_full_frame_identities(lifecycle_data: pd.DataFrame):
+    """A split selects each child's rows; only formula filters count as exclusions."""
+    data = lifecycle_data.copy()
+    data.loc[7, "x"] = np.nan
+    fit = pf.feols("y ~ x", data, split="fe")
+    for model in fit.to_list():
+        level = model._sample_split_value
+        population = data.index[data["fe"] == level]
+        expected_index = population.drop(7, errors="ignore")
+        sample = model.sample
+        assert sample.retained_index.equals(expected_index)
+        assert sample.n_rows == len(expected_index)
+        assert sample.exclusions == ExclusionCounts(missing=int(level == "b"))
+        # Excluded positions are local to the child's input frame.
+        assert sample.excluded_positions == frozenset(
+            np.flatnonzero(population == 7).tolist()
+        )
+        np.testing.assert_allclose(
+            model.resid(),
+            data.loc[expected_index, "y"] - model.predict(),
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg="retained_index does not align residuals with the input rows",
         )

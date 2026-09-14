@@ -32,7 +32,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
     )
     res_crv1 = fit2.tidy()
 
-    _N = fit1._N
+    _N = fit1.sample.n_effective
     _k = fit1._k
 
     k_adj = False
@@ -85,7 +85,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
 
     res_crv3 = fit1.tidy()
 
-    _N = fit1._N
+    _N = fit1.sample.n_effective
     _k = fit1._k
 
     k_adj = False

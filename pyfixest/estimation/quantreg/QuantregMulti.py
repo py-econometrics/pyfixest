@@ -97,7 +97,7 @@ class QuantregMulti:
         X = self.all_quantregs[q[q_median_idx]].within_data.design
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
         hessian = X.T @ X
-        N = self.all_quantregs[q[q_median_idx]]._N
+        N = self.all_quantregs[q[q_median_idx]].sample.n_effective
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)
 
         # fit first quantile regression using "pfn"

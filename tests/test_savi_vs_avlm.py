@@ -73,7 +73,9 @@ def test_savi_coefficient_inference_matches_avlm(
     fit_ssc = ssc(k_adj=False) if vcov in ("HC2", "HC3") else ssc()
     fit = feols(formula, savi_data, vcov=vcov, ssc=fit_ssc)
     if mixture_precision == "optimal":
-        mixture_precision = pf.optimal_mixture_precision(fit._N, fit._k, alpha)
+        mixture_precision = pf.optimal_mixture_precision(
+            fit.sample.n_effective, fit._k, alpha
+        )
 
     r_vcov = ro.NULL if vcov == "iid" else vcov
     r_results = _R_AVLM_RESULTS(

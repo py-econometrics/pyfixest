@@ -80,7 +80,7 @@ class Fegaussian(Feglm):
         return vcov_iid_ols(
             residuals=self.working_state.working_residuals,
             bread=self._bread,
-            N=self._N,
+            N=self.sample.n_effective,
             weights=self.observation_weights.values,
         )
 
@@ -106,7 +106,7 @@ class Fegaussian(Feglm):
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
             weights=self.observation_weights.values,
-            N=self._N,
+            N=self.sample.n_effective,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self._drop_intercept,

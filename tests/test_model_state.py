@@ -16,62 +16,35 @@ from pyfixest.estimation.internals.model_state import (
 
 
 def test_observation_weights_unweighted_fast_path() -> None:
-    weights = ObservationWeights.unweighted(n_rows=4)
+    weights = ObservationWeights.unweighted()
 
     assert weights.values is None
     assert weights.weights_type is None
-    assert weights.n_rows == 4
-    assert weights.n_effective == 4
-    assert isinstance(weights.n_effective, int)
     assert not weights.is_weighted
     assert not hasattr(weights, "__dict__")
+    assert not hasattr(weights, "n_rows")
+    assert not hasattr(weights, "n_effective")
 
 
-@pytest.mark.parametrize(
-    ("weights_type", "expected_n"), [("aweights", 3.0), ("fweights", 6.0)]
-)
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 @pytest.mark.parametrize("input_writeable", [False, True])
 def test_observation_weights_keep_canonical_user_values(
-    weights_type, expected_n, input_writeable
+    weights_type, input_writeable
 ) -> None:
     user_weights = np.array([[1.0], [2.0], [3.0]])
     user_weights.setflags(write=input_writeable)
     weights = ObservationWeights.from_values(user_weights, weights_type=weights_type)
     np.testing.assert_array_equal(weights.values, user_weights.flatten())
     assert weights.weights_type == weights_type
-    assert weights.n_rows == 3
-    assert weights.n_effective == expected_n
-    assert isinstance(weights.n_effective, int if weights_type == "aweights" else float)
     assert weights.is_weighted
     assert user_weights.flags.writeable == input_writeable
 
 
-@pytest.mark.parametrize(
-    ("kwargs", "message"),
-    [
-        (
-            {
-                "values": np.ones(2),
-                "weights_type": None,
-                "n_rows": 2,
-                "n_effective": 2.0,
-            },
-            "Weighted observations must declare a `weights_type`",
-        ),
-        (
-            {
-                "values": np.ones(3),
-                "weights_type": "aweights",
-                "n_rows": 2,
-                "n_effective": 2,
-            },
-            "Observation weights must contain one value per row",
-        ),
-    ],
-)
-def test_observation_weights_reject_inconsistent_state(kwargs, message) -> None:
-    with pytest.raises(ValueError, match=message):
-        ObservationWeights(**kwargs)
+def test_observation_weights_reject_inconsistent_state() -> None:
+    with pytest.raises(
+        ValueError, match="Weighted observations must declare a `weights_type`"
+    ):
+        ObservationWeights(values=np.ones(2), weights_type=None)
 
 
 def test_exclusion_counts_sum_over_stages() -> None:
