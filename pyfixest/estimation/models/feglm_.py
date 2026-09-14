@@ -13,6 +13,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
 from pyfixest.estimation.models.feols_ import (
@@ -232,6 +233,7 @@ class Feglm(Feols):
         Unlike linear models, GLMs store this coefficient-ordered design in
         working_state. It is not multiplied by square-root working weights.
         """
+        require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
     def _predict_in_sample(self, *, type: str) -> np.ndarray:
@@ -288,11 +290,12 @@ class Feglm(Feols):
         np.ndarray
             A flat array with the requested residuals.
         """
+        if type not in {"response", "working"}:
+            raise ValueError("type must be one of 'response' or 'working'.")
+        require_retained(self, "resid", "working_state")
         if type == "response":
             return self.working_state.response_residuals.flatten()
-        if type == "working":
-            return self.working_state.working_residuals.flatten()
-        raise ValueError("type must be one of 'response' or 'working'.")
+        return self.working_state.working_residuals.flatten()
 
     def residualize(
         self,

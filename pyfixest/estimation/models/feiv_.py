@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import WithinIvData, WithinLinearData
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -286,6 +287,7 @@ class Feiv(Feols):
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
+        require_retained(self, "first_stage", "_data")
         # Store names of instruments from Z matrix
         self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
 
@@ -348,6 +350,15 @@ class Feiv(Feols):
     def _finalize_fit(self) -> None:
         """Fit and retain the first-stage model after second-stage inference."""
         self.first_stage()
+
+    def _clear_attributes(self) -> None:
+        """Apply the parent's retention policy to the retained first stage."""
+        first_stage = getattr(self, "_model_1st_stage", None)
+        if first_stage is not None:
+            first_stage._store_data = self._store_data
+            first_stage._lean = self._lean
+            first_stage._clear_attributes()
+        super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):
         """Implement IV diagnostic tests.
@@ -507,10 +518,13 @@ class Feiv(Feols):
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
+        first_stage = self._model_1st_stage
+        require_retained(first_stage, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
         if self._vcov_type_detail == "iid":
-            self._model_1st_stage.vcov("hetero")
+            require_retained(first_stage, "eff_F", "_data")
+            first_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013
         # 1. Extract First Stage Coefficients and Variance-Covariance Matrix:
@@ -525,15 +539,15 @@ class Feiv(Feols):
 
         # Extract coefficients for the non-exogenous instruments
 
-        pi_hat = np.array(self._model_1st_stage.coef()[self._non_exo_instruments])
+        pi_hat = np.array(first_stage.coef()[self._non_exo_instruments])
         iv_positions = [
             self._coefnames_z.index(instrument)
             for instrument in self._non_exo_instruments
         ]
-        Z = self._model_1st_stage.within_data.design[:, iv_positions]
+        Z = first_stage.within_data.design[:, iv_positions]
 
         # Q_zz = Z'WZ
-        observation_weights = self._model_1st_stage.observation_weights.values
+        observation_weights = first_stage.observation_weights.values
         Q_zz = (
             Z.T @ Z
             if observation_weights is None
@@ -541,7 +555,7 @@ class Feiv(Feols):
         )
 
         # Extract the robust variance-covariance matrix
-        vcv = self._model_1st_stage._vcov
+        vcv = first_stage._vcov
 
         # Map the instrument names to their indices in the parameter list
         # Number of rows/columns in vcv

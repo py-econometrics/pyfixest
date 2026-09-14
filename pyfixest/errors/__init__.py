@@ -58,6 +58,10 @@ class EmptyVcovError(Exception):  # noqa: D101
     pass
 
 
+class MissingModelDataError(RuntimeError):
+    """Required model state was removed by fitted-model storage options."""
+
+
 class FormulaSyntaxError(Exception):  # noqa: D101
     pass
 
@@ -74,6 +78,7 @@ __all__ = [
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
+    "MissingModelDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
     "UnderDeterminedIVError",

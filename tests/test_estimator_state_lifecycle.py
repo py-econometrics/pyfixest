@@ -418,3 +418,126 @@ def test_multi_quantile_children_follow_ols_retention(
             atol=1e-12,
             err_msg="multi-quantile retained and newdata predictions disagree",
         )
+    if multi_method == "cfm1" and not store_data and not lean:
+        assert np.isfinite(fit.to_list()[0].objective_value), (
+            "store_data=False made the retained quantile objective unavailable"
+        )
+
+
+@pytest.mark.parametrize("store_data", [False, True])
+@pytest.mark.parametrize("lean", [False, True])
+def test_iv_first_stage_follows_parent_retention(
+    lifecycle_data: pd.DataFrame, store_data: bool, lean: bool
+) -> None:
+    """IV cleanup keeps completed diagnostics while stripping parent and child."""
+    fit = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+        store_data=store_data,
+        lean=lean,
+    )
+    first_stage = fit._model_1st_stage
+
+    for model in (fit, first_stage):
+        assert hasattr(model, "_data") is (store_data and not lean)
+        assert hasattr(model, "model_matrix") is (store_data and not lean)
+        assert hasattr(model, "within_data") is (not lean)
+        assert hasattr(model, "observation_weights") is (not lean)
+        assert np.isfinite(model.coef()).all()
+        assert np.isfinite(model.se()).all()
+
+    retained_f = fit._f_stat_1st_stage
+    fit.IV_weakness_test(["f_stat"])
+    np.testing.assert_allclose(
+        fit._f_stat_1st_stage,
+        retained_f,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="IV first-stage F statistic changed after retained-state cleanup",
+    )
+
+
+def test_store_data_false_retains_robust_effective_f(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    reference = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+    )
+    fit = pf.feols(
+        "y ~ x + [endog ~ z]",
+        lifecycle_data,
+        vcov="hetero",
+        store_data=False,
+    )
+
+    reference.eff_F()
+    fit.eff_F()
+
+    np.testing.assert_allclose(
+        fit._eff_F,
+        reference._eff_F,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed robust effective-F",
+    )
+
+
+@pytest.mark.parametrize(
+    "estimator,kwargs",
+    [
+        (pf.feols, {}),
+        (pf.fepois, {}),
+        (pf.feglm, {"family": "gaussian"}),
+        (pf.quantreg, {}),
+    ],
+)
+def test_lean_prediction_on_new_data_without_fixed_effects(
+    lifecycle_data: pd.DataFrame, estimator, kwargs
+) -> None:
+    data = lifecycle_data.assign(y_count=np.tile([1, 2, 3, 4], 6))
+    outcome = "y_count" if estimator is pf.fepois else "y"
+    reference = estimator(f"{outcome} ~ x", data, **kwargs)
+    fit = estimator(f"{outcome} ~ x", data, lean=True, **kwargs)
+
+    expected = reference.predict(newdata=data.iloc[:3])
+    prediction = fit.predict(newdata=data.iloc[:3])
+
+    np.testing.assert_allclose(
+        prediction,
+        expected,
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="lean cleanup changed no-FE new-data predictions",
+    )
+
+
+def test_store_data_false_preserves_no_fe_post_estimation(
+    lifecycle_data: pd.DataFrame,
+) -> None:
+    """Methods needing only retained arrays stay available without raw data."""
+    reference = pf.feols("y ~ x + x2", lifecycle_data)
+    fit = pf.feols("y ~ x + x2", lifecycle_data, store_data=False)
+
+    reference_boot = reference.wildboottest(param="x", reps=99, seed=42)
+    stripped_boot = fit.wildboottest(param="x", reps=99, seed=42)
+    np.testing.assert_allclose(
+        stripped_boot[["t value", "Pr(>|t|)"]].to_numpy(dtype=float),
+        reference_boot[["t value", "Pr(>|t|)"]].to_numpy(dtype=float),
+        rtol=1e-12,
+        atol=1e-12,
+        err_msg="store_data=False changed no-FE heteroskedastic bootstrap results",
+    )
+
+    reference_decomposition = reference.decompose(decomp_var="x", only_coef=True)
+    stripped_decomposition = fit.decompose(decomp_var="x", only_coef=True)
+    for name, expected in reference_decomposition.results.absolute.items():
+        np.testing.assert_allclose(
+            stripped_decomposition.results.absolute[name],
+            expected,
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg=f"store_data=False changed decomposition quantity {name}",
+        )

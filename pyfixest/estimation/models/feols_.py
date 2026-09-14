@@ -40,6 +40,11 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     WithinLinearData,
 )
+from pyfixest.estimation.internals.retention import (
+    RetentionPolicy,
+    omitted_attributes,
+    require_retained,
+)
 from pyfixest.estimation.internals.vcov_ import (
     vcov_crv1,
     vcov_crv3_fast,
@@ -554,6 +559,7 @@ class Feols(ResultAccessorMixin):
         Linear and quantile models retain it in within_data. The GLM override
         reads the corresponding final IRLS design from working_state.
         """
+        require_retained(self, "predict", "within_data")
         return self.within_data.design
 
     def _predict_in_sample(self, *, type: str) -> np.ndarray:
@@ -666,6 +672,7 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        require_retained(self, "vcov", "_data")
         # Assuming `data` is the DataFrame in question
 
         data_to_check = data if data is not None else self._data
@@ -914,30 +921,9 @@ class Feols(ResultAccessorMixin):
         return vcov_mat
 
     def _clear_attributes(self):
-        attributes = []
-
-        if not self._store_data:
-            attributes += ["_data", "model_matrix"]
-
-        if self._lean:
-            attributes += [
-                "_data",
-                "_cluster_df",
-                "_tXZ",
-                "_tZy",
-                "_tZX",
-                "_scores",
-                "_tZZinv",
-                "_u_hat",
-                "_Y_hat_link",
-                "_Y_hat_response",
-                "model_matrix",
-                "working_state",
-                "within_data",
-                "observation_weights",
-            ]
-
-        for attr in attributes:
+        """Apply the configured fitted-model retention policy."""
+        policy = RetentionPolicy(store_data=self._store_data, lean=self._lean)
+        for attr in omitted_attributes(policy):
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -1176,6 +1162,11 @@ class Feols(ResultAccessorMixin):
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
+        if self._has_fixef or not run_heteroskedastic:
+            require_retained(self, "wildboottest", "_data")
+        else:
+            require_retained(self, "wildboottest", "within_data")
+
         if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
             raise ValueError(
                 f"Cluster variable {cluster_list[0]} not found in the data."
@@ -1361,6 +1352,7 @@ class Feols(ResultAccessorMixin):
                 cluster = self._clustervar[0]
 
         # check that cluster is in data
+        require_retained(self, "ccv", "_data", "within_data")
         if cluster not in self._data.columns:
             raise ValueError(
                 f"Cluster variable {cluster} not found in the data used for the model fit."
@@ -1632,6 +1624,10 @@ class Feols(ResultAccessorMixin):
             only_coef=only_coef,
         )
 
+        require_retained(self, "decompose", "within_data", "observation_weights")
+        if self._has_fixef or cluster is not None or self._is_clustered:
+            require_retained(self, "decompose", "_data")
+
         nthreads_int = -1 if nthreads is None else nthreads
 
         rng = (
@@ -1734,6 +1730,8 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The fixef() method is currently not supported for IV models."
             )
+
+        require_retained(self, "fixef", "_data")
 
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
@@ -1922,6 +1920,7 @@ class Feols(ResultAccessorMixin):
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if self._sumFE is None:
+                    require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
@@ -2070,6 +2069,15 @@ class Feols(ResultAccessorMixin):
         if resampvar_ not in self._coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
+        if self._has_weights:
+            raise NotImplementedError(
+                """
+                Regression Weights are not supported with Randomization Inference.
+                """
+            )
+
+        require_retained(self, "ritest", "_data")
+
         if cluster is not None and cluster not in self._data:
             raise ValueError(f"The variable {cluster} is not found in the data.")
 
@@ -2108,13 +2116,6 @@ class Feols(ResultAccessorMixin):
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        if self._has_weights:
-            raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
-            )
 
         if choose_algorithm == "slow" or self._method == "fepois":
             vcov_input: str | dict[str, str]
@@ -2307,6 +2308,7 @@ class Feols(ResultAccessorMixin):
                 "rows cannot safely update the complete fitted-result state; use the "
                 "returned coefficients instead."
             )
+        require_retained(self, "update", "within_data")
         if not np.all(X_new[:, 0] == 1):
             X_new = np.column_stack((np.ones(len(X_new)), X_new))
         X_n_plus_1 = np.vstack((self.within_data.design, X_new))

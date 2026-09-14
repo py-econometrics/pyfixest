@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import EmptyVcovError
+from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -301,6 +302,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Called internally before storage cleanup, while model_matrix,
         within_data, and observation_weights are available.
         """
+        require_retained(
+            self,
+            "get_performance",
+            "model_matrix",
+            "within_data",
+            "_u_hat",
+            "observation_weights",
+        )
         measures = performance_measures(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,
@@ -585,4 +594,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
+        require_retained(self, "resid", "_u_hat")
         return self._u_hat.flatten()

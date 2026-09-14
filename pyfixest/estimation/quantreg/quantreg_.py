@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
 from pyfixest.estimation.internals.model_state import WithinLinearData
+from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -460,6 +461,7 @@ class Quantreg(Feols):
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
+        require_retained(self, "objective_value", "_u_hat")
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
 
     def get_performance(self) -> None:
