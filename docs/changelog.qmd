@@ -71,6 +71,11 @@ Other things:
 - `lean=True` now discards the retained GLM working state so its design and
   working-response arrays are released with the other estimation matrices.
 
+### Documentation
+
+- CI now checks that every rendered page is listed in `llms.txt` and that
+  internal links in the machine-readable pages resolve.
+
 ### Inference Types
 
 - `ccv()` now rejects weighted models instead of estimating from a mix of
