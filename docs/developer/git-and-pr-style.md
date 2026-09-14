@@ -93,3 +93,11 @@ Mention them only when a non-obvious stack relationship affects review. Group
 successful checks on one line and give detail to failures, deferred checks,
 numerical deviations, and support limits. Human approval is represented by
 GitHub review state, not by an author checkbox.
+
+## Issues
+
+GitHub issue bodies must contain at most two short sentences unless the user
+explicitly requests more detail: state the concrete problem or proposed change,
+then the desired outcome and any relevant issue/PR link. Omit headings,
+checklists, implementation plans, and background narratives; do not move
+overflow into comments.
