@@ -36,6 +36,10 @@ approval before implementation.
 
 ## Record the strategy
 
+Record the requested observable outcome, explicitly accepted supporting
+changes, behavior to preserve, and deferred adjacent concerns. Apply the
+[change-scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
+
 1. the primary classification and target module;
 2. the nearest in-repo precedent;
 3. public API and result-object impact;

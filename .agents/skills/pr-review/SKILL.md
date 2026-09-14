@@ -58,6 +58,13 @@ decisions, questions, and optional maintainability improvements. Answer
 questions directly and support disagreements with evidence rather than
 treating unfamiliar syntax or a naming preference as a correctness bug.
 
+## Confirm change scope
+
+Apply the [change-scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
+Check that each behavioral change is requested, explicitly accepted, or needed
+for the requested outcome. Flag independent improvements for removal or a
+follow-up issue.
+
 ## Spend verification budget on unresolved risk
 
 Review differs from authoring in what to re-run. Treat checks named in a PR
