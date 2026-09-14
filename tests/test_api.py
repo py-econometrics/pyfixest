@@ -350,13 +350,32 @@ def test_lean(estimator, kwargs, lean, store_data):
         data=data,
         lean=lean,
         store_data=store_data,
+        vcov={"CRV1": "f1"},
         **kwargs,
     )
 
     assert hasattr(fit, "_data") == (store_data and not lean)
-    assert hasattr(fit, "within_data") == (estimator is pf.feols and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
-    if estimator is not pf.feols:
+    if estimator is pf.feols:
+        lean_only_attributes = {
+            "_cluster_df",
+            "_tXZ",
+            "_tZy",
+            "_tZX",
+            "_scores",
+            "_tZZinv",
+            "_u_hat",
+            "_Y_hat_link",
+            "_Y_hat_response",
+            "within_data",
+            "observation_weights",
+        }
+        for attribute in lean_only_attributes:
+            assert hasattr(fit, attribute) is (not lean), attribute
+        if not lean and not store_data:
+            assert np.isfinite(fit.resid()[:3]).all()
+    else:
+        assert not hasattr(fit, "within_data")
         assert hasattr(fit, "working_state") == (not lean)
 
 
