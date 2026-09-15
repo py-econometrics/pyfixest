@@ -164,6 +164,32 @@ def rows_with_unseen_contrast_levels(
     return mask
 
 
+def i_term_columns(rhs_spec: ModelSpec) -> list[str]:
+    """
+    Return the model-matrix columns produced by terms that call ``i()``.
+
+    Mirrors fixest's ``model_matrix_info`` registry, which ``iplot`` consults to
+    select ``i()`` coefficients. Every ``i()`` encode stores contrast state under
+    pyfixest's ``__contrasts_<var>__`` key, so a factor is an ``i()`` call
+    exactly when its encoder state carries such a key. A term contributes its
+    columns when any of its factors is such a call, which also covers
+    ``i(f):x`` style interactions. Column names are never inspected, so user
+    columns containing ``::`` are not misclassified.
+    """
+    i_factor_exprs = {
+        factor_expr
+        for factor_expr, value in rhs_spec.encoder_state.items()
+        if any(is_contrast_state_key(key) for key in _unpack_encoder_state(value)[1])
+    }
+    columns: list[str] = []
+    # formulaic internal: `ModelSpec.structure` lists one EncodedTermStructure
+    # per term with the exact model-matrix columns that term produced.
+    for term_structure in rhs_spec.structure or ():
+        if any(factor.expr in i_factor_exprs for factor in term_structure.term.factors):
+            columns.extend(term_structure.columns)
+    return columns
+
+
 def iter_i_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:

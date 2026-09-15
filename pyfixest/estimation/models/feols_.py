@@ -164,8 +164,6 @@ class Feols(ResultAccessorMixin):
         Indicates whether fixed effects are used.
     _fixef : Any
         Fixed effects used in the regression.
-    _icovars : Any
-        Internal covariates, to be enriched outside of the class.
     _ssc_dict : dict
         dictionary for sum of squares and cross products matrices.
     _tZX : np.ndarray
@@ -345,7 +343,6 @@ class Feols(ResultAccessorMixin):
             else None
         )
         # self._coefnames = None
-        self._icovars = None
 
         # set in get_fit()
         self._tZX = np.array([])
@@ -433,18 +430,8 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
+
         independent = model_matrix.independent
-        is_icovar = (
-            independent.columns.str.contains(r"^.+::.+$")
-            if not independent.empty
-            else None
-        )
-        self._icovars = (
-            independent.columns[is_icovar].tolist()
-            if is_icovar is not None and is_icovar.any()
-            else None
-        )
         self._X_is_empty = independent.shape[1] == 0
         self._model_spec = model_matrix.model_spec
 

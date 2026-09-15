@@ -159,6 +159,15 @@ def test_iplot_error(data):
         iplot(fit4)
 
 
+@pytest.mark.extended
+def test_iplot_rejects_double_colon_column_without_i(data):
+    """A '::' in a column name must not be mistaken for i() syntax."""
+    renamed = data.rename(columns={"X1": "a::b"})
+    fit = feols(fml="Y ~ Q('a::b') + X2", data=renamed, vcov="iid")
+    with pytest.raises(ValueError, match="did not have ivars"):
+        fit.iplot()
+
+
 @pytest.mark.parametrize(
     argnames="plot_backend",
     argvalues=["lets_plot", "matplotlib"],

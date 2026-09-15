@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.formulaic_compat import i_term_columns
+from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -202,12 +204,13 @@ def iplot(
         rename_models = {}
 
     for x, fxst in enumerate(list(models)):
-        if fxst._icovars is None:
+        icovars = i_term_columns(fxst._model_spec[_ModelMatrixKey.main].rhs)
+        if not icovars:
             raise ValueError(
                 f"The {x} th estimated model did not have ivars / 'i()' model syntax."
                 "In consequence, the '.iplot()' method is not supported."
             )
-        all_icovars += fxst._icovars
+        all_icovars += icovars
 
         df_model = _get_model_df(
             fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
