@@ -244,7 +244,7 @@ def test_plot_labels(fit1, plot_backend, plot_func):
     if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
         pytest.skip("lets-plot is not installed")
 
-    labels = {"f2::1.0": "F2 = 1", "X1": "1x"}
+    labels = {"f2::1.0": "F2 = 1", "X1": "1x", "f2::2.0:X1": "F2 = 2 x X1"}
     with warnings.catch_warnings(record=True) as record:
         warnings.simplefilter("always")
         fig = plot_func(fit1, plot_backend=plot_backend, labels=labels)
@@ -265,6 +265,7 @@ def test_plot_labels(fit1, plot_backend, plot_func):
         coef_labels = list(fig.as_dict()["data"]["Coefficient"])
     assert "F2 = 1:1x" in coef_labels
     assert "f2::0.0:1x" in coef_labels
+    assert "F2 = 2 x X1" in coef_labels
     assert "f2::1.0:X1" not in coef_labels
 
     with pytest.warns(UserWarning, match="The label key 'X3' is not in the covariate"):
