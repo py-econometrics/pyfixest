@@ -13,7 +13,7 @@ ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Fei
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
     warnings.warn(
-        "The function `_check_label_keys_in_covars` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
+        "The function `_check_label_keys_in_covars` is deprecated, as `pf.coefplot()` and `pf.iplot()` check the keys of `labels` themselves. ",
         DeprecationWarning,
         stacklevel=2,
     )

@@ -69,11 +69,14 @@ def _relabel_coefficient(coefname: str, labels: dict) -> str:
     return ":".join(labels.get(v, v) for v in _split_interaction(coefname))
 
 
-def _warn_unknown_label_keys(labels: dict, coefnames: list[str]) -> None:
+def _apply_coefficient_labels(df: pd.DataFrame, labels: dict) -> None:
+    """Warn about label keys that match no coefficient, then relabel the coefficients."""
+    coefnames = df["Coefficient"].unique().tolist()
     known = set(coefnames).union(*(_split_interaction(c) for c in coefnames))
     for label_key in labels:
         if label_key not in known:
             warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
+    df["Coefficient"] = df["Coefficient"].map(lambda c: _relabel_coefficient(c, labels))
 
 
 def iplot(
@@ -248,11 +251,8 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    # check that labels match the coef names
-    if labels is not None:
-        _warn_unknown_label_keys(
-            labels=labels, coefnames=df["Coefficient"].unique().tolist()
-        )
+    if labels:
+        _apply_coefficient_labels(df=df, labels=labels)
 
     return _coefplot(
         plot_backend=plot_backend,
@@ -264,7 +264,6 @@ def iplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
-        labels=labels,
         ax=ax,
     )
 
@@ -411,11 +410,8 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    # check that labels match the coef names
-    if labels is not None:
-        _warn_unknown_label_keys(
-            labels=labels, coefnames=df["Coefficient"].unique().tolist()
-        )
+    if labels:
+        _apply_coefficient_labels(df=df, labels=labels)
 
     return _coefplot(
         plot_backend=plot_backend,
@@ -427,7 +423,6 @@ def coefplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
-        labels=labels,
         ax=ax,
     )
 
@@ -535,7 +530,6 @@ def _coefplot_lets_plot(
     rotate_xticks: float = 0,
     title: str | None = None,
     flip_coord: bool | None = True,
-    labels: dict | None = None,
     ax=None,  # for compatibility with matplotlib backend
 ):
     """
@@ -559,8 +553,6 @@ def _coefplot_lets_plot(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
-    labels : dict, optional
-        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
     ax : None, optional
         Not used. Only for compatibility with the matplotlib backend.
 
@@ -591,11 +583,6 @@ def _coefplot_lets_plot(
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
-
-    if labels:
-        df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_coefficient(x, labels)
-        )
 
     plot = (
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
@@ -633,7 +620,6 @@ def _coefplot_matplotlib(
     rotate_xticks: float = 0,
     title: str | None = None,
     flip_coord: bool | None = True,
-    labels: dict | None = None,
     ax: plt.Axes | None = None,
     dodge: float = 0.5,
     **fig_kwargs,
@@ -660,8 +646,6 @@ def _coefplot_matplotlib(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
-    labels : dict, optional
-        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
     dodge : float, optional
         The amount to dodge each model's points by. Default is 0.1.
     fig_kwargs : dict
@@ -673,11 +657,6 @@ def _coefplot_matplotlib(
         A matplotlib Figure object.
     """
     import matplotlib.pyplot as plt
-
-    if labels:
-        df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_coefficient(x, labels)
-        )
 
     ub, lb = (f"{round(x * 100, 1)}%" for x in [1 - alpha / 2, alpha / 2])
 

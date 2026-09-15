@@ -245,19 +245,10 @@ def test_plot_labels(fit1, plot_backend, plot_func):
         pytest.skip("lets-plot is not installed")
 
     labels = {"f2::1.0": "F2 = 1", "X1": "1x", "f2::2.0:X1": "F2 = 2 x X1"}
-    with warnings.catch_warnings(record=True) as record:
-        warnings.simplefilter("always")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=DeprecationWarning, module="pyfixest")
+        warnings.filterwarnings("error", message="The label key")
         fig = plot_func(fit1, plot_backend=plot_backend, labels=labels)
-
-    pyfixest_warnings = [
-        str(w.message)
-        for w in record
-        if "pyfixest" in w.filename
-        and (
-            issubclass(w.category, DeprecationWarning) or "label key" in str(w.message)
-        )
-    ]
-    assert pyfixest_warnings == []
 
     if plot_backend == "matplotlib":
         coef_labels = [t.get_text() for t in fig.axes[0].get_yticklabels()]
