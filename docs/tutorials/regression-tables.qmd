@@ -101,7 +101,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code=[0.01, 0.05, 0.1], d
 
 
 ## Other output formats
-By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/articles/intro.html)), but you can also opt to dataframe, markdown, or latex output via the `type` argument.
+By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/articles/intro.html)), but you can also opt to DataFrame, Markdown, LaTeX, Typst, or Word output via the `type` argument.
 
 
 ```{python}
@@ -168,6 +168,40 @@ if run:
 display(FileLink("latexdocs/SampleTableDoc.pdf"))
 ```
 
+
+### Word output
+
+Use `type="docx"` to create an editable Word table, including multi-level
+headers, coefficients and standard errors, fixed effects, statistics, and notes.
+The result is a `python-docx.Document` object. Pass `file_name` to save it
+directly; the same document is returned for further editing.
+
+```{python}
+#| output: false
+document = pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    type="docx",
+    file_name="regression_results.docx",
+    model_heads=["Baseline", "Two-way FE", "Interaction"] * 2,
+    coef_fmt="b:.3f*\n(se:.3f)",
+    docx_style={
+        "font_name": "Times New Roman",
+        "font_size_pt": 11,
+        "notes_font_size_pt": 9,
+        "first_col_width": "4cm",
+    },
+)
+```
+
+`docx_style` accepts the options in
+`maketables.MTable.DEFAULT_DOCX_STYLE` in the
+[maketables package](https://py-econometrics.github.io/maketables/).
+These settings apply only to Word output. Use `labels`, `felabels`, and `notes`
+to supply text in your preferred language. Font availability and pagination
+depend on the application opening the document.
+
+To add more content before saving, omit `file_name`, edit the returned document
+using python-docx, and call `document.save("regression_results.docx")`.
 
 ## Rename variables
 You can also rename variables if you want to have a more readable output. Just pass a dictionary to the `labels` argument. Note that interaction terms will also be relabeled using the specified labels for the interacted variables (if you want to manually relabel an interaction term differently, add it to the dictionary).
