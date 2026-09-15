@@ -14,6 +14,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
     filter_multistage_endogenous_terms,
     get_first_multistage_lhs,
+    i_term_columns,
     iter_i_categorical_levels,
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
@@ -150,6 +151,47 @@ def test_encoder_state_guard_raises_loudly() -> None:
 
     with pytest.raises(FormulaicCompatibilityError, match="encoder_state structure"):
         list(iter_i_categorical_levels(malformed_spec, pd.DataFrame({"f1": [1]})))
+
+
+@pytest.mark.parametrize(
+    ("fml", "expected"),
+    [
+        ("Y ~ X1 + C(f1)", []),
+        ("Y ~ i(f1, ref=1) + X1", ["f1::0", "f1::2", "f1::3", "f1::4"]),
+        ("Y ~ X1 + i(f1, X2, ref=1)", ["f1::0:X2", "f1::2:X2", "f1::3:X2", "f1::4:X2"]),
+        ("Y ~ i(f1, ref=1):X1 + X1", ["f1::0:X1", "f1::2:X1", "f1::3:X1", "f1::4:X1"]),
+    ],
+    ids=["no_i", "i", "i_continuous", "i_in_interaction"],
+)
+def test_i_term_columns(data: pd.DataFrame, fml: str, expected: list[str]) -> None:
+    """i_term_columns returns exactly the columns produced by i() terms."""
+    fit = pf.feols(fml, data=data)
+
+    columns = i_term_columns(fit._model_spec["second_stage"].rhs)
+
+    assert columns == expected
+    assert set(columns) <= set(fit._coefnames)
+
+
+def test_i_term_columns_ignores_double_colon_names(data: pd.DataFrame) -> None:
+    """A user column named with '::' is not an i() term."""
+    renamed = data.rename(columns={"X1": "a::b"})
+    fit = pf.feols("Y ~ Q('a::b') + X2", data=renamed)
+
+    assert "Q('a::b')" in fit._coefnames
+    assert i_term_columns(fit._model_spec["second_stage"].rhs) == []
+
+
+def test_i_term_columns_survives_lean(data: pd.DataFrame) -> None:
+    """The i() registry lives on the retained model spec, not the model matrix."""
+    fit = pf.feols("Y ~ i(f1, ref=1)", data=data, lean=True, store_data=False)
+
+    assert i_term_columns(fit._model_spec["second_stage"].rhs) == [
+        "f1::0",
+        "f1::2",
+        "f1::3",
+        "f1::4",
+    ]
 
 
 def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
