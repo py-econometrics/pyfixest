@@ -247,9 +247,9 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     kept_index = model_matrix.dependent.index.drop([0, 5])
     source_sample = model_matrix.sample
 
-    filtered = model_matrix.without_rows([0, 5])
+    filtered = model_matrix.without_rows([0, 5], stage="separation")
 
-    assert model_matrix.without_rows([]) is model_matrix
+    assert model_matrix.without_rows([], stage="separation") is model_matrix
     assert filtered is not model_matrix
     assert filtered.na_index == model_matrix.na_index | {0, 5}
     assert filtered.model_spec is model_matrix.model_spec

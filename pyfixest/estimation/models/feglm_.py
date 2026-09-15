@@ -151,8 +151,7 @@ class Feglm(Feols):
 
         if na_separation:
             self._data.drop(na_separation, axis=0, inplace=True)
-            # without_rows() counts the dropped rows as separation exclusions.
-            model_matrix = model_matrix.without_rows(na_separation)
+            model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation

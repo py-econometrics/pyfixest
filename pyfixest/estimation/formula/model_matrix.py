@@ -270,20 +270,20 @@ class ModelMatrix:
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
-    def without_rows(self, rows: list[int]) -> ModelMatrix:
-        """Return a shallow copy without ``rows``.
+    def without_rows(self, rows: list[int], *, stage: _ExclusionStage) -> ModelMatrix:
+        """Return a shallow copy without ``rows``, counted as ``stage`` exclusions.
 
         The copied object receives a new filtered data frame and a ``sample``
-        that counts ``rows`` as separation exclusions, the only estimator-level
-        filter; its unchanged formula metadata remains shared with the original
-        object. An empty ``rows`` sequence returns this instance unchanged.
+        that adds ``rows`` to the exclusions of ``stage``; its unchanged formula
+        metadata remains shared with the original object. An empty ``rows``
+        sequence returns this instance unchanged.
         """
         if not rows:
             return self
         filtered = copy.copy(self)
         filtered._data = self._data.drop(index=rows)
         filtered._sample = self._sample_without(
-            self._data.index.isin(rows), stage="separation"
+            self._data.index.isin(rows), stage=stage
         )
         return filtered
 
