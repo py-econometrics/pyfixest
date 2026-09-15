@@ -1,3 +1,4 @@
+import warnings
 from unittest.mock import patch
 
 import matplotlib
@@ -229,6 +230,44 @@ def test_coefplot(
     coefplot(fit1, **plot_kwargs)
     coefplot([fit1, fit2], **plot_kwargs)
     fit_multi.coefplot(**plot_kwargs)
+
+
+@pytest.mark.parametrize(
+    argnames="plot_backend",
+    argvalues=["lets_plot", "matplotlib"],
+    ids=["lets_plot", "matplotlib"],
+)
+@pytest.mark.parametrize(
+    argnames="plot_func", argvalues=[coefplot, iplot], ids=["coefplot", "iplot"]
+)
+def test_plot_labels(fit1, plot_backend, plot_func):
+    if plot_backend == "lets_plot" and not _HAS_LETS_PLOT:
+        pytest.skip("lets-plot is not installed")
+
+    labels = {"f2::1.0": "F2 = 1", "X1": "1x"}
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        fig = plot_func(fit1, plot_backend=plot_backend, labels=labels)
+
+    pyfixest_deprecations = [
+        str(w.message)
+        for w in record
+        if issubclass(w.category, DeprecationWarning) and "pyfixest" in w.filename
+    ]
+    assert pyfixest_deprecations == []
+
+    if plot_backend == "matplotlib":
+        coef_labels = [t.get_text() for t in fig.axes[0].get_yticklabels()]
+    else:
+        coef_labels = list(fig.as_dict()["data"]["Coefficient"])
+    assert "F2 = 1:1x" in coef_labels
+    assert "f2::0.0:1x" in coef_labels
+    assert "f2::1.0:X1" not in coef_labels
+
+
+def test_iplot_cat_template_deprecated(fit1):
+    with pytest.warns(DeprecationWarning, match="`cat_template` argument of `iplot"):
+        iplot(fit1, plot_backend="matplotlib", cat_template="{value}")
 
 
 @pytest.mark.extended
