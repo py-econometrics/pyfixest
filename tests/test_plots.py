@@ -249,12 +249,15 @@ def test_plot_labels(fit1, plot_backend, plot_func):
         warnings.simplefilter("always")
         fig = plot_func(fit1, plot_backend=plot_backend, labels=labels)
 
-    pyfixest_deprecations = [
+    pyfixest_warnings = [
         str(w.message)
         for w in record
-        if issubclass(w.category, DeprecationWarning) and "pyfixest" in w.filename
+        if "pyfixest" in w.filename
+        and (
+            issubclass(w.category, DeprecationWarning) or "label key" in str(w.message)
+        )
     ]
-    assert pyfixest_deprecations == []
+    assert pyfixest_warnings == []
 
     if plot_backend == "matplotlib":
         coef_labels = [t.get_text() for t in fig.axes[0].get_yticklabels()]
@@ -263,6 +266,9 @@ def test_plot_labels(fit1, plot_backend, plot_func):
     assert "F2 = 1:1x" in coef_labels
     assert "f2::0.0:1x" in coef_labels
     assert "f2::1.0:X1" not in coef_labels
+
+    with pytest.warns(UserWarning, match="The label key 'X3' is not in the covariate"):
+        plot_func(fit1, plot_backend=plot_backend, labels={"X3": "3x"})
 
 
 def test_iplot_cat_template_deprecated(fit1):
