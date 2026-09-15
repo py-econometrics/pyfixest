@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.formula.model_matrix import ModelMatrix
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14,7 +18,7 @@ class ObservationWeights:
 
     ``values`` are always user-scale weights; ``None`` means no weights.
     Observation counts, including the frequency-weight sum, live in
-    ``SampleInfo``.
+    ``EstimationSample``.
 
     Parameters
     ----------
@@ -66,20 +70,17 @@ class ObservationWeights:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DroppedRowCounts:
-    """Rows dropped from the fitted sample, counted by the stage that dropped them.
+    """Counts of rows removed at each sample-filtering stage.
 
-    Each stage counts only the rows it newly dropped from the rows that survived
-    the earlier stages, so the counts sum to the number of dropped rows and
-    never double-count. Stages run in field order: formula missing-value
-    handling, the nonfinite filter, singleton fixed-effect removal, and GLM
-    separation. A sample split selects each child's input rows before these
-    stages and is not a drop.
+    Counts are mutually exclusive and stages run in field order, the order
+    of ``DropStageOptions`` after the formula's missing-value handling. Sample
+    splitting is not a filtering stage.
 
     Parameters
     ----------
     missing : int
         Rows with a missing value in any formula variable.
-    nonfinite : int
+    infinite : int
         Rows with an infinite value in a materialized column.
     singleton : int
         Rows removed as singleton fixed-effect levels (``fixef_rm="singleton"``).
@@ -97,41 +98,34 @@ class DroppedRowCounts:
     """
 
     missing: int = 0
-    nonfinite: int = 0
+    infinite: int = 0
     singleton: int = 0
     separation: int = 0
 
     @property
     def total(self) -> int:
         """Number of dropped rows over all stages."""
-        return self.missing + self.nonfinite + self.singleton + self.separation
+        return self.missing + self.infinite + self.singleton + self.separation
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class SampleInfo:
-    """The row sample a model was fitted on.
+class EstimationSample:
+    """Summary of the sample used to fit a model.
 
-    The estimator builds it with ``from_weights`` from the dropped-row
-    bookkeeping of its ``ModelMatrix`` and its observation weights. The
-    estimation functions discard the index of the user's data, so
-    ``dropped_positions`` count from zero in the frame the estimator
-    received, after any sample split; the demeaning cache keys a row sample
-    by the same set. It is scalar-sized apart from that set and survives
-    every storage option.
+    ``dropped_row_index`` holds zero-based row positions within the estimator
+    input after sample splitting.
 
     Parameters
     ----------
-    dropped_positions : frozenset[int]
+    dropped_row_index : frozenset[int]
         Positions of the rows dropped by any filtering stage.
     n_rows : int
         Number of physical fitted rows.
     n_obs : int or float
-        Number of observations as fixest's ``nobs``: ``n_rows`` for
-        unweighted fits and analytic weights, and the weight sum for
-        frequency weights.
+        ``n_rows``, or the weight sum for frequency weights.
     dropped_by_stage : DroppedRowCounts
         Dropped rows by filtering stage; their total equals
-        ``len(dropped_positions)``.
+        ``len(dropped_row_index)``.
 
     Examples
     --------
@@ -143,31 +137,27 @@ class SampleInfo:
     ```
     """
 
-    dropped_positions: frozenset[int]
+    dropped_row_index: frozenset[int]
     n_rows: int
     n_obs: int | float
     dropped_by_stage: DroppedRowCounts
 
     def __post_init__(self) -> None:
-        if self.dropped_by_stage.total != len(self.dropped_positions):
+        if self.dropped_by_stage.total != len(self.dropped_row_index):
             raise ValueError(
-                "Dropped-row counts must sum to the number of dropped positions."
+                "Dropped-row counts must sum to the size of the dropped row index."
             )
 
     @classmethod
-    def from_weights(
-        cls,
-        *,
-        n_rows: int,
-        dropped_positions: frozenset[int],
-        dropped_by_stage: DroppedRowCounts,
-        weights: ObservationWeights,
-    ) -> SampleInfo:
-        """Describe the fitted sample from dropped-row bookkeeping and observation weights.
+    def from_model_matrix(
+        cls, model_matrix: ModelMatrix, *, weights: ObservationWeights
+    ) -> EstimationSample:
+        """Describe the sample of `model_matrix` fitted under `weights`.
 
         fixest counts a frequency weight as that many repeated rows, so
         ``n_obs`` is the weight sum; otherwise it is the row count.
         """
+        n_rows = model_matrix.n_rows
         if weights.values is not None and len(weights.values) != n_rows:
             raise ValueError("Observation weights must contain one value per row.")
         n_obs: int | float = n_rows
@@ -175,10 +165,10 @@ class SampleInfo:
             assert weights.values is not None
             n_obs = float(weights.values.sum())
         return cls(
-            dropped_positions=dropped_positions,
+            dropped_row_index=model_matrix.dropped_row_index,
             n_rows=n_rows,
             n_obs=n_obs,
-            dropped_by_stage=dropped_by_stage,
+            dropped_by_stage=model_matrix.dropped_by_stage,
         )
 
 

@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
+        EstimationSample,
         ObservationWeights,
-        SampleInfo,
         WithinLinearData,
     )
 from pyfixest.estimation.internals.literals import (
@@ -141,7 +141,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
     observation_weights: "ObservationWeights"
-    sample: "SampleInfo"
+    sample: "EstimationSample"
     within_data: "WithinLinearData"
     _coefnames: list[str]
     _method: str

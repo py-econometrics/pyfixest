@@ -67,7 +67,7 @@ website:
     - contents:
       - reference/estimation.state.ModelMatrix.qmd
       - reference/estimation.state.ObservationWeights.qmd
-      - reference/estimation.state.SampleInfo.qmd
+      - reference/estimation.state.EstimationSample.qmd
       - reference/estimation.state.DroppedRowCounts.qmd
       - reference/estimation.state.WithinLinearData.qmd
       - reference/estimation.state.WithinIvData.qmd

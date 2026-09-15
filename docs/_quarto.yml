@@ -238,7 +238,7 @@ quartodoc:
       contents:
         - estimation.state.ModelMatrix
         - estimation.state.ObservationWeights
-        - estimation.state.SampleInfo
+        - estimation.state.EstimationSample
         - estimation.state.DroppedRowCounts
         - estimation.state.WithinLinearData
         - estimation.state.WithinIvData

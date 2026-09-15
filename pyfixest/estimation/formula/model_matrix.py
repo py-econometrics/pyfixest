@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any, Final, Literal, TypeAlias, cast
+from typing import Any, Final, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -17,12 +17,11 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSF
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
-# The filtering stages that run after formulaic's missing-value handling.
-_DropStage: TypeAlias = Literal["nonfinite", "singleton", "separation"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -92,7 +91,7 @@ class ModelMatrix:
         The underlying formulaic model specifications keyed by role.
     n_rows : int
         Number of rows that survived every filtering stage.
-    dropped_positions : frozenset[int]
+    dropped_row_index : frozenset[int]
         Positions of the dropped rows in the frame the matrix was built from.
     dropped_by_stage : DroppedRowCounts
         Dropped rows counted by the filtering stage that removed them.
@@ -113,7 +112,7 @@ class ModelMatrix:
         self._collect_data(model_matrix)
         # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
         # the later stages add the rows they drop.
-        self._dropped_positions = drop_rows
+        self._dropped_row_index = drop_rows
         self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)
 
@@ -182,7 +181,7 @@ class ModelMatrix:
         self._drop(
             ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
             "rows with infinite values",
-            stage="nonfinite",
+            stage="infinite",
         )
         if self._fixed_effects_column_names is not None:
             # Ensure fixed effects are `int32`
@@ -219,11 +218,11 @@ class ModelMatrix:
         target: ModelMatrix,
         is_dropped: NDArray[np.bool_],
         *,
-        stage: _DropStage,
+        stage: DropStageOptions,
     ) -> None:
         """Write onto `target` the dropped rows after `stage` drops the masked rows."""
         counts = self._dropped_by_stage
-        target._dropped_positions = self._dropped_positions.union(
+        target._dropped_row_index = self._dropped_row_index.union(
             self._data.index[is_dropped].tolist()
         )
         target._dropped_by_stage = replace(
@@ -231,7 +230,7 @@ class ModelMatrix:
         )
 
     def _drop(
-        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: _DropStage
+        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
     ) -> None:
         """Drop the masked rows from `self._data` and count them under `stage`.
 
@@ -244,7 +243,7 @@ class ModelMatrix:
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
-    def without_rows(self, rows: list[int], *, stage: _DropStage) -> ModelMatrix:
+    def without_rows(self, rows: list[int], *, stage: DropStageOptions) -> ModelMatrix:
         """Return a shallow copy without ``rows``, counted under ``stage``.
 
         The copied object receives a new filtered data frame and dropped-row
@@ -383,13 +382,13 @@ class ModelMatrix:
         return len(self._data)
 
     @property
-    def dropped_positions(self) -> frozenset[int]:
+    def dropped_row_index(self) -> frozenset[int]:
         """Positions of dropped rows, including ``without_rows`` drops.
 
         Positions count from zero in the frame this matrix was built from,
         which ``create_model_matrix`` reindexes before materializing.
         """
-        return self._dropped_positions
+        return self._dropped_row_index
 
     @property
     def dropped_by_stage(self) -> DroppedRowCounts:

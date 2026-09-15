@@ -37,8 +37,8 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    EstimationSample,
     ObservationWeights,
-    SampleInfo,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -150,7 +150,7 @@ class Feols(ResultAccessorMixin):
         The solver used for the regression.
     observation_weights : ObservationWeights
         User-scale weights and their analytic or frequency interpretation.
-    sample : SampleInfo
+    sample : EstimationSample
         Observation counts and the dropped rows, by position and by stage.
     _k : int
         Number of independent variables (or features).
@@ -423,8 +423,8 @@ class Feols(ResultAccessorMixin):
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it
-        if model_matrix.dropped_positions:
-            self._data.drop(index=list(model_matrix.dropped_positions), inplace=True)
+        if model_matrix.dropped_row_index:
+            self._data.drop(index=list(model_matrix.dropped_row_index), inplace=True)
 
         return model_matrix
 
@@ -469,11 +469,8 @@ class Feols(ResultAccessorMixin):
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
-        self.sample = SampleInfo.from_weights(
-            n_rows=model_matrix.n_rows,
-            dropped_positions=model_matrix.dropped_positions,
-            dropped_by_stage=model_matrix.dropped_by_stage,
-            weights=self.observation_weights,
+        self.sample = EstimationSample.from_model_matrix(
+            model_matrix, weights=self.observation_weights
         )
 
     def _validate_response(self) -> None:
@@ -512,7 +509,7 @@ class Feols(ResultAccessorMixin):
                 x_names=tuple(design_frame.columns),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
-                na_index=self.sample.dropped_positions,
+                na_index=self.sample.dropped_row_index,
                 demeaner=self._demeaner,
             )
         return WithinLinearData(response=response, design=design)
@@ -529,7 +526,7 @@ class Feols(ResultAccessorMixin):
         setup phase on a later fit over the same design.
         """
         return self._demean_cache.lookup_preconditioner.get(
-            self.sample.dropped_positions
+            self.sample.dropped_row_index
         )
 
     def _drop_multicollinear_within_data(
