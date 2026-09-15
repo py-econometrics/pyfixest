@@ -232,7 +232,7 @@ class Feiv(Feols):
                 x_names=tuple(instrument_frame.columns),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
-                na_index=self._na_index,
+                na_index=self.sample_info.dropped_row_index,
                 demeaner=self._demeaner,
             )
         return WithinIvData(
@@ -310,7 +310,9 @@ class Feiv(Feols):
             vcov_detail = self._vcov_type_detail
 
         demeaner = self._demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(self._na_index)
+        cached_pre = self._demean_cache.lookup_preconditioner.get(
+            self.sample_info.dropped_row_index
+        )
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 

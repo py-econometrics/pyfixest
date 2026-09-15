@@ -272,17 +272,17 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     assert len({id(model._demean_cache.lookup_preconditioner) for model in models}) == 1
 
     first, second, third = models
-    assert first._na_index == second._na_index
-    assert extra_na_index not in first._na_index
-    assert extra_na_index in third._na_index
+    assert first.sample_info.dropped_row_index == second.sample_info.dropped_row_index
+    assert extra_na_index not in first.sample_info.dropped_row_index
+    assert extra_na_index in third.sample_info.dropped_row_index
 
     assert isinstance(first.preconditioner, pf.Preconditioner)
     assert first.preconditioner is second.preconditioner
     assert isinstance(third.preconditioner, pf.Preconditioner)
     assert third.preconditioner is not first.preconditioner
     assert set(first._demean_cache.lookup_preconditioner) == {
-        first._na_index,
-        third._na_index,
+        first.sample_info.dropped_row_index,
+        third.sample_info.dropped_row_index,
     }
 
 

@@ -37,6 +37,7 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    EstimationSample,
     ObservationWeights,
     WithinLinearData,
 )
@@ -149,8 +150,8 @@ class Feols(ResultAccessorMixin):
         The solver used for the regression.
     observation_weights : ObservationWeights
         User-scale weights and their analytic or frequency interpretation.
-    _N : int
-        Number of observations.
+    sample_info : EstimationSample
+        Observation counts and the dropped rows, by position and by stage.
     _k : int
         Number of independent variables (or features).
     _support_crv3_inference : bool
@@ -365,7 +366,6 @@ class Feols(ResultAccessorMixin):
         self._G: list[int] = []
         self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
-        self.n_separation_na = 0
 
         # set in get_inference()
         self._se = np.array([])
@@ -423,17 +423,16 @@ class Feols(ResultAccessorMixin):
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it
-        if self._na_index:
-            self._data.drop(index=list(self._na_index), inplace=True)
+        if model_matrix.dropped_row_index:
+            self._data.drop(index=list(model_matrix.dropped_row_index), inplace=True)
 
         return model_matrix
 
     # Deliberately untyped: an annotation makes mypy check this body, whose published
     # attribute types are still transitional or loose; see the typing follow-up.
     def _publish_model_matrix(self, model_matrix):
-        """Publish structurally immutable formula and observation-weight state."""
+        """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        self._na_index = model_matrix.na_index
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         independent = model_matrix.independent
         is_icovar = (
@@ -470,18 +469,28 @@ class Feols(ResultAccessorMixin):
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
-        self._N = self.observation_weights.n_effective
-        self._N_rows = self.observation_weights.n_rows
+        weights = self.observation_weights
+        n_rows = model_matrix.n_rows
+        # Frequency weights count repeated observations; other fits count rows.
+        self.sample_info = EstimationSample(
+            dropped_row_index=model_matrix.dropped_row_index,
+            n_rows=n_rows,
+            n_obs=(
+                float(weights.values.sum())
+                if weights.weights_type == "fweights"
+                else n_rows
+            ),
+            dropped_by_stage=model_matrix.dropped_by_stage,
+        )
 
     def _validate_response(self) -> None:
         """Validate estimator-specific response constraints, if any."""
 
     def _set_observation_weights(self) -> ObservationWeights:
         """Build canonical user-scale observation weights for this row sample."""
-        n_rows = len(self.model_matrix.dependent)
         weights = self.model_matrix.weights
         if weights is None:
-            return ObservationWeights.unweighted(n_rows=n_rows)
+            return ObservationWeights.unweighted()
 
         # `weights_type` is validated at the API boundary (estimation/api/utils.py).
         weights_type = cast(WeightsTypeOptions, self._weights_type)
@@ -510,7 +519,7 @@ class Feols(ResultAccessorMixin):
                 x_names=tuple(design_frame.columns),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
-                na_index=self._na_index,
+                na_index=self.sample_info.dropped_row_index,
                 demeaner=self._demeaner,
             )
         return WithinLinearData(response=response, design=design)
@@ -526,7 +535,9 @@ class Feols(ResultAccessorMixin):
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
-        return self._demean_cache.lookup_preconditioner.get(self._na_index)
+        return self._demean_cache.lookup_preconditioner.get(
+            self.sample_info.dropped_row_index
+        )
 
     def _drop_multicollinear_within_data(
         self, within_data: WithinLinearData
@@ -708,7 +719,7 @@ class Feols(ResultAccessorMixin):
         elif self._vcov_type == "hetero":
             # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
             self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
             )
             self._vcov = self._ssc * self._vcov_hetero()
 
@@ -727,7 +738,7 @@ class Feols(ResultAccessorMixin):
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self._N)
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
             )
             self._vcov = self._ssc * self._vcov_nid()
 
@@ -765,7 +776,7 @@ class Feols(ResultAccessorMixin):
         "Bundle model-level and vcov-type-specific args for get_ssc()."
         return {
             "ssc_dict": self._ssc_dict,
-            "N": self._N,
+            "N": self.sample_info.n_obs,
             "k": self._k,
             "k_fe": self._k_fe.sum() if self._has_fixef else 0,
             "n_fe": self._n_fe,
@@ -795,7 +806,7 @@ class Feols(ResultAccessorMixin):
         return vcov_iid_ols(
             residuals=self._u_hat,
             bread=self._bread,
-            N=self._N,
+            N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
         )
 
@@ -1004,7 +1015,7 @@ class Feols(ResultAccessorMixin):
         if self._is_clustered:
             self._dfd = np.min(np.array(self._G)) - 1
         else:
-            self._dfd = self._N - self._k - k_fe
+            self._dfd = self.sample_info.n_obs - self._k - k_fe
 
         self._wald_statistic = W
 
@@ -1381,7 +1392,7 @@ class Feols(ResultAccessorMixin):
 
         tau_full = np.array(self.coef().xs(treatment))
 
-        N = self._N
+        N = self.sample_info.n_obs
         G = len(unique_clusters)
 
         ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
@@ -1673,7 +1684,7 @@ class Feols(ResultAccessorMixin):
             X=X,
             Y=Y,
             weights=(
-                np.ones((self._N_rows, 1))
+                np.ones((self.sample_info.n_rows, 1))
                 if self.observation_weights.values is None
                 else self.observation_weights.values[:, None]
             ),
@@ -1892,7 +1903,7 @@ class Feols(ResultAccessorMixin):
             # prediction errors; will throw error later;
             X = self._prediction_design()
             y_hat = self._predict_in_sample(type=type)
-            n_observations = self._N_rows
+            n_observations = self.sample_info.n_rows
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
             n_observations = newdata.shape[0]
@@ -2148,7 +2159,7 @@ class Feols(ResultAccessorMixin):
 
         else:
             weights = (
-                np.ones(self._N_rows)
+                np.ones(self.sample_info.n_rows)
                 if self.observation_weights.values is None
                 else self.observation_weights.values
             )

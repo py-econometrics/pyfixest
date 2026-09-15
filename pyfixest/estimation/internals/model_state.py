@@ -13,6 +13,8 @@ class ObservationWeights:
     """Canonical observation weights retained by a fitted model.
 
     ``values`` are always user-scale weights; ``None`` means no weights.
+    Observation counts, including the frequency-weight sum, live in
+    ``EstimationSample``.
 
     Parameters
     ----------
@@ -20,11 +22,6 @@ class ObservationWeights:
         Flat, user-scale observation weights. ``None`` for an unweighted fit.
     weights_type : {"aweights", "fweights"} or None
         Weight type. ``None`` for an unweighted fit.
-    n_rows : int
-        Number of physical rows used for estimation.
-    n_effective : int or float
-        Effective observation count: ``n_rows`` for unweighted fits and
-        analytic weights, and ``sum(values)`` for frequency weights.
 
     Examples
     --------
@@ -38,26 +35,17 @@ class ObservationWeights:
 
     values: NDArray[np.float64] | None
     weights_type: WeightsTypeOptions | None
-    n_rows: int
-    n_effective: int | float
 
     def __post_init__(self) -> None:
         # `unweighted()` and `from_values()` are the only constructors used by
-        # the estimators; these two guards catch direct misconstruction.
+        # the estimators; this guard catches direct misconstruction.
         if self.values is not None and self.weights_type is None:
             raise ValueError("Weighted observations must declare a `weights_type`.")
-        if self.values is not None and len(self.values) != self.n_rows:
-            raise ValueError("Observation weights must contain one value per row.")
 
     @classmethod
-    def unweighted(cls, *, n_rows: int) -> ObservationWeights:
+    def unweighted(cls) -> ObservationWeights:
         """Construct the representation of an unweighted fit."""
-        return cls(
-            values=None,
-            weights_type=None,
-            n_rows=n_rows,
-            n_effective=n_rows,
-        )
+        return cls(values=None, weights_type=None)
 
     @classmethod
     def from_values(
@@ -68,21 +56,92 @@ class ObservationWeights:
     ) -> ObservationWeights:
         """Construct canonical weighted state from user-scale weights."""
         observation_weights = np.asarray(weights, dtype=np.float64).reshape(-1)
-        n_rows = len(observation_weights)
-        n_effective = (
-            n_rows if weights_type == "aweights" else float(np.sum(observation_weights))
-        )
-        return cls(
-            values=observation_weights,
-            weights_type=weights_type,
-            n_rows=n_rows,
-            n_effective=n_effective,
-        )
+        return cls(values=observation_weights, weights_type=weights_type)
 
     @property
     def is_weighted(self) -> bool:
         """Whether this state contains user-supplied observation weights."""
         return self.values is not None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class DroppedRowCounts:
+    """Counts of rows removed at each sample-filtering stage.
+
+    Counts are mutually exclusive and stages run in field order, matching
+    ``DropStageOptions``. Sample splitting is not a filtering stage.
+
+    Parameters
+    ----------
+    missing : int
+        Rows with a missing value in any formula variable.
+    infinite : int
+        Rows with an infinite value in a materialized column.
+    singleton : int
+        Rows removed as singleton fixed-effect levels (``fixef_rm="singleton"``).
+    separation : int
+        Rows removed by the GLM separation check.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.sample_info.dropped_by_stage
+    ```
+    """
+
+    missing: int = 0
+    infinite: int = 0
+    singleton: int = 0
+    separation: int = 0
+
+    @property
+    def total(self) -> int:
+        """Number of dropped rows over all stages."""
+        return self.missing + self.infinite + self.singleton + self.separation
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EstimationSample:
+    """Summary of the sample used to fit a model.
+
+    ``dropped_row_index`` holds zero-based row positions within the estimator
+    input after sample splitting.
+
+    Parameters
+    ----------
+    dropped_row_index : frozenset[int]
+        Positions of the rows dropped by any filtering stage.
+    n_rows : int
+        Number of physical fitted rows.
+    n_obs : int or float
+        ``n_rows``, or the weight sum for frequency weights.
+    dropped_by_stage : DroppedRowCounts
+        Dropped rows by filtering stage; their total equals
+        ``len(dropped_row_index)``.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.sample_info.n_rows, fit.sample_info.n_obs, fit.sample_info.dropped_by_stage.missing
+    ```
+    """
+
+    dropped_row_index: frozenset[int]
+    n_rows: int
+    n_obs: int | float
+    dropped_by_stage: DroppedRowCounts
+
+    def __post_init__(self) -> None:
+        if self.dropped_by_stage.total != len(self.dropped_row_index):
+            raise ValueError(
+                "Dropped-row counts must sum to the size of the dropped row index."
+            )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

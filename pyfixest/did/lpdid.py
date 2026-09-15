@@ -270,7 +270,7 @@ def _lpdid_estimate(
         )
         fit_post = cast(Feols, feols(fml=fml, data=data[sample_idx_post], vcov=vcov))
         fit_tidy_post = fit_post.tidy().xs("treat_diff")
-        fit_tidy_post["N"] = int(fit_post._N)
+        fit_tidy_post["N"] = int(fit_post.sample_info.n_obs)
 
         res = pd.DataFrame(fit_tidy_post).T
 
@@ -285,7 +285,7 @@ def _lpdid_estimate(
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
-            fit_tidy["N"] = int(fit._N)
+            fit_tidy["N"] = int(fit.sample_info.n_obs)
             fit_tidy.name = h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 
@@ -300,7 +300,7 @@ def _lpdid_estimate(
             fit = cast(Feols, feols(fml=fml, data=data[sample_idx], vcov=vcov))
 
             fit_tidy = cast(pd.Series, fit.tidy().xs("treat_diff"))
-            fit_tidy["N"] = int(fit._N)
+            fit_tidy["N"] = int(fit.sample_info.n_obs)
             fit_tidy.name = -h  # type: ignore[union-attr]
             fit_all.append(fit_tidy)
 

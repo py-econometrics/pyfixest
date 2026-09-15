@@ -3,9 +3,13 @@ from __future__ import annotations
 from dataclasses import FrozenInstanceError, replace
 
 import numpy as np
+import pandas as pd
 import pytest
 
+import pyfixest as pf
 from pyfixest.estimation.internals.model_state import (
+    DroppedRowCounts,
+    EstimationSample,
     ObservationWeights,
     WithinIvData,
     WithinLinearData,
@@ -13,62 +17,81 @@ from pyfixest.estimation.internals.model_state import (
 
 
 def test_observation_weights_unweighted_fast_path() -> None:
-    weights = ObservationWeights.unweighted(n_rows=4)
+    weights = ObservationWeights.unweighted()
 
     assert weights.values is None
     assert weights.weights_type is None
-    assert weights.n_rows == 4
-    assert weights.n_effective == 4
-    assert isinstance(weights.n_effective, int)
     assert not weights.is_weighted
     assert not hasattr(weights, "__dict__")
+    assert not hasattr(weights, "n_rows")
+    assert not hasattr(weights, "n_obs")
 
 
-@pytest.mark.parametrize(
-    ("weights_type", "expected_n"), [("aweights", 3.0), ("fweights", 6.0)]
-)
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 @pytest.mark.parametrize("input_writeable", [False, True])
 def test_observation_weights_keep_canonical_user_values(
-    weights_type, expected_n, input_writeable
+    weights_type, input_writeable
 ) -> None:
     user_weights = np.array([[1.0], [2.0], [3.0]])
     user_weights.setflags(write=input_writeable)
     weights = ObservationWeights.from_values(user_weights, weights_type=weights_type)
     np.testing.assert_array_equal(weights.values, user_weights.flatten())
     assert weights.weights_type == weights_type
-    assert weights.n_rows == 3
-    assert weights.n_effective == expected_n
-    assert isinstance(weights.n_effective, int if weights_type == "aweights" else float)
     assert weights.is_weighted
     assert user_weights.flags.writeable == input_writeable
 
 
+def test_observation_weights_reject_inconsistent_state() -> None:
+    with pytest.raises(
+        ValueError, match="Weighted observations must declare a `weights_type`"
+    ):
+        ObservationWeights(values=np.ones(2), weights_type=None)
+
+
+def test_estimation_sample_rejects_inconsistent_state() -> None:
+    with pytest.raises(ValueError, match="must sum to the size of the dropped"):
+        EstimationSample(
+            dropped_row_index=frozenset({3, 4}),
+            n_rows=3,
+            n_obs=3,
+            dropped_by_stage=DroppedRowCounts(missing=1),
+        )
+
+
 @pytest.mark.parametrize(
-    ("kwargs", "message"),
+    ("weights_type", "expected_n_obs"),
     [
-        (
-            {
-                "values": np.ones(2),
-                "weights_type": None,
-                "n_rows": 2,
-                "n_effective": 2.0,
-            },
-            "Weighted observations must declare a `weights_type`",
-        ),
-        (
-            {
-                "values": np.ones(3),
-                "weights_type": "aweights",
-                "n_rows": 2,
-                "n_effective": 2,
-            },
-            "Observation weights must contain one value per row",
-        ),
+        (None, 3),
+        ("aweights", 3),
+        ("fweights", 6.0),
     ],
+    ids=["unweighted", "aweights", "fweights"],
 )
-def test_observation_weights_reject_inconsistent_state(kwargs, message) -> None:
-    with pytest.raises(ValueError, match=message):
-        ObservationWeights(**kwargs)
+def test_estimation_sample_counts_frequency_weights(
+    weights_type, expected_n_obs
+) -> None:
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0, 4.0],
+            "x": [1.0, np.nan, 2.0, np.nan, 3.0],
+            "weight": [1.0, 10.0, 2.0, 10.0, 3.0],
+        }
+    )
+    fit = pf.feols(
+        "y ~ x",
+        data,
+        weights="weight" if weights_type else None,
+        weights_type=weights_type or "aweights",
+    )
+    sample_info = fit.sample_info
+
+    assert sample_info.n_rows == 3
+    assert sample_info.n_obs == expected_n_obs
+    assert type(sample_info.n_obs) is type(expected_n_obs)
+    assert sample_info.dropped_row_index == frozenset({1, 3})
+    assert sample_info.dropped_by_stage == DroppedRowCounts(missing=2)
+    with pytest.raises(FrozenInstanceError):
+        sample_info.n_rows = 0  # type: ignore[misc]
 
 
 def test_within_linear_data_is_structurally_immutable() -> None:

@@ -151,10 +151,9 @@ class Feglm(Feols):
 
         if na_separation:
             self._data.drop(na_separation, axis=0, inplace=True)
-            model_matrix = model_matrix.without_rows(na_separation)
+            model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
-            self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
             self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
 
@@ -314,7 +313,7 @@ class Feglm(Feols):
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
-            na_index=self._na_index,
+            na_index=self.sample_info.dropped_row_index,
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
