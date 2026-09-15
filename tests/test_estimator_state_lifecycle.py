@@ -20,7 +20,7 @@ from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_m
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.model_state import (
-    ExclusionCounts,
+    DroppedRowCounts,
     ObservationWeights,
     SampleInfo,
     WithinIvData,
@@ -91,7 +91,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit.observation_weights.values, weights)
     assert fit.observation_weights.weights_type == weights_type
-    assert expected_n == fit.sample.n_effective
+    assert expected_n == fit.sample.n_obs
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(
         lifecycle_data["fe"]
@@ -193,7 +193,7 @@ def test_unweighted_effective_n_remains_integer_for_prediction_errors(
     """An integer physical row count remains usable by prediction allocation."""
     fit = pf.feols("y ~ x", data=lifecycle_data, vcov="iid")
 
-    assert isinstance(fit.sample.n_effective, int)
+    assert isinstance(fit.sample.n_obs, int)
     assert fit.sample.n_rows == len(lifecycle_data)
     assert fit.predict(se_fit=True).shape == (len(lifecycle_data),)
 
@@ -224,24 +224,23 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert model_matrix.fixed_effects is not None
     assert model_matrix.fixed_effects.index.equals(fit._data.index)
     # Row 5 is a formula-stage singleton; rows 0 and 1 are separated.
-    assert model_matrix.na_index == frozenset({0, 1, 5})
+    assert model_matrix.dropped_positions == frozenset({0, 1, 5})
     assert len(model_matrix.dependent) == fit.sample.n_rows
-    assert fit.sample.exclusions == ExclusionCounts(
+    assert fit.sample.dropped_by_stage == DroppedRowCounts(
         missing=0, singleton=1, separation=2
     )
-    assert fit.sample.retained_index.equals(model_matrix.retained_index)
-    assert fit.sample.excluded_positions == model_matrix.na_index
-    assert fit.sample.exclusions == model_matrix.exclusions
+    assert fit.sample.n_rows == model_matrix.n_rows
+    assert fit.sample.dropped_positions == model_matrix.dropped_positions
+    assert fit.sample.dropped_by_stage == model_matrix.dropped_by_stage
 
 
 def test_model_matrix_without_rows_returns_filtered_copy(
     lifecycle_data: pd.DataFrame,
 ) -> None:
     """Estimator-level row filters yield a new ModelMatrix and keep the source."""
-    row_labels = pd.Index(range(100, 100 + len(lifecycle_data)))
     model_matrix = create_model_matrix(
         formula=Formula.parse("y ~ x | fe")[0],
-        data=lifecycle_data.set_axis(row_labels),
+        data=lifecycle_data.copy(),
         weights="weight",
     )
     kept_index = model_matrix.dependent.index.drop([0, 5])
@@ -250,7 +249,7 @@ def test_model_matrix_without_rows_returns_filtered_copy(
 
     assert model_matrix.without_rows([], stage="separation") is model_matrix
     assert filtered is not model_matrix
-    assert filtered.na_index == model_matrix.na_index | {0, 5}
+    assert filtered.dropped_positions == model_matrix.dropped_positions | {0, 5}
     assert filtered.model_spec is model_matrix.model_spec
     for role in ("dependent", "independent", "fixed_effects", "weights"):
         assert getattr(filtered, role).index.equals(kept_index)
@@ -260,11 +259,11 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert len(model_matrix.dependent) == len(lifecycle_data)
 
     # The source keeps its bookkeeping; the copy counts the rows as separation.
-    assert model_matrix.exclusions == ExclusionCounts()
-    assert model_matrix.retained_index.equals(row_labels)
-    assert filtered.exclusions == ExclusionCounts(separation=2)
-    assert filtered.na_index == frozenset({0, 5})
-    assert filtered.retained_index.equals(row_labels.drop([100, 105]))
+    assert model_matrix.dropped_by_stage == DroppedRowCounts()
+    assert model_matrix.n_rows == len(lifecycle_data)
+    assert filtered.dropped_by_stage == DroppedRowCounts(separation=2)
+    assert filtered.dropped_positions == frozenset({0, 5})
+    assert filtered.n_rows == len(lifecycle_data) - 2
 
 
 def test_multiple_estimation_shares_array_native_demean_cache(
@@ -335,7 +334,7 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit.sample.n_effective))
+    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit.sample.n_obs))
     np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
     if fit._has_fixef:
         assert observation_weights is not None
@@ -462,14 +461,9 @@ def test_iv_first_stage_follows_parent_retention(
         assert hasattr(model, "observation_weights") is (not lean)
         assert np.isfinite(model.coef()).all()
         assert np.isfinite(model.se()).all()
-        # Counts and exclusions survive every storage option; only the
-        # observation-sized row labels are dropped by lean cleanup.
+        # The sample survives every storage option unchanged.
         assert model.sample.n_rows == len(lifecycle_data)
-        assert model.sample.exclusions == ExclusionCounts()
-        if lean:
-            assert model.sample.retained_index is None
-        else:
-            assert model.sample.retained_index.equals(lifecycle_data.index)
+        assert model.sample.dropped_by_stage == DroppedRowCounts()
 
     retained_f = fit._f_stat_1st_stage
     fit.IV_weakness_test(["f_stat"])
@@ -579,10 +573,10 @@ def test_store_data_false_preserves_no_fe_post_estimation(
         (pf.quantreg, "y ~ x", {"quantile": 0.5}, 0),
     ],
 )
-def test_sample_info_counts_exclusions_by_stage(
+def test_sample_info_counts_dropped_rows_by_stage(
     lifecycle_data, estimator, formula, kwargs, expected_separation
 ):
-    """Every estimator reports its final row sample and the stage of each exclusion."""
+    """Every estimator reports its final row sample and the stage of each dropped row."""
     data = lifecycle_data.assign(
         count=np.tile([1, 3, 2, 4], 6), binary=np.tile([0, 1], 12)
     )
@@ -597,7 +591,7 @@ def test_sample_info_counts_exclusions_by_stage(
         result = estimator(formula, data, **kwargs)
     models = result.to_list() if isinstance(result, FixestMulti) else [result]
     uses_fe = "| fe" in formula
-    expected_exclusions = ExclusionCounts(
+    expected_dropped = DroppedRowCounts(
         missing=1,
         nonfinite=1,
         singleton=2 * int(uses_fe),
@@ -611,66 +605,45 @@ def test_sample_info_counts_exclusions_by_stage(
     for model in models:
         sample = model.sample
         assert isinstance(sample, SampleInfo)
-        assert sample.retained_index.equals(model.model_matrix.retained_index)
-        assert sample.excluded_positions == model.model_matrix.na_index
-        assert sample.exclusions == model.model_matrix.exclusions
-        assert sample.exclusions == expected_exclusions
-        assert sample.exclusions.total == len(sample.excluded_positions)
-        assert sample.n_rows == len(data) - expected_exclusions.total
+        assert sample.n_rows == model.model_matrix.n_rows
+        assert sample.dropped_positions == model.model_matrix.dropped_positions
+        assert sample.dropped_by_stage == model.model_matrix.dropped_by_stage
+        assert sample.dropped_by_stage == expected_dropped
+        assert sample.dropped_by_stage.total == len(sample.dropped_positions)
+        assert sample.n_rows == len(data) - expected_dropped.total
         assert sample.n_rows == len(model.resid())
-        assert sample.retained_index.equals(expected_index)
-        assert set(sample.excluded_positions) == set(
+        assert set(sample.dropped_positions) == set(
             data.index.difference(expected_index)
         )
         if kwargs.get("weights_type") == "fweights":
             # Singletons are physical rows; the effective count sums weights.
-            assert sample.n_effective == data.loc[expected_index, "weight"].sum()
-            assert isinstance(sample.n_effective, float)
+            assert sample.n_obs == data.loc[expected_index, "weight"].sum()
+            assert isinstance(sample.n_obs, float)
         else:
-            assert sample.n_effective == sample.n_rows
-            assert isinstance(sample.n_effective, int)
+            assert sample.n_obs == sample.n_rows
+            assert isinstance(sample.n_obs, int)
         if model._is_iv:
             # The first stage is refit on the retained rows: it owns a sample
-            # with no exclusions of its own and the parent's row labels.
+            # with no dropped rows of its own.
             first_stage = model._model_1st_stage.sample
             assert first_stage is not sample
-            assert first_stage.exclusions == ExclusionCounts()
+            assert first_stage.dropped_by_stage == DroppedRowCounts()
             assert first_stage.n_rows == sample.n_rows
-            assert first_stage.retained_index.equals(sample.retained_index)
     assert len({id(model.sample) for model in models}) == len(models)
 
 
-def test_sample_positions_ignore_the_input_index(lifecycle_data: pd.DataFrame):
-    """Fitted rows are identified by input position; a custom index is discarded."""
-    data = lifecycle_data.set_axis(pd.Index(range(1000, 1000 + len(lifecycle_data))))
-    data.iloc[3, data.columns.get_loc("x")] = np.nan
-    fit = pf.feols("y ~ x", data)
-    assert fit.sample.retained_index.equals(pd.RangeIndex(len(data)).drop(3))
-    assert fit.sample.excluded_positions == frozenset({3})
-    assert fit.sample.exclusions == ExclusionCounts(missing=1)
-
-
-def test_split_samples_keep_full_frame_identities(lifecycle_data: pd.DataFrame):
-    """A split selects each child's rows; only formula filters count as exclusions."""
+def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
+    """A split selects each child's rows; only formula filters count as dropped."""
     data = lifecycle_data.copy()
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
         level = model._sample_split_value
         population = data.index[data["fe"] == level]
-        expected_index = population.drop(7, errors="ignore")
         sample = model.sample
-        assert sample.retained_index.equals(expected_index)
-        assert sample.n_rows == len(expected_index)
-        assert sample.exclusions == ExclusionCounts(missing=int(level == "b"))
-        # Excluded positions are local to the child's input frame.
-        assert sample.excluded_positions == frozenset(
+        assert sample.n_rows == len(population) - int(level == "b")
+        assert sample.dropped_by_stage == DroppedRowCounts(missing=int(level == "b"))
+        # Dropped positions count from zero in the child's input frame.
+        assert sample.dropped_positions == frozenset(
             np.flatnonzero(population == 7).tolist()
-        )
-        np.testing.assert_allclose(
-            model.resid(),
-            data.loc[expected_index, "y"] - model.predict(),
-            rtol=1e-12,
-            atol=1e-12,
-            err_msg="retained_index does not align residuals with the input rows",
         )

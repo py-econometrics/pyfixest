@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
@@ -66,15 +65,15 @@ class ObservationWeights:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class ExclusionCounts:
-    """Rows excluded from the fitted sample, counted by the stage that removed them.
+class DroppedRowCounts:
+    """Rows dropped from the fitted sample, counted by the stage that dropped them.
 
-    Each stage counts only the rows it newly removed from the rows that survived
-    the earlier stages, so the counts sum to the number of excluded rows and
+    Each stage counts only the rows it newly dropped from the rows that survived
+    the earlier stages, so the counts sum to the number of dropped rows and
     never double-count. Stages run in field order: formula missing-value
     handling, the nonfinite filter, singleton fixed-effect removal, and GLM
     separation. A sample split selects each child's input rows before these
-    stages and is not an exclusion.
+    stages and is not a drop.
 
     Parameters
     ----------
@@ -93,7 +92,7 @@ class ExclusionCounts:
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
-    fit.sample.exclusions
+    fit.sample.dropped_by_stage
     ```
     """
 
@@ -104,7 +103,7 @@ class ExclusionCounts:
 
     @property
     def total(self) -> int:
-        """Number of excluded rows over all stages."""
+        """Number of dropped rows over all stages."""
         return self.missing + self.nonfinite + self.singleton + self.separation
 
 
@@ -112,32 +111,27 @@ class ExclusionCounts:
 class SampleInfo:
     """The row sample a model was fitted on.
 
-    The estimator builds it with ``from_rows`` from the row bookkeeping of
-    its ``ModelMatrix`` and its observation weights. ``retained_index``
-    identifies the fitted rows in the frame the estimator received, in
-    estimation order. The estimation functions discard the index of the
-    user's data, so for a fitted model these are the 0-based positions of the
-    input rows, as in fixest's ``obs()``, not the caller's index labels. A
-    sample split keeps positions in the full frame, and an IV first stage
-    keeps the positions of its second stage. ``excluded_positions`` are
-    formula-local positions in that frame after the split, which is also how
-    the demeaning cache keys a row sample.
+    The estimator builds it with ``from_weights`` from the dropped-row
+    bookkeeping of its ``ModelMatrix`` and its observation weights. The
+    estimation functions discard the index of the user's data, so
+    ``dropped_positions`` count from zero in the frame the estimator
+    received, after any sample split; the demeaning cache keys a row sample
+    by the same set. It is scalar-sized apart from that set and survives
+    every storage option.
 
     Parameters
     ----------
-    retained_index : pd.Index or None
-        Positions of the fitted rows in the input frame. ``None`` after
-        ``lean=True`` cleanup, which drops this observation-sized index.
-    excluded_positions : frozenset[int]
-        Positions of the rows excluded by any filtering stage.
+    dropped_positions : frozenset[int]
+        Positions of the rows dropped by any filtering stage.
     n_rows : int
         Number of physical fitted rows.
-    n_effective : int or float
-        Effective observation count: ``n_rows`` for unweighted fits and
-        analytic weights, and the weight sum for frequency weights.
-    exclusions : ExclusionCounts
-        Excluded rows by filtering stage; their total equals
-        ``len(excluded_positions)``.
+    n_obs : int or float
+        Number of observations as fixest's ``nobs``: ``n_rows`` for
+        unweighted fits and analytic weights, and the weight sum for
+        frequency weights.
+    dropped_by_stage : DroppedRowCounts
+        Dropped rows by filtering stage; their total equals
+        ``len(dropped_positions)``.
 
     Examples
     --------
@@ -145,51 +139,46 @@ class SampleInfo:
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
-    fit.sample.n_rows, fit.sample.n_effective, fit.sample.exclusions.missing
+    fit.sample.n_rows, fit.sample.n_obs, fit.sample.dropped_by_stage.missing
     ```
     """
 
-    retained_index: pd.Index | None
-    excluded_positions: frozenset[int]
+    dropped_positions: frozenset[int]
     n_rows: int
-    n_effective: int | float
-    exclusions: ExclusionCounts
+    n_obs: int | float
+    dropped_by_stage: DroppedRowCounts
 
     def __post_init__(self) -> None:
-        if self.retained_index is not None and len(self.retained_index) != self.n_rows:
-            raise ValueError("SampleInfo must contain one retained row label per row.")
-        if self.exclusions.total != len(self.excluded_positions):
+        if self.dropped_by_stage.total != len(self.dropped_positions):
             raise ValueError(
-                "Exclusion counts must sum to the number of excluded positions."
+                "Dropped-row counts must sum to the number of dropped positions."
             )
 
     @classmethod
-    def from_rows(
+    def from_weights(
         cls,
         *,
-        retained_index: pd.Index,
-        excluded_positions: frozenset[int],
-        exclusions: ExclusionCounts,
+        n_rows: int,
+        dropped_positions: frozenset[int],
+        dropped_by_stage: DroppedRowCounts,
         weights: ObservationWeights,
     ) -> SampleInfo:
-        """Describe the fitted sample from row bookkeeping and observation weights.
+        """Describe the fitted sample from dropped-row bookkeeping and observation weights.
 
-        fixest counts a frequency weight as that many repeated rows, so the
-        effective count is the weight sum; otherwise it is the row count.
+        fixest counts a frequency weight as that many repeated rows, so
+        ``n_obs`` is the weight sum; otherwise it is the row count.
         """
-        n_rows = len(retained_index)
         if weights.values is not None and len(weights.values) != n_rows:
             raise ValueError("Observation weights must contain one value per row.")
-        n_effective: int | float = n_rows
+        n_obs: int | float = n_rows
         if weights.weights_type == "fweights":
             assert weights.values is not None
-            n_effective = float(weights.values.sum())
+            n_obs = float(weights.values.sum())
         return cls(
-            retained_index=retained_index,
-            excluded_positions=excluded_positions,
+            dropped_positions=dropped_positions,
             n_rows=n_rows,
-            n_effective=n_effective,
-            exclusions=exclusions,
+            n_obs=n_obs,
+            dropped_by_stage=dropped_by_stage,
         )
 
 

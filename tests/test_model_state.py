@@ -3,11 +3,10 @@ from __future__ import annotations
 from dataclasses import FrozenInstanceError, replace
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from pyfixest.estimation.internals.model_state import (
-    ExclusionCounts,
+    DroppedRowCounts,
     ObservationWeights,
     SampleInfo,
     WithinIvData,
@@ -23,7 +22,7 @@ def test_observation_weights_unweighted_fast_path() -> None:
     assert not weights.is_weighted
     assert not hasattr(weights, "__dict__")
     assert not hasattr(weights, "n_rows")
-    assert not hasattr(weights, "n_effective")
+    assert not hasattr(weights, "n_obs")
 
 
 @pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
@@ -47,59 +46,41 @@ def test_observation_weights_reject_inconsistent_state() -> None:
         ObservationWeights(values=np.ones(2), weights_type=None)
 
 
-def test_exclusion_counts_sum_over_stages() -> None:
-    counts = ExclusionCounts(missing=2, nonfinite=1, singleton=3, separation=4)
+def test_dropped_row_counts_sum_over_stages() -> None:
+    counts = DroppedRowCounts(missing=2, nonfinite=1, singleton=3, separation=4)
     assert counts.total == 10
-    assert ExclusionCounts().total == 0
+    assert DroppedRowCounts().total == 0
     assert not hasattr(counts, "__dict__")
     with pytest.raises(FrozenInstanceError):
         counts.missing = 0  # type: ignore[misc]
     assert replace(counts, separation=0).total == 6
 
 
-@pytest.mark.parametrize("retained_index", [None, pd.Index([0, 2, 5])])
-def test_sample_info_is_structurally_immutable(retained_index) -> None:
+def test_sample_info_is_structurally_immutable() -> None:
     sample = SampleInfo(
-        retained_index=retained_index,
-        excluded_positions=frozenset({1, 3, 4}),
+        dropped_positions=frozenset({1, 3, 4}),
         n_rows=3,
-        n_effective=7.0,
-        exclusions=ExclusionCounts(missing=2, singleton=1),
+        n_obs=7.0,
+        dropped_by_stage=DroppedRowCounts(missing=2, singleton=1),
     )
-    assert sample.retained_index is retained_index
     assert sample.n_rows == 3
-    assert sample.n_effective == 7.0
-    assert sample.exclusions.total == 3
+    assert sample.n_obs == 7.0
+    assert sample.dropped_by_stage.total == 3
     assert not hasattr(sample, "__dict__")
     with pytest.raises(FrozenInstanceError):
         sample.n_rows = 4  # type: ignore[misc]
     with pytest.raises(TypeError):
-        SampleInfo(pd.Index([0]), frozenset(), 1, 1, ExclusionCounts())  # type: ignore[misc]
+        SampleInfo(frozenset(), 1, 1, DroppedRowCounts())  # type: ignore[misc]
 
 
-@pytest.mark.parametrize(
-    ("kwargs", "message"),
-    [
-        (
-            {"retained_index": pd.Index([0, 1]), "n_rows": 3},
-            "one retained row label per row",
-        ),
-        (
-            {"exclusions": ExclusionCounts(missing=1)},
-            "Exclusion counts must sum to the number of excluded positions",
-        ),
-    ],
-)
-def test_sample_info_rejects_inconsistent_state(kwargs, message) -> None:
-    consistent = {
-        "retained_index": pd.Index([0, 1, 2]),
-        "excluded_positions": frozenset({3, 4}),
-        "n_rows": 3,
-        "n_effective": 3,
-        "exclusions": ExclusionCounts(missing=1, nonfinite=1),
-    }
-    with pytest.raises(ValueError, match=message):
-        SampleInfo(**{**consistent, **kwargs})
+def test_sample_info_rejects_inconsistent_state() -> None:
+    with pytest.raises(ValueError, match="must sum to the number of dropped"):
+        SampleInfo(
+            dropped_positions=frozenset({3, 4}),
+            n_rows=3,
+            n_obs=3,
+            dropped_by_stage=DroppedRowCounts(missing=1),
+        )
 
 
 @pytest.mark.parametrize(
@@ -121,27 +102,27 @@ def test_sample_info_rejects_inconsistent_state(kwargs, message) -> None:
     ],
     ids=["unweighted", "aweights", "fweights"],
 )
-def test_sample_info_from_rows_counts_frequency_weights(
+def test_sample_info_from_weights_counts_frequency_weights(
     weights, expected_n_effective
 ) -> None:
-    sample = SampleInfo.from_rows(
-        retained_index=pd.Index([0, 2, 4]),
-        excluded_positions=frozenset({1, 3}),
-        exclusions=ExclusionCounts(missing=2),
+    sample = SampleInfo.from_weights(
+        n_rows=3,
+        dropped_positions=frozenset({1, 3}),
+        dropped_by_stage=DroppedRowCounts(missing=2),
         weights=weights,
     )
     assert sample.n_rows == 3
-    assert sample.n_effective == expected_n_effective
-    assert type(sample.n_effective) is type(expected_n_effective)
-    assert sample.excluded_positions == frozenset({1, 3})
+    assert sample.n_obs == expected_n_effective
+    assert type(sample.n_obs) is type(expected_n_effective)
+    assert sample.dropped_positions == frozenset({1, 3})
 
 
-def test_sample_info_from_rows_rejects_misaligned_weights() -> None:
+def test_sample_info_from_weights_rejects_misaligned_weights() -> None:
     with pytest.raises(ValueError, match="one value per row"):
-        SampleInfo.from_rows(
-            retained_index=pd.Index([0, 1]),
-            excluded_positions=frozenset(),
-            exclusions=ExclusionCounts(),
+        SampleInfo.from_weights(
+            n_rows=2,
+            dropped_positions=frozenset(),
+            dropped_by_stage=DroppedRowCounts(),
             weights=ObservationWeights.from_values(np.ones(3), weights_type="aweights"),
         )
 

@@ -209,7 +209,7 @@ def test_predict_newdata_i_transform(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit.sample.n_effective
+    assert pred_full.shape[0] == fit.sample.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 
@@ -230,7 +230,7 @@ def test_predict_newdata_poly_transform(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit.sample.n_effective
+    assert pred_full.shape[0] == fit.sample.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 
@@ -250,7 +250,7 @@ def test_predict_newdata_fe_interaction(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit.sample.n_effective
+    assert pred_full.shape[0] == fit.sample.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 

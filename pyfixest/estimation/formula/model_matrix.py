@@ -17,12 +17,12 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSF
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
-from pyfixest.estimation.internals.model_state import ExclusionCounts
+from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
 # The filtering stages that run after formulaic's missing-value handling.
-_ExclusionStage: TypeAlias = Literal["nonfinite", "singleton", "separation"]
+_DropStage: TypeAlias = Literal["nonfinite", "singleton", "separation"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,10 +59,6 @@ class ModelMatrix:
         Whether to remove singleton fixed-effect groups.
     drop_intercept : bool, default False
         Whether to remove the structural intercept.
-    row_labels : pd.Index
-        Identities of every row of the estimation frame, in order, so that the
-        fitted rows can be identified in the caller's frame. The estimators
-        pass the positions of their input rows.
 
     Examples
     --------
@@ -94,11 +90,11 @@ class ModelMatrix:
         Observation weights for weighted estimation.
     model_spec : Mapping[str, formulaic.ModelSpec]
         The underlying formulaic model specifications keyed by role.
-    retained_index : pd.Index
-        ``row_labels`` of the rows that survived every filtering stage.
-    na_index : frozenset[int]
-        Positions of the rows that were dropped.
-    exclusions : ExclusionCounts
+    n_rows : int
+        Number of rows that survived every filtering stage.
+    dropped_positions : frozenset[int]
+        Positions of the dropped rows in the frame the matrix was built from.
+    dropped_by_stage : DroppedRowCounts
         Dropped rows counted by the filtering stage that removed them.
     """
 
@@ -110,18 +106,15 @@ class ModelMatrix:
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
-        *,
-        row_labels: pd.Index,
     ) -> None:
         self._drop_intercept = drop_intercept
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
         # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
-        # the later stages update this row bookkeeping as they exclude rows.
-        self._retained_index = row_labels.take(self._data.index.to_numpy())
-        self._na_index = drop_rows
-        self._exclusions = ExclusionCounts(missing=len(drop_rows))
+        # the later stages add the rows they drop.
+        self._dropped_positions = drop_rows
+        self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
@@ -221,23 +214,24 @@ class ModelMatrix:
                 stage="singleton",
             )
 
-    def _record_exclusion(
+    def _record_drop(
         self,
         target: ModelMatrix,
         is_dropped: NDArray[np.bool_],
         *,
-        stage: _ExclusionStage,
+        stage: _DropStage,
     ) -> None:
-        """Write onto `target` the row bookkeeping after `stage` drops the masked rows."""
-        exclusions = self._exclusions
-        target._retained_index = self._retained_index[~is_dropped]
-        target._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
-        target._exclusions = replace(
-            exclusions, **{stage: getattr(exclusions, stage) + int(is_dropped.sum())}
+        """Write onto `target` the dropped rows after `stage` drops the masked rows."""
+        counts = self._dropped_by_stage
+        target._dropped_positions = self._dropped_positions.union(
+            self._data.index[is_dropped].tolist()
+        )
+        target._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + int(is_dropped.sum())}
         )
 
     def _drop(
-        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: _ExclusionStage
+        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: _DropStage
     ) -> None:
         """Drop the masked rows from `self._data` and count them under `stage`.
 
@@ -246,23 +240,23 @@ class ModelMatrix:
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._record_exclusion(self, is_dropped, stage=stage)
+        self._record_drop(self, is_dropped, stage=stage)
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
-    def without_rows(self, rows: list[int], *, stage: _ExclusionStage) -> ModelMatrix:
-        """Return a shallow copy without ``rows``, counted as ``stage`` exclusions.
+    def without_rows(self, rows: list[int], *, stage: _DropStage) -> ModelMatrix:
+        """Return a shallow copy without ``rows``, counted under ``stage``.
 
-        The copied object receives a new filtered data frame and row
-        bookkeeping that adds ``rows`` to the exclusions of ``stage``; its
-        unchanged formula metadata remains shared with the original object. An
-        empty ``rows`` sequence returns this instance unchanged.
+        The copied object receives a new filtered data frame and dropped-row
+        bookkeeping that counts ``rows`` under ``stage``; its unchanged formula
+        metadata remains shared with the original object. An empty ``rows``
+        sequence returns this instance unchanged.
         """
         if not rows:
             return self
         filtered = copy.copy(self)
         filtered._data = self._data.drop(index=rows)
-        self._record_exclusion(filtered, self._data.index.isin(rows), stage=stage)
+        self._record_drop(filtered, self._data.index.isin(rows), stage=stage)
         return filtered
 
     @property
@@ -384,19 +378,23 @@ class ModelMatrix:
         return self._model_spec
 
     @property
-    def retained_index(self) -> pd.Index:
-        """``row_labels`` of the rows kept after every filtering stage."""
-        return self._retained_index
+    def n_rows(self) -> int:
+        """Number of rows kept after every filtering stage, including ``without_rows``."""
+        return len(self._data)
 
     @property
-    def na_index(self) -> frozenset[int]:
-        """Integer positions of dropped rows, including ``without_rows`` drops."""
-        return self._na_index
+    def dropped_positions(self) -> frozenset[int]:
+        """Positions of dropped rows, including ``without_rows`` drops.
+
+        Positions count from zero in the frame this matrix was built from,
+        which ``create_model_matrix`` reindexes before materializing.
+        """
+        return self._dropped_positions
 
     @property
-    def exclusions(self) -> ExclusionCounts:
+    def dropped_by_stage(self) -> DroppedRowCounts:
         """Dropped rows by filtering stage, including ``without_rows`` drops."""
-        return self._exclusions
+        return self._dropped_by_stage
 
 
 def create_model_matrix(
@@ -408,7 +406,6 @@ def create_model_matrix(
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
     context: int | Mapping[str, Any] = 0,
-    row_labels: pd.Index | None = None,
 ) -> ModelMatrix:
     """
     Create a ModelMatrix from a formula and data.
@@ -447,11 +444,6 @@ def create_model_matrix(
         Additional context variables for formulaic during model matrix creation.
         Can be an integer (stack frame depth) or a dictionary of variables to
         make available in the formula environment (e.g., custom transformations).
-    row_labels : pd.Index or None, default=None
-        Identities of the rows of `data` in the caller's frame, recorded as
-        ``retained_index`` for the fitted rows. Defaults to the index of `data`
-        before it is reset; the estimators pass the positions of their input
-        rows.
 
     Returns
     -------
@@ -473,10 +465,6 @@ def create_model_matrix(
     ```
     """
     # Process input data
-    if row_labels is None:
-        row_labels = data.index
-    elif len(row_labels) != data.shape[0]:
-        raise ValueError("`row_labels` must contain one label per row of `data`.")
     data.reset_index(drop=True, inplace=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
@@ -498,7 +486,6 @@ def create_model_matrix(
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
-        row_labels=row_labels,
     )
 
 

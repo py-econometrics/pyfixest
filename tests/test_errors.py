@@ -16,8 +16,6 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.deprecated.FormulaParser import FixestFormulaParser
-from pyfixest.estimation.formula.model_matrix import create_model_matrix
-from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
@@ -310,15 +308,6 @@ def test_dependent_and_endogenous_model_matrix_errors(
 
     with pytest.raises(TypeError, match=error_message):
         feols(fml=fml, data=data, context={"two_columns": two_columns})
-
-
-def test_model_matrix_rejects_misaligned_row_labels():
-    with pytest.raises(ValueError, match="one label per row"):
-        create_model_matrix(
-            formula=Formula.parse("Y ~ X1")[0],
-            data=get_data().copy(),
-            row_labels=pd.Index([0, 1]),
-        )
 
 
 def test_iv_errors():

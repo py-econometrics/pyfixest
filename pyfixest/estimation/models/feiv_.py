@@ -232,7 +232,7 @@ class Feiv(Feols):
                 x_names=tuple(instrument_frame.columns),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
-                na_index=self.sample.excluded_positions,
+                na_index=self.sample.dropped_positions,
                 demeaner=self._demeaner,
             )
         return WithinIvData(
@@ -311,7 +311,7 @@ class Feiv(Feols):
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(
-            self.sample.excluded_positions
+            self.sample.dropped_positions
         )
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
@@ -330,17 +330,6 @@ class Feiv(Feols):
 
         # Ensure model1 is of type Feols
         if isinstance(model1, Feols):
-            # The refit received the retained rows with a reset index, so its
-            # positions index this model's fitted rows; its model matrix keeps
-            # that refit-local bookkeeping.
-            assert self.sample.retained_index is not None
-            assert model1.sample.retained_index is not None
-            model1.sample = replace(
-                model1.sample,
-                retained_index=self.sample.retained_index.take(
-                    model1.sample.retained_index.to_numpy()
-                ),
-            )
             # Store the first stage coefficients
             self._pi_hat = model1._beta_hat
 

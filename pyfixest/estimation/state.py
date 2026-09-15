@@ -2,7 +2,7 @@
 
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
-    ExclusionCounts,
+    DroppedRowCounts,
     GlmWorkingState,
     ObservationWeights,
     SampleInfo,
@@ -11,7 +11,7 @@ from pyfixest.estimation.internals.model_state import (
 )
 
 __all__ = [
-    "ExclusionCounts",
+    "DroppedRowCounts",
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",

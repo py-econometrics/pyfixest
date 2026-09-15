@@ -151,7 +151,7 @@ class Feols(ResultAccessorMixin):
     observation_weights : ObservationWeights
         User-scale weights and their analytic or frequency interpretation.
     sample : SampleInfo
-        Retained row labels, excluded positions, and observation counts.
+        Observation counts and the dropped rows, by position and by stage.
     _k : int
         Number of independent variables (or features).
     _support_crv3_inference : bool
@@ -301,8 +301,8 @@ class Feols(ResultAccessorMixin):
         else:
             data = data.loc[data[self._sample_split_var] == sample_split_value]
 
-        # The index is reset in prepare_model_matrix(), after the row labels
-        # have been recorded for the retained-row sample.
+        data = data.reset_index(drop=True)
+
         self._data = data.copy() if copy_data else data
         self._ssc_dict = ssc_dict
         self._drop_singletons = drop_singletons
@@ -411,10 +411,6 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
-        # Row labels identify the fitted rows in the frame this estimator
-        # received; the reset makes labels and formula-local positions coincide.
-        row_labels = self._data.index
-        self._data = self._data.reset_index(drop=True)
         model_matrix = model_matrix_fixest.create_model_matrix(
             formula=self.FixestFormula,
             data=self._data,
@@ -423,13 +419,12 @@ class Feols(ResultAccessorMixin):
             weights=self._weights_name,
             offset=self._offset_name,
             context=self._context,
-            row_labels=row_labels,
         )
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it
-        if model_matrix.na_index:
-            self._data.drop(index=list(model_matrix.na_index), inplace=True)
+        if model_matrix.dropped_positions:
+            self._data.drop(index=list(model_matrix.dropped_positions), inplace=True)
 
         return model_matrix
 
@@ -474,10 +469,10 @@ class Feols(ResultAccessorMixin):
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
-        self.sample = SampleInfo.from_rows(
-            retained_index=model_matrix.retained_index,
-            excluded_positions=model_matrix.na_index,
-            exclusions=model_matrix.exclusions,
+        self.sample = SampleInfo.from_weights(
+            n_rows=model_matrix.n_rows,
+            dropped_positions=model_matrix.dropped_positions,
+            dropped_by_stage=model_matrix.dropped_by_stage,
             weights=self.observation_weights,
         )
 
@@ -517,7 +512,7 @@ class Feols(ResultAccessorMixin):
                 x_names=tuple(design_frame.columns),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
-                na_index=self.sample.excluded_positions,
+                na_index=self.sample.dropped_positions,
                 demeaner=self._demeaner,
             )
         return WithinLinearData(response=response, design=design)
@@ -534,7 +529,7 @@ class Feols(ResultAccessorMixin):
         setup phase on a later fit over the same design.
         """
         return self._demean_cache.lookup_preconditioner.get(
-            self.sample.excluded_positions
+            self.sample.dropped_positions
         )
 
     def _drop_multicollinear_within_data(
@@ -717,7 +712,7 @@ class Feols(ResultAccessorMixin):
         elif self._vcov_type == "hetero":
             # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
             self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample.n_effective)
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample.n_obs)
             )
             self._vcov = self._ssc * self._vcov_hetero()
 
@@ -736,7 +731,7 @@ class Feols(ResultAccessorMixin):
 
         elif self._vcov_type == "nid":
             self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample.n_effective)
+                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample.n_obs)
             )
             self._vcov = self._ssc * self._vcov_nid()
 
@@ -774,7 +769,7 @@ class Feols(ResultAccessorMixin):
         "Bundle model-level and vcov-type-specific args for get_ssc()."
         return {
             "ssc_dict": self._ssc_dict,
-            "N": self.sample.n_effective,
+            "N": self.sample.n_obs,
             "k": self._k,
             "k_fe": self._k_fe.sum() if self._has_fixef else 0,
             "n_fe": self._n_fe,
@@ -804,7 +799,7 @@ class Feols(ResultAccessorMixin):
         return vcov_iid_ols(
             residuals=self._u_hat,
             bread=self._bread,
-            N=self.sample.n_effective,
+            N=self.sample.n_obs,
             weights=self.observation_weights.values,
         )
 
@@ -935,9 +930,6 @@ class Feols(ResultAccessorMixin):
         for attr in omitted_attributes(policy):
             if hasattr(self, attr):
                 delattr(self, attr)
-        if policy.lean:
-            # The row labels are observation-sized; counts and exclusions stay.
-            self.sample = replace(self.sample, retained_index=None)
 
     def wald_test(self, R=None, q=None, distribution="F"):
         """
@@ -1016,7 +1008,7 @@ class Feols(ResultAccessorMixin):
         if self._is_clustered:
             self._dfd = np.min(np.array(self._G)) - 1
         else:
-            self._dfd = self.sample.n_effective - self._k - k_fe
+            self._dfd = self.sample.n_obs - self._k - k_fe
 
         self._wald_statistic = W
 
@@ -1393,7 +1385,7 @@ class Feols(ResultAccessorMixin):
 
         tau_full = np.array(self.coef().xs(treatment))
 
-        N = self.sample.n_effective
+        N = self.sample.n_obs
         G = len(unique_clusters)
 
         ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
