@@ -150,6 +150,13 @@ def _check_structure(baseline: Baseline, mod) -> None:
     baseline.check_exact("df_t", int(mod._df_t))
 
 
+def _fit_statistic(mod, name: str, legacy: str) -> float:
+    """Read a fit statistic; the pinned release predates `FitStatistics`."""
+    if hasattr(mod, "fitstat"):
+        return getattr(mod.fitstat, name)
+    return getattr(mod, legacy)
+
+
 def _check_fit(baseline: Baseline, mod, *, confint: bool = True) -> None:
     """Check the full estimate and inference vectors."""
     _check_structure(baseline, mod)
@@ -230,6 +237,8 @@ def test_single_fit_feols(
     _check_fit(baseline, mod)
     baseline.check("resid", mod.resid()[0:5])
     baseline.check("predict", mod.predict()[0:5])
+    for name in ("rmse", "r2", "adj_r2", "r2_within", "adj_r2_within"):
+        baseline.check(name, _fit_statistic(mod, name, f"_{name}"))
 
 
 @pytest.mark.parametrize("fml,f3_type", FEOLS_F3_DTYPE_CASES)
@@ -262,7 +271,9 @@ def test_single_fit_fepois(data_fepois, inference, fml, weights, offset, baselin
     )
 
     _check_fit_at_x1(baseline, mod, **FEPOIS_TOLERANCE)
-    baseline.check("deviance", mod.deviance)
+    baseline.check("deviance", _fit_statistic(mod, "deviance", "deviance"))
+    baseline.check("loglik", _fit_statistic(mod, "loglik", "_loglik"))
+    baseline.check("pearson_chi2", _fit_statistic(mod, "pearson_chi2", "_pearson_chi2"))
     baseline.check("resid", mod.resid()[0:5], **FEPOIS_TOLERANCE)
     baseline.check(
         "irls_weights",
@@ -318,7 +329,7 @@ def test_single_fit_feglm(data_fepois, family, inference, fml, baseline):
         iwls_maxiter=100,
     )
 
-    baseline.check("deviance", mod.deviance)
+    baseline.check("deviance", _fit_statistic(mod, "deviance", "deviance"))
 
     # `resid()` returned the IRLS working residual in the pinned release and
     # returns the response residual now, so both are compared through the

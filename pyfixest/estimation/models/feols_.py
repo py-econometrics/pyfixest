@@ -29,6 +29,10 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    linear_fit_statistics,
+)
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
@@ -220,16 +224,8 @@ class Feols(ResultAccessorMixin):
         A DataFrame with the estimated fixed effects.
     _sumFE : np.ndarray
         Sum of all fixed effects for each observation.
-    _rmse : float
-        Root mean squared error of the model.
-    _r2 : float
-        R-squared value of the model.
-    _r2_within : float
-        R-squared value computed on demeaned dependent variable.
-    _adj_r2 : float
-        Adjusted R-squared value of the model.
-    _adj_r2_within : float
-        Adjusted R-squared value computed on demeaned dependent variable.
+    fitstat : FitStatistics
+        Goodness-of-fit measures; ``NaN`` where the estimator defines none.
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
@@ -378,15 +374,8 @@ class Feols(ResultAccessorMixin):
         self._alpha = None
         self._sumFE = None
 
-        # set in get_performance()
-        self._rmse = np.nan
-        self._r2 = np.nan
-        self._r2_within = np.nan
-        self._adj_r2 = np.nan
-        self._adj_r2_within = np.nan
-
-        # special for poisson / glm
-        self.deviance: float | None = None
+        # set in get_fit(); IV and quantile fits keep the all-NaN value
+        self.fitstat = FitStatistics()
 
         # special for did
         self._res_cohort_eventtime_dict: dict[str, Any] | None = None
@@ -621,11 +610,21 @@ class Feols(ResultAccessorMixin):
             self._tZZinv = np.array([])
 
         self._get_predictors()
+        self.fitstat = linear_fit_statistics(
+            Y=self.model_matrix.dependent.to_numpy(),
+            Y_within=within_data.response,
+            residuals=self._u_hat,
+            weights=self.observation_weights.values,
+            N=self.sample_info.n_obs,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""
         if self._method == "feols" and not self._is_iv:
-            self.get_performance()
             self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:

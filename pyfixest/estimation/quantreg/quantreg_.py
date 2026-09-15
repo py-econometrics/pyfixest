@@ -463,9 +463,3 @@ class Quantreg(Feols):
         "Compute the total loss of the quantile regression model."
         require_retained(self, "objective_value", "_u_hat")
         return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
-
-    def get_performance(self) -> None:
-        "Reject linear R² measures; quantile regression has no such diagnostics yet."
-        raise NotImplementedError(
-            "get_performance() is not supported for quantreg() fits."
-        )
