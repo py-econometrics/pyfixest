@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.retention import require_retained
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.internals.fit_statistics import FitStatistics
     from pyfixest.estimation.internals.model_state import (
         EstimationSample,
         ObservationWeights,
@@ -20,10 +21,6 @@ if TYPE_CHECKING:
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
-)
-from pyfixest.estimation.internals.performance_ import (
-    PerformanceMeasures,
-    performance_measures,
 )
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
@@ -143,6 +140,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     observation_weights: "ObservationWeights"
     sample_info: "EstimationSample"
     within_data: "WithinLinearData"
+    fitstat: "FitStatistics"
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -153,11 +151,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _k: int
     _df_t: int
     _inference_dist: "InferenceDist"
-    _rmse: float
-    _r2: float
-    _adj_r2: float
-    _r2_within: float
-    _adj_r2_within: float
     _vcov_type: str
 
     def _bind_report_methods(self):
@@ -280,60 +273,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         z_se = z * self._se
         self._conf_int = np.array([self._beta_hat - z_se, self._beta_hat + z_se])
 
-    def get_performance(self) -> None:
-        """
-        Compute and store goodness-of-fit measures during fit finalization.
-
-        Compute multiple additional measures commonly reported with linear
-        regression output, including R-squared and adjusted R-squared. Note that
-        variables with the suffix _within use demeaned dependent variables Y,
-        while variables without do not or are invariant to demeaning.
-
-        Returns
-        -------
-        None
-            The measures are stored on the model object rather than returned.
-
-        Notes
-        -----
-        Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
-        `_adj_r2_within`. The `_within` variants are computed on the demeaned
-        dependent variable and are only defined for models with fixed effects.
-        Called internally before storage cleanup, while model_matrix,
-        within_data, and observation_weights are available.
-        """
-        require_retained(
-            self,
-            "get_performance",
-            "model_matrix",
-            "within_data",
-            "_u_hat",
-            "observation_weights",
-        )
-        measures = performance_measures(
-            Y=self.model_matrix.dependent.to_numpy(),
-            Y_within=self.within_data.response,
-            residuals=self._u_hat,
-            weights=self.observation_weights.values,
-            N=self.sample_info.n_obs,
-            k=self._k,
-            k_fe=self._n_fixef_coefficients(),
-            has_intercept=not self._drop_intercept,
-            has_fixef=self._has_fixef,
-        )
-        self._store_performance(measures)
-
     def _n_fixef_coefficients(self) -> int:
         """Return the number of fixed-effect coefficients, zero without fixed effects."""
         return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
-
-    def _store_performance(self, measures: PerformanceMeasures) -> None:
-        """Publish goodness-of-fit measures on the fitted model."""
-        self._rmse = measures.rmse
-        self._r2 = measures.r2
-        self._adj_r2 = measures.adj_r2
-        self._r2_within = measures.r2_within
-        self._adj_r2_within = measures.adj_r2_within
 
     def tidy(
         self,

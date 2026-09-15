@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
@@ -132,3 +133,17 @@ def test_within_iv_data_requires_instrument_roles() -> None:
     assert isinstance(reduced, WithinIvData)
     assert reduced.instruments is state.instruments
     assert reduced.design.shape == (3, 1)
+
+
+def test_fit_statistics_default_to_nan_and_are_immutable() -> None:
+    undefined = FitStatistics()
+    assert all(np.isnan(getattr(undefined, field)) for field in undefined.__slots__)
+    assert not hasattr(undefined, "__dict__")
+
+    stats = FitStatistics(deviance=2.0)
+    assert stats.deviance == 2.0
+    assert np.isnan(stats.r2)
+    with pytest.raises(FrozenInstanceError):
+        stats.r2 = 0.5  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        FitStatistics(1.0)  # type: ignore[misc]

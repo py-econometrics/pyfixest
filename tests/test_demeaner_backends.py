@@ -228,14 +228,10 @@ def _assert_backend_matches(
         atol=case.predict_tol,
         err_msg=f"predictions differ for {context}",
     )
+    fit_statistics = ("r2", "adj_r2", "r2_within", "adj_r2_within")
     np.testing.assert_allclose(
-        [actual._r2, actual._adj_r2, actual._r2_within, actual._adj_r2_within],
-        [
-            reference._r2,
-            reference._adj_r2,
-            reference._r2_within,
-            reference._adj_r2_within,
-        ],
+        [getattr(actual.fitstat, name) for name in fit_statistics],
+        [getattr(reference.fitstat, name) for name in fit_statistics],
         rtol=0,
         atol=case.inference_tol,
         equal_nan=True,

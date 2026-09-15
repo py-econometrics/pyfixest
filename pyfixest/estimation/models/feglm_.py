@@ -13,6 +13,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
@@ -122,8 +123,6 @@ class Feglm(Feols):
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
 
-        self.deviance = None
-
         self._method = "feglm"
         self._family = family
         self._inference_dist = family.inference_dist
@@ -221,7 +220,7 @@ class Feglm(Feols):
         self._tZXinv = np.linalg.inv(self._tZX)
         self._hessian = self._tZX.copy()
 
-        self.deviance = fit.deviance
+        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
         if self.convergence:
             self._convergence = True
@@ -265,13 +264,6 @@ class Feglm(Feols):
             is_iv=self._is_iv,
             tXZ=self._tXZ,
             tZZinv=self._tZZinv,
-        )
-
-    def get_performance(self) -> None:
-        """Reject linear R² measures; only the Gaussian family reports them."""
-        raise NotImplementedError(
-            f"get_performance() is not supported for family='{self._family.name}'; "
-            "only feols() and Gaussian feglm() fits report R² measures."
         )
 
     def resid(self, type: str = "response") -> np.ndarray:
