@@ -96,9 +96,7 @@ def _fit_statistics(estimator: str, family: str | None, has_fe: bool, is_iv: boo
 def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, tol):
     """Assert that a frequency-weighted fit equals the fit on repeated rows."""
     n_expanded = int(counts.sum())
-    assert (
-        fit_weighted.sample.n_obs == fit_expanded.sample.n_obs == n_expanded
-    )
+    assert fit_weighted.sample.n_obs == fit_expanded.sample.n_obs == n_expanded
     assert fit_weighted.sample.n_rows == len(counts)
     assert fit_expanded.sample.n_rows == n_expanded
 
