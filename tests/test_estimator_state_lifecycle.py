@@ -648,6 +648,16 @@ def test_sample_info_counts_exclusions_by_stage(
     assert len({id(model.sample) for model in models}) == len(models)
 
 
+def test_sample_positions_ignore_the_input_index(lifecycle_data: pd.DataFrame):
+    """Fitted rows are identified by input position; a custom index is discarded."""
+    data = lifecycle_data.set_axis(pd.Index(range(1000, 1000 + len(lifecycle_data))))
+    data.iloc[3, data.columns.get_loc("x")] = np.nan
+    fit = pf.feols("y ~ x", data)
+    assert fit.sample.retained_index.equals(pd.RangeIndex(len(data)).drop(3))
+    assert fit.sample.excluded_positions == frozenset({3})
+    assert fit.sample.exclusions == ExclusionCounts(missing=1)
+
+
 def test_split_samples_keep_full_frame_identities(lifecycle_data: pd.DataFrame):
     """A split selects each child's rows; only formula filters count as exclusions."""
     data = lifecycle_data.copy()

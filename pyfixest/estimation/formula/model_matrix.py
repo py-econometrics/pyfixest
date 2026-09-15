@@ -61,8 +61,9 @@ class ModelMatrix:
     drop_intercept : bool, default False
         Whether to remove the structural intercept.
     row_labels : pd.Index
-        Labels of every row of the estimation frame, in order, so that the
-        fitted rows can be identified in the caller's frame.
+        Identities of every row of the estimation frame, in order, so that the
+        fitted rows can be identified in the caller's frame. The estimators
+        pass the positions of their input rows.
     weights_type : {"aweights", "fweights"} or None, default None
         Interpretation of the weights column, which decides whether the
         effective observation count is the row count or the weight sum.
@@ -466,9 +467,10 @@ def create_model_matrix(
         Can be an integer (stack frame depth) or a dictionary of variables to
         make available in the formula environment (e.g., custom transformations).
     row_labels : pd.Index or None, default=None
-        Labels identifying the rows of `data` in the caller's frame, recorded
-        as ``sample.retained_index`` for the fitted rows. Defaults to the index
-        of `data` before it is reset.
+        Identities of the rows of `data` in the caller's frame, recorded as
+        ``sample.retained_index`` for the fitted rows. Defaults to the index of
+        `data` before it is reset; the estimators pass the positions of their
+        input rows.
     weights_type : {"aweights", "fweights"} or None, default=None
         Interpretation of the weights column. Frequency weights count their
         sum as ``sample.n_effective``; otherwise the row count is used.

@@ -26,7 +26,7 @@ Other things:
 - Post-estimation methods now raise `MissingModelDataError` when `store_data=False` or `lean=True` removed required state, and these storage options also clean retained IV first-stage models.
 - Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
-- Fitted models expose `fit.sample`, a `SampleInfo` component with the retained row labels, the excluded row positions, the physical and effective (frequency-weight) observation counts, and `ExclusionCounts` by filtering stage (missing, nonfinite, singleton, separation). It replaces the private `_N`, `_N_rows`, and `_na_index` fields and the public `n_separation_na` attribute of fitted models, and the count fields of `ObservationWeights`. `lean=True` drops only the row labels.
+- Fitted models expose `fit.sample`, a `SampleInfo` component with the positions of the retained and excluded input rows, the physical and effective (frequency-weight) observation counts, and `ExclusionCounts` by filtering stage (missing, nonfinite, singleton, separation). It replaces the private `_N`, `_N_rows`, and `_na_index` fields and the public `n_separation_na` attribute of fitted models, and the count fields of `ObservationWeights`. `lean=True` drops only the retained positions.
 
 ### Contributor Workflow
 

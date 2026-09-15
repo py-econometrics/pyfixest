@@ -112,18 +112,20 @@ class ExclusionCounts:
 class SampleInfo:
     """The row sample a model was fitted on.
 
-    ``retained_index`` identifies the fitted rows by their labels in the
-    estimation frame the estimator received, in estimation order; a sample
-    split keeps the labels of the full frame, and an IV first stage keeps the
-    labels of its second stage. ``excluded_positions`` are formula-local
-    positions in that frame after the split, which is also how the demeaning
-    cache keys a row sample.
+    ``retained_index`` identifies the fitted rows in the frame the estimator
+    received, in estimation order. The estimation functions discard the index
+    of the user's data, so for a fitted model these are the 0-based positions
+    of the input rows, as in fixest's ``obs()``, not the caller's index labels.
+    A sample split keeps positions in the full frame, and an IV first stage
+    keeps the positions of its second stage. ``excluded_positions`` are
+    formula-local positions in that frame after the split, which is also how
+    the demeaning cache keys a row sample.
 
     Parameters
     ----------
     retained_index : pd.Index or None
-        Row labels of the fitted rows. ``None`` after ``lean=True`` cleanup,
-        which drops this observation-sized index.
+        Positions of the fitted rows in the input frame. ``None`` after
+        ``lean=True`` cleanup, which drops this observation-sized index.
     excluded_positions : frozenset[int]
         Positions of the rows excluded by any filtering stage.
     n_rows : int
