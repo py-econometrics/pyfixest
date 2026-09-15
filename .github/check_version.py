@@ -40,6 +40,12 @@ def cargo_to_python_version(cargo_version: str) -> str:
     return cargo_version
 
 
+def is_prerelease_version(cargo_version: str) -> bool:
+    """Return whether a Cargo SemVer version has a prerelease component."""
+    version_without_build_metadata = cargo_version.split("+", maxsplit=1)[0]
+    return "-" in version_without_build_metadata
+
+
 def main() -> None:
     """Check that the git tag matches the Cargo.toml version."""
     import os
@@ -58,6 +64,12 @@ def main() -> None:
     if tag_version != python_version:
         print(f"MISMATCH: tag={tag_version!r} != Cargo.toml={python_version!r}")
         sys.exit(1)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        prerelease = str(is_prerelease_version(cargo_version)).lower()
+        with Path(github_output).open("a", encoding="utf-8") as output_file:
+            output_file.write(f"is_prerelease={prerelease}\n")
 
     print(f"OK: tag={tag_version!r} matches Cargo.toml={python_version!r}")
 
