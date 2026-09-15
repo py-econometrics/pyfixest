@@ -112,11 +112,13 @@ class ExclusionCounts:
 class SampleInfo:
     """The row sample a model was fitted on.
 
-    ``retained_index`` identifies the fitted rows in the frame the estimator
-    received, in estimation order. The estimation functions discard the index
-    of the user's data, so for a fitted model these are the 0-based positions
-    of the input rows, as in fixest's ``obs()``, not the caller's index labels.
-    A sample split keeps positions in the full frame, and an IV first stage
+    The estimator builds it with ``from_rows`` from the row bookkeeping of
+    its ``ModelMatrix`` and its observation weights. ``retained_index``
+    identifies the fitted rows in the frame the estimator received, in
+    estimation order. The estimation functions discard the index of the
+    user's data, so for a fitted model these are the 0-based positions of the
+    input rows, as in fixest's ``obs()``, not the caller's index labels. A
+    sample split keeps positions in the full frame, and an IV first stage
     keeps the positions of its second stage. ``excluded_positions`` are
     formula-local positions in that frame after the split, which is also how
     the demeaning cache keys a row sample.
@@ -160,6 +162,35 @@ class SampleInfo:
             raise ValueError(
                 "Exclusion counts must sum to the number of excluded positions."
             )
+
+    @classmethod
+    def from_rows(
+        cls,
+        *,
+        retained_index: pd.Index,
+        excluded_positions: frozenset[int],
+        exclusions: ExclusionCounts,
+        weights: ObservationWeights,
+    ) -> SampleInfo:
+        """Describe the fitted sample from row bookkeeping and observation weights.
+
+        fixest counts a frequency weight as that many repeated rows, so the
+        effective count is the weight sum; otherwise it is the row count.
+        """
+        n_rows = len(retained_index)
+        if weights.values is not None and len(weights.values) != n_rows:
+            raise ValueError("Observation weights must contain one value per row.")
+        n_effective: int | float = n_rows
+        if weights.weights_type == "fweights":
+            assert weights.values is not None
+            n_effective = float(weights.values.sum())
+        return cls(
+            retained_index=retained_index,
+            excluded_positions=excluded_positions,
+            n_rows=n_rows,
+            n_effective=n_effective,
+            exclusions=exclusions,
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

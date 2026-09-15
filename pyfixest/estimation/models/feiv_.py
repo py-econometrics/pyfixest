@@ -331,7 +331,8 @@ class Feiv(Feols):
         # Ensure model1 is of type Feols
         if isinstance(model1, Feols):
             # The refit received the retained rows with a reset index, so its
-            # row labels are positions within this model's fitted rows.
+            # positions index this model's fitted rows; its model matrix keeps
+            # that refit-local bookkeeping.
             assert self.sample.retained_index is not None
             assert model1.sample.retained_index is not None
             model1.sample = replace(

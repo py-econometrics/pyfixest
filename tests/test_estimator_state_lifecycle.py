@@ -229,12 +229,13 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert fit.sample.exclusions == ExclusionCounts(
         missing=0, singleton=1, separation=2
     )
-    assert fit.sample is model_matrix.sample
+    assert fit.sample.retained_index.equals(model_matrix.retained_index)
+    assert fit.sample.excluded_positions == model_matrix.na_index
+    assert fit.sample.exclusions == model_matrix.exclusions
 
 
-@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
 def test_model_matrix_without_rows_returns_filtered_copy(
-    lifecycle_data: pd.DataFrame, weights_type: str
+    lifecycle_data: pd.DataFrame,
 ) -> None:
     """Estimator-level row filters yield a new ModelMatrix and keep the source."""
     row_labels = pd.Index(range(100, 100 + len(lifecycle_data)))
@@ -242,10 +243,8 @@ def test_model_matrix_without_rows_returns_filtered_copy(
         formula=Formula.parse("y ~ x | fe")[0],
         data=lifecycle_data.set_axis(row_labels),
         weights="weight",
-        weights_type=weights_type,
     )
     kept_index = model_matrix.dependent.index.drop([0, 5])
-    source_sample = model_matrix.sample
 
     filtered = model_matrix.without_rows([0, 5], stage="separation")
 
@@ -260,21 +259,12 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert filtered.offset is None
     assert len(model_matrix.dependent) == len(lifecycle_data)
 
-    # The source keeps its sample; the copy counts the rows as separation.
-    assert model_matrix.sample is source_sample
-    assert source_sample.exclusions == ExclusionCounts()
-    assert source_sample.retained_index.equals(row_labels)
-    assert filtered.sample.exclusions == ExclusionCounts(separation=2)
-    assert filtered.sample.excluded_positions == frozenset({0, 5})
-    assert filtered.sample.n_rows == len(lifecycle_data) - 2
-    assert filtered.sample.retained_index.equals(row_labels.drop([100, 105]))
-    kept_weights = lifecycle_data["weight"].drop([0, 5])
-    if weights_type == "fweights":
-        assert source_sample.n_effective == lifecycle_data["weight"].sum()
-        assert filtered.sample.n_effective == kept_weights.sum()
-    else:
-        assert source_sample.n_effective == len(lifecycle_data)
-        assert filtered.sample.n_effective == filtered.sample.n_rows
+    # The source keeps its bookkeeping; the copy counts the rows as separation.
+    assert model_matrix.exclusions == ExclusionCounts()
+    assert model_matrix.retained_index.equals(row_labels)
+    assert filtered.exclusions == ExclusionCounts(separation=2)
+    assert filtered.na_index == frozenset({0, 5})
+    assert filtered.retained_index.equals(row_labels.drop([100, 105]))
 
 
 def test_multiple_estimation_shares_array_native_demean_cache(
@@ -621,7 +611,9 @@ def test_sample_info_counts_exclusions_by_stage(
     for model in models:
         sample = model.sample
         assert isinstance(sample, SampleInfo)
-        assert sample is model.model_matrix.sample
+        assert sample.retained_index.equals(model.model_matrix.retained_index)
+        assert sample.excluded_positions == model.model_matrix.na_index
+        assert sample.exclusions == model.model_matrix.exclusions
         assert sample.exclusions == expected_exclusions
         assert sample.exclusions.total == len(sample.excluded_positions)
         assert sample.n_rows == len(data) - expected_exclusions.total

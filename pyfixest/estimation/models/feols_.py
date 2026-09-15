@@ -38,6 +38,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
+    SampleInfo,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -423,7 +424,6 @@ class Feols(ResultAccessorMixin):
             offset=self._offset_name,
             context=self._context,
             row_labels=row_labels,
-            weights_type=self._weights_type,
         )
         self._publish_model_matrix(model_matrix)
 
@@ -438,7 +438,6 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        self.sample = model_matrix.sample
         # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         independent = model_matrix.independent
         is_icovar = (
@@ -475,6 +474,12 @@ class Feols(ResultAccessorMixin):
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
+        self.sample = SampleInfo.from_rows(
+            retained_index=model_matrix.retained_index,
+            excluded_positions=model_matrix.na_index,
+            exclusions=model_matrix.exclusions,
+            weights=self.observation_weights,
+        )
 
     def _validate_response(self) -> None:
         """Validate estimator-specific response constraints, if any."""

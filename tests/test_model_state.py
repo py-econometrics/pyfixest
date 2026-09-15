@@ -102,6 +102,50 @@ def test_sample_info_rejects_inconsistent_state(kwargs, message) -> None:
         SampleInfo(**{**consistent, **kwargs})
 
 
+@pytest.mark.parametrize(
+    ("weights", "expected_n_effective"),
+    [
+        (ObservationWeights.unweighted(), 3),
+        (
+            ObservationWeights.from_values(
+                np.array([1.0, 2.0, 3.0]), weights_type="aweights"
+            ),
+            3,
+        ),
+        (
+            ObservationWeights.from_values(
+                np.array([1.0, 2.0, 3.0]), weights_type="fweights"
+            ),
+            6.0,
+        ),
+    ],
+    ids=["unweighted", "aweights", "fweights"],
+)
+def test_sample_info_from_rows_counts_frequency_weights(
+    weights, expected_n_effective
+) -> None:
+    sample = SampleInfo.from_rows(
+        retained_index=pd.Index([0, 2, 4]),
+        excluded_positions=frozenset({1, 3}),
+        exclusions=ExclusionCounts(missing=2),
+        weights=weights,
+    )
+    assert sample.n_rows == 3
+    assert sample.n_effective == expected_n_effective
+    assert type(sample.n_effective) is type(expected_n_effective)
+    assert sample.excluded_positions == frozenset({1, 3})
+
+
+def test_sample_info_from_rows_rejects_misaligned_weights() -> None:
+    with pytest.raises(ValueError, match="one value per row"):
+        SampleInfo.from_rows(
+            retained_index=pd.Index([0, 1]),
+            excluded_positions=frozenset(),
+            exclusions=ExclusionCounts(),
+            weights=ObservationWeights.from_values(np.ones(3), weights_type="aweights"),
+        )
+
+
 def test_within_linear_data_is_structurally_immutable() -> None:
     response = np.arange(3.0)[:, None]
     design = np.column_stack((np.ones(3), np.arange(3.0)))
