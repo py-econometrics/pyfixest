@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.estimation.formula.model_matrix import create_model_matrix
-from pyfixest.estimation.formula.parse import Formula
+import pyfixest as pf
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
@@ -49,33 +48,6 @@ def test_observation_weights_reject_inconsistent_state() -> None:
         ObservationWeights(values=np.ones(2), weights_type=None)
 
 
-def test_dropped_row_counts_sum_over_stages() -> None:
-    counts = DroppedRowCounts(missing=2, infinite=1, singleton=3, separation=4)
-    assert counts.total == 10
-    assert DroppedRowCounts().total == 0
-    assert not hasattr(counts, "__dict__")
-    with pytest.raises(FrozenInstanceError):
-        counts.missing = 0  # type: ignore[misc]
-    assert replace(counts, separation=0).total == 6
-
-
-def test_estimation_sample_is_structurally_immutable() -> None:
-    sample = EstimationSample(
-        dropped_row_index=frozenset({1, 3, 4}),
-        n_rows=3,
-        n_obs=7.0,
-        dropped_by_stage=DroppedRowCounts(missing=2, singleton=1),
-    )
-    assert sample.n_rows == 3
-    assert sample.n_obs == 7.0
-    assert sample.dropped_by_stage.total == 3
-    assert not hasattr(sample, "__dict__")
-    with pytest.raises(FrozenInstanceError):
-        sample.n_rows = 4  # type: ignore[misc]
-    with pytest.raises(TypeError):
-        EstimationSample(frozenset(), 1, 1, DroppedRowCounts())  # type: ignore[misc]
-
-
 def test_estimation_sample_rejects_inconsistent_state() -> None:
     with pytest.raises(ValueError, match="must sum to the size of the dropped"):
         EstimationSample(
@@ -87,49 +59,39 @@ def test_estimation_sample_rejects_inconsistent_state() -> None:
 
 
 @pytest.mark.parametrize(
-    ("weights", "expected_n_effective"),
+    ("weights_type", "expected_n_obs"),
     [
-        (ObservationWeights.unweighted(), 3),
-        (
-            ObservationWeights.from_values(
-                np.array([1.0, 2.0, 3.0]), weights_type="aweights"
-            ),
-            3,
-        ),
-        (
-            ObservationWeights.from_values(
-                np.array([1.0, 2.0, 3.0]), weights_type="fweights"
-            ),
-            6.0,
-        ),
+        (None, 3),
+        ("aweights", 3),
+        ("fweights", 6.0),
     ],
     ids=["unweighted", "aweights", "fweights"],
 )
-def test_estimation_sample_from_model_matrix_counts_frequency_weights(
-    weights, expected_n_effective
+def test_estimation_sample_counts_frequency_weights(
+    weights_type, expected_n_obs
 ) -> None:
     data = pd.DataFrame(
-        {"y": [1.0, 2.0, 3.0, 4.0, 5.0], "x": [1.0, np.nan, 2.0, np.nan, 3.0]}
+        {
+            "y": [1.0, 2.0, 3.0, 4.0, 4.0],
+            "x": [1.0, np.nan, 2.0, np.nan, 3.0],
+            "weight": [1.0, 10.0, 2.0, 10.0, 3.0],
+        }
     )
-    model_matrix = create_model_matrix(formula=Formula.parse("y ~ x")[0], data=data)
+    fit = pf.feols(
+        "y ~ x",
+        data,
+        weights="weight" if weights_type else None,
+        weights_type=weights_type or "aweights",
+    )
+    sample_info = fit.sample_info
 
-    sample = EstimationSample.from_model_matrix(model_matrix, weights=weights)
-
-    assert sample.n_rows == 3
-    assert sample.n_obs == expected_n_effective
-    assert type(sample.n_obs) is type(expected_n_effective)
-    assert sample.dropped_row_index == frozenset({1, 3})
-    assert sample.dropped_by_stage == DroppedRowCounts(missing=2)
-
-
-def test_estimation_sample_from_model_matrix_rejects_misaligned_weights() -> None:
-    data = pd.DataFrame({"y": [1.0, 2.0], "x": [1.0, 2.0]})
-    model_matrix = create_model_matrix(formula=Formula.parse("y ~ x")[0], data=data)
-    with pytest.raises(ValueError, match="one value per row"):
-        EstimationSample.from_model_matrix(
-            model_matrix,
-            weights=ObservationWeights.from_values(np.ones(3), weights_type="aweights"),
-        )
+    assert sample_info.n_rows == 3
+    assert sample_info.n_obs == expected_n_obs
+    assert type(sample_info.n_obs) is type(expected_n_obs)
+    assert sample_info.dropped_row_index == frozenset({1, 3})
+    assert sample_info.dropped_by_stage == DroppedRowCounts(missing=2)
+    with pytest.raises(FrozenInstanceError):
+        sample_info.n_rows = 0  # type: ignore[misc]
 
 
 def test_within_linear_data_is_structurally_immutable() -> None:

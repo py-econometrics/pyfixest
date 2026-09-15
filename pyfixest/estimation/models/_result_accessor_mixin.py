@@ -141,7 +141,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
     observation_weights: "ObservationWeights"
-    sample: "EstimationSample"
+    sample_info: "EstimationSample"
     within_data: "WithinLinearData"
     _coefnames: list[str]
     _method: str
@@ -315,7 +315,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             Y_within=self.within_data.response,
             residuals=self._u_hat,
             weights=self.observation_weights.values,
-            N=self.sample.n_obs,
+            N=self.sample_info.n_obs,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self._drop_intercept,

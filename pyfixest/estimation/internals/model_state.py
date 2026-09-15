@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
-
-if TYPE_CHECKING:
-    from pyfixest.estimation.formula.model_matrix import ModelMatrix
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -72,9 +68,8 @@ class ObservationWeights:
 class DroppedRowCounts:
     """Counts of rows removed at each sample-filtering stage.
 
-    Counts are mutually exclusive and stages run in field order, the order
-    of ``DropStageOptions`` after the formula's missing-value handling. Sample
-    splitting is not a filtering stage.
+    Counts are mutually exclusive and stages run in field order, matching
+    ``DropStageOptions``. Sample splitting is not a filtering stage.
 
     Parameters
     ----------
@@ -93,7 +88,7 @@ class DroppedRowCounts:
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
-    fit.sample.dropped_by_stage
+    fit.sample_info.dropped_by_stage
     ```
     """
 
@@ -133,7 +128,7 @@ class EstimationSample:
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
-    fit.sample.n_rows, fit.sample.n_obs, fit.sample.dropped_by_stage.missing
+    fit.sample_info.n_rows, fit.sample_info.n_obs, fit.sample_info.dropped_by_stage.missing
     ```
     """
 
@@ -147,29 +142,6 @@ class EstimationSample:
             raise ValueError(
                 "Dropped-row counts must sum to the size of the dropped row index."
             )
-
-    @classmethod
-    def from_model_matrix(
-        cls, model_matrix: ModelMatrix, *, weights: ObservationWeights
-    ) -> EstimationSample:
-        """Describe the sample of `model_matrix` fitted under `weights`.
-
-        fixest counts a frequency weight as that many repeated rows, so
-        ``n_obs`` is the weight sum; otherwise it is the row count.
-        """
-        n_rows = model_matrix.n_rows
-        if weights.values is not None and len(weights.values) != n_rows:
-            raise ValueError("Observation weights must contain one value per row.")
-        n_obs: int | float = n_rows
-        if weights.weights_type == "fweights":
-            assert weights.values is not None
-            n_obs = float(weights.values.sum())
-        return cls(
-            dropped_row_index=model_matrix.dropped_row_index,
-            n_rows=n_rows,
-            n_obs=n_obs,
-            dropped_by_stage=model_matrix.dropped_by_stage,
-        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -115,7 +115,7 @@ def test_vs_fixest(data, fml):
     if not np.allclose(feols_mod.coef().values, r_fixest_ols.rx2("coefficients")):
         raise ValueError("Coefficients are not equal")
 
-    if not (stats.nobs(r_fixest_ols)[0] == feols_mod.sample.n_obs):
+    if not (stats.nobs(r_fixest_ols)[0] == feols_mod.sample_info.n_obs):
         raise ValueError("The Number of Observations does not match.")
 
     # test Poisson fit

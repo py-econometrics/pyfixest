@@ -213,22 +213,6 @@ class ModelMatrix:
                 stage="singleton",
             )
 
-    def _record_drop(
-        self,
-        target: ModelMatrix,
-        is_dropped: NDArray[np.bool_],
-        *,
-        stage: DropStageOptions,
-    ) -> None:
-        """Write onto `target` the dropped rows after `stage` drops the masked rows."""
-        counts = self._dropped_by_stage
-        target._dropped_row_index = self._dropped_row_index.union(
-            self._data.index[is_dropped].tolist()
-        )
-        target._dropped_by_stage = replace(
-            counts, **{stage: getattr(counts, stage) + int(is_dropped.sum())}
-        )
-
     def _drop(
         self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
     ) -> None:
@@ -239,7 +223,13 @@ class ModelMatrix:
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._record_drop(self, is_dropped, stage=stage)
+        self._dropped_row_index = self._dropped_row_index.union(
+            self._data.index[is_dropped].tolist()
+        )
+        counts = self._dropped_by_stage
+        self._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
@@ -255,7 +245,12 @@ class ModelMatrix:
             return self
         filtered = copy.copy(self)
         filtered._data = self._data.drop(index=rows)
-        self._record_drop(filtered, self._data.index.isin(rows), stage=stage)
+        filtered._dropped_row_index = self._dropped_row_index.union(rows)
+        n_dropped = len(self._data) - len(filtered._data)
+        counts = self._dropped_by_stage
+        filtered._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
         return filtered
 
     @property

@@ -265,7 +265,7 @@ def _assert_fixest_contract(py_fit, r_fit, *, inference_atol, derived_atol):
     assert int(py_fit._df_t) == int(
         ro.r('attr(.pyfixest_fast_fit$cov.scaled, "df.t")')[0]
     ), "inference degrees of freedom differ from R fixest"
-    assert int(stats.nobs(r_fit)[0]) == py_fit.sample.n_obs, (
+    assert int(stats.nobs(r_fit)[0]) == py_fit.sample_info.n_obs, (
         "observation count differs from R fixest"
     )
 

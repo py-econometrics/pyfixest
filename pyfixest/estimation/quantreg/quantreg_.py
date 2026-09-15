@@ -410,7 +410,7 @@ class Quantreg(Feols):
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
-            N=self.sample.n_rows,
+            N=self.sample_info.n_rows,
         )
 
     def _vcov_hetero(self):
@@ -419,7 +419,7 @@ class Quantreg(Feols):
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
-            N=self.sample.n_rows,
+            N=self.sample_info.n_rows,
         )
 
     def _vcov_nid(self) -> np.ndarray:
@@ -435,7 +435,7 @@ class Quantreg(Feols):
             Y=self.within_data.response,
             beta_hat=self._beta_hat,
             q=self._quantile,
-            N=self.sample.n_rows,
+            N=self.sample_info.n_rows,
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )

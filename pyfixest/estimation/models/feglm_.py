@@ -313,7 +313,7 @@ class Feglm(Feols):
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
-            na_index=self.sample.dropped_row_index,
+            na_index=self.sample_info.dropped_row_index,
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]

@@ -336,7 +336,7 @@ def summary(
             split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
             print(split)
         print("Inference: ", fxst._vcov_type_detail)
-        print("Observations: ", fxst.sample.n_obs)
+        print("Observations: ", fxst.sample_info.n_obs)
         print("")
         print(df.to_markdown(floatfmt=f".{digits}f"))
         print("---")

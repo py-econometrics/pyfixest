@@ -53,7 +53,7 @@ def _compute_prediction_error(
 
     prediction_df = pd.DataFrame(np.nan, index=range(nobs), columns=columns)
 
-    df_resid = model.sample.n_obs - model._k
+    df_resid = model.sample_info.n_obs - model._k
     z_crit = t.ppf(1 - alpha / 2, df_resid)
     sigma2 = np.sum(model.resid() ** 2) / df_resid
 

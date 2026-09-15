@@ -6,7 +6,7 @@ HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 HacVcovTypeOptions = Literal["NW", "DK"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
-DropStageOptions = Literal["infinite", "singleton", "separation"]
+DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
 SolverOptions = Literal[
     "np.linalg.lstsq",

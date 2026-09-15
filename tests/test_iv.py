@@ -153,7 +153,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     # Note that Effective F stat is equal to cluster robust F
     # when clusteres are set up. If not set up,
     # then effective F is equal to hetero-roboust F.
-    _N = fit_iv.sample.n_obs
+    _N = fit_iv.sample_info.n_obs
     if adj_vcov == {"CRV1": "cluster"}:
         F_stat_R = F_cl
         F_eff_R = result[3]

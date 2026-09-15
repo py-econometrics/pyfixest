@@ -231,7 +231,7 @@ def test_single_fit_feols(
     py_confint = mod.confint().xs("X1").values
     py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
 
-    py_nobs = mod.sample.n_obs
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
     py_df_k = mod._df_k
     py_df_t = mod._df_t
@@ -410,7 +410,7 @@ def test_single_fit_feols_empty(
             data=data_r,
         )
 
-    py_nobs = mod.sample.n_obs
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
     py_predict = mod.predict()
 
@@ -490,7 +490,7 @@ def test_single_fit_fepois(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_nobs = mod.sample.n_obs
+    py_nobs = mod.sample_info.n_obs
     py_deviance = mod.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
@@ -851,8 +851,8 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     # Gaussian GLM with identity link == OLS; compare against pf.feols directly
     if family == "gaussian":
         ref = pf.feols(fml=py_fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
-        assert (mod.sample.n_obs, int(mod._df_k), int(mod._df_t)) == (
-            ref.sample.n_obs,
+        assert (mod.sample_info.n_obs, int(mod._df_k), int(mod._df_t)) == (
+            ref.sample_info.n_obs,
             int(ref._df_k),
             int(ref._df_t),
         )
@@ -885,7 +885,7 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_nobs = mod.sample.n_obs
+    py_nobs = mod.sample_info.n_obs
     py_deviance = mod.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
@@ -1014,7 +1014,7 @@ def test_single_fit_iv(
     py_confint = mod.confint().xs("X1").values
     py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1", is_iv=True)
 
-    py_nobs = mod.sample.n_obs
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
 
     df_X1 = _get_r_df(r_fixest, is_iv=True)
@@ -1675,7 +1675,7 @@ def test_singleton_dropping():
     )
 
     # test that number of observations match
-    nobs_py = fit_py.sample.n_obs
+    nobs_py = fit_py.sample_info.n_obs
     nobs_r = stats.nobs(fit_r)
     np.testing.assert_allclose(
         nobs_py,
@@ -1752,7 +1752,7 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
     py_df_t = py_fit._df_t
     py_df_k = py_fit._df_k
 
-    py_nobs = py_fit.sample.n_obs
+    py_nobs = py_fit.sample_info.n_obs
     r_nobs = stats.nobs(r_fit)
 
     # coefficients identical:
@@ -1844,7 +1844,7 @@ def test_inf_dropping(fml, weights):
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
-    assert int(data.shape[0] - n_zeros) == fit_py.sample.n_obs
+    assert int(data.shape[0] - n_zeros) == fit_py.sample_info.n_obs
 
 
 def _get_r_inference(inference):

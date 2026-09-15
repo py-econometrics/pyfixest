@@ -168,7 +168,7 @@ def _assert_backend_matches(
 
     assert actual._coefnames == reference._coefnames, context
     assert actual._collin_vars == reference._collin_vars, context
-    assert actual.sample.n_obs == reference.sample.n_obs, context
+    assert actual.sample_info.n_obs == reference.sample_info.n_obs, context
     assert actual._df_k == reference._df_k, context
     assert actual._df_t == reference._df_t, context
 
