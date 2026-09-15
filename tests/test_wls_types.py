@@ -96,9 +96,11 @@ def _fit_statistics(estimator: str, family: str | None, has_fe: bool, is_iv: boo
 def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, tol):
     """Assert that a frequency-weighted fit equals the fit on repeated rows."""
     n_expanded = int(counts.sum())
-    assert fit_weighted._N == fit_expanded._N == n_expanded
-    assert fit_weighted._N_rows == len(counts)
-    assert fit_expanded._N_rows == n_expanded
+    assert (
+        fit_weighted.sample_info.n_obs == fit_expanded.sample_info.n_obs == n_expanded
+    )
+    assert fit_weighted.sample_info.n_rows == len(counts)
+    assert fit_expanded.sample_info.n_rows == n_expanded
 
     np.testing.assert_allclose(
         fit_weighted.coef().to_numpy(),
@@ -234,10 +236,9 @@ def test_fweights_glm_sample_sizes_after_separation():
             iwls_tol=1e-11,
         )
 
-    assert fit_weighted._N == fit_expanded._N == 19
-    assert fit_weighted._N_rows == 9
-    assert fit_expanded._N_rows == 19
-    assert fit_weighted.observation_weights.n_effective == 19
+    assert fit_weighted.sample_info.n_obs == fit_expanded.sample_info.n_obs == 19
+    assert fit_weighted.sample_info.n_rows == 9
+    assert fit_expanded.sample_info.n_rows == 19
     np.testing.assert_allclose(fit_weighted.coef(), fit_expanded.coef(), atol=1e-10)
     np.testing.assert_allclose(fit_weighted._vcov, fit_expanded._vcov, atol=1e-10)
 

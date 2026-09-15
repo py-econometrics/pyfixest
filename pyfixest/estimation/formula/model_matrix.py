@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Final, TypeAlias, cast
 
 import formulaic
@@ -17,6 +17,8 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSF
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.internals.literals import DropStageOptions
+from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
@@ -87,8 +89,12 @@ class ModelMatrix:
         Observation weights for weighted estimation.
     model_spec : Mapping[str, formulaic.ModelSpec]
         The underlying formulaic model specifications keyed by role.
-    na_index : frozenset[int]
-        Indices of rows that were dropped.
+    n_rows : int
+        Number of rows that survived every filtering stage.
+    dropped_row_index : frozenset[int]
+        Positions of the dropped rows in the frame the matrix was built from.
+    dropped_by_stage : DroppedRowCounts
+        Dropped rows counted by the filtering stage that removed them.
     """
 
     _data: pd.DataFrame
@@ -102,9 +108,12 @@ class ModelMatrix:
     ) -> None:
         self._drop_intercept = drop_intercept
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
-        self._na_index = drop_rows
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
+        # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
+        # the later stages add the rows they drop.
+        self._dropped_row_index = drop_rows
+        self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
@@ -172,6 +181,7 @@ class ModelMatrix:
         self._drop(
             ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
             "rows with infinite values",
+            stage="infinite",
         )
         if self._fixed_effects_column_names is not None:
             # Ensure fixed effects are `int32`
@@ -200,32 +210,47 @@ class ModelMatrix:
             self._drop(
                 detect_singletons(fixed_effects.to_numpy()),
                 "singleton fixed effect(s)",
+                stage="singleton",
             )
 
-    def _drop(self, is_dropped: NDArray[np.bool_], reason: str) -> None:
-        """Drop the masked rows from `self._data` and add their labels to `na_index`.
+    def _drop(
+        self, is_dropped: NDArray[np.bool_], reason: str, *, stage: DropStageOptions
+    ) -> None:
+        """Drop the masked rows from `self._data` and count them under `stage`.
 
         `reason` completes the warning "{n} {reason} dropped from the model."
         """
         n_dropped = int(is_dropped.sum())
         if not n_dropped:
             return
-        self._na_index = self._na_index.union(self._data.index[is_dropped].tolist())
+        self._dropped_row_index = self._dropped_row_index.union(
+            self._data.index[is_dropped].tolist()
+        )
+        counts = self._dropped_by_stage
+        self._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
         self._data = self._data.loc[~is_dropped]
         warnings.warn(f"{n_dropped} {reason} dropped from the model.")
 
-    def without_rows(self, rows: list[int]) -> ModelMatrix:
-        """Return a shallow copy without ``rows``.
+    def without_rows(self, rows: list[int], *, stage: DropStageOptions) -> ModelMatrix:
+        """Return a shallow copy without ``rows``, counted under ``stage``.
 
-        The copied object receives a new filtered data frame and ``na_index``;
-        its unchanged formula metadata remains shared with the original object.
-        An empty ``rows`` sequence returns this instance unchanged.
+        The copied object receives a new filtered data frame and dropped-row
+        bookkeeping that counts ``rows`` under ``stage``; its unchanged formula
+        metadata remains shared with the original object. An empty ``rows``
+        sequence returns this instance unchanged.
         """
         if not rows:
             return self
         filtered = copy.copy(self)
         filtered._data = self._data.drop(index=rows)
-        filtered._na_index = self._na_index.union(rows)
+        filtered._dropped_row_index = self._dropped_row_index.union(rows)
+        n_dropped = len(self._data) - len(filtered._data)
+        counts = self._dropped_by_stage
+        filtered._dropped_by_stage = replace(
+            counts, **{stage: getattr(counts, stage) + n_dropped}
+        )
         return filtered
 
     @property
@@ -347,9 +372,23 @@ class ModelMatrix:
         return self._model_spec
 
     @property
-    def na_index(self) -> frozenset[int]:
-        """Integer positions of dropped rows, including ``without_rows`` drops."""
-        return self._na_index
+    def n_rows(self) -> int:
+        """Number of rows kept after every filtering stage, including ``without_rows``."""
+        return len(self._data)
+
+    @property
+    def dropped_row_index(self) -> frozenset[int]:
+        """Positions of dropped rows, including ``without_rows`` drops.
+
+        Positions count from zero in the frame this matrix was built from,
+        which ``create_model_matrix`` reindexes before materializing.
+        """
+        return self._dropped_row_index
+
+    @property
+    def dropped_by_stage(self) -> DroppedRowCounts:
+        """Dropped rows by filtering stage, including ``without_rows`` drops."""
+        return self._dropped_by_stage
 
 
 def create_model_matrix(

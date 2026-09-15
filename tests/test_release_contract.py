@@ -143,7 +143,9 @@ def data_quantreg():
 
 def _check_structure(baseline: Baseline, mod) -> None:
     baseline.check_exact("coefnames", list(mod._coefnames))
-    baseline.check_exact("nobs", int(mod._N))
+    # The pinned release predates `EstimationSample`; `_N` was its `n_obs`.
+    nobs = mod.sample_info.n_obs if hasattr(mod, "sample_info") else mod._N
+    baseline.check_exact("nobs", int(nobs))
     baseline.check_exact("df_k", int(mod._df_k))
     baseline.check_exact("df_t", int(mod._df_t))
 

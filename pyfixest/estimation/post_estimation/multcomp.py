@@ -354,7 +354,7 @@ def _multcomp_resample(
 
         if type == "wyoung":
             _df[i] = (
-                model._N - model._k
+                model.sample_info.n_obs - model._k
                 if model._vcov_type in ["iid", "hetero"]
                 else min(model._G) - 1
             )
