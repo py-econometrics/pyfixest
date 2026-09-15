@@ -5,6 +5,10 @@ import pytest
 
 from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
+    _check_label_keys_in_covars,
+    _relabel_expvar,
+    _rename_categorical,
+    _rename_event_study_coefs,
     rename_categoricals,
     rename_event_study_coefs,
 )
@@ -184,6 +188,23 @@ def test_rename_event_study_coefs():
         "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",
         "Intercept": "Intercept",
     }
+
+
+@pytest.mark.parametrize(
+    argnames=("func", "args"),
+    argvalues=[
+        (_check_label_keys_in_covars, (["X1"], ["X1"])),
+        (_relabel_expvar, ("X1", {}, ":")),
+        (_rename_categorical, ("C(f1)[T.1]",)),
+        (rename_categoricals, (["C(f1)[T.1]"],)),
+        (_rename_event_study_coefs, ("C(f1)[T.1]",)),
+        (rename_event_study_coefs, (["C(f1)[T.1]"],)),
+    ],
+    ids=lambda x: getattr(x, "__name__", ""),
+)
+def test_relabel_utils_deprecated(func, args):
+    with pytest.warns(DeprecationWarning, match=f"`{func.__name__}` is deprecated"):
+        func(*args)
 
 
 def _foo():

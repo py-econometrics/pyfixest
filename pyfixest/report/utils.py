@@ -12,6 +12,11 @@ ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Fei
 
 
 def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str]):
+    warnings.warn(
+        "The function `_check_label_keys_in_covars` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     for label_key in label_keys:
         if label_key not in covariate_names:
             warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
@@ -79,7 +84,7 @@ def _rename_categorical(
         The renamed categorical variable.
     """
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
+        "The function `_rename_categorical` is deprecated, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -144,7 +149,7 @@ def rename_categoricals(
     {'C(var)[T.1]': 'var::1', 'C(var)[T.2]': 'var::2', 'C(var2)[T.1]': 'var2::1', 'C(var2)[T.2]': 'var2::2'}
     """
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
+        "The function `rename_categoricals` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
         stacklevel=2,
@@ -158,7 +163,7 @@ def rename_categoricals(
 
 def _rename_event_study_coefs(col_name: str):
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
+        "The function `_rename_event_study_coefs` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
         stacklevel=2,
@@ -201,7 +206,7 @@ def rename_event_study_coefs(coef_names_list: list):
         }
     """
     warnings.warn(
-        "The function `_relabel_expvar` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
+        "The function `rename_event_study_coefs` is deprecated as we have adjusted the naming of variables interacted via the i() operator with pyfixest 0.50. "
         "For regression tables, please rely on the `labels` and `cat_template` arguments of `pf.etable()` instead. ",
         DeprecationWarning,
         stacklevel=2,
