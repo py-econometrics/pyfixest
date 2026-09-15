@@ -430,7 +430,7 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        
+
         independent = model_matrix.independent
         self._X_is_empty = independent.shape[1] == 0
         self._model_spec = model_matrix.model_spec
