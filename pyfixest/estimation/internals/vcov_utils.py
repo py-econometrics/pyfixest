@@ -115,16 +115,6 @@ def run_crv_loop(
     return vcov, ssc_arr, df_k, int(np.min(df_t_full))
 
 
-def _compute_bread(
-    _is_iv: bool,
-    _tXZ: np.ndarray,
-    _tZZinv: np.ndarray,
-    _tZX: np.ndarray,
-    _hessian: np.ndarray,
-):
-    return np.linalg.inv(_tXZ @ _tZZinv @ _tZX) if _is_iv else np.linalg.inv(_hessian)
-
-
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     if not data.empty:
         data_pandas = _narwhals_to_pandas(data)

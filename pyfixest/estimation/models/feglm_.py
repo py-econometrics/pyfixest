@@ -109,7 +109,6 @@ class Feglm(Feols):
 
         self.maxiter = maxiter
         self.tol = tol
-        self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
 
@@ -121,8 +120,6 @@ class Feglm(Feols):
         self._supports_wildboottest = False
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
-
-        self.deviance = None
 
         self._method = "feglm"
         self._family = family
@@ -223,8 +220,6 @@ class Feglm(Feols):
 
         self.deviance = fit.deviance
         self.convergence = fit.converged
-        if self.convergence:
-            self._convergence = True
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.

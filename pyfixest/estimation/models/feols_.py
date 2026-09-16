@@ -54,7 +54,6 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
-    _compute_bread,
     prepare_cluster_state,
     run_crv_loop,
 )
@@ -260,6 +259,22 @@ class Feols(ResultAccessorMixin):
 
     """
 
+    # Set in prepare_model_matrix().
+    _icovars: list[str] | None
+    # Set in get_fit().
+    _tZX: np.ndarray
+    _tZy: np.ndarray
+    _scores: np.ndarray
+    _hessian: np.ndarray
+    # Set in vcov().
+    _bread: np.ndarray
+    _vcov_type_detail: str
+    _G: list[int]
+    _ssc: np.ndarray
+    # Set in fixef().
+    _fixef_coefficients: dict[str, FixedEffect]
+    _alpha: np.ndarray
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -344,38 +359,18 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
-        # self._coefnames = None
-        self._icovars = None
 
-        # set in get_fit()
-        self._tZX = np.array([])
-        # self._tZXinv = None
+        # IV-only cross products; empty for OLS, Poisson, and GLM fits, whose
+        # vcov path reads them alongside `_is_iv`.
         self._tXZ = np.array([])
-        self._tZy = np.array([])
         self._tZZinv = np.array([])
-        self._beta_hat = np.array([])
-        self._scores = np.array([])
-        self._hessian = np.array([])
-        self._bread = np.array([])
 
-        # set in vcov()
-        self._vcov_type = ""
-        self._vcov_type_detail = ""
+        # set in vcov(); the defaults are read before any user-triggered refit
         self._is_clustered = False
         self._clustervar: list[str] = []
-        self._G: list[int] = []
-        self._ssc = np.array([], dtype=np.float64)
         self._vcov = np.array([])
 
-        # set in get_inference()
-        self._se = np.array([])
-        self._tstat = np.array([])
-        self._pvalue = np.array([])
-        self._conf_int = np.array([])
-
-        # set in fixef()
-        self._fixef_coefficients: dict[str, FixedEffect] = {}
-        self._alpha = None
+        # set in fixef(); None triggers the lazy fixef() call in predict()
         self._sumFE = None
 
         # set in get_performance()
@@ -600,6 +595,9 @@ class Feols(ResultAccessorMixin):
         self._set_within_data(within_data)
 
         if self._X_is_empty:
+            # Fixed-effects-only model: no coefficients, residuals are the
+            # within-transformed response, and the plan skips vcov().
+            self._beta_hat = np.empty(0)
             self._u_hat = within_data.response.flatten()
         else:
             fit = fit_ols(
@@ -706,9 +704,10 @@ class Feols(ResultAccessorMixin):
             self._clustervar,
         ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
 
-        self._bread = _compute_bread(
-            self._is_iv, self._tXZ, self._tZZinv, self._tZX, self._hessian
-        )
+        if self._is_iv:
+            self._bread = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
+        else:
+            self._bread = np.linalg.inv(self._hessian)
 
         if self._vcov_type == "iid":
             self._ssc, self._df_k, self._df_t = get_ssc(
