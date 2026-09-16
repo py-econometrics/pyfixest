@@ -243,6 +243,8 @@ quartodoc:
         - estimation.state.WithinLinearData
         - estimation.state.WithinIvData
         - estimation.state.GlmWorkingState
+        - estimation.state.SandwichComponents
+        - estimation.state.IvSandwichComponents
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.

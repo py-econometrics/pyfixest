@@ -45,6 +45,8 @@ class Fepois(Feglm):
         User-scale observation weights.
     working_state : GlmWorkingState
         Final within-scale IRLS design, response, weights, predictors and residuals.
+    sandwich : SandwichComponents
+        IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     drop_singletons : bool

@@ -359,11 +359,7 @@ def test_lean(estimator, kwargs, lean, store_data):
     if estimator is pf.feols:
         lean_only_attributes = {
             "_cluster_df",
-            "_tXZ",
-            "_tZy",
-            "_tZX",
-            "_scores",
-            "_tZZinv",
+            "sandwich",
             "_u_hat",
             "_Y_hat_link",
             "_Y_hat_response",
@@ -377,6 +373,7 @@ def test_lean(estimator, kwargs, lean, store_data):
     else:
         assert not hasattr(fit, "within_data")
         assert hasattr(fit, "working_state") == (not lean)
+        assert hasattr(fit, "sandwich") == (not lean)
 
 
 def test_duckdb_input():

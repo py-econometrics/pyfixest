@@ -15,7 +15,10 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.model_state import WithinIvData, WithinLinearData
+from pyfixest.estimation.internals.model_state import (
+    WithinIvData,
+    WithinLinearData,
+)
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -78,26 +81,15 @@ class Feiv(Feols):
         Indicator for supporting CRV3 inference.
     _support_iid_inference : bool
         Indicator for supporting IID inference.
-    _tZX : np.ndarray
-        Transpose of Z times X.
-    _tXZ : np.ndarray
-        Transpose of X times Z.
-    _tZy : np.ndarray
-        Transpose of Z times Y.
-    _tZZinv : np.ndarray
-        Inverse of transpose of Z times Z.
+    sandwich : IvSandwichComponents
+        Weighted instrument scores, the 2SLS Hessian, its inverse, and the
+        projection X' W Z (Z' W Z)^{-1}, set in get_fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
         Predicted values of the regression model.
     _u_hat : np.ndarray
         Residuals of the regression model.
-    _scores : np.ndarray
-        Scores used in the regression.
-    _hessian : np.ndarray
-        Hessian matrix used in the regression.
-    _bread : np.ndarray
-        Bread matrix used in the regression.
     _pi_hat : np.ndarray
         Estimated coefficients from 1st stage regression
     _X_hat : np.ndarray
@@ -275,15 +267,10 @@ class Feiv(Feols):
             solver=self._solver,
         )
 
-        self._tZX = fit.tZX
-        self._tXZ = fit.tXZ
-        self._tZy = fit.tZy
-        self._tZZinv = fit.tZZinv
         self._beta_hat = fit.beta
         self._u_hat = fit.residuals
+        self.sandwich = fit.sandwich
         self._get_predictors()
-        self._scores = fit.scores
-        self._hessian = fit.hessian
 
     def first_stage(self) -> None:
         """Implement First stage regression."""

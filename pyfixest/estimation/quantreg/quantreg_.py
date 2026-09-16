@@ -222,8 +222,6 @@ class Quantreg(Feols):
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
-        self._hessian = self.within_data.design.T @ self.within_data.design
-        self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
         self,

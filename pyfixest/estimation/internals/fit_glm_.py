@@ -9,7 +9,10 @@ from pyfixest.errors import NonConvergenceError
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.literals import SolverOptions
-from pyfixest.estimation.internals.model_state import GlmWorkingState
+from pyfixest.estimation.internals.model_state import (
+    GlmWorkingState,
+    SandwichComponents,
+)
 from pyfixest.estimation.internals.solvers import solve_ols
 
 DemeanFn = Callable[
@@ -29,6 +32,9 @@ class GlmFit:
     working_state : GlmWorkingState
         Final within-scale IRLS inputs, weights, fitted values, and residuals.
         Square-root-weighted solver arrays are deliberately not retained.
+    sandwich : SandwichComponents
+        IRLS scores W X * e, the Hessian X' W X, and its inverse, with W the
+        final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
     deviance : float
@@ -48,6 +54,7 @@ class GlmFit:
 
     beta: np.ndarray
     working_state: GlmWorkingState
+    sandwich: SandwichComponents
     X: np.ndarray
     deviance: float
     converged: bool
@@ -293,20 +300,28 @@ def fit_glm_irls(
         if not converged:
             _raise_non_convergence(maxiter)
 
-    working_residuals = z_tilde_final - X_tilde_final @ beta_final
+    working_residuals = (z_tilde_final - X_tilde_final @ beta_final).flatten()
+    working_weights = working_weights_final.flatten()
     working_state = GlmWorkingState(
         working_response_within=z_tilde_final,
         design_within=X_tilde_final,
-        working_weights=working_weights_final.flatten(),
+        working_weights=working_weights,
         eta=eta.flatten(),
         mu=mu.flatten(),
         response_residuals=Y_flat - mu.flatten(),
-        working_residuals=working_residuals.flatten(),
+        working_residuals=working_residuals,
+    )
+    # The IRLS score is W_i x_i e_i; ``working_weights`` already includes any
+    # user-supplied observation weight.
+    sandwich = SandwichComponents.from_hessian(
+        scores=X_tilde_final * (working_weights * working_residuals)[:, None],
+        hessian=X_tilde_final.T @ (working_weights[:, None] * X_tilde_final),
     )
 
     return GlmFit(
         beta=beta_final,
         working_state=working_state,
+        sandwich=sandwich,
         X=X_eff,
         deviance=deviance,
         converged=converged,

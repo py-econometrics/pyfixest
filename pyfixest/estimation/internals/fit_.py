@@ -5,6 +5,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from pyfixest.estimation.internals.literals import SolverOptions
+from pyfixest.estimation.internals.model_state import (
+    IvSandwichComponents,
+    SandwichComponents,
+)
 from pyfixest.estimation.internals.solvers import solve_ols
 
 
@@ -19,22 +23,13 @@ class OlsFit:
     residuals : np.ndarray
         Residuals Y - X @ beta, shape (N,). Always on the scale of the
         supplied Y; weights never rescale them.
-    scores : np.ndarray
-        Weighted score matrix W X * residuals, shape (N, k).
-    hessian : np.ndarray
-        Weighted Hessian X' W X, shape (k, k).
-    tZX : np.ndarray
-        Z'X (= X' W X for OLS), shape (k, k).
-    tZy : np.ndarray
-        Z'Y (= X' W Y for OLS), shape (k, 1).
+    sandwich : SandwichComponents
+        Weighted scores W X * residuals, the Hessian X' W X, and its inverse.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
-    scores: np.ndarray
-    hessian: np.ndarray
-    tZX: np.ndarray
-    tZy: np.ndarray
+    sandwich: SandwichComponents
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,28 +43,14 @@ class IvFit:
     residuals : np.ndarray
         Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
         of the supplied Y; weights never rescale them.
-    scores : np.ndarray
-        Weighted score matrix W Z * residuals, shape (N, k_z).
-    hessian : np.ndarray
-        Weighted instrument cross-product Z' W Z, shape (k_z, k_z).
-    tZX : np.ndarray
-        Weighted cross-product Z' W X, shape (k_z, k).
-    tXZ : np.ndarray
-        Weighted cross-product X' W Z, shape (k, k_z).
-    tZy : np.ndarray
-        Weighted cross-product Z' W Y, shape (k_z, 1).
-    tZZinv : np.ndarray
-        (Z' W Z)^{-1}, shape (k_z, k_z).
+    sandwich : IvSandwichComponents
+        Weighted instrument scores W Z * residuals, the 2SLS Hessian, its
+        inverse, and the projection X' W Z (Z' W Z)^{-1}.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
-    scores: np.ndarray
-    hessian: np.ndarray
-    tZX: np.ndarray
-    tXZ: np.ndarray
-    tZy: np.ndarray
-    tZZinv: np.ndarray
+    sandwich: IvSandwichComponents
 
 
 def fit_ols(
@@ -104,22 +85,18 @@ def fit_ols(
         X_solver = X * sqrt_weights
         Y_solver = Y * sqrt_weights
 
-    tZX = X_solver.T @ X_solver
-    tZy = X_solver.T @ Y_solver
-    beta = solve_ols(tZX, tZy, solver)
+    hessian = X_solver.T @ X_solver
+    tXy = X_solver.T @ Y_solver
+    beta = solve_ols(hessian, tXy, solver)
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
         scores = X * (weight_values * residuals)[:, None]
-    hessian = tZX.copy()
     return OlsFit(
         beta=beta,
         residuals=residuals,
-        scores=scores,
-        hessian=hessian,
-        tZX=tZX,
-        tZy=tZy,
+        sandwich=SandwichComponents.from_hessian(scores=scores, hessian=hessian),
     )
 
 
@@ -168,25 +145,21 @@ def fit_iv(
     tZZ = Z_solver.T @ Z_solver
     tZZinv = np.linalg.inv(tZZ)
 
-    H = tXZ @ tZZinv
-    A = H @ tZX
-    B = H @ tZy
-    beta = solve_ols(A, B, solver)
+    # 2SLS normal equations: X'WZ (Z'WZ)^-1 Z'WX beta = X'WZ (Z'WZ)^-1 Z'Wy.
+    projection = tXZ @ tZZinv
+    hessian = projection @ tZX
+    beta = solve_ols(hessian, projection @ tZy, solver)
 
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
         scores = Z * residuals[:, None]
     else:
         scores = Z * (weight_values * residuals)[:, None]
-    hessian = tZZ
 
     return IvFit(
         beta=beta,
         residuals=residuals,
-        scores=scores,
-        hessian=hessian,
-        tZX=tZX,
-        tXZ=tXZ,
-        tZy=tZy,
-        tZZinv=tZZinv,
+        sandwich=IvSandwichComponents.from_projection(
+            scores=scores, hessian=hessian, projection=projection
+        ),
     )

@@ -79,7 +79,7 @@ class Fegaussian(Feglm):
         # we set gaussian glms to match pf.feols exactly
         return vcov_iid_ols(
             residuals=self.working_state.working_residuals,
-            bread=self._bread,
+            bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
         )

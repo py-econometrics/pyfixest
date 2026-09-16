@@ -39,6 +39,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     ObservationWeights,
+    SandwichComponents,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -151,6 +152,10 @@ class Feols(ResultAccessorMixin):
         User-scale weights and their analytic or frequency interpretation.
     sample_info : EstimationSample
         Observation counts and the dropped rows, by position and by stage.
+    sandwich : SandwichComponents
+        Weighted scores, Hessian, and bread of the sandwich covariance, set in
+        get_fit(). IV models carry an `IvSandwichComponents` with the
+        instrument projection.
     _k : int
         Number of independent variables (or features).
     _support_crv3_inference : bool
@@ -167,14 +172,6 @@ class Feols(ResultAccessorMixin):
         Internal covariates, to be enriched outside of the class.
     _ssc_dict : dict
         dictionary for sum of squares and cross products matrices.
-    _tZX : np.ndarray
-        Transpose of Z multiplied by X, set in get_fit().
-    _tXZ : np.ndarray
-        Transpose of X multiplied by Z, set in get_fit().
-    _tZy : np.ndarray
-        Transpose of Z multiplied by Y, set in get_fit().
-    _tZZinv : np.ndarray
-        Inverse of the transpose of Z multiplied by Z, set in get_fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
@@ -183,12 +180,6 @@ class Feols(ResultAccessorMixin):
         Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
-    _scores : np.ndarray
-        Scores used in the regression analysis.
-    _hessian : np.ndarray
-        Hessian matrix used in the regression.
-    _bread : np.ndarray
-        Bread matrix, used in calculating the variance-covariance matrix.
     _vcov_type : Any
         Type of variance-covariance matrix used.
     _vcov_type_detail : Any
@@ -262,12 +253,8 @@ class Feols(ResultAccessorMixin):
     # Set in prepare_model_matrix().
     _icovars: list[str] | None
     # Set in get_fit().
-    _tZX: np.ndarray
-    _tZy: np.ndarray
-    _scores: np.ndarray
-    _hessian: np.ndarray
+    sandwich: SandwichComponents
     # Set in vcov().
-    _bread: np.ndarray
     _vcov_type_detail: str
     _G: list[int]
     _ssc: np.ndarray
@@ -359,11 +346,6 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
-
-        # IV-only cross products; empty for OLS, Poisson, and GLM fits, whose
-        # vcov path reads them alongside `_is_iv`.
-        self._tXZ = np.array([])
-        self._tZZinv = np.array([])
 
         # set in vcov(); the defaults are read before any user-triggered refit
         self._is_clustered = False
@@ -607,16 +589,9 @@ class Feols(ResultAccessorMixin):
                 solver=self._solver,
             )
 
-            self._tZX = fit.tZX
-            self._tZy = fit.tZy
             self._beta_hat = fit.beta
             self._u_hat = fit.residuals
-            self._scores = fit.scores
-            self._hessian = fit.hessian
-
-            # IV attributes, set to None for OLS, Poisson
-            self._tXZ = np.array([])
-            self._tZZinv = np.array([])
+            self.sandwich = fit.sandwich
 
         self._get_predictors()
 
@@ -703,11 +678,6 @@ class Feols(ResultAccessorMixin):
             self._is_clustered,
             self._clustervar,
         ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
-
-        if self._is_iv:
-            self._bread = np.linalg.inv(self._tXZ @ self._tZZinv @ self._tZX)
-        else:
-            self._bread = np.linalg.inv(self._hessian)
 
         if self._vcov_type == "iid":
             self._ssc, self._df_k, self._df_t = get_ssc(
@@ -804,7 +774,7 @@ class Feols(ResultAccessorMixin):
     def _vcov_iid(self):
         return vcov_iid_ols(
             residuals=self._u_hat,
-            bread=self._bread,
+            bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
         )
@@ -812,9 +782,8 @@ class Feols(ResultAccessorMixin):
     def _vcov_hetero(self):
         observation_weights = self.observation_weights.values
         return vcov_hetero(
-            scores=self._scores,
+            components=self.sandwich,
             X=self.within_data.design,
-            tZX=self._tZX,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
                 if observation_weights is not None and self._weights_type == "fweights"
@@ -822,10 +791,6 @@ class Feols(ResultAccessorMixin):
             ),
             normal_equation_weights=observation_weights,
             vcov_type_detail=self._vcov_type_detail,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
         )
 
     def _vcov_hac(self):
@@ -857,16 +822,11 @@ class Feols(ResultAccessorMixin):
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
 
         return vcov_hac(
-            scores=self._scores,
+            components=self.sandwich,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=self._lag,
             vcov_type_detail=self._vcov_type_detail,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
-            tZX=self._tZX,
         )
 
     def _vcov_nid(self):
@@ -876,14 +836,9 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         return vcov_crv1(
-            scores=self._scores,
+            components=self.sandwich,
             clustid=clustid,
             cluster_col=cluster_col,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
-            tZX=self._tZX,
         )
 
     def _vcov_crv3_fast(self, clustid, cluster_col):

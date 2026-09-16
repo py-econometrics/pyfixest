@@ -119,13 +119,13 @@ def test_against_fixest(fml):
     )
     np.testing.assert_allclose(
         fit_r.rx2("scores").reshape(-1, 1),
-        fit._scores.reshape(-1, 1),
+        fit.sandwich.scores.reshape(-1, 1),
         atol=1e-08,
         rtol=1e-07,
     )
 
     np.testing.assert_allclose(
-        fit_r.rx2("hessian"), fit._hessian, atol=1e-08, rtol=1e-07
+        fit_r.rx2("hessian"), fit.sandwich.hessian, atol=1e-08, rtol=1e-07
     )
 
     np.testing.assert_allclose(
