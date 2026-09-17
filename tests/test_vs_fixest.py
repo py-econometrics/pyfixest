@@ -1167,7 +1167,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         if family == "gaussian":
             pytest.skip("Mismatch in scores, but all other tests pass.")
 
-            py_scores = fit_py._scores
+            py_scores = fit_py.sandwich.scores
             r_scores = fit_r.rx2("scores")
             check_absolute_diff(
                 py_scores[0, :],

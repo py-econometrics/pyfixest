@@ -6,6 +6,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     GlmWorkingState,
     ObservationWeights,
+    SandwichComponents,
     WithinIvData,
     WithinLinearData,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
+    "SandwichComponents",
     "WithinIvData",
     "WithinLinearData",
 ]

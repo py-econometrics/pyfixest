@@ -116,7 +116,6 @@ class QuantregMulti:
         self.all_quantregs[q[q_median_idx]]._u_hat = (
             Y.flatten() - (X @ beta_hat).flatten()
         )
-        self.all_quantregs[q[q_median_idx]]._hessian = hessian
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -141,7 +140,6 @@ class QuantregMulti:
                 )[0]
                 self.all_quantregs[q[i]]._beta_hat = beta_hat
                 self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -170,7 +168,6 @@ class QuantregMulti:
                     self.all_quantregs[q[i]].within_data.response.flatten()
                     - self.all_quantregs[q[i]].within_data.design @ beta_new
                 )
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm2_fun(i, "left")

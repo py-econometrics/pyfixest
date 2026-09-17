@@ -109,7 +109,6 @@ class Feglm(Feols):
 
         self.maxiter = maxiter
         self.tol = tol
-        self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
 
@@ -121,8 +120,6 @@ class Feglm(Feols):
         self._supports_wildboottest = False
         self._supports_cluster_causal_variance = False
         self._support_decomposition = False
-
-        self.deviance = None
 
         self._method = "feglm"
         self._family = family
@@ -210,21 +207,10 @@ class Feglm(Feols):
         self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        weighted_working_residuals = (
-            working_state.working_weights * working_state.working_residuals
-        )
-        # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
-        # any user-supplied observation weight.
-        self._scores = design_within * weighted_working_residuals[:, None]
-        weighted_design = working_state.working_weights[:, None] * design_within
-        self._tZX = design_within.T @ weighted_design
-        self._tZXinv = np.linalg.inv(self._tZX)
-        self._hessian = self._tZX.copy()
+        self.sandwich = fit.sandwich
 
         self.deviance = fit.deviance
         self.convergence = fit.converged
-        if self.convergence:
-            self._convergence = True
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.
@@ -244,16 +230,15 @@ class Feglm(Feols):
         return self.working_state.eta if type == "link" else self.working_state.mu
 
     def _vcov_iid(self):
-        return vcov_iid_glm(bread=self._bread)
+        return vcov_iid_glm(bread=self.sandwich.bread)
 
     def _vcov_hetero(self):
         # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
         # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
         return vcov_hetero(
-            scores=self._scores,
+            sandwich=self.sandwich,
             X=self.working_state.design_within,
-            tZX=self._tZX,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
                 if observation_weights is not None and self._weights_type == "fweights"
@@ -261,10 +246,6 @@ class Feglm(Feols):
             ),
             normal_equation_weights=self.working_state.working_weights,
             vcov_type_detail=self._vcov_type_detail,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
         )
 
     def get_performance(self) -> None:

@@ -24,6 +24,7 @@ from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
+    SandwichComponents,
     WithinIvData,
     WithinLinearData,
 )
@@ -111,17 +112,25 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     )
     np.testing.assert_allclose(fit._u_hat, residuals)
     np.testing.assert_allclose(fit.resid(), residuals)
+    sandwich = fit.sandwich
+    assert type(sandwich) is SandwichComponents
     np.testing.assert_allclose(
-        fit._scores,
+        sandwich.scores,
         fit.within_data.design * (weights * residuals)[:, None],
     )
+    hessian = fit.within_data.design.T @ (weights[:, None] * fit.within_data.design)
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._hessian,
-        fit.within_data.design.T @ (weights[:, None] * fit.within_data.design),
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
     )
+    for name in ("_scores", "_hessian", "_bread", "_tZX", "_tXZ", "_tZy", "_tZZinv"):
+        assert not hasattr(fit, name), name
 
     with pytest.raises(FrozenInstanceError):
         fit.within_data.response = fit.within_data.design  # type: ignore[misc]
+    with pytest.raises(FrozenInstanceError):
+        sandwich.bread = hessian  # type: ignore[misc]
 
 
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
@@ -145,12 +154,24 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     weighted_design = weights[:, None] * within.design
-    weighted_response = weights[:, None] * within.response
-    np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
-    np.testing.assert_allclose(fit._tZy, within.instruments.T @ weighted_response)
+    weighted_instruments = weights[:, None] * within.instruments
+    tZX = within.instruments.T @ weighted_design
+    tZZ = within.instruments.T @ weighted_instruments
+    tZZinv = np.linalg.inv(tZZ)
+    sandwich = fit.sandwich
+    assert isinstance(sandwich, SandwichComponents)
+    # The IV Hessian is the 2SLS Hessian, whose inverse is the bread.
+    hessian = tZX.T @ tZZinv @ tZX
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._scores,
-        within.instruments * (weights * fit._u_hat)[:, None],
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
+    )
+    # 2SLS scores are the OLS scores of the first-stage projection X_hat.
+    X_hat = within.instruments @ tZZinv @ tZX
+    np.testing.assert_allclose(
+        sandwich.scores,
+        X_hat * (weights * fit._u_hat)[:, None],
     )
     np.testing.assert_allclose(fit.resid(), fit._u_hat)
 
@@ -399,8 +420,21 @@ def test_published_components_preserve_inputs(
         "_Xbeta",
         "_u_hat_response",
         "_u_hat_working",
+        "_scores",
+        "_hessian",
+        "_bread",
+        "_tZX",
+        "_tXZ",
+        "_tZy",
+        "_tZZinv",
+        "_tZXinv",
     )
     assert not any(hasattr(fit, name) for name in removed)
+    if estimator is pf.quantreg:
+        # Quantile inference follows R quantreg and never reads a sandwich.
+        assert not hasattr(fit, "sandwich")
+    else:
+        assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
     assert input_array.flags.writeable == writeable_before
 
@@ -422,7 +456,9 @@ def test_multi_quantile_children_follow_ols_retention(
         lean=lean,
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
+    assert hasattr(ols, "sandwich") == (not lean)
     for child in fit.to_list():
+        assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
         if lean:

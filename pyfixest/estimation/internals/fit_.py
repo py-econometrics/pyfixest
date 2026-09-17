@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from pyfixest.estimation.internals.literals import SolverOptions
+from pyfixest.estimation.internals.model_state import SandwichComponents
 from pyfixest.estimation.internals.solvers import solve_ols
 
 
@@ -19,22 +20,13 @@ class OlsFit:
     residuals : np.ndarray
         Residuals Y - X @ beta, shape (N,). Always on the scale of the
         supplied Y; weights never rescale them.
-    scores : np.ndarray
-        Weighted score matrix W X * residuals, shape (N, k).
-    hessian : np.ndarray
-        Weighted Hessian X' W X, shape (k, k).
-    tZX : np.ndarray
-        Z'X (= X' W X for OLS), shape (k, k).
-    tZy : np.ndarray
-        Z'Y (= X' W Y for OLS), shape (k, 1).
+    sandwich : SandwichComponents
+        Weighted scores W X * residuals, the Hessian X' W X, and its inverse.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
-    scores: np.ndarray
-    hessian: np.ndarray
-    tZX: np.ndarray
-    tZy: np.ndarray
+    sandwich: SandwichComponents
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,28 +40,15 @@ class IvFit:
     residuals : np.ndarray
         Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
         of the supplied Y; weights never rescale them.
-    scores : np.ndarray
-        Weighted score matrix W Z * residuals, shape (N, k_z).
-    hessian : np.ndarray
-        Weighted instrument cross-product Z' W Z, shape (k_z, k_z).
-    tZX : np.ndarray
-        Weighted cross-product Z' W X, shape (k_z, k).
-    tXZ : np.ndarray
-        Weighted cross-product X' W Z, shape (k, k_z).
-    tZy : np.ndarray
-        Weighted cross-product Z' W Y, shape (k_z, 1).
-    tZZinv : np.ndarray
-        (Z' W Z)^{-1}, shape (k_z, k_z).
+    sandwich : SandwichComponents
+        Weighted scores W X_hat * residuals of the first-stage projection
+        X_hat = Z (Z' W Z)^{-1} Z' W X, the 2SLS Hessian X_hat' W X_hat, and
+        its inverse.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
-    scores: np.ndarray
-    hessian: np.ndarray
-    tZX: np.ndarray
-    tXZ: np.ndarray
-    tZy: np.ndarray
-    tZZinv: np.ndarray
+    sandwich: SandwichComponents
 
 
 def fit_ols(
@@ -104,22 +83,20 @@ def fit_ols(
         X_solver = X * sqrt_weights
         Y_solver = Y * sqrt_weights
 
-    tZX = X_solver.T @ X_solver
-    tZy = X_solver.T @ Y_solver
-    beta = solve_ols(tZX, tZy, solver)
+    hessian = X_solver.T @ X_solver
+    tXy = X_solver.T @ Y_solver
+    beta = solve_ols(hessian, tXy, solver)
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
         scores = X * residuals[:, None]
     else:
         scores = X * (weight_values * residuals)[:, None]
-    hessian = tZX.copy()
     return OlsFit(
         beta=beta,
         residuals=residuals,
-        scores=scores,
-        hessian=hessian,
-        tZX=tZX,
-        tZy=tZy,
+        sandwich=SandwichComponents(
+            scores=scores, hessian=hessian, bread=np.linalg.inv(hessian)
+        ),
     )
 
 
@@ -163,30 +140,23 @@ def fit_iv(
         Y_solver = Y * sqrt_weights
 
     tZX = Z_solver.T @ X_solver
-    tXZ = X_solver.T @ Z_solver
-    tZy = Z_solver.T @ Y_solver
     tZZ = Z_solver.T @ Z_solver
-    tZZinv = np.linalg.inv(tZZ)
 
-    H = tXZ @ tZZinv
-    A = H @ tZX
-    B = H @ tZy
-    beta = solve_ols(A, B, solver)
-
+    first_stage_coefs = solve_ols(tZZ, tZX, solver).reshape(tZX.shape)
+    X_hat = Z @ first_stage_coefs
+    X_hat_solver = X_hat if weight_values is None else X_hat * sqrt_weights
+    hessian = X_hat_solver.T @ X_hat_solver
+    beta = solve_ols(hessian, X_hat_solver.T @ Y_solver, solver)
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
-        scores = Z * residuals[:, None]
+        scores = X_hat * residuals[:, None]
     else:
-        scores = Z * (weight_values * residuals)[:, None]
-    hessian = tZZ
+        scores = X_hat * (weight_values * residuals)[:, None]
 
     return IvFit(
         beta=beta,
         residuals=residuals,
-        scores=scores,
-        hessian=hessian,
-        tZX=tZX,
-        tXZ=tXZ,
-        tZy=tZy,
-        tZZinv=tZZinv,
+        sandwich=SandwichComponents(
+            scores=scores, hessian=hessian, bread=np.linalg.inv(hessian)
+        ),
     )

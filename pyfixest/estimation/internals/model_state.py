@@ -259,3 +259,33 @@ class GlmWorkingState:
     mu: NDArray[np.float64]
     response_residuals: NDArray[np.float64]
     working_residuals: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SandwichComponents:
+    """Scores, Hessian, and bread of a fitted model's sandwich covariance.
+
+
+    Parameters
+    ----------
+    scores : NDArray[np.float64]
+        Weighted scores ``W X * u``, shape (n_rows, n_coefficients).
+    hessian : NDArray[np.float64]
+        Weighted cross-product ``X' W X``, shape (n_coefficients,
+        n_coefficients).
+    bread : NDArray[np.float64]
+        Inverse of ``hessian``, shape (n_coefficients, n_coefficients).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.sandwich.bread
+    ```
+    """
+
+    scores: NDArray[np.float64]
+    hessian: NDArray[np.float64]
+    bread: NDArray[np.float64]

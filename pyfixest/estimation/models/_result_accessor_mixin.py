@@ -391,21 +391,25 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
+            se, tstat, pvalue = self._se, self._tstat, self._pvalue
+            conf_int = self._conf_int
         except EmptyVcovError:
             warnings.warn(
                 "Empty variance-covariance matrix detected",
                 UserWarning,
             )
+            # Fixed-effects-only model: no coefficients, so no inference rows.
+            se = tstat = pvalue = np.empty(0)
+            conf_int = np.empty((2, 0))
 
         data = {
             "Coefficient": self._coefnames,
             "Estimate": self._beta_hat,
-            "Std. Error": self._se,
-            "t value": self._tstat,
-            "Pr(>|t|)": self._pvalue,
-            # use slice because self._conf_int might be empty
-            f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
-            f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
+            "Std. Error": se,
+            "t value": tstat,
+            "Pr(>|t|)": pvalue,
+            f"{lb * 100:.1f}%": conf_int[0],
+            f"{ub * 100:.1f}%": conf_int[1],
         }
         if (
             getattr(self, "_sample_split_var", None) is not None

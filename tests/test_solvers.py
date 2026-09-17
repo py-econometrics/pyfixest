@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+import pyfixest as pf
 from pyfixest.estimation.internals.solvers import solve_ols
 
 
@@ -46,6 +47,67 @@ def test_solve_ols_different_solvers(solver):
     assert np.allclose(solution, np.array([1.75, 1.5]))
     # Verify solution satisfies the system
     assert np.allclose(tZX @ solution, tZY)
+
+
+SOLVERS = [
+    "scipy.linalg.solve",
+    "np.linalg.lstsq",
+    "np.linalg.solve",
+    "scipy.sparse.linalg.lsqr",
+]
+
+
+@pytest.mark.parametrize("solver", SOLVERS, ids=SOLVERS)
+def test_solve_ols_single_column_rhs_is_flat(solver):
+    # A (k, 1) right-hand side keeps the legacy flat solution.
+    tZX = np.array([[4.0, 2.0], [2.0, 3.0]])
+    tZY = np.array([[10.0], [8.0]])
+    solution = solve_ols(tZX, tZY, solver)
+    assert solution.shape == (2,)
+    assert np.allclose(solution, np.array([1.75, 1.5]))
+
+
+@pytest.mark.parametrize("rhs_shape", [(3,), (3, 1), (3, 4)], ids=str)
+def test_solve_ols_solvers_agree(rhs_shape):
+    # Every solver returns the same solution for a well-conditioned system,
+    # for a flat, a single-column, and a multi-column right-hand side.
+    rng = np.random.default_rng(11)
+    A = rng.standard_normal((6, 3))
+    tZX = A.T @ A
+    tZY = rng.standard_normal(rhs_shape)
+    solutions = [solve_ols(tZX, tZY, solver) for solver in SOLVERS]
+    for solution in solutions[1:]:
+        assert solution.shape == solutions[0].shape
+        np.testing.assert_allclose(solution, solutions[0], rtol=1e-8, atol=1e-10)
+
+
+@pytest.mark.parametrize("solver", SOLVERS, ids=SOLVERS)
+def test_solve_ols_matrix_rhs_solves_each_column(solver):
+    # Several right-hand sides at once, as in the 2SLS first stage.
+    rng = np.random.default_rng(7)
+    A = rng.standard_normal((5, 3))
+    tZX = A.T @ A
+    tZY = rng.standard_normal((3, 4))
+    solution = solve_ols(tZX, tZY, solver)
+    assert solution.shape == (3, 4)
+    expected = np.column_stack(
+        [solve_ols(tZX, tZY[:, j], solver) for j in range(tZY.shape[1])]
+    )
+    assert np.allclose(solution, expected)
+    assert np.allclose(tZX @ solution, tZY)
+
+
+@pytest.mark.parametrize("solver", SOLVERS[1:], ids=SOLVERS[1:])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_iv_solvers_agree(solver, weights):
+    # Both 2SLS stages route through the solver option, so every solver must
+    # reproduce the default's coefficients and covariance.
+    data = pf.get_data()
+    fml = "Y ~ X2 + [X1 ~ Z1 + Z2] | f1"
+    default = pf.feols(fml, data=data, weights=weights, vcov={"CRV1": "f1"})
+    fit = pf.feols(fml, data=data, weights=weights, vcov={"CRV1": "f1"}, solver=solver)
+    np.testing.assert_allclose(fit.coef(), default.coef(), rtol=1e-8)
+    np.testing.assert_allclose(fit._vcov, default._vcov, rtol=1e-6)
 
 
 def test_solve_ols_invalid_solver():

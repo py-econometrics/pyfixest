@@ -137,10 +137,6 @@ class Quantreg(Feols):
 
         self._seed = seed
 
-        # later set in fit method, consant for different quantiles q -> can be reused
-        self._chol = None
-        self._P = None
-
         self._method_map: dict[
             str,
             Callable[
@@ -226,8 +222,6 @@ class Quantreg(Feols):
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
-        self._hessian = self.within_data.design.T @ self.within_data.design
-        self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
         self,
@@ -255,12 +249,9 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        # if self._chol is None or self._P is None:
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
         _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
-        # if self._chol is None or self._P is None:
-        #    raise ValueError("...")
 
         fn_res = frisch_newton_solver(
             A=X.T,
