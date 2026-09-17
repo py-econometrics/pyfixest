@@ -265,15 +265,6 @@ class GlmWorkingState:
 class SandwichComponents:
     """Scores, Hessian, and bread of a fitted model's sandwich covariance.
 
-    Every sandwich covariance is ``bread @ meat @ bread``, where the meat
-    aggregates the rows of ``scores`` (per observation, per cluster, or with
-    kernel weights over time) and ``bread`` is the inverse Hessian. Linear
-    models and GLMs build the scores from the within-scale design, the
-    residuals, and the weights that enter the normal equations: observation
-    weights for OLS, final IRLS working weights for a GLM. A 2SLS fit uses
-    the first-stage projection of the design, ``X_hat = Z (Z'WZ)^{-1} Z'WX``,
-    in place of ``X``, so its sandwich has the same form as the OLS sandwich
-    and no estimator-specific assembly.
 
     Parameters
     ----------

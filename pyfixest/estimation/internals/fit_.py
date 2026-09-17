@@ -140,21 +140,17 @@ def fit_iv(
         Y_solver = Y * sqrt_weights
 
     tZX = Z_solver.T @ X_solver
-    tXZ = X_solver.T @ Z_solver
-    tZy = Z_solver.T @ Y_solver
     tZZ = Z_solver.T @ Z_solver
-    tZZinv = np.linalg.inv(tZZ)
 
-    # 2SLS normal equations: X'WZ (Z'WZ)^-1 Z'WX beta = X'WZ (Z'WZ)^-1 Z'Wy.
-    projection = tXZ @ tZZinv
-    hessian = projection @ tZX
-    beta = solve_ols(hessian, projection @ tZy, solver)
-
+    # First stage: regress every column of X on Z. Second stage: weighted
+    # OLS of y on the fitted design X_hat, so X_hat carries the square-root
+    # weights exactly as X does in fit_ols.
+    first_stage_coefs = solve_ols(tZZ, tZX, solver).reshape(tZX.shape)
+    X_hat = Z @ first_stage_coefs
+    X_hat_solver = X_hat if weight_values is None else X_hat * sqrt_weights
+    hessian = X_hat_solver.T @ X_hat_solver
+    beta = solve_ols(hessian, X_hat_solver.T @ Y_solver, solver)
     residuals = Y.flatten() - (X @ beta).flatten()
-    # 2SLS is OLS on the first-stage projection X_hat = Z (Z'WZ)^-1 Z'WX, so
-    # the scores W X_hat * u live in coefficient space and the sandwich takes
-    # the OLS form, as in fixest.
-    X_hat = Z @ (tZZinv @ tZX)
     if weight_values is None:
         scores = X_hat * residuals[:, None]
     else:

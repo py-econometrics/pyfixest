@@ -311,8 +311,6 @@ def fit_glm_irls(
         response_residuals=Y_flat - mu.flatten(),
         working_residuals=working_residuals,
     )
-    # The IRLS score is W_i x_i e_i; ``working_weights`` already includes any
-    # user-supplied observation weight.
     hessian = X_tilde_final.T @ (working_weights[:, None] * X_tilde_final)
     sandwich = SandwichComponents(
         scores=X_tilde_final * (working_weights * working_residuals)[:, None],
