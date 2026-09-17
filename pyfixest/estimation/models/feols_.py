@@ -154,8 +154,7 @@ class Feols(ResultAccessorMixin):
         Observation counts and the dropped rows, by position and by stage.
     sandwich : SandwichComponents
         Weighted scores, Hessian, and bread of the sandwich covariance, set in
-        get_fit(). IV models carry an `IvSandwichComponents` with the
-        instrument projection.
+        get_fit().
     _k : int
         Number of independent variables (or features).
     _support_crv3_inference : bool

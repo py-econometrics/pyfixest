@@ -5,10 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from pyfixest.estimation.internals.literals import SolverOptions
-from pyfixest.estimation.internals.model_state import (
-    IvSandwichComponents,
-    SandwichComponents,
-)
+from pyfixest.estimation.internals.model_state import SandwichComponents
 from pyfixest.estimation.internals.solvers import solve_ols
 
 
@@ -43,14 +40,15 @@ class IvFit:
     residuals : np.ndarray
         Second-stage residuals Y - X @ beta, shape (N,). Always on the scale
         of the supplied Y; weights never rescale them.
-    sandwich : IvSandwichComponents
-        Weighted instrument scores W Z * residuals, the 2SLS Hessian, its
-        inverse, and the projection X' W Z (Z' W Z)^{-1}.
+    sandwich : SandwichComponents
+        Weighted scores W X_hat * residuals of the first-stage projection
+        X_hat = Z (Z' W Z)^{-1} Z' W X, the 2SLS Hessian X_hat' W X_hat, and
+        its inverse.
     """
 
     beta: np.ndarray
     residuals: np.ndarray
-    sandwich: IvSandwichComponents
+    sandwich: SandwichComponents
 
 
 def fit_ols(
@@ -96,7 +94,9 @@ def fit_ols(
     return OlsFit(
         beta=beta,
         residuals=residuals,
-        sandwich=SandwichComponents.from_hessian(scores=scores, hessian=hessian),
+        sandwich=SandwichComponents(
+            scores=scores, hessian=hessian, bread=np.linalg.inv(hessian)
+        ),
     )
 
 
@@ -151,15 +151,19 @@ def fit_iv(
     beta = solve_ols(hessian, projection @ tZy, solver)
 
     residuals = Y.flatten() - (X @ beta).flatten()
+    # 2SLS is OLS on the first-stage projection X_hat = Z (Z'WZ)^-1 Z'WX, so
+    # the scores W X_hat * u live in coefficient space and the sandwich takes
+    # the OLS form, as in fixest.
+    X_hat = Z @ (tZZinv @ tZX)
     if weight_values is None:
-        scores = Z * residuals[:, None]
+        scores = X_hat * residuals[:, None]
     else:
-        scores = Z * (weight_values * residuals)[:, None]
+        scores = X_hat * (weight_values * residuals)[:, None]
 
     return IvFit(
         beta=beta,
         residuals=residuals,
-        sandwich=IvSandwichComponents.from_projection(
-            scores=scores, hessian=hessian, projection=projection
+        sandwich=SandwichComponents(
+            scores=scores, hessian=hessian, bread=np.linalg.inv(hessian)
         ),
     )

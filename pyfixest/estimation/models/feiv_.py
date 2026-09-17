@@ -81,9 +81,9 @@ class Feiv(Feols):
         Indicator for supporting CRV3 inference.
     _support_iid_inference : bool
         Indicator for supporting IID inference.
-    sandwich : IvSandwichComponents
-        Weighted instrument scores, the 2SLS Hessian, its inverse, and the
-        projection X' W Z (Z' W Z)^{-1}, set in get_fit().
+    sandwich : SandwichComponents
+        Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
+        X_hat' W X_hat, and its inverse, set in get_fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray

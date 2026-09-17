@@ -73,7 +73,6 @@ website:
       - reference/estimation.state.WithinIvData.qmd
       - reference/estimation.state.GlmWorkingState.qmd
       - reference/estimation.state.SandwichComponents.qmd
-      - reference/estimation.state.IvSandwichComponents.qmd
       section: Fitted State
     - contents:
       - reference/estimation.formula.parse.Formula.qmd

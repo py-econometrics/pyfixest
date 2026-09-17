@@ -250,7 +250,7 @@ arrays remain mutable unless they are explicitly marked read-only:
 | `WithinLinearData` | Unpremultiplied within-scale response and design arrays. |
 | `WithinIvData` | Extends `WithinLinearData` with the instrument and endogenous arrays that only IV models carry. |
 | `GlmWorkingState` | Final within-scale working response and design, IRLS working weights, predictors, means, and response- and working-residual domains. |
-| `SandwichComponents` | Weighted scores, Hessian, and bread built by the OLS and IRLS fit primitives; the vcov primitives read nothing else. `IvSandwichComponents` adds the projection that carries an instrument-space meat into coefficient space and holds the 2SLS Hessian. |
+| `SandwichComponents` | Weighted scores, Hessian, and bread built by the OLS, 2SLS, and IRLS fit primitives; the vcov primitives read nothing else. The 2SLS fit scores the first-stage projection of the design, so every estimator shares one sandwich form. |
 | `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
 
 Analytic weights keep the retained row count as the effective sample size;

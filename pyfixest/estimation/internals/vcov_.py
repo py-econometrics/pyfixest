@@ -7,10 +7,7 @@ from pyfixest.estimation.internals.literals import (
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
 )
-from pyfixest.estimation.internals.model_state import (
-    IvSandwichComponents,
-    SandwichComponents,
-)
+from pyfixest.estimation.internals.model_state import SandwichComponents
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
     _get_panel_idx,
@@ -20,10 +17,7 @@ from pyfixest.estimation.internals.vcov_utils import (
 
 
 def _sandwich(meat: np.ndarray, components: SandwichComponents) -> np.ndarray:
-    "Assemble bread @ meat @ bread, projecting an IV meat into coefficient space."
-    if isinstance(components, IvSandwichComponents):
-        projection = components.projection
-        meat = projection @ meat @ projection.T
+    "Assemble bread @ meat @ bread."
     return components.bread @ meat @ components.bread
 
 
@@ -63,7 +57,8 @@ def vcov_hetero(
     ----------
     components : SandwichComponents
         Scores and bread of the fit. HC2/HC3 leverage reads the bread as
-        ``(X' W X)^-1``, so they are unsupported for IV components.
+        ``(X' W X)^-1`` of the supplied ``X``, so the model layer rejects
+        them for IV fits, whose bread belongs to the projected design.
     X : np.ndarray
         Within-scale design, shape (N, k), used for the HC2/HC3 leverage.
     frequency_weights : np.ndarray or None

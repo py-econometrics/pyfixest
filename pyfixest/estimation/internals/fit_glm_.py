@@ -313,9 +313,11 @@ def fit_glm_irls(
     )
     # The IRLS score is W_i x_i e_i; ``working_weights`` already includes any
     # user-supplied observation weight.
-    sandwich = SandwichComponents.from_hessian(
+    hessian = X_tilde_final.T @ (working_weights[:, None] * X_tilde_final)
+    sandwich = SandwichComponents(
         scores=X_tilde_final * (working_weights * working_residuals)[:, None],
-        hessian=X_tilde_final.T @ (working_weights[:, None] * X_tilde_final),
+        hessian=hessian,
+        bread=np.linalg.inv(hessian),
     )
 
     return GlmFit(

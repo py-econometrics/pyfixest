@@ -23,7 +23,6 @@ from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
-    IvSandwichComponents,
     ObservationWeights,
     SandwichComponents,
     WithinIvData,
@@ -158,22 +157,21 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     weighted_instruments = weights[:, None] * within.instruments
     tZX = within.instruments.T @ weighted_design
     tZZ = within.instruments.T @ weighted_instruments
-    projection = tZX.T @ np.linalg.inv(tZZ)
+    tZZinv = np.linalg.inv(tZZ)
     sandwich = fit.sandwich
-    assert isinstance(sandwich, IvSandwichComponents)
-    # atol: the projection of a regressor onto itself carries entries that
-    # are exactly zero in theory and rounding noise in floating point.
-    np.testing.assert_allclose(sandwich.projection, projection, atol=1e-12)
+    assert isinstance(sandwich, SandwichComponents)
     # The IV Hessian is the 2SLS Hessian, whose inverse is the bread.
-    hessian = projection @ tZX
+    hessian = tZX.T @ tZZinv @ tZX
     np.testing.assert_allclose(sandwich.hessian, hessian)
     # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
         sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
     )
+    # 2SLS scores are the OLS scores of the first-stage projection X_hat.
+    X_hat = within.instruments @ tZZinv @ tZX
     np.testing.assert_allclose(
         sandwich.scores,
-        within.instruments * (weights * fit._u_hat)[:, None],
+        X_hat * (weights * fit._u_hat)[:, None],
     )
     np.testing.assert_allclose(fit.resid(), fit._u_hat)
 

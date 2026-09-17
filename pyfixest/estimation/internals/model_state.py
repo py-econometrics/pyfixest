@@ -270,13 +270,15 @@ class SandwichComponents:
     kernel weights over time) and ``bread`` is the inverse Hessian. Linear
     models and GLMs build the scores from the within-scale design, the
     residuals, and the weights that enter the normal equations: observation
-    weights for OLS, final IRLS working weights for a GLM.
+    weights for OLS, final IRLS working weights for a GLM. A 2SLS fit uses
+    the first-stage projection of the design, ``X_hat = Z (Z'WZ)^{-1} Z'WX``,
+    in place of ``X``, so its sandwich has the same form as the OLS sandwich
+    and no estimator-specific assembly.
 
     Parameters
     ----------
     scores : NDArray[np.float64]
-        Weighted scores ``W X * u``, shape (n_rows, n_scores). Equal to the
-        number of coefficients unless the model is an IV model.
+        Weighted scores ``W X * u``, shape (n_rows, n_coefficients).
     hessian : NDArray[np.float64]
         Weighted cross-product ``X' W X``, shape (n_coefficients,
         n_coefficients).
@@ -296,64 +298,3 @@ class SandwichComponents:
     scores: NDArray[np.float64]
     hessian: NDArray[np.float64]
     bread: NDArray[np.float64]
-
-    @classmethod
-    def from_hessian(
-        cls,
-        *,
-        scores: NDArray[np.float64],
-        hessian: NDArray[np.float64],
-    ) -> SandwichComponents:
-        """Construct the components, inverting ``hessian`` for the bread."""
-        return cls(scores=scores, hessian=hessian, bread=np.linalg.inv(hessian))
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class IvSandwichComponents(SandwichComponents):
-    """Sandwich components of a 2SLS fit.
-
-    The scores live in instrument space, so the meat they build has one row
-    and column per instrument. ``projection`` maps it into coefficient space
-    before the bread is applied: the covariance is
-    ``bread @ projection @ meat @ projection.T @ bread``.
-
-    Parameters
-    ----------
-    scores : NDArray[np.float64]
-        Weighted instrument scores ``W Z * u``, shape (n_rows, n_instruments).
-    hessian : NDArray[np.float64]
-        2SLS Hessian ``X' W Z (Z' W Z)^{-1} Z' W X``, shape (n_coefficients,
-        n_coefficients).
-    bread : NDArray[np.float64]
-        Inverse of ``hessian``, shape (n_coefficients, n_coefficients).
-    projection : NDArray[np.float64]
-        ``X' W Z (Z' W Z)^{-1}``, shape (n_coefficients, n_instruments).
-
-    Examples
-    --------
-    ```{python}
-    import pyfixest as pf
-
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
-    fit.sandwich.projection.shape
-    ```
-    """
-
-    projection: NDArray[np.float64]
-
-    @classmethod
-    def from_projection(
-        cls,
-        *,
-        scores: NDArray[np.float64],
-        hessian: NDArray[np.float64],
-        projection: NDArray[np.float64],
-    ) -> IvSandwichComponents:
-        """Construct the components, inverting the 2SLS ``hessian`` for the bread."""
-        base = SandwichComponents.from_hessian(scores=scores, hessian=hessian)
-        return cls(
-            scores=base.scores,
-            hessian=base.hessian,
-            bread=base.bread,
-            projection=projection,
-        )
