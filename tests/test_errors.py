@@ -1694,3 +1694,23 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("vcov", "vcov_kwargs", "error", "match"),
+    [
+        ("HC4", None, ValueError, "vcov must be one of"),
+        (["f1"], None, TypeError, "vcov must be a string or a dict"),
+        ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
+        ({"CRV1": "f1+f2+f3"}, None, ValueError, "two-way clustering"),
+        ({"CRV1": 1}, None, TypeError, "must be a string"),
+        ("NW", None, ValueError, "Missing required 'time_id'"),
+        ("DK", {"time_id": "f1"}, ValueError, "Missing required 'panel_id'"),
+        ("NW", {"time_id": "f1", "lags": 2}, ValueError, "vcov_kwargs accepts"),
+    ],
+)
+def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
+    """`VcovSpec.from_user_input` validates `vcov` for post-estimation calls too."""
+    fit = pf.feols("Y ~ X1", get_data())
+    with pytest.raises(error, match=match):
+        fit.vcov(vcov, vcov_kwargs)

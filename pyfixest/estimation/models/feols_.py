@@ -43,6 +43,7 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     SandwichComponents,
     VarianceCovariance,
+    VcovSpec,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -650,26 +651,22 @@ class Feols(ResultAccessorMixin):
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
 
-        # assign estimated fixed effects, and fixed effects nested within cluster.
-
-        # deparse vcov input
-        _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
-
-        vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
-            vcov, self._has_fixef, self._is_iv
+        spec = VcovSpec.from_user_input(
+            vcov, vcov_kwargs, has_fixef=self._has_fixef, is_iv=self._is_iv
         )
+        vcov_type = spec.vcov_type
 
         # Every estimator follows the same three steps: small-sample factors,
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         if vcov_type == "CRV":
-            if len(clustervar) > 1 and not self._support_multiway_clustering:
+            if len(spec.clustervar) > 1 and not self._support_multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
-                clustervar=clustervar,
+                clustervar=list(spec.clustervar),
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
                 fe=self.model_matrix.fixed_effects,
@@ -684,7 +681,7 @@ class Feols(ResultAccessorMixin):
                 self._vcov_crv_cluster(
                     clustid=clustid,
                     cluster_col=cluster_col,
-                    vcov_type_detail=vcov_type_detail,
+                    vcov_type_detail=spec.vcov_type_detail,
                 )
                 for clustid, cluster_col in prep.dimensions()
             ]
@@ -696,19 +693,12 @@ class Feols(ResultAccessorMixin):
             elif vcov_type == "hetero":
                 # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
-                term = self._vcov_hetero(vcov_type_detail=vcov_type_detail)
+                term = self._vcov_hetero(vcov_type_detail=spec.vcov_type_detail)
             elif vcov_type == "HAC":
-                kw = vcov_kwargs or {}
-                time_id = cast(str, kw.get("time_id"))
                 # G is the number of unique time periods T used
                 ssc_vcov_type = "HAC"
-                ssc_G = np.unique(self._data[time_id]).shape[0]
-                term = self._vcov_hac(
-                    vcov_type_detail=vcov_type_detail,
-                    lag=cast("int | None", kw.get("lag")),
-                    time_id=time_id,
-                    panel_id=cast("str | None", kw.get("panel_id")),
-                )
+                ssc_G = np.unique(self._data[spec.time_id]).shape[0]
+                term = self._vcov_hac(spec)
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
@@ -724,9 +714,7 @@ class Feols(ResultAccessorMixin):
             ssc=ssc,
             df_k=df_k,
             df_t=df_t,
-            vcov_type=vcov_type,
-            vcov_type_detail=vcov_type_detail,
-            clustervar=tuple(clustervar) if is_clustered else (),
+            spec=spec,
             G=G,
         )
         # update p-value, t-stat, standard error, confint
@@ -801,15 +789,9 @@ class Feols(ResultAccessorMixin):
         bread = self.sandwich.bread
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
-    def _vcov_hac(
-        self,
-        *,
-        vcov_type_detail: str,
-        lag: int | None,
-        time_id: str | None,
-        panel_id: str | None,
-    ) -> VcovTerm:
+    def _vcov_hac(self, spec: VcovSpec) -> VcovTerm:
         _data = self._data
+        time_id, panel_id = spec.time_id, spec.panel_id
 
         if not self._support_hac_inference:
             raise NotImplementedError(
@@ -838,8 +820,8 @@ class Feols(ResultAccessorMixin):
             scores=self.sandwich.scores,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
-            lag=lag,
-            vcov_type_detail=cast(HacVcovTypeOptions, vcov_type_detail),
+            lag=spec.lag,
+            vcov_type_detail=cast(HacVcovTypeOptions, spec.vcov_type_detail),
         )
         bread = self.sandwich.bread
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
@@ -983,7 +965,7 @@ class Feols(ResultAccessorMixin):
             q=q,
         )
 
-        if self.variance_covariance.is_clustered:
+        if self.variance_covariance.spec.is_clustered:
             self._dfd = min(self.variance_covariance.G) - 1
         else:
             self._dfd = self.sample_info.n_obs - self._k - k_fe
@@ -1131,8 +1113,8 @@ class Feols(ResultAccessorMixin):
         if cluster is not None and isinstance(cluster, list):
             cluster_list = cluster
 
-        if cluster is None and self.variance_covariance.is_clustered:
-            cluster_list = list(self.variance_covariance.clustervar)
+        if cluster is None and self.variance_covariance.spec.is_clustered:
+            cluster_list = list(self.variance_covariance.spec.clustervar)
 
         run_heteroskedastic = not cluster_list
 
@@ -1321,7 +1303,7 @@ class Feols(ResultAccessorMixin):
             )
 
         if cluster is None:
-            clustervar = self.variance_covariance.clustervar
+            clustervar = self.variance_covariance.spec.clustervar
             if not clustervar:
                 raise ValueError("No cluster variable found in the model fit.")
             elif len(clustervar) > 1:
@@ -1338,7 +1320,7 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self.variance_covariance.is_clustered:
+        if not self.variance_covariance.spec.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )
@@ -1608,7 +1590,7 @@ class Feols(ResultAccessorMixin):
         if (
             self._has_fixef
             or cluster is not None
-            or self.variance_covariance.is_clustered
+            or self.variance_covariance.spec.is_clustered
         ):
             require_retained(self, "decompose", "_data")
 
@@ -1624,8 +1606,8 @@ class Feols(ResultAccessorMixin):
         cluster_df: pd.Series | None = None
         if cluster is not None:
             cluster_df = self._data[cluster]
-        elif self.variance_covariance.is_clustered:
-            cluster_df = self._data[self.variance_covariance.clustervar[0]]
+        elif self.variance_covariance.spec.is_clustered:
+            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
         else:
             cluster_df = None
 
@@ -2078,7 +2060,7 @@ class Feols(ResultAccessorMixin):
             )
 
         # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.is_clustered:
+        if cluster is not None and not self.variance_covariance.spec.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )
@@ -2300,142 +2282,3 @@ class Feols(ResultAccessorMixin):
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
         return beta_n_plus_1
-
-
-def _check_vcov_input(
-    vcov: str | dict[str, str],
-    vcov_kwargs: dict[str, Any] | None,
-    data: pd.DataFrame,
-):
-    """
-    Check the input for the vcov argument in the Feols class.
-
-    Parameters
-    ----------
-    vcov : Union[str, dict[str, str]]
-        The vcov argument passed to the Feols class.
-    vcov_kwargs : Optional[dict[str, Any]]
-        The vcov_kwargs argument passed to the Feols class.
-    data : pd.DataFrame
-        The data passed to the Feols class.
-
-    Returns
-    -------
-    None
-    """
-    assert isinstance(vcov, (dict, str, list)), "vcov must be a dict, string or list"
-    if isinstance(vcov, dict):
-        assert next(iter(vcov.keys())) in [
-            "CRV1",
-            "CRV3",
-        ], "vcov dict key must be CRV1 or CRV3"
-        assert isinstance(next(iter(vcov.values())), str), (
-            "vcov dict value must be a string"
-        )
-        deparse_vcov = next(iter(vcov.values())).split("+")
-        assert len(deparse_vcov) <= 2, "not more than twoway clustering is supported"
-
-    if isinstance(vcov, list):
-        assert all(isinstance(v, str) for v in vcov), "vcov list must contain strings"
-        assert all(v in data.columns for v in vcov), (
-            "vcov list must contain columns in the data"
-        )
-    if isinstance(vcov, str):
-        assert vcov in [
-            "iid",
-            "hetero",
-            "HC1",
-            "HC2",
-            "HC3",
-            "NW",
-            "DK",
-            "nid",
-        ], (
-            "vcov string must be iid, hetero, HC1, HC2, HC3, NW, or DK, or for quantile regression, 'nid'."
-        )
-
-        # check that time_id is provided if vcov is NW or DK
-        if (
-            vcov in {"NW", "DK"}
-            and vcov_kwargs is not None
-            and "time_id" not in vcov_kwargs
-        ):
-            raise ValueError("Missing required 'time_id' for NW/DK vcov")
-
-
-def _deparse_vcov_input(vcov: str | dict[str, str], has_fixef: bool, is_iv: bool):
-    """
-    Deparse the vcov argument passed to the Feols class.
-
-    Parameters
-    ----------
-    vcov : Union[str, dict[str, str]]
-        The vcov argument passed to the Feols class.
-    has_fixef : bool
-        Whether the regression has fixed effects.
-    is_iv : bool
-        Whether the regression is an IV regression.
-
-    Returns
-    -------
-    vcov_type : str
-        The type of vcov to be used. Either "iid", "hetero", or "CRV".
-    vcov_type_detail : str or list
-        The type of vcov to be used, with more detail. Options include "iid",
-        "hetero", "HC1", "HC2", "HC3", "CRV1", or "CRV3".
-    is_clustered : bool
-        Indicates whether the vcov is clustered.
-    clustervar : str
-        The name of the cluster variable.
-    """
-    if isinstance(vcov, dict):
-        vcov_type_detail = next(iter(vcov.keys()))
-        deparse_vcov = next(iter(vcov.values())).split("+")
-        if isinstance(deparse_vcov, str):
-            deparse_vcov = [deparse_vcov]
-        deparse_vcov = [x.replace(" ", "") for x in deparse_vcov]
-    elif isinstance(vcov, (list, str)):
-        vcov_type_detail = vcov
-    else:
-        raise TypeError("arg vcov needs to be a dict, string or list")
-
-    if vcov_type_detail == "iid":
-        vcov_type = "iid"
-        is_clustered = False
-    elif vcov_type_detail in ["hetero", "HC1", "HC2", "HC3"]:
-        vcov_type = "hetero"
-        is_clustered = False
-        if vcov_type_detail in ["HC2", "HC3"]:
-            if has_fixef:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
-                )
-            if is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
-                )
-    elif vcov_type_detail in ["NW", "DK"]:
-        vcov_type = "HAC"
-        is_clustered = False
-
-    elif vcov_type_detail in ["CRV1", "CRV3"]:
-        vcov_type = "CRV"
-        is_clustered = True
-
-    elif vcov_type_detail == "nid":
-        vcov_type = "nid"
-        is_clustered = False
-
-    clustervar = deparse_vcov if is_clustered else None
-
-    # loop over clustervar to change "^" to "_"
-    if clustervar and "^" in clustervar:
-        clustervar = [x.replace("^", "_") for x in clustervar]
-        warnings.warn(
-            f"""
-            The '^' character in the cluster variable name is replaced by '_'.
-            In consequence, the clustering variable(s) is (are) named {clustervar}.
-            """
-        )
-
-    return vcov_type, vcov_type_detail, is_clustered, clustervar

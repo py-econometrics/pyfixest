@@ -9,6 +9,7 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     SandwichComponents,
     VarianceCovariance,
+    VcovSpec,
     WithinIvData,
     WithinLinearData,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "ObservationWeights",
     "SandwichComponents",
     "VarianceCovariance",
+    "VcovSpec",
     "WithinIvData",
     "WithinLinearData",
 ]

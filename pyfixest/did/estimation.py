@@ -8,7 +8,7 @@ from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
-from pyfixest.estimation.internals.model_state import VarianceCovariance
+from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -120,7 +120,9 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
-        fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+        fit.variance_covariance = _did2s_covariance(
+            fit=fit, vcov=vcov, G=_G, cluster=cluster
+        )
         fit._method = "did2s"
 
     elif estimator == "twfe":
@@ -300,20 +302,23 @@ def did2s(
         weights=weights,
     )
 
-    fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+    fit.variance_covariance = _did2s_covariance(
+        fit=fit, vcov=vcov, G=_G, cluster=cluster
+    )
     fit.get_inference()  # update inference with correct vcov matrix
     fit._method = "did2s"
 
     return fit
 
 
-def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovariance:
+def _did2s_covariance(
+    *, fit: Feols, vcov: np.ndarray, G: int, cluster: str
+) -> VarianceCovariance:
     """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
 
     The second-stage fit was estimated with ``vcov="iid"``; its degrees of
-    freedom and adjustment factor are kept, as they were before the value
-    existed. The cluster variable is not recorded on the result, so
-    ``is_clustered`` stays ``False`` for downstream Wald tests.
+    freedom and adjustment factor are kept. The spec records the cluster
+    variable, so Wald tests use the clustered degrees of freedom.
     """
     inner = fit.variance_covariance
     return VarianceCovariance(
@@ -322,9 +327,9 @@ def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovari
         ssc=inner.ssc,
         df_k=inner.df_k,
         df_t=inner.df_t,
-        vcov_type="CRV",
-        vcov_type_detail="CRV1 (GMM)",
-        clustervar=(),
+        spec=VcovSpec(
+            vcov_type="CRV", vcov_type_detail="CRV1 (GMM)", clustervar=(cluster,)
+        ),
         G=(int(G),),
     )
 
