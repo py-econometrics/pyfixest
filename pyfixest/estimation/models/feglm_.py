@@ -249,7 +249,8 @@ class Feglm(Feols):
             normal_equation_weights=self.working_state.working_weights,
             vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
-        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def get_performance(self) -> None:
         """Reject linear R² measures; only the Gaussian family reports them."""

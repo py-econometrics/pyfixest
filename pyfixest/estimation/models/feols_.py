@@ -803,7 +803,8 @@ class Feols(ResultAccessorMixin):
             normal_equation_weights=observation_weights,
             vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
-        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def _vcov_hac(
         self,
@@ -845,7 +846,8 @@ class Feols(ResultAccessorMixin):
             lag=lag,
             vcov_type_detail=cast(HacVcovTypeOptions, vcov_type_detail),
         )
-        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def _vcov_nid(self) -> VcovTerm:
         raise NotImplementedError(
@@ -858,7 +860,8 @@ class Feols(ResultAccessorMixin):
             clustid=clustid,
             cluster_col=cluster_col,
         )
-        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def _vcov_crv3_fast(self, clustid, cluster_col) -> np.ndarray:
         return vcov_crv3_fast(

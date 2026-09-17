@@ -38,11 +38,6 @@ class VcovTerm:
     vcov: np.ndarray
     meat: np.ndarray | None
 
-    @classmethod
-    def from_meat(cls, *, meat: np.ndarray, bread: np.ndarray) -> VcovTerm:
-        """Sandwich the meat between the bread and keep both."""
-        return cls(vcov=bread @ meat @ bread, meat=meat)
-
 
 def combine_terms(terms: Sequence[VcovTerm], ssc: np.ndarray) -> VcovTerm:
     """Sum the small-sample-adjusted terms, ``Σ ssc_x * term_x``.
