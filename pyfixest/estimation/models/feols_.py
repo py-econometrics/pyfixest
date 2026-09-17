@@ -781,7 +781,7 @@ class Feols(ResultAccessorMixin):
     def _vcov_hetero(self):
         observation_weights = self.observation_weights.values
         return vcov_hetero(
-            components=self.sandwich,
+            sandwich=self.sandwich,
             X=self.within_data.design,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
@@ -821,7 +821,7 @@ class Feols(ResultAccessorMixin):
         _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
 
         return vcov_hac(
-            components=self.sandwich,
+            sandwich=self.sandwich,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
             lag=self._lag,
@@ -835,7 +835,7 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
         return vcov_crv1(
-            components=self.sandwich,
+            sandwich=self.sandwich,
             clustid=clustid,
             cluster_col=cluster_col,
         )

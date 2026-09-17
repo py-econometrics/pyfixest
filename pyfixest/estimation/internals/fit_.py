@@ -142,9 +142,6 @@ def fit_iv(
     tZX = Z_solver.T @ X_solver
     tZZ = Z_solver.T @ Z_solver
 
-    # First stage: regress every column of X on Z. Second stage: weighted
-    # OLS of y on the fitted design X_hat, so X_hat carries the square-root
-    # weights exactly as X does in fit_ols.
     first_stage_coefs = solve_ols(tZZ, tZX, solver).reshape(tZX.shape)
     X_hat = Z @ first_stage_coefs
     X_hat_solver = X_hat if weight_values is None else X_hat * sqrt_weights

@@ -237,7 +237,7 @@ class Feglm(Feols):
         # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
         return vcov_hetero(
-            components=self.sandwich,
+            sandwich=self.sandwich,
             X=self.working_state.design_within,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))

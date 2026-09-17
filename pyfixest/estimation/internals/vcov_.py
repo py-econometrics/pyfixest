@@ -16,9 +16,9 @@ from pyfixest.estimation.internals.vcov_utils import (
 )
 
 
-def _sandwich(meat: np.ndarray, components: SandwichComponents) -> np.ndarray:
-    "Assemble bread @ meat @ bread."
-    return components.bread @ meat @ components.bread
+def _get_sandwich(meat: np.ndarray, bread: np.ndarray) -> np.ndarray:
+    "Assemble the sandwich covariance bread @ meat @ bread."
+    return bread @ meat @ bread
 
 
 def vcov_iid_ols(
@@ -45,7 +45,7 @@ def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
 
 
 def vcov_hetero(
-    components: SandwichComponents,
+    sandwich: SandwichComponents,
     X: np.ndarray,
     frequency_weights: np.ndarray | None,
     normal_equation_weights: np.ndarray | None,
@@ -55,7 +55,7 @@ def vcov_hetero(
 
     Parameters
     ----------
-    components : SandwichComponents
+    sandwich : SandwichComponents
         Scores and bread of the fit. HC2/HC3 leverage reads the bread as
         ``(X' W X)^-1`` of the supplied ``X``, so the model layer rejects
         them for IV fits, whose bread belongs to the projected design.
@@ -72,11 +72,11 @@ def vcov_hetero(
     # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
     # rows represent repeated observations, so their per-observation leverage
     # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
-    scores = components.scores
+    scores = sandwich.scores
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
-        leverage = np.sum(X * (X @ components.bread), axis=1)
+        leverage = np.sum(X * (X @ sandwich.bread), axis=1)
         if normal_equation_weights is not None:
             leverage = normal_equation_weights.flatten() * leverage
         if frequency_weights is not None:
@@ -96,18 +96,18 @@ def vcov_hetero(
 
     meat = transformed_scores.T @ transformed_scores
 
-    return _sandwich(meat=meat, components=components)
+    return _get_sandwich(meat=meat, bread=sandwich.bread)
 
 
 def vcov_hac(
-    components: SandwichComponents,
+    sandwich: SandwichComponents,
     time_arr: np.ndarray,
     panel_arr: np.ndarray | None,
     lag: int | None,
     vcov_type_detail: HacVcovTypeOptions,
 ) -> np.ndarray:
     "Unscaled HAC vcov: Newey-West (time or panel) or Driscoll-Kraay."
-    scores = components.scores
+    scores = sandwich.scores
     if vcov_type_detail == "NW":
         if panel_arr is None:
             if lag is None:
@@ -150,22 +150,22 @@ def vcov_hac(
     else:
         raise ValueError("vcov_type_detail must be one of 'NW' or 'DK'.")
 
-    return _sandwich(meat=hac_meat, components=components)
+    return _get_sandwich(meat=hac_meat, bread=sandwich.bread)
 
 
 def vcov_crv1(
-    components: SandwichComponents,
+    sandwich: SandwichComponents,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
     "Unscaled CRV1 cluster-robust vcov."
     meat = crv1_meat_loop(
-        scores=components.scores.astype(np.float64),
+        scores=sandwich.scores.astype(np.float64),
         clustid=clustid.astype(np.uintp),
         cluster_col=cluster_col.astype(np.uintp),
     )
 
-    return _sandwich(meat=meat, components=components)
+    return _get_sandwich(meat=meat, bread=sandwich.bread)
 
 
 def _jackknife_vcov(beta_jack: np.ndarray, beta_center: np.ndarray) -> np.ndarray:

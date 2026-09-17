@@ -67,6 +67,20 @@ def test_solve_ols_single_column_rhs_is_flat(solver):
     assert np.allclose(solution, np.array([1.75, 1.5]))
 
 
+@pytest.mark.parametrize("rhs_shape", [(3,), (3, 1), (3, 4)], ids=str)
+def test_solve_ols_solvers_agree(rhs_shape):
+    # Every solver returns the same solution for a well-conditioned system,
+    # for a flat, a single-column, and a multi-column right-hand side.
+    rng = np.random.default_rng(11)
+    A = rng.standard_normal((6, 3))
+    tZX = A.T @ A
+    tZY = rng.standard_normal(rhs_shape)
+    solutions = [solve_ols(tZX, tZY, solver) for solver in SOLVERS]
+    for solution in solutions[1:]:
+        assert solution.shape == solutions[0].shape
+        np.testing.assert_allclose(solution, solutions[0], rtol=1e-8, atol=1e-10)
+
+
 @pytest.mark.parametrize("solver", SOLVERS, ids=SOLVERS)
 def test_solve_ols_matrix_rhs_solves_each_column(solver):
     # Several right-hand sides at once, as in the 2SLS first stage.
