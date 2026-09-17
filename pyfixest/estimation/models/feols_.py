@@ -85,6 +85,8 @@ from pyfixest.utils.dev_utils import (
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
+    DegreesOfFreedomCounts,
+    Ssc,
     capture_context,
     get_ssc,
 )
@@ -175,8 +177,8 @@ class Feols(ResultAccessorMixin):
         Fixed effects used in the regression.
     _icovars : Any
         Internal covariates, to be enriched outside of the class.
-    _ssc_dict : dict
-        dictionary for sum of squares and cross products matrices.
+    _ssc : Ssc
+        Small-sample correction options.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     _Y_hat_link : np.ndarray
@@ -254,7 +256,7 @@ class Feols(ResultAccessorMixin):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -294,7 +296,7 @@ class Feols(ResultAccessorMixin):
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if copy_data else data
-        self._ssc_dict = ssc_dict
+        self._ssc = ssc
         self._drop_singletons = drop_singletons
         self._drop_intercept = drop_intercept
         self._weights_name = weights
@@ -659,6 +661,7 @@ class Feols(ResultAccessorMixin):
         # Every estimator follows the same three steps: small-sample factors,
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
+        df_t: int | float
         if vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self._support_multiway_clustering:
                 raise NotImplementedError(
@@ -667,7 +670,7 @@ class Feols(ResultAccessorMixin):
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
                 clustervar=list(spec.clustervar),
-                ssc_dict=self._ssc_dict,
+                ssc=self._ssc,
                 fixef=self._fixef,
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
@@ -675,7 +678,7 @@ class Feols(ResultAccessorMixin):
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
             ssc, df_k, df_t = cluster_ssc(
-                prep=prep, make_ssc_kwargs=self._make_ssc_kwargs
+                prep=prep, ssc=self._ssc, dof_counts=self._dof_counts
             )
             terms = [
                 self._vcov_crv_cluster(
@@ -702,9 +705,11 @@ class Feols(ResultAccessorMixin):
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
-            ssc, df_k, df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type=ssc_vcov_type, G=ssc_G)
+            correction = get_ssc(
+                self._ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
+            ssc = np.array([correction.adj])
+            df_k, df_t = correction.df_k, correction.df_t
             terms = [term]
         term = combine_terms(terms, ssc)
 
@@ -722,28 +727,23 @@ class Feols(ResultAccessorMixin):
 
         return self
 
-    def _make_ssc_kwargs(
+    def _dof_counts(
         self,
         *,
-        vcov_type: str,
-        G: int | float | list[int],
-        vcov_sign: int = 1,
+        G: int | float,
         k_fe_nested: int = 0,
         n_fe_fully_nested: int = 0,
-    ) -> dict:
-        "Bundle model-level and vcov-type-specific args for get_ssc()."
-        return {
-            "ssc_dict": self._ssc_dict,
-            "N": self.sample_info.n_obs,
-            "k": self._k,
-            "k_fe": self._k_fe.sum() if self._has_fixef else 0,
-            "n_fe": self._n_fe,
-            "vcov_type": vcov_type,
-            "G": G,
-            "vcov_sign": vcov_sign,
-            "k_fe_nested": k_fe_nested,
-            "n_fe_fully_nested": n_fe_fully_nested,
-        }
+    ) -> DegreesOfFreedomCounts:
+        "Bundle the model counts that enter get_ssc()."
+        return DegreesOfFreedomCounts(
+            N=self.sample_info.n_obs,
+            k=self._k,
+            k_fe=self._k_fe.sum() if self._has_fixef else 0,
+            n_fe=self._n_fe,
+            k_fe_nested=k_fe_nested,
+            n_fe_fully_nested=n_fe_fully_nested,
+            G=G,
+        )
 
     def _vcov_crv_cluster(
         self,

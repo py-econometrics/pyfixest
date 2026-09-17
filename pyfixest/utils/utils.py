@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import Mapping
-from typing import Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -9,15 +12,131 @@ from formulaic.utils.context import capture_context as _capture_context
 
 from pyfixest.utils.dev_utils import _create_rng
 
+if TYPE_CHECKING:
+    # Imported lazily: pyfixest.estimation imports this module at package
+    # import time, so a runtime import here would be circular.
+    from pyfixest.estimation.internals.literals import GDfOptions, KFixefOptions
+
+_K_FIXEF_VALUES = ("none", "full", "nonnested")
+_G_DF_VALUES = ("min", "conventional")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Ssc:
+    """Small-sample correction options, as fixest's ``ssc()``.
+
+    Build one with [ssc()](/reference/utils.utils.ssc.qmd), which also
+    accepts the deprecated argument names; the estimation functions take it
+    through their ``ssc`` argument.
+
+    Parameters
+    ----------
+    k_adj : bool, default True
+        Apply the ``(N - 1) / (N - k)`` adjustment (``N / (N - k)`` for
+        heteroskedasticity-robust estimators).
+    k_fixef : {"none", "full", "nonnested"}, default "nonnested"
+        Which fixed-effect parameters count toward ``k``.
+    G_adj : bool, default True
+        Apply the ``G / (G - 1)`` cluster adjustment.
+    G_df : {"min", "conventional"}, default "min"
+        Whether multiway clustering adjusts every dimension with the smallest
+        cluster count or with its own.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.ssc(k_adj=False)
+    ```
+    """
+
+    k_adj: bool = True
+    k_fixef: KFixefOptions = "nonnested"
+    G_adj: bool = True
+    G_df: GDfOptions = "min"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.k_adj, bool):
+            raise TypeError("k_adj must be True or False.")
+        if not isinstance(self.G_adj, bool):
+            raise TypeError("G_adj must be True or False.")
+        if self.k_fixef not in _K_FIXEF_VALUES:
+            raise ValueError(
+                f"k_fixef must be one of {_K_FIXEF_VALUES}; got {self.k_fixef!r}."
+            )
+        if self.G_df not in _G_DF_VALUES:
+            raise ValueError(f"G_df must be one of {_G_DF_VALUES}; got {self.G_df!r}.")
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> Ssc:
+        """Build from a legacy ``{"k_adj": ..., "k_fixef": ..., ...}`` dict."""
+        unknown = set(mapping) - {"k_adj", "k_fixef", "G_adj", "G_df"}
+        if unknown:
+            raise ValueError(
+                f"ssc accepts the keys k_adj, k_fixef, G_adj, and G_df; got {sorted(unknown)}."
+            )
+        return cls(**mapping)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class DegreesOfFreedomCounts:
+    """Model counts that enter the small-sample correction.
+
+    Parameters
+    ----------
+    N : int or float
+        Number of observations (the frequency-weight sum under fweights).
+    k : int
+        Number of estimated coefficients, excluding fixed effects.
+    k_fe : int
+        Number of fixed-effect levels across all fixed effects.
+    n_fe : int
+        Number of fixed effects; ``Y ~ X | f1 + f2`` has two.
+    k_fe_nested : int
+        Fixed-effect levels nested within the cluster variables.
+    n_fe_fully_nested : int
+        Fixed effects fully nested within the cluster variables.
+    G : int or float
+        Number of clusters; the number of time periods for HAC and ``N``
+        for heteroskedasticity-robust inference.
+    """
+
+    N: int | float
+    k: int
+    k_fe: int
+    n_fe: int
+    k_fe_nested: int = 0
+    n_fe_fully_nested: int = 0
+    G: int | float
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SmallSampleCorrection:
+    """Result of ``get_ssc()``.
+
+    Parameters
+    ----------
+    adj : float
+        Factor that multiplies the covariance matrix.
+    df_k : int
+        Parameters counted by the ``k_adj`` adjustment.
+    df_t : int or float
+        Degrees of freedom of the t reference distribution.
+    """
+
+    adj: float
+    df_k: int
+    df_t: int | float
+
 
 def ssc(
     k_adj: bool = True,
-    k_fixef: str = "nonnested",
+    k_fixef: KFixefOptions = "nonnested",
     G_adj: bool = True,
-    G_df: str = "min",
-    *args: Any,
+    G_df: GDfOptions = "min",
     **kwargs: Any,
-) -> dict[str, str | bool]:
+) -> Ssc:
     """
     Set the small sample correction factor applied in `get_ssc()`.
 
@@ -86,8 +205,8 @@ def ssc(
 
     Returns
     -------
-    dict
-        A dictionary with encoded info on how to form small sample corrections
+    Ssc
+        The validated options; see [Ssc](/reference/utils.utils.Ssc.qmd).
 
     Examples
     --------
@@ -132,74 +251,33 @@ def ssc(
             elif new_name == "G_adj" and "G_adj" not in kwargs:
                 G_adj = kwargs[old_name]
 
-    if not isinstance(k_adj, bool):
-        raise TypeError("k_adj must be True or False.")
-    if k_fixef not in ["none", "full", "nonnested"]:
-        raise TypeError(
-            f"k_fixef must be 'none', 'full', or 'nonnested' but it is {k_fixef}."
-        )
-    if not isinstance(G_adj, bool):
-        raise TypeError("G_adj must be True or False.")
-    if G_df not in ["conventional", "min"]:
-        raise TypeError("G_df must be 'conventional' or 'min'.")
-
-    return {
-        "k_adj": k_adj,
-        "k_fixef": k_fixef,
-        "G_adj": G_adj,
-        "G_df": G_df,
-    }
+    return Ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df)
 
 
 def get_ssc(
+    ssc: Ssc,
+    counts: DegreesOfFreedomCounts,
     *,
-    ssc_dict: dict[str, str | (str | bool)],
-    N: int,
-    k: int,
-    k_fe: int,
-    k_fe_nested: int,
-    n_fe: int,
-    n_fe_fully_nested: int,
-    G: int,
-    vcov_sign: int,
-    vcov_type: "str",
-) -> tuple[np.ndarray, int, int]:
+    vcov_type: str,
+) -> SmallSampleCorrection:
     """
-    Compute small sample adjustment factors.
+    Compute the small sample adjustment factor and the degrees of freedom.
 
     Parameters
     ----------
-    ssc_dict : dict
-        A dictionary created via the ssc() function.
-    N : int
-        The number of observations.
-    k : int
-        The number of estimated parameters (as in the first part of the model formula)
-    k_fe : int
-        The number of estimated fixed effects (as specified in the second part of the model formula).
-    k_fe_nested : int
-        The number of estimated fixed effects nested within clusters.
-    n_fe : int
-        The number of fixed effects in the model. I.e. 'Y ~ X1  | f1 + f2' has 2 fixed effects.
-    n_fe_fully_nested : int
-        The number of fixed effects that are fully nested within clusters.
-    G : int
-        The number of clusters.
-    vcov_sign : array-like
-        A vector that helps create the covariance matrix.
+    ssc : Ssc
+        The options created via the ssc() function.
+    counts : DegreesOfFreedomCounts
+        Observation, coefficient, fixed-effect, and cluster counts.
     vcov_type : str
-        The type of covariance matrix. Must be one of "iid", "hetero", "HAC", or "CRV".
+        The type of covariance matrix: "iid", "hetero", "HAC", or "CRV".
 
     Returns
     -------
-    tuple of np.ndarray and int
-        A small sample adjustment factor and the effective number of coefficients k used in the adjustment.
-
-    Raises
-    ------
-    ValueError
-        If vcov_type is not "iid", "hetero", or "CRV", or if G_df is neither
-        "conventional" nor "min".
+    SmallSampleCorrection
+        The factor `adj` that multiplies the covariance matrix, the parameter
+        count `df_k` it used, and the degrees of freedom `df_t` of the t
+        distribution.
 
     Examples
     --------
@@ -208,31 +286,18 @@ def get_ssc(
 
     ```{python}
     import pyfixest as pf
-    from pyfixest.utils.utils import get_ssc
+    from pyfixest.utils.utils import DegreesOfFreedomCounts, get_ssc
 
     # cluster-robust adjustment: 1000 observations, 3 coefficients, 20 clusters
-    adj, k_used, G_used = get_ssc(
-        ssc_dict=pf.ssc(),
-        N=1000,
-        k=3,
-        k_fe=0,
-        k_fe_nested=0,
-        n_fe=0,
-        n_fe_fully_nested=0,
-        G=20,
-        vcov_sign=1,
-        vcov_type="CRV",
-    )
-    adj, k_used, G_used
+    counts = DegreesOfFreedomCounts(N=1000, k=3, k_fe=0, n_fe=0, G=20)
+    get_ssc(pf.ssc(), counts, vcov_type="CRV")
     ```
 
     Configure the behaviour with [ssc()](/reference/utils.utils.ssc.qmd). See
     [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
-    k_adj = ssc_dict["k_adj"]
-    k_fixef = ssc_dict["k_fixef"]
-    G_adj = ssc_dict["G_adj"]
-    G_df = ssc_dict["G_df"]
+    N, k, k_fe, n_fe = counts.N, counts.k, counts.k_fe, counts.n_fe
+    G: int | float = counts.G
 
     G_adj_value = 1.0
     adj_value = 1.0
@@ -243,39 +308,31 @@ def get_ssc(
     # subtract one for each fixed effect, except for the first
     k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
-    if k_fixef == "none":
+    if ssc.k_fixef == "none":
         df_k = k
-    elif k_fixef == "nonnested":
+    elif ssc.k_fixef == "nonnested":
         if n_fe == 0:
             df_k = k
-        elif k_fe_nested == 0:
+        elif counts.k_fe_nested == 0:
             # no nested fe, so just add all fixed effects
             df_k = k + k_fe_adj
         else:
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
-            df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
-    elif k_fixef == "full":
-        # add all fixed effects
-        df_k = k + k_fe_adj if n_fe > 0 else k
+            df_k = k + k_fe_adj - counts.k_fe_nested + counts.n_fe_fully_nested
     else:
-        raise ValueError("k_fixef is neither none, nonnested, nor full.")
+        # "full": add all fixed effects
+        df_k = k + k_fe_adj if n_fe > 0 else k
 
-    if k_adj:
+    if ssc.k_adj:
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["CRV", "HAC"] and G_adj:
-        if G_df == "conventional":
-            G_adj_value = G / (G - 1)
-        elif G_df == "min":
-            G = np.min(G)
-            G_adj_value = G / (G - 1)
-        else:
-            raise ValueError("G_df is neither conventional nor min.")
+    if vcov_type in ["CRV", "HAC"] and ssc.G_adj:
+        G_adj_value = G / (G - 1)
 
     df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
-    return np.array([adj_value * G_adj_value * vcov_sign]), df_k, df_t
+    return SmallSampleCorrection(adj=adj_value * G_adj_value, df_k=df_k, df_t=df_t)
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):

@@ -9,6 +9,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import PROBIT
 from pyfixest.estimation.models.feglm_ import Feglm
+from pyfixest.utils.utils import Ssc
 
 
 class Feprobit(Feglm):
@@ -18,7 +19,7 @@ class Feprobit(Feglm):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -47,7 +48,7 @@ class Feprobit(Feglm):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
+            ssc=ssc,
             drop_singletons=drop_singletons,
             drop_intercept=drop_intercept,
             weights=weights,

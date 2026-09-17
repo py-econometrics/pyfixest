@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.utils import _estimation_input_checks, _resolve_ssc
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
@@ -22,8 +22,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def feols(
@@ -32,7 +31,7 @@ def feols(
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
@@ -501,8 +500,7 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-    if ssc is None:
-        ssc = ssc_func()
+    ssc = _resolve_ssc(ssc)
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
@@ -549,7 +547,7 @@ def feols(
         drop_intercept=drop_intercept,
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,
-        ssc_dict=ssc,
+        ssc=ssc,
         solver=solver,
         demeaner=demeaner,
         collin_tol=collin_tol,

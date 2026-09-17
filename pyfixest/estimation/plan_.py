@@ -21,6 +21,7 @@ from pyfixest.estimation.models.feprobit_ import Feprobit
 from pyfixest.estimation.protocols import FittedModel, ModelFactory
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
+from pyfixest.utils.utils import Ssc
 
 
 @dataclass(frozen=True)
@@ -194,7 +195,7 @@ def expand_specs(
     model_cls = _resolve_model_class(config.method, is_iv)
     needs = MODEL_REGISTRY[config.method].needs
 
-    ssc_dict = dict(config.ssc_dict) if config.ssc_dict else {}
+    ssc = config.ssc if config.ssc is not None else Ssc()
     drop_singletons = _drop_singletons(config.fixef_rm)
 
     specs: list[ModelSpec] = []
@@ -206,7 +207,7 @@ def expand_specs(
                     needs=needs,
                     formula=formula,
                     data=data,
-                    ssc_dict=ssc_dict,
+                    ssc=ssc,
                     drop_singletons=drop_singletons,
                     sample_split_value=sample_split_value,
                     splitvar=splitvar,
@@ -231,7 +232,7 @@ def _build_model_kwargs(
     needs: frozenset[str],
     formula: FixestFormula,
     data: pd.DataFrame,
-    ssc_dict: dict[str, Any],
+    ssc: Ssc,
     drop_singletons: bool,
     sample_split_value: Any,
     splitvar: str | None,
@@ -246,7 +247,7 @@ def _build_model_kwargs(
     kwargs: dict[str, Any] = {
         "FixestFormula": formula,
         "data": data,
-        "ssc_dict": ssc_dict,
+        "ssc": ssc,
         "drop_singletons": drop_singletons,
         "drop_intercept": config.drop_intercept,
         "weights": config.weights,

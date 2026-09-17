@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.utils import _estimation_input_checks, _resolve_ssc
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
@@ -14,8 +14,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
@@ -50,7 +49,7 @@ def quantreg(
     multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
     maxiter: int | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     collin_tol: float = 1e-09,
     separation_check: list[str] | None = None,
     drop_intercept: bool = False,
@@ -116,7 +115,7 @@ def quantreg(
 
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `ssc_func()`. Note that by default, R's quantreg and Stata's qreg2 do not use
+        If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
         small sample corrections. To match their behavior, set
         `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
@@ -217,8 +216,7 @@ def quantreg(
     weights_type = "aweights"
     solver: SolverOptions = "np.linalg.solve"
 
-    if ssc is None:
-        ssc = ssc_func()
+    ssc = _resolve_ssc(ssc)
 
     context = {} if context is None else capture_context(context)
 
@@ -258,7 +256,7 @@ def quantreg(
         drop_intercept=drop_intercept,
         vcov=vcov,
         vcov_kwargs=None,
-        ssc_dict=ssc,
+        ssc=ssc,
         solver=solver,
         collin_tol=collin_tol,
         context=context,

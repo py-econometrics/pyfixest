@@ -10,6 +10,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.utils.utils import Ssc
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,7 @@ class EstimationConfig:
     # --- vcov ---
     vcov: str | dict[str, str] | None = None
     vcov_kwargs: dict[str, str | int] | None = None
-    ssc_dict: dict[str, str | bool] | None = None
+    ssc: Ssc | None = None
 
     # --- fit knobs ---
     solver: SolverOptions = "scipy.linalg.solve"

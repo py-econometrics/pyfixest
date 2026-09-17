@@ -1,8 +1,23 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 import pandas as pd
 
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.utils import Ssc
+
+
+def _resolve_ssc(ssc: Ssc | Mapping[str, Any] | None) -> Ssc:
+    """Return the small-sample options as an `Ssc`, defaulting to `ssc()`."""
+    if ssc is None:
+        return Ssc()
+    if isinstance(ssc, Ssc):
+        return ssc
+    if isinstance(ssc, Mapping):
+        return Ssc.from_mapping(ssc)
+    raise TypeError(f"ssc must be created with pf.ssc(); got {type(ssc).__name__}.")
 
 
 def _estimation_input_checks(
@@ -11,7 +26,7 @@ def _estimation_input_checks(
     vcov: str | dict[str, str] | None,
     vcov_kwargs: dict[str, str | int] | None,
     weights: str | None,
-    ssc: dict[str, str | bool],
+    ssc: Ssc,
     fixef_rm: str,
     collin_tol: float,
     copy_data: bool,

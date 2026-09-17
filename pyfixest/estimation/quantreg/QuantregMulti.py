@@ -20,6 +20,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import Ssc
 
 
 class QuantregMulti:
@@ -30,7 +31,7 @@ class QuantregMulti:
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
         quantile: list[float],
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,

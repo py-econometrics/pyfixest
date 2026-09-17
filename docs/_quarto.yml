@@ -271,5 +271,8 @@ quartodoc:
       contents:
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
+        - utils.utils.Ssc
         - utils.utils.get_ssc
+        - utils.utils.DegreesOfFreedomCounts
+        - utils.utils.SmallSampleCorrection
         - estimation.post_estimation.savi.optimal_mixture_precision

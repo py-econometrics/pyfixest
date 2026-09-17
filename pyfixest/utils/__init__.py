@@ -7,12 +7,18 @@ from pyfixest.utils.dgps import (
     get_worker_panel,
 )
 from pyfixest.utils.utils import (
+    DegreesOfFreedomCounts,
+    SmallSampleCorrection,
+    Ssc,
     get_data,
     get_ssc,
     ssc,
 )
 
 __all__ = [
+    "DegreesOfFreedomCounts",
+    "SmallSampleCorrection",
+    "Ssc",
     "get_bartik_data",
     "get_data",
     "get_encouragement_data",
