@@ -169,13 +169,14 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         raise NotImplementedError(
             "SAVI inference does not currently support feols models with fixed effects."
         )
-    if model._vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
+    if not hasattr(model, "covariance"):
+        raise EmptyVcovError()
+    vcov_type = model.covariance.vcov_type
+    if vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
-            f"SAVI inference does not support vcov type {model._vcov_type!r}. "
+            f"SAVI inference does not support vcov type {vcov_type!r}. "
             "Supported types are iid, hetero, HC1, HC2, and HC3."
         )
-    if len(model._vcov) == 0:
-        raise EmptyVcovError()
 
 
 def _coefficient_evalues(
@@ -185,7 +186,7 @@ def _coefficient_evalues(
     values = _savi_e_value(
         model._tstat**2,
         dfn=1,
-        dfd=model._df_t,
+        dfd=model.covariance.df_t,
         nobs=model.sample_info.n_obs,
         mixture_precision=mixture_precision,
     )
@@ -232,7 +233,7 @@ def _confint(
         alpha=alpha,
         mixture_precision=mixture_precision,
         nobs=model.sample_info.n_obs,
-        dfd=model._df_t,
+        dfd=model.covariance.df_t,
     )
     standard_errors = model._se[coef_indices]
     estimates = model._beta_hat[coef_indices]

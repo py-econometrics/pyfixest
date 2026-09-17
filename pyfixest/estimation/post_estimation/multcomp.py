@@ -302,10 +302,9 @@ def _multcomp_resample(
                 f"Parameter '{param}' not found in the model {model._fml}."
             )
 
-        if model._is_clustered:
-            # model._G a list of length 3
-            # for oneway clusering: repeated three times
-            G = min(model._G)
+        if model.covariance.is_clustered:
+            # covariance.G has one entry per cluster dimension
+            G = min(model.covariance.G)
             if reps > 2**G:
                 warnings.warn(
                     f"""
@@ -355,8 +354,8 @@ def _multcomp_resample(
         if type == "wyoung":
             _df[i] = (
                 model.sample_info.n_obs - model._k
-                if model._vcov_type in ["iid", "hetero"]
-                else min(model._G) - 1
+                if model.covariance.vcov_type in ["iid", "hetero"]
+                else min(model.covariance.G) - 1
             )
             p_vals[i] = 2 * (1 - t.cdf(np.abs(t_stats[i]), _df[i]))
             boot_p_vals[:, i] = 2 * (1 - t.cdf(np.abs(boot_t_stats[:, i]), _df[i]))

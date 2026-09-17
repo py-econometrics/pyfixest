@@ -11,6 +11,7 @@ from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.performance_ import performance_measures
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -75,14 +76,15 @@ class Fegaussian(Feglm):
 
         self._method = "feglm-gaussian"
 
-    def _vcov_iid(self):
+    def _vcov_iid(self) -> VcovTerm:
         # we set gaussian glms to match pf.feols exactly
-        return vcov_iid_ols(
+        vcov = vcov_iid_ols(
             residuals=self.working_state.working_residuals,
             bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
     def get_performance(self) -> None:
         """Compute and store Gaussian fit statistics from retained model data.

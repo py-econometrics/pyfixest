@@ -15,12 +15,14 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import EmptyVcovError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
+    CoefficientCovariance,
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
@@ -688,3 +690,136 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
         assert sample_info.dropped_row_index == frozenset(
             np.flatnonzero(population == 7).tolist()
         )
+
+
+_OLD_VCOV_ATTRIBUTES = (
+    "_vcov",
+    "_vcov_type",
+    "_vcov_type_detail",
+    "_is_clustered",
+    "_clustervar",
+    "_G",
+    "_ssc",
+    "_df_k",
+    "_df_t",
+    "_cluster_df",
+    "_lag",
+    "_time_id",
+    "_panel_id",
+)
+
+
+@pytest.mark.parametrize(
+    ("estimator", "formula", "vcov", "vcov_kwargs", "n_terms"),
+    [
+        (pf.feols, "y ~ x + x2 | fe", "HC1", None, 1),
+        (pf.feols, "y ~ x + x2", "HC3", None, 1),
+        (pf.feols, "y ~ x + x2 | fe", {"CRV1": "fe"}, None, 1),
+        (pf.feols, "y ~ x + x2 | fe", {"CRV1": "fe+group"}, None, 3),
+        (
+            pf.feols,
+            "y ~ x | fe",
+            "NW",
+            {"time_id": "period", "panel_id": "unit", "lag": 2},
+            1,
+        ),
+        (
+            pf.feols,
+            "y ~ x + x2 | fe",
+            "DK",
+            {"time_id": "period", "panel_id": "unit"},
+            1,
+        ),
+        (pf.feols, "y ~ x | endog ~ z", "hetero", None, 1),
+        (pf.feols, "y ~ x | fe | endog ~ z", {"CRV1": "fe"}, None, 1),
+        (pf.fepois, "count ~ x | fe", {"CRV1": "fe"}, None, 1),
+    ],
+)
+def test_covariance_collects_vcov_meat_and_ssc(
+    lifecycle_data, estimator, formula, vcov, vcov_kwargs, n_terms
+):
+    """vcov() publishes one frozen value whose meat reproduces the matrix."""
+    data = lifecycle_data.assign(
+        group=np.tile(["g1", "g2", "g3"], 8),
+        period=np.tile(np.arange(6), 4),
+        unit=np.repeat(np.arange(4), 6),
+        count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data)),
+    )
+    fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
+    covariance = fit.covariance
+
+    assert isinstance(covariance, CoefficientCovariance)
+    with pytest.raises(FrozenInstanceError):
+        covariance.vcov = covariance.vcov  # type: ignore[misc]
+    assert not any(hasattr(fit, name) for name in _OLD_VCOV_ATTRIBUTES)
+
+    bread = fit.sandwich.bread
+    assert covariance.meat is not None
+    np.testing.assert_allclose(
+        covariance.vcov, bread @ covariance.meat @ bread, rtol=1e-12, atol=1e-14
+    )
+    assert covariance.ssc.shape == (n_terms,)
+    assert covariance.vcov_type_detail == (
+        next(iter(vcov)) if isinstance(vcov, dict) else vcov
+    )
+    if isinstance(vcov, dict):
+        assert covariance.is_clustered
+        assert covariance.clustervar == tuple(vcov["CRV1"].split("+"))
+        assert len(covariance.G) == n_terms
+        assert covariance.df_t == min(covariance.G) - 1
+    else:
+        assert not covariance.is_clustered
+        assert covariance.clustervar == ()
+        assert covariance.G == ()
+    np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(covariance.vcov)))
+
+
+@pytest.mark.parametrize(
+    ("estimator", "formula", "vcov", "vcov_type"),
+    [
+        (pf.feols, "y ~ x + x2 | fe", "iid", "iid"),
+        (pf.feols, "y ~ x + x2", {"CRV3": "fe"}, "CRV"),
+        (pf.fepois, "count ~ x | fe", "iid", "iid"),
+        (pf.quantreg, "y ~ x + x2", "nid", "nid"),
+        (pf.quantreg, "y ~ x + x2", {"CRV1": "fe"}, "CRV"),
+    ],
+)
+def test_covariance_without_sandwich_has_no_meat(
+    lifecycle_data, estimator, formula, vcov, vcov_type
+):
+    """Estimators without a sandwich form publish meat=None."""
+    data = lifecycle_data.assign(
+        count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data))
+    )
+    fit = estimator(formula, data, vcov=vcov)
+    covariance = fit.covariance
+    assert covariance.meat is None
+    assert covariance.vcov_type == vcov_type
+    assert covariance.vcov.shape == (len(fit.coef()), len(fit.coef()))
+    assert covariance.ssc.shape == (1,)
+
+
+def test_vcov_replaces_the_covariance_value(lifecycle_data):
+    """A post-fit vcov() call publishes a fresh value rather than mutating one."""
+    fit = pf.feols("y ~ x + x2 | fe", lifecycle_data, vcov={"CRV1": "fe"})
+    clustered = fit.covariance
+    fit.vcov("hetero")
+    assert fit.covariance is not clustered
+    assert fit.covariance.vcov_type == "hetero"
+    assert not fit.covariance.is_clustered
+    assert clustered.is_clustered  # the old value is untouched
+
+
+def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
+    """A fixed-effects-only fit skips vcov() and carries no covariance."""
+    fit = pf.feols("y ~ 1 | fe", lifecycle_data)
+    assert not hasattr(fit, "covariance")
+    with pytest.raises(EmptyVcovError):
+        fit.get_inference()
+
+
+def test_quantreg_rejects_multiway_clustering(lifecycle_data):
+    """Quantile regression declares no multiway support before any state is read."""
+    data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))
+    with pytest.raises(NotImplementedError, match="Multiway clustering"):
+        pf.quantreg("y ~ x", data, vcov={"CRV1": "fe+group"})

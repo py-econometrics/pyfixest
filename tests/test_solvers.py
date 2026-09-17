@@ -107,7 +107,7 @@ def test_iv_solvers_agree(solver, weights):
     default = pf.feols(fml, data=data, weights=weights, vcov={"CRV1": "f1"})
     fit = pf.feols(fml, data=data, weights=weights, vcov={"CRV1": "f1"}, solver=solver)
     np.testing.assert_allclose(fit.coef(), default.coef(), rtol=1e-8)
-    np.testing.assert_allclose(fit._vcov, default._vcov, rtol=1e-6)
+    np.testing.assert_allclose(fit.covariance.vcov, default.covariance.vcov, rtol=1e-6)
 
 
 def test_solve_ols_invalid_solver():

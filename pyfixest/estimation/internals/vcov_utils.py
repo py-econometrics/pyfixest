@@ -19,6 +19,58 @@ from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VcovTerm:
+    """One unadjusted covariance term and, for sandwich estimators, its meat.
+
+    Attributes
+    ----------
+    vcov : np.ndarray
+        Unadjusted covariance, shape (k, k). Equals ``bread @ meat @ bread``
+        when ``meat`` is present.
+    meat : np.ndarray or None
+        Unadjusted meat, shape (k, k); ``None`` for estimators without a
+        sandwich form (iid, jackknife CRV3, quantile regression).
+    """
+
+    vcov: np.ndarray
+    meat: np.ndarray | None
+
+
+def adjust_term(term: VcovTerm, ssc: np.ndarray) -> VcovTerm:
+    "Apply the small-sample factor to a covariance term and its meat."
+    return VcovTerm(
+        vcov=ssc * term.vcov,
+        meat=None if term.meat is None else ssc * term.meat,
+    )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CrvLoopResult:
+    """Cluster-robust covariance accumulated over the cluster dimensions.
+
+    Attributes
+    ----------
+    vcov : np.ndarray
+        Adjusted covariance, shape (k, k).
+    meat : np.ndarray or None
+        Adjusted meat, shape (k, k); ``None`` when the per-cluster terms
+        carry no meat.
+    ssc : np.ndarray
+        Small-sample factor per cluster dimension, sign included.
+    df_k : int
+        Parameter count used by the ``k_adj`` adjustment.
+    df_t : int
+        Minimum ``G - 1`` over the cluster dimensions.
+    """
+
+    vcov: np.ndarray
+    meat: np.ndarray | None
+    ssc: np.ndarray
+    df_k: int
+    df_t: int
+
+
 @dataclass
 class ClusterPrep:
     "Precomputed cluster state shared across the CRV per-cluster loop."
@@ -83,14 +135,15 @@ def run_crv_loop(
     prep: ClusterPrep,
     k: int,
     make_ssc_kwargs: Callable[..., dict],
-    cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
-) -> tuple[np.ndarray, np.ndarray, int, int]:
-    "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
+    cluster_term: Callable[[np.ndarray, np.ndarray], VcovTerm],
+) -> CrvLoopResult:
+    "Accumulate the adjusted per-cluster-dimension terms, ssc, df_k, and df_t."
     vcov_sign_list = [1, 1, -1]
     n_clusters = prep.cluster_df.shape[1]
 
     vcov = np.zeros((k, k))
-    ssc_arr: np.ndarray | None = None
+    meat: np.ndarray | None = np.zeros((k, k))
+    ssc_arr = np.zeros(n_clusters)
     df_t_full = np.zeros(n_clusters)
     df_k = 0
 
@@ -107,12 +160,18 @@ def run_crv_loop(
                 n_fe_fully_nested=prep.n_fe_fully_nested,
             )
         )
-        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+        ssc_arr[x] = ssc[0]
         df_t_full[x] = df_t
-        vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
+        term = cluster_term(clustid, cluster_col)
+        vcov += ssc_arr[x] * term.vcov
+        if term.meat is None:
+            meat = None
+        elif meat is not None:
+            meat += ssc_arr[x] * term.meat
 
-    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
-    return vcov, ssc_arr, df_k, int(np.min(df_t_full))
+    return CrvLoopResult(
+        vcov=vcov, meat=meat, ssc=ssc_arr, df_k=df_k, df_t=int(np.min(df_t_full))
+    )
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):

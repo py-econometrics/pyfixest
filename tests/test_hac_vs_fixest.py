@@ -335,7 +335,7 @@ def test_single_fit_feols_hac_panel(
     # operations as in dof.K
     ro.globalenv["r_fixest"] = r_fixest
 
-    py_vcov = mod._vcov[0, 0]
+    py_vcov = mod.covariance.vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
@@ -389,7 +389,7 @@ def test_feols_hac_ssc_adjustments(
 
     ro.globalenv["r_fixest"] = r_fixest
 
-    py_vcov = mod._vcov[0, 0]
+    py_vcov = mod.covariance.vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     check_absolute_diff(py_vcov, r_vcov, 1e-05, "py_vcov != r_vcov")
@@ -468,7 +468,7 @@ def test_single_fit_fepois_hac_panel(
     # operations as in dof.K
     ro.globalenv["r_fixest"] = r_fixest
 
-    py_vcov = mod._vcov[0, 0]
+    py_vcov = mod.covariance.vcov[0, 0]
     r_vcov = stats.vcov(r_fixest)[0, 0]
 
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
@@ -580,7 +580,7 @@ def test_single_fit_feglm_hac_panel(
     r_coef = stats.coef(r_fixest)[1]
     check_absolute_diff(py_coef, r_coef, 1e-06, "py_coef != r_coef")
 
-    py_vcov = mod._vcov[1, 1]
+    py_vcov = mod.covariance.vcov[1, 1]
     r_vcov = stats.vcov(r_fixest)[1, 1]
 
     check_absolute_diff(py_vcov, r_vcov, 1e-04, "py_vcov != r_vcov")
@@ -600,6 +600,8 @@ def test_vcov_updating(data_panel):
         vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year", "panel_id": "unit"}
     )
 
-    assert fit_hetero._vcov_type == "HAC"
-    assert fit_hetero._vcov_type_detail == "NW"
-    check_absolute_diff(fit_hetero._vcov, fit_nw._vcov, 1e-08, "py_vcov != r_vcov")
+    assert fit_hetero.covariance.vcov_type == "HAC"
+    assert fit_hetero.covariance.vcov_type_detail == "NW"
+    check_absolute_diff(
+        fit_hetero.covariance.vcov, fit_nw.covariance.vcov, 1e-08, "py_vcov != r_vcov"
+    )

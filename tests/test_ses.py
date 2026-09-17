@@ -53,7 +53,7 @@ def test_HC1_vs_CRV1(N, seed, beta_type, error_type, weights):
     if not np.allclose(res_hc1["t value"] * np.sqrt(adj_factor), res_crv1["t value"]):
         raise ValueError("HC1 and CRV1 t values are not the same.")
 
-    if not np.allclose(fit1._vcov / adj_factor, fit2._vcov):
+    if not np.allclose(fit1.covariance.vcov / adj_factor, fit2.covariance.vcov):
         raise ValueError("HC1 and CRV1 vcov are not the same.")
 
 
@@ -106,7 +106,7 @@ def test_HC3_vs_CRV3(N, seed, beta_type, error_type, weights):
     if not np.allclose(res_hc3["t value"] * np.sqrt(adj_factor), res_crv3["t value"]):
         raise ValueError("HC3 and CRV3 t values are not the same.")
 
-    if not np.allclose(fit1._vcov / adj_factor, fit2._vcov):
+    if not np.allclose(fit1.covariance.vcov / adj_factor, fit2.covariance.vcov):
         raise ValueError("HC1 and CRV1 vcov are not the same.")
 
 

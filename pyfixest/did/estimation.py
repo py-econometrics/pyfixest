@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import numpy as np
 import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
@@ -5,6 +8,8 @@ from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.internals.model_state import CoefficientCovariance
+from pyfixest.estimation.models.feols_ import Feols
 
 
 def event_study(
@@ -115,10 +120,7 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
-        fit._vcov = vcov
-        fit._G = _G
-        fit._vcov_type = "CRV1"
-        fit._vcov_type_detail = "CRV1 (GMM)"
+        fit.covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
         fit._method = "did2s"
 
     elif estimator == "twfe":
@@ -298,16 +300,33 @@ def did2s(
         weights=weights,
     )
 
-    fit._vcov = vcov
-    fit._G = _G
+    fit.covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
     fit.get_inference()  # update inference with correct vcov matrix
-
-    fit._vcov_type = "CRV1"
-    fit._vcov_type_detail = "CRV1 (GMM)"
-    # fit._G = did2s._G
     fit._method = "did2s"
 
     return fit
+
+
+def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> CoefficientCovariance:
+    """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
+
+    The second-stage fit was estimated with ``vcov="iid"``; its degrees of
+    freedom and adjustment factor are kept, as they were before the value
+    existed. The cluster variable is not recorded on the result, so
+    ``is_clustered`` stays ``False`` for downstream Wald tests.
+    """
+    inner = fit.covariance
+    return CoefficientCovariance(
+        vcov=vcov,
+        meat=None,
+        ssc=inner.ssc,
+        df_k=inner.df_k,
+        df_t=inner.df_t,
+        vcov_type="CRV",
+        vcov_type_detail="CRV1 (GMM)",
+        clustervar=(),
+        G=(int(G),),
+    )
 
 
 def lpdid(

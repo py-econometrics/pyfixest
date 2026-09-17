@@ -260,7 +260,9 @@ class SaturatedEventStudy(DID):
             if weighting == "variance":
                 R /= np.sum(R)
 
-            res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
+            res_dict = _compute_lincomb_stats(
+                R=R, coefs=coefs, vcov=model.covariance.vcov
+            )
             df_agg.loc[period] = pd.Series(res_dict)
 
         return df_agg
