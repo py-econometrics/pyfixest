@@ -16,11 +16,7 @@ from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import (
-    meat_hetero,
-    sandwich_term,
-    vcov_iid_glm,
-)
+from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import (
     Feols,
@@ -253,7 +249,7 @@ class Feglm(Feols):
             normal_equation_weights=self.working_state.working_weights,
             vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
-        return sandwich_term(self.sandwich, meat)
+        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
 
     def get_performance(self) -> None:
         """Reject linear R² measures; only the Gaussian family reports them."""

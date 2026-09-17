@@ -295,11 +295,6 @@ class SandwichComponents:
 class VarianceCovariance:
     """Variance-covariance estimate of the coefficients and its building blocks.
 
-    ``vcov()`` publishes one value per call as ``fit.variance_covariance``: the
-    adjusted covariance matrix, the meat of the sandwich where one exists,
-    the small-sample adjustment factors, the degrees of freedom, and the
-    requested estimator.
-
     Parameters
     ----------
     vcov : NDArray[np.float64]
@@ -313,8 +308,7 @@ class VarianceCovariance:
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
         Small-sample adjustment factors. Length one, or one entry per cluster
-        dimension for CRV inference: three for two-way clustering, the
-        interaction entry carrying its negative sign.
+        dimension for CRV inference: three for two-way clustering.
     df_k : int
         Number of parameters counted by the ``k_adj`` adjustment.
     df_t : int or float

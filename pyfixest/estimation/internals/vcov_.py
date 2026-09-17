@@ -9,18 +9,11 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import SandwichComponents
 from pyfixest.estimation.internals.vcov_utils import (
-    VcovTerm,
     _dk_meat_panel,
     _get_panel_idx,
     _nw_meat_panel,
     _nw_meat_time,
 )
-
-
-def sandwich_term(sandwich: SandwichComponents, meat: np.ndarray) -> VcovTerm:
-    "Assemble bread @ meat @ bread and keep the meat alongside it."
-    bread = sandwich.bread
-    return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
 
 def vcov_iid_ols(

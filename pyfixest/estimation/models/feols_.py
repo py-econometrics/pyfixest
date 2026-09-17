@@ -54,15 +54,14 @@ from pyfixest.estimation.internals.vcov_ import (
     meat_crv1,
     meat_hac,
     meat_hetero,
-    sandwich_term,
     vcov_crv3_fast,
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
     VcovTerm,
-    adjust_term,
+    cluster_ssc,
+    combine_terms,
     prepare_cluster_state,
-    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -665,46 +664,10 @@ class Feols(ResultAccessorMixin):
             vcov, self._has_fixef, self._is_iv
         )
 
+        # Every estimator follows the same three steps: small-sample factors,
+        # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
-        if vcov_type == "iid":
-            ssc, df_k, df_t = get_ssc(**self._make_ssc_kwargs(vcov_type="iid", G=1))
-            term = adjust_term(self._vcov_iid(), ssc)
-
-        elif vcov_type == "hetero":
-            # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            ssc, df_k, df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
-            )
-            term = adjust_term(
-                self._vcov_hetero(vcov_type_detail=vcov_type_detail), ssc
-            )
-
-        elif vcov_type == "HAC":
-            kw = vcov_kwargs or {}
-            time_id = cast(str, kw.get("time_id"))
-            ssc, df_k, df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="HAC",
-                    G=np.unique(self._data[time_id]).shape[0],
-                )  # number of unique time periods T used
-            )
-            term = adjust_term(
-                self._vcov_hac(
-                    vcov_type_detail=vcov_type_detail,
-                    lag=cast("int | None", kw.get("lag")),
-                    time_id=time_id,
-                    panel_id=cast("str | None", kw.get("panel_id")),
-                ),
-                ssc,
-            )
-
-        elif vcov_type == "nid":
-            ssc, df_k, df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
-            )
-            term = adjust_term(self._vcov_nid(), ssc)
-
-        elif vcov_type == "CRV":
+        if vcov_type == "CRV":
             if len(clustervar) > 1 and not self._support_multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
@@ -718,19 +681,47 @@ class Feols(ResultAccessorMixin):
                 k_fe=self._k_fe,
             )
             # prep.G may pad the "min" rule to three entries; keep one per dimension
-            G = tuple(int(g) for g in prep.G[: prep.cluster_df.shape[1]])
-            crv = run_crv_loop(
-                prep=prep,
-                k=self._k,
-                make_ssc_kwargs=self._make_ssc_kwargs,
-                cluster_term=lambda clustid, cluster_col: self._vcov_crv_cluster(
+            G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
+            ssc, df_k, df_t = cluster_ssc(
+                prep=prep, make_ssc_kwargs=self._make_ssc_kwargs
+            )
+            terms = [
+                self._vcov_crv_cluster(
                     clustid=clustid,
                     cluster_col=cluster_col,
                     vcov_type_detail=vcov_type_detail,
-                ),
+                )
+                for clustid, cluster_col in prep.dimensions()
+            ]
+        else:
+            ssc_G: int | float
+            if vcov_type == "iid":
+                ssc_vcov_type, ssc_G = "iid", 1
+                term = self._vcov_iid()
+            elif vcov_type == "hetero":
+                # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+                ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
+                term = self._vcov_hetero(vcov_type_detail=vcov_type_detail)
+            elif vcov_type == "HAC":
+                kw = vcov_kwargs or {}
+                time_id = cast(str, kw.get("time_id"))
+                # G is the number of unique time periods T used
+                ssc_vcov_type = "HAC"
+                ssc_G = np.unique(self._data[time_id]).shape[0]
+                term = self._vcov_hac(
+                    vcov_type_detail=vcov_type_detail,
+                    lag=cast("int | None", kw.get("lag")),
+                    time_id=time_id,
+                    panel_id=cast("str | None", kw.get("panel_id")),
+                )
+            elif vcov_type == "nid":
+                ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
+                term = self._vcov_nid()
+            ssc, df_k, df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type=ssc_vcov_type, G=ssc_G)
             )
-            term = VcovTerm(vcov=crv.vcov, meat=crv.meat)
-            ssc, df_k, df_t = crv.ssc, crv.df_k, crv.df_t
+            terms = [term]
+        term = combine_terms(terms, ssc)
 
         self.variance_covariance = VarianceCovariance(
             vcov=term.vcov,
@@ -812,7 +803,7 @@ class Feols(ResultAccessorMixin):
             normal_equation_weights=observation_weights,
             vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
-        return sandwich_term(self.sandwich, meat)
+        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
 
     def _vcov_hac(
         self,
@@ -854,7 +845,7 @@ class Feols(ResultAccessorMixin):
             lag=lag,
             vcov_type_detail=cast(HacVcovTypeOptions, vcov_type_detail),
         )
-        return sandwich_term(self.sandwich, meat)
+        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
 
     def _vcov_nid(self) -> VcovTerm:
         raise NotImplementedError(
@@ -867,7 +858,7 @@ class Feols(ResultAccessorMixin):
             clustid=clustid,
             cluster_col=cluster_col,
         )
-        return sandwich_term(self.sandwich, meat)
+        return VcovTerm.from_meat(meat=meat, bread=self.sandwich.bread)
 
     def _vcov_crv3_fast(self, clustid, cluster_col) -> np.ndarray:
         return vcov_crv3_fast(
