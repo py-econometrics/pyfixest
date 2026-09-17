@@ -573,9 +573,9 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "conf_int_lb": [
-                    fit2._conf_int[0]
+                    fit2.coeftable.conf_int[0]
                 ],  # length of customized statistics not equal to the number of models
-                "conf_int_ub": [fit2._conf_int[1]],
+                "conf_int_ub": [fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
@@ -586,9 +586,9 @@ def test_errors_etable():
             custom_stats={
                 "conf_int_lb": [
                     [0.1, 0.1, 0.1],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # length of customized statistics not equal to length of model
-                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+                "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b [conf_int_lb, conf_int_ub]",
         )
@@ -598,8 +598,8 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "b": [
-                    fit2._conf_int[0],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # preserved keyword cannot be used as a custom statistic
             },
             coef_fmt="b [se]",
