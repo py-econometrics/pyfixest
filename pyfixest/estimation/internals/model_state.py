@@ -292,8 +292,8 @@ class SandwichComponents:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class CoefficientCovariance:
-    """Coefficient covariance estimate and the pieces it was assembled from.
+class VarianceCovariance:
+    """Variance-covariance estimate of the coefficients and its building blocks.
 
     ``vcov()`` publishes one value per call as ``fit.covariance``: the
     adjusted covariance matrix, the meat of the sandwich where one exists,

@@ -244,7 +244,7 @@ quartodoc:
         - estimation.state.WithinIvData
         - estimation.state.GlmWorkingState
         - estimation.state.SandwichComponents
-        - estimation.state.CoefficientCovariance
+        - estimation.state.VarianceCovariance
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.

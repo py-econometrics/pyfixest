@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
-        CoefficientCovariance,
         EstimationSample,
         ObservationWeights,
+        VarianceCovariance,
         WithinLinearData,
     )
 from pyfixest.estimation.internals.literals import (
@@ -133,7 +133,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
-    covariance: "CoefficientCovariance"
+    covariance: "VarianceCovariance"
     _beta_hat: np.ndarray
     _se: np.ndarray
     _tstat: np.ndarray

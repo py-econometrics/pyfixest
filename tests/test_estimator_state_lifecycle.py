@@ -22,11 +22,11 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
-    CoefficientCovariance,
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
     SandwichComponents,
+    VarianceCovariance,
     WithinIvData,
     WithinLinearData,
 )
@@ -748,7 +748,7 @@ def test_covariance_collects_vcov_meat_and_ssc(
     fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
     covariance = fit.covariance
 
-    assert isinstance(covariance, CoefficientCovariance)
+    assert isinstance(covariance, VarianceCovariance)
     with pytest.raises(FrozenInstanceError):
         covariance.vcov = covariance.vcov  # type: ignore[misc]
     assert not any(hasattr(fit, name) for name in _OLD_VCOV_ATTRIBUTES)

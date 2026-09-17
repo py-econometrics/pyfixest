@@ -142,7 +142,7 @@ def data_quantreg():
 
 
 def _covariance_field(mod, name: str):
-    """Read a `CoefficientCovariance` field, or its private legacy attribute.
+    """Read a `VarianceCovariance` field, or its private legacy attribute.
 
     The pinned release predates `fit.covariance` and stores `_vcov`, `_df_k`,
     and `_df_t` on the model.

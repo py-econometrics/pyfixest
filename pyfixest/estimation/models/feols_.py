@@ -39,10 +39,10 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
-    CoefficientCovariance,
     EstimationSample,
     ObservationWeights,
     SandwichComponents,
+    VarianceCovariance,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -185,7 +185,7 @@ class Feols(ResultAccessorMixin):
         Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
-    covariance : CoefficientCovariance
+    covariance : VarianceCovariance
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
@@ -250,7 +250,7 @@ class Feols(ResultAccessorMixin):
     # Set in get_fit().
     sandwich: SandwichComponents
     # Set in vcov().
-    covariance: CoefficientCovariance
+    covariance: VarianceCovariance
     # Set in fixef().
     _fixef_coefficients: dict[str, FixedEffect]
     _alpha: np.ndarray
@@ -732,7 +732,7 @@ class Feols(ResultAccessorMixin):
             term = VcovTerm(vcov=crv.vcov, meat=crv.meat)
             ssc, df_k, df_t = crv.ssc, crv.df_k, crv.df_t
 
-        self.covariance = CoefficientCovariance(
+        self.covariance = VarianceCovariance(
             vcov=term.vcov,
             meat=term.meat,
             ssc=ssc,

@@ -8,7 +8,7 @@ from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
-from pyfixest.estimation.internals.model_state import CoefficientCovariance
+from pyfixest.estimation.internals.model_state import VarianceCovariance
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -307,7 +307,7 @@ def did2s(
     return fit
 
 
-def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> CoefficientCovariance:
+def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovariance:
     """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
 
     The second-stage fit was estimated with ``vcov="iid"``; its degrees of
@@ -316,7 +316,7 @@ def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> CoefficientCov
     ``is_clustered`` stays ``False`` for downstream Wald tests.
     """
     inner = fit.covariance
-    return CoefficientCovariance(
+    return VarianceCovariance(
         vcov=vcov,
         meat=None,
         ssc=inner.ssc,
