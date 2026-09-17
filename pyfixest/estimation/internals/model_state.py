@@ -295,7 +295,7 @@ class SandwichComponents:
 class VarianceCovariance:
     """Variance-covariance estimate of the coefficients and its building blocks.
 
-    ``vcov()`` publishes one value per call as ``fit.covariance``: the
+    ``vcov()`` publishes one value per call as ``fit.variance_covariance``: the
     adjusted covariance matrix, the meat of the sandwich where one exists,
     the small-sample adjustment factors, the degrees of freedom, and the
     requested estimator.
@@ -337,7 +337,7 @@ class VarianceCovariance:
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov={"CRV1": "f1"})
-    cov = fit.covariance
+    cov = fit.variance_covariance
     cov.vcov_type_detail, cov.G, cov.df_t, cov.ssc
     ```
 

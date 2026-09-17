@@ -120,7 +120,7 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
-        fit.covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+        fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
         fit._method = "did2s"
 
     elif estimator == "twfe":
@@ -300,7 +300,7 @@ def did2s(
         weights=weights,
     )
 
-    fit.covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+    fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
     fit.get_inference()  # update inference with correct vcov matrix
     fit._method = "did2s"
 
@@ -315,7 +315,7 @@ def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovari
     existed. The cluster variable is not recorded on the result, so
     ``is_clustered`` stays ``False`` for downstream Wald tests.
     """
-    inner = fit.covariance
+    inner = fit.variance_covariance
     return VarianceCovariance(
         vcov=vcov,
         meat=None,

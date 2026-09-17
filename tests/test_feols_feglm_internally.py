@@ -159,17 +159,20 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     if inference == "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
         scaling_factor = (
-            fit_ols.covariance.vcov[0, 0] / fit_gaussian.covariance.vcov[0, 0]
+            fit_ols.variance_covariance.vcov[0, 0]
+            / fit_gaussian.variance_covariance.vcov[0, 0]
         )
         # Check that all elements follow the same scaling
         check_absolute_diff(
-            fit_ols.covariance.vcov,
-            scaling_factor * fit_gaussian.covariance.vcov,
+            fit_ols.variance_covariance.vcov,
+            scaling_factor * fit_gaussian.variance_covariance.vcov,
             tol=1e-10,
         )
     else:
         check_absolute_diff(
-            fit_ols.covariance.vcov, fit_gaussian.covariance.vcov, tol=1e-10
+            fit_ols.variance_covariance.vcov,
+            fit_gaussian.variance_covariance.vcov,
+            tol=1e-10,
         )
 
 

@@ -1264,7 +1264,9 @@ def test_poisson_crv3_remains_supported():
     )
 
     np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
-    np.testing.assert_allclose(direct_fit.covariance.vcov, glm_fit.covariance.vcov)
+    np.testing.assert_allclose(
+        direct_fit.variance_covariance.vcov, glm_fit.variance_covariance.vcov
+    )
 
 
 def test_empty_vcov_error():

@@ -228,7 +228,7 @@ def _assert_fixest_contract(py_fit, r_fit, *, inference_atol, derived_atol):
         quantity="coefficient estimates",
     )
     _assert_close(
-        py_fit.covariance.vcov[np.ix_(py_positions, py_positions)],
+        py_fit.variance_covariance.vcov[np.ix_(py_positions, py_positions)],
         stats.vcov(r_fit),
         atol=inference_atol,
         quantity="covariance matrices",
@@ -259,10 +259,10 @@ def _assert_fixest_contract(py_fit, r_fit, *, inference_atol, derived_atol):
     )
 
     ro.globalenv[".pyfixest_fast_fit"] = r_fit
-    assert int(py_fit.covariance.df_k) == int(
+    assert int(py_fit.variance_covariance.df_k) == int(
         ro.r('attr(.pyfixest_fast_fit$cov.scaled, "df.K")')[0]
     ), "model degrees of freedom differ from R fixest"
-    assert int(py_fit.covariance.df_t) == int(
+    assert int(py_fit.variance_covariance.df_t) == int(
         ro.r('attr(.pyfixest_fast_fit$cov.scaled, "df.t")')[0]
     ), "inference degrees of freedom differ from R fixest"
     assert int(stats.nobs(r_fit)[0]) == py_fit.sample_info.n_obs, (

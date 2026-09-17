@@ -144,11 +144,11 @@ def data_quantreg():
 def _covariance_field(mod, name: str):
     """Read a `VarianceCovariance` field, or its private legacy attribute.
 
-    The pinned release predates `fit.covariance` and stores `_vcov`, `_df_k`,
+    The pinned release predates `fit.variance_covariance` and stores `_vcov`, `_df_k`,
     and `_df_t` on the model.
     """
-    if hasattr(mod, "covariance"):
-        return getattr(mod.covariance, name)
+    if hasattr(mod, "variance_covariance"):
+        return getattr(mod.variance_covariance, name)
     return getattr(mod, f"_{name}")
 
 

@@ -290,7 +290,7 @@ class Feiv(Feols):
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: dict[str, str] | str
 
-        covariance = self.covariance
+        covariance = self.variance_covariance
         if covariance.is_clustered:
             vcov_detail = {covariance.vcov_type_detail: covariance.clustervar[0]}
         else:
@@ -511,7 +511,7 @@ class Feiv(Feols):
         require_retained(first_stage, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
-        if self.covariance.vcov_type_detail == "iid":
+        if self.variance_covariance.vcov_type_detail == "iid":
             require_retained(first_stage, "eff_F", "_data")
             first_stage.vcov("hetero")
 
@@ -544,7 +544,7 @@ class Feiv(Feols):
         )
 
         # Extract the robust variance-covariance matrix
-        vcv = first_stage.covariance.vcov
+        vcv = first_stage.variance_covariance.vcov
 
         # Map the instrument names to their indices in the parameter list
         # Number of rows/columns in vcv

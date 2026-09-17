@@ -261,7 +261,7 @@ class SaturatedEventStudy(DID):
                 R /= np.sum(R)
 
             res_dict = _compute_lincomb_stats(
-                R=R, coefs=coefs, vcov=model.covariance.vcov
+                R=R, coefs=coefs, vcov=model.variance_covariance.vcov
             )
             df_agg.loc[period] = pd.Series(res_dict)
 

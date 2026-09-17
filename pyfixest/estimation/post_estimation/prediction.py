@@ -19,7 +19,7 @@ def _get_prediction_se(model, X: np.ndarray) -> np.ndarray:
     se : np.ndarray
         The prediction standard error for each observation.
     """
-    return np.sqrt(np.einsum("ij,jk,ik->i", X, model.covariance.vcov, X))
+    return np.sqrt(np.einsum("ij,jk,ik->i", X, model.variance_covariance.vcov, X))
 
 
 def _compute_prediction_error(

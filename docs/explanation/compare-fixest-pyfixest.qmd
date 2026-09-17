@@ -98,7 +98,7 @@ Let's compare how close the covariance matrices are:
 
 
 ```{python}
-fit_vcov = fit.covariance.vcov
+fit_vcov = fit.variance_covariance.vcov
 r_vcov = stats.vcov(r_fit)
 fit_vcov - r_vcov
 ```
@@ -108,7 +108,7 @@ And for WLS:
 
 
 ```{python}
-fit_weights.covariance.vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
 We conclude by comparing all estimation results via the `tidy` methods:
@@ -162,11 +162,11 @@ As before, we compare the variance covariance matrices:
 
 
 ```{python}
-fit.covariance.vcov - stats.vcov(r_fit)
+fit.variance_covariance.vcov - stats.vcov(r_fit)
 ```
 
 ```{python}
-fit_weights.covariance.vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
 We conclude by comparing all estimation results via the `tidy` methods:
@@ -213,11 +213,11 @@ r_fit_weights = fixest.feols(
 ```
 
 ```{python}
-fit.covariance.vcov - stats.vcov(r_fit)
+fit.variance_covariance.vcov - stats.vcov(r_fit)
 ```
 
 ```{python}
-fit_weights.covariance.vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
 We conclude by comparing all estimation results via the `tidy` methods:
@@ -275,15 +275,15 @@ fit_r_crv = fixest.fepois(
 ```
 
 ```{python}
-fit_iid.covariance.vcov - stats.vcov(fit_r_iid)
+fit_iid.variance_covariance.vcov - stats.vcov(fit_r_iid)
 ```
 
 ```{python}
-fit_hetero.covariance.vcov - stats.vcov(fit_r_hetero)
+fit_hetero.variance_covariance.vcov - stats.vcov(fit_r_hetero)
 ```
 
 ```{python}
-fit_crv.covariance.vcov - stats.vcov(fit_r_crv)
+fit_crv.variance_covariance.vcov - stats.vcov(fit_r_crv)
 ```
 
 We conclude by comparing all estimation results via the `tidy` methods:

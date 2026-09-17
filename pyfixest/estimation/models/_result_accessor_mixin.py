@@ -133,7 +133,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
-    covariance: "VarianceCovariance"
+    variance_covariance: "VarianceCovariance"
     _beta_hat: np.ndarray
     _se: np.ndarray
     _tstat: np.ndarray
@@ -268,9 +268,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
         -
         """
-        if not hasattr(self, "covariance"):
+        if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
-        covariance = self.covariance
+        covariance = self.variance_covariance
 
         self._se = np.sqrt(np.diagonal(covariance.vcov))
         self._tstat = self._beta_hat / self._se
@@ -554,11 +554,13 @@ class ResultAccessorMixin(TidyColumnAccessors):
         )
 
         if inference_type == "regular":
-            crit_val = self._inference_dist.crit_val(alpha, self.covariance.df_t)
+            crit_val = self._inference_dist.crit_val(
+                alpha, self.variance_covariance.df_t
+            )
         else:
             joint_indices = sorted(coef_indices)
             D_inv = 1 / self._se[joint_indices]
-            V = self.covariance.vcov[np.ix_(joint_indices, joint_indices)]
+            V = self.variance_covariance.vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 

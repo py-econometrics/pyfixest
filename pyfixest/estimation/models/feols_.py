@@ -185,7 +185,7 @@ class Feols(ResultAccessorMixin):
         Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
-    covariance : VarianceCovariance
+    variance_covariance : VarianceCovariance
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
@@ -250,7 +250,7 @@ class Feols(ResultAccessorMixin):
     # Set in get_fit().
     sandwich: SandwichComponents
     # Set in vcov().
-    covariance: VarianceCovariance
+    variance_covariance: VarianceCovariance
     # Set in fixef().
     _fixef_coefficients: dict[str, FixedEffect]
     _alpha: np.ndarray
@@ -732,7 +732,7 @@ class Feols(ResultAccessorMixin):
             term = VcovTerm(vcov=crv.vcov, meat=crv.meat)
             ssc, df_k, df_t = crv.ssc, crv.df_k, crv.df_t
 
-        self.covariance = VarianceCovariance(
+        self.variance_covariance = VarianceCovariance(
             vcov=term.vcov,
             meat=term.meat,
             ssc=ssc,
@@ -989,13 +989,13 @@ class Feols(ResultAccessorMixin):
 
         W, self._dfn = _wald_statistic(
             beta_hat=self._beta_hat,
-            vcov=self.covariance.vcov,
+            vcov=self.variance_covariance.vcov,
             R=R,
             q=q,
         )
 
-        if self.covariance.is_clustered:
-            self._dfd = min(self.covariance.G) - 1
+        if self.variance_covariance.is_clustered:
+            self._dfd = min(self.variance_covariance.G) - 1
         else:
             self._dfd = self.sample_info.n_obs - self._k - k_fe
 
@@ -1142,8 +1142,8 @@ class Feols(ResultAccessorMixin):
         if cluster is not None and isinstance(cluster, list):
             cluster_list = cluster
 
-        if cluster is None and self.covariance.is_clustered:
-            cluster_list = list(self.covariance.clustervar)
+        if cluster is None and self.variance_covariance.is_clustered:
+            cluster_list = list(self.variance_covariance.clustervar)
 
         run_heteroskedastic = not cluster_list
 
@@ -1332,7 +1332,7 @@ class Feols(ResultAccessorMixin):
             )
 
         if cluster is None:
-            clustervar = self.covariance.clustervar
+            clustervar = self.variance_covariance.clustervar
             if not clustervar:
                 raise ValueError("No cluster variable found in the model fit.")
             elif len(clustervar) > 1:
@@ -1349,7 +1349,7 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self.covariance.is_clustered:
+        if not self.variance_covariance.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )
@@ -1399,7 +1399,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self.covariance.vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1616,7 +1616,11 @@ class Feols(ResultAccessorMixin):
         )
 
         require_retained(self, "decompose", "within_data", "observation_weights")
-        if self._has_fixef or cluster is not None or self.covariance.is_clustered:
+        if (
+            self._has_fixef
+            or cluster is not None
+            or self.variance_covariance.is_clustered
+        ):
             require_retained(self, "decompose", "_data")
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1631,8 +1635,8 @@ class Feols(ResultAccessorMixin):
         cluster_df: pd.Series | None = None
         if cluster is not None:
             cluster_df = self._data[cluster]
-        elif self.covariance.is_clustered:
-            cluster_df = self._data[self.covariance.clustervar[0]]
+        elif self.variance_covariance.is_clustered:
+            cluster_df = self._data[self.variance_covariance.clustervar[0]]
         else:
             cluster_df = None
 
@@ -2085,7 +2089,7 @@ class Feols(ResultAccessorMixin):
             )
 
         # update vcov if cluster provided but not in model
-        if cluster is not None and not self.covariance.is_clustered:
+        if cluster is not None and not self.variance_covariance.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )

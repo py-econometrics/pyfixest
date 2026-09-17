@@ -746,7 +746,7 @@ def test_covariance_collects_vcov_meat_and_ssc(
         count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data)),
     )
     fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
-    covariance = fit.covariance
+    covariance = fit.variance_covariance
 
     assert isinstance(covariance, VarianceCovariance)
     with pytest.raises(FrozenInstanceError):
@@ -792,7 +792,7 @@ def test_covariance_without_sandwich_has_no_meat(
         count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data))
     )
     fit = estimator(formula, data, vcov=vcov)
-    covariance = fit.covariance
+    covariance = fit.variance_covariance
     assert covariance.meat is None
     assert covariance.vcov_type == vcov_type
     assert covariance.vcov.shape == (len(fit.coef()), len(fit.coef()))
@@ -802,18 +802,18 @@ def test_covariance_without_sandwich_has_no_meat(
 def test_vcov_replaces_the_covariance_value(lifecycle_data):
     """A post-fit vcov() call publishes a fresh value rather than mutating one."""
     fit = pf.feols("y ~ x + x2 | fe", lifecycle_data, vcov={"CRV1": "fe"})
-    clustered = fit.covariance
+    clustered = fit.variance_covariance
     fit.vcov("hetero")
-    assert fit.covariance is not clustered
-    assert fit.covariance.vcov_type == "hetero"
-    assert not fit.covariance.is_clustered
+    assert fit.variance_covariance is not clustered
+    assert fit.variance_covariance.vcov_type == "hetero"
+    assert not fit.variance_covariance.is_clustered
     assert clustered.is_clustered  # the old value is untouched
 
 
 def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
     """A fixed-effects-only fit skips vcov() and carries no covariance."""
     fit = pf.feols("y ~ 1 | fe", lifecycle_data)
-    assert not hasattr(fit, "covariance")
+    assert not hasattr(fit, "variance_covariance")
     with pytest.raises(EmptyVcovError):
         fit.get_inference()
 
