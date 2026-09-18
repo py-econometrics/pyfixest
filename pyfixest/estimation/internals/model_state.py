@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -370,10 +369,9 @@ class VcovSpec:
                     f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
                 )
             if any("^" in x for x in clustervar):
-                clustervar = tuple(x.replace("^", "_") for x in clustervar)
-                warnings.warn(
-                    "The '^' character in the cluster variable name is replaced by '_'. "
-                    f"In consequence, the clustering variable(s) is (are) named {list(clustervar)}."
+                raise ValueError(
+                    f"Clustering on an interaction such as {cluster_input!r} is not supported. "
+                    "Add the interacted variable as a column of the data and cluster on that column."
                 )
             return cls(vcov_type="CRV", vcov_type_detail=detail, clustervar=clustervar)
 

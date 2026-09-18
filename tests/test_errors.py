@@ -1704,6 +1704,7 @@ def test_fixest_multi_rejects_savi_tidy_argument():
         ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
         ({"CRV1": "f1+f2+f3"}, None, ValueError, "two-way clustering"),
         ({"CRV1": 1}, None, TypeError, "must be a string"),
+        ({"CRV1": "f1^f2"}, None, ValueError, "interaction"),
         ("NW", None, ValueError, "Missing required 'time_id'"),
         ("DK", {"time_id": "f1"}, ValueError, "Missing required 'panel_id'"),
         ("NW", {"time_id": "f1", "lags": 2}, ValueError, "vcov_kwargs accepts"),
