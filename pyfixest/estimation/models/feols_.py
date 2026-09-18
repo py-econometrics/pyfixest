@@ -69,7 +69,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
     _decompose_arg_check,
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
-    FixedEffect,
+    FixedEffectEstimates,
     build_fixed_effects,
     check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
@@ -198,12 +198,10 @@ class Feols(ResultAccessorMixin):
         Confidence intervals for the estimated coefficients.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]
-        Fixed effect estimates grouped by fixed effect.
-    _alpha : pd.DataFrame
-        A DataFrame with the estimated fixed effects.
-    _sumFE : np.ndarray
-        Sum of all fixed effects for each observation.
+    fixef_estimates : FixedEffectEstimates
+        Fixed-effect estimates published by `fixef()`: the coefficient records
+        grouped by fixed effect, the dummy-coded solution `alpha`, and the
+        per-observation fixed-effect contribution `sumFE`.
     _rmse : float
         Root mean squared error of the model.
     _r2 : float
@@ -251,8 +249,7 @@ class Feols(ResultAccessorMixin):
     # Set in vcov().
     variance_covariance: VarianceCovariance
     # Set in fixef().
-    _fixef_coefficients: dict[str, FixedEffect]
-    _alpha: np.ndarray
+    fixef_estimates: FixedEffectEstimates
 
     def __init__(
         self,
@@ -339,9 +336,6 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
-
-        # set in fixef(); None triggers the lazy fixef() call in predict()
-        self._sumFE = None
 
         # set in get_performance()
         self._rmse = np.nan
@@ -1680,10 +1674,9 @@ class Feols(ResultAccessorMixin):
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
-        This method creates the following attributes:
-        - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects.
-        - `_sumFE` (np.array): An array with the sum of fixed effects for each
-        observation (i = 1, ..., N).
+        Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates`
+        value holding the coefficient records, the dummy-coded solution
+        `alpha`, and the per-observation contribution `sumFE`.
 
         Parameters
         ----------
@@ -1738,7 +1731,7 @@ class Feols(ResultAccessorMixin):
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._predict_in_sample(type="link")
                 # The linear predictor includes the offset; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
+                # that sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
                 if self._offset_name is not None:
                     offset = self.model_matrix.offset
@@ -1770,18 +1763,20 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
-        self._fixef_coefficients = build_fixed_effects(
-            fixed_effect_coefficients=alpha,
-            contrast_coding=contrast_coding,
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+        self.fixef_estimates = FixedEffectEstimates(
+            coefficients=build_fixed_effects(
+                fixed_effect_coefficients=alpha,
+                contrast_coding=contrast_coding,
+                transform_state=self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].transform_state,
+            ),
+            alpha=alpha,
+            # Fixed-effect contribution per observation, in the units of Y.
+            sumFE=D.dot(alpha),
         )
-        self._alpha = alpha
-        # Fixed-effect contribution per observation, in the units of Y.
-        self._sumFE = D.dot(alpha)
 
-        return fixed_effects_to_frame(self._fixef_coefficients)
+        return fixed_effects_to_frame(self.fixef_estimates.coefficients)
 
     def predict(
         self,
@@ -1908,12 +1903,12 @@ class Feols(ResultAccessorMixin):
                 warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
-                if self._sumFE is None:
+                if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self._fixef_coefficients,
+                    coefficients=self.fixef_estimates.coefficients,
                 )
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()

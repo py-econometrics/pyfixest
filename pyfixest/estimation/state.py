@@ -11,10 +11,16 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.post_estimation.fixed_effects import (
+    FixedEffect,
+    FixedEffectEstimates,
+)
 
 __all__ = [
     "DroppedRowCounts",
     "EstimationSample",
+    "FixedEffect",
+    "FixedEffectEstimates",
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
