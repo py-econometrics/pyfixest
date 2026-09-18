@@ -77,10 +77,8 @@ class Feiv(Feols):
         Indices of collinear variables in Z.
     _is_iv : bool
         Indicator if instrumental variables are used.
-    _support_crv3_inference : bool
-        Indicator for supporting CRV3 inference.
-    _support_iid_inference : bool
-        Indicator for supporting IID inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
         Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
         X_hat' W X_hat, and its inverse, set in get_fit().
@@ -201,10 +199,12 @@ class Feiv(Feols):
         )
 
         self._is_iv = True
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""

@@ -39,6 +39,7 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     EstimationSample,
     ObservationWeights,
     SandwichComponents,
@@ -162,8 +163,8 @@ class Feols(ResultAccessorMixin):
         get_fit().
     _k : int
         Number of independent variables (or features).
-    _support_crv3_inference : bool
-        Indicates support for CRV3 inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -321,14 +322,16 @@ class Feols(ResultAccessorMixin):
         self._lean = lean
         self._context = capture_context(context)
 
-        self._support_crv3_inference = True
-        self._support_hac_inference = True
-        self._support_multiway_clustering = True
-        self._supports_wildboottest = True
-        self._supports_cluster_causal_variance = True
+        self.capabilities = Capabilities(
+            crv3_inference=True,
+            hac_inference=True,
+            multiway_clustering=True,
+            wildboottest=True,
+            cluster_causal_variance=True,
+            decomposition=True,
+        )
         if self._has_weights or self._is_iv:
-            self._supports_wildboottest = False
-        self._support_decomposition = True
+            self.capabilities = replace(self.capabilities, wildboottest=False)
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -668,7 +671,7 @@ class Feols(ResultAccessorMixin):
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         if vcov_type == "CRV":
-            if len(clustervar) > 1 and not self._support_multiway_clustering:
+            if len(clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
@@ -773,7 +776,7 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self._support_crv3_inference:
+        if not self.capabilities.crv3_inference:
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self._method}'."
             )
@@ -816,7 +819,7 @@ class Feols(ResultAccessorMixin):
     ) -> VcovTerm:
         _data = self._data
 
-        if not self._support_hac_inference:
+        if not self.capabilities.hac_inference:
             raise NotImplementedError(
                 "HAC inference is not supported for this model type."
             )
@@ -1116,7 +1119,7 @@ class Feols(ResultAccessorMixin):
                 f"Parameter {param} not found in the model's coefficients."
             )
 
-        if not self._supports_wildboottest:
+        if not self.capabilities.wildboottest:
             if self._is_iv:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
@@ -1297,7 +1300,7 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        if not self._supports_cluster_causal_variance:
+        if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
                 f"of type '{self._method}'."
@@ -1570,7 +1573,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self._support_decomposition:
+        if not self.capabilities.decomposition:
             raise NotImplementedError(
                 "Decomposition is currently only supported for regression models "
                 "estimated via feols()."
