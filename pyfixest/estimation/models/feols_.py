@@ -330,7 +330,7 @@ class Feols(ResultAccessorMixin):
             cluster_causal_variance=True,
             decomposition=True,
         )
-        if self._has_weights or self._is_iv:
+        if self._has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
 
         # attributes that have to be enriched outside of the class -
@@ -1164,11 +1164,6 @@ class Feols(ResultAccessorMixin):
         except ImportError:
             print(
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported with IV estimation."
             )
 
         if self._method == "fepois":

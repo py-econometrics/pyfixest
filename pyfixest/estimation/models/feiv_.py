@@ -202,6 +202,7 @@ class Feiv(Feols):
         self.capabilities = replace(
             self.capabilities,
             crv3_inference=False,
+            wildboottest=False,
             cluster_causal_variance=False,
             decomposition=False,
         )
