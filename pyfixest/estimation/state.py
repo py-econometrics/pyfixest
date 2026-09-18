@@ -3,6 +3,7 @@
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
     CoefficientTable,
+    CollinearityCheck,
     DroppedRowCounts,
     EstimationSample,
     GlmWorkingState,
@@ -16,6 +17,7 @@ from pyfixest.estimation.internals.model_state import (
 
 __all__ = [
     "CoefficientTable",
+    "CollinearityCheck",
     "DroppedRowCounts",
     "EstimationSample",
     "GlmWorkingState",

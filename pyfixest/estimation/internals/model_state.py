@@ -145,6 +145,56 @@ class EstimationSample:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class CollinearityCheck:
+    """Outcome of one rank check that removes collinear design columns.
+
+    Linear and quantile models publish the check of their regressors as
+    ``fit.collinearity``; IV models publish the instrument check as
+    ``fit.collinearity_instruments``. ``dropped`` is fixest's ``collin.var``.
+
+    Parameters
+    ----------
+    dropped : tuple[str, ...]
+        Names of the columns removed, in input order. Empty when the design
+        had full rank.
+    mask : tuple[bool, ...]
+        One entry per checked column, ``True`` where the column was dropped.
+    coefnames : tuple[str, ...]
+        Names of the retained columns, in input order.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + f1 | f1", data)
+    fit.collinearity.dropped, fit.collinearity.coefnames
+    ```
+    """
+
+    dropped: tuple[str, ...]
+    mask: tuple[bool, ...]
+    coefnames: tuple[str, ...]
+
+    @property
+    def any_dropped(self) -> bool:
+        """Whether the check removed at least one column."""
+        return bool(self.dropped)
+
+    def select(self, columns: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return `columns` without the columns this check dropped.
+
+        The argument must have one column per entry of ``mask``, in the same
+        order as the checked matrix. Returns the input unchanged when the
+        design had full rank.
+        """
+        if not self.any_dropped:
+            return columns
+        return np.delete(columns, np.asarray(self.mask), axis=1)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class WithinLinearData:
     """Response and regressors after demeaning by the fixed effects.
 

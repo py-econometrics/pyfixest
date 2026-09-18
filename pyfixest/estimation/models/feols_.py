@@ -39,6 +39,7 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
     EstimationSample,
     ObservationWeights,
     RitestStatistics,
@@ -148,10 +149,9 @@ class Feols(ResultAccessorMixin):
         Tolerance level for collinearity checks.
     _coefnames : list
         Names of the coefficients (of the design matrix X).
-    _collin_vars : list
-        Variables identified as collinear.
-    _collin_index : list
-        Indices of collinear variables.
+    collinearity : CollinearityCheck
+        Names and column mask of the regressors dropped by the rank check,
+        set in get_fit().
     _solver: str
         The solver used for the regression.
     observation_weights : ObservationWeights
@@ -254,6 +254,7 @@ class Feols(ResultAccessorMixin):
     # Set in prepare_model_matrix().
     _icovars: list[str] | None
     # Set in get_fit().
+    collinearity: CollinearityCheck
     sandwich: SandwichComponents
     # Set in vcov().
     variance_covariance: VarianceCovariance
@@ -518,17 +519,23 @@ class Feols(ResultAccessorMixin):
     ) -> WithinLinearData:
         """Return within data after the established unweighted rank check."""
         design = within_data.design
-        if design.shape[1] > 0:
-            (
-                design,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = drop_multicollinear_variables(
-                design,
-                self._coefnames,
-                self._collin_tol,
+        if design.shape[1] == 0:
+            # Fixed-effects-only model: nothing to check, but the attribute is
+            # published for every fitted model.
+            self.collinearity = CollinearityCheck(
+                dropped=(),
+                mask=tuple(False for _ in self._coefnames),
+                coefnames=tuple(self._coefnames),
             )
+            return within_data
+
+        design, check = drop_multicollinear_variables(
+            design,
+            self._coefnames,
+            self._collin_tol,
+        )
+        self.collinearity = check
+        self._coefnames = list(check.coefnames)
 
         return replace(within_data, design=design)
 
