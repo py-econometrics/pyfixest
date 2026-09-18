@@ -245,6 +245,8 @@ quartodoc:
         - estimation.state.GlmWorkingState
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.FixedEffectEstimates
+        - estimation.state.FixedEffect
         - estimation.state.RitestStatistics
         - estimation.state.CoefficientTable
     - title: Formula Parsing & Model Matrix
