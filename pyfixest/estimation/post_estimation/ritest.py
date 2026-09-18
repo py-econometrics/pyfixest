@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from importlib import import_module
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy.stats import norm
 from tqdm import tqdm
 
@@ -371,7 +374,7 @@ def _get_ritest_pvalue(
 
 
 def _plot_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, plot_backend: str
+    sample_stat: float, ri_stats: NDArray[np.float64], plot_backend: str
 ):
     """Plot the permutation distribution of the test statistic."""
     df = pd.DataFrame({"ri_stats": ri_stats})
