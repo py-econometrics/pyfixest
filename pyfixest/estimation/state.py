@@ -11,6 +11,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.post_estimation.ritest import RitestStatistics
 
 __all__ = [
     "DroppedRowCounts",
@@ -18,6 +19,7 @@ __all__ = [
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
+    "RitestStatistics",
     "SandwichComponents",
     "VarianceCovariance",
     "WithinIvData",
