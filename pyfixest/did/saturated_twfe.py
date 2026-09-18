@@ -256,40 +256,38 @@ class SaturatedEventStudy(DID):
 
     def test_treatment_heterogeneity(self) -> pd.Series:
         """
-        Test for treatment heterogeneity in the event study design.
+        Test for treatment heterogeneity across cohorts in the event study design.
 
-        Parameters
-        ----------
-        by : str, optional
+        Tests the cohort-specific deviations from the common post-treatment
+        event study coefficients jointly, as in Lal (2025,
+        [arXiv](https://arxiv.org/abs/2503.05125)).
 
-                The type of test to perform. Can be either "cohort" or "time".
-                Default is "cohort". If "cohort", tests for treatment heterogeneity
-                across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
-                for details.
+        Returns
+        -------
+        pd.Series
+            The test statistic and the p-value of the joint test.
         """
         return _test_treatment_heterogeneity(self.mod)
 
     def aggregate(self, agg="period", weighting: str | None = "shares") -> pd.DataFrame:
         """
-        Aggregate the fully interacted event study estimates by relative time, cohort, and time.
+        Aggregate the cohort-specific event study estimates by event time.
 
         Parameters
         ----------
         agg : str, optional
-
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
-                computes the average treatment effect by period.
-
+            The aggregation level. Only `"period"`, the default, is supported:
+            the cohort-specific effects are aggregated by event time.
         weighting : str, optional
-
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+            The weighting scheme. Only `"shares"`, the default, is supported:
+            each cohort enters an event time with its share of the units
+            observed at that event time (Sun and Abraham 2021).
 
         Returns
         -------
-        pd.Series
-            A Series containing the aggregated estimates.
+        pd.DataFrame
+            The aggregated estimate per event time, with standard error,
+            t value, p value, and the bounds of the 95% confidence interval.
         """
         return _aggregate_by_period(
             self.mod, self._design, agg=agg, weighting=weighting
@@ -302,13 +300,12 @@ class SaturatedEventStudy(DID):
         Parameters
         ----------
         agg : str, optional
-            The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-            Default is "att". If "att", computes the average treatment effect on the treated.
-            If "cohort", computes the average treatment effect by cohort. If "period",
-            computes the average treatment effect by period.
-
+            The aggregation level. Only `"period"`, the default, is supported:
+            the cohort-specific effects are aggregated by event time.
         weighting : str, optional
-            The type of weighting to use. Can be either 'shares' or 'variance'.
+            The weighting scheme. Only `"shares"`, the default, is supported:
+            each cohort enters an event time with its share of the units
+            observed at that event time (Sun and Abraham 2021).
 
         Returns
         -------
@@ -324,25 +321,23 @@ def _aggregate_by_period(
     weighting: str | None = "shares",
 ) -> pd.DataFrame:
     """
-    Aggregate the fully interacted event study estimates by relative time, cohort, and time.
+    Aggregate the cohort-specific event study estimates by event time.
 
     Parameters
     ----------
     agg : str, optional
-
-            The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-            Default is "att". If "att", computes the average treatment effect on the treated.
-            If "cohort", computes the average treatment effect by cohort. If "period",
-            computes the average treatment effect by period.
-
+        The aggregation level. Only `"period"`, the default, is supported: the
+        cohort-specific effects are aggregated by event time.
     weighting : str, optional
-
-                The type of weighting to use. Can be either 'shares' or 'variance'.
+        The weighting scheme. Only `"shares"`, the default, is supported: each
+        cohort enters an event time with its share of the units observed at
+        that event time (Sun and Abraham 2021).
 
     Returns
     -------
-    pd.Series
-        A Series containing the aggregated estimates.
+    pd.DataFrame
+        The aggregated estimate per event time, with standard error, t value,
+        p value, and the bounds of the 95% confidence interval.
     """
     if agg not in ["period"]:
         raise ValueError("agg must be either 'period'")
@@ -438,13 +433,12 @@ def _iplot_aggregate_by_period(
     Parameters
     ----------
     agg : str, optional
-        The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-        Default is "att". If "att", computes the average treatment effect on the treated.
-        If "cohort", computes the average treatment effect by cohort. If "period",
-        computes the average treatment effect by period.
-
+        The aggregation level. Only `"period"`, the default, is supported: the
+        cohort-specific effects are aggregated by event time.
     weighting : str, optional
-        The type of weighting to use. Can be either 'shares' or 'variance'.
+        The weighting scheme. Only `"shares"`, the default, is supported: each
+        cohort enters an event time with its share of the units observed at
+        that event time (Sun and Abraham 2021).
 
     Returns
     -------
@@ -542,20 +536,17 @@ def _test_treatment_heterogeneity(
     model: Feols,
 ) -> pd.Series:
     """
-    Test for treatment heterogeneity in the event study design.
+    Test for treatment heterogeneity across cohorts in the event study design.
 
-    For details, see https://github.com/apoorvalal/TestingInEventStudies
-
-    Parameters
-    ----------
-    model : SaturatedEventStudy
-        The fitted event study model
+    Tests the cohort-specific deviations from the common post-treatment event
+    study coefficients jointly, as in Lal (2025,
+    [arXiv](https://arxiv.org/abs/2503.05125)). For details, see
+    https://github.com/apoorvalal/TestingInEventStudies
 
     Returns
     -------
     pd.Series
-
-            A Series containing the p-value of the test and the test statistic.
+        The test statistic and the p-value of the joint test.
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
