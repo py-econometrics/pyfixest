@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -355,3 +359,83 @@ class VarianceCovariance:
     def is_clustered(self) -> bool:
         """Whether the estimator clusters on at least one variable."""
         return bool(self.clustervar)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStageDiagnostics:
+    """Instrument-strength diagnostics of a 2SLS first stage.
+
+    Parameters
+    ----------
+    f_stat : float
+        Wald F statistic of the joint null that every excluded instrument has
+        a zero first-stage coefficient. It inherits the first stage's
+        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        whenever the second stage is.
+    p_value : float
+        P-value of `f_stat`.
+    eff_f : float or None
+        Effective F statistic of
+        [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
+        computed against a heteroskedasticity-robust first stage. ``None``
+        until `IV_Diag()` or `eff_F()` computes it.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.diagnostics
+    ```
+    """
+
+    f_stat: float
+    p_value: float
+    eff_f: float | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStage:
+    """First-stage regression retained by a fitted 2SLS model.
+
+    The first stage regresses the endogenous regressor on the exogenous
+    regressors and the excluded instruments, on the second stage's retained
+    rows and with its fixed effects, weights, and covariance estimator.
+
+    Parameters
+    ----------
+    coefficients : NDArray[np.float64]
+        First-stage coefficients pi_hat, one per first-stage regressor.
+    fitted_values : NDArray[np.float64]
+        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+    residuals : NDArray[np.float64]
+        First-stage residuals v_hat, shape (n_rows,).
+    model : Feols
+        The fitted first-stage model. It follows the second stage's
+        `store_data` and `lean` policy, so it drops the same state.
+    instruments : tuple[str, ...]
+        Names of the excluded instruments, in first-stage design order.
+    diagnostics : FirstStageDiagnostics
+        Instrument-strength statistics of that first stage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.instruments
+    ```
+
+    ```{python}
+    fit.first_stage.model.tidy()
+    ```
+    """
+
+    coefficients: NDArray[np.float64]
+    fitted_values: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    model: Feols
+    instruments: tuple[str, ...]
+    diagnostics: FirstStageDiagnostics

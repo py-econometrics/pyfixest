@@ -139,10 +139,9 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     fit_iv = feols(
         "y ~ 1 + c1 + c2 | d ~ z", data=data, vcov=adj_vcov, weights=weight_detail_py
     )
-    fit_iv.first_stage()
-    F_stat_pf = fit_iv._f_stat_1st_stage
+    F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
     fit_iv.IV_Diag()
-    F_stat_eff_pf = fit_iv._eff_F
+    F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
 
     F_naive = result[0]
     F_hetero = result[1]
@@ -210,14 +209,14 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     )
     fit_ols = feols("X1 ~  Z1 | f1", vcov=vcov_detail, data=data, weights=weight_detail)
 
-    fit_iv.first_stage()
     fit_ols.wald_test()
 
-    _pi_hat_iv = fit_iv._pi_hat
-    _X_hat_iv = fit_iv._X_hat
-    _v_hat_iv = fit_iv._v_hat
-    _F_stat_iv = fit_iv._f_stat_1st_stage
-    _F_pval_iv = fit_iv._p_value_1st_stage
+    first_stage = fit_iv.first_stage
+    _pi_hat_iv = first_stage.coefficients
+    _X_hat_iv = first_stage.fitted_values
+    _v_hat_iv = first_stage.residuals
+    _F_stat_iv = first_stage.diagnostics.f_stat
+    _F_pval_iv = first_stage.diagnostics.p_value
 
     _pi_hat_ols = fit_ols._beta_hat
     _X_hat_ols = fit_ols.within_data.design @ fit_ols._beta_hat
@@ -290,7 +289,7 @@ def test_iv_diag_does_not_relabel_vcov_type():
         atol=1e-12,
         err_msg="IV_Diag() changed the main model's standard errors",
     )
-    assert np.isfinite(fit_iid._eff_F)
+    assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)
 
     # The effective F is computed from the heteroskedasticity-robust first
     # stage, so it does not depend on the outer model's covariance type.
@@ -300,8 +299,8 @@ def test_iv_diag_does_not_relabel_vcov_type():
     fit_hetero.IV_Diag()
 
     np.testing.assert_allclose(
-        fit_iid._eff_F,
-        fit_hetero._eff_F,
+        fit_iid.first_stage.diagnostics.eff_f,
+        fit_hetero.first_stage.diagnostics.eff_f,
         rtol=1e-10,
         atol=1e-10,
         err_msg="Effective F differs between iid and hetero specifications",

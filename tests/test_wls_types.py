@@ -1,3 +1,5 @@
+from operator import attrgetter
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -82,7 +84,11 @@ def _vcov_types(has_fe: bool, is_iv: bool, supports_crv3: bool) -> list:
 
 def _fit_statistics(estimator: str, family: str | None, has_fe: bool, is_iv: bool):
     if is_iv:
-        return ["_pi_hat", "_f_stat_1st_stage", "_p_value_1st_stage"]
+        return [
+            "first_stage.coefficients",
+            "first_stage.diagnostics.f_stat",
+            "first_stage.diagnostics.p_value",
+        ]
     if estimator == "fepois":
         return ["deviance", "_loglik", "_pearson_chi2"]
     if estimator == "feglm" and family != "gaussian":
@@ -189,9 +195,10 @@ def test_fweights_match_literal_expansion(estimator, family, fml):
         tol=tol,
     )
     for statistic in _fit_statistics(estimator, family, has_fe, is_iv):
+        read = attrgetter(statistic)
         np.testing.assert_allclose(
-            getattr(fit_weighted, statistic),
-            getattr(fit_expanded, statistic),
+            read(fit_weighted),
+            read(fit_expanded),
             err_msg=f"{statistic} differs",
             **tol,
         )
@@ -199,7 +206,10 @@ def test_fweights_match_literal_expansion(estimator, family, fml):
         fit_weighted.IV_Diag()
         fit_expanded.IV_Diag()
         np.testing.assert_allclose(
-            fit_weighted._eff_F, fit_expanded._eff_F, err_msg="_eff_F differs", **tol
+            fit_weighted.first_stage.diagnostics.eff_f,
+            fit_expanded.first_stage.diagnostics.eff_f,
+            err_msg="effective F differs",
+            **tol,
         )
 
 

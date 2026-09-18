@@ -4,6 +4,8 @@ from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
+    FirstStage,
+    FirstStageDiagnostics,
     GlmWorkingState,
     ObservationWeights,
     SandwichComponents,
@@ -15,6 +17,8 @@ from pyfixest.estimation.internals.model_state import (
 __all__ = [
     "DroppedRowCounts",
     "EstimationSample",
+    "FirstStage",
+    "FirstStageDiagnostics",
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
