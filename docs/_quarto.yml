@@ -245,6 +245,7 @@ quartodoc:
         - estimation.state.GlmWorkingState
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.WaldTest
         - estimation.state.FirstStage
         - estimation.state.FirstStageDiagnostics
     - title: Formula Parsing & Model Matrix
