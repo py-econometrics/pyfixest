@@ -74,6 +74,7 @@ website:
       - reference/estimation.state.GlmWorkingState.qmd
       - reference/estimation.state.SandwichComponents.qmd
       - reference/estimation.state.VarianceCovariance.qmd
+      - reference/estimation.state.QuantregSolution.qmd
       section: Fitted State
     - contents:
       - reference/estimation.formula.parse.Formula.qmd
