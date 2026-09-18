@@ -7,14 +7,13 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import EmptyVcovError
-from pyfixest.estimation.internals.inference_ import coefficient_table
+from pyfixest.estimation.internals.model_state import CoefficientTable
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.model_state import (
-        CoefficientTable,
         EstimationSample,
         ObservationWeights,
         VarianceCovariance,
@@ -136,7 +135,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     # Type declarations for attributes provided by the host class (Feols).
     variance_covariance: "VarianceCovariance"
-    coeftable: "CoefficientTable"
+    coeftable: CoefficientTable
     _beta_hat: np.ndarray
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
@@ -271,11 +270,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
         covariance = self.variance_covariance
-        self.coeftable = coefficient_table(
-            beta_hat=self._beta_hat,
-            vcov=covariance.vcov,
-            df_t=covariance.df_t,
-            dist=self._inference_dist,
+        dist = self._inference_dist
+
+        beta_hat = self._beta_hat
+        se = np.sqrt(np.diagonal(covariance.vcov))
+        tstat = beta_hat / se
+        pvalue = dist.pvalue(tstat, covariance.df_t)
+        # fixest_CI_factor: beta +- q(1 - alpha / 2) * se at df_t degrees of freedom
+        z_se = dist.crit_val(alpha, covariance.df_t) * se
+        self.coeftable = CoefficientTable(
+            estimate=beta_hat,
+            se=se,
+            tstat=tstat,
+            pvalue=pvalue,
+            conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
             alpha=alpha,
         )
 
