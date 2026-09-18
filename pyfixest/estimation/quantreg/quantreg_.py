@@ -19,6 +19,7 @@ from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
+    QuantregSolution,
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.vcov_ import (
@@ -61,7 +62,19 @@ class Quantreg(Feols):
 
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
+
+    Attributes
+    ----------
+    solution : QuantregSolution
+        Result of the interior point solve: the coefficients, the convergence
+        flag, the iteration count, and the final primal and dual iterates.
+        With `multi_method="cfm2"`, only the central quantile is solved and
+        the remaining quantiles are updated by a single Newton step, so they
+        carry no solution. Dropped by `lean=True`.
     """
+
+    # Set in get_fit().
+    solution: QuantregSolution
 
     def __init__(
         self,
@@ -139,22 +152,7 @@ class Quantreg(Feols):
 
         self._seed = seed
 
-        self._method_map: dict[
-            str,
-            Callable[
-                ...,
-                tuple[
-                    np.ndarray,
-                    bool,
-                    int,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                ],
-            ],
-        ] = {
+        self._method_map: dict[str, Callable[..., QuantregSolution]] = {
             "fn": partial(
                 self.fit_qreg_fn,
                 q=self._quantile,
@@ -206,16 +204,10 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        res = self._fit(X=self.within_data.design, Y=self.within_data.response)
-
-        self._beta_hat = res[0]
-        self._has_converged = res[1]
-        self._it = res[2]
-        self._x_final = res[3]
-        self._s_final = res[4]
-        self._z_final = res[5]
-        self._w_final = res[6]
-        self._y_final = res[7]
+        self.solution = self._fit(
+            X=self.within_data.design, Y=self.within_data.response
+        )
+        self._beta_hat = self.solution.beta
 
         self._Y_hat_link = self.within_data.design @ self._beta_hat
         self._Y_hat_response = self._Y_hat_link
@@ -233,16 +225,7 @@ class Quantreg(Feols):
         tol: float | None = None,
         maxiter: int | None = None,
         beta_init: np.ndarray | None = None,
-    ) -> tuple[
-        np.ndarray,
-        bool,
-        int,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-    ]:
+    ) -> QuantregSolution:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
         N, _ = X.shape
         if tol is None:
@@ -255,7 +238,7 @@ class Quantreg(Feols):
         _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
 
-        fn_res = frisch_newton_solver(
+        solution = frisch_newton_solver(
             A=X.T,
             b=(1 - q) * X.T @ np.ones(N),
             c=-Y,
@@ -269,15 +252,12 @@ class Quantreg(Feols):
             P=cast(np.ndarray, _P),
         )
 
-        has_converged = fn_res[1]
-        it = fn_res[2]
-
-        if not has_converged:
+        if not solution.has_converged:
             warnings.warn(
-                f"The Frisch-Newton Interior Point solver has not converged after {it} iterations."
+                f"The Frisch-Newton Interior Point solver has not converged after {solution.iterations} iterations."
             )
 
-        return fn_res
+        return solution
 
     def fit_qreg_pfn(
         self,
@@ -290,16 +270,7 @@ class Quantreg(Feols):
         beta_init: np.ndarray | None = None,
         rng: np.random.Generator | None = None,
         eta: float | None = None,
-    ) -> tuple[
-        np.ndarray,
-        bool,
-        int,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-    ]:
+    ) -> QuantregSolution:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing."""
         N, k = X.shape
         if tol is None:
@@ -332,7 +303,7 @@ class Quantreg(Feols):
                 idx_init = rng.choice(N, size=n_init, replace=False)
                 beta_hat_init = self.fit_qreg_fn(
                     X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
-                )[0]
+                ).beta
 
             else:
                 beta_hat_init = beta_init
@@ -365,8 +336,8 @@ class Quantreg(Feols):
                     Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
 
                 # solve the modified problem
-                fn_res = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
-                beta_hat = fn_res[0]
+                solution = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
+                beta_hat = solution.beta
 
                 r = Y.flatten() - X @ beta_hat
 
@@ -395,7 +366,7 @@ class Quantreg(Feols):
                 "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups."
             )
 
-        return fn_res
+        return solution
 
     def _vcov_iid(self) -> VcovTerm:
         vcov = vcov_iid_qreg(

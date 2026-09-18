@@ -110,12 +110,12 @@ class QuantregMulti:
 
         if self.method == "pfn":
             fit_kwargs["rng"] = rng
-        beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
+        median_quantreg = self.all_quantregs[q[q_median_idx]]
+        median_quantreg.solution = median_quantreg._fit(**fit_kwargs)
+        beta_hat = median_quantreg.solution.beta
 
-        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = (
-            Y.flatten() - (X @ beta_hat).flatten()
-        )
+        median_quantreg._beta_hat = beta_hat
+        median_quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -135,11 +135,13 @@ class QuantregMulti:
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
-                beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
+                quantreg = self.all_quantregs[q[i]]
+                quantreg.solution = quantreg.fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
-                )[0]
-                self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+                )
+                beta_hat = quantreg.solution.beta
+                quantreg._beta_hat = beta_hat
+                quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")

@@ -11,6 +11,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 __all__ = [
     "DroppedRowCounts",
@@ -18,6 +19,7 @@ __all__ = [
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
+    "QuantregSolution",
     "SandwichComponents",
     "VarianceCovariance",
     "WithinIvData",

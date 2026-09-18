@@ -27,6 +27,7 @@ _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "working_state",
     "within_data",
     "observation_weights",
+    "solution",
 )
 
 
