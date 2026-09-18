@@ -188,9 +188,20 @@ class Feols(ResultAccessorMixin):
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
+<<<<<<< HEAD
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
+=======
+    _se : np.ndarray
+        Standard errors of the estimated coefficients.
+    _tstat : np.ndarray
+        T-statistics of the estimated coefficients.
+    _pvalue : np.ndarray
+        P-values associated with the t-statistics.
+    _conf_int : np.ndarray
+        Confidence intervals for the estimated coefficients.
+>>>>>>> master
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
     _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]

@@ -120,7 +120,13 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
+<<<<<<< HEAD
         fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+=======
+        fit.variance_covariance = _did2s_covariance(
+            fit=fit, vcov=vcov, G=_G, clustervar=cluster
+        )
+>>>>>>> master
         fit._method = "did2s"
 
     elif estimator == "twfe":
@@ -300,13 +306,16 @@ def did2s(
         weights=weights,
     )
 
-    fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+    fit.variance_covariance = _did2s_covariance(
+        fit=fit, vcov=vcov, G=_G, clustervar=cluster
+    )
     fit.get_inference()  # update inference with correct vcov matrix
     fit._method = "did2s"
 
     return fit
 
 
+<<<<<<< HEAD
 def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovariance:
     """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
 
@@ -315,16 +324,30 @@ def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovari
     existed. The cluster variable is not recorded on the result, so
     ``is_clustered`` stays ``False`` for downstream Wald tests.
     """
+=======
+def _did2s_covariance(
+    *, fit: Feols, vcov: np.ndarray, G: int, clustervar: str
+) -> VarianceCovariance:
+    """Wrap the GMM cluster covariance of did2s in the fitted-model contract."""
+>>>>>>> master
     inner = fit.variance_covariance
     return VarianceCovariance(
         vcov=vcov,
         meat=None,
+<<<<<<< HEAD
         ssc=inner.ssc,
+=======
+        ssc=np.ones(1),
+>>>>>>> master
         df_k=inner.df_k,
         df_t=inner.df_t,
         vcov_type="CRV",
         vcov_type_detail="CRV1 (GMM)",
+<<<<<<< HEAD
         clustervar=(),
+=======
+        clustervar=(clustervar,),
+>>>>>>> master
         G=(int(G),),
     )
 

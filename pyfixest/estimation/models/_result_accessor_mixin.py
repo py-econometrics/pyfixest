@@ -560,7 +560,11 @@ class ResultAccessorMixin(TidyColumnAccessors):
             )
         else:
             joint_indices = sorted(coef_indices)
+<<<<<<< HEAD
             D_inv = 1 / se[joint_indices]
+=======
+            D_inv = 1 / self._se[joint_indices]
+>>>>>>> master
             V = self.variance_covariance.vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
