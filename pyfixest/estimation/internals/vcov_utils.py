@@ -130,9 +130,7 @@ def prepare_cluster_state(
 def cluster_ssc(
     *, prep: ClusterPrep, make_ssc_kwargs: Callable[..., dict]
 ) -> tuple[np.ndarray, int, int]:
-    """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``.
-
-    """
+    """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``."""
     vcov_sign_list = (1, 1, -1)
     ssc_arr = np.zeros(prep.n_dimensions)
     df_t_full = np.zeros(prep.n_dimensions)
