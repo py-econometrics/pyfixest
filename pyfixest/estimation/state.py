@@ -6,12 +6,12 @@ from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     GlmWorkingState,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     WithinIvData,
     WithinLinearData,
 )
-from pyfixest.estimation.post_estimation.ritest import RitestStatistics
 
 __all__ = [
     "DroppedRowCounts",

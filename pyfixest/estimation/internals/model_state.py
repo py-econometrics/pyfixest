@@ -355,3 +355,42 @@ class VarianceCovariance:
     def is_clustered(self) -> bool:
         """Whether the estimator clusters on at least one variable."""
         return bool(self.clustervar)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RitestStatistics:
+    """Randomization-inference draws retained by `ritest()`.
+
+    Published as `fit.ritest_statistics` when `ritest()` is called with
+    `store_ritest_statistics=True`, and read by `plot_ritest()` and by the
+    randomization-inference path of `rwolf()` and `wyoung()`.
+
+    Parameters
+    ----------
+    statistics : NDArray[np.float64]
+        Test statistics of the resampled assignments, shape (reps,), one per
+        randomization iteration. Regression coefficients for
+        `"randomization-c"` and t-statistics for `"randomization-t"`.
+    sample_stat : float
+        Statistic of the observed assignment, centered at the null value of
+        the tested hypothesis.
+    pvalue : float
+        Randomization-inference p-value, the share of `statistics` at least
+        as extreme as `sample_stat`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1", pf.get_data())
+    fit.ritest("X1", reps=200, store_ritest_statistics=True)
+
+    stored = fit.ritest_statistics
+    stored.sample_stat, stored.pvalue, stored.statistics.shape
+    ```
+    """
+
+    statistics: NDArray[np.float64]
+    sample_stat: float
+    pvalue: float

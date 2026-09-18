@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -41,6 +41,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     WithinLinearData,
@@ -87,11 +88,6 @@ from pyfixest.utils.utils import (
     capture_context,
     get_ssc,
 )
-
-if TYPE_CHECKING:
-    # The ritest module imports numba where available, so `ritest()` and
-    # `plot_ritest()` import it lazily at call time.
-    from pyfixest.estimation.post_estimation.ritest import RitestStatistics
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
@@ -2046,7 +2042,6 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.ritest import (
             _HAS_NUMBA,
-            RitestStatistics,
             _decode_resampvar,
             _get_ritest_pvalue,
             _get_ritest_stats_fast,
