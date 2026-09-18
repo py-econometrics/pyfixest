@@ -245,6 +245,8 @@ quartodoc:
         - estimation.state.GlmWorkingState
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.FixedEffectEstimates
+        - estimation.state.FixedEffect
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.
