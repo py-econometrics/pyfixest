@@ -314,13 +314,7 @@ def did2s(
 def _did2s_covariance(
     *, fit: Feols, vcov: np.ndarray, G: int, clustervar: str
 ) -> VarianceCovariance:
-    """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
-
-    The GMM covariance carries no small-sample factor, and the t reference
-    keeps the residual degrees of freedom of the second-stage fit, as R's
-    ``did2s`` does. The cluster variable is recorded, so Wald tests, the wild
-    bootstrap, and the causal cluster variance treat the fit as clustered.
-    """
+    """Wrap the GMM cluster covariance of did2s in the fitted-model contract."""
     inner = fit.variance_covariance
     return VarianceCovariance(
         vcov=vcov,
