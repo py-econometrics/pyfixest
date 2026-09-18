@@ -262,6 +262,40 @@ class GlmWorkingState:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class FittedValues:
+    """In-sample predictions on the link and the response scale.
+
+    fixest draws the same distinction through the ``type`` argument of
+    ``fitted.values()``. Every fitted model publishes this value as
+    ``fit.fitted_values``. For linear, IV, and quantile models the two scales
+    coincide and share one array. GLMs publish their linear predictor as
+    ``link`` and its inverse-link mean as ``response``, the same arrays their
+    ``GlmWorkingState`` carries as IRLS output.
+
+    Parameters
+    ----------
+    link : NDArray[np.float64]
+        Prediction on the scale of the linear predictor, including the
+        fixed-effect contribution and any offset, shape (n_rows,).
+    response : NDArray[np.float64]
+        Prediction on the scale of the dependent variable, ``E(Y|X)``,
+        shape (n_rows,).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.fitted_values.response[:3]
+    ```
+    """
+
+    link: NDArray[np.float64]
+    response: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SandwichComponents:
     """Scores, Hessian, and bread of a fitted model's sandwich covariance.
 

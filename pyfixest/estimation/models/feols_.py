@@ -41,6 +41,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
     EstimationSample,
+    FittedValues,
     ObservationWeights,
     RitestStatistics,
     SandwichComponents,
@@ -180,10 +181,9 @@ class Feols(ResultAccessorMixin):
         dictionary for sum of squares and cross products matrices.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
-    _Y_hat_link : np.ndarray
-        Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.
-    _Y_hat_response : np.ndarray
-        Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
+    fitted_values : FittedValues
+        In-sample predictions on the link and the response scale, set in
+        get_fit().
     _u_hat : np.ndarray
         Residuals of the regression model.
     variance_covariance : VarianceCovariance
@@ -254,6 +254,7 @@ class Feols(ResultAccessorMixin):
     _icovars: list[str] | None
     # Set in get_fit().
     sandwich: SandwichComponents
+    fitted_values: FittedValues
     # Set in vcov().
     variance_covariance: VarianceCovariance
     # Set in ritest() when store_ritest_statistics is True.
@@ -548,16 +549,21 @@ class Feols(ResultAccessorMixin):
         """Return cached fitted values for predict() and fixed-effect recovery.
 
         These values include the fixed-effect contribution. Link and response
-        predictions coincide for linear models; GLMs override this method to
-        distinguish the linear predictor from the response mean.
+        predictions coincide for linear, IV, and quantile models; for GLMs the
+        link is the linear predictor and the response its inverse-link mean.
+        Fixed-effect recovery requests the link scale.
         """
-        return self._Y_hat_link if type == "link" else self._Y_hat_response
+        fitted_values = self.fitted_values
+        return fitted_values.link if type == "link" else fitted_values.response
 
-    def _get_predictors(self) -> None:
-        self._Y_hat_link = (
-            self.model_matrix.dependent.to_numpy().flatten() - self.resid()
-        )
-        self._Y_hat_response = self._Y_hat_link
+    def _publish_fitted_values(self) -> None:
+        """Publish the in-sample predictions of the current coefficients.
+
+        The response minus the residual carries the fixed-effect contribution,
+        which `design @ beta_hat` alone would omit.
+        """
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
     def get_fit(self) -> None:
         """
@@ -587,7 +593,7 @@ class Feols(ResultAccessorMixin):
             self._u_hat = fit.residuals
             self.sandwich = fit.sandwich
 
-        self._get_predictors()
+        self._publish_fitted_values()
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""

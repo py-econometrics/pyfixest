@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
+from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
@@ -207,6 +208,11 @@ class Feglm(Feols):
         self._collin_index = fit.collin_index
         working_state = fit.working_state
         self.working_state = working_state
+        # The prediction view of the same arrays: eta is the linear predictor
+        # (fixed effects and offset included), mu its inverse-link mean.
+        self.fitted_values = FittedValues(
+            link=working_state.eta, response=working_state.mu
+        )
         design_within = working_state.design_within
         self._X_is_empty = design_within.shape[1] == 0
         self._k = design_within.shape[1]
@@ -225,14 +231,6 @@ class Feglm(Feols):
         """
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
-
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Supply cached GLM predictions to predict() and fixef().
-
-        eta includes fixed effects and any offset; mu is the inverse-link
-        response mean. Fixed-effect recovery requests eta, not mu.
-        """
-        return self.working_state.eta if type == "link" else self.working_state.mu
 
     def _vcov_iid(self) -> VcovTerm:
         return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)

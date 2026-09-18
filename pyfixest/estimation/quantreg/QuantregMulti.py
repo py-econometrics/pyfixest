@@ -181,7 +181,7 @@ class QuantregMulti:
             )
 
         for quantreg in self.all_quantregs.values():
-            quantreg._get_predictors()
+            quantreg._publish_fitted_values()
 
         # sort self.all_quantregs by q
         self.all_quantregs = dict(

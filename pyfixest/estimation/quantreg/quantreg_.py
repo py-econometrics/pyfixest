@@ -15,7 +15,10 @@ from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.model_state import WithinLinearData
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    WithinLinearData,
+)
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
@@ -221,8 +224,8 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
-        self._Y_hat_link = self.within_data.design @ self._beta_hat
-        self._Y_hat_response = self._Y_hat_link
+        fitted = self.within_data.design @ self._beta_hat
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
         self._u_hat = (
             self.within_data.response.flatten()
