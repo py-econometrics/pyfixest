@@ -184,7 +184,7 @@ def _coefficient_evalues(
 ) -> pd.Series:
     """Compute coefficient-wise e-values for a validated model."""
     values = _savi_e_value(
-        model._tstat**2,
+        model.coeftable.tstat**2,
         dfn=1,
         dfd=model.variance_covariance.df_t,
         nobs=model.sample_info.n_obs,
@@ -235,7 +235,7 @@ def _confint(
         nobs=model.sample_info.n_obs,
         dfd=model.variance_covariance.df_t,
     )
-    standard_errors = model._se[coef_indices]
+    standard_errors = model.coeftable.se[coef_indices]
     estimates = model._beta_hat[coef_indices]
 
     df = pd.DataFrame(
