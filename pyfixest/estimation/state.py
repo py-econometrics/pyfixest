@@ -2,6 +2,7 @@
 
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     CoefficientTable,
     DroppedRowCounts,
     EstimationSample,
@@ -19,6 +20,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 
 __all__ = [
+    "Capabilities",
     "CoefficientTable",
     "DroppedRowCounts",
     "EstimationSample",

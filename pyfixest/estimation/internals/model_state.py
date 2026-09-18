@@ -358,6 +358,53 @@ class VarianceCovariance:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class Capabilities:
+    """Inference and post-estimation features a fitted model supports.
+
+    Each model class publishes one value in its constructor, so a method can
+    reject an unsupported estimator before it reads any estimation state
+    rather than reinterpreting another estimator's arrays.
+
+    Parameters
+    ----------
+    crv3_inference : bool
+        Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
+        on leave-one-cluster-out samples, so it is restricted to estimators
+        whose refit replays the original estimation contract.
+    hac_inference : bool
+        Whether ``vcov()`` accepts the Newey-West and Driscoll-Kraay
+        estimators.
+    multiway_clustering : bool
+        Whether ``vcov()`` accepts more than one cluster variable.
+    wildboottest : bool
+        Whether ``wildboottest()`` can resample the fit. Unweighted OLS only.
+    cluster_causal_variance : bool
+        Whether ``ccv()``, the causal cluster variance estimator, is available.
+    decomposition : bool
+        Whether ``decompose()``, the Gelbach decomposition, is available.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.feols("Y ~ X1 | f1", pf.get_data()).capabilities
+    ```
+
+    ```{python}
+    pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois")).capabilities
+    ```
+    """
+
+    crv3_inference: bool
+    hac_inference: bool
+    multiway_clustering: bool
+    wildboottest: bool
+    cluster_causal_variance: bool
+    decomposition: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class RitestStatistics:
     """Randomization-inference draws, the sample statistic, and the p-value.
 
