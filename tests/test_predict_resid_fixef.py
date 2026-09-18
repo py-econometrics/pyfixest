@@ -12,6 +12,100 @@ fixest = importr("fixest")
 stats = importr("stats")
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("estimator", ["fepois", "feglm"])
+@pytest.mark.parametrize("fixed_effects", ["g", "g + h"])
+@pytest.mark.parametrize("weights", [None, "w"])
+@pytest.mark.parametrize("has_offset", [False, True])
+def test_fe_only_poisson_prediction_against_fixest(
+    estimator, fixed_effects, weights, has_offset
+):
+    """FE-only Poisson predictions recover fixed effects on the link scale."""
+    data = pd.DataFrame(
+        {
+            "y": [1, 3, 2, 6, 4, 8, 3, 5, 2, 4, 6, 7] * 2,
+            "g": np.repeat(["a", "b", "c", "d"], 6),
+            "h": np.tile(["u", "v", "w"], 8),
+            "w": np.tile([1.0, 2.0, 3.0], 8),
+            "off": np.linspace(-0.3, 0.4, 24),
+        }
+    )
+    formula = f"y ~ 1 | {fixed_effects}"
+    fit = getattr(pf, estimator)(
+        formula,
+        data,
+        weights=weights,
+        offset="off" if has_offset else None,
+        **({"family": "poisson"} if estimator == "feglm" else {}),
+    )
+    reference_kwargs = {}
+    if weights is not None:
+        reference_kwargs["weights"] = ro.Formula("~w")
+    if has_offset:
+        reference_kwargs["offset"] = ro.Formula("~off")
+    reference = fixest.fepois(ro.Formula(formula), data=data, **reference_kwargs)
+
+    # Tighten only FE recovery; the unchanged IRLS algorithms set prediction accuracy.
+    fit.fixef(atol=1e-12, btol=1e-12)
+    np.testing.assert_allclose(
+        fit._sumFE,
+        reference.rx2("sumFE"),
+        rtol=1e-6,
+        atol=1e-6,
+        err_msg="FE-only Poisson effects differ from R fixest on the link scale",
+    )
+    newdata = data.iloc[[17, 2, 9, 0]].copy()
+    newdata["off"] += 0.7
+    for prediction_type in ("link", "response"):
+        for prediction_data in (data, newdata):
+            np.testing.assert_allclose(
+                fit.predict(prediction_data, type=prediction_type),
+                stats.predict(reference, newdata=prediction_data, type=prediction_type),
+                rtol=1e-6,
+                atol=1e-6,
+                err_msg=f"FE-only Poisson {prediction_type} predictions differ from R fixest",
+            )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit"])
+@pytest.mark.parametrize("fixed_effects", ["g", "g + h"])
+@pytest.mark.parametrize("weights", [None, "w"])
+def test_fe_only_glm_prediction_against_stats(family, fixed_effects, weights):
+    rng = np.random.default_rng(493)
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=120),
+            "g": np.repeat(["a", "b", "c", "d"], 30),
+            "h": np.tile(["u", "v", "w"], 40),
+            "w": np.tile([1.0, 2.0, 3.0], 40),
+        }
+    )
+    if family != "gaussian":
+        data["y"] = (data["y"] > 0).astype(int)
+    fit = pf.feglm(f"y ~ 1 | {fixed_effects}", data, family=family, weights=weights)
+    r_family = stats.gaussian() if family == "gaussian" else stats.binomial(link=family)
+    r_formula = "y ~ " + " + ".join(
+        f"factor({group})" for group in fixed_effects.split(" + ")
+    )
+    reference = stats.glm(
+        ro.Formula(r_formula),
+        data=data,
+        family=r_family,
+        **({"weights": data["w"]} if weights is not None else {}),
+    )
+    fit.fixef(atol=1e-12, btol=1e-12)
+    for prediction_type in ("link", "response"):
+        for newdata in (data, data.iloc[[41, 3, 87, 0]]):
+            np.testing.assert_allclose(
+                fit.predict(newdata, type=prediction_type),
+                stats.predict(reference, newdata=newdata, type=prediction_type),
+                rtol=1e-6,
+                atol=1e-6,
+                err_msg=f"FE-only {family} {prediction_type} predictions differ from R glm",
+            )
+
+
 @pytest.fixture
 def data():
     data = pf.get_data(seed=6534714, model="Fepois")

@@ -1703,22 +1703,20 @@ class Feols(ResultAccessorMixin):
             context=FORMULAIC_TRANSFORMS | {**self._context},
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
+        if self._method == "fepois" or self._method.startswith("feglm"):
+            # Recover fixed effects on the link scale, including FE-only fits.
+            # Equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815.
+            Y = self._predict_in_sample(type="link")
+            # Remove the offset so prediction can add the newdata offset once.
+            if self._offset_name is not None:
+                offset = self.model_matrix.offset
+                assert offset is not None
+                Y = Y - offset.to_numpy().flatten()
         if self._X_is_empty:
             uhat = Y.flatten()
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._predict_in_sample(type="link")
-                # The linear predictor includes the offset; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self._offset_name is not None:
-                    offset = self.model_matrix.offset
-                    assert offset is not None
-                    Y = Y - offset.to_numpy().flatten()
             uhat = (Y - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
