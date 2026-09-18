@@ -132,9 +132,6 @@ def cluster_ssc(
 ) -> tuple[np.ndarray, int, int]:
     """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``.
 
-    The factor of the two-way interaction dimension carries the negative
-    sign of the Cameron-Gelbach-Miller combination. ``df_t`` is the smallest
-    ``G - 1`` over the dimensions.
     """
     vcov_sign_list = (1, 1, -1)
     ssc_arr = np.zeros(prep.n_dimensions)
