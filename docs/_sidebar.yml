@@ -76,6 +76,8 @@ website:
       - reference/estimation.state.VarianceCovariance.qmd
       - reference/estimation.state.FixedEffectEstimates.qmd
       - reference/estimation.state.FixedEffect.qmd
+      - reference/estimation.state.RitestStatistics.qmd
+      - reference/estimation.state.CoefficientTable.qmd
       section: Fitted State
     - contents:
       - reference/estimation.formula.parse.Formula.qmd

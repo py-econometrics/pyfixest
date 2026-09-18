@@ -26,7 +26,9 @@ def test_multicol_overdetermined_iv():
     np.testing.assert_allclose(
         fit._beta_hat, np.array([-0.174227, -0.993607], dtype=float), rtol=1e-5
     )
-    np.testing.assert_allclose(fit._se, np.array([0.018416, 0.104009]), rtol=1e-5)
+    np.testing.assert_allclose(
+        fit.coeftable.se, np.array([0.018416, 0.104009]), rtol=1e-5
+    )
 
 
 def test_polars_input():

@@ -2,10 +2,12 @@
 
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.internals.model_state import (
+    CoefficientTable,
     DroppedRowCounts,
     EstimationSample,
     GlmWorkingState,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     WithinIvData,
@@ -17,6 +19,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 
 __all__ = [
+    "CoefficientTable",
     "DroppedRowCounts",
     "EstimationSample",
     "FixedEffect",
@@ -24,6 +27,7 @@ __all__ = [
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
+    "RitestStatistics",
     "SandwichComponents",
     "VarianceCovariance",
     "WithinIvData",
