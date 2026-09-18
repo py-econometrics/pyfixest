@@ -200,6 +200,9 @@ class Feols(ResultAccessorMixin):
         P-values associated with the t-statistics.
     _conf_int : np.ndarray
         Confidence intervals for the estimated coefficients.
+    coeftable : CoefficientTable
+        Coefficient table published by `get_inference()`: estimates, standard
+        errors, t-statistics, p-values, and confidence bounds.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
     _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]

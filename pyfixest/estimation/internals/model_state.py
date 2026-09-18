@@ -358,39 +358,44 @@ class VarianceCovariance:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class RitestStatistics:
-    """Randomization-inference draws retained by `ritest()`.
+class CoefficientTable:
+    """Coefficient estimates with their standard errors, statistics, and bounds.
 
-    Published as `fit.ritest_statistics` when `ritest()` is called with
-    `store_ritest_statistics=True`, and read by `plot_ritest()` and by the
-    randomization-inference path of `rwolf()` and `wyoung()`.
+    ``get_inference()`` publishes one value as ``fit.coeftable`` from the
+    current ``fit.variance_covariance``; it is the table that fixest's
+    ``coeftable()`` prints, plus the confidence bounds of ``confint()``.
 
     Parameters
     ----------
-    statistics : NDArray[np.float64]
-        Test statistics of the resampled assignments, shape (reps,), one per
-        randomization iteration. Regression coefficients for
-        `"randomization-c"` and t-statistics for `"randomization-t"`.
-    sample_stat : float
-        Statistic of the observed assignment, centered at the null value of
-        the tested hypothesis.
-    pvalue : float
-        Randomization-inference p-value, the share of `statistics` at least
-        as extreme as `sample_stat`.
+    estimate : NDArray[np.float64]
+        Coefficient estimates, shape (n_coefficients,).
+    se : NDArray[np.float64]
+        Standard errors, the square root of the covariance diagonal.
+    tstat : NDArray[np.float64]
+        ``estimate / se``.
+    pvalue : NDArray[np.float64]
+        Two-sided p-values from the model's reference distribution with
+        ``variance_covariance.df_t`` degrees of freedom.
+    conf_int : NDArray[np.float64]
+        Lower and upper confidence bounds, shape (2, n_coefficients), at
+        level ``1 - alpha``.
+    alpha : float
+        Significance level of the bounds.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X1", pf.get_data())
-    fit.ritest("X1", reps=200, store_ritest_statistics=True)
-
-    stored = fit.ritest_statistics
-    stored.sample_stat, stored.pvalue, stored.statistics.shape
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov="HC1")
+    table = fit.coeftable
+    table.estimate, table.se, table.conf_int
     ```
     """
 
-    statistics: NDArray[np.float64]
-    sample_stat: float
-    pvalue: float
+    estimate: NDArray[np.float64]
+    se: NDArray[np.float64]
+    tstat: NDArray[np.float64]
+    pvalue: NDArray[np.float64]
+    conf_int: NDArray[np.float64]
+    alpha: float
