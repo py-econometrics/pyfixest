@@ -355,3 +355,81 @@ class VarianceCovariance:
     def is_clustered(self) -> bool:
         """Whether the estimator clusters on at least one variable."""
         return bool(self.clustervar)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RitestStatistics:
+    """Randomization-inference draws, the sample statistic, and the p-value.
+
+    ``ritest(store_ritest_statistics=True)`` publishes one value as
+    ``fit.ritest_statistics``.
+
+    Parameters
+    ----------
+    statistics : NDArray[np.float64]
+        Resampled test statistics, shape (reps + 1,). The first entry is the
+        observed statistic under the original assignment; the remaining
+        ``reps`` entries are the randomization draws.
+    sample_stat : float
+        The observed statistic, centered at the null hypothesis value.
+    pvalue : float
+        Randomization-inference p-value of the test.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2", pf.get_data())
+    fit.ritest("X1", reps=100, store_ritest_statistics=True)
+    fit.ritest_statistics.pvalue
+    ```
+    """
+
+    statistics: NDArray[np.float64]
+    sample_stat: float
+    pvalue: float
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CoefficientTable:
+    """Coefficient estimates with their standard errors, statistics, and bounds.
+
+    ``get_inference()`` publishes one value as ``fit.coeftable`` from the
+    current ``fit.variance_covariance``; it is the table that fixest's
+    ``coeftable()`` prints, plus the confidence bounds of ``confint()``.
+
+    Parameters
+    ----------
+    estimate : NDArray[np.float64]
+        Coefficient estimates, shape (n_coefficients,).
+    se : NDArray[np.float64]
+        Standard errors, the square root of the covariance diagonal.
+    tstat : NDArray[np.float64]
+        ``estimate / se``.
+    pvalue : NDArray[np.float64]
+        Two-sided p-values from the model's reference distribution with
+        ``variance_covariance.df_t`` degrees of freedom.
+    conf_int : NDArray[np.float64]
+        Lower and upper confidence bounds, shape (2, n_coefficients), at
+        level ``1 - alpha``.
+    alpha : float
+        Significance level of the bounds.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov="HC1")
+    table = fit.coeftable
+    table.estimate, table.se, table.conf_int
+    ```
+    """
+
+    estimate: NDArray[np.float64]
+    se: NDArray[np.float64]
+    tstat: NDArray[np.float64]
+    pvalue: NDArray[np.float64]
+    conf_int: NDArray[np.float64]
+    alpha: float
