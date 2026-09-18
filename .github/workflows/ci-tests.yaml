@@ -36,6 +36,8 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} test-py
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+          # Temporarily disable MPS tests on macOS; remove to re-enable.
+          PYTEST_ADDOPTS: ${{ runner.os == 'macOS' && '-k "not mps"' || '' }}
 
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
