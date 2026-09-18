@@ -41,6 +41,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     WithinLinearData,
@@ -188,6 +189,17 @@ class Feols(ResultAccessorMixin):
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
+    ritest_statistics : RitestStatistics
+        Randomization-inference draws, the centered sample statistic, and the
+        p-value, set by `ritest(store_ritest_statistics=True)`.
+    _se : np.ndarray
+        Standard errors of the estimated coefficients.
+    _tstat : np.ndarray
+        T-statistics of the estimated coefficients.
+    _pvalue : np.ndarray
+        P-values associated with the t-statistics.
+    _conf_int : np.ndarray
+        Confidence intervals for the estimated coefficients.
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
@@ -245,6 +257,8 @@ class Feols(ResultAccessorMixin):
     sandwich: SandwichComponents
     # Set in vcov().
     variance_covariance: VarianceCovariance
+    # Set in ritest() when store_ritest_statistics is True.
+    ritest_statistics: RitestStatistics
     # Set in fixef().
     _fixef_coefficients: dict[str, FixedEffect]
     _alpha: np.ndarray
@@ -1994,9 +2008,9 @@ class Feols(ResultAccessorMixin):
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, stores the simulated statistics
-            in the model object via the `ritest_statistics` attribute as a
-            numpy array.
+            Defaults to False. If True, publishes the draws, the centered
+            sample statistic, and the p-value as a `RitestStatistics` value
+            in the model's `ritest_statistics` attribute.
         level: float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.
@@ -2163,9 +2177,11 @@ class Feols(ResultAccessorMixin):
         )
 
         if store_ritest_statistics:
-            self._ritest_statistics = ri_stats
-            self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat - h0_value
+            self.ritest_statistics = RitestStatistics(
+                statistics=ri_stats,
+                sample_stat=float(sample_stat - h0_value),
+                pvalue=float(ri_pvalue),
+            )
 
         res = pd.Series(
             {
@@ -2205,7 +2221,7 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
 
-        if not hasattr(self, "_ritest_statistics"):
+        if not hasattr(self, "ritest_statistics"):
             raise ValueError(
                 """
                             The randomization inference statistics have not been stored
@@ -2214,11 +2230,12 @@ class Feols(ResultAccessorMixin):
                             """
             )
 
-        ri_stats = self._ritest_statistics
-        sample_stat = self._ritest_sample_stat
+        stored = self.ritest_statistics
 
         return _plot_ritest_pvalue(
-            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+            ri_stats=stored.statistics,
+            sample_stat=stored.sample_stat,
+            plot_backend=plot_backend,
         )
 
     def update(
