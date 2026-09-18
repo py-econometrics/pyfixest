@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
-from scipy.stats import chi2, f, t
+from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
@@ -35,6 +35,7 @@ from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
+    WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
 )
@@ -43,6 +44,7 @@ from pyfixest.estimation.internals.model_state import (
     ObservationWeights,
     SandwichComponents,
     VarianceCovariance,
+    WaldTest,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -78,7 +80,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.post_estimation.wald import wald_test
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -196,8 +198,10 @@ class Feols(ResultAccessorMixin):
         P-values associated with the t-statistics.
     _conf_int : np.ndarray
         Confidence intervals for the estimated coefficients.
-    _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
+    wald : WaldTest
+        Wald test published by `wald_test()`: the statistic of the reference
+        distribution used, its p-value, both scalings of the quadratic form,
+        and the degrees of freedom.
     _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]
         Fixed effect estimates grouped by fixed effect.
     _alpha : pd.DataFrame
@@ -250,6 +254,8 @@ class Feols(ResultAccessorMixin):
     sandwich: SandwichComponents
     # Set in vcov().
     variance_covariance: VarianceCovariance
+    # Set in wald_test().
+    wald: WaldTest
     # Set in fixef().
     _fixef_coefficients: dict[str, FixedEffect]
     _alpha: np.ndarray
@@ -914,7 +920,12 @@ class Feols(ResultAccessorMixin):
             if hasattr(self, attr):
                 delattr(self, attr)
 
-    def wald_test(self, R=None, q=None, distribution="F"):
+    def wald_test(
+        self,
+        R: np.ndarray | None = None,
+        q: float | np.ndarray | None = None,
+        distribution: WaldDistributionOptions = "F",
+    ) -> WaldTest:
         """
         Conduct Wald test.
 
@@ -923,19 +934,7 @@ class Feols(ResultAccessorMixin):
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
 
-        This method producues the following attriutes
-
-        _dfd : int
-            degree of freedom in denominator
-        _dfn : int
-            degree of freedom in numerator
-        _wald_statistic : scalar
-            Wald-statistics computed for hypothesis testing
-        _f_statistic : scalar
-            Wald-statistics(when R is an indentity matrix, and q being zero vector)
-            computed for hypothesis testing
-        _p_value : scalar
-            corresponding p-value for statistics
+        The result is also published as `fit.wald`.
 
         Parameters
         ----------
@@ -947,18 +946,21 @@ class Feols(ResultAccessorMixin):
             If None, defaults to a vector of zeros.
         distribution : str, optional
             The distribution to use for the p-value. Can be either "F" or "chi2".
-            Defaults to "F".
+            Defaults to "F". The F distribution is only used for the joint null
+            that all coefficients are zero; any other restriction falls back to
+            "chi2" with a warning.
 
         Returns
         -------
-        pd.Series
-            A pd.Series with the Wald statistic and p-value.
+        WaldTest
+            The test statistic of the reference distribution used, its p-value,
+            both scalings of the Wald quadratic form, and the degrees of
+            freedom. See [WaldTest](/reference/estimation.state.WaldTest.qmd).
 
         Examples
         --------
         ```{python}
         import numpy as np
-        import pandas as pd
         import pyfixest as pf
 
         data = pf.get_data()
@@ -968,32 +970,24 @@ class Feols(ResultAccessorMixin):
         q = np.array([0.0])
 
         # Wald test
-        fit.wald_test(R=R, q=q, distribution = "chi2")
-        f_stat = fit._f_statistic
-        p_stat = fit._p_value
+        wald = fit.wald_test(R=R, q=q, distribution = "chi2")
 
-        print(f"Python f_stat: {f_stat}")
-        print(f"Python p_stat: {p_stat}")
+        print(f"Python statistic: {wald.stat}")
+        print(f"Python p-value: {wald.pvalue}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        _validate_literal_argument(distribution, WaldDistributionOptions)
+
+        k_fe = np.sum(self._k_fe.to_numpy()) if self._has_fixef else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
 
-        W, self._dfn = _wald_statistic(
-            beta_hat=self._beta_hat,
-            vcov=self.variance_covariance.vcov,
-            R=R,
-            q=q,
-        )
-
-        if self.variance_covariance.is_clustered:
-            self._dfd = min(self.variance_covariance.G) - 1
+        covariance = self.variance_covariance
+        if covariance.is_clustered:
+            df2: int | float = min(covariance.G) - 1
         else:
-            self._dfd = self.sample_info.n_obs - self._k - k_fe
-
-        self._wald_statistic = W
+            df2 = self.sample_info.n_obs - self._k - k_fe
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
@@ -1005,20 +999,17 @@ class Feols(ResultAccessorMixin):
             )
             distribution = "chi2"
 
-        if distribution == "F":
-            self._f_statistic = W / self._dfn
-            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
-            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
-        elif distribution == "chi2":
-            self._f_statistic = W / self._dfn
-            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
-            res = pd.Series(
-                {"statistic": self._wald_statistic, "pvalue": self._p_value}
-            )
-        else:
-            raise ValueError("Distribution must be F or chi2")
+        self.wald = wald_test(
+            beta_hat=self._beta_hat,
+            vcov=covariance.vcov,
+            R=R,
+            q=q,
+            df2=df2,
+            distribution=distribution,
+            vcov_type=covariance.vcov_type_detail,
+        )
 
-        return res
+        return self.wald
 
     def wildboottest(
         self,

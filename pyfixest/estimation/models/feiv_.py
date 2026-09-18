@@ -543,9 +543,13 @@ def first_stage_f_test(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model.wald_test(R=R)
+        wald = model.wald_test(R=R)
+    # `wald_test` uses the F distribution when `R` is the identity, that is
+    # when the excluded instruments are the only first-stage regressors, and
+    # chi2 otherwise. The reported statistic is the F scaling W / p_iv under
+    # either, as in fixest.
     return FirstStageDiagnostics(
-        f_stat=model._f_statistic, p_value=model._p_value, eff_f=None
+        f_stat=wald.f_statistic, p_value=wald.pvalue, eff_f=None
     )
 
 

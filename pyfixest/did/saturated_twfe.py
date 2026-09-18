@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation import feols
+from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
 
 from .did2s import DID
@@ -169,7 +170,7 @@ class SaturatedEventStudy(DID):
         """Get summary table."""
         return self.mod.summary()
 
-    def test_treatment_heterogeneity(self) -> pd.Series:
+    def test_treatment_heterogeneity(self) -> WaldTest:
         """
         Test for treatment heterogeneity in the event study design.
 
@@ -376,7 +377,7 @@ def _saturated_event_study(
 
 def _test_treatment_heterogeneity(
     model: Feols,
-) -> pd.Series:
+) -> WaldTest:
     """
     Test for treatment heterogeneity in the event study design.
 
@@ -389,9 +390,10 @@ def _test_treatment_heterogeneity(
 
     Returns
     -------
-    pd.Series
+    WaldTest
 
-            A Series containing the p-value of the test and the test statistic.
+            The chi2 test statistic of the joint null of no heterogeneity and
+            its p-value.
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
@@ -407,8 +409,7 @@ def _test_treatment_heterogeneity(
     for i, idx in enumerate(event_study_coefs):
         R2[i, idx] = 1
 
-    test_result = model.wald_test(R=R2, distribution="chi2")
-    return test_result
+    return model.wald_test(R=R2, distribution="chi2")
 
 
 def compute_period_weights(

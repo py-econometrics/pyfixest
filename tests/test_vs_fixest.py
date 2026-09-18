@@ -1634,7 +1634,7 @@ def get_data_r(fml, data):
 @pytest.mark.skip("Wald tests will be released with pyfixest 0.14.0.")
 def test_wald_test(fml, data):
     fit1 = feols(fml, data)
-    fit1.wald_test()
+    wald = fit1.wald_test()
 
     fit_r = fixest.feols(
         ro.Formula(fml),
@@ -1646,8 +1646,8 @@ def test_wald_test(fml, data):
     wald_stat_r = wald_r[0]
     wald_pval_r = wald_r[1]  # noqa: F841
 
-    np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
-    # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+    np.testing.assert_allclose(wald.f_statistic, wald_stat_r)
+    # np.testing.assert_allclose(wald.pvalue, wald_pval_r)
 
 
 @pytest.mark.against_r_core
