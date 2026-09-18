@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import EmptyVcovError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
@@ -25,6 +26,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     ObservationWeights,
     SandwichComponents,
+    VarianceCovariance,
     WithinIvData,
     WithinLinearData,
 )
@@ -688,3 +690,58 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
         assert sample_info.dropped_row_index == frozenset(
             np.flatnonzero(population == 7).tolist()
         )
+
+
+@pytest.mark.parametrize(
+    ("estimator", "formula", "vcov", "vcov_kwargs"),
+    [
+        (pf.feols, "y ~ x + x2 | fe", "HC1", None),
+        (pf.feols, "y ~ x + x2 | fe", {"CRV1": "fe+group"}, None),
+        (
+            pf.feols,
+            "y ~ x | fe",
+            "NW",
+            {"time_id": "period", "panel_id": "unit", "lag": 2},
+        ),
+        (pf.feols, "y ~ x | fe | endog ~ z", {"CRV1": "fe"}, None),
+        (pf.fepois, "count ~ x | fe", {"CRV1": "fe"}, None),
+    ],
+)
+def test_meat_reproduces_the_adjusted_vcov(
+    lifecycle_data, estimator, formula, vcov, vcov_kwargs
+):
+    """The published meat sandwiches back to the published covariance.
+
+    Nothing outside the fitted model reads the meat, so the live-R suites
+    cannot catch a wrong one; this identity is its only check.
+    """
+    data = lifecycle_data.assign(
+        group=np.tile(["g1", "g2", "g3"], 8),
+        period=np.tile(np.arange(6), 4),
+        unit=np.repeat(np.arange(4), 6),
+        count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data)),
+    )
+    fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
+    covariance = fit.variance_covariance
+
+    assert isinstance(covariance, VarianceCovariance)
+    bread = fit.sandwich.bread
+    np.testing.assert_allclose(
+        covariance.vcov, bread @ covariance.meat @ bread, rtol=1e-12, atol=1e-14
+    )
+    assert covariance.ssc.shape == (len(covariance.G) or 1,)
+
+
+def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
+    """A fixed-effects-only fit skips vcov() and carries no covariance."""
+    fit = pf.feols("y ~ 1 | fe", lifecycle_data)
+    assert not hasattr(fit, "variance_covariance")
+    with pytest.raises(EmptyVcovError):
+        fit.get_inference()
+
+
+def test_quantreg_rejects_multiway_clustering(lifecycle_data):
+    """Quantile regression declares no multiway support before any state is read."""
+    data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))
+    with pytest.raises(NotImplementedError, match="Multiway clustering"):
+        pf.quantreg("y ~ x", data, vcov={"CRV1": "fe+group"})

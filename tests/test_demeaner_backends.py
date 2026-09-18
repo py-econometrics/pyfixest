@@ -169,8 +169,12 @@ def _assert_backend_matches(
     assert actual._coefnames == reference._coefnames, context
     assert actual._collin_vars == reference._collin_vars, context
     assert actual.sample_info.n_obs == reference.sample_info.n_obs, context
-    assert actual._df_k == reference._df_k, context
-    assert actual._df_t == reference._df_t, context
+    assert actual.variance_covariance.df_k == reference.variance_covariance.df_k, (
+        context
+    )
+    assert actual.variance_covariance.df_t == reference.variance_covariance.df_t, (
+        context
+    )
 
     np.testing.assert_allclose(
         actual.coef(),
@@ -180,8 +184,8 @@ def _assert_backend_matches(
         err_msg=f"coefficients differ for {context}",
     )
     np.testing.assert_allclose(
-        actual._vcov,
-        reference._vcov,
+        actual.variance_covariance.vcov,
+        reference.variance_covariance.vcov,
         rtol=0,
         atol=case.inference_tol,
         err_msg=f"vcov differs for {context}",

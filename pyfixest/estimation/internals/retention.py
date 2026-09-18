@@ -20,7 +20,6 @@ _STORE_DATA_ATTRIBUTES: tuple[str, ...] = ("_data", "model_matrix")
 _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "_data",
     "model_matrix",
-    "_cluster_df",
     "sandwich",
     "_u_hat",
     "_Y_hat_link",

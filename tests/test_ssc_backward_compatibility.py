@@ -57,10 +57,14 @@ def test_ssc_backward_compatibility_feols(data, k_adj, k_fixef, G_adj, G_df):
     ci_old = fit_old.confint().values
     np.testing.assert_allclose(ci_new, ci_old, rtol=0, atol=0, err_msg="confint differ")
 
-    assert fit_new._df_t == fit_old._df_t
-    assert fit_new._df_k == fit_old._df_k
+    assert fit_new.variance_covariance.df_t == fit_old.variance_covariance.df_t
+    assert fit_new.variance_covariance.df_k == fit_old.variance_covariance.df_k
     np.testing.assert_allclose(
-        fit_new._vcov, fit_old._vcov, rtol=0, atol=0, err_msg="vcov differ"
+        fit_new.variance_covariance.vcov,
+        fit_old.variance_covariance.vcov,
+        rtol=0,
+        atol=0,
+        err_msg="vcov differ",
     )
 
-    assert fit_new._ssc == fit_old._ssc
+    assert fit_new.variance_covariance.ssc == fit_old.variance_covariance.ssc

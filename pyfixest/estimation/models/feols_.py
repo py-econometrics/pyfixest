@@ -30,6 +30,8 @@ from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.literals import (
+    HacVcovTypeOptions,
+    HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
@@ -40,6 +42,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationSample,
     ObservationWeights,
     SandwichComponents,
+    VarianceCovariance,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -48,15 +51,17 @@ from pyfixest.estimation.internals.retention import (
     require_retained,
 )
 from pyfixest.estimation.internals.vcov_ import (
-    vcov_crv1,
+    meat_crv1,
+    meat_hac,
+    meat_hetero,
     vcov_crv3_fast,
-    vcov_hac,
-    vcov_hetero,
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    VcovTerm,
+    cluster_ssc,
+    combine_terms,
     prepare_cluster_state,
-    run_crv_loop,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -179,20 +184,10 @@ class Feols(ResultAccessorMixin):
         Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
     _u_hat : np.ndarray
         Residuals of the regression model.
-    _vcov_type : Any
-        Type of variance-covariance matrix used.
-    _vcov_type_detail : Any
-        Detailed specification of the variance-covariance matrix type.
-    _is_clustered : bool
-        Indicates if clustering is used in the variance-covariance calculation.
-    _clustervar : Any
-        Variable used for clustering in the variance-covariance calculation.
-    _G : Any
-        Group information used in clustering.
-    _ssc : Any
-        Sum of squares and cross products matrix.
-    _vcov : np.ndarray
-        Variance-covariance matrix of the estimated coefficients.
+    variance_covariance : VarianceCovariance
+        Covariance estimate published by `vcov()`: the adjusted matrix, the
+        meat where a sandwich exists, small-sample factors, degrees of
+        freedom, and the requested estimator with its cluster variables.
     _se : np.ndarray
         Standard errors of the estimated coefficients.
     _tstat : np.ndarray
@@ -254,9 +249,7 @@ class Feols(ResultAccessorMixin):
     # Set in get_fit().
     sandwich: SandwichComponents
     # Set in vcov().
-    _vcov_type_detail: str
-    _G: list[int]
-    _ssc: np.ndarray
+    variance_covariance: VarianceCovariance
     # Set in fixef().
     _fixef_coefficients: dict[str, FixedEffect]
     _alpha: np.ndarray
@@ -330,6 +323,7 @@ class Feols(ResultAccessorMixin):
 
         self._support_crv3_inference = True
         self._support_hac_inference = True
+        self._support_multiway_clustering = True
         self._supports_wildboottest = True
         self._supports_cluster_causal_variance = True
         if self._has_weights or self._is_iv:
@@ -345,11 +339,6 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
-
-        # set in vcov(); the defaults are read before any user-triggered refit
-        self._is_clustered = False
-        self._clustervar: list[str] = []
-        self._vcov = np.array([])
 
         # set in fixef(); None triggers the lazy fixef() call in predict()
         self._sumFE = None
@@ -671,62 +660,80 @@ class Feols(ResultAccessorMixin):
         # deparse vcov input
         _check_vcov_input(vcov=vcov, vcov_kwargs=vcov_kwargs, data=self._data)
 
-        (
-            self._vcov_type,
-            self._vcov_type_detail,
-            self._is_clustered,
-            self._clustervar,
-        ) = _deparse_vcov_input(vcov, self._has_fixef, self._is_iv)
+        vcov_type, vcov_type_detail, is_clustered, clustervar = _deparse_vcov_input(
+            vcov, self._has_fixef, self._is_iv
+        )
 
-        if self._vcov_type == "iid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="iid", G=1)
-            )
-            self._vcov = self._ssc * self._vcov_iid()
-
-        elif self._vcov_type == "hetero":
-            # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
-            )
-            self._vcov = self._ssc * self._vcov_hetero()
-
-        elif self._vcov_type == "HAC":
-            kw = vcov_kwargs or {}
-            self._lag = kw.get("lag")
-            self._time_id = kw.get("time_id")
-            self._panel_id = kw.get("panel_id")
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(
-                    vcov_type="HAC",
-                    G=np.unique(self._data[self._time_id]).shape[0],
-                )  # number of unique time periods T used
-            )
-            self._vcov = self._ssc * self._vcov_hac()
-
-        elif self._vcov_type == "nid":
-            self._ssc, self._df_k, self._df_t = get_ssc(
-                **self._make_ssc_kwargs(vcov_type="hetero", G=self.sample_info.n_obs)
-            )
-            self._vcov = self._ssc * self._vcov_nid()
-
-        elif self._vcov_type == "CRV":
+        # Every estimator follows the same three steps: small-sample factors,
+        # one unadjusted term per cluster dimension, and their combination.
+        G: tuple[int, ...] = ()
+        if vcov_type == "CRV":
+            if len(clustervar) > 1 and not self._support_multiway_clustering:
+                raise NotImplementedError(
+                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
+                )
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
-                clustervar=self._clustervar,
+                clustervar=clustervar,
                 ssc_dict=self._ssc_dict,
                 fixef=self._fixef,
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
             )
-            self._cluster_df = prep.cluster_df
-            self._G = prep.G
-            self._vcov, self._ssc, self._df_k, self._df_t = run_crv_loop(
-                prep=prep,
-                k=self._k,
-                make_ssc_kwargs=self._make_ssc_kwargs,
-                cluster_vcov=self._vcov_crv_cluster,
+            # prep.G may pad the "min" rule to three entries; keep one per dimension
+            G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
+            ssc, df_k, df_t = cluster_ssc(
+                prep=prep, make_ssc_kwargs=self._make_ssc_kwargs
             )
+            terms = [
+                self._vcov_crv_cluster(
+                    clustid=clustid,
+                    cluster_col=cluster_col,
+                    vcov_type_detail=vcov_type_detail,
+                )
+                for clustid, cluster_col in prep.dimensions()
+            ]
+        else:
+            ssc_G: int | float
+            if vcov_type == "iid":
+                ssc_vcov_type, ssc_G = "iid", 1
+                term = self._vcov_iid()
+            elif vcov_type == "hetero":
+                # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
+                ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
+                term = self._vcov_hetero(vcov_type_detail=vcov_type_detail)
+            elif vcov_type == "HAC":
+                kw = vcov_kwargs or {}
+                time_id = cast(str, kw.get("time_id"))
+                # G is the number of unique time periods T used
+                ssc_vcov_type = "HAC"
+                ssc_G = np.unique(self._data[time_id]).shape[0]
+                term = self._vcov_hac(
+                    vcov_type_detail=vcov_type_detail,
+                    lag=cast("int | None", kw.get("lag")),
+                    time_id=time_id,
+                    panel_id=cast("str | None", kw.get("panel_id")),
+                )
+            elif vcov_type == "nid":
+                ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
+                term = self._vcov_nid()
+            ssc, df_k, df_t = get_ssc(
+                **self._make_ssc_kwargs(vcov_type=ssc_vcov_type, G=ssc_G)
+            )
+            terms = [term]
+        term = combine_terms(terms, ssc)
+
+        self.variance_covariance = VarianceCovariance(
+            vcov=term.vcov,
+            meat=term.meat,
+            ssc=ssc,
+            df_k=df_k,
+            df_t=df_t,
+            vcov_type=vcov_type,
+            vcov_type_detail=vcov_type_detail,
+            clustervar=tuple(clustervar) if is_clustered else (),
+            G=G,
+        )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
@@ -756,10 +763,14 @@ class Feols(ResultAccessorMixin):
         }
 
     def _vcov_crv_cluster(
-        self, clustid: np.ndarray, cluster_col: np.ndarray
-    ) -> np.ndarray:
+        self,
+        *,
+        clustid: np.ndarray,
+        cluster_col: np.ndarray,
+        vcov_type_detail: str,
+    ) -> VcovTerm:
         "Pick CRV1 / CRV3-fast / CRV3-slow for one cluster column."
-        if self._vcov_type_detail == "CRV1":
+        if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
         if not self._support_crv3_inference:
@@ -768,19 +779,20 @@ class Feols(ResultAccessorMixin):
             )
         use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
-        return crv3(clustid=clustid, cluster_col=cluster_col)
+        return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
-    def _vcov_iid(self):
-        return vcov_iid_ols(
+    def _vcov_iid(self) -> VcovTerm:
+        vcov = vcov_iid_ols(
             residuals=self._u_hat,
             bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_hetero(self):
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
         observation_weights = self.observation_weights.values
-        return vcov_hetero(
+        meat = meat_hetero(
             sandwich=self.sandwich,
             X=self.within_data.design,
             frequency_weights=(
@@ -789,12 +801,19 @@ class Feols(ResultAccessorMixin):
                 else None
             ),
             normal_equation_weights=observation_weights,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
-    def _vcov_hac(self):
-        _time_id = self._time_id
-        _panel_id = self._panel_id
+    def _vcov_hac(
+        self,
+        *,
+        vcov_type_detail: str,
+        lag: int | None,
+        time_id: str | None,
+        panel_id: str | None,
+    ) -> VcovTerm:
         _data = self._data
 
         if not self._support_hac_inference:
@@ -810,37 +829,41 @@ class Feols(ResultAccessorMixin):
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(_data[_time_id], np.number) and not np.issubdtype(
-            _data[_time_id], np.datetime64
+        if not np.issubdtype(_data[time_id], np.number) and not np.issubdtype(
+            _data[time_id], np.datetime64
         ):
             raise ValueError(
                 "The time variable must be numeric or date, else we cannot sort by time."
             )
 
-        _time_arr = _data[_time_id].to_numpy()
-        _panel_arr = _data[_panel_id].to_numpy() if _panel_id is not None else None
+        _time_arr = _data[time_id].to_numpy()
+        _panel_arr = _data[panel_id].to_numpy() if panel_id is not None else None
 
-        return vcov_hac(
-            sandwich=self.sandwich,
+        meat = meat_hac(
+            scores=self.sandwich.scores,
             time_arr=_time_arr,
             panel_arr=_panel_arr,
-            lag=self._lag,
-            vcov_type_detail=self._vcov_type_detail,
+            lag=lag,
+            vcov_type_detail=cast(HacVcovTypeOptions, vcov_type_detail),
         )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
-    def _vcov_nid(self):
+    def _vcov_nid(self) -> VcovTerm:
         raise NotImplementedError(
             "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
         )
 
-    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
-        return vcov_crv1(
-            sandwich=self.sandwich,
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray) -> VcovTerm:
+        meat = meat_crv1(
+            scores=self.sandwich.scores,
             clustid=clustid,
             cluster_col=cluster_col,
         )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
-    def _vcov_crv3_fast(self, clustid, cluster_col):
+    def _vcov_crv3_fast(self, clustid, cluster_col) -> np.ndarray:
         return vcov_crv3_fast(
             X=self.within_data.design,
             Y=self.within_data.response,
@@ -850,7 +873,7 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _vcov_crv3_slow(self, clustid, cluster_col):
+    def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
 
         # lazy loading to avoid circular import
@@ -960,13 +983,13 @@ class Feols(ResultAccessorMixin):
 
         W, self._dfn = _wald_statistic(
             beta_hat=self._beta_hat,
-            vcov=self._vcov,
+            vcov=self.variance_covariance.vcov,
             R=R,
             q=q,
         )
 
-        if self._is_clustered:
-            self._dfd = np.min(np.array(self._G)) - 1
+        if self.variance_covariance.is_clustered:
+            self._dfd = min(self.variance_covariance.G) - 1
         else:
             self._dfd = self.sample_info.n_obs - self._k - k_fe
 
@@ -1021,7 +1044,7 @@ class Feols(ResultAccessorMixin):
         cluster : Union[str, None], optional
             The variable used for clustering. Defaults to None. If None, then
             uses the variable specified in the model's `clustervar` attribute.
-            If no `_clustervar` attribute is found, runs a heteroskedasticity-
+            If the model is not clustered, runs a heteroskedasticity-
             robust bootstrap.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
@@ -1113,11 +1136,8 @@ class Feols(ResultAccessorMixin):
         if cluster is not None and isinstance(cluster, list):
             cluster_list = cluster
 
-        if cluster is None and self._clustervar is not None:
-            if isinstance(self._clustervar, str):
-                cluster_list = [self._clustervar]
-            else:
-                cluster_list = self._clustervar
+        if cluster is None and self.variance_covariance.is_clustered:
+            cluster_list = list(self.variance_covariance.clustervar)
 
         run_heteroskedastic = not cluster_list
 
@@ -1306,14 +1326,15 @@ class Feols(ResultAccessorMixin):
             )
 
         if cluster is None:
-            if self._clustervar is None:
+            clustervar = self.variance_covariance.clustervar
+            if not clustervar:
                 raise ValueError("No cluster variable found in the model fit.")
-            elif len(self._clustervar) > 1:
+            elif len(clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance estimator."
                 )
             else:
-                cluster = self._clustervar[0]
+                cluster = clustervar[0]
 
         # check that cluster is in data
         require_retained(self, "ccv", "_data", "within_data")
@@ -1322,7 +1343,7 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self._is_clustered:
+        if not self.variance_covariance.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )
@@ -1372,7 +1393,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self._vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1589,7 +1610,11 @@ class Feols(ResultAccessorMixin):
         )
 
         require_retained(self, "decompose", "within_data", "observation_weights")
-        if self._has_fixef or cluster is not None or self._is_clustered:
+        if (
+            self._has_fixef
+            or cluster is not None
+            or self.variance_covariance.is_clustered
+        ):
             require_retained(self, "decompose", "_data")
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1604,8 +1629,8 @@ class Feols(ResultAccessorMixin):
         cluster_df: pd.Series | None = None
         if cluster is not None:
             cluster_df = self._data[cluster]
-        elif self._is_clustered:
-            cluster_df = self._data[self._clustervar[0]]
+        elif self.variance_covariance.is_clustered:
+            cluster_df = self._data[self.variance_covariance.clustervar[0]]
         else:
             cluster_df = None
 
@@ -2058,7 +2083,7 @@ class Feols(ResultAccessorMixin):
             )
 
         # update vcov if cluster provided but not in model
-        if cluster is not None and not self._is_clustered:
+        if cluster is not None and not self.variance_covariance.is_clustered:
             warnings.warn(
                 "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
             )

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -13,9 +13,11 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -229,14 +231,14 @@ class Feglm(Feols):
         """
         return self.working_state.eta if type == "link" else self.working_state.mu
 
-    def _vcov_iid(self):
-        return vcov_iid_glm(bread=self.sandwich.bread)
+    def _vcov_iid(self) -> VcovTerm:
+        return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
 
-    def _vcov_hetero(self):
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
         # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
         # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
-        return vcov_hetero(
+        meat = meat_hetero(
             sandwich=self.sandwich,
             X=self.working_state.design_within,
             frequency_weights=(
@@ -245,8 +247,10 @@ class Feglm(Feols):
                 else None
             ),
             normal_equation_weights=self.working_state.working_weights,
-            vcov_type_detail=self._vcov_type_detail,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def get_performance(self) -> None:
         """Reject linear R² measures; only the Gaussian family reports them."""

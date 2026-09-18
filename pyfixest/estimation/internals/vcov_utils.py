@@ -1,4 +1,6 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -19,6 +21,42 @@ from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import get_ssc
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VcovTerm:
+    """One unadjusted covariance term and, for sandwich estimators, its meat.
+
+    Attributes
+    ----------
+    vcov : np.ndarray
+        Unadjusted covariance, shape (k, k). Equals ``bread @ meat @ bread``
+        when ``meat`` is present.
+    meat : np.ndarray or None
+        Unadjusted meat, shape (k, k); ``None`` for estimators without a
+        sandwich form (iid, jackknife CRV3, quantile regression).
+    """
+
+    vcov: np.ndarray
+    meat: np.ndarray | None
+
+
+def combine_terms(terms: Sequence[VcovTerm], ssc: np.ndarray) -> VcovTerm:
+    """Sum the small-sample-adjusted terms, ``Σ ssc_x * term_x``.
+
+    The meat is combined the same way when every term carries one, so the
+    adjusted ``vcov`` stays ``bread @ meat @ bread``.
+    """
+    k = terms[0].vcov.shape[0]
+    vcov = np.zeros((k, k))
+    meat: np.ndarray | None = (
+        None if any(term.meat is None for term in terms) else np.zeros((k, k))
+    )
+    for factor, term in zip(ssc, terms, strict=True):
+        vcov += factor * term.vcov
+        if meat is not None and term.meat is not None:
+            meat += factor * term.meat
+    return VcovTerm(vcov=vcov, meat=meat)
+
+
 @dataclass
 class ClusterPrep:
     "Precomputed cluster state shared across the CRV per-cluster loop."
@@ -28,6 +66,17 @@ class ClusterPrep:
     G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
     k_fe_nested: int
     n_fe_fully_nested: int
+
+    @property
+    def n_dimensions(self) -> int:
+        "Number of cluster dimensions: one, or three for two-way clustering."
+        return self.cluster_df.shape[1]
+
+    def dimensions(self) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        "Yield ``(clustid, cluster_col)`` for each cluster dimension."
+        for x in range(self.n_dimensions):
+            cluster_col = self.cluster_arr_int[:, x]
+            yield np.unique(cluster_col), cluster_col
 
 
 def prepare_cluster_state(
@@ -78,26 +127,20 @@ def prepare_cluster_state(
     )
 
 
-def run_crv_loop(
-    *,
-    prep: ClusterPrep,
-    k: int,
-    make_ssc_kwargs: Callable[..., dict],
-    cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
-) -> tuple[np.ndarray, np.ndarray, int, int]:
-    "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
-    vcov_sign_list = [1, 1, -1]
-    n_clusters = prep.cluster_df.shape[1]
+def cluster_ssc(
+    *, prep: ClusterPrep, make_ssc_kwargs: Callable[..., dict]
+) -> tuple[np.ndarray, int, int]:
+    """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``.
 
-    vcov = np.zeros((k, k))
-    ssc_arr: np.ndarray | None = None
-    df_t_full = np.zeros(n_clusters)
+    The factor of the two-way interaction dimension carries the negative
+    sign of the Cameron-Gelbach-Miller combination. ``df_t`` is the smallest
+    ``G - 1`` over the dimensions.
+    """
+    vcov_sign_list = (1, 1, -1)
+    ssc_arr = np.zeros(prep.n_dimensions)
+    df_t_full = np.zeros(prep.n_dimensions)
     df_k = 0
-
-    for x in range(n_clusters):
-        cluster_col = prep.cluster_arr_int[:, x]
-        clustid = np.unique(cluster_col)
-
+    for x in range(prep.n_dimensions):
         ssc, df_k, df_t = get_ssc(
             **make_ssc_kwargs(
                 vcov_type="CRV",
@@ -107,12 +150,9 @@ def run_crv_loop(
                 n_fe_fully_nested=prep.n_fe_fully_nested,
             )
         )
-        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
+        ssc_arr[x] = ssc[0]
         df_t_full[x] = df_t
-        vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
-
-    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
-    return vcov, ssc_arr, df_k, int(np.min(df_t_full))
+    return ssc_arr, df_k, int(np.min(df_t_full))
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):

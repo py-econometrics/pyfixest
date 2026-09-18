@@ -121,6 +121,11 @@ def test_did2s(data, weights):
     np.testing.assert_allclose(
         fit_did2s_py1.se(), fit_did2s_r1.iloc[:, 3].squeeze(), atol=1e-05, rtol=1e-05
     )
+    # the GMM covariance is recorded as clustered on the did2s cluster variable
+    covariance = fit_did2s_py1.variance_covariance
+    assert covariance.is_clustered
+    assert covariance.clustervar == ("state",)
+    assert (data["state"].nunique(),) == covariance.G
 
     # Model 2
     py_args["second_stage"] = "~i(rel_year, ref = -1.0)"

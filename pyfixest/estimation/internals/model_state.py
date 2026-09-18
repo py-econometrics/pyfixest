@@ -289,3 +289,69 @@ class SandwichComponents:
     scores: NDArray[np.float64]
     hessian: NDArray[np.float64]
     bread: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VarianceCovariance:
+    """Variance-covariance estimate of the coefficients and its building blocks.
+
+    Parameters
+    ----------
+    vcov : NDArray[np.float64]
+        Small-sample-adjusted covariance matrix, shape (n_coefficients,
+        n_coefficients).
+    meat : NDArray[np.float64] or None
+        Adjusted meat of the sandwich, shape (n_coefficients,
+        n_coefficients), so that ``vcov == bread @ meat @ bread`` with the
+        bread of ``fit.sandwich``. For multiway clustering the per-dimension
+        meats enter with their signs and adjustment factors. ``None`` where
+        no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
+    ssc : NDArray[np.float64]
+        Small-sample adjustment factors. Length one, or one entry per cluster
+        dimension for CRV inference: three for two-way clustering.
+    df_k : int
+        Number of parameters counted by the ``k_adj`` adjustment.
+    df_t : int or float
+        Degrees of freedom of the t reference distribution.
+    vcov_type : str
+        Estimator family: ``"iid"``, ``"hetero"``, ``"HAC"``, ``"CRV"``, or
+        ``"nid"``.
+    vcov_type_detail : str
+        Requested estimator, for example ``"HC1"``, ``"NW"``, or ``"CRV1"``.
+    clustervar : tuple[str, ...]
+        Cluster variables; empty unless clustered.
+    G : tuple[int, ...]
+        Cluster counts per dimension after the ``G_df`` rule; empty unless
+        clustered.
+
+    Examples
+    --------
+    ```{python}
+    import numpy as np
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov={"CRV1": "f1"})
+    cov = fit.variance_covariance
+    cov.vcov_type_detail, cov.G, cov.df_t, cov.ssc
+    ```
+
+    ```{python}
+    bread = fit.sandwich.bread
+    np.allclose(cov.vcov, bread @ cov.meat @ bread)
+    ```
+    """
+
+    vcov: NDArray[np.float64]
+    meat: NDArray[np.float64] | None
+    ssc: NDArray[np.float64]
+    df_k: int
+    df_t: int | float
+    vcov_type: str
+    vcov_type_detail: str
+    clustervar: tuple[str, ...]
+    G: tuple[int, ...]
+
+    @property
+    def is_clustered(self) -> bool:
+        """Whether the estimator clusters on at least one variable."""
+        return bool(self.clustervar)

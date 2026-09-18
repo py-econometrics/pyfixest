@@ -16,11 +16,6 @@ from pyfixest.estimation.internals.vcov_utils import (
 )
 
 
-def _get_sandwich(meat: np.ndarray, bread: np.ndarray) -> np.ndarray:
-    "Assemble the sandwich covariance bread @ meat @ bread."
-    return bread @ meat @ bread
-
-
 def vcov_iid_ols(
     residuals: np.ndarray,
     bread: np.ndarray,
@@ -44,14 +39,14 @@ def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
     return bread
 
 
-def vcov_hetero(
+def meat_hetero(
     sandwich: SandwichComponents,
     X: np.ndarray,
     frequency_weights: np.ndarray | None,
     normal_equation_weights: np.ndarray | None,
     vcov_type_detail: HeteroVcovTypeOptions,
 ) -> np.ndarray:
-    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
+    """Unscaled heteroskedasticity-robust meat (HC1/HC2/HC3), shape (k, k).
 
     Parameters
     ----------
@@ -94,20 +89,17 @@ def vcov_hetero(
     if frequency_weights is not None:
         transformed_scores = transformed_scores / np.sqrt(frequency_weights)
 
-    meat = transformed_scores.T @ transformed_scores
-
-    return _get_sandwich(meat=meat, bread=sandwich.bread)
+    return transformed_scores.T @ transformed_scores
 
 
-def vcov_hac(
-    sandwich: SandwichComponents,
+def meat_hac(
+    scores: np.ndarray,
     time_arr: np.ndarray,
     panel_arr: np.ndarray | None,
     lag: int | None,
     vcov_type_detail: HacVcovTypeOptions,
 ) -> np.ndarray:
-    "Unscaled HAC vcov: Newey-West (time or panel) or Driscoll-Kraay."
-    scores = sandwich.scores
+    "Unscaled HAC meat, shape (k, k): Newey-West (time or panel) or Driscoll-Kraay."
     if vcov_type_detail == "NW":
         if panel_arr is None:
             if lag is None:
@@ -150,22 +142,20 @@ def vcov_hac(
     else:
         raise ValueError("vcov_type_detail must be one of 'NW' or 'DK'.")
 
-    return _get_sandwich(meat=hac_meat, bread=sandwich.bread)
+    return hac_meat
 
 
-def vcov_crv1(
-    sandwich: SandwichComponents,
+def meat_crv1(
+    scores: np.ndarray,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled CRV1 cluster-robust vcov."
-    meat = crv1_meat_loop(
-        scores=sandwich.scores.astype(np.float64),
+    "Unscaled CRV1 cluster-robust meat, shape (k, k)."
+    return crv1_meat_loop(
+        scores=scores.astype(np.float64),
         clustid=clustid.astype(np.uintp),
         cluster_col=cluster_col.astype(np.uintp),
     )
-
-    return _get_sandwich(meat=meat, bread=sandwich.bread)
 
 
 def _jackknife_vcov(beta_jack: np.ndarray, beta_center: np.ndarray) -> np.ndarray:

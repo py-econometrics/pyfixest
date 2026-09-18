@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -117,6 +118,7 @@ class Quantreg(Feols):
 
         self._supports_wildboottest = False
         self._support_crv3_inference = False
+        self._support_multiway_clustering = False
         self._supports_cluster_causal_variance = False
         self._support_hac_inference = False
         self._support_decomposition = False
@@ -395,25 +397,27 @@ class Quantreg(Feols):
 
         return fn_res
 
-    def _vcov_iid(self):
-        return vcov_iid_qreg(
+    def _vcov_iid(self) -> VcovTerm:
+        vcov = vcov_iid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_hetero(self):
-        return vcov_hetero_qreg(
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
+        vcov = vcov_hetero_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_nid(self) -> np.ndarray:
+    def _vcov_nid(self) -> VcovTerm:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
         as developed in Hendricks and Koenker (1991).
@@ -421,7 +425,7 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-        return vcov_nid_qreg(
+        vcov = vcov_nid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             beta_hat=self._beta_hat,
@@ -430,24 +434,22 @@ class Quantreg(Feols):
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray) -> VcovTerm:
         """
         Implement cluster robust variance estimator for quantile regression following
-        Parente and Santos Silva, 2016.
+        Parente and Santos Silva, 2016. Multiway clustering is rejected by
+        ``vcov()`` through ``_support_multiway_clustering``.
         """
-        if len(self._clustervar) > 1:
-            raise NotImplementedError(
-                "Multiway clustering is not (yet) supported for quantile regression."
-            )
-
-        return vcov_crv1_qreg(
+        vcov = vcov_crv1_qreg(
             X=self.within_data.design,
             u_hat=self._u_hat,
             q=self._quantile,
             clustid=clustid,
             cluster_col=cluster_col,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
     @property
     def objective_value(self):
