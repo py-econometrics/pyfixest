@@ -120,7 +120,9 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
-        fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+        fit.variance_covariance = _did2s_covariance(
+            fit=fit, vcov=vcov, G=_G, clustervar=cluster
+        )
         fit._method = "did2s"
 
     elif estimator == "twfe":
@@ -300,31 +302,35 @@ def did2s(
         weights=weights,
     )
 
-    fit.variance_covariance = _did2s_covariance(fit=fit, vcov=vcov, G=_G)
+    fit.variance_covariance = _did2s_covariance(
+        fit=fit, vcov=vcov, G=_G, clustervar=cluster
+    )
     fit.get_inference()  # update inference with correct vcov matrix
     fit._method = "did2s"
 
     return fit
 
 
-def _did2s_covariance(*, fit: Feols, vcov: np.ndarray, G: int) -> VarianceCovariance:
+def _did2s_covariance(
+    *, fit: Feols, vcov: np.ndarray, G: int, clustervar: str
+) -> VarianceCovariance:
     """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
 
-    The second-stage fit was estimated with ``vcov="iid"``; its degrees of
-    freedom and adjustment factor are kept, as they were before the value
-    existed. The cluster variable is not recorded on the result, so
-    ``is_clustered`` stays ``False`` for downstream Wald tests.
+    The GMM covariance carries no small-sample factor, and the t reference
+    keeps the residual degrees of freedom of the second-stage fit, as R's
+    ``did2s`` does. The cluster variable is recorded, so Wald tests, the wild
+    bootstrap, and the causal cluster variance treat the fit as clustered.
     """
     inner = fit.variance_covariance
     return VarianceCovariance(
         vcov=vcov,
         meat=None,
-        ssc=inner.ssc,
+        ssc=np.ones(1),
         df_k=inner.df_k,
         df_t=inner.df_t,
         vcov_type="CRV",
         vcov_type_detail="CRV1 (GMM)",
-        clustervar=(),
+        clustervar=(clustervar,),
         G=(int(G),),
     )
 
