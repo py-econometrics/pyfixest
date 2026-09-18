@@ -318,13 +318,14 @@ def _did2s_covariance(
 
     The second-stage fit was estimated with ``vcov="iid"``; its degrees of
     freedom and adjustment factor are kept. The spec records the cluster
-    variable, so Wald tests use the clustered degrees of freedom.
+    variable, so `wald_test`, `wildboottest`, and `ccv` treat the fit as
+    clustered.
     """
     inner = fit.variance_covariance
     return VarianceCovariance(
         vcov=vcov,
         meat=None,
-        ssc=inner.ssc,
+        ssc=np.ones(1),
         df_k=inner.df_k,
         df_t=inner.df_t,
         spec=VcovSpec(
