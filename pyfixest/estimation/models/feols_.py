@@ -1127,6 +1127,10 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
                 )
+            if self._method == "did2s":
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for the DID2S estimator."
+                )
             if self._has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
