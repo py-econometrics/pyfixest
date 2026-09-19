@@ -610,6 +610,10 @@ class Feols(ResultAccessorMixin):
             self._tZZinv = np.array([])
 
         self._get_predictors()
+        # Empty designs are used only for demeaning and may have no residual
+        # degrees of freedom. Leave their fit statistics undefined.
+        if self._X_is_empty:
+            return
         self.fitstat = linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=within_data.response,

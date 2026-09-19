@@ -8,7 +8,7 @@ and row-sample seams locked here are not observable from those suites.
 from __future__ import annotations
 
 import warnings
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, astuple
 
 import numpy as np
 import pandas as pd
@@ -53,6 +53,7 @@ def lifecycle_data() -> pd.DataFrame:
 
     return pd.DataFrame(
         {
+            "row_id": np.arange(n_obs),
             "y": response,
             "x": covariate,
             "x2": second_covariate,
@@ -337,7 +338,14 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         vcov="iid",
         iwls_tol=1e-10,
     )
-    assert fitstat == reference.fitstat
+    np.testing.assert_allclose(
+        astuple(fitstat),
+        astuple(reference.fitstat),
+        rtol=0,
+        atol=0,
+        equal_nan=True,
+        err_msg="Storage options changed Gaussian fit statistics",
+    )
     response = lifecycle_data["y"].to_numpy()
     observation_weights = reference.observation_weights.values
     residuals = reference.working_state.response_residuals
@@ -367,13 +375,30 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     [
         (pf.feols, "y ~ x + [endog ~ z] | fe", {}),
         (pf.quantreg, "y ~ x", {"quantile": 0.5}),
+        (pf.feols, "y ~ 1 | fe", {}),
+        (pf.feols, "y ~ 1 | row_id", {"fixef_rm": "none"}),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {"fixef_rm": "none", "weights": "weight", "store_data": False},
+        ),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {
+                "fixef_rm": "none",
+                "weights": "weight",
+                "weights_type": "fweights",
+                "lean": True,
+            },
+        ),
     ],
 )
 def test_undefined_fit_statistics_are_nan(
     lifecycle_data: pd.DataFrame, estimator, formula: str, kwargs: dict
 ) -> None:
     fit = estimator(formula, lifecycle_data, **kwargs)
-    assert fit.fitstat == FitStatistics()
+    assert all(np.isnan(value) for value in astuple(fit.fitstat))
     assert not hasattr(fit, "get_performance")
 
 
