@@ -678,6 +678,73 @@ def test_fepois_hc2_hc3_against_sandwich(vcov_type):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("has_fixef", [False, True])
+@pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
+@pytest.mark.parametrize("storage", [{}, {"store_data": False}, {"lean": True}])
+def test_saturated_ols_performance_against_lm(has_fixef, weights_type, storage):
+    """Identified saturated fits survive undefined adjusted R² (issue #1536)."""
+    if has_fixef:
+        data = pd.DataFrame(
+            {
+                "y": [1.0, 3.0, 2.0, 6.0],
+                "x": [0.0, 1.0, 0.0, 0.0],
+                "z": [0.0, 0.0, 0.0, 1.0],
+                "g": ["a", "a", "b", "b"],
+            }
+        )
+        formula, r_formula = "y ~ x + z | g", "y ~ x + z + factor(g)"
+    else:
+        data = pd.DataFrame({"y": [1.0, 3.0], "x": [0.0, 1.0]})
+        formula = r_formula = "y ~ x"
+    # Analytic weights change the projection but not residual degrees of freedom.
+    # Unit frequency weights give the saturated literal-replication reference.
+    data["w"] = np.arange(1.0, len(data) + 1) if weights_type == "aweights" else 1.0
+    kwargs = (
+        {} if weights_type is None else {"weights": "w", "weights_type": weights_type}
+    )
+    fit = pf.feols(formula, data, ssc=pf.ssc(k_adj=False), **kwargs, **storage)
+    reference = stats.lm(ro.Formula(r_formula), data=data, weights=data["w"])
+    reference_summary = ro.r("summary")(reference)
+    reference_coefs = stats.coef(reference)
+    ro.globalenv["saturated_reference"] = reference
+    reference_names = list(ro.r("names(coef(saturated_reference))"))
+    aligned = [
+        reference_coefs[
+            reference_names.index("(Intercept)" if name == "Intercept" else name)
+        ]
+        for name in fit.coef().index
+    ]
+    # These tiny full-rank systems need no iterative FE recovery: round-off only.
+    np.testing.assert_allclose(
+        fit.coef(),
+        aligned,
+        rtol=0,
+        atol=1e-12,
+        err_msg="saturated OLS coefficients differ from base R lm",
+    )
+    assert int(stats.nobs(reference)[0]) == fit._N
+    assert int(stats.df_residual(reference)[0]) == 0
+    np.testing.assert_allclose(
+        fit._r2,
+        reference_summary.rx2("r.squared")[0],
+        rtol=0,
+        atol=1e-12,
+        err_msg="saturated OLS R-squared differs from base R lm",
+    )
+    assert np.isnan(reference_summary.rx2("adj.r.squared")[0])
+    assert np.isnan(fit._adj_r2)
+    assert np.isnan(fit._adj_r2_within)
+    if has_fixef:
+        np.testing.assert_allclose(
+            fit._r2_within,
+            1.0,
+            rtol=0,
+            atol=1e-12,
+            err_msg="saturated OLS within R-squared differs from a perfect fit",
+        )
+
+
+@pytest.mark.against_r_core
 def test_feglm_gaussian_reference_behavior():
     """Lock in pyfixest's Gaussian-GLM compatibility decision."""
     data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
