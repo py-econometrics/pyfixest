@@ -242,6 +242,7 @@ quartodoc:
         - estimation.state.DroppedRowCounts
         - estimation.state.WithinLinearData
         - estimation.state.WithinIvData
+        - estimation.state.CollinearityCheck
         - estimation.state.GlmWorkingState
         - estimation.state.FittedValues
         - estimation.state.SandwichComponents

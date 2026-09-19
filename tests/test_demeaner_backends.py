@@ -167,7 +167,10 @@ def _assert_backend_matches(
     context = f"backend={case.name}"
 
     assert actual._coefnames == reference._coefnames, context
-    assert actual._collin_vars == reference._collin_vars, context
+    assert (
+        actual.collinearity.dropped_coef_names
+        == reference.collinearity.dropped_coef_names
+    ), context
     assert actual.sample_info.n_obs == reference.sample_info.n_obs, context
     assert actual.variance_covariance.df_k == reference.variance_covariance.df_k, (
         context

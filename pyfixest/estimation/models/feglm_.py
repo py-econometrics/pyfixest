@@ -203,9 +203,8 @@ class Feglm(Feols):
             fixef_tol=self._fixef_tol,
         )
 
-        self._coefnames = fit.coefnames
-        self._collin_vars = fit.collin_vars
-        self._collin_index = fit.collin_index
+        self.collinearity = fit.collinearity
+        self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
         # The prediction view of the same arrays: eta is the linear predictor

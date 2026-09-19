@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
     FittedValues,
     WithinIvData,
     WithinLinearData,
@@ -72,10 +73,9 @@ class Feiv(Feols):
         for frequency weights.
     _coefnames_z : list
         Names of coefficients for Z after handling multicollinearity.
-    _collin_vars_z : list
-        Variables identified as collinear in Z.
-    _collin_index_z : list
-        Indices of collinear variables in Z.
+    collinearity_instruments : CollinearityCheck
+        Names and column mask of the instruments dropped by the rank check,
+        set in get_fit().
     _is_iv : bool
         Indicator if instrumental variables are used.
     capabilities : Capabilities
@@ -151,6 +151,9 @@ class Feiv(Feols):
     [instrumental variables tutorial](/tutorials/instrumental-variables.qmd) for
     details.
     """
+
+    # Set in get_fit().
+    collinearity_instruments: CollinearityCheck
 
     # Constructor and methods implementation...
     def __init__(
@@ -244,16 +247,13 @@ class Feiv(Feols):
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
         assert self._coefnames_z is not None
-        (
-            instruments,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = drop_multicollinear_variables(
+        instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
+        self.collinearity_instruments = collinearity
+        self._coefnames_z = list(collinearity.coefnames)
         return replace(within_data, instruments=instruments)
 
     def get_fit(self) -> None:
