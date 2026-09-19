@@ -145,7 +145,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
 def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     """Get the variance of a named coefficient from both Python and R models."""
     py_idx = py_model._coefnames.index(coefname)
-    py_vcov = py_model._vcov[py_idx, py_idx]
+    py_vcov = py_model.variance_covariance.vcov[py_idx, py_idx]
     # Get R coefficient names (pandas2ri strips names from auto-converted arrays)
     ro.globalenv[".tmp.model"] = r_model
     r_names = list(ro.r("names(coef(.tmp.model))"))
@@ -233,8 +233,8 @@ def test_single_fit_feols(
 
     py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
-    py_df_k = mod._df_k
-    py_df_t = mod._df_t
+    py_df_k = mod.variance_covariance.df_k
+    py_df_t = mod.variance_covariance.df_t
 
     df_X1 = _get_r_df(r_fixest)
     r_coef = df_X1["estimate"]
@@ -494,8 +494,8 @@ def test_single_fit_fepois(
     py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
-    py_df_k = int(mod._df_k)
-    py_df_t = int(mod._df_t)
+    py_df_k = int(mod.variance_covariance.df_k)
+    py_df_t = int(mod.variance_covariance.df_t)
     py_n_coefs = mod.coef().values.size
     py_loglik = mod.fitstat.loglik
     py_loglik_null = mod.fitstat.loglik_null
@@ -639,7 +639,7 @@ def test_frequency_weighted_linear_models_against_fixest(fml):
         err_msg="Fweight coefficients differ from the R fixest literal expansion",
     )
     np.testing.assert_allclose(
-        py_fit._vcov,
+        py_fit.variance_covariance.vcov,
         np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
         rtol=0,
         atol=1e-7,
@@ -671,7 +671,7 @@ def test_fepois_hc2_hc3_against_sandwich(vcov_type):
         control=ro.r("glm.control(epsilon = 1e-14, maxit = 100)"),
     )
     np.testing.assert_allclose(
-        py_fit._vcov,
+        py_fit.variance_covariance.vcov,
         np.asarray(sandwich.vcovHC(r_glm, type=vcov_type)),
         rtol=1e-6,
         atol=0,
@@ -709,8 +709,8 @@ def test_feglm_gaussian_reference_behavior():
 
     pd.testing.assert_frame_equal(py_glm.tidy(), py_ols.tidy(), rtol=0, atol=1e-10)
     np.testing.assert_allclose(
-        py_glm._vcov,
-        py_ols._vcov,
+        py_glm.variance_covariance.vcov,
+        py_ols.variance_covariance.vcov,
         rtol=0,
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
@@ -754,13 +754,13 @@ def test_feglm_gaussian_reference_behavior():
             err_msg=f"Gaussian-GLM coefficients differ from {label}",
         )
         np.testing.assert_allclose(
-            py_glm._vcov,
+            py_glm.variance_covariance.vcov,
             np.asarray(stats.vcov(r_fit)),
             rtol=0,
             atol=1e-8,
             err_msg=f"Gaussian-GLM covariance differs from {label}",
         )
-        assert py_glm._df_t == int(stats.df_residual(r_fit)[0]), (
+        assert py_glm.variance_covariance.df_t == int(stats.df_residual(r_fit)[0]), (
             f"Gaussian-GLM residual degrees of freedom differ from {label}"
         )
 
@@ -772,7 +772,7 @@ def test_feglm_gaussian_reference_behavior():
         err_msg="Gaussian-GLM coefficients differ from R fixest::feglm",
     )
     assert not np.allclose(
-        py_glm._vcov,
+        py_glm.variance_covariance.vcov,
         np.asarray(stats.vcov(r_feglm)),
         rtol=0,
         atol=1e-8,
@@ -851,13 +851,22 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     # Gaussian GLM with identity link == OLS; compare against pf.feols directly
     if family == "gaussian":
         ref = pf.feols(fml=py_fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
-        assert (mod.sample_info.n_obs, int(mod._df_k), int(mod._df_t)) == (
+        assert (
+            mod.sample_info.n_obs,
+            int(mod.variance_covariance.df_k),
+            int(mod.variance_covariance.df_t),
+        ) == (
             ref.sample_info.n_obs,
-            int(ref._df_k),
-            int(ref._df_t),
+            int(ref.variance_covariance.df_k),
+            int(ref.variance_covariance.df_t),
         )
         pd.testing.assert_frame_equal(mod.tidy(), ref.tidy(), atol=1e-10, rtol=0)
-        np.testing.assert_allclose(mod._vcov, ref._vcov, atol=1e-10, rtol=0)
+        np.testing.assert_allclose(
+            mod.variance_covariance.vcov,
+            ref.variance_covariance.vcov,
+            atol=1e-10,
+            rtol=0,
+        )
         return
 
     r_family = {
@@ -889,8 +898,8 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
-    py_df_k = int(mod._df_k)
-    py_df_t = int(mod._df_t)
+    py_df_k = int(mod.variance_covariance.df_k)
+    py_df_t = int(mod.variance_covariance.df_t)
     py_n_coefs = mod.coef().values.size
 
     df_X1 = _get_r_df(r_fixest)
@@ -1167,7 +1176,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         if family == "gaussian":
             pytest.skip("Mismatch in scores, but all other tests pass.")
 
-            py_scores = fit_py._scores
+            py_scores = fit_py.sandwich.scores
             r_scores = fit_r.rx2("scores")
             check_absolute_diff(
                 py_scores[0, :],
@@ -1460,7 +1469,7 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
     if True:
         # test vcov's
         np.testing.assert_allclose(
-            fit1._vcov,
+            fit1.variance_covariance.vcov,
             stats.vcov(feols_fit1),
             rtol=1e-04,
             atol=1e-04,
@@ -1749,8 +1758,8 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
     r_df_t = int(ro.r('attr(r_fit$cov.scaled, "df.t")')[0])
     r_df_k = int(ro.r('attr(r_fit$cov.scaled, "df.K")')[0])
 
-    py_df_t = py_fit._df_t
-    py_df_k = py_fit._df_k
+    py_df_t = py_fit.variance_covariance.df_t
+    py_df_k = py_fit.variance_covariance.df_k
 
     py_nobs = py_fit.sample_info.n_obs
     r_nobs = stats.nobs(r_fit)
@@ -1819,7 +1828,7 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
     )
     # vcov identical:
     np.testing.assert_allclose(
-        py_fit._vcov,
+        py_fit.variance_covariance.vcov,
         stats.vcov(r_fit),
         rtol=1e-07 if model == "feols" else 1e-06,
         atol=1e-07 if model == "feols" else 1e-06,

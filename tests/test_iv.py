@@ -274,13 +274,13 @@ def test_iv_diag_does_not_relabel_vcov_type():
     data = get_data()
 
     fit_iid = feols("Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, weights="weights", vcov="iid")
-    vcov_type_detail_before = fit_iid._vcov_type_detail
+    vcov_type_detail_before = fit_iid.variance_covariance.spec.vcov_type_detail
     se_before = fit_iid.se().copy()
 
     fit_iid.IV_Diag()
 
     assert vcov_type_detail_before == "iid"
-    assert fit_iid._vcov_type_detail == "iid", (
+    assert fit_iid.variance_covariance.spec.vcov_type_detail == "iid", (
         "IV_Diag() relabelled the main model's covariance type"
     )
     np.testing.assert_allclose(

@@ -548,9 +548,9 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "conf_int_lb": [
-                    fit2._conf_int[0]
+                    fit2.coeftable.conf_int[0]
                 ],  # length of customized statistics not equal to the number of models
-                "conf_int_ub": [fit2._conf_int[1]],
+                "conf_int_ub": [fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
@@ -561,9 +561,9 @@ def test_errors_etable():
             custom_stats={
                 "conf_int_lb": [
                     [0.1, 0.1, 0.1],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # length of customized statistics not equal to length of model
-                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+                "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b [conf_int_lb, conf_int_ub]",
         )
@@ -573,8 +573,8 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "b": [
-                    fit2._conf_int[0],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # preserved keyword cannot be used as a custom statistic
             },
             coef_fmt="b [se]",
@@ -1239,7 +1239,9 @@ def test_poisson_crv3_remains_supported():
     )
 
     np.testing.assert_allclose(direct_fit.coef(), glm_fit.coef())
-    np.testing.assert_allclose(direct_fit._vcov, glm_fit._vcov)
+    np.testing.assert_allclose(
+        direct_fit.variance_covariance.vcov, glm_fit.variance_covariance.vcov
+    )
 
 
 def test_empty_vcov_error():
@@ -1667,3 +1669,30 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("vcov", "vcov_kwargs", "error", "match"),
+    [
+        ("HC4", None, ValueError, "vcov must be one of"),
+        (["f1"], None, TypeError, "vcov must be a string or a dict"),
+        ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
+        ({"CRV1": "f1+f2+f3"}, None, ValueError, "two-way clustering"),
+        ({"CRV1": 1}, None, TypeError, "must be a string"),
+        ({"CRV1": "f1^f2"}, None, ValueError, "interaction"),
+        ("NW", None, ValueError, "Missing required 'time_id'"),
+        ("DK", {"time_id": "f1"}, ValueError, "Missing required 'panel_id'"),
+        ("NW", {"time_id": "f1", "lags": 2}, ValueError, "vcov_kwargs accepts"),
+        (
+            "NW",
+            {"time_id": "f1", "lag": -1},
+            ValueError,
+            "'lag' must be a non-negative integer",
+        ),
+    ],
+)
+def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
+    """`VcovSpec.from_user_input` validates `vcov` for post-estimation calls too."""
+    fit = pf.feols("Y ~ X1", get_data())
+    with pytest.raises(error, match=match):
+        fit.vcov(vcov, vcov_kwargs)

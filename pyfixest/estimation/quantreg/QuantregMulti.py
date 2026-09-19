@@ -17,6 +17,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
@@ -116,7 +117,6 @@ class QuantregMulti:
         self.all_quantregs[q[q_median_idx]]._u_hat = (
             Y.flatten() - (X @ beta_hat).flatten()
         )
-        self.all_quantregs[q[q_median_idx]]._hessian = hessian
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -141,7 +141,6 @@ class QuantregMulti:
                 )[0]
                 self.all_quantregs[q[i]]._beta_hat = beta_hat
                 self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -170,7 +169,6 @@ class QuantregMulti:
                     self.all_quantregs[q[i]].within_data.response.flatten()
                     - self.all_quantregs[q[i]].within_data.design @ beta_new
                 )
-                self.all_quantregs[q[i]]._hessian = hessian
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm2_fun(i, "left")
@@ -184,7 +182,12 @@ class QuantregMulti:
             )
 
         for quantreg in self.all_quantregs.values():
-            quantreg._get_predictors()
+            # The response minus the residual carries the fixed-effect
+            # contribution, which `design @ beta_hat` alone would omit.
+            fitted = (
+                quantreg.model_matrix.dependent.to_numpy().flatten() - quantreg.resid()
+            )
+            quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
         # sort self.all_quantregs by q
         self.all_quantregs = dict(

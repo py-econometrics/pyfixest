@@ -1,5 +1,6 @@
 import warnings
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from functools import partial
 from typing import Any, cast
 
@@ -14,8 +15,12 @@ from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.model_state import WithinLinearData
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    WithinLinearData,
+)
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
@@ -115,11 +120,15 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
-        self._supports_wildboottest = False
-        self._support_crv3_inference = False
-        self._supports_cluster_causal_variance = False
-        self._support_hac_inference = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=False,
+            multiway_clustering=False,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
         self._quantile = quantile
         self._method = f"quantreg_{method}"
@@ -136,10 +145,6 @@ class Quantreg(Feols):
         self._model_name_plot = self._model_name
 
         self._seed = seed
-
-        # later set in fit method, consant for different quantiles q -> can be reused
-        self._chol = None
-        self._P = None
 
         self._method_map: dict[
             str,
@@ -219,15 +224,13 @@ class Quantreg(Feols):
         self._w_final = res[6]
         self._y_final = res[7]
 
-        self._Y_hat_link = self.within_data.design @ self._beta_hat
-        self._Y_hat_response = self._Y_hat_link
+        fitted = self.within_data.design @ self._beta_hat
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
         self._u_hat = (
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
-        self._hessian = self.within_data.design.T @ self.within_data.design
-        self._bread = np.linalg.inv(self._hessian)
 
     def fit_qreg_fn(
         self,
@@ -255,12 +258,9 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        # if self._chol is None or self._P is None:
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
         _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
-        # if self._chol is None or self._P is None:
-        #    raise ValueError("...")
 
         fn_res = frisch_newton_solver(
             A=X.T,
@@ -404,25 +404,27 @@ class Quantreg(Feols):
 
         return fn_res
 
-    def _vcov_iid(self):
-        return vcov_iid_qreg(
+    def _vcov_iid(self) -> VcovTerm:
+        vcov = vcov_iid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_hetero(self):
-        return vcov_hetero_qreg(
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
+        vcov = vcov_hetero_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
             q=self._quantile,
             N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_nid(self) -> np.ndarray:
+    def _vcov_nid(self) -> VcovTerm:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
         as developed in Hendricks and Koenker (1991).
@@ -430,7 +432,7 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-        return vcov_nid_qreg(
+        vcov = vcov_nid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             beta_hat=self._beta_hat,
@@ -439,24 +441,22 @@ class Quantreg(Feols):
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray) -> VcovTerm:
         """
         Implement cluster robust variance estimator for quantile regression following
-        Parente and Santos Silva, 2016.
+        Parente and Santos Silva, 2016. Multiway clustering is rejected by
+        ``vcov()`` through ``capabilities.multiway_clustering``.
         """
-        if len(self._clustervar) > 1:
-            raise NotImplementedError(
-                "Multiway clustering is not (yet) supported for quantile regression."
-            )
-
-        return vcov_crv1_qreg(
+        vcov = vcov_crv1_qreg(
             X=self.within_data.design,
             u_hat=self._u_hat,
             q=self._quantile,
             clustid=clustid,
             cluster_col=cluster_col,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
     @property
     def objective_value(self):

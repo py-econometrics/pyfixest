@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Literal
+from dataclasses import replace
+from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -14,9 +15,12 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
+from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
+from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -110,18 +114,19 @@ class Feglm(Feols):
 
         self.maxiter = maxiter
         self.tol = tol
-        self.convergence = False
         self.separation_check = separation_check
         self._accelerate = accelerate
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
         # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = False
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=True,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
         self._method = "feglm"
         self._family = family
@@ -199,31 +204,24 @@ class Feglm(Feols):
             fixef_tol=self._fixef_tol,
         )
 
-        self._coefnames = fit.coefnames
-        self._collin_vars = fit.collin_vars
-        self._collin_index = fit.collin_index
+        self.collinearity = fit.collinearity
+        self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
+        # The prediction view of the same arrays: eta is the linear predictor
+        # (fixed effects and offset included), mu its inverse-link mean.
+        self.fitted_values = FittedValues(
+            link=working_state.eta, response=working_state.mu
+        )
         design_within = working_state.design_within
         self._X_is_empty = design_within.shape[1] == 0
         self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        weighted_working_residuals = (
-            working_state.working_weights * working_state.working_residuals
-        )
-        # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
-        # any user-supplied observation weight.
-        self._scores = design_within * weighted_working_residuals[:, None]
-        weighted_design = working_state.working_weights[:, None] * design_within
-        self._tZX = design_within.T @ weighted_design
-        self._tZXinv = np.linalg.inv(self._tZX)
-        self._hessian = self._tZX.copy()
+        self.sandwich = fit.sandwich
 
         self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
-        if self.convergence:
-            self._convergence = True
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.
@@ -234,37 +232,26 @@ class Feglm(Feols):
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Supply cached GLM predictions to predict() and fixef().
+    def _vcov_iid(self) -> VcovTerm:
+        return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
 
-        eta includes fixed effects and any offset; mu is the inverse-link
-        response mean. Fixed-effect recovery requests eta, not mu.
-        """
-        return self.working_state.eta if type == "link" else self.working_state.mu
-
-    def _vcov_iid(self):
-        return vcov_iid_glm(bread=self._bread)
-
-    def _vcov_hetero(self):
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
         # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
         # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
-        return vcov_hetero(
-            scores=self._scores,
+        meat = meat_hetero(
+            sandwich=self.sandwich,
             X=self.working_state.design_within,
-            tZX=self._tZX,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
                 if observation_weights is not None and self._weights_type == "fweights"
                 else None
             ),
             normal_equation_weights=self.working_state.working_weights,
-            vcov_type_detail=self._vcov_type_detail,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def resid(self, type: str = "response") -> np.ndarray:
         """

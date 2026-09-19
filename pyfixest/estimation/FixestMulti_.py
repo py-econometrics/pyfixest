@@ -213,9 +213,8 @@ class FixestMulti(TidyColumnAccessors):
             Default is None.
         cluster : Union[str, None], optional
             The name of the cluster variable. Default is None. If None, uses
-            the `self._clustervar` attribute as the cluster variable. If the
-            `self._clustervar` attribute is None, a heteroskedasticity-robust
-            wild bootstrap is run.
+            each model's cluster variables. If a model is not clustered, a
+            heteroskedasticity-robust wild bootstrap is run.
         weights_type : str, optional
             The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
             or 'normal'. Default is 'rademacher'.

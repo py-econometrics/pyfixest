@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import EmptyVcovError
+from pyfixest.estimation.internals.model_state import CoefficientTable
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from pyfixest.estimation.internals.model_state import (
         EstimationSample,
         ObservationWeights,
+        VarianceCovariance,
         WithinLinearData,
     )
 from pyfixest.estimation.internals.literals import (
@@ -129,12 +131,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
     # Type declarations for attributes provided by the host class (Feols).
-    _vcov: np.ndarray
+    variance_covariance: "VarianceCovariance"
+    coeftable: CoefficientTable
     _beta_hat: np.ndarray
-    _se: np.ndarray
-    _tstat: np.ndarray
-    _pvalue: np.ndarray
-    _conf_int: np.ndarray
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
     observation_weights: "ObservationWeights"
@@ -149,9 +148,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _is_iv: bool
     _k_fe: pd.Series
     _k: int
-    _df_t: int
     _inference_dist: "InferenceDist"
-    _vcov_type: str
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -244,7 +241,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
-        Compute standard errors, t-statistics, and p-values for the regression model.
+        Publish `coeftable`, the coefficient table of the current covariance.
 
         Parameters
         ----------
@@ -255,23 +252,33 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         None
+            The table is stored as `coeftable`, a
+            [CoefficientTable](/reference/estimation.state.CoefficientTable.qmd).
 
         Details
         -------
         relevant fixest functions:
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
-        -
         """
-        if len(self._vcov) == 0:
+        if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
+        covariance = self.variance_covariance
+        dist = self._inference_dist
 
-        self._se = np.sqrt(np.diagonal(self._vcov))
-        self._tstat = self._beta_hat / self._se
-        self._pvalue = self._inference_dist.pvalue(self._tstat, self._df_t)
-        z = self._inference_dist.crit_val(alpha, self._df_t)
-
-        z_se = z * self._se
-        self._conf_int = np.array([self._beta_hat - z_se, self._beta_hat + z_se])
+        beta_hat = self._beta_hat
+        se = np.sqrt(np.diagonal(covariance.vcov))
+        tstat = beta_hat / se
+        pvalue = dist.pvalue(tstat, covariance.df_t)
+        # fixest_CI_factor: beta +- q(1 - alpha / 2) * se at df_t degrees of freedom
+        z_se = dist.crit_val(alpha, covariance.df_t) * se
+        self.coeftable = CoefficientTable(
+            estimate=beta_hat,
+            se=se,
+            tstat=tstat,
+            pvalue=pvalue,
+            conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
+            alpha=alpha,
+        )
 
     def _n_fixef_coefficients(self) -> int:
         """Return the number of fixed-effect coefficients, zero without fixed effects."""
@@ -333,21 +340,26 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
+            table = self.coeftable
+            se, tstat, pvalue = table.se, table.tstat, table.pvalue
+            conf_int = table.conf_int
         except EmptyVcovError:
             warnings.warn(
                 "Empty variance-covariance matrix detected",
                 UserWarning,
             )
+            # Fixed-effects-only model: no coefficients, so no inference rows.
+            se = tstat = pvalue = np.empty(0)
+            conf_int = np.empty((2, 0))
 
         data = {
             "Coefficient": self._coefnames,
             "Estimate": self._beta_hat,
-            "Std. Error": self._se,
-            "t value": self._tstat,
-            "Pr(>|t|)": self._pvalue,
-            # use slice because self._conf_int might be empty
-            f"{lb * 100:.1f}%": self._conf_int[:1].flatten(),
-            f"{ub * 100:.1f}%": self._conf_int[1:2].flatten(),
+            "Std. Error": se,
+            "t value": tstat,
+            "Pr(>|t|)": pvalue,
+            f"{lb * 100:.1f}%": conf_int[0],
+            f"{ub * 100:.1f}%": conf_int[1],
         }
         if (
             getattr(self, "_sample_split_var", None) is not None
@@ -491,17 +503,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
             self._coefnames, keep, drop, exact_match
         )
 
+        se = self.coeftable.se
         if inference_type == "regular":
-            crit_val = self._inference_dist.crit_val(alpha, self._df_t)
+            crit_val = self._inference_dist.crit_val(
+                alpha, self.variance_covariance.df_t
+            )
         else:
             joint_indices = sorted(coef_indices)
-            D_inv = 1 / self._se[joint_indices]
-            V = self._vcov[np.ix_(joint_indices, joint_indices)]
+            D_inv = 1 / se[joint_indices]
+            V = self.variance_covariance.vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
-        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * self._se[coef_indices])
-        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * self._se[coef_indices])
+        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * se[coef_indices])
+        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * se[coef_indices])
 
         df = pd.DataFrame(
             {

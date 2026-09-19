@@ -114,8 +114,8 @@ def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, to
         fit_weighted.vcov(vcov_type)
         fit_expanded.vcov(vcov_type)
         np.testing.assert_allclose(
-            fit_weighted._vcov,
-            fit_expanded._vcov,
+            fit_weighted.variance_covariance.vcov,
+            fit_expanded.variance_covariance.vcov,
             err_msg=f"Vcov differs for {vcov_type}",
             **tol,
         )
@@ -186,7 +186,7 @@ def test_fweights_match_literal_expansion(estimator, family, fml):
         fit_expanded,
         counts,
         vcov_types=_vcov_types(
-            has_fe, is_iv, supports_crv3=fit_weighted._support_crv3_inference
+            has_fe, is_iv, supports_crv3=fit_weighted.capabilities.crv3_inference
         ),
         tol=tol,
     )
@@ -242,7 +242,11 @@ def test_fweights_glm_sample_sizes_after_separation():
     assert fit_weighted.sample_info.n_rows == 9
     assert fit_expanded.sample_info.n_rows == 19
     np.testing.assert_allclose(fit_weighted.coef(), fit_expanded.coef(), atol=1e-10)
-    np.testing.assert_allclose(fit_weighted._vcov, fit_expanded._vcov, atol=1e-10)
+    np.testing.assert_allclose(
+        fit_weighted.variance_covariance.vcov,
+        fit_expanded.variance_covariance.vcov,
+        atol=1e-10,
+    )
 
 
 def test_aweights():

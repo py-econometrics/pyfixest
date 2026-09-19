@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import EmptyVcovError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
@@ -25,6 +26,8 @@ from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
+    SandwichComponents,
+    VarianceCovariance,
     WithinIvData,
     WithinLinearData,
 )
@@ -113,17 +116,25 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     )
     np.testing.assert_allclose(fit._u_hat, residuals)
     np.testing.assert_allclose(fit.resid(), residuals)
+    sandwich = fit.sandwich
+    assert type(sandwich) is SandwichComponents
     np.testing.assert_allclose(
-        fit._scores,
+        sandwich.scores,
         fit.within_data.design * (weights * residuals)[:, None],
     )
+    hessian = fit.within_data.design.T @ (weights[:, None] * fit.within_data.design)
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._hessian,
-        fit.within_data.design.T @ (weights[:, None] * fit.within_data.design),
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
     )
+    for name in ("_scores", "_hessian", "_bread", "_tZX", "_tXZ", "_tZy", "_tZZinv"):
+        assert not hasattr(fit, name), name
 
     with pytest.raises(FrozenInstanceError):
         fit.within_data.response = fit.within_data.design  # type: ignore[misc]
+    with pytest.raises(FrozenInstanceError):
+        sandwich.bread = hessian  # type: ignore[misc]
 
 
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
@@ -147,12 +158,24 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     weighted_design = weights[:, None] * within.design
-    weighted_response = weights[:, None] * within.response
-    np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
-    np.testing.assert_allclose(fit._tZy, within.instruments.T @ weighted_response)
+    weighted_instruments = weights[:, None] * within.instruments
+    tZX = within.instruments.T @ weighted_design
+    tZZ = within.instruments.T @ weighted_instruments
+    tZZinv = np.linalg.inv(tZZ)
+    sandwich = fit.sandwich
+    assert isinstance(sandwich, SandwichComponents)
+    # The IV Hessian is the 2SLS Hessian, whose inverse is the bread.
+    hessian = tZX.T @ tZZinv @ tZX
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._scores,
-        within.instruments * (weights * fit._u_hat)[:, None],
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
+    )
+    # 2SLS scores are the OLS scores of the first-stage projection X_hat.
+    X_hat = within.instruments @ tZZinv @ tZX
+    np.testing.assert_allclose(
+        sandwich.scores,
+        X_hat * (weights * fit._u_hat)[:, None],
     )
     np.testing.assert_allclose(fit.resid(), fit._u_hat)
 
@@ -461,8 +484,21 @@ def test_published_components_preserve_inputs(
         "_pseudo_r2",
         "_pearson_chi2",
         "_y_hat_null",
+        "_scores",
+        "_hessian",
+        "_bread",
+        "_tZX",
+        "_tXZ",
+        "_tZy",
+        "_tZZinv",
+        "_tZXinv",
     )
     assert not any(hasattr(fit, name) for name in removed)
+    if estimator is pf.quantreg:
+        # Quantile inference follows R quantreg and never reads a sandwich.
+        assert not hasattr(fit, "sandwich")
+    else:
+        assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
     assert input_array.flags.writeable == writeable_before
 
@@ -484,7 +520,9 @@ def test_multi_quantile_children_follow_ols_retention(
         lean=lean,
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
+    assert hasattr(ols, "sandwich") == (not lean)
     for child in fit.to_list():
+        assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
         if lean:
@@ -714,3 +752,58 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
         assert sample_info.dropped_row_index == frozenset(
             np.flatnonzero(population == 7).tolist()
         )
+
+
+@pytest.mark.parametrize(
+    ("estimator", "formula", "vcov", "vcov_kwargs"),
+    [
+        (pf.feols, "y ~ x + x2 | fe", "HC1", None),
+        (pf.feols, "y ~ x + x2 | fe", {"CRV1": "fe+group"}, None),
+        (
+            pf.feols,
+            "y ~ x | fe",
+            "NW",
+            {"time_id": "period", "panel_id": "unit", "lag": 2},
+        ),
+        (pf.feols, "y ~ x | fe | endog ~ z", {"CRV1": "fe"}, None),
+        (pf.fepois, "count ~ x | fe", {"CRV1": "fe"}, None),
+    ],
+)
+def test_meat_reproduces_the_adjusted_vcov(
+    lifecycle_data, estimator, formula, vcov, vcov_kwargs
+):
+    """The published meat sandwiches back to the published covariance.
+
+    Nothing outside the fitted model reads the meat, so the live-R suites
+    cannot catch a wrong one; this identity is its only check.
+    """
+    data = lifecycle_data.assign(
+        group=np.tile(["g1", "g2", "g3"], 8),
+        period=np.tile(np.arange(6), 4),
+        unit=np.repeat(np.arange(4), 6),
+        count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data)),
+    )
+    fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
+    covariance = fit.variance_covariance
+
+    assert isinstance(covariance, VarianceCovariance)
+    bread = fit.sandwich.bread
+    np.testing.assert_allclose(
+        covariance.vcov, bread @ covariance.meat @ bread, rtol=1e-12, atol=1e-14
+    )
+    assert covariance.ssc.shape == (len(covariance.G) or 1,)
+
+
+def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
+    """A fixed-effects-only fit skips vcov() and carries no covariance."""
+    fit = pf.feols("y ~ 1 | fe", lifecycle_data)
+    assert not hasattr(fit, "variance_covariance")
+    with pytest.raises(EmptyVcovError):
+        fit.get_inference()
+
+
+def test_quantreg_rejects_multiway_clustering(lifecycle_data):
+    """Quantile regression declares no multiway support before any state is read."""
+    data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))
+    with pytest.raises(NotImplementedError, match="Multiway clustering"):
+        pf.quantreg("y ~ x", data, vcov={"CRV1": "fe+group"})

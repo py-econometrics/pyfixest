@@ -141,13 +141,24 @@ def data_quantreg():
     return data
 
 
+def _covariance_field(mod, name: str):
+    """Read a `VarianceCovariance` field, or its private legacy attribute.
+
+    The pinned release predates `fit.variance_covariance` and stores `_vcov`, `_df_k`,
+    and `_df_t` on the model.
+    """
+    if hasattr(mod, "variance_covariance"):
+        return getattr(mod.variance_covariance, name)
+    return getattr(mod, f"_{name}")
+
+
 def _check_structure(baseline: Baseline, mod) -> None:
     baseline.check_exact("coefnames", list(mod._coefnames))
     # The pinned release predates `EstimationSample`; `_N` was its `n_obs`.
     nobs = mod.sample_info.n_obs if hasattr(mod, "sample_info") else mod._N
     baseline.check_exact("nobs", int(nobs))
-    baseline.check_exact("df_k", int(mod._df_k))
-    baseline.check_exact("df_t", int(mod._df_t))
+    baseline.check_exact("df_k", int(_covariance_field(mod, "df_k")))
+    baseline.check_exact("df_t", int(_covariance_field(mod, "df_t")))
 
 
 def _fit_statistic(mod, name: str, legacy: str) -> float:
@@ -168,7 +179,7 @@ def _check_fit(baseline: Baseline, mod, *, confint: bool = True) -> None:
         baseline.check("confint", mod.confint())
     # se covers the vcov diagonal; one norm keeps the off-diagonal block in
     # scope without recording an O(k^2) matrix per case.
-    vcov = np.asarray(mod._vcov)
+    vcov = np.asarray(_covariance_field(mod, "vcov"))
     baseline.check("vcov_offdiag", np.linalg.norm(vcov - np.diag(np.diag(vcov))))
 
 

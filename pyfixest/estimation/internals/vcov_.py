@@ -7,25 +7,13 @@ from pyfixest.estimation.internals.literals import (
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import SandwichComponents
 from pyfixest.estimation.internals.vcov_utils import (
     _dk_meat_panel,
     _get_panel_idx,
     _nw_meat_panel,
     _nw_meat_time,
 )
-
-
-def _sandwich(
-    meat: np.ndarray,
-    bread: np.ndarray,
-    is_iv: bool,
-    tXZ: np.ndarray,
-    tZZinv: np.ndarray,
-    tZX: np.ndarray,
-) -> np.ndarray:
-    "Assemble bread @ meat @ bread, with the IV projection of the meat."
-    projected_meat = tXZ @ tZZinv @ meat @ tZZinv @ tZX if is_iv else meat
-    return bread @ projected_meat @ bread
 
 
 def vcov_iid_ols(
@@ -51,22 +39,23 @@ def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
     return bread
 
 
-def vcov_hetero(
-    scores: np.ndarray,
+def meat_hetero(
+    sandwich: SandwichComponents,
     X: np.ndarray,
-    tZX: np.ndarray,
     frequency_weights: np.ndarray | None,
     normal_equation_weights: np.ndarray | None,
     vcov_type_detail: HeteroVcovTypeOptions,
-    bread: np.ndarray,
-    is_iv: bool,
-    tXZ: np.ndarray,
-    tZZinv: np.ndarray,
 ) -> np.ndarray:
-    """Unscaled heteroskedasticity-robust vcov (HC1/HC2/HC3).
+    """Unscaled heteroskedasticity-robust meat (HC1/HC2/HC3), shape (k, k).
 
     Parameters
     ----------
+    sandwich : SandwichComponents
+        Scores and bread of the fit. HC2/HC3 leverage reads the bread as
+        ``(X' W X)^-1`` of the supplied ``X``, so the model layer rejects
+        them for IV fits, whose bread belongs to the projected design.
+    X : np.ndarray
+        Within-scale design, shape (N, k), used for the HC2/HC3 leverage.
     frequency_weights : np.ndarray or None
         User-scale weights when ``weights_type == "fweights"``, else ``None``.
         Each row then stands for ``f_i`` repeated observations.
@@ -78,10 +67,11 @@ def vcov_hetero(
     # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
     # rows represent repeated observations, so their per-observation leverage
     # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
+    scores = sandwich.scores
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
     elif vcov_type_detail in ["HC2", "HC3"]:
-        leverage = np.sum(X * (X @ np.linalg.inv(tZX)), axis=1)
+        leverage = np.sum(X * (X @ sandwich.bread), axis=1)
         if normal_equation_weights is not None:
             leverage = normal_equation_weights.flatten() * leverage
         if frequency_weights is not None:
@@ -99,27 +89,17 @@ def vcov_hetero(
     if frequency_weights is not None:
         transformed_scores = transformed_scores / np.sqrt(frequency_weights)
 
-    Omega = transformed_scores.T @ transformed_scores
-
-    meat = tXZ @ tZZinv @ Omega @ tZZinv @ tZX if is_iv else Omega
-    vcov = bread @ meat @ bread
-
-    return vcov
+    return transformed_scores.T @ transformed_scores
 
 
-def vcov_hac(
+def meat_hac(
     scores: np.ndarray,
     time_arr: np.ndarray,
     panel_arr: np.ndarray | None,
     lag: int | None,
     vcov_type_detail: HacVcovTypeOptions,
-    bread: np.ndarray,
-    is_iv: bool,
-    tXZ: np.ndarray,
-    tZZinv: np.ndarray,
-    tZX: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled HAC vcov: Newey-West (time or panel) or Driscoll-Kraay."
+    "Unscaled HAC meat, shape (k, k): Newey-West (time or panel) or Driscoll-Kraay."
     if vcov_type_detail == "NW":
         if panel_arr is None:
             if lag is None:
@@ -162,40 +142,19 @@ def vcov_hac(
     else:
         raise ValueError("vcov_type_detail must be one of 'NW' or 'DK'.")
 
-    return _sandwich(
-        meat=hac_meat,
-        bread=bread,
-        is_iv=is_iv,
-        tXZ=tXZ,
-        tZZinv=tZZinv,
-        tZX=tZX,
-    )
+    return hac_meat
 
 
-def vcov_crv1(
+def meat_crv1(
     scores: np.ndarray,
     clustid: np.ndarray,
     cluster_col: np.ndarray,
-    bread: np.ndarray,
-    is_iv: bool,
-    tXZ: np.ndarray,
-    tZZinv: np.ndarray,
-    tZX: np.ndarray,
 ) -> np.ndarray:
-    "Unscaled CRV1 cluster-robust vcov."
-    meat = crv1_meat_loop(
+    "Unscaled CRV1 cluster-robust meat, shape (k, k)."
+    return crv1_meat_loop(
         scores=scores.astype(np.float64),
         clustid=clustid.astype(np.uintp),
         cluster_col=cluster_col.astype(np.uintp),
-    )
-
-    return _sandwich(
-        meat=meat,
-        bread=bread,
-        is_iv=is_iv,
-        tXZ=tXZ,
-        tZZinv=tZZinv,
-        tZX=tZX,
     )
 
 

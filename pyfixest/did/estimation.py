@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from dataclasses import replace
+
+import numpy as np
 import pandas as pd
 
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
@@ -5,6 +10,8 @@ from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
+from pyfixest.estimation.models.feols_ import Feols
 
 
 def event_study(
@@ -115,11 +122,10 @@ def event_study(
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
         vcov, _G = did2s.vcov()
-        fit._vcov = vcov
-        fit._G = _G
-        fit._vcov_type = "CRV1"
-        fit._vcov_type_detail = "CRV1 (GMM)"
-        fit._method = "did2s"
+        fit.variance_covariance = _did2s_covariance(
+            fit=fit, vcov=vcov, G=_G, cluster=cluster
+        )
+        _mark_as_did2s(fit)
 
     elif estimator == "twfe":
         twfe = TWFE(
@@ -298,16 +304,49 @@ def did2s(
         weights=weights,
     )
 
-    fit._vcov = vcov
-    fit._G = _G
+    fit.variance_covariance = _did2s_covariance(
+        fit=fit, vcov=vcov, G=_G, cluster=cluster
+    )
     fit.get_inference()  # update inference with correct vcov matrix
-
-    fit._vcov_type = "CRV1"
-    fit._vcov_type_detail = "CRV1 (GMM)"
-    # fit._G = did2s._G
-    fit._method = "did2s"
+    _mark_as_did2s(fit)
 
     return fit
+
+
+def _mark_as_did2s(fit: Feols) -> None:
+    """Record that a fit came from the DID2S estimator.
+
+    The two-step GMM covariance does not resample from an estimated model in
+    the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
+    """
+    fit._method = "did2s"
+    fit.capabilities = replace(
+        fit.capabilities, wildboottest=False, cluster_causal_variance=False
+    )
+
+
+def _did2s_covariance(
+    *, fit: Feols, vcov: np.ndarray, G: int, cluster: str
+) -> VarianceCovariance:
+    """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
+
+    The second-stage fit was estimated with ``vcov="iid"``; its degrees of
+    freedom and adjustment factor are kept. The spec records the cluster
+    variable, so `wald_test`, `wildboottest`, and `ccv` treat the fit as
+    clustered.
+    """
+    inner = fit.variance_covariance
+    return VarianceCovariance(
+        vcov=vcov,
+        meat=None,
+        ssc=np.ones(1),
+        df_k=inner.df_k,
+        df_t=inner.df_t,
+        spec=VcovSpec(
+            vcov_type="CRV", vcov_type_detail="CRV1 (GMM)", clustervar=(cluster,)
+        ),
+        G=(int(G),),
+    )
 
 
 def lpdid(
