@@ -31,6 +31,151 @@ def test_multicol_overdetermined_iv():
     )
 
 
+@pytest.mark.parametrize(
+    ("cluster", "explicit_cluster", "fml", "weights", "weights_type"),
+    [
+        ("f1:f2", "joint2", "Y ~ X1 | f1", "observation_weight", "aweights"),
+        ("f1:f2", "joint2", "Y ~ X1 | f1", "frequency_weight", "fweights"),
+        ("f1:f2:f3", "joint3", "Y ~ X1 + [X2 ~ Z1] | f1", None, "aweights"),
+        ("  f1  :\t f2 + f3  ", "joint2 + f3", "Y ~ X1", None, "aweights"),
+    ],
+)
+def test_cluster_interactions_match_explicit_groups(
+    cluster, explicit_cluster, fml, weights, weights_type
+):
+    data = get_data(N=400, seed=1576).dropna().copy()
+    data["f3"] = np.arange(len(data)) % 4
+    data["observation_weight"] = np.linspace(0.5, 2.0, len(data))
+    data["frequency_weight"] = np.arange(len(data)) % 4 + 1
+    for name, columns in (
+        ("joint2", ["f1", "f2"]),
+        ("joint3", ["f1", "f2", "f3"]),
+    ):
+        data[name] = pd.factorize(pd.MultiIndex.from_frame(data[columns]))[0]
+
+    fit = feols(
+        fml,
+        data=data,
+        weights=weights,
+        weights_type=weights_type,
+        vcov={"CRV1": cluster},
+    )
+    reference = feols(
+        fml,
+        data=data,
+        weights=weights,
+        weights_type=weights_type,
+        vcov={"CRV1": explicit_cluster},
+    )
+
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        reference.variance_covariance.vcov,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="cluster-interaction covariance differs from explicit joint groups",
+    )
+    assert fit.variance_covariance.G == reference.variance_covariance.G
+    assert fit.variance_covariance.df_t == reference.variance_covariance.df_t
+    assert fit.variance_covariance.cluster_ids is not None
+    assert fit.variance_covariance.cluster_ids.shape == (
+        fit.sample_info.n_rows,
+        len(fit.variance_covariance.G),
+    )
+
+
+def test_cluster_interaction_ids_follow_post_estimation_vcov_data():
+    data = get_data(N=180, seed=1576).dropna().copy()
+    fit = feols("Y ~ X1", data=data, vcov="iid")
+    alternate = fit._data.copy()
+    alternate["f2"] = np.roll(alternate["f2"].to_numpy(), 1)
+
+    fit.vcov({"CRV1": "f1:f2"}, data=alternate)
+    expected = pd.factorize(pd.MultiIndex.from_frame(alternate[["f1", "f2"]]))[0]
+    np.testing.assert_array_equal(fit.variance_covariance.cluster_ids[:, 0], expected)
+    np.testing.assert_array_equal(fit._cluster_array("f1:f2"), expected)
+    assert "f1:f2" not in data.columns
+
+    fit.vcov("iid")
+    assert fit.variance_covariance.cluster_ids is None
+
+
+def test_cluster_interactions_with_poisson_and_multiple_estimation():
+    data = get_data(N=300, seed=1576).dropna().copy()
+    data["joint"] = pd.factorize(pd.MultiIndex.from_frame(data[["f1", "f2"]]))[0]
+
+    multi = feols("sw(Y, Y2) ~ X1 | f1", data=data, vcov={"CRV1": "f1:f2"})
+    multi_reference = feols("sw(Y, Y2) ~ X1 | f1", data=data, vcov={"CRV1": "joint"})
+    for fit, reference in zip(
+        multi.all_fitted_models.values(),
+        multi_reference.all_fitted_models.values(),
+        strict=True,
+    ):
+        np.testing.assert_allclose(
+            fit.variance_covariance.vcov,
+            reference.variance_covariance.vcov,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="multiple-estimation covariance differs for joint groups",
+        )
+
+    poisson_data = get_data(N=300, seed=1576, model="Fepois").dropna().copy()
+    poisson_data["joint"] = pd.factorize(
+        pd.MultiIndex.from_frame(poisson_data[["f1", "f2"]])
+    )[0]
+    poisson = fepois("Y ~ X1 | f1", data=poisson_data, vcov={"CRV1": "f1:f2"})
+    poisson_reference = fepois("Y ~ X1 | f1", data=poisson_data, vcov={"CRV1": "joint"})
+    np.testing.assert_allclose(
+        poisson.variance_covariance.vcov,
+        poisson_reference.variance_covariance.vcov,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="Poisson covariance differs for joint groups",
+    )
+
+
+def test_crv3_cluster_interaction_matches_explicit_groups():
+    data = get_data(N=120, seed=1576).dropna().copy()
+    data["f1"] = np.arange(len(data)) % 2
+    data["f2"] = np.arange(len(data)) // 2 % 3
+    data["joint"] = pd.factorize(pd.MultiIndex.from_frame(data[["f1", "f2"]]))[0]
+
+    fit = feols("Y ~ X1", data=data, vcov={"CRV3": "f1:f2"})
+    reference = feols("Y ~ X1", data=data, vcov={"CRV3": "joint"})
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        reference.variance_covariance.vcov,
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="CRV3 covariance differs for joint groups",
+    )
+
+
+def test_cluster_interaction_post_estimation_uses_stored_ids():
+    data = get_data(N=160, seed=1576).dropna().copy()
+    n_rows = len(data)
+    data["f1"] = np.arange(n_rows) % 2
+    data["f2"] = np.arange(n_rows) // 2 % 2
+    data["D"] = np.arange(n_rows) // 4 % 2
+    data["joint"] = pd.factorize(pd.MultiIndex.from_frame(data[["f1", "f2"]]))[0]
+
+    fit = feols("Y ~ D", data=data, vcov={"CRV1": "f1  :  f2"})
+    reference = feols("Y ~ D", data=data, vcov={"CRV1": "joint"})
+
+    bootstrap = fit.wildboottest(reps=15, param="D", seed=17)
+    bootstrap_reference = reference.wildboottest(reps=15, param="D", seed=17)
+    for quantity in ("t value", "Pr(>|t|)", "ssc"):
+        np.testing.assert_allclose(
+            bootstrap[quantity],
+            bootstrap_reference[quantity],
+            err_msg=f"wild bootstrap {quantity} differs for joint groups",
+        )
+
+    ccv = fit.ccv(treatment="D", pk=0.5, qk=0.5, n_splits=4, seed=17)
+    ccv_reference = reference.ccv(treatment="D", pk=0.5, qk=0.5, n_splits=4, seed=17)
+    pd.testing.assert_frame_equal(ccv, ccv_reference)
+
+
 def test_polars_input():
     data = get_data()
     data_pl = pl.from_pandas(data)

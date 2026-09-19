@@ -127,6 +127,11 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
+    cluster_columns = tuple(
+        component.strip()
+        for dimension in vcov.clustervar
+        for component in dimension.split(":")
+    )
+    for column in (*cluster_columns, vcov.time_id, vcov.panel_id):
         if column is not None and column not in data.columns:
             raise ValueError(f"The variable '{column}' is not in the data.")

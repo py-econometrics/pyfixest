@@ -79,6 +79,14 @@ fit_twoway = pf.feols(
 )
 ```
 
+Use `:` to cluster on the joint values of two or more columns as one cluster
+dimension. For example, `f1:f2` groups observations by each distinct pair;
+`f1:f2 + f3` clusters in two dimensions.
+
+```python
+fit_joint = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "f1:f2"})
+```
+
 ## 5. Which Level Should You Cluster On?
 
 Core principle: cluster at the level where shocks or treatment assignment induce dependence.

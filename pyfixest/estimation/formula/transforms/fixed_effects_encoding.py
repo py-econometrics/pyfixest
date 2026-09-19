@@ -4,6 +4,8 @@ from typing import Any, Final, cast
 import pandas as pd
 from formulaic.utils.stateful_transforms import stateful_transform
 
+from pyfixest.estimation.formula.transforms.misc import encode_groups
+
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
 
 
@@ -13,7 +15,7 @@ def encode_fixed_effects(*args, _state=None, _metadata=None, _spec=None):
     state = cast(MutableMapping[str, Any], _state)
     data = pd.concat(args, axis=1)
     if FIXED_EFFECT_ENCODING not in state:
-        data[FIXED_EFFECT_ENCODING] = data.groupby(data.columns.tolist()).ngroup()
+        data[FIXED_EFFECT_ENCODING] = encode_groups(data)
         encoded_state = data.dropna(subset=[FIXED_EFFECT_ENCODING]).drop_duplicates()
         state[FIXED_EFFECT_ENCODING] = encoded_state
         return data[FIXED_EFFECT_ENCODING]
