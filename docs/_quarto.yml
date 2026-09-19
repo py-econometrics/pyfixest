@@ -245,6 +245,7 @@ quartodoc:
         - estimation.state.GlmWorkingState
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.VcovSpec
         - estimation.state.FixedEffectEstimates
         - estimation.state.FixedEffect
         - estimation.state.RitestStatistics

@@ -171,7 +171,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         )
     if not hasattr(model, "variance_covariance"):
         raise EmptyVcovError()
-    vcov_type = model.variance_covariance.vcov_type
+    vcov_type = model.variance_covariance.spec.vcov_type
     if vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
             f"SAVI inference does not support vcov type {vcov_type!r}. "
