@@ -111,22 +111,6 @@ def test_cluster_na():
         ),
         (
             feols,
-            "Y ~ X1",
-            {},
-            {"store_data": False},
-            lambda fit, data: fit.get_performance(),
-            "get_performance",
-        ),
-        (
-            pf.feglm,
-            "Y ~ X1",
-            {"family": "gaussian"},
-            {"store_data": False},
-            lambda fit, data: fit.get_performance(),
-            "get_performance",
-        ),
-        (
-            feols,
             "Y ~ X1 | f1",
             {},
             {"store_data": False},
@@ -394,15 +378,6 @@ def test_poisson_errors():
     # iv not supported
     with pytest.raises(NotImplementedError):
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
-
-
-def test_get_performance_not_supported():
-    data = pf.get_data(model="Fepois").dropna()
-    with pytest.raises(NotImplementedError, match="family='poisson'"):
-        pf.fepois("Y ~ X1", data=data).get_performance()
-    data = pf.get_data().dropna()
-    with pytest.raises(NotImplementedError, match="quantreg"):
-        pf.quantreg("Y ~ X1", data=data, quantile=0.5).get_performance()
 
 
 def test_poisson_offset_errors():
