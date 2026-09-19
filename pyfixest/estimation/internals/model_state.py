@@ -155,11 +155,12 @@ class CollinearityCheck:
 
     Linear and quantile models publish the check of their regressors as
     ``fit.collinearity``; IV models publish the instrument check as
-    ``fit.collinearity_instruments``. ``dropped`` is fixest's ``collin.var``.
+    ``fit.collinearity_instruments``. ``dropped_coef_names`` is fixest's
+    ``collin.var``.
 
     Parameters
     ----------
-    dropped : tuple[str, ...]
+    dropped_coef_names : tuple[str, ...]
         Names of the columns removed, in input order. Empty when the design
         had full rank.
     mask : tuple[bool, ...]
@@ -174,18 +175,18 @@ class CollinearityCheck:
 
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + f1 | f1", data)
-    fit.collinearity.dropped, fit.collinearity.coefnames
+    fit.collinearity.dropped_coef_names, fit.collinearity.coefnames
     ```
     """
 
-    dropped: tuple[str, ...]
+    dropped_coef_names: tuple[str, ...]
     mask: tuple[bool, ...]
     coefnames: tuple[str, ...]
 
     @property
     def any_dropped(self) -> bool:
         """Whether the check removed at least one column."""
-        return bool(self.dropped)
+        return bool(self.dropped_coef_names)
 
     def select(self, columns: NDArray[np.float64]) -> NDArray[np.float64]:
         """Return `columns` without the columns this check dropped.

@@ -522,19 +522,19 @@ class Feols(ResultAccessorMixin):
             # Fixed-effects-only model: nothing to check, but the attribute is
             # published for every fitted model.
             self.collinearity = CollinearityCheck(
-                dropped=(),
+                dropped_coef_names=(),
                 mask=tuple(False for _ in self._coefnames),
                 coefnames=tuple(self._coefnames),
             )
             return within_data
 
-        design, check = drop_multicollinear_variables(
+        design, collinearity = drop_multicollinear_variables(
             design,
             self._coefnames,
             self._collin_tol,
         )
-        self.collinearity = check
-        self._coefnames = list(check.coefnames)
+        self.collinearity = collinearity
+        self._coefnames = list(collinearity.coefnames)
 
         return replace(within_data, design=design)
 

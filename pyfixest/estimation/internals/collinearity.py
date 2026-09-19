@@ -80,7 +80,7 @@ def drop_multicollinear_variables(
         collin_index = np.asarray(id_excl, dtype=bool)
 
     check = CollinearityCheck(
-        dropped=tuple(collin_vars),
+        dropped_coef_names=tuple(collin_vars),
         mask=tuple(collin_index.tolist()),
         coefnames=tuple(names_array.tolist()),
     )

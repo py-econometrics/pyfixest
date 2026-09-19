@@ -181,7 +181,7 @@ def fit_glm_irls(
     X_eff = X
 
     collinearity = CollinearityCheck(
-        dropped=(),
+        dropped_coef_names=(),
         mask=tuple(False for _ in coefnames),
         coefnames=tuple(coefnames),
     )

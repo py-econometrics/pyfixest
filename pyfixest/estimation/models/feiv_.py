@@ -247,13 +247,13 @@ class Feiv(Feols):
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
         assert self._coefnames_z is not None
-        instruments, check = drop_multicollinear_variables(
+        instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
-        self.collinearity_instruments = check
-        self._coefnames_z = list(check.coefnames)
+        self.collinearity_instruments = collinearity
+        self._coefnames_z = list(collinearity.coefnames)
         return replace(within_data, instruments=instruments)
 
     def get_fit(self) -> None:
