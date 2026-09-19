@@ -17,6 +17,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Bug Fixes
+
+- `panelview()` now renders treatment plots for unbalanced panels, preserving unobserved unit-period cells as gaps.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
