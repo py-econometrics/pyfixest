@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
@@ -148,9 +149,12 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
-        self._support_crv3_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=True,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 import pandas as pd
 
@@ -123,7 +125,7 @@ def event_study(
         fit.variance_covariance = _did2s_covariance(
             fit=fit, vcov=vcov, G=_G, cluster=cluster
         )
-        fit._method = "did2s"
+        _mark_as_did2s(fit)
 
     elif estimator == "twfe":
         twfe = TWFE(
@@ -306,9 +308,21 @@ def did2s(
         fit=fit, vcov=vcov, G=_G, cluster=cluster
     )
     fit.get_inference()  # update inference with correct vcov matrix
-    fit._method = "did2s"
+    _mark_as_did2s(fit)
 
     return fit
+
+
+def _mark_as_did2s(fit: Feols) -> None:
+    """Record that a fit came from the DID2S estimator.
+
+    The two-step GMM covariance does not resample from an estimated model in
+    the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
+    """
+    fit._method = "did2s"
+    fit.capabilities = replace(
+        fit.capabilities, wildboottest=False, cluster_causal_variance=False
+    )
 
 
 def _did2s_covariance(

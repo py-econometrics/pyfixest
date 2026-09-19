@@ -246,7 +246,11 @@ quartodoc:
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
         - estimation.state.VcovSpec
+        - estimation.state.FixedEffectEstimates
+        - estimation.state.FixedEffect
+        - estimation.state.RitestStatistics
         - estimation.state.CoefficientTable
+        - estimation.state.Capabilities
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.

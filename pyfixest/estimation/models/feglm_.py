@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -116,12 +117,14 @@ class Feglm(Feols):
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
         # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = False
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=True,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
         self._method = "feglm"
         self._family = family

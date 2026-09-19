@@ -39,8 +39,10 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     EstimationSample,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     VcovSpec,
@@ -70,7 +72,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
     _decompose_arg_check,
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
-    FixedEffect,
+    FixedEffectEstimates,
     build_fixed_effects,
     check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
@@ -163,8 +165,8 @@ class Feols(ResultAccessorMixin):
         get_fit().
     _k : int
         Number of independent variables (or features).
-    _support_crv3_inference : bool
-        Indicates support for CRV3 inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -189,17 +191,26 @@ class Feols(ResultAccessorMixin):
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
+    ritest_statistics : RitestStatistics
+        Randomization-inference draws, the centered sample statistic, and the
+        p-value, set by `ritest(store_ritest_statistics=True)`.
+    _se : np.ndarray
+        Standard errors of the estimated coefficients.
+    _tstat : np.ndarray
+        T-statistics of the estimated coefficients.
+    _pvalue : np.ndarray
+        P-values associated with the t-statistics.
+    _conf_int : np.ndarray
+        Confidence intervals for the estimated coefficients.
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]
-        Fixed effect estimates grouped by fixed effect.
-    _alpha : pd.DataFrame
-        A DataFrame with the estimated fixed effects.
-    _sumFE : np.ndarray
-        Sum of all fixed effects for each observation.
+    fixef_estimates : FixedEffectEstimates
+        Fixed-effect estimates published by `fixef()`: the coefficient records
+        grouped by fixed effect, the dummy-coded solution `alpha`, and the
+        per-observation fixed-effect contribution `sumFE`.
     _rmse : float
         Root mean squared error of the model.
     _r2 : float
@@ -246,9 +257,10 @@ class Feols(ResultAccessorMixin):
     sandwich: SandwichComponents
     # Set in vcov().
     variance_covariance: VarianceCovariance
+    # Set in ritest() when store_ritest_statistics is True.
+    ritest_statistics: RitestStatistics
     # Set in fixef().
-    _fixef_coefficients: dict[str, FixedEffect]
-    _alpha: np.ndarray
+    fixef_estimates: FixedEffectEstimates
 
     def __init__(
         self,
@@ -317,14 +329,16 @@ class Feols(ResultAccessorMixin):
         self._lean = lean
         self._context = capture_context(context)
 
-        self._support_crv3_inference = True
-        self._support_hac_inference = True
-        self._support_multiway_clustering = True
-        self._supports_wildboottest = True
-        self._supports_cluster_causal_variance = True
-        if self._has_weights or self._is_iv:
-            self._supports_wildboottest = False
-        self._support_decomposition = True
+        self.capabilities = Capabilities(
+            crv3_inference=True,
+            hac_inference=True,
+            multiway_clustering=True,
+            wildboottest=True,
+            cluster_causal_variance=True,
+            decomposition=True,
+        )
+        if self._has_weights:
+            self.capabilities = replace(self.capabilities, wildboottest=False)
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -335,9 +349,6 @@ class Feols(ResultAccessorMixin):
             if FixestFormula.is_fixed_effects
             else None
         )
-
-        # set in fixef(); None triggers the lazy fixef() call in predict()
-        self._sumFE = None
 
         # set in get_performance()
         self._rmse = np.nan
@@ -660,7 +671,7 @@ class Feols(ResultAccessorMixin):
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         if vcov_type == "CRV":
-            if len(spec.clustervar) > 1 and not self._support_multiway_clustering:
+            if len(clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
@@ -756,7 +767,7 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self._support_crv3_inference:
+        if not self.capabilities.crv3_inference:
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self._method}'."
             )
@@ -793,7 +804,7 @@ class Feols(ResultAccessorMixin):
         _data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
 
-        if not self._support_hac_inference:
+        if not self.capabilities.hac_inference:
             raise NotImplementedError(
                 "HAC inference is not supported for this model type."
             )
@@ -1093,10 +1104,14 @@ class Feols(ResultAccessorMixin):
                 f"Parameter {param} not found in the model's coefficients."
             )
 
-        if not self._supports_wildboottest:
+        if not self.capabilities.wildboottest:
             if self._is_iv:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
+                )
+            if self._method == "did2s":
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for the DID2S estimator."
                 )
             if self._has_weights:
                 raise NotImplementedError(
@@ -1138,11 +1153,6 @@ class Feols(ResultAccessorMixin):
         except ImportError:
             print(
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported with IV estimation."
             )
 
         if self._method == "fepois":
@@ -1274,7 +1284,7 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        if not self._supports_cluster_causal_variance:
+        if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
                 f"of type '{self._method}'."
@@ -1547,7 +1557,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self._support_decomposition:
+        if not self.capabilities.decomposition:
             raise NotImplementedError(
                 "Decomposition is currently only supported for regression models "
                 "estimated via feols()."
@@ -1657,10 +1667,9 @@ class Feols(ResultAccessorMixin):
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
-        This method creates the following attributes:
-        - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects.
-        - `_sumFE` (np.array): An array with the sum of fixed effects for each
-        observation (i = 1, ..., N).
+        Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates`
+        value holding the coefficient records, the dummy-coded solution
+        `alpha`, and the per-observation contribution `sumFE`.
 
         Parameters
         ----------
@@ -1715,7 +1724,7 @@ class Feols(ResultAccessorMixin):
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self._predict_in_sample(type="link")
                 # The linear predictor includes the offset; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
+                # that sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
                 if self._offset_name is not None:
                     offset = self.model_matrix.offset
@@ -1747,18 +1756,20 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
-        self._fixef_coefficients = build_fixed_effects(
-            fixed_effect_coefficients=alpha,
-            contrast_coding=contrast_coding,
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+        self.fixef_estimates = FixedEffectEstimates(
+            coefficients=build_fixed_effects(
+                fixed_effect_coefficients=alpha,
+                contrast_coding=contrast_coding,
+                transform_state=self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].transform_state,
+            ),
+            alpha=alpha,
+            # Fixed-effect contribution per observation, in the units of Y.
+            sumFE=D.dot(alpha),
         )
-        self._alpha = alpha
-        # Fixed-effect contribution per observation, in the units of Y.
-        self._sumFE = D.dot(alpha)
 
-        return fixed_effects_to_frame(self._fixef_coefficients)
+        return fixed_effects_to_frame(self.fixef_estimates.coefficients)
 
     def predict(
         self,
@@ -1885,12 +1896,12 @@ class Feols(ResultAccessorMixin):
                 warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
-                if self._sumFE is None:
+                if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self._fixef_coefficients,
+                    coefficients=self.fixef_estimates.coefficients,
                 )
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
@@ -1976,9 +1987,9 @@ class Feols(ResultAccessorMixin):
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, stores the simulated statistics
-            in the model object via the `ritest_statistics` attribute as a
-            numpy array.
+            Defaults to False. If True, publishes the draws, the centered
+            sample statistic, and the p-value as a `RitestStatistics` value
+            in the model's `ritest_statistics` attribute.
         level: float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.
@@ -2145,9 +2156,11 @@ class Feols(ResultAccessorMixin):
         )
 
         if store_ritest_statistics:
-            self._ritest_statistics = ri_stats
-            self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat - h0_value
+            self.ritest_statistics = RitestStatistics(
+                statistics=ri_stats,
+                sample_stat=float(sample_stat - h0_value),
+                pvalue=float(ri_pvalue),
+            )
 
         res = pd.Series(
             {
@@ -2187,7 +2200,7 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
 
-        if not hasattr(self, "_ritest_statistics"):
+        if not hasattr(self, "ritest_statistics"):
             raise ValueError(
                 """
                             The randomization inference statistics have not been stored
@@ -2196,11 +2209,12 @@ class Feols(ResultAccessorMixin):
                             """
             )
 
-        ri_stats = self._ritest_statistics
-        sample_stat = self._ritest_sample_stat
+        stored = self.ritest_statistics
 
         return _plot_ritest_pvalue(
-            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+            ri_stats=stored.statistics,
+            sample_stat=stored.sample_stat,
+            plot_backend=plot_backend,
         )
 
     def update(
