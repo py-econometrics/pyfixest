@@ -660,7 +660,7 @@ class Feols(ResultAccessorMixin):
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         if vcov_type == "CRV":
-            if len(clustervar) > 1 and not self.capabilities.multiway_clustering:
+            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
