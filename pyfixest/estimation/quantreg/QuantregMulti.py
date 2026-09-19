@@ -185,8 +185,7 @@ class QuantregMulti:
             # The response minus the residual carries the fixed-effect
             # contribution, which `design @ beta_hat` alone would omit.
             fitted = (
-                quantreg.model_matrix.dependent.to_numpy().flatten()
-                - quantreg.resid()
+                quantreg.model_matrix.dependent.to_numpy().flatten() - quantreg.resid()
             )
             quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
