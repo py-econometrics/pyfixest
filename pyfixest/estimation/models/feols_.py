@@ -39,8 +39,8 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
-    CollinearityCheck,
     Capabilities,
+    CollinearityCheck,
     EstimationSample,
     FittedValues,
     ObservationWeights,
