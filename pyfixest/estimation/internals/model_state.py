@@ -268,14 +268,7 @@ class GlmWorkingState:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FittedValues:
-    """In-sample predictions on the link and the response scale.
-
-    fixest draws the same distinction through the ``type`` argument of
-    ``fitted.values()``. Every fitted model publishes this value as
-    ``fit.fitted_values``. For linear, IV, and quantile models the two scales
-    coincide and share one array. GLMs publish their linear predictor as
-    ``link`` and its inverse-link mean as ``response``, the same arrays their
-    ``GlmWorkingState`` carries as IRLS output.
+    """In-sample predictions / fitted values on link and the response scale.
 
     Parameters
     ----------

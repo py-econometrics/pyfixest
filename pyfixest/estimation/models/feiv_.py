@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import (
+    FittedValues,
     WithinIvData,
     WithinLinearData,
 )
@@ -272,7 +273,11 @@ class Feiv(Feols):
         self._beta_hat = fit.beta
         self._u_hat = fit.residuals
         self.sandwich = fit.sandwich
-        self._publish_fitted_values()
+
+        # The response minus the residual carries the fixed-effect
+        # contribution, which `design @ beta_hat` alone would omit.
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
     def first_stage(self) -> None:
         """Implement First stage regression."""
