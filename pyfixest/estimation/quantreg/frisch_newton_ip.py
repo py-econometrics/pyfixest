@@ -12,15 +12,7 @@ class QuantregSolution:
     """Solution of the Frisch-Newton interior point solver.
 
     Fields follow the notation of Portnoy and Koenker (1997), [Statistical
-    Science](https://doi.org/10.1214/ss/1030037960): the solver minimizes
-    ``c' x`` subject to ``A x = b`` and ``0 <= x <= u``, where ``A`` is the
-    transposed design matrix. The regression coefficients are the negated dual
-    variable, ``beta == -y``.
-
-    The primal iterates have one entry per row of the linear program the solver
-    was handed. For `method="fn"` that is the estimation sample; for
-    `method="pfn"` it is the preprocessed subsample of the last globality
-    check, in which each trimmed tail contributes one aggregated row.
+    Science](https://doi.org/10.1214/ss/1030037960).
 
     Parameters
     ----------

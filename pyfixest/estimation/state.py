@@ -16,14 +16,11 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
-<<<<<<< HEAD
-from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
-=======
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffect,
     FixedEffectEstimates,
 )
->>>>>>> master
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 __all__ = [
     "Capabilities",
@@ -36,11 +33,8 @@ __all__ = [
     "GlmWorkingState",
     "ModelMatrix",
     "ObservationWeights",
-<<<<<<< HEAD
     "QuantregSolution",
-=======
     "RitestStatistics",
->>>>>>> master
     "SandwichComponents",
     "VarianceCovariance",
     "VcovSpec",
