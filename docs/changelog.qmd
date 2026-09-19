@@ -17,6 +17,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+- Randomization inference now accepts string, categorical, and nullable integer cluster labels while retaining explicit errors for missing cluster identifiers.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
