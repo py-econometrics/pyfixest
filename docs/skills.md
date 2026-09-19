@@ -1,4 +1,7 @@
-# Skills
+---
+title: Skills
+description: "A skill file to drop into an analytics project so that LLM assistants get PyFixest's formula, inference, and reporting APIs right."
+---
 
 This page provides a ready-to-use skill file for analytics projects that use PyFixest. The goal is to make LLM-assisted analysis more reliable by giving the model a concise, authoritative reference for PyFixest usage.
 
