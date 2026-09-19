@@ -153,11 +153,6 @@ class EstimationSample:
 class CollinearityCheck:
     """Outcome of one rank check that removes collinear design columns.
 
-    Linear and quantile models publish the check of their regressors as
-    ``fit.collinearity``; IV models publish the instrument check as
-    ``fit.collinearity_instruments``. ``dropped_coef_names`` is fixest's
-    ``collin.var``.
-
     Parameters
     ----------
     dropped_coef_names : tuple[str, ...]
