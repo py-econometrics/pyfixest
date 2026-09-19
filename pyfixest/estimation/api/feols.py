@@ -257,7 +257,8 @@ def feols(
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
     `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way
     clustering, you can provide a formula string, e.g. `{"CRV1": "f1 + f2"}` for
-    CRV1 inference with clustering by `f1`.
+    CRV1 inference with clustering by `f1` and `f2`. Use `:` for a single
+    joint-group dimension, e.g. `{"CRV1": "f1:f2"}`.
 
     ```{python}
     fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})

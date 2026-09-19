@@ -23,6 +23,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Clustered inference accepts `:` interactions such as `vcov={"CRV1": "f1:f2"}` and retains the resolved cluster IDs for later post-estimation methods.
 - Post-estimation methods now raise `MissingModelDataError` when `store_data=False` or `lean=True` removed required state, and these storage options also clean retained IV first-stage models.
 - Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
