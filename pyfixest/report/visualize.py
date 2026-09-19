@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import re
+import warnings
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
@@ -12,11 +14,7 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
-from pyfixest.report.utils import (
-    _check_label_keys_in_covars,
-    _post_processing_input_checks,
-    _relabel_expvar,
-)
+from pyfixest.report.utils import _post_processing_input_checks
 from pyfixest.utils.dev_utils import _select_order_coefs
 
 if TYPE_CHECKING:
@@ -57,6 +55,28 @@ def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int
         return (500, 300)
     else:
         raise ValueError("plot_backend must be either 'lets_plot' or 'matplotlib'.")
+
+
+def _split_interaction(coefname: str) -> list[str]:
+    """Split an interaction term on ':' without breaking 'variable::value' names."""
+    return re.split(r"(?<!:):(?!:)", coefname)
+
+
+def _relabel_coefficient(coefname: str, labels: dict) -> str:
+    """Relabel a coefficient, or each variable of an interaction term."""
+    if coefname in labels:
+        return labels[coefname]
+    return ":".join(labels.get(v, v) for v in _split_interaction(coefname))
+
+
+def _apply_coefficient_labels(df: pd.DataFrame, labels: dict) -> None:
+    """Warn about label keys that match no coefficient, then relabel the coefficients."""
+    coefnames = df["Coefficient"].unique().tolist()
+    known = set(coefnames).union(*(_split_interaction(c) for c in coefnames))
+    for label_key in labels:
+        if label_key not in known:
+            warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
+    df["Coefficient"] = df["Coefficient"].map(lambda c: _relabel_coefficient(c, labels))
 
 
 def iplot(
@@ -129,10 +149,8 @@ def iplot(
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     cat_template: str, optional
-        Template to relabel categorical variables. None by default, which applies no relabeling.
-        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
-        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
-        are also possible.
+        Deprecated and has no effect: coefficients created via `i()` are already
+        named "variable::value". Use `labels` to rename them.
     joint: str or bool, optional
         Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
         are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
@@ -150,17 +168,16 @@ def iplot(
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.report.utils import rename_categoricals
 
     df = pf.get_data()
     fit1 = pf.feols("Y ~ i(f1)", data = df)
     fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
+    pf.iplot([fit1, fit2, fit3])
     pf.iplot(
         models = [fit1, fit2, fit3],
-        labels = rename_categoricals(fit1._coefnames)
+        labels = {"f1::1.0": "f1 = 1", "f1::2.0": "f1 = 2"}
     )
     pf.iplot(
         models = [fit1, fit2, fit3],
@@ -187,6 +204,14 @@ def iplot(
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+        )
+    if cat_template is not None:
+        warnings.warn(
+            "The `cat_template` argument of `iplot()` is deprecated and has no effect, "
+            "as coefficients created via `i()` are already named 'variable::value'. "
+            "Use `labels` to rename coefficients instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     df_all: list[pd.DataFrame] = []
@@ -226,12 +251,8 @@ def iplot(
     # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    # check that labels match the coef names
-    if labels is not None:
-        _check_label_keys_in_covars(
-            label_keys=list(labels.keys()),
-            covariate_names=df["Coefficient"].unique().tolist(),
-        )
+    if labels:
+        _apply_coefficient_labels(df=df, labels=labels)
 
     return _coefplot(
         plot_backend=plot_backend,
@@ -243,8 +264,6 @@ def iplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
-        labels=labels,
-        cat_template=cat_template,
         ax=ax,
     )
 
@@ -391,12 +410,8 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    # check that labels match the coef names
-    if labels is not None:
-        _check_label_keys_in_covars(
-            label_keys=list(labels.keys()),
-            covariate_names=df["Coefficient"].unique().tolist(),
-        )
+    if labels:
+        _apply_coefficient_labels(df=df, labels=labels)
 
     return _coefplot(
         plot_backend=plot_backend,
@@ -408,7 +423,6 @@ def coefplot(
         rotate_xticks=rotate_xticks,
         title=title,
         flip_coord=coord_flip,
-        labels=labels,
         ax=ax,
     )
 
@@ -516,8 +530,6 @@ def _coefplot_lets_plot(
     rotate_xticks: float = 0,
     title: str | None = None,
     flip_coord: bool | None = True,
-    labels: dict | None = None,
-    cat_template: str | None = None,
     ax=None,  # for compatibility with matplotlib backend
 ):
     """
@@ -541,13 +553,6 @@ def _coefplot_lets_plot(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
-    labels : dict, optional
-        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
-    cat_template : str, optional
-        Template to relabel categorical variables. None by default, which applies no relabeling.
-        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
-        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
-        are also possible.
     ax : None, optional
         Not used. Only for compatibility with the matplotlib backend.
 
@@ -578,19 +583,6 @@ def _coefplot_lets_plot(
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
-
-    labels_dict = {} if labels is None else labels
-
-    if not labels_dict or cat_template is not None:
-        interactionSymbol = ":"
-        df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_expvar(
-                x,
-                labels_dict,
-                interactionSymbol,
-                cat_template if cat_template is not None else "",
-            )
-        )
 
     plot = (
         ggplot(df, aes(x="Coefficient", y="Estimate", color="Model"))
@@ -628,8 +620,6 @@ def _coefplot_matplotlib(
     rotate_xticks: float = 0,
     title: str | None = None,
     flip_coord: bool | None = True,
-    labels: dict | None = None,
-    cat_template: str | None = None,
     ax: plt.Axes | None = None,
     dodge: float = 0.5,
     **fig_kwargs,
@@ -656,13 +646,6 @@ def _coefplot_matplotlib(
         The title of the plot.
     flip_coord : bool, optional
         Whether to flip the coordinates of the plot. Default is True.
-    labels : dict, optional
-        A dictionary to relabel the variables. The keys are the original variable names and the values the new names.
-    cat_template : str, optional
-        Template to relabel categorical variables. None by default, which applies no relabeling.
-        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
-        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
-        are also possible.
     dodge : float, optional
         The amount to dodge each model's points by. Default is 0.1.
     fig_kwargs : dict
@@ -674,19 +657,6 @@ def _coefplot_matplotlib(
         A matplotlib Figure object.
     """
     import matplotlib.pyplot as plt
-
-    labels_dict = {} if labels is None else labels
-
-    if not labels_dict or cat_template is not None:
-        interactionSymbol = ":"
-        df["Coefficient"] = df["Coefficient"].apply(
-            lambda x: _relabel_expvar(
-                x,
-                labels_dict,
-                interactionSymbol,
-                cat_template if cat_template is not None else "",
-            )
-        )
 
     ub, lb = (f"{round(x * 100, 1)}%" for x in [1 - alpha / 2, alpha / 2])
 
