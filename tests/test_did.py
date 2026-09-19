@@ -123,8 +123,8 @@ def test_did2s(data, weights):
     )
     # the GMM covariance is recorded as clustered on the did2s cluster variable
     covariance = fit_did2s_py1.variance_covariance
-    assert covariance.is_clustered
-    assert covariance.clustervar == ("state",)
+    assert covariance.spec.is_clustered
+    assert covariance.spec.clustervar == ("state",)
     assert (data["state"].nunique(),) == covariance.G
 
     # Model 2
