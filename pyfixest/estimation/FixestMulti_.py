@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
@@ -146,13 +147,25 @@ class FixestMulti(TidyColumnAccessors):
             fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
         return self
 
-    def tidy(self) -> pd.DataFrame:
+    def tidy(
+        self,
+        alpha: float = 0.05,
+        inference_type: InferenceType = "regular",
+    ) -> pd.DataFrame:
         """
         Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
 
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for each model's confidence intervals. Defaults to 0.05.
+        inference_type : {"regular"}, optional
+            Coefficient-wise inference to report. Only "regular" is supported by
+            the fitted models' `tidy()` methods. Defaults to "regular".
+
         Returns
         -------
-        pandas.DataFrame or str
+        pandas.DataFrame
                 A tidy DataFrame with the following columns:
                 - fml: the formula used to generate the results
                 - Coefficient: the names of the coefficients
@@ -160,15 +173,13 @@ class FixestMulti(TidyColumnAccessors):
                 - Std. Error: the standard errors of the estimated coefficients
                 - t value: the t-values of the estimated coefficients
                 - Pr(>|t|): the p-values of the estimated coefficients
-                - 2.5%: the lower bound of the 95% confidence interval
-                - 97.5%: the upper bound of the 95% confidence interval
-                If `type` is set to "markdown", the resulting DataFrame will be
-                returned as a markdown-formatted string with three decimal places.
+                - confidence bounds: the lower and upper bounds at level
+                  `1 - alpha`, labelled by their percentiles
         """
         res = []
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
-            df = fxst.tidy().reset_index()
+            df = fxst.tidy(alpha=alpha, inference_type=inference_type).reset_index()
             df["fml"] = fxst._fml
             res.append(df)
 
@@ -177,17 +188,73 @@ class FixestMulti(TidyColumnAccessors):
 
         return res_df
 
-    def confint(self) -> pd.DataFrame:
+    def confint(
+        self,
+        alpha: float = 0.05,
+        keep: list | str | None = None,
+        drop: list | str | None = None,
+        exact_match: bool | None = False,
+        joint: bool = False,
+        seed: int | None = None,
+        reps: int = 10_000,
+        *,
+        inference_type: InferenceType = "regular",
+        mixture_precision: float = 1.0,
+    ) -> pd.DataFrame:
         """
         Obtain confidence intervals for the fitted models.
 
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level. Defaults to 0.05.
+        keep : str or list of str, optional
+            Patterns selecting coefficients within each model, in the requested
+            order. Defaults to all coefficients.
+        drop : str or list of str, optional
+            Patterns excluding coefficients within each model. Defaults to None.
+        exact_match : bool, optional
+            Match coefficient names exactly instead of as regular expressions.
+            Defaults to False.
+        joint : bool, optional
+            Deprecated alias for `inference_type="simult"`. Defaults to False.
+        seed : int, optional
+            Random seed forwarded to each model's simultaneous inference.
+            Defaults to None.
+        reps : int, optional
+            Number of simulations per model for simultaneous inference.
+            Defaults to 10_000.
+        inference_type : {"regular", "simult", "savi"}, optional
+            Confidence interval type forwarded to each fitted model. Simultaneous
+            inference covers the selected coefficients within each model,
+            separately. Defaults to "regular".
+        mixture_precision : float, optional
+            Mixing precision for SAVI confidence sequences. Defaults to 1.0.
+            Each fitted model's SAVI support restrictions apply.
+
         Returns
         -------
-        pandas.Series
-            A pd.Series with coefficient names and confidence intervals.
-            The key indicates which models the estimated statistic derives from.
+        pandas.DataFrame
+            Confidence bounds indexed by formula and coefficient name.
         """
-        return self.tidy()[["2.5%", "97.5%"]]
+        return pd.concat(
+            [
+                model.confint(
+                    alpha=alpha,
+                    keep=keep,
+                    drop=drop,
+                    exact_match=exact_match,
+                    joint=joint,
+                    seed=seed,
+                    reps=reps,
+                    inference_type=inference_type,
+                    mixture_precision=mixture_precision,
+                )
+                for model in self.all_fitted_models.values()
+            ],
+            keys=[model._fml for model in self.all_fitted_models.values()],
+            names=["fml", "Coefficient"],
+        )
 
     def wildboottest(
         self,
