@@ -116,6 +116,9 @@ jobs:
       - name: Build and render docs
         run: pixi run -e docs docs-render
 
+      - name: Check rendered llms index and links
+        run: pixi run -e docs python scripts/check_agent_docs.py --site docs/_site
+
       - name: Save docs artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
