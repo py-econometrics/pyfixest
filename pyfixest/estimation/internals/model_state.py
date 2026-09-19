@@ -436,15 +436,21 @@ class VcovSpec:
                 raise TypeError(
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
-            clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
+            # '+' separates cluster dimensions; ':' joins columns within one.
+            clustervar = tuple(
+                dimension.strip() for dimension in cluster_input.split("+")
+            )
             if len(clustervar) > 2:
                 raise ValueError(
                     f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
                 )
-            if any("^" in x for x in clustervar):
+            if any(
+                not component.strip()
+                for dimension in clustervar
+                for component in dimension.split(":")
+            ):
                 raise ValueError(
-                    f"Clustering on an interaction such as {cluster_input!r} is not supported. "
-                    "Add the interacted variable as a column of the data and cluster on that column."
+                    "Cluster variables must be nonempty column names separated by '+' or ':'."
                 )
             return cls(vcov_type="CRV", vcov_type_detail=detail, clustervar=clustervar)
 
@@ -523,6 +529,10 @@ class VarianceCovariance:
     G : tuple[int, ...]
         Cluster counts per dimension after the ``G_df`` rule; empty unless
         clustered.
+    cluster_ids : NDArray[np.intp] or None
+        Sample-aligned integer IDs for the cluster dimensions. Two-way
+        clustering includes a third column for their intersection.
+        ``None`` for unclustered inference or ``lean=True``.
 
     Examples
     --------
@@ -548,6 +558,7 @@ class VarianceCovariance:
     df_t: int | float
     spec: VcovSpec
     G: tuple[int, ...]
+    cluster_ids: NDArray[np.intp] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

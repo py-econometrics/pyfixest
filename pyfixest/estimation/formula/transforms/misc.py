@@ -1,6 +1,14 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
+import pandas as pd
+
+
+def encode_groups(data: pd.DataFrame) -> pd.Series:
+    """Assign one integer ID to each distinct row of grouping variables."""
+    return data.groupby(data.columns.tolist()).ngroup()
 
 
 def log(array: np.ndarray) -> np.ndarray:

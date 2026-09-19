@@ -20,7 +20,7 @@ issue and investigate them before adding them to this ledger.
 | Area | Pyfixest behavior | `fixest` behavior | Rationale | Tests | Status |
 |---|---|---|---|---|---|
 | Gaussian GLM inference | `feglm(family="gaussian")` matches `feols()`, base R `lm`, base R `glm`, and `fixest::feols` for OLS behavior and small-sample corrections. | `fixest::feglm(family="gaussian")` applies GLM small-sample corrections that differ slightly from `fixest::feols`. | A Gaussian identity-link model should agree with pyfixest OLS and base R's Gaussian linear-model behavior. | `tests/test_vs_fixest.py::test_feglm_gaussian_reference_behavior`; confirmed with R 4.5.3 and `fixest` 0.14.0 on 2026-08-25 | Intentional; documented for 0.70.0 |
-| Clustering on interactions | `vcov={"CRV1": "f1^f2"}` raises `ValueError`; users add the interacted variable as a data column and cluster on it. | `cluster = ~f1^f2` clusters on the interaction of `f1` and `f2`. | Cluster variables are read from the data by name, and interacted fixed-effect columns are not materialized there. Earlier versions silently rewrote `^` to `_` and then failed on the missing column. | `tests/test_errors.py::test_vcov_spec_rejects_malformed_input`; `fixest` 0.14.0 behavior recorded 2026-09-18 | Unsupported; documented for 0.70.0 |
+| Clustering on interactions | `vcov={"CRV1": "f1:f2"}` clusters observations by each distinct `(f1, f2)` pair. | `cluster = ~f1^f2` clusters by the same pairs. | Pyfixest uses `:` consistently with its fixed-effect interaction syntax. | `tests/test_vs_fixest.py::test_cluster_interactions_against_fixest`; [fixest VCOV documentation](https://lrberge.github.io/fixest/reference/vcov.fixest.html) | Intentional syntax difference; documented for 0.70.0 |
 
 ## Adding an entry
 
