@@ -35,6 +35,7 @@ __all__ = [
     "iplot",
     "lpdid",
     "optimal_mixture_precision",
+    "oriv",
     "panelview",
     "qplot",
     "quantreg",
@@ -56,6 +57,7 @@ _lazy_imports = {
     "feols": "pyfixest.estimation.api",
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
+    "oriv": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
     # demeaner configs
     "BaseDemeaner": "pyfixest.demeaners",
@@ -97,6 +99,7 @@ _direct_module_imports = {
     "feglm",
     "feols",
     "fepois",
+    "oriv",
     "quantreg",
 }
 
