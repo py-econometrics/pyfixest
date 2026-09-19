@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import maketables
 import numpy as np
 import pandas as pd
@@ -8,6 +12,10 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
+
+if TYPE_CHECKING:
+    from docx.document import Document
+    from great_tables import GT
 
 ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
@@ -52,14 +60,15 @@ def etable(
     model_heads: list | None = None,
     head_order: str | None = "dh",
     file_name: str | None = None,
+    docx_style: dict[str, object] | None = None,
     **kwargs,
-) -> pd.DataFrame | str | None:
+) -> pd.DataFrame | GT | Document | str | None:
     r"""
     Generate a table summarizing the results of multiple regression models.
 
     This function uses the maketables package internally to create publication-ready
     regression tables. It supports various output formats including HTML (via Great Tables),
-    markdown, and LaTeX.
+    markdown, LaTeX, Typst, and Word.
 
     Parameters
     ----------
@@ -68,7 +77,8 @@ def etable(
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
-        "gt" for great_tables, "tex" for LaTeX table, or "typst" for Typst table. Default is "gt".
+        "gt" for great_tables, "tex" for LaTeX, "typst" for Typst, or "docx"
+        for an editable Word document. Default is "gt".
     signif_code : list, optional
         Significance levels for the stars. Default is None, which sets
         [0.001, 0.01, 0.05]. Note that stars are only rendered if `coef_fmt`
@@ -154,17 +164,26 @@ def etable(
         When head_order is "d", only the dependent variable and model numbers are displayed
         and with "" only the model numbers. Default is "dh".
     file_name: str, optional
-        The name/path of the file to save the LaTeX table to. Default is None.
+        The name/path of the file to save when type is "gt", "tex", "typst",
+        or "docx". Default is None, which returns the output without saving it.
+    docx_style: dict, optional
+        Word style overrides, used only when type is "docx". Passed to
+        `maketables.MTable.make` as `docx_style`. For example,
+        `{"font_name": "Arial", "font_size_pt": 12, "notes_font_size_pt": 9}`.
+        See `maketables.MTable.DEFAULT_DOCX_STYLE` for supported options.
+        Default is None, which uses maketables' Word style defaults.
 
     Returns
     -------
-    pandas.DataFrame
-        A styled DataFrame with the coefficients and standard errors of the models.
-        When output is "tex", the LaTeX code is returned as a string.
+    pandas.DataFrame, great_tables.GT, docx.document.Document, str, or None
+        A DataFrame for "df", a GT object for "gt", a string for "html",
+        "tex", or "typst", or a Word Document for "docx". Markdown output
+        is printed and returns None. Word output is returned even when saved
+        via `file_name`, so it can be edited further with python-docx.
 
     Examples
     --------
-    For more examples, take a look at the [regression tables and summary statistics vignette](https://pyfixest.org/table-layout.html).
+    For more examples, see the [regression tables tutorial](/tutorials/regression-tables.qmd).
 
     ```{python}
     import pyfixest as pf
@@ -175,6 +194,16 @@ def etable(
     fit2 = pf.feols("Y~X1 + X2 | f1 + f2", df)
 
     pf.etable([fit1, fit2])
+    ```
+
+    ```{python}
+    document = pf.etable(
+        [fit1, fit2],
+        type="docx",
+        docx_style={"font_name": "Arial", "font_size_pt": 12},
+    )
+    # Save directly with file_name="results.docx", or edit the document first.
+    document.add_paragraph("Additional discussion of the estimates.")
     ```
     """
     # Apply pyfixest default for signif_code (different from maketables default)
@@ -200,7 +229,8 @@ def etable(
         "gt",
         "tex",
         "typst",
-    ], "type must be either 'df', 'md', 'html', 'gt' or 'tex'"
+        "docx",
+    ], "type must be either 'df', 'md', 'html', 'gt', 'tex', 'typst' or 'docx'"
 
     models_list = _post_processing_input_checks(models)
 
@@ -267,6 +297,11 @@ def etable(
             with open(file_name, "w") as f:
                 f.write(result.as_raw_html())
         return result
+    elif type == "docx":
+        document = table.make(type="docx", docx_style=docx_style)
+        if file_name is not None:
+            document.save(file_name)
+        return document
     elif type == "typst":
         result = table.make(type="typst")
         if file_name is not None:
