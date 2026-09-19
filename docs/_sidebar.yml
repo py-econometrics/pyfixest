@@ -72,6 +72,7 @@ website:
       - reference/estimation.state.WithinLinearData.qmd
       - reference/estimation.state.WithinIvData.qmd
       - reference/estimation.state.GlmWorkingState.qmd
+      - reference/estimation.state.FittedValues.qmd
       - reference/estimation.state.SandwichComponents.qmd
       - reference/estimation.state.VarianceCovariance.qmd
       - reference/estimation.state.VcovSpec.qmd

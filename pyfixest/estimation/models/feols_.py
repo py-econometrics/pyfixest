@@ -41,6 +41,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
     EstimationSample,
+    FittedValues,
     ObservationWeights,
     RitestStatistics,
     SandwichComponents,
@@ -181,10 +182,9 @@ class Feols(ResultAccessorMixin):
         dictionary for sum of squares and cross products matrices.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
-    _Y_hat_link : np.ndarray
-        Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.
-    _Y_hat_response : np.ndarray
-        Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
+    fitted_values : FittedValues
+        In-sample predictions on the link and the response scale, set in
+        get_fit().
     _u_hat : np.ndarray
         Residuals of the regression model.
     variance_covariance : VarianceCovariance
@@ -255,6 +255,7 @@ class Feols(ResultAccessorMixin):
     _icovars: list[str] | None
     # Set in get_fit().
     sandwich: SandwichComponents
+    fitted_values: FittedValues
     # Set in vcov().
     variance_covariance: VarianceCovariance
     # Set in ritest() when store_ritest_statistics is True.
@@ -545,21 +546,6 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Return cached fitted values for predict() and fixed-effect recovery.
-
-        These values include the fixed-effect contribution. Link and response
-        predictions coincide for linear models; GLMs override this method to
-        distinguish the linear predictor from the response mean.
-        """
-        return self._Y_hat_link if type == "link" else self._Y_hat_response
-
-    def _get_predictors(self) -> None:
-        self._Y_hat_link = (
-            self.model_matrix.dependent.to_numpy().flatten() - self.resid()
-        )
-        self._Y_hat_response = self._Y_hat_link
-
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -588,7 +574,10 @@ class Feols(ResultAccessorMixin):
             self._u_hat = fit.residuals
             self.sandwich = fit.sandwich
 
-        self._get_predictors()
+        # The response minus the residual carries the fixed-effect
+        # contribution, which `design @ beta_hat` alone would omit.
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""
@@ -1722,7 +1711,7 @@ class Feols(ResultAccessorMixin):
             if self._method == "fepois" or self._method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._predict_in_sample(type="link")
+                Y = self.fitted_values.link
                 # The linear predictor includes the offset; subtract it so
                 # that sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
@@ -1868,7 +1857,7 @@ class Feols(ResultAccessorMixin):
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             X = self._prediction_design()
-            y_hat = self._predict_in_sample(type=type)
+            y_hat = getattr(self.fitted_values, type)
             n_observations = self.sample_info.n_rows
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
