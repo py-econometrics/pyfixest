@@ -73,10 +73,15 @@ website:
       - reference/estimation.state.WithinIvData.qmd
       - reference/estimation.state.CollinearityCheck.qmd
       - reference/estimation.state.GlmWorkingState.qmd
+      - reference/estimation.state.FittedValues.qmd
       - reference/estimation.state.SandwichComponents.qmd
       - reference/estimation.state.VarianceCovariance.qmd
+      - reference/estimation.state.VcovSpec.qmd
+      - reference/estimation.state.FixedEffectEstimates.qmd
+      - reference/estimation.state.FixedEffect.qmd
       - reference/estimation.state.RitestStatistics.qmd
       - reference/estimation.state.CoefficientTable.qmd
+      - reference/estimation.state.Capabilities.qmd
       section: Fitted State
     - contents:
       - reference/estimation.formula.parse.Formula.qmd

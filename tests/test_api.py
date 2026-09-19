@@ -356,12 +356,11 @@ def test_lean(estimator, kwargs, lean, store_data):
 
     assert hasattr(fit, "_data") == (store_data and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
+    assert hasattr(fit, "fitted_values") == (not lean)
     if estimator is pf.feols:
         lean_only_attributes = {
             "sandwich",
             "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
             "within_data",
             "observation_weights",
         }

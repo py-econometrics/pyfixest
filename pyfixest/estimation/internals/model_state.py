@@ -5,7 +5,12 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.internals.literals import WeightsTypeOptions
+
+_VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
+_VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
+_VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -312,6 +317,33 @@ class GlmWorkingState:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class FittedValues:
+    """In-sample predictions / fitted values on link and the response scale.
+
+    Parameters
+    ----------
+    link : NDArray[np.float64]
+        Prediction on the scale of the linear predictor, including the
+        fixed-effect contribution and any offset, shape (n_rows,).
+    response : NDArray[np.float64]
+        Prediction on the scale of the dependent variable, ``E(Y|X)``,
+        shape (n_rows,).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.fitted_values.response[:3]
+    ```
+    """
+
+    link: NDArray[np.float64]
+    response: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SandwichComponents:
     """Scores, Hessian, and bread of a fitted model's sandwich covariance.
 
@@ -342,6 +374,132 @@ class SandwichComponents:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class VcovSpec:
+    """The requested covariance estimator, parsed from the ``vcov`` argument.
+
+    Parameters
+    ----------
+    vcov_type : str
+        Estimator family: ``"iid"``, ``"hetero"``, ``"HAC"``, ``"CRV"``, or
+        ``"nid"``.
+    vcov_type_detail : str
+        Requested estimator, for example ``"HC1"``, ``"NW"``, or ``"CRV1"``.
+    clustervar : tuple[str, ...]
+        Cluster variables; empty unless clustered.
+    lag : int or None
+        Newey-West or Driscoll-Kraay lag; ``None`` unless HAC.
+    time_id : str or None
+        Time variable of HAC inference; ``None`` unless HAC.
+    panel_id : str or None
+        Panel variable of HAC inference; ``None`` unless HAC.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov={"CRV1": "f1+f2"})
+    fit.variance_covariance.spec
+    ```
+    """
+
+    vcov_type: str
+    vcov_type_detail: str
+    clustervar: tuple[str, ...] = ()
+    lag: int | None = None
+    time_id: str | None = None
+    panel_id: str | None = None
+
+    @property
+    def is_clustered(self) -> bool:
+        """Whether the estimator clusters on at least one variable."""
+        return bool(self.clustervar)
+
+    @classmethod
+    def from_user_input(
+        cls,
+        vcov: str | dict[str, str],
+        vcov_kwargs: dict[str, str | int] | None = None,
+        *,
+        has_fixef: bool,
+        is_iv: bool,
+    ) -> VcovSpec:
+        """Parse and validate the ``vcov`` and ``vcov_kwargs`` arguments.
+
+        Raises ``TypeError`` for input of the wrong type, ``ValueError`` for
+        unknown or incomplete values, and ``VcovTypeNotSupportedError`` for
+        HC2/HC3 with fixed effects or IV.
+        """
+        if isinstance(vcov, dict):
+            if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:
+                raise ValueError(
+                    f"A vcov dict must have exactly one key, one of {_VCOV_CLUSTER_KEYS}; got {vcov!r}."
+                )
+            detail, cluster_input = next(iter(vcov.items()))
+            if not isinstance(cluster_input, str):
+                raise TypeError(
+                    f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
+                )
+            clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
+            if len(clustervar) > 2:
+                raise ValueError(
+                    f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
+                )
+            if any("^" in x for x in clustervar):
+                raise ValueError(
+                    f"Clustering on an interaction such as {cluster_input!r} is not supported. "
+                    "Add the interacted variable as a column of the data and cluster on that column."
+                )
+            return cls(vcov_type="CRV", vcov_type_detail=detail, clustervar=clustervar)
+
+        if not isinstance(vcov, str):
+            raise TypeError(
+                f"vcov must be a string or a dict such as {{'CRV1': 'f1'}}; got {type(vcov).__name__}."
+            )
+        if vcov not in _VCOV_STRINGS:
+            raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
+
+        if vcov in ("HC2", "HC3"):
+            if has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+
+        if vcov in ("NW", "DK"):
+            kw = vcov_kwargs or {}
+            unknown = set(kw) - set(_VCOV_KWARGS_KEYS)
+            if unknown:
+                raise ValueError(
+                    f"vcov_kwargs accepts the keys {_VCOV_KWARGS_KEYS}; got {sorted(unknown)}."
+                )
+            time_id = kw.get("time_id")
+            if not isinstance(time_id, str):
+                raise ValueError("Missing required 'time_id' for NW/DK vcov")
+            panel_id = kw.get("panel_id")
+            if vcov == "DK" and panel_id is None:
+                raise ValueError("Missing required 'panel_id' for DK vcov")
+            lag = kw.get("lag")
+            if lag is not None and (
+                not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
+            ):
+                raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
+            return cls(
+                vcov_type="HAC",
+                vcov_type_detail=vcov,
+                lag=kw.get("lag"),  # type: ignore[arg-type]
+                time_id=time_id,
+                panel_id=panel_id,  # type: ignore[arg-type]
+            )
+
+        vcov_type = {"iid": "iid", "nid": "nid"}.get(vcov, "hetero")
+        return cls(vcov_type=vcov_type, vcov_type_detail=vcov)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class VarianceCovariance:
     """Variance-covariance estimate of the coefficients and its building blocks.
 
@@ -363,13 +521,9 @@ class VarianceCovariance:
         Number of parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
         Degrees of freedom of the t reference distribution.
-    vcov_type : str
-        Estimator family: ``"iid"``, ``"hetero"``, ``"HAC"``, ``"CRV"``, or
-        ``"nid"``.
-    vcov_type_detail : str
-        Requested estimator, for example ``"HC1"``, ``"NW"``, or ``"CRV1"``.
-    clustervar : tuple[str, ...]
-        Cluster variables; empty unless clustered.
+    spec : VcovSpec
+        The requested estimator: family, detail, cluster variables, and HAC
+        arguments.
     G : tuple[int, ...]
         Cluster counts per dimension after the ``G_df`` rule; empty unless
         clustered.
@@ -382,7 +536,7 @@ class VarianceCovariance:
 
     fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov={"CRV1": "f1"})
     cov = fit.variance_covariance
-    cov.vcov_type_detail, cov.G, cov.df_t, cov.ssc
+    cov.spec.vcov_type_detail, cov.G, cov.df_t, cov.ssc
     ```
 
     ```{python}
@@ -396,15 +550,55 @@ class VarianceCovariance:
     ssc: NDArray[np.float64]
     df_k: int
     df_t: int | float
-    vcov_type: str
-    vcov_type_detail: str
-    clustervar: tuple[str, ...]
+    spec: VcovSpec
     G: tuple[int, ...]
 
-    @property
-    def is_clustered(self) -> bool:
-        """Whether the estimator clusters on at least one variable."""
-        return bool(self.clustervar)
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Capabilities:
+    """Inference and post-estimation features a fitted model supports.
+
+    Each model class publishes one value in its constructor, so a method can
+    reject an unsupported estimator before it reads any estimation state
+    rather than reinterpreting another estimator's arrays.
+
+    Parameters
+    ----------
+    crv3_inference : bool
+        Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
+        on leave-one-cluster-out samples, so it is restricted to estimators
+        whose refit replays the original estimation contract.
+    hac_inference : bool
+        Whether ``vcov()`` accepts the Newey-West and Driscoll-Kraay
+        estimators.
+    multiway_clustering : bool
+        Whether ``vcov()`` accepts more than one cluster variable.
+    wildboottest : bool
+        Whether ``wildboottest()`` can resample the fit. Unweighted OLS only.
+    cluster_causal_variance : bool
+        Whether ``ccv()``, the causal cluster variance estimator, is available.
+    decomposition : bool
+        Whether ``decompose()``, the Gelbach decomposition, is available.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.feols("Y ~ X1 | f1", pf.get_data()).capabilities
+    ```
+
+    ```{python}
+    pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois")).capabilities
+    ```
+    """
+
+    crv3_inference: bool
+    hac_inference: bool
+    multiway_clustering: bool
+    wildboottest: bool
+    cluster_causal_variance: bool
+    decomposition: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
