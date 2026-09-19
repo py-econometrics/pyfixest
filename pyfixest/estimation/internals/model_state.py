@@ -406,7 +406,9 @@ class VcovSpec:
             if vcov == "DK" and panel_id is None:
                 raise ValueError("Missing required 'panel_id' for DK vcov")
             lag = kw.get("lag")
-            if lag is not None and (not isinstance(lag, int) or isinstance(lag, bool) or lag < 0):
+            if lag is not None and (
+                not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
+            ):
                 raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
             return cls(
                 vcov_type="HAC",
