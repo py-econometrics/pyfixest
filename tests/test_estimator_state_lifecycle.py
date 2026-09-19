@@ -30,6 +30,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 
 @pytest.fixture
@@ -430,11 +431,20 @@ def test_published_components_preserve_inputs(
         "_tZy",
         "_tZZinv",
         "_tZXinv",
+        "_has_converged",
+        "_it",
+        "_x_final",
+        "_s_final",
+        "_z_final",
+        "_w_final",
+        "_y_final",
     )
     assert not any(hasattr(fit, name) for name in removed)
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")
+        assert isinstance(fit.solution, QuantregSolution)
+        np.testing.assert_allclose(fit.solution.beta, fit.coef().to_numpy())
     else:
         assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
@@ -459,7 +469,11 @@ def test_multi_quantile_children_follow_ols_retention(
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
     assert hasattr(ols, "sandwich") == (not lean)
+    # cfm2 solves only the central quantile and updates the others by a single
+    # Newton step, so only that child carries an interior point solution.
+    solved = {0.5} if multi_method == "cfm2" else {0.25, 0.5, 0.75}
     for child in fit.to_list():
+        assert hasattr(child, "solution") is (child._quantile in solved and not lean)
         assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name

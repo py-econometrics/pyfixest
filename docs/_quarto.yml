@@ -247,6 +247,7 @@ quartodoc:
         - estimation.state.FittedValues
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.QuantregSolution
         - estimation.state.VcovSpec
         - estimation.state.FixedEffectEstimates
         - estimation.state.FixedEffect
