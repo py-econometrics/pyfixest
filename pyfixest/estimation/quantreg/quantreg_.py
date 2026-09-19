@@ -1,5 +1,6 @@
 import warnings
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from functools import partial
 from typing import Any, cast
 
@@ -14,7 +15,10 @@ from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
 )
-from pyfixest.estimation.internals.model_state import WithinLinearData
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    WithinLinearData,
+)
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
@@ -129,12 +133,15 @@ class Quantreg(Feols):
             FutureWarning,
         )
 
-        self._supports_wildboottest = False
-        self._support_crv3_inference = False
-        self._support_multiway_clustering = False
-        self._supports_cluster_causal_variance = False
-        self._support_hac_inference = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=False,
+            multiway_clustering=False,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
         self._quantile = quantile
         self._method = f"quantreg_{method}"
@@ -209,8 +216,8 @@ class Quantreg(Feols):
         )
         self._beta_hat = self.solution.beta
 
-        self._Y_hat_link = self.within_data.design @ self._beta_hat
-        self._Y_hat_response = self._Y_hat_link
+        fitted = self.within_data.design @ self._beta_hat
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
         self._u_hat = (
             self.within_data.response.flatten()
@@ -411,7 +418,7 @@ class Quantreg(Feols):
         """
         Implement cluster robust variance estimator for quantile regression following
         Parente and Santos Silva, 2016. Multiway clustering is rejected by
-        ``vcov()`` through ``_support_multiway_clustering``.
+        ``vcov()`` through ``capabilities.multiway_clustering``.
         """
         vcov = vcov_crv1_qreg(
             X=self.within_data.design,

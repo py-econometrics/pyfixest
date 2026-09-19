@@ -123,8 +123,8 @@ def test_did2s(data, weights):
     )
     # the GMM covariance is recorded as clustered on the did2s cluster variable
     covariance = fit_did2s_py1.variance_covariance
-    assert covariance.is_clustered
-    assert covariance.clustervar == ("state",)
+    assert covariance.spec.is_clustered
+    assert covariance.spec.clustervar == ("state",)
     assert (data["state"].nunique(),) == covariance.G
 
     # Model 2
@@ -216,6 +216,34 @@ def test_errors(data):
             treatment="treat",
             cluster="state",
         )
+
+
+def test_did2s_wildboottest_ccv_unsupported(data):
+    "did2s's two-step GMM covariance does not support wild bootstrap or CCV inference."
+    fit = did2s_pyfixest(
+        data,
+        yname="dep_var",
+        first_stage="~ 0 | state + year",
+        second_stage="~ treat",
+        treatment="treat",
+        cluster="state",
+    )
+
+    assert fit.capabilities.wildboottest is False
+    assert fit.capabilities.cluster_causal_variance is False
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Wild cluster bootstrap is not supported for the DID2S estimator\.",
+    ):
+        fit.wildboottest(param="treat", reps=99, seed=1)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The causal cluster variance estimator is not supported for models "
+        r"of type 'did2s'\.",
+    ):
+        fit.ccv(treatment="treat", cluster="state")
 
 
 def test_lpdid():

@@ -123,11 +123,13 @@ def test_vs_fixest(data, fml):
         raise ValueError("Coefficients are not equal")
 
     # test sumFE for OLS
-    if not np.allclose(feols_mod._sumFE, r_fixest_ols.rx2("sumFE")):
+    if not np.allclose(feols_mod.fixef_estimates.sumFE, r_fixest_ols.rx2("sumFE")):
         raise ValueError("sumFE for OLS are not equal")
 
     # test sumFE for Poisson
-    if not np.allclose(fepois_mod._sumFE, r_fixest_pois.rx2("sumFE"), atol=1e-07):
+    if not np.allclose(
+        fepois_mod.fixef_estimates.sumFE, r_fixest_pois.rx2("sumFE"), atol=1e-07
+    ):
         raise ValueError("sumFE for Poisson are not equal")
 
     # test predict for OLS
@@ -292,8 +294,12 @@ def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_ty
     # With two fixed effects, iterative demeaning and the lsqr fixed-effect
     # solve agree with fixest to about 1e-8.
     tol = {"rtol": 1e-7, "atol": 1e-7}
-    np.testing.assert_allclose(fit._sumFE, response_scale_fixed_effect, **tol)
-    np.testing.assert_allclose(fit._sumFE, np.asarray(fit_r.rx2("sumFE")), **tol)
+    np.testing.assert_allclose(
+        fit.fixef_estimates.sumFE, response_scale_fixed_effect, **tol
+    )
+    np.testing.assert_allclose(
+        fit.fixef_estimates.sumFE, np.asarray(fit_r.rx2("sumFE")), **tol
+    )
 
     # With two fixed effects the per-level values depend on the normalization
     # of the second effect, so compare levels only for the single-FE model.
