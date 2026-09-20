@@ -8,7 +8,7 @@ and row-sample seams locked here are not observable from those suites.
 from __future__ import annotations
 
 import warnings
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, astuple
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
@@ -55,6 +56,7 @@ def lifecycle_data() -> pd.DataFrame:
 
     return pd.DataFrame(
         {
+            "row_id": np.arange(n_obs),
             "y": response,
             "x": covariate,
             "x2": second_covariate,
@@ -344,15 +346,32 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         iwls_tol=1e-10,
         **storage,
     )
-    # Gaussian fitting does not yet populate performance statistics.
-    for attribute in ("_rmse", "_r2", "_adj_r2", "_r2_within", "_adj_r2_within"):
-        assert np.isnan(getattr(fit, attribute)), attribute
-    if storage:
-        return
-    fit.get_performance()
+    # The Gaussian fit statistics are completed at fit time and survive every
+    # storage option; the reference fit keeps the arrays they were built from.
+    fitstat = fit.fitstat
+    assert isinstance(fitstat, FitStatistics)
+    assert np.isfinite(fitstat.deviance)
+    assert np.isnan(fitstat.r2_within) is not fit._has_fixef
+    reference = pf.feglm(
+        fml,
+        data=lifecycle_data,
+        family="gaussian",
+        weights=weights,
+        weights_type=weights_type,
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+    np.testing.assert_allclose(
+        astuple(fitstat),
+        astuple(reference.fitstat),
+        rtol=0,
+        atol=0,
+        equal_nan=True,
+        err_msg="Storage options changed Gaussian fit statistics",
+    )
     response = lifecycle_data["y"].to_numpy()
-    observation_weights = fit.observation_weights.values
-    residuals = fit.working_state.response_residuals
+    observation_weights = reference.observation_weights.values
+    residuals = reference.working_state.response_residuals
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
@@ -360,8 +379,8 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit.sample_info.n_obs))
-    np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+    np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
     if fit._has_fixef:
         assert observation_weights is not None
         weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
@@ -371,7 +390,39 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         )
         response_within = response - group_mean.to_numpy()
         ssy_within = np.sum(observation_weights * response_within**2)
-        np.testing.assert_allclose(fit._r2_within, 1 - ssu / ssy_within)
+        np.testing.assert_allclose(fitstat.r2_within, 1 - ssu / ssy_within)
+
+
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs",
+    [
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {}),
+        (pf.quantreg, "y ~ x", {"quantile": 0.5}),
+        (pf.feols, "y ~ 1 | fe", {}),
+        (pf.feols, "y ~ 1 | row_id", {"fixef_rm": "none"}),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {"fixef_rm": "none", "weights": "weight", "store_data": False},
+        ),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {
+                "fixef_rm": "none",
+                "weights": "weight",
+                "weights_type": "fweights",
+                "lean": True,
+            },
+        ),
+    ],
+)
+def test_undefined_fit_statistics_are_nan(
+    lifecycle_data: pd.DataFrame, estimator, formula: str, kwargs: dict
+) -> None:
+    fit = estimator(formula, lifecycle_data, **kwargs)
+    assert all(np.isnan(value) for value in astuple(fit.fitstat))
+    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -422,6 +473,17 @@ def test_published_components_preserve_inputs(
         "_Xbeta",
         "_u_hat_response",
         "_u_hat_working",
+        "_rmse",
+        "_r2",
+        "_adj_r2",
+        "_r2_within",
+        "_adj_r2_within",
+        "deviance",
+        "_loglik",
+        "_loglik_null",
+        "_pseudo_r2",
+        "_pearson_chi2",
+        "_y_hat_null",
         "_scores",
         "_hessian",
         "_bread",

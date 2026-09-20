@@ -1,3 +1,5 @@
+from operator import attrgetter
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -84,13 +86,13 @@ def _fit_statistics(estimator: str, family: str | None, has_fe: bool, is_iv: boo
     if is_iv:
         return ["_pi_hat", "_f_stat_1st_stage", "_p_value_1st_stage"]
     if estimator == "fepois":
-        return ["deviance", "_loglik", "_pearson_chi2"]
+        return ["fitstat.deviance", "fitstat.loglik", "fitstat.pearson_chi2"]
     if estimator == "feglm" and family != "gaussian":
-        return ["deviance"]
-    performance = ["_rmse", "_r2", "_adj_r2"]
+        return ["fitstat.deviance"]
+    fit_statistics = ["fitstat.rmse", "fitstat.r2", "fitstat.adj_r2"]
     if has_fe:
-        performance += ["_r2_within", "_adj_r2_within"]
-    return performance
+        fit_statistics += ["fitstat.r2_within", "fitstat.adj_r2_within"]
+    return fit_statistics
 
 
 def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, tol):
@@ -190,8 +192,8 @@ def test_fweights_match_literal_expansion(estimator, family, fml):
     )
     for statistic in _fit_statistics(estimator, family, has_fe, is_iv):
         np.testing.assert_allclose(
-            getattr(fit_weighted, statistic),
-            getattr(fit_expanded, statistic),
+            attrgetter(statistic)(fit_weighted),
+            attrgetter(statistic)(fit_expanded),
             err_msg=f"{statistic} differs",
             **tol,
         )

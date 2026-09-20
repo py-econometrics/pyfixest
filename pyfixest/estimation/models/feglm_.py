@@ -14,6 +14,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.internals.retention import require_retained
@@ -219,7 +220,7 @@ class Feglm(Feols):
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich
 
-        self.deviance = fit.deviance
+        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
 
     def _prediction_design(self) -> np.ndarray:
@@ -251,13 +252,6 @@ class Feglm(Feols):
         )
         bread = self.sandwich.bread
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
-
-    def get_performance(self) -> None:
-        """Reject linear R² measures; only the Gaussian family reports them."""
-        raise NotImplementedError(
-            f"get_performance() is not supported for family='{self._family.name}'; "
-            "only feols() and Gaussian feglm() fits report R² measures."
-        )
 
     def resid(self, type: str = "response") -> np.ndarray:
         """
