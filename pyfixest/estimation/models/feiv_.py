@@ -454,9 +454,7 @@ class Feiv(Feols):
 
         Notes
         -----
-        `f_stat` is adjusted to the specification of vcov. If
-        vcov_detail = "iid", the F statistic is not adjusted, otherwise it is
-        always adjusted.
+        `f_stat` is adjusted to the specification of vcov. 
 
         Parameters
         ----------
