@@ -19,11 +19,12 @@ A few classes and textbooks have adopted PyFixest for teaching. And for core tex
 - Tidy Finance comes with a [chapter on fixed effects](https://www.tidy-finance.org/python/fixed-effects-and-clustered-standard-errors.html) and clustered standard errors and [Difference-in-Differences estimation](https://www.tidy-finance.org/python/difference-in-differences.html) that uses pyfixest
 - The Effect (first edition): [our PyFixest translation](replicating-the-effect.qmd)
 - The Panel Data Chapter in [the Mixtape](https://mixtape.scunning.com/08-panel_data#data-exercise-survey-of-adult-service-providers). You can find a PyFixest translation [here](mixtape.qmd)
+- Chapter 6 (robust standard errors) of Peng Ding's [Linear Model and Extensions](https://arxiv.org/abs/2401.00649): [our PyFixest translation](ding_linear_models.qmd)
 
 Textbooks / textbook chapters that we still want to cover:
 
 - The Difference-in-Differences chapter in the Mixtape ([github issue here](https://github.com/py-econometrics/pyfixest/issues/998))
-- All of the Python translation of Ding's textbook on causal inference ([github issue here](https://github.com/py-econometrics/pyfixest/issues/957))
+- The remaining chapters of Peng Ding's textbook on linear models, [Linear Model and Extensions](https://arxiv.org/abs/2401.00649) ([github issue here](https://github.com/py-econometrics/pyfixest/issues/957))
 - The "Brave and True" chapters on [Dummy Regression](https://matheusfacure.github.io/python-causality-handbook/06-Grouped-and-Dummy-Regression.html), [Instrumental Variables](https://matheusfacure.github.io/python-causality-handbook/08-Instrumental-Variables.html), [Difference-in-Differences](https://matheusfacure.github.io/python-causality-handbook/13-Difference-in-Differences.html) and [Panel Data and Fixed Effects](https://matheusfacure.github.io/python-causality-handbook/14-Panel-Data-and-Fixed-Effects.html).
 
 ## Classes
