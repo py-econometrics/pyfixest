@@ -1,6 +1,7 @@
 """Public components for inspecting fitted estimator state."""
 
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
     CoefficientTable,
@@ -32,6 +33,7 @@ __all__ = [
     "EstimationSample",
     "FirstStage",
     "FirstStageDiagnostics",
+    "FitStatistics",
     "FittedValues",
     "FixedEffect",
     "FixedEffectEstimates",

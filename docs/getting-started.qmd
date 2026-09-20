@@ -85,20 +85,21 @@ fit_naive.se()
 fit_naive.tidy()
 ```
 
-Common model-level fit statistics are stored on the fitted object:
+Common model-level fit statistics are stored on the fitted object; the
+`fitstat` component holds the goodness-of-fit measures:
 
 ```{python}
 fit_naive.sample_info.n_obs  # number of observations
-fit_naive._rmse     # root mean squared error
-fit_naive._r2       # R-squared
-fit_naive._adj_r2   # adjusted R-squared
+fit_naive.fitstat.rmse       # root mean squared error
+fit_naive.fitstat.r2         # R-squared
+fit_naive.fitstat.adj_r2     # adjusted R-squared
 ```
 
 For models with fixed effects, within R-squared measures are also available:
 
 ```{python}
-fit_fe._r2_within
-fit_fe._adj_r2_within
+fit_fe.fitstat.r2_within
+fit_fe.fitstat.adj_r2_within
 ```
 
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.

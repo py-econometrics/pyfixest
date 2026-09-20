@@ -29,6 +29,10 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    linear_fit_statistics,
+)
 from pyfixest.estimation.internals.literals import (
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
@@ -194,14 +198,6 @@ class Feols(ResultAccessorMixin):
     ritest_statistics : RitestStatistics
         Randomization-inference draws, the centered sample statistic, and the
         p-value, set by `ritest(store_ritest_statistics=True)`.
-    _se : np.ndarray
-        Standard errors of the estimated coefficients.
-    _tstat : np.ndarray
-        T-statistics of the estimated coefficients.
-    _pvalue : np.ndarray
-        P-values associated with the t-statistics.
-    _conf_int : np.ndarray
-        Confidence intervals for the estimated coefficients.
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
@@ -211,16 +207,8 @@ class Feols(ResultAccessorMixin):
         Fixed-effect estimates published by `fixef()`: the coefficient records
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
         per-observation fixed-effect contribution `sumFE`.
-    _rmse : float
-        Root mean squared error of the model.
-    _r2 : float
-        R-squared value of the model.
-    _r2_within : float
-        R-squared value computed on demeaned dependent variable.
-    _adj_r2 : float
-        Adjusted R-squared value of the model.
-    _adj_r2_within : float
-        Adjusted R-squared value computed on demeaned dependent variable.
+    fitstat : FitStatistics
+        Goodness-of-fit measures; ``NaN`` where the estimator defines none.
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
@@ -352,15 +340,8 @@ class Feols(ResultAccessorMixin):
             else None
         )
 
-        # set in get_performance()
-        self._rmse = np.nan
-        self._r2 = np.nan
-        self._r2_within = np.nan
-        self._adj_r2 = np.nan
-        self._adj_r2_within = np.nan
-
-        # special for poisson / glm
-        self.deviance: float | None = None
+        # set in get_fit(); IV and quantile fits keep the all-NaN value
+        self.fitstat = FitStatistics()
 
         # special for did
         self._res_cohort_eventtime_dict: dict[str, Any] | None = None
@@ -585,11 +566,25 @@ class Feols(ResultAccessorMixin):
         # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
+        # Empty designs are used only for demeaning and may have no residual
+        # degrees of freedom. Leave their fit statistics undefined.
+        if self._X_is_empty:
+            return
+        self.fitstat = linear_fit_statistics(
+            Y=self.model_matrix.dependent.to_numpy(),
+            Y_within=within_data.response,
+            residuals=self._u_hat,
+            weights=self.observation_weights.values,
+            N=self.sample_info.n_obs,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""
         if self._method == "feols" and not self._is_iv:
-            self.get_performance()
             self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:

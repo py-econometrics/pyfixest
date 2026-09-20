@@ -244,6 +244,7 @@ quartodoc:
         - estimation.state.WithinIvData
         - estimation.state.CollinearityCheck
         - estimation.state.GlmWorkingState
+        - estimation.state.FitStatistics
         - estimation.state.FittedValues
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance

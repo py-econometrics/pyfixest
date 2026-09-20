@@ -90,13 +90,13 @@ def _fit_statistics(estimator: str, family: str | None, has_fe: bool, is_iv: boo
             "first_stage.diagnostics.p_value",
         ]
     if estimator == "fepois":
-        return ["deviance", "_loglik", "_pearson_chi2"]
+        return ["fitstat.deviance", "fitstat.loglik", "fitstat.pearson_chi2"]
     if estimator == "feglm" and family != "gaussian":
-        return ["deviance"]
-    performance = ["_rmse", "_r2", "_adj_r2"]
+        return ["fitstat.deviance"]
+    fit_statistics = ["fitstat.rmse", "fitstat.r2", "fitstat.adj_r2"]
     if has_fe:
-        performance += ["_r2_within", "_adj_r2_within"]
-    return performance
+        fit_statistics += ["fitstat.r2_within", "fitstat.adj_r2_within"]
+    return fit_statistics
 
 
 def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, tol):
