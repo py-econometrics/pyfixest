@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     FirstStage,
@@ -151,12 +152,7 @@ class Feiv(Feols):
         weights_type: str | None,
         collin_tol: float,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ] = "scipy.linalg.solve",
+        solver: SolverOptions = "scipy.linalg.solve",
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,
@@ -215,7 +211,7 @@ class Feiv(Feols):
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
-                demeaner=self._demeaner,
+                demeaner=self.options.demeaner,
             )
         return WithinIvData(
             response=linear_data.response,
@@ -234,7 +230,7 @@ class Feiv(Feols):
         instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
-            self._collin_tol,
+            self.options.collin_tol,
         )
         self.collinearity_instruments = collinearity
         self._coefnames_z = list(collinearity.coefnames)
@@ -251,7 +247,7 @@ class Feiv(Feols):
             Z=within_data.instruments,
             Y=within_data.response,
             weights=self.observation_weights.values,
-            solver=self._solver,
+            solver=self.options.solver,
         )
 
         self._beta_hat = fit.beta
@@ -291,7 +287,7 @@ class Feiv(Feols):
         else:
             vcov_detail = spec.vcov_type_detail
 
-        demeaner = self._demeaner
+        demeaner = self.options.demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(
             self.sample_info.dropped_row_index
         )
@@ -303,10 +299,10 @@ class Feiv(Feols):
             fml=fml_first_stage,
             data=self._data,
             vcov=vcov_detail,
-            weights=self._weights_name,
-            weights_type=self._weights_type,
-            collin_tol=self._collin_tol,
-            solver=self._solver,
+            weights=self.options.weights,
+            weights_type=self.options.weights_type,
+            collin_tol=self.options.collin_tol,
+            solver=self.options.solver,
             demeaner=demeaner,
         )
 
@@ -338,8 +334,14 @@ class Feiv(Feols):
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
             model = first_stage.model
-            model._store_data = self._store_data
-            model._lean = self._lean
+            # The first stage is fitted in full because `first_stage` is built
+            # from its within data and residuals; it takes over the parent's
+            # storage options once those values have been read.
+            model.options = replace(
+                model.options,
+                store_data=self.options.store_data,
+                lean=self.options.lean,
+            )
             model._clear_attributes()
         super()._clear_attributes()
 
@@ -500,7 +502,7 @@ class Feiv(Feols):
                 frequency_weights=(
                     observation_weights.reshape((-1, 1))
                     if observation_weights is not None
-                    and model._weights_type == "fweights"
+                    and model.options.weights_type == "fweights"
                     else None
                 ),
                 normal_equation_weights=observation_weights,
@@ -508,7 +510,7 @@ class Feiv(Feols):
             )
             bread = model.sandwich.bread
             correction = get_ssc(
-                model._ssc,
+                model.options.ssc,
                 model._dof_counts(G=model.sample_info.n_obs),
                 vcov_type="hetero",
             )

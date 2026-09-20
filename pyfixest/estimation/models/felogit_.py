@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any
 
 import pandas as pd
 
@@ -8,6 +8,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import LOGIT
+from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.utils.utils import Ssc
 
@@ -28,12 +29,7 @@ class Felogit(Feglm):
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
+        solver: SolverOptions,
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         store_data: bool = True,

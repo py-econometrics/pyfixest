@@ -22,10 +22,6 @@ if TYPE_CHECKING:
 class Ssc:
     """Small-sample correction options.
 
-    Build one with [ssc()](/reference/utils.utils.ssc.qmd), which also
-    accepts the deprecated argument names; the estimation functions take it
-    through their ``ssc`` argument.
-
     Parameters
     ----------
     k_adj : bool, default True
@@ -298,6 +294,7 @@ def get_ssc(
     [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
     N, k, k_fe, n_fe = counts.N, counts.k, counts.k_fe, counts.n_fe
+    k_fe_nested, n_fe_fully_nested = counts.k_fe_nested, counts.n_fe_fully_nested
     G: int | float = counts.G
 
     G_adj_value = 1.0
@@ -314,13 +311,13 @@ def get_ssc(
     elif ssc.k_fixef == "nonnested":
         if n_fe == 0:
             df_k = k
-        elif counts.k_fe_nested == 0:
+        elif k_fe_nested == 0:
             # no nested fe, so just add all fixed effects
             df_k = k + k_fe_adj
         else:
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
-            df_k = k + k_fe_adj - counts.k_fe_nested + counts.n_fe_fully_nested
+            df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
     else:
         # "full": add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k

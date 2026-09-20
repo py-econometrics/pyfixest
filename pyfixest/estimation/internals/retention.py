@@ -41,7 +41,7 @@ def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
 
 def require_retained(model, operation: str, *names: str) -> None:
     """Fail before `operation` touches attributes omitted by the retention policy."""
-    policy = RetentionPolicy(store_data=model._store_data, lean=model._lean)
+    policy = model.options.retention
     omitted = set(omitted_attributes(policy))
     missing = []
     for name in names:

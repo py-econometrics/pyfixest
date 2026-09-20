@@ -476,7 +476,7 @@ def qplot(
             )
 
         df = model.tidy()
-        df["quantile"] = model._quantile
+        df["quantile"] = model.options.quantile
         df["model"] = model._model_name_plot
 
         df_all = pd.concat([df_all, df], axis=0)

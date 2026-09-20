@@ -1,22 +1,205 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
 
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.internals.literals import (
+    QuantregMethodOptions,
+    SolverOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.retention import RetentionPolicy
+from pyfixest.utils.utils import Ssc
 
 if TYPE_CHECKING:
     from pyfixest.estimation.models.feols_ import Feols
 _VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
+
+_OptionsT = TypeVar("_OptionsT", bound="EstimationOptions")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EstimationOptions:
+    """Estimation options a fitted model was built with.
+
+    Every model class publishes one value in its constructor as
+    ``fit.options``, so the options a result was produced with can be read
+    back from the result itself. GLM and quantile fits publish the
+    estimator-specific extensions below. The value survives
+    ``store_data=False`` and ``lean=True``, which it describes through
+    `retention`.
+
+    Parameters
+    ----------
+    ssc : Ssc
+        Small-sample correction options, as built by
+        [ssc()](/reference/utils.utils.ssc.qmd).
+    drop_singletons : bool
+        Whether singleton fixed-effect levels were dropped
+        (``fixef_rm="singleton"``).
+    drop_intercept : bool
+        Whether the intercept was removed from the design.
+    weights : str or None
+        Name of the observation-weight column, or ``None`` for an unweighted
+        fit.
+    weights_type : {"aweights", "fweights"} or None
+        Interpretation of `weights`: analytic or frequency weights.
+    offset : str or None
+        Name of the offset column of a GLM fit, or ``None``.
+    collin_tol : float
+        Tolerance of the rank check that drops collinear columns.
+    solver : str
+        Linear solver used for the least-squares steps.
+    demeaner : MapDemeaner or LsmrDemeaner
+        Resolved fixed-effect demeaner configuration.
+    store_data : bool
+        Whether the estimation data and formula state were retained.
+    lean : bool
+        Whether the large fit products were dropped after estimation.
+    context : Mapping[str, Any]
+        Variables made available to formulaic when materializing the model
+        matrix, as captured by `capture_context`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), weights="weights")
+    fit.options.weights, fit.options.weights_type, fit.options.demeaner
+    ```
+    """
+
+    ssc: Ssc
+    drop_singletons: bool
+    drop_intercept: bool
+    weights: str | None
+    weights_type: WeightsTypeOptions | None
+    offset: str | None
+    collin_tol: float
+    solver: SolverOptions
+    demeaner: AnyDemeaner
+    store_data: bool
+    lean: bool
+    context: Mapping[str, Any]
+
+    @classmethod
+    def extend(
+        cls: type[_OptionsT], options: EstimationOptions, **estimator_options: Any
+    ) -> _OptionsT:
+        """Widen shared options into an estimator-specific options value.
+
+        A subclass cannot be built with `dataclasses.replace`, so the shared
+        fields of `options` are carried over explicitly.
+        """
+        shared = {
+            field.name: getattr(options, field.name)
+            for field in fields(EstimationOptions)
+        }
+        return cls(**shared, **estimator_options)
+
+    @property
+    def has_weights(self) -> bool:
+        """Whether the fit used user-supplied observation weights."""
+        return self.weights is not None
+
+    @property
+    def fixef_tol(self) -> float:
+        """Stopping tolerance of the demeaning algorithm.
+
+        LSMR takes two tolerances; the backends that expose only one collapse
+        them to their maximum, as `LsmrDemeaner` documents.
+        """
+        demeaner = self.demeaner
+        if isinstance(demeaner, LsmrDemeaner):
+            return max(demeaner.fixef_atol, demeaner.fixef_btol)
+        return demeaner.fixef_tol
+
+    @property
+    def retention(self) -> RetentionPolicy:
+        """Storage policy the fitted model was cleaned up under."""
+        return RetentionPolicy(store_data=self.store_data, lean=self.lean)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class GlmEstimationOptions(EstimationOptions):
+    """Estimation options of a GLM fit, including the IRLS options.
+
+    Published as ``fit.options`` by `feglm()` and `fepois()` fits. The family
+    itself is not an option and is not carried here.
+
+    Parameters
+    ----------
+    maxiter : int
+        Maximum number of IRLS iterations.
+    tol : float
+        Convergence tolerance of the IRLS iteration.
+    separation_check : list[str] or None
+        Separation-detection methods run before estimation, or ``None`` when
+        the check was skipped.
+    accelerate : bool
+        Whether the accelerated demeaning path of Stammann (2018) was used.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois"))
+    fit.options.maxiter, fit.options.tol
+    ```
+    """
+
+    maxiter: int
+    tol: float
+    separation_check: list[str] | None
+    accelerate: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class QuantregEstimationOptions(EstimationOptions):
+    """Estimation options of a quantile-regression fit.
+
+    Published as ``fit.options`` by `quantreg()` fits.
+
+    Parameters
+    ----------
+    quantile : float
+        The quantile of the conditional distribution that was fitted.
+    method : {"fn", "pfn"}
+        Frisch-Newton interior point solver, with or without preprocessing.
+    quantile_tol : float
+        Convergence tolerance of the interior point solver.
+    quantile_maxiter : int or None
+        Maximum number of solver iterations; ``None`` defers to the solver's
+        sample-size-dependent default.
+    seed : int or None
+        Seed of the subsampling draws of the ``"pfn"`` method.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.25)
+    fit.options.quantile, fit.options.method
+    ```
+    """
+
+    quantile: float
+    method: QuantregMethodOptions
+    quantile_tol: float
+    quantile_maxiter: int | None
+    seed: int | None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
