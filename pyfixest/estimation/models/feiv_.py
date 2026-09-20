@@ -19,6 +19,8 @@ from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import (
     FirstStage,
     FirstStageDiagnostics,
+    CollinearityCheck,
+    FittedValues,
     WithinIvData,
     WithinLinearData,
 )
@@ -74,23 +76,21 @@ class Feiv(Feols):
         for frequency weights.
     _coefnames_z : list
         Names of coefficients for Z after handling multicollinearity.
-    _collin_vars_z : list
-        Variables identified as collinear in Z.
-    _collin_index_z : list
-        Indices of collinear variables in Z.
+    collinearity_instruments : CollinearityCheck
+        Names and column mask of the instruments dropped by the rank check,
+        set in get_fit().
     _is_iv : bool
         Indicator if instrumental variables are used.
-    _support_crv3_inference : bool
-        Indicator for supporting CRV3 inference.
-    _support_iid_inference : bool
-        Indicator for supporting IID inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
         Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
         X_hat' W X_hat, and its inverse, set in get_fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
-    _Y_hat_link : np.ndarray
-        Predicted values of the regression model.
+    fitted_values : FittedValues
+        In-sample predictions on the link and the response scale, set in
+        get_fit().
     _u_hat : np.ndarray
         Residuals of the regression model.
     first_stage : FirstStage
@@ -132,8 +132,13 @@ class Feiv(Feols):
     details.
     """
 
+<<<<<<< HEAD
     # Set in _fit_first_stage().
     first_stage: FirstStage
+=======
+    # Set in get_fit().
+    collinearity_instruments: CollinearityCheck
+>>>>>>> master
 
     # Constructor and methods implementation...
     def __init__(
@@ -184,10 +189,13 @@ class Feiv(Feols):
         )
 
         self._is_iv = True
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
@@ -224,16 +232,13 @@ class Feiv(Feols):
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
         assert self._coefnames_z is not None
-        (
-            instruments,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = drop_multicollinear_variables(
+        instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
+        self.collinearity_instruments = collinearity
+        self._coefnames_z = list(collinearity.coefnames)
         return replace(within_data, instruments=instruments)
 
     def get_fit(self) -> None:
@@ -253,7 +258,11 @@ class Feiv(Feols):
         self._beta_hat = fit.beta
         self._u_hat = fit.residuals
         self.sandwich = fit.sandwich
-        self._get_predictors()
+
+        # The response minus the residual carries the fixed-effect
+        # contribution, which `design @ beta_hat` alone would omit.
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""
@@ -277,11 +286,11 @@ class Feiv(Feols):
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: dict[str, str] | str
 
-        covariance = self.variance_covariance
-        if covariance.is_clustered:
-            vcov_detail = {covariance.vcov_type_detail: covariance.clustervar[0]}
+        spec = self.variance_covariance.spec
+        if spec.is_clustered:
+            vcov_detail = {spec.vcov_type_detail: spec.clustervar[0]}
         else:
-            vcov_detail = covariance.vcov_type_detail
+            vcov_detail = spec.vcov_type_detail
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(
@@ -483,9 +492,15 @@ class Feiv(Feols):
         require_retained(model, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
+<<<<<<< HEAD
         if self.variance_covariance.vcov_type_detail == "iid":
             require_retained(model, "eff_F", "_data")
             model.vcov("hetero")
+=======
+        if self.variance_covariance.spec.vcov_type_detail == "iid":
+            require_retained(first_stage, "eff_F", "_data")
+            first_stage.vcov("hetero")
+>>>>>>> master
 
         instrument_positions = _instrument_positions(
             model=model, instruments=published.instruments

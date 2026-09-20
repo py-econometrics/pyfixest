@@ -242,11 +242,19 @@ quartodoc:
         - estimation.state.DroppedRowCounts
         - estimation.state.WithinLinearData
         - estimation.state.WithinIvData
+        - estimation.state.CollinearityCheck
         - estimation.state.GlmWorkingState
+        - estimation.state.FittedValues
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
         - estimation.state.FirstStage
         - estimation.state.FirstStageDiagnostics
+        - estimation.state.VcovSpec
+        - estimation.state.FixedEffectEstimates
+        - estimation.state.FixedEffect
+        - estimation.state.RitestStatistics
+        - estimation.state.CoefficientTable
+        - estimation.state.Capabilities
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.

@@ -190,7 +190,7 @@ def test_fweights_match_literal_expansion(estimator, family, fml):
         fit_expanded,
         counts,
         vcov_types=_vcov_types(
-            has_fe, is_iv, supports_crv3=fit_weighted._support_crv3_inference
+            has_fe, is_iv, supports_crv3=fit_weighted.capabilities.crv3_inference
         ),
         tol=tol,
     )
