@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    WaldDistributionOptions,
+    WeightsTypeOptions,
+)
 
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 _VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
@@ -559,6 +565,149 @@ class VarianceCovariance:
     spec: VcovSpec
     G: tuple[int, ...]
     cluster_ids: NDArray[np.intp] | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStageDiagnostics:
+    """Instrument-strength diagnostics of a 2SLS first stage.
+
+    Parameters
+    ----------
+    f_stat : float
+        Wald F statistic of the joint null that every excluded instrument has
+        a zero first-stage coefficient. It inherits the first stage's
+        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        whenever the second stage is.
+    p_value : float
+        P-value of `f_stat`.
+    eff_f : float or None
+        Effective F statistic of
+        [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
+        computed against a heteroskedasticity-robust first stage. ``None``
+        until `IV_Diag()` or `eff_F()` computes it.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.diagnostics
+    ```
+    """
+
+    f_stat: float
+    p_value: float
+    eff_f: float | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStage:
+    """First-stage regression retained by a fitted 2SLS model.
+
+    The first stage regresses the endogenous regressor on the exogenous
+    regressors and the excluded instruments, on the second stage's retained
+    rows and with its fixed effects, weights, and covariance estimator.
+
+    Parameters
+    ----------
+    coefficients : NDArray[np.float64]
+        First-stage coefficients pi_hat, one per first-stage regressor.
+    fitted_values : NDArray[np.float64]
+        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+    residuals : NDArray[np.float64]
+        First-stage residuals v_hat, shape (n_rows,).
+    model : Feols
+        The fitted first-stage model. It follows the second stage's
+        `store_data` and `lean` policy, so it drops the same state.
+    instruments : tuple[str, ...]
+        Names of the excluded instruments, in first-stage design order.
+    diagnostics : FirstStageDiagnostics
+        Instrument-strength statistics of that first stage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.instruments
+    ```
+
+    ```{python}
+    fit.first_stage.model.tidy()
+    ```
+    """
+
+    coefficients: NDArray[np.float64]
+    fitted_values: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    model: Feols
+    instruments: tuple[str, ...]
+    diagnostics: FirstStageDiagnostics
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WaldTest:
+    """Wald test of a linear hypothesis R @ beta = q.
+
+    Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
+    of the reference distribution actually used, `df1` and `df2` are its
+    degrees of freedom, and `vcov_type` names the covariance estimator the
+    quadratic form was built with.
+
+    Parameters
+    ----------
+    stat : float
+        Test statistic under `distribution`: the F-scaled `f_statistic` for
+        ``"F"``, the unscaled `wald_statistic` for ``"chi2"``.
+    pvalue : float
+        P-value of `stat` under `distribution`.
+    df1 : int
+        Numerator degrees of freedom, the number of restrictions in R.
+    df2 : int or float
+        Denominator degrees of freedom: the number of clusters minus one
+        under clustered inference, otherwise the number of observations minus
+        the number of estimated coefficients and fixed effects.
+    distribution : {"F", "chi2"}
+        Reference distribution. ``"F"`` is only used for the joint null that
+        every coefficient is zero; any other restriction falls back to
+        ``"chi2"``.
+    vcov_type : str
+        Covariance estimator the test was computed with, as
+        `VarianceCovariance.vcov_type_detail`.
+    wald_statistic : float
+        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+    f_statistic : float
+        F-scaled statistic W / `df1`, available under either distribution.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data(), vcov={"CRV1": "f1"})
+    fit.wald
+    ```
+
+    `feols()` fits run the joint test on all coefficients automatically; other
+    estimators publish `fit.wald` once `wald_test()` is called.
+
+    ```{python}
+    import numpy as np
+
+    fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
+    ```
+    """
+
+    stat: float
+    pvalue: float
+    df1: int
+    df2: int | float
+    distribution: WaldDistributionOptions
+    vcov_type: str
+    wald_statistic: float
+    f_statistic: float
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
