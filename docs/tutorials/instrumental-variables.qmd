@@ -366,10 +366,6 @@ where $\hat{\pi}$ are the first-stage coefficients on the excluded instruments, 
 The `.IV_Diag()` method computes both the standard F-statistic and the effective F-statistic in one call:
 
 ```{python}
-# Re-use the motherhood penalty IV model: IV_Diag() reports the standard F
-# under the first stage's own covariance estimator, and computes the
-# effective F under a heteroskedasticity-robust covariance without changing
-# the first stage's retained covariance.
 fit_iv.IV_Diag()
 
 diagnostics = fit_iv.first_stage.diagnostics
