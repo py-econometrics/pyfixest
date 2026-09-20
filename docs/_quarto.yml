@@ -236,6 +236,9 @@ quartodoc:
       desc: |
         Data classes and model-matrix components exposed by fitted estimators.
       contents:
+        - estimation.state.EstimationOptions
+        - estimation.state.GlmEstimationOptions
+        - estimation.state.QuantregEstimationOptions
         - estimation.state.ModelMatrix
         - estimation.state.ObservationWeights
         - estimation.state.EstimationSample
