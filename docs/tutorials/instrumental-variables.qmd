@@ -344,13 +344,11 @@ The `.first_stage()` method re-estimates the first-stage regression and computes
 
 
 ```{python}
-# Re-use the motherhood penalty IV model
-# Note: IV_Diag() switches vcov to hetero internally for the effective F computation.
-# Reset to iid here to get the iid-based first-stage F-statistic.
-fit_iv.vcov("iid")
-fit_iv.first_stage()
+# Re-use the motherhood penalty IV model. IV_Diag() now preserves the retained
+# first-stage covariance, so the iid-based F-statistic remains available.
+fit_iv.IV_Diag()
 
-# The F-stat is stored as an attribute after calling first_stage()
+# The F-stat is stored as an attribute after calling IV_Diag()
 print(f"First-stage F-statistic: {fit_iv._f_stat_1st_stage:.1f}")
 print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
 ```

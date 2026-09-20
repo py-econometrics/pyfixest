@@ -22,7 +22,9 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.utils.utils import get_ssc
 
 
 class Feiv(Feols):
@@ -516,11 +518,6 @@ class Feiv(Feols):
         """Compute Effective F stat (Olea and Pflueger 2013)."""
         first_stage = self._model_1st_stage
         require_retained(first_stage, "eff_F", "within_data", "observation_weights")
-        # If vcov is iid, redo first stage regression
-
-        if self.variance_covariance.spec.vcov_type_detail == "iid":
-            require_retained(first_stage, "eff_F", "_data")
-            first_stage.vcov("hetero")
 
         # Compute Effective F stat by Olea and Pflueger 2013
         # 1. Extract First Stage Coefficients and Variance-Covariance Matrix:
@@ -550,8 +547,34 @@ class Feiv(Feols):
             else Z.T @ (observation_weights[:, None] * Z)
         )
 
-        # Extract the robust variance-covariance matrix
-        vcv = first_stage.variance_covariance.vcov
+        # Keep clustered effective-F behavior tied to the model's retained
+        # first-stage covariance. Only IID inference needs a separate
+        # heteroskedasticity-robust covariance.
+        if first_stage.variance_covariance.spec.is_clustered:
+            vcv = first_stage.variance_covariance.vcov
+        else:
+            observation_weights = first_stage.observation_weights.values
+            hetero_meat = meat_hetero(
+                sandwich=first_stage.sandwich,
+                X=first_stage.within_data.design,
+                frequency_weights=(
+                    observation_weights.reshape((-1, 1))
+                    if observation_weights is not None
+                    and first_stage._weights_type == "fweights"
+                    else None
+                ),
+                normal_equation_weights=observation_weights,
+                vcov_type_detail="hetero",
+            )
+            bread = first_stage.sandwich.bread
+            ssc, _, _ = get_ssc(
+                **first_stage._make_ssc_kwargs(
+                    vcov_type="hetero", G=first_stage.sample_info.n_obs
+                )
+            )
+            # Apply the same small-sample scaling as vcov("hetero") without
+            # modifying the first-stage model's stored covariance or inference.
+            vcv = bread @ (hetero_meat * ssc[0]) @ bread
 
         # Map the instrument names to their indices in the parameter list
         # Number of rows/columns in vcv
