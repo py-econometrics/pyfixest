@@ -344,8 +344,6 @@ Every IV fit estimates its first stage and reports the **first-stage F-statistic
 
 
 ```{python}
-# Re-use the motherhood penalty IV model. IV_Diag() preserves the retained
-# first-stage's own covariance, so the iid-based F-statistic remains available.
 fit_iv.IV_Diag()
 
 diagnostics = fit_iv.first_stage.diagnostics

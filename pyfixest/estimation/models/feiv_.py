@@ -492,13 +492,11 @@ class Feiv(Feols):
             model=model, instruments=published.instruments
         )
 
-        # Keep clustered effective-F behavior tied to the model's retained
-        # first-stage covariance. Only IID inference needs a separate
-        # heteroskedasticity-robust covariance, computed without mutating the
-        # first-stage model's stored covariance or inference.
-        if model.variance_covariance.spec.is_clustered:
-            vcv = model.variance_covariance.vcov
-        else:
+        # Only IID inference needs a substitute heteroskedasticity-robust
+        # covariance; hetero and clustered first stages already carry the
+        # covariance eff_F needs. Compute it without mutating the first-stage
+        # model's stored covariance or inference.
+        if model.variance_covariance.spec.vcov_type_detail == "iid":
             observation_weights = model.observation_weights.values
             hetero_meat = meat_hetero(
                 sandwich=model.sandwich,
@@ -519,6 +517,8 @@ class Feiv(Feols):
             # Apply the same small-sample scaling as vcov("hetero") without
             # modifying the first-stage model's stored covariance or inference.
             vcv = bread @ (hetero_meat * ssc[0]) @ bread
+        else:
+            vcv = model.variance_covariance.vcov
 
         eff_f = effective_f_statistic(
             pi_hat=model._beta_hat[instrument_positions],
