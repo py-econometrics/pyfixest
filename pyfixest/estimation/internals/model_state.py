@@ -7,7 +7,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    WaldDistributionOptions,
+    WeightsTypeOptions,
+)
 
 if TYPE_CHECKING:
     from pyfixest.estimation.models.feols_ import Feols
@@ -631,6 +634,69 @@ class FirstStage:
     model: Feols
     instruments: tuple[str, ...]
     diagnostics: FirstStageDiagnostics
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WaldTest:
+    """Wald test of a linear hypothesis R @ beta = q.
+
+    Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
+    of the reference distribution actually used, `df1` and `df2` are its
+    degrees of freedom, and `vcov_type` names the covariance estimator the
+    quadratic form was built with.
+
+    Parameters
+    ----------
+    stat : float
+        Test statistic under `distribution`: the F-scaled `f_statistic` for
+        ``"F"``, the unscaled `wald_statistic` for ``"chi2"``.
+    pvalue : float
+        P-value of `stat` under `distribution`.
+    df1 : int
+        Numerator degrees of freedom, the number of restrictions in R.
+    df2 : int or float
+        Denominator degrees of freedom: the number of clusters minus one
+        under clustered inference, otherwise the number of observations minus
+        the number of estimated coefficients and fixed effects.
+    distribution : {"F", "chi2"}
+        Reference distribution. ``"F"`` is only used for the joint null that
+        every coefficient is zero; any other restriction falls back to
+        ``"chi2"``.
+    vcov_type : str
+        Covariance estimator the test was computed with, as
+        `VarianceCovariance.vcov_type_detail`.
+    wald_statistic : float
+        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+    f_statistic : float
+        F-scaled statistic W / `df1`, available under either distribution.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data(), vcov={"CRV1": "f1"})
+    fit.wald
+    ```
+
+    `feols()` fits run the joint test on all coefficients automatically; other
+    estimators publish `fit.wald` once `wald_test()` is called.
+
+    ```{python}
+    import numpy as np
+
+    fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
+    ```
+    """
+
+    stat: float
+    pvalue: float
+    df1: int
+    df2: int | float
+    distribution: WaldDistributionOptions
+    vcov_type: str
+    wald_statistic: float
+    f_statistic: float
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

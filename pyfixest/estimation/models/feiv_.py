@@ -565,9 +565,9 @@ def first_stage_f_test(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        model.wald_test(R=R)
+        wald = model.wald_test(R=R)
     return FirstStageDiagnostics(
-        f_stat=model._f_statistic, p_value=model._p_value, eff_f=None
+        f_stat=wald.f_statistic, p_value=wald.pvalue, eff_f=None
     )
 
 

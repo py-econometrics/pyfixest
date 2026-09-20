@@ -248,6 +248,7 @@ quartodoc:
         - estimation.state.FittedValues
         - estimation.state.SandwichComponents
         - estimation.state.VarianceCovariance
+        - estimation.state.WaldTest
         - estimation.state.FirstStage
         - estimation.state.FirstStageDiagnostics
         - estimation.state.VcovSpec

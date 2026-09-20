@@ -211,7 +211,7 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     )
     fit_ols = feols("X1 ~  Z1 | f1", vcov=vcov_detail, data=data, weights=weight_detail)
 
-    fit_ols.wald_test()
+    wald_ols = fit_ols.wald_test()
 
     first_stage = fit_iv.first_stage
     _pi_hat_iv = first_stage.coefficients
@@ -223,8 +223,8 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     _pi_hat_ols = fit_ols._beta_hat
     _X_hat_ols = fit_ols.within_data.design @ fit_ols._beta_hat
     _v_hat_ols = fit_ols._u_hat
-    _F_stat_ols = fit_ols._f_statistic
-    _F_pval_ols = fit_ols._p_value
+    _F_stat_ols = wald_ols.f_statistic
+    _F_pval_ols = wald_ols.pvalue
 
     # Assert that the parameter estimates and predicted values are c
     # lose between IV and OLS
