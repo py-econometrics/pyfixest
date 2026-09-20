@@ -802,6 +802,18 @@ def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
         fit.get_inference()
 
 
+@pytest.mark.parametrize(
+    ("retention_kwargs", "ids_retained"),
+    [({}, True), ({"store_data": False}, True), ({"lean": True}, False)],
+)
+def test_cluster_ids_follow_data_retention(
+    lifecycle_data, retention_kwargs, ids_retained
+):
+    data = lifecycle_data.assign(group=np.arange(len(lifecycle_data)) % 3)
+    fit = pf.feols("y ~ x | fe", data, vcov={"CRV1": "fe:group"}, **retention_kwargs)
+    assert (fit.variance_covariance.cluster_ids is not None) is ids_retained
+
+
 def test_quantreg_rejects_multiway_clustering(lifecycle_data):
     """Quantile regression declares no multiway support before any state is read."""
     data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))

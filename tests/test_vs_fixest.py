@@ -1434,6 +1434,40 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
+    ("cluster", "r_cluster"),
+    [("f1:f2", "~f1^f2"), ("f1:f2:f3", "~joint3")],
+)
+def test_cluster_interactions_against_fixest(data_feols, cluster, r_cluster):
+    """Joint-group CRV1 inference agrees with R fixest on the same rows."""
+    data = data_feols.dropna().copy()
+    data["f3"] = np.arange(len(data)) % 4
+    data["joint3"] = pd.factorize(pd.MultiIndex.from_frame(data[["f1", "f2", "f3"]]))[0]
+
+    fit = feols("Y ~ X1 | f1", data=data, vcov={"CRV1": cluster})
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X1 | f1"),
+        data=data,
+        cluster=ro.Formula(r_cluster),
+    )
+
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        stats.vcov(fit_r),
+        rtol=1e-7,
+        atol=1e-8,
+        err_msg=f"CRV1 covariance for {cluster} differs from R fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se().to_numpy(),
+        np.sqrt(np.diag(stats.vcov(fit_r))),
+        rtol=1e-7,
+        atol=1e-8,
+        err_msg=f"CRV1 standard errors for {cluster} differ from R fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
     "data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")]
 )
 @pytest.mark.parametrize("k_adj", [True, False])

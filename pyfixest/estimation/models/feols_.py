@@ -615,9 +615,9 @@ class Feols(ResultAccessorMixin):
             to use for inference.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
-            CRV1 inference or {"CRV3": "clustervar"}
-            for CRV3 inference. Note that CRV3 inference is currently not supported
-            for IV estimation.
+            CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+            Use ":" to cluster on joint groups and "+" for two-way clustering.
+            Note that CRV3 inference is currently not supported for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
@@ -664,12 +664,12 @@ class Feols(ResultAccessorMixin):
         spec = VcovSpec.from_user_input(
             vcov, vcov_kwargs, has_fixef=self._has_fixef, is_iv=self._is_iv
         )
-        vcov_type = spec.vcov_type
 
         # Every estimator follows the same three steps: small-sample factors,
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
-        if vcov_type == "CRV":
+        cluster_ids: np.ndarray | None = None
+        if spec.vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
@@ -682,6 +682,7 @@ class Feols(ResultAccessorMixin):
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
             )
+            cluster_ids = None if self._lean else prep.cluster_arr_int
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
             ssc, df_k, df_t = cluster_ssc(
@@ -697,19 +698,19 @@ class Feols(ResultAccessorMixin):
             ]
         else:
             ssc_G: int | float
-            if vcov_type == "iid":
+            if spec.vcov_type == "iid":
                 ssc_vcov_type, ssc_G = "iid", 1
                 term = self._vcov_iid()
-            elif vcov_type == "hetero":
+            elif spec.vcov_type == "hetero":
                 # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_hetero(vcov_type_detail=spec.vcov_type_detail)
-            elif vcov_type == "HAC":
+            elif spec.vcov_type == "HAC":
                 # G is the number of unique time periods T used
                 ssc_vcov_type = "HAC"
                 ssc_G = np.unique(self._data[spec.time_id]).shape[0]
                 term = self._vcov_hac(spec)
-            elif vcov_type == "nid":
+            elif spec.vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
             ssc, df_k, df_t = get_ssc(
@@ -726,11 +727,20 @@ class Feols(ResultAccessorMixin):
             df_t=df_t,
             spec=spec,
             G=G,
+            cluster_ids=cluster_ids,
         )
         # update p-value, t-stat, standard error, confint
         self.get_inference()
 
         return self
+
+    def _cluster_array(self, cluster: str) -> np.ndarray:
+        """Get sample-aligned cluster values from the current vcov or model data."""
+        covariance = self.variance_covariance
+        if covariance.cluster_ids is not None and cluster in covariance.spec.clustervar:
+            column = covariance.spec.clustervar.index(cluster)
+            return covariance.cluster_ids[:, column]
+        return self._data[cluster].to_numpy()
 
     def _make_ssc_kwargs(
         self,
@@ -1125,10 +1135,13 @@ class Feols(ResultAccessorMixin):
         else:
             require_retained(self, "wildboottest", "within_data")
 
-        if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable {cluster_list[0]} not found in the data."
-            )
+        if not run_heteroskedastic:
+            try:
+                cluster_array = self._cluster_array(cluster_list[0])
+            except KeyError as exc:
+                raise ValueError(
+                    f"Cluster variable {cluster_list[0]} not found in the data."
+                ) from exc
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
@@ -1163,8 +1176,6 @@ class Feols(ResultAccessorMixin):
 
         else:
             inference = f"CRV({cluster_list[0]})"
-
-            cluster_array = self._data[cluster_list[0]].to_numpy().flatten()
 
             boot = WildboottestCL(
                 X=_X,
@@ -1305,12 +1316,13 @@ class Feols(ResultAccessorMixin):
             else:
                 cluster = clustervar[0]
 
-        # check that cluster is in data
         require_retained(self, "ccv", "_data", "within_data")
-        if cluster not in self._data.columns:
+        try:
+            cluster_vec = self._cluster_array(cluster)
+        except KeyError as exc:
             raise ValueError(
                 f"Cluster variable {cluster} not found in the data used for the model fit."
-            )
+            ) from exc
 
         if not self.variance_covariance.spec.is_clustered:
             warnings.warn(
@@ -1330,7 +1342,6 @@ class Feols(ResultAccessorMixin):
             "Treatment variable must be binary with values 0 and 1"
         )
         X = self.within_data.design
-        cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
         tau_full = np.array(self.coef().xs(treatment))
@@ -1595,13 +1606,20 @@ class Feols(ResultAccessorMixin):
         if agg_first is None:
             agg_first = combine_covariates is not None
 
-        cluster_df: pd.Series | None = None
-        if cluster is not None:
-            cluster_df = self._data[cluster]
-        elif self.variance_covariance.spec.is_clustered:
-            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
-        else:
-            cluster_df = None
+        cluster_name = (
+            self.variance_covariance.spec.clustervar[0]
+            if cluster is None and self.variance_covariance.spec.is_clustered
+            else cluster
+        )
+        cluster_df = (
+            pd.Series(
+                self._cluster_array(cluster_name),
+                index=self._data.index,
+                name=cluster_name,
+            )
+            if cluster_name is not None
+            else None
+        )
 
         Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
