@@ -600,8 +600,8 @@ def test_vcov_updating(data_panel):
         vcov="NW", vcov_kwargs={"lag": 7, "time_id": "year", "panel_id": "unit"}
     )
 
-    assert fit_hetero.variance_covariance.vcov_type == "HAC"
-    assert fit_hetero.variance_covariance.vcov_type_detail == "NW"
+    assert fit_hetero.variance_covariance.spec.vcov_type == "HAC"
+    assert fit_hetero.variance_covariance.spec.vcov_type_detail == "NW"
     check_absolute_diff(
         fit_hetero.variance_covariance.vcov,
         fit_nw.variance_covariance.vcov,
