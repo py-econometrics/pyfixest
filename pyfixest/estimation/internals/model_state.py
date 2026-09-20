@@ -552,6 +552,7 @@ class VarianceCovariance:
     spec: VcovSpec
     G: tuple[int, ...]
 
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FirstStageDiagnostics:
     """Instrument-strength diagnostics of a 2SLS first stage.
