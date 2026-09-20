@@ -185,7 +185,7 @@ def poisson_fit_statistics(
         loglik_null = _weighted_sum(y * np.log(mu_null) - mu_null - gammaln(y + 1))
         pseudo_r2 = 1 - (loglik / loglik_null)
 
-    pearson_chi2 = _weighted_sum((y - mu) ** 2 / mu) 
+    pearson_chi2 = _weighted_sum((y - mu) ** 2 / mu)
 
     return FitStatistics(
         deviance=deviance,
