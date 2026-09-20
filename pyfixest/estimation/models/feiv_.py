@@ -17,9 +17,9 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
     FirstStage,
     FirstStageDiagnostics,
-    CollinearityCheck,
     FittedValues,
     WithinIvData,
     WithinLinearData,
@@ -132,13 +132,10 @@ class Feiv(Feols):
     details.
     """
 
-<<<<<<< HEAD
     # Set in _fit_first_stage().
     first_stage: FirstStage
-=======
     # Set in get_fit().
     collinearity_instruments: CollinearityCheck
->>>>>>> master
 
     # Constructor and methods implementation...
     def __init__(
@@ -492,15 +489,9 @@ class Feiv(Feols):
         require_retained(model, "eff_F", "within_data", "observation_weights")
         # If vcov is iid, redo first stage regression
 
-<<<<<<< HEAD
-        if self.variance_covariance.vcov_type_detail == "iid":
+        if self.variance_covariance.spec.vcov_type_detail == "iid":
             require_retained(model, "eff_F", "_data")
             model.vcov("hetero")
-=======
-        if self.variance_covariance.spec.vcov_type_detail == "iid":
-            require_retained(first_stage, "eff_F", "_data")
-            first_stage.vcov("hetero")
->>>>>>> master
 
         instrument_positions = _instrument_positions(
             model=model, instruments=published.instruments

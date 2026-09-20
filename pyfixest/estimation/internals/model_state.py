@@ -552,13 +552,6 @@ class VarianceCovariance:
     spec: VcovSpec
     G: tuple[int, ...]
 
-<<<<<<< HEAD
-    @property
-    def is_clustered(self) -> bool:
-        """Whether the estimator clusters on at least one variable."""
-        return bool(self.clustervar)
-
-
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FirstStageDiagnostics:
     """Instrument-strength diagnostics of a 2SLS first stage.
@@ -577,41 +570,12 @@ class FirstStageDiagnostics:
         [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
         computed against a heteroskedasticity-robust first stage. ``None``
         until `IV_Diag()` or `eff_F()` computes it.
-=======
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class Capabilities:
-    """Inference and post-estimation features a fitted model supports.
-
-    Each model class publishes one value in its constructor, so a method can
-    reject an unsupported estimator before it reads any estimation state
-    rather than reinterpreting another estimator's arrays.
-
-    Parameters
-    ----------
-    crv3_inference : bool
-        Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
-        on leave-one-cluster-out samples, so it is restricted to estimators
-        whose refit replays the original estimation contract.
-    hac_inference : bool
-        Whether ``vcov()`` accepts the Newey-West and Driscoll-Kraay
-        estimators.
-    multiway_clustering : bool
-        Whether ``vcov()`` accepts more than one cluster variable.
-    wildboottest : bool
-        Whether ``wildboottest()`` can resample the fit. Unweighted OLS only.
-    cluster_causal_variance : bool
-        Whether ``ccv()``, the causal cluster variance estimator, is available.
-    decomposition : bool
-        Whether ``decompose()``, the Gelbach decomposition, is available.
->>>>>>> master
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-<<<<<<< HEAD
     fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
     fit.first_stage.diagnostics
     ```
@@ -645,7 +609,60 @@ class FirstStage:
         Names of the excluded instruments, in first-stage design order.
     diagnostics : FirstStageDiagnostics
         Instrument-strength statistics of that first stage.
-=======
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.instruments
+    ```
+
+    ```{python}
+    fit.first_stage.model.tidy()
+    ```
+    """
+
+    coefficients: NDArray[np.float64]
+    fitted_values: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    model: Feols
+    instruments: tuple[str, ...]
+    diagnostics: FirstStageDiagnostics
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Capabilities:
+    """Inference and post-estimation features a fitted model supports.
+
+    Each model class publishes one value in its constructor, so a method can
+    reject an unsupported estimator before it reads any estimation state
+    rather than reinterpreting another estimator's arrays.
+
+    Parameters
+    ----------
+    crv3_inference : bool
+        Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
+        on leave-one-cluster-out samples, so it is restricted to estimators
+        whose refit replays the original estimation contract.
+    hac_inference : bool
+        Whether ``vcov()`` accepts the Newey-West and Driscoll-Kraay
+        estimators.
+    multiway_clustering : bool
+        Whether ``vcov()`` accepts more than one cluster variable.
+    wildboottest : bool
+        Whether ``wildboottest()`` can resample the fit. Unweighted OLS only.
+    cluster_causal_variance : bool
+        Whether ``ccv()``, the causal cluster variance estimator, is available.
+    decomposition : bool
+        Whether ``decompose()``, the Gelbach decomposition, is available.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
     pf.feols("Y ~ X1 | f1", pf.get_data()).capabilities
     ```
 
@@ -679,30 +696,12 @@ class RitestStatistics:
         The observed statistic, centered at the null hypothesis value.
     pvalue : float
         Randomization-inference p-value of the test.
->>>>>>> master
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-<<<<<<< HEAD
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
-    fit.first_stage.instruments
-    ```
-
-    ```{python}
-    fit.first_stage.model.tidy()
-    ```
-    """
-
-    coefficients: NDArray[np.float64]
-    fitted_values: NDArray[np.float64]
-    residuals: NDArray[np.float64]
-    model: Feols
-    instruments: tuple[str, ...]
-    diagnostics: FirstStageDiagnostics
-=======
     fit = pf.feols("Y ~ X1 + X2", pf.get_data())
     fit.ritest("X1", reps=100, store_ritest_statistics=True)
     fit.ritest_statistics.pvalue
@@ -756,4 +755,3 @@ class CoefficientTable:
     pvalue: NDArray[np.float64]
     conf_int: NDArray[np.float64]
     alpha: float
->>>>>>> master

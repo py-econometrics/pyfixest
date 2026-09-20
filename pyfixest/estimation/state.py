@@ -7,12 +7,9 @@ from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     DroppedRowCounts,
     EstimationSample,
-<<<<<<< HEAD
     FirstStage,
     FirstStageDiagnostics,
-=======
     FittedValues,
->>>>>>> master
     GlmWorkingState,
     ObservationWeights,
     RitestStatistics,
