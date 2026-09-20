@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 import pandas as pd
@@ -13,17 +13,14 @@ from formulaic.utils.context import capture_context as _capture_context
 from pyfixest.utils.dev_utils import _create_rng
 
 if TYPE_CHECKING:
-    # Imported lazily: pyfixest.estimation imports this module at package
-    # import time, so a runtime import here would be circular.
+    # Annotation-only: pyfixest.estimation imports this module at package
+    # import time, so a module-level runtime import here would be circular.
     from pyfixest.estimation.internals.literals import GDfOptions, KFixefOptions
-
-_K_FIXEF_VALUES = ("none", "full", "nonnested")
-_G_DF_VALUES = ("min", "conventional")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Ssc:
-    """Small-sample correction options, as fixest's ``ssc()``.
+    """Small-sample correction options.
 
     Build one with [ssc()](/reference/utils.utils.ssc.qmd), which also
     accepts the deprecated argument names; the estimation functions take it
@@ -57,16 +54,20 @@ class Ssc:
     G_df: GDfOptions = "min"
 
     def __post_init__(self) -> None:
+        from pyfixest.estimation.internals.literals import GDfOptions, KFixefOptions
+
         if not isinstance(self.k_adj, bool):
             raise TypeError("k_adj must be True or False.")
         if not isinstance(self.G_adj, bool):
             raise TypeError("G_adj must be True or False.")
-        if self.k_fixef not in _K_FIXEF_VALUES:
+        k_fixef_values = get_args(KFixefOptions)
+        if self.k_fixef not in k_fixef_values:
             raise ValueError(
-                f"k_fixef must be one of {_K_FIXEF_VALUES}; got {self.k_fixef!r}."
+                f"k_fixef must be one of {k_fixef_values}; got {self.k_fixef!r}."
             )
-        if self.G_df not in _G_DF_VALUES:
-            raise ValueError(f"G_df must be one of {_G_DF_VALUES}; got {self.G_df!r}.")
+        g_df_values = get_args(GDfOptions)
+        if self.G_df not in g_df_values:
+            raise ValueError(f"G_df must be one of {g_df_values}; got {self.G_df!r}.")
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any]) -> Ssc:
