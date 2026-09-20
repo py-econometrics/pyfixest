@@ -155,6 +155,7 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.saturated_twfe.SaturatedEventStudy
+        - did.saturated_twfe.EventStudyDesign
         - did.visualize.panelview
     - title: Multiple Hypothesis Testing
       desc: |

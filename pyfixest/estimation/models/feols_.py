@@ -213,18 +213,6 @@ class Feols(ResultAccessorMixin):
         `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical _model_name attributes are passed. In this case,
         the _model_name_plot attribute will be modified.
-
-    # special for did
-    _res_cohort_eventtime_dict: Optional[dict[str, Any]]
-    _yname: Optional[str]
-    _gname: Optional[str]
-    _tname: Optional[str]
-    _idname: Optional[str]
-    _att: Optional[Any]
-    test_treatment_heterogeneity: Callable[..., Any]
-    aggregate: Callable[..., Any]
-    iplot_aggregate: Callable[..., Any]
-
     """
 
     # Set in prepare_model_matrix().
@@ -303,26 +291,8 @@ class Feols(ResultAccessorMixin):
         # set in get_fit(); IV and quantile fits keep the all-NaN value
         self.fitstat = FitStatistics()
 
-        # special for did
-        self._res_cohort_eventtime_dict: dict[str, Any] | None = None
-        self._yname: str | None = None
-        self._gname: str | None = None
-        self._tname: str | None = None
-        self._idname: str | None = None
-        self._att: bool | None = None
-
         # set functions inherited from other modules
         self._bind_report_methods()
-
-        # DiD methods - assign placeholder functions
-        def _not_implemented_did(*args, **kwargs):
-            raise NotImplementedError(
-                "This method is only available for DiD models, not for vanilla 'feols'."
-            )
-
-        self.test_treatment_heterogeneity = _not_implemented_did
-        self.aggregate = _not_implemented_did
-        self.iplot_aggregate = _not_implemented_did
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
