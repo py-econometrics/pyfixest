@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
 from typing import Any, Literal, cast
@@ -15,7 +14,6 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -38,7 +36,6 @@ from pyfixest.estimation.internals.literals import (
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
-    SolverOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
@@ -96,8 +93,6 @@ from pyfixest.utils.dev_utils import (
 )
 from pyfixest.utils.utils import (
     DegreesOfFreedomCounts,
-    Ssc,
-    capture_context,
     get_ssc,
 )
 
@@ -117,32 +112,21 @@ class Feols(ResultAccessorMixin):
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional numpy array.
-    X : np.ndarray
-        Independent variables, a two-dimensional numpy array.
-    weights : np.ndarray
-        Weights, a one-dimensional numpy array.
-    collin_tol : float
-        Tolerance level for collinearity checks.
-    coefnames : list[str]
-        Names of the coefficients (of the design matrix X).
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights or
-        "fweights" for frequency weights.
-    solver : str, optional.
-        The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
-        Defaults to "scipy.linalg.solve".
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
-    offset : Optional[str]
-        Name of the offset column. Only used by GLM fits; ``None`` otherwise.
+    FixestFormula : Formula
+        Parsed fixest formula of the model to fit.
+    data : pd.DataFrame
+        Estimation data, already converted to pandas and reindexed.
+    options : EstimationOptions
+        Every estimation option the fit is built with, assembled from the
+        `EstimationConfig` by the estimation planner.
+    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
+        Demeaning cache shared across the models of one cache block.
+    lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
+        Preconditioner cache shared across the models of one cache block.
+    sample_split_var : Optional[str]
+        Name of the sample-split variable, or ``None`` for the full sample.
+    sample_split_value : Optional[str | int | float]
+        Value of `sample_split_var` this model is fitted on.
 
     Attributes
     ----------
@@ -262,23 +246,12 @@ class Feols(ResultAccessorMixin):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc: Ssc,
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        *,
+        options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
         sample_split_var: str | None = None,
         sample_split_value: str | int | float | _AllSampleSentinel | None = None,
-        offset: str | None = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
@@ -302,21 +275,8 @@ class Feols(ResultAccessorMixin):
 
         data = data.reset_index(drop=True)
 
-        self._data = data.copy() if copy_data else data
-        self.options = EstimationOptions(
-            ssc=ssc,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=cast("WeightsTypeOptions | None", weights_type),
-            offset=offset,
-            collin_tol=collin_tol,
-            solver=solver,
-            demeaner=MapDemeaner() if demeaner is None else demeaner,
-            store_data=store_data,
-            lean=lean,
-            context=capture_context(context),
-        )
+        self.options = options
+        self._data = data.copy() if options.copy_data else data
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
         self.capabilities = Capabilities(

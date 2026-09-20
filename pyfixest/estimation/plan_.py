@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.model_state import (
+    EstimationOptions,
+    GlmEstimationOptions,
+    QuantregEstimationOptions,
+)
 from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -28,38 +35,48 @@ from pyfixest.utils.utils import Ssc
 class ModelEntry:
     """One row in the model registry.
 
-    `model_cls` is the class to instantiate. `needs` lists the
-    extra option groups that class's constructor accepts on top of
-    the base kwargs - for example `"iwls"` for GLMs, or
-    `"quantreg"` for quantile regression. The planner reads this
-    to decide which config fields to thread through.
+    `model_cls` is the class to instantiate and `options_cls` the
+    `EstimationOptions` flavour its constructor takes, which decides
+    which `EstimationConfig` fields the planner reads. The remaining
+    flags record the per-class wiring that the options class alone does
+    not express.
     """
 
     model_cls: ModelFactory
-    needs: frozenset[str] = field(default_factory=frozenset)
+    options_cls: type[EstimationOptions] = EstimationOptions
+    # Quantile regression does not absorb fixed effects, so it neither
+    # demeans nor shares the runner's preconditioner cache.
+    accepts_preconditioner: bool = True
+    # IRLS acceleration is a user option of the `feglm()` families only;
+    # `Fepois` always runs the accelerated path.
+    accepts_accelerate: bool = False
+    # `QuantregMulti` fans one call out over several quantiles and needs
+    # the quantile list and the process algorithm on top of the options.
+    fits_quantile_process: bool = False
 
 
 MODEL_REGISTRY: dict[str, ModelEntry] = {
-    "feols": ModelEntry(Feols, frozenset({"demeaner"})),
-    "fepois": ModelEntry(
-        Fepois,
-        frozenset({"demeaner", "iwls", "separation_check", "offset"}),
-    ),
+    "feols": ModelEntry(Feols),
+    "fepois": ModelEntry(Fepois, options_cls=GlmEstimationOptions),
     "feglm-logit": ModelEntry(
-        Felogit,
-        frozenset({"demeaner", "iwls", "separation_check", "accelerate"}),
+        Felogit, options_cls=GlmEstimationOptions, accepts_accelerate=True
     ),
     "feglm-probit": ModelEntry(
-        Feprobit,
-        frozenset({"demeaner", "iwls", "separation_check", "accelerate"}),
+        Feprobit, options_cls=GlmEstimationOptions, accepts_accelerate=True
     ),
     "feglm-gaussian": ModelEntry(
-        Fegaussian,
-        frozenset({"demeaner", "iwls", "separation_check", "accelerate"}),
+        Fegaussian, options_cls=GlmEstimationOptions, accepts_accelerate=True
     ),
-    "quantreg": ModelEntry(Quantreg, frozenset({"quantreg"})),
+    "quantreg": ModelEntry(
+        Quantreg,
+        options_cls=QuantregEstimationOptions,
+        accepts_preconditioner=False,
+    ),
     "quantreg_multi": ModelEntry(
-        QuantregMulti, frozenset({"quantreg", "quantreg_multi"})
+        QuantregMulti,
+        options_cls=QuantregEstimationOptions,
+        accepts_preconditioner=False,
+        fits_quantile_process=True,
     ),
 }
 
@@ -193,10 +210,11 @@ def expand_specs(
     drop them as soon as the cache key changes.
     """
     model_cls = _resolve_model_class(config.method, is_iv)
-    needs = MODEL_REGISTRY[config.method].needs
+    entry = MODEL_REGISTRY[config.method]
 
-    ssc = config.ssc if config.ssc is not None else Ssc()
-    drop_singletons = _drop_singletons(config.fixef_rm)
+    options = _build_options(
+        config=config, entry=entry, captured_context=captured_context
+    )
 
     specs: list[ModelSpec] = []
     for sample_split_value in splits:
@@ -204,14 +222,12 @@ def expand_specs(
             for formula in formula_dict[fixef_key]:
                 model_kwargs = _build_model_kwargs(
                     config=config,
-                    needs=needs,
+                    entry=entry,
                     formula=formula,
                     data=data,
-                    ssc=ssc,
-                    drop_singletons=drop_singletons,
+                    options=options,
                     sample_split_value=sample_split_value,
                     splitvar=splitvar,
-                    captured_context=captured_context,
                 )
                 specs.append(
                     ModelSpec(
@@ -226,17 +242,74 @@ def expand_specs(
     return specs
 
 
+def _build_options(
+    *,
+    config: EstimationConfig,
+    entry: ModelEntry,
+    captured_context: Mapping[str, Any],
+) -> EstimationOptions:
+    """Turn the estimation request into the options value the model is built with.
+
+    This is the single boundary between `EstimationConfig`, which records
+    what the user asked for, and the frozen `options` a fitted model
+    publishes. `entry.options_cls` decides which estimator-specific fields
+    are filled; the shared fields are the same for every model class.
+    """
+    shared: dict[str, Any] = {
+        "ssc": config.ssc if config.ssc is not None else Ssc(),
+        "drop_singletons": _drop_singletons(config.fixef_rm),
+        "drop_intercept": config.drop_intercept,
+        "weights": config.weights,
+        # validated at the API boundary (estimation/api/utils.py)
+        "weights_type": cast(WeightsTypeOptions, config.weights_type),
+        # only `fepois` reads an offset; the other APIs never set one
+        "offset": config.offset,
+        "collin_tol": config.collin_tol,
+        "solver": config.solver,
+        "demeaner": config.demeaner if config.demeaner is not None else MapDemeaner(),
+        "store_data": config.store_data,
+        "copy_data": config.copy_data,
+        "lean": config.lean,
+        "context": captured_context,
+    }
+
+    options_cls = entry.options_cls
+    if issubclass(options_cls, GlmEstimationOptions):
+        return GlmEstimationOptions(
+            **shared,
+            maxiter=config.iwls_maxiter,
+            tol=config.iwls_tol,
+            separation_check=config.separation_check,
+            accelerate=config.accelerate if entry.accepts_accelerate else True,
+        )
+    if issubclass(options_cls, QuantregEstimationOptions):
+        quantile = config.quantile
+        return QuantregEstimationOptions(
+            **shared,
+            # `quantile` is validated at the API boundary
+            # (estimation/api/quantreg.py); the quantile process carries the
+            # first requested quantile and gives each child fit its own via
+            # `dataclasses.replace`
+            quantile=cast(
+                float, quantile[0] if isinstance(quantile, list) else quantile
+            ),
+            method=config.quantreg_method,
+            quantile_tol=config.quantile_tol,
+            quantile_maxiter=config.quantile_maxiter,
+            seed=config.seed,
+        )
+    return EstimationOptions(**shared)
+
+
 def _build_model_kwargs(
     *,
     config: EstimationConfig,
-    needs: frozenset[str],
+    entry: ModelEntry,
     formula: FixestFormula,
     data: pd.DataFrame,
-    ssc: Ssc,
-    drop_singletons: bool,
+    options: EstimationOptions,
     sample_split_value: Any,
     splitvar: str | None,
-    captured_context: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Compose the static constructor kwargs for one model.
 
@@ -247,45 +320,14 @@ def _build_model_kwargs(
     kwargs: dict[str, Any] = {
         "FixestFormula": formula,
         "data": data,
-        "ssc": ssc,
-        "drop_singletons": drop_singletons,
-        "drop_intercept": config.drop_intercept,
-        "weights": config.weights,
-        "weights_type": config.weights_type,
-        "solver": config.solver,
-        "collin_tol": config.collin_tol,
-        "store_data": config.store_data,
-        "copy_data": config.copy_data,
-        "lean": config.lean,
-        "context": captured_context,
+        "options": options,
         "sample_split_value": sample_split_value,
         "sample_split_var": splitvar,
     }
 
-    if "demeaner" in needs:
-        kwargs["demeaner"] = config.demeaner
-
-    if "iwls" in needs:
-        kwargs["tol"] = config.iwls_tol
-        kwargs["maxiter"] = config.iwls_maxiter
-
-    if "separation_check" in needs:
-        kwargs["separation_check"] = config.separation_check
-
-    if "offset" in needs:
-        kwargs["offset"] = config.offset
-
-    if "accelerate" in needs:
-        kwargs["accelerate"] = config.accelerate
-
-    if "quantreg" in needs:
+    if entry.fits_quantile_process:
+        # the fan-out itself is not an option of any single fit
         kwargs["quantile"] = config.quantile
-        kwargs["method"] = config.quantreg_method
-        kwargs["quantile_tol"] = config.quantile_tol
-        kwargs["quantile_maxiter"] = config.quantile_maxiter
-        kwargs["seed"] = config.seed
-
-    if "quantreg_multi" in needs:
         kwargs["multi_method"] = config.quantreg_multi_method
 
     return kwargs
@@ -309,7 +351,7 @@ def fit_one(
     """
     model_kwargs = dict(spec.model_kwargs)
     model_kwargs["lookup_demeaned_data"] = lookup_demeaned_data
-    if "demeaner" in MODEL_REGISTRY[spec.method].needs:
+    if MODEL_REGISTRY[spec.method].accepts_preconditioner:
         model_kwargs["lookup_preconditioner"] = lookup_preconditioner
 
     FIT: FittedModel = spec.model_cls(**model_kwargs)
