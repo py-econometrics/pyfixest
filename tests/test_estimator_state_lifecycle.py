@@ -555,7 +555,7 @@ def test_iv_first_stage_follows_parent_retention(
         store_data=store_data,
         lean=lean,
     )
-    first_stage = fit._model_1st_stage
+    first_stage = fit.first_stage.model
 
     for model in (fit, first_stage):
         assert hasattr(model, "_data") is (store_data and not lean)
@@ -568,10 +568,10 @@ def test_iv_first_stage_follows_parent_retention(
         assert model.sample_info.n_rows == len(lifecycle_data)
         assert model.sample_info.dropped_by_stage == DroppedRowCounts()
 
-    retained_f = fit._f_stat_1st_stage
+    retained_f = fit.first_stage.diagnostics.f_stat
     fit.IV_weakness_test(["f_stat"])
     np.testing.assert_allclose(
-        fit._f_stat_1st_stage,
+        fit.first_stage.diagnostics.f_stat,
         retained_f,
         rtol=1e-12,
         atol=1e-12,
@@ -598,8 +598,8 @@ def test_store_data_false_retains_robust_effective_f(
     fit.eff_F()
 
     np.testing.assert_allclose(
-        fit._eff_F,
-        reference._eff_F,
+        fit.first_stage.diagnostics.eff_f,
+        reference.first_stage.diagnostics.eff_f,
         rtol=1e-12,
         atol=1e-12,
         err_msg="store_data=False changed robust effective-F",
@@ -728,7 +728,7 @@ def test_estimation_sample_counts_dropped_rows_by_stage(
         if model._is_iv:
             # The first stage is refit on the retained rows: it owns a sample
             # with no dropped rows of its own.
-            first_stage = model._model_1st_stage.sample_info
+            first_stage = model.first_stage.model.sample_info
             assert first_stage is not sample_info
             assert first_stage.dropped_by_stage == DroppedRowCounts()
             assert first_stage.n_rows == sample_info.n_rows
