@@ -321,16 +321,16 @@ def test_feiv_first_stage_reuses_within_preconditioner():
 
     preconditioner = fit.preconditioner
     assert isinstance(preconditioner, pf.Preconditioner)
-    assert isinstance(fit._model_1st_stage._demeaner, pf.LsmrDemeaner)
+    assert isinstance(fit.first_stage.model._demeaner, pf.LsmrDemeaner)
     # The 1st-stage demeaner's config stores the 2nd-stage's preconditioner
     # verbatim (identity preserved on assignment).
-    assert fit._model_1st_stage._demeaner.preconditioner is preconditioner
+    assert fit.first_stage.model._demeaner.preconditioner is preconditioner
     # The 1st-stage model's preconditioner is what came back from the solve;
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
-    assert isinstance(fit._model_1st_stage.preconditioner, pf.Preconditioner)
-    assert fit._model_1st_stage.preconditioner.variant == preconditioner.variant
-    assert fit._model_1st_stage.preconditioner.nrows == preconditioner.nrows
+    assert isinstance(fit.first_stage.model.preconditioner, pf.Preconditioner)
+    assert fit.first_stage.model.preconditioner.variant == preconditioner.variant
+    assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 
 @pytest.mark.parametrize(
@@ -356,12 +356,11 @@ def test_lean(estimator, kwargs, lean, store_data):
 
     assert hasattr(fit, "_data") == (store_data and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
+    assert hasattr(fit, "fitted_values") == (not lean)
     if estimator is pf.feols:
         lean_only_attributes = {
             "sandwich",
             "_u_hat",
-            "_Y_hat_link",
-            "_Y_hat_response",
             "within_data",
             "observation_weights",
         }

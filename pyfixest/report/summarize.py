@@ -335,7 +335,7 @@ def summary(
         if fxst._sample_split_value != "all":
             split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
             print(split)
-        print("Inference: ", fxst.variance_covariance.vcov_type_detail)
+        print("Inference: ", fxst.variance_covariance.spec.vcov_type_detail)
         print("Observations: ", fxst.sample_info.n_obs)
         print("")
         print(df.to_markdown(floatfmt=f".{digits}f"))
@@ -343,14 +343,14 @@ def summary(
 
         to_print = ""
 
-        if not np.isnan(fxst._rmse):
-            to_print += f"RMSE: {np.round(fxst._rmse, digits)} "
-        if not np.isnan(fxst._r2):
-            to_print += f"R2: {np.round(fxst._r2, digits)} "
-        if not np.isnan(fxst._r2_within):
-            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
-        if fxst.deviance is not None:
-            deviance_value = np.asarray(fxst.deviance).squeeze()
-            to_print += f"Deviance: {np.round(deviance_value, digits)} "
+        fitstat = fxst.fitstat
+        if not np.isnan(fitstat.rmse):
+            to_print += f"RMSE: {np.round(fitstat.rmse, digits)} "
+        if not np.isnan(fitstat.r2):
+            to_print += f"R2: {np.round(fitstat.r2, digits)} "
+        if not np.isnan(fitstat.r2_within):
+            to_print += f"R2 Within: {np.round(fitstat.r2_within, digits)} "
+        if not np.isnan(fitstat.deviance):
+            to_print += f"Deviance: {np.round(fitstat.deviance, digits)} "
 
         print(to_print)

@@ -7,11 +7,13 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.errors import EmptyVcovError
+from pyfixest.estimation.internals.model_state import CoefficientTable
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.internals.fit_statistics import FitStatistics
     from pyfixest.estimation.internals.model_state import (
         EstimationSample,
         ObservationWeights,
@@ -21,10 +23,6 @@ if TYPE_CHECKING:
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
-)
-from pyfixest.estimation.internals.performance_ import (
-    PerformanceMeasures,
-    performance_measures,
 )
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
@@ -134,16 +132,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     # Type declarations for attributes provided by the host class (Feols).
     variance_covariance: "VarianceCovariance"
+    coeftable: CoefficientTable
     _beta_hat: np.ndarray
-    _se: np.ndarray
-    _tstat: np.ndarray
-    _pvalue: np.ndarray
-    _conf_int: np.ndarray
     _u_hat: np.ndarray
     model_matrix: "ModelMatrix"
     observation_weights: "ObservationWeights"
     sample_info: "EstimationSample"
     within_data: "WithinLinearData"
+    fitstat: "FitStatistics"
     _coefnames: list[str]
     _method: str
     _drop_intercept: bool
@@ -153,11 +149,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _k_fe: pd.Series
     _k: int
     _inference_dist: "InferenceDist"
-    _rmse: float
-    _r2: float
-    _adj_r2: float
-    _r2_within: float
-    _adj_r2_within: float
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -250,7 +241,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def get_inference(self, alpha: float = 0.05) -> None:
         """
-        Compute standard errors, t-statistics, and p-values for the regression model.
+        Publish `coeftable`, the coefficient table of the current covariance.
 
         Parameters
         ----------
@@ -261,79 +252,37 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         None
+            The table is stored as `coeftable`, a
+            [CoefficientTable](/reference/estimation.state.CoefficientTable.qmd).
 
         Details
         -------
         relevant fixest functions:
         - fixest_CI_factor: https://github.com/lrberge/fixest/blob/5523d48ef4a430fa2e82815ca589fc8a47168fe7/R/miscfuns.R#L5614
-        -
         """
         if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
         covariance = self.variance_covariance
+        dist = self._inference_dist
 
-        self._se = np.sqrt(np.diagonal(covariance.vcov))
-        self._tstat = self._beta_hat / self._se
-        self._pvalue = self._inference_dist.pvalue(self._tstat, covariance.df_t)
-        z = self._inference_dist.crit_val(alpha, covariance.df_t)
-
-        z_se = z * self._se
-        self._conf_int = np.array([self._beta_hat - z_se, self._beta_hat + z_se])
-
-    def get_performance(self) -> None:
-        """
-        Compute and store goodness-of-fit measures during fit finalization.
-
-        Compute multiple additional measures commonly reported with linear
-        regression output, including R-squared and adjusted R-squared. Note that
-        variables with the suffix _within use demeaned dependent variables Y,
-        while variables without do not or are invariant to demeaning.
-
-        Returns
-        -------
-        None
-            The measures are stored on the model object rather than returned.
-
-        Notes
-        -----
-        Sets the attributes `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, and
-        `_adj_r2_within`. The `_within` variants are computed on the demeaned
-        dependent variable and are only defined for models with fixed effects.
-        Called internally before storage cleanup, while model_matrix,
-        within_data, and observation_weights are available.
-        """
-        require_retained(
-            self,
-            "get_performance",
-            "model_matrix",
-            "within_data",
-            "_u_hat",
-            "observation_weights",
+        beta_hat = self._beta_hat
+        se = np.sqrt(np.diagonal(covariance.vcov))
+        tstat = beta_hat / se
+        pvalue = dist.pvalue(tstat, covariance.df_t)
+        # fixest_CI_factor: beta +- q(1 - alpha / 2) * se at df_t degrees of freedom
+        z_se = dist.crit_val(alpha, covariance.df_t) * se
+        self.coeftable = CoefficientTable(
+            estimate=beta_hat,
+            se=se,
+            tstat=tstat,
+            pvalue=pvalue,
+            conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
+            alpha=alpha,
         )
-        measures = performance_measures(
-            Y=self.model_matrix.dependent.to_numpy(),
-            Y_within=self.within_data.response,
-            residuals=self._u_hat,
-            weights=self.observation_weights.values,
-            N=self.sample_info.n_obs,
-            k=self._k,
-            k_fe=self._n_fixef_coefficients(),
-            has_intercept=not self._drop_intercept,
-            has_fixef=self._has_fixef,
-        )
-        self._store_performance(measures)
 
     def _n_fixef_coefficients(self) -> int:
         """Return the number of fixed-effect coefficients, zero without fixed effects."""
         return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
-
-    def _store_performance(self, measures: PerformanceMeasures) -> None:
-        """Publish goodness-of-fit measures on the fitted model."""
-        self._rmse = measures.rmse
-        self._r2 = measures.r2
-        self._adj_r2 = measures.adj_r2
-        self._r2_within = measures.r2_within
-        self._adj_r2_within = measures.adj_r2_within
 
     def tidy(
         self,
@@ -391,8 +340,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ub, lb = 1 - alpha / 2, alpha / 2
         try:
             self.get_inference(alpha=alpha)
-            se, tstat, pvalue = self._se, self._tstat, self._pvalue
-            conf_int = self._conf_int
+            table = self.coeftable
+            se, tstat, pvalue = table.se, table.tstat, table.pvalue
+            conf_int = table.conf_int
         except EmptyVcovError:
             warnings.warn(
                 "Empty variance-covariance matrix detected",
@@ -553,19 +503,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
             self._coefnames, keep, drop, exact_match
         )
 
+        se = self.coeftable.se
         if inference_type == "regular":
             crit_val = self._inference_dist.crit_val(
                 alpha, self.variance_covariance.df_t
             )
         else:
             joint_indices = sorted(coef_indices)
-            D_inv = 1 / self._se[joint_indices]
+            D_inv = 1 / se[joint_indices]
             V = self.variance_covariance.vcov[np.ix_(joint_indices, joint_indices)]
             C_coefs = (D_inv * V).T * D_inv
             crit_val = simultaneous_crit_val(C_coefs, reps, alpha=alpha, seed=seed)
 
-        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * self._se[coef_indices])
-        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * self._se[coef_indices])
+        ub = pd.Series(self._beta_hat[coef_indices] + crit_val * se[coef_indices])
+        lb = pd.Series(self._beta_hat[coef_indices] - crit_val * se[coef_indices])
 
         df = pd.DataFrame(
             {

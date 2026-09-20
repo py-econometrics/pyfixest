@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
@@ -16,11 +17,17 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
+    FirstStage,
+    FirstStageDiagnostics,
+    FittedValues,
     WithinIvData,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.utils.utils import get_ssc
 
 
 class Feiv(Feols):
@@ -71,53 +78,28 @@ class Feiv(Feols):
         for frequency weights.
     _coefnames_z : list
         Names of coefficients for Z after handling multicollinearity.
-    _collin_vars_z : list
-        Variables identified as collinear in Z.
-    _collin_index_z : list
-        Indices of collinear variables in Z.
+    collinearity_instruments : CollinearityCheck
+        Names and column mask of the instruments dropped by the rank check,
+        set in get_fit().
     _is_iv : bool
         Indicator if instrumental variables are used.
-    _support_crv3_inference : bool
-        Indicator for supporting CRV3 inference.
-    _support_iid_inference : bool
-        Indicator for supporting IID inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
         Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
         X_hat' W X_hat, and its inverse, set in get_fit().
     _beta_hat : np.ndarray
         Estimated regression coefficients.
-    _Y_hat_link : np.ndarray
-        Predicted values of the regression model.
+    fitted_values : FittedValues
+        In-sample predictions on the link and the response scale, set in
+        get_fit().
     _u_hat : np.ndarray
         Residuals of the regression model.
-    _pi_hat : np.ndarray
-        Estimated coefficients from 1st stage regression
-    _X_hat : np.ndarray
-        Predicted values of the 1st stage regression
-    _v_hat : np.ndarray
-        Residuals of the 1st stage regression
-    _model_1st_stage : Any
-        feols object of 1st stage regression.
-        It contains various results and diagnostics
-        from the fixed effects OLS regression.
-    _endogvar_1st_stage : np.ndarray
-        Unweihgted Endogenous independent variable vector
-    _Z_1st_stage : np.ndarray
-        Unweighted instruments vector to be used for 1st stage
-    _non_exo_instruments : list
-        List of instruments name excluding exogenous independent vars.
-    __p_iv : scalar
-        Number of instruments listed in _non_exo_instruments
-    _f_stat_1st_stage : scalar
-        F-statistics of First Stage regression for evaluation of IV weakness.
-        The computed F-statistics test the following null hypothesis :
-        # H0 : beta_{z_1} = 0 & ... & beta_{z_{p_iv}} = 0 where z_1, ..., z_{p_iv}
-        # are the instrument variables
-        # H1 : H0 does not hold
-        Note that this F-statistics is adjusted to heteroskedasticity /
-        clusters if users set specification of variance-covariance matrix type
-    _eff_F : scalar
-        Effective F-statistics of first stage regression as in Olea and Pflueger 2013
+    first_stage : FirstStage
+        First-stage regression fitted after second-stage inference: the
+        coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
+        fitted first-stage model, the excluded instruments, and the
+        instrument-strength `diagnostics`.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -144,13 +126,18 @@ class Feiv(Feols):
     The first stage F-statistic is stored on the fitted object.
 
     ```{python}
-    fit._f_stat_1st_stage
+    fit.first_stage.diagnostics.f_stat
     ```
 
     See the
     [instrumental variables tutorial](/tutorials/instrumental-variables.qmd) for
     details.
     """
+
+    # Set in _fit_first_stage().
+    first_stage: FirstStage
+    # Set in get_fit().
+    collinearity_instruments: CollinearityCheck
 
     # Constructor and methods implementation...
     def __init__(
@@ -201,10 +188,13 @@ class Feiv(Feols):
         )
 
         self._is_iv = True
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
@@ -241,16 +231,13 @@ class Feiv(Feols):
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
         assert self._coefnames_z is not None
-        (
-            instruments,
-            self._coefnames_z,
-            self._collin_vars_z,
-            self._collin_index_z,
-        ) = drop_multicollinear_variables(
+        instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
             self._collin_tol,
         )
+        self.collinearity_instruments = collinearity
+        self._coefnames_z = list(collinearity.coefnames)
         return replace(within_data, instruments=instruments)
 
     def get_fit(self) -> None:
@@ -270,13 +257,21 @@ class Feiv(Feols):
         self._beta_hat = fit.beta
         self._u_hat = fit.residuals
         self.sandwich = fit.sandwich
-        self._get_predictors()
 
-    def first_stage(self) -> None:
-        """Implement First stage regression."""
-        require_retained(self, "first_stage", "_data")
-        # Store names of instruments from Z matrix
-        self._non_exo_instruments = list(set(self._coefnames_z) - set(self._coefnames))
+        # The response minus the residual carries the fixed-effect
+        # contribution, which `design @ beta_hat` alone would omit.
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
+
+    def _fit_first_stage(self) -> None:
+        """Fit the first-stage regression and publish it as `first_stage`."""
+        require_retained(self, "_fit_first_stage", "_data")
+        # The excluded instruments are the instrument-matrix columns that are
+        # not also second-stage regressors, kept in instrument-matrix order.
+        exogenous = set(self._coefnames)
+        instruments = tuple(
+            str(name) for name in self._coefnames_z if name not in exogenous
+        )
 
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
@@ -290,11 +285,11 @@ class Feiv(Feols):
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: dict[str, str] | str
 
-        covariance = self.variance_covariance
-        if covariance.is_clustered:
-            vcov_detail = {covariance.vcov_type_detail: covariance.clustervar[0]}
+        spec = self.variance_covariance.spec
+        if spec.is_clustered:
+            vcov_detail = {spec.vcov_type_detail: spec.clustervar[0]}
         else:
-            vcov_detail = covariance.vcov_type_detail
+            vcov_detail = spec.vcov_type_detail
 
         demeaner = self._demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(
@@ -316,37 +311,36 @@ class Feiv(Feols):
         )
 
         # Ensure model1 is of type Feols
-        if isinstance(model1, Feols):
-            # Store the first stage coefficients
-            self._pi_hat = model1._beta_hat
-
-            # Use fitted values from the first stage
-            self._X_hat = (
-                model1.within_data.design @ model1._beta_hat
-            )  # note that model1.within_data.design is demeaned
-
-            # Residuals from the first stage
-            self._v_hat = model1._u_hat
-
-            # Store 1st stage model for further use
-            self._model_1st_stage = model1
-
-        else:
+        if not isinstance(model1, Feols):
             raise TypeError("The first stage model must be of type Feols")
 
-        self.IV_weakness_test(["f_stat"])
+        self.first_stage = FirstStage(
+            coefficients=model1._beta_hat,
+            # note that model1.within_data.design is demeaned
+            fitted_values=model1.within_data.design @ model1._beta_hat,
+            residuals=model1._u_hat,
+            model=model1,
+            instruments=instruments,
+            diagnostics=first_stage_f_test(
+                model=model1,
+                instrument_positions=_instrument_positions(
+                    model=model1, instruments=instruments
+                ),
+            ),
+        )
 
     def _finalize_fit(self) -> None:
         """Fit and retain the first-stage model after second-stage inference."""
-        self.first_stage()
+        self._fit_first_stage()
 
     def _clear_attributes(self) -> None:
         """Apply the parent's retention policy to the retained first stage."""
-        first_stage = getattr(self, "_model_1st_stage", None)
+        first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            first_stage._store_data = self._store_data
-            first_stage._lean = self._lean
-            first_stage._clear_attributes()
+            model = first_stage.model
+            model._store_data = self._store_data
+            model._lean = self._lean
+            model._clear_attributes()
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):
@@ -419,10 +413,9 @@ class Feiv(Feols):
             fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
                      vcov=vcov_detail,
                      weights="weights")
-            fit_iv.first_stage()
-            F_stat_pf = fit_iv._f_stat_1st_stage
+            F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
             fit_iv.IV_Diag()
-            F_stat_eff_pf = fit_iv._eff_F
+            F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
 
             print("(Unadjusted) F stat :", F_stat_pf)
             print("Effective F stat :", F_stat_eff_pf)
@@ -455,17 +448,15 @@ class Feiv(Feols):
         """Implement IV weakness test (F-test).
 
         This method covers hetero-robust and clustered-robust F statistics.
-        It produces two statistics:
+        It republishes `first_stage` with two updated statistics:
 
-        - self._f_stat_1st_stage: F statistics of first stage regression
-        - self._eff_F: Effective F statistics (Olea and Pflueger 2013)
-                       of first stage regression
+        - `first_stage.diagnostics.f_stat`: F statistic of the first stage
+        - `first_stage.diagnostics.eff_f`: effective F statistic
+          (Olea and Pflueger 2013) of the first stage
 
         Notes
         -----
-        "self._f_stat_1st_stage" is adjusted to the specification of vcov.
-        If vcov_detail = "iid", F statistics is not adjusted,
-        otherwise it is always adjusted.
+        `f_stat` is adjusted to the specification of vcov.
 
         Parameters
         ----------
@@ -476,81 +467,143 @@ class Feiv(Feols):
         iv_diag_statistics = iv_diag_statistics or []
 
         if "f_stat" in iv_diag_statistics:
-            self._p_iv = len(self._non_exo_instruments)
-
-            # Create an identity matrix of size p_iv by p_iv
-            # Pad the identity matrix with zeros to make it of size p_iv by k
-            # Extract all the IV indexes and its first index
-            self._iv_loc = [
-                self._coefnames_z.index(x)
-                for x in self._non_exo_instruments
-                if x in self._coefnames_z
-            ]
-
-            # Generate matrix R that tests the following;
-            # H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
-            #      where z_1, ..., z_{p_iv} are the instrument variables
-            # H1 : H0 does not hold
-
-            # Pad identity matrix to implement wald-test
-            R = np.zeros((self._p_iv, self._model_1st_stage._k))
-            R[:, self._iv_loc] = np.eye(self._p_iv)
-
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                self._model_1st_stage.wald_test(R=R)
-            self._f_stat_1st_stage = self._model_1st_stage._f_statistic
-            self._p_value_1st_stage = self._model_1st_stage._p_value
+            published = self.first_stage
+            diagnostics = first_stage_f_test(
+                model=published.model,
+                instrument_positions=_instrument_positions(
+                    model=published.model, instruments=published.instruments
+                ),
+            )
+            self.first_stage = replace(
+                published,
+                diagnostics=replace(diagnostics, eff_f=published.diagnostics.eff_f),
+            )
 
         if "effective_f" in iv_diag_statistics:
             self.eff_F()
 
     def eff_F(self) -> None:
         """Compute Effective F stat (Olea and Pflueger 2013)."""
-        first_stage = self._model_1st_stage
-        require_retained(first_stage, "eff_F", "within_data", "observation_weights")
-        # If vcov is iid, redo first stage regression
+        published = self.first_stage
+        model = published.model
+        require_retained(model, "eff_F", "within_data", "observation_weights")
 
-        if self.variance_covariance.vcov_type_detail == "iid":
-            require_retained(first_stage, "eff_F", "_data")
-            first_stage.vcov("hetero")
-
-        # Compute Effective F stat by Olea and Pflueger 2013
-        # 1. Extract First Stage Coefficients and Variance-Covariance Matrix:
-        #   Extract the coefficients for the instrument z
-        #   from the first stage regression.
-        #   Extract the robust variance-covariance matrix of these coefficients.
-        #   Extract the instrument matrix.
-        # 2. Compute the Instrument Matrix:
-        #   Construct the instrument matrix Q_{zz} = Z.T x Z
-        # 3. Compute the Effective F-statistic:
-        #   F_{eff} = π.T Q_{zz} π / trance(ΣQ_{zz})
-
-        # Extract coefficients for the non-exogenous instruments
-
-        pi_hat = np.array(first_stage.coef()[self._non_exo_instruments])
-        iv_positions = [
-            self._coefnames_z.index(instrument)
-            for instrument in self._non_exo_instruments
-        ]
-        Z = first_stage.within_data.design[:, iv_positions]
-
-        # Q_zz = Z'WZ
-        observation_weights = first_stage.observation_weights.values
-        Q_zz = (
-            Z.T @ Z
-            if observation_weights is None
-            else Z.T @ (observation_weights[:, None] * Z)
+        instrument_positions = _instrument_positions(
+            model=model, instruments=published.instruments
         )
 
-        # Extract the robust variance-covariance matrix
-        vcv = first_stage.variance_covariance.vcov
+        if model.variance_covariance.spec.vcov_type_detail == "iid":
+            observation_weights = model.observation_weights.values
+            hetero_meat = meat_hetero(
+                sandwich=model.sandwich,
+                X=model.within_data.design,
+                frequency_weights=(
+                    observation_weights.reshape((-1, 1))
+                    if observation_weights is not None
+                    and model._weights_type == "fweights"
+                    else None
+                ),
+                normal_equation_weights=observation_weights,
+                vcov_type_detail="hetero",
+            )
+            bread = model.sandwich.bread
+            ssc, _, _ = get_ssc(
+                **model._make_ssc_kwargs(vcov_type="hetero", G=model.sample_info.n_obs)
+            )
+            vcv = bread @ (hetero_meat * ssc[0]) @ bread
+        else:
+            vcv = model.variance_covariance.vcov
 
-        # Map the instrument names to their indices in the parameter list
-        # Number of rows/columns in vcv
+        eff_f = effective_f_statistic(
+            pi_hat=model._beta_hat[instrument_positions],
+            instruments_within=model.within_data.design[:, instrument_positions],
+            instrument_vcov=vcv[np.ix_(instrument_positions, instrument_positions)],
+            weights=model.observation_weights.values,
+        )
+        self.first_stage = replace(
+            published, diagnostics=replace(published.diagnostics, eff_f=eff_f)
+        )
 
-        # Extract the submatrix
-        Sigma = vcv[np.ix_(self._iv_loc, self._iv_loc)]
 
-        # Calculate the effective F-statistic
-        self._eff_F = (pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(Sigma @ Q_zz))
+def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list[int]:
+    """Locate the excluded instruments among the first-stage coefficients."""
+    coefnames = list(model._coefnames)
+    return [coefnames.index(instrument) for instrument in instruments]
+
+
+def first_stage_f_test(
+    *, model: Feols, instrument_positions: list[int]
+) -> FirstStageDiagnostics:
+    r"""Test that the excluded instruments are jointly irrelevant.
+
+    Wald test of
+
+    H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
+         where z_1, ..., z_{p_iv} are the excluded instruments
+    H1 : H0 does not hold
+
+    under the first stage's own covariance estimator, so the statistic is
+    heteroskedasticity- or cluster-robust whenever that estimator is.
+
+    Parameters
+    ----------
+    model : Feols
+        The fitted first-stage model.
+    instrument_positions : list[int]
+        Positions of the excluded instruments among `model`'s coefficients.
+
+    Returns
+    -------
+    FirstStageDiagnostics
+        The F statistic and its p-value; `eff_f` is not computed here.
+    """
+    # Pad an identity matrix of size p_iv by p_iv with zeros to select the
+    # excluded instruments out of the first stage's k coefficients.
+    p_iv = len(instrument_positions)
+    R = np.zeros((p_iv, model._k))
+    R[:, instrument_positions] = np.eye(p_iv)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.wald_test(R=R)
+    return FirstStageDiagnostics(
+        f_stat=model._f_statistic, p_value=model._p_value, eff_f=None
+    )
+
+
+def effective_f_statistic(
+    *,
+    pi_hat: NDArray[np.float64],
+    instruments_within: NDArray[np.float64],
+    instrument_vcov: NDArray[np.float64],
+    weights: NDArray[np.float64] | None,
+) -> float:
+    """Compute the effective F statistic of Olea and Pflueger (2013).
+
+    With the excluded instruments Z on within scale, the first-stage
+    coefficients pi on those instruments, and their covariance Sigma,
+
+        F_eff = pi' Q_zz pi / trace(Sigma Q_zz),   Q_zz = Z' W Z.
+
+    See [Olea and Pflueger
+    (2013)](https://doi.org/10.1080/00401706.2013.806694).
+
+    Parameters
+    ----------
+    pi_hat : NDArray[np.float64]
+        First-stage coefficients on the excluded instruments, shape (p_iv,).
+    instruments_within : NDArray[np.float64]
+        Within-scale excluded instruments, shape (n_rows, p_iv).
+    instrument_vcov : NDArray[np.float64]
+        Heteroskedasticity-robust covariance of `pi_hat`, shape (p_iv, p_iv).
+    weights : NDArray[np.float64] or None
+        Observation weights, or `None` for an unweighted fit.
+
+    Returns
+    -------
+    float
+        The effective F statistic.
+    """
+    Z = instruments_within
+    Q_zz = Z.T @ Z if weights is None else Z.T @ (weights[:, None] * Z)
+    return float((pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(instrument_vcov @ Q_zz)))

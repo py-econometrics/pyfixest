@@ -352,7 +352,7 @@ def _aggregate_by_period(
     )
 
     coefs = fit._beta_hat
-    se = fit._se
+    se = fit.coeftable.se
     coefnames = fit._coefnames
 
     if weighting == "shares":

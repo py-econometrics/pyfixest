@@ -371,16 +371,16 @@ def feols(
 
     ```{python}
     fit_iv.IV_Diag()
-    print("First-stage F-statistic:", round(fit_iv._f_stat_1st_stage, 3))
-    print("Effective F-statistic:", round(fit_iv._eff_F, 3))
+    diagnostics = fit_iv.first_stage.diagnostics
+    print("First-stage F-statistic:", round(diagnostics.f_stat, 3))
+    print("Effective F-statistic:", round(diagnostics.eff_f, 3))
     ```
 
     You can also access the first-stage regression as a `Feols` object via
-    `_model_1st_stage` and display both stages with `etable()`:
+    `first_stage.model` and display both stages with `etable()`:
 
     ```{python}
-    first_stage = fit_iv._model_1st_stage
-    pf.etable([first_stage, fit_iv])
+    pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.

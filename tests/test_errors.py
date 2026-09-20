@@ -111,22 +111,6 @@ def test_cluster_na():
         ),
         (
             feols,
-            "Y ~ X1",
-            {},
-            {"store_data": False},
-            lambda fit, data: fit.get_performance(),
-            "get_performance",
-        ),
-        (
-            pf.feglm,
-            "Y ~ X1",
-            {"family": "gaussian"},
-            {"store_data": False},
-            lambda fit, data: fit.get_performance(),
-            "get_performance",
-        ),
-        (
-            feols,
             "Y ~ X1 | f1",
             {},
             {"store_data": False},
@@ -194,16 +178,8 @@ def test_cluster_na():
             "Y ~ X1 + [X2 ~ Z1]",
             {},
             {"store_data": False},
-            lambda fit, data: fit.first_stage(),
-            "first_stage",
-        ),
-        (
-            feols,
-            "Y ~ X1 + [X2 ~ Z1]",
-            {},
-            {"store_data": False},
-            lambda fit, data: fit.eff_F(),
-            "eff_F",
+            lambda fit, data: fit._fit_first_stage(),
+            "_fit_first_stage",
         ),
         (
             feols,
@@ -396,15 +372,6 @@ def test_poisson_errors():
         pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
 
 
-def test_get_performance_not_supported():
-    data = pf.get_data(model="Fepois").dropna()
-    with pytest.raises(NotImplementedError, match="family='poisson'"):
-        pf.fepois("Y ~ X1", data=data).get_performance()
-    data = pf.get_data().dropna()
-    with pytest.raises(NotImplementedError, match="quantreg"):
-        pf.quantreg("Y ~ X1", data=data, quantile=0.5).get_performance()
-
-
 def test_poisson_offset_errors():
     data = pf.get_data(model="Fepois").dropna()
 
@@ -573,9 +540,9 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "conf_int_lb": [
-                    fit2._conf_int[0]
+                    fit2.coeftable.conf_int[0]
                 ],  # length of customized statistics not equal to the number of models
-                "conf_int_ub": [fit2._conf_int[1]],
+                "conf_int_ub": [fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
@@ -586,9 +553,9 @@ def test_errors_etable():
             custom_stats={
                 "conf_int_lb": [
                     [0.1, 0.1, 0.1],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # length of customized statistics not equal to length of model
-                "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+                "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
             },
             coef_fmt="b [conf_int_lb, conf_int_ub]",
         )
@@ -598,8 +565,8 @@ def test_errors_etable():
             models=[fit1, fit2],
             custom_stats={
                 "b": [
-                    fit2._conf_int[0],
-                    fit2._conf_int[0],
+                    fit2.coeftable.conf_int[0],
+                    fit2.coeftable.conf_int[0],
                 ],  # preserved keyword cannot be used as a custom statistic
             },
             coef_fmt="b [se]",
@@ -887,16 +854,18 @@ def setup_feiv_instance():
     return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
-def test_IV_first_stage_invalid_model_type():
+def test_IV_first_stage_invalid_model_type(monkeypatch):
+    """The first stage rejects a fit result that is not a single Feols model."""
+
     class NotFeols:
         # Dummy class for testing invalid model type
         pass
 
-    invalid_model = NotFeols()
+    feiv_instance = setup_feiv_instance()
+    monkeypatch.setattr("pyfixest.estimation.feols", lambda **kwargs: NotFeols())
 
-    with pytest.raises(TypeError):
-        feiv_instance = setup_feiv_instance()
-        feiv_instance.first_stage(invalid_model)  # This should raise TypeError
+    with pytest.raises(TypeError, match="must be of type Feols"):
+        feiv_instance._fit_first_stage()
 
 
 def test_IV_Diag_unsupported_statistics():
@@ -1694,3 +1663,30 @@ def test_fixest_multi_rejects_savi_tidy_argument():
 
     with pytest.raises(TypeError):
         fit.tidy(inference_type="savi")
+
+
+@pytest.mark.parametrize(
+    ("vcov", "vcov_kwargs", "error", "match"),
+    [
+        ("HC4", None, ValueError, "vcov must be one of"),
+        (["f1"], None, TypeError, "vcov must be a string or a dict"),
+        ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
+        ({"CRV1": "f1+f2+f3"}, None, ValueError, "two-way clustering"),
+        ({"CRV1": 1}, None, TypeError, "must be a string"),
+        ({"CRV1": "f1^f2"}, None, ValueError, "interaction"),
+        ("NW", None, ValueError, "Missing required 'time_id'"),
+        ("DK", {"time_id": "f1"}, ValueError, "Missing required 'panel_id'"),
+        ("NW", {"time_id": "f1", "lags": 2}, ValueError, "vcov_kwargs accepts"),
+        (
+            "NW",
+            {"time_id": "f1", "lag": -1},
+            ValueError,
+            "'lag' must be a non-negative integer",
+        ),
+    ],
+)
+def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
+    """`VcovSpec.from_user_input` validates `vcov` for post-estimation calls too."""
+    fit = pf.feols("Y ~ X1", get_data())
+    with pytest.raises(error, match=match):
+        fit.vcov(vcov, vcov_kwargs)
