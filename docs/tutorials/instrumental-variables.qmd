@@ -182,19 +182,20 @@ The IV estimate is closer to the true effect of -0.15. The "naive" OLS estimate 
 
 In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for "weak instruments", which aim to validate the "relevance" assumption.
 
-`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Both can be accessed via the `._model_1st_stage` attribute.
+`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Both live on the `.first_stage` attribute, which every IV fit carries.
 
 ```{python}
-# first_stage() must be called before IV_Diag() — it fits the first-stage OLS
-# regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.
-fit_iv.first_stage()
-fit_iv._model_1st_stage.summary()
+# The first-stage OLS regression is fitted with the model and retained as
+# fit_iv.first_stage.model.
+fit_iv.first_stage.model.summary()
 ```
 
 ```{python}
+# IV_Diag() adds the effective F-statistic to fit_iv.first_stage.diagnostics.
 fit_iv.IV_Diag()
-print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"First-stage F-statistic : {diagnostics.f_stat:.2f}")
+print(f"Effective F-statistic   : {diagnostics.eff_f:.2f}")
 ```
 
 Both F-statistics are well above 10, which is the canonical threshold for a strong instrument. More recent work instead suggests that for reliable inference, the effective F-statistic should be significantly higher.
@@ -273,11 +274,10 @@ pf.coefplot([fit_itt, fit_late], keep="assigned_treatment|adopted_feature")
 Since the instrument (`assigned_treatment`) is fully randomized, the first stage is expected to be very strong and both statistics should comfortably exceed 10.
 
 ```{python}
-# first_stage() must be called before IV_Diag()
-fit_late.first_stage()
 fit_late.IV_Diag()
-print(f"First-stage F-statistic : {fit_late._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_late._eff_F:.2f}")
+diagnostics = fit_late.first_stage.diagnostics
+print(f"First-stage F-statistic : {diagnostics.f_stat:.2f}")
+print(f"Effective F-statistic   : {diagnostics.eff_f:.2f}")
 ```
 
 
@@ -340,17 +340,17 @@ Weak instruments - instruments that are only loosely correlated with the endogen
 
 ### The First-Stage F-Statistic
 
-The `.first_stage()` method re-estimates the first-stage regression and computes the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ for iid errors (@stockyogo2005).
+Every IV fit estimates its first stage and reports the **first-stage F-statistic**, which tests $H_0\colon \pi = 0$ (all instrument coefficients are jointly zero). The classic rule of thumb is $F > 10$ for iid errors (@stockyogo2005).
 
 
 ```{python}
-# Re-use the motherhood penalty IV model. IV_Diag() now preserves the retained
-# first-stage covariance, so the iid-based F-statistic remains available.
+# Re-use the motherhood penalty IV model. IV_Diag() preserves the retained
+# first-stage's own covariance, so the iid-based F-statistic remains available.
 fit_iv.IV_Diag()
 
-# The F-stat is stored as an attribute after calling IV_Diag()
-print(f"First-stage F-statistic: {fit_iv._f_stat_1st_stage:.1f}")
-print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"First-stage F-statistic: {diagnostics.f_stat:.1f}")
+print(f"First-stage p-value:     {diagnostics.p_value:.4f}")
 ```
 
 
@@ -368,10 +368,15 @@ where $\hat{\pi}$ are the first-stage coefficients on the excluded instruments, 
 The `.IV_Diag()` method computes both the standard F-statistic and the effective F-statistic in one call:
 
 ```{python}
+# Re-use the motherhood penalty IV model: IV_Diag() reports the standard F
+# under the first stage's own covariance estimator, and computes the
+# effective F under a heteroskedasticity-robust covariance without changing
+# the first stage's retained covariance.
 fit_iv.IV_Diag()
 
-print(f"Standard F-statistic:  {fit_iv._f_stat_1st_stage:.1f}")
-print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"Standard F-statistic:  {diagnostics.f_stat:.1f}")
+print(f"Effective F-statistic: {diagnostics.eff_f:.1f}")
 ```
 
 ::: {.callout-tip}

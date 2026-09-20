@@ -141,10 +141,9 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
     fit_iv = feols(
         "y ~ 1 + c1 + c2 | d ~ z", data=data, vcov=adj_vcov, weights=weight_detail_py
     )
-    fit_iv.first_stage()
-    F_stat_pf = fit_iv._f_stat_1st_stage
+    F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
     fit_iv.IV_Diag()
-    F_stat_eff_pf = fit_iv._eff_F
+    F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
 
     F_naive = result[0]
     F_hetero = result[1]
@@ -212,14 +211,14 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     )
     fit_ols = feols("X1 ~  Z1 | f1", vcov=vcov_detail, data=data, weights=weight_detail)
 
-    fit_iv.first_stage()
     fit_ols.wald_test()
 
-    _pi_hat_iv = fit_iv._pi_hat
-    _X_hat_iv = fit_iv._X_hat
-    _v_hat_iv = fit_iv._v_hat
-    _F_stat_iv = fit_iv._f_stat_1st_stage
-    _F_pval_iv = fit_iv._p_value_1st_stage
+    first_stage = fit_iv.first_stage
+    _pi_hat_iv = first_stage.coefficients
+    _X_hat_iv = first_stage.fitted_values
+    _v_hat_iv = first_stage.residuals
+    _F_stat_iv = first_stage.diagnostics.f_stat
+    _F_pval_iv = first_stage.diagnostics.p_value
 
     _pi_hat_ols = fit_ols._beta_hat
     _X_hat_ols = fit_ols.within_data.design @ fit_ols._beta_hat
@@ -289,13 +288,13 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
     )
     vcov_type_detail_before = fit_iid.variance_covariance.spec.vcov_type_detail
     se_before = fit_iid.se().copy()
-    first_stage = fit_iid._model_1st_stage
-    first_stage_vcov_before = first_stage.variance_covariance
-    first_stage_se_before = first_stage.se().copy()
-    first_stage_f_before = fit_iid._f_stat_1st_stage
-    first_stage_p_value_before = fit_iid._p_value_1st_stage
+    first_stage_model = fit_iid.first_stage.model
+    first_stage_vcov_before = first_stage_model.variance_covariance
+    first_stage_se_before = first_stage_model.se().copy()
+    first_stage_f_before = fit_iid.first_stage.diagnostics.f_stat
+    first_stage_p_value_before = fit_iid.first_stage.diagnostics.p_value
 
-    reference_first_stage = copy.deepcopy(first_stage)
+    reference_first_stage = copy.deepcopy(first_stage_model)
     reference_first_stage.vcov("hetero")
 
     fit_iid.IV_Diag()
@@ -311,15 +310,16 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
         atol=1e-12,
         err_msg="IV_Diag() changed the main model's standard errors",
     )
-    assert fit_iid._model_1st_stage.variance_covariance is first_stage_vcov_before
-    np.testing.assert_allclose(first_stage.se(), first_stage_se_before)
-    assert fit_iid._f_stat_1st_stage == first_stage_f_before
-    assert fit_iid._p_value_1st_stage == first_stage_p_value_before
-    assert np.isfinite(fit_iid._eff_F)
+    assert fit_iid.first_stage.model.variance_covariance is first_stage_vcov_before
+    np.testing.assert_allclose(first_stage_model.se(), first_stage_se_before)
+    assert fit_iid.first_stage.diagnostics.f_stat == first_stage_f_before
+    assert fit_iid.first_stage.diagnostics.p_value == first_stage_p_value_before
+    assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)
 
+    instruments = list(fit_iid.first_stage.instruments)
     iv_positions = [
-        fit_iid._coefnames_z.index(instrument)
-        for instrument in fit_iid._non_exo_instruments
+        list(first_stage_model._coefnames).index(instrument)
+        for instrument in instruments
     ]
     Z = reference_first_stage.within_data.design[:, iv_positions]
     observation_weights = reference_first_stage.observation_weights.values
@@ -328,12 +328,12 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
         if observation_weights is None
         else Z.T @ (observation_weights[:, None] * Z)
     )
-    pi_hat = np.array(reference_first_stage.coef()[fit_iid._non_exo_instruments])
+    pi_hat = np.array(reference_first_stage.coef()[instruments])
     Sigma = reference_first_stage.variance_covariance.vcov[
-        np.ix_(fit_iid._iv_loc, fit_iid._iv_loc)
+        np.ix_(iv_positions, iv_positions)
     ]
     expected_eff_f = (pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(Sigma @ Q_zz))
-    np.testing.assert_allclose(fit_iid._eff_F, expected_eff_f)
+    np.testing.assert_allclose(fit_iid.first_stage.diagnostics.eff_f, expected_eff_f)
 
     # The effective F is computed from the heteroskedasticity-robust first
     # stage, so it does not depend on the outer model's covariance type.
@@ -348,9 +348,18 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
     fit_hetero.IV_Diag()
 
     np.testing.assert_allclose(
-        fit_iid._eff_F,
-        fit_hetero._eff_F,
+        fit_iid.first_stage.diagnostics.eff_f,
+        fit_hetero.first_stage.diagnostics.eff_f,
         rtol=1e-10,
         atol=1e-10,
         err_msg="Effective F differs between iid and hetero specifications",
     )
+
+
+def test_eff_f_does_not_require_stored_data():
+    # Since eff_F() no longer refits the first stage to switch its covariance,
+    # it does not need the raw data retained for an iid-vcov fit.
+    data = get_data()
+    fit_iid = feols("Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, vcov="iid", store_data=False)
+    fit_iid.IV_Diag()
+    assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)
