@@ -495,7 +495,7 @@ class Feiv(Feols):
             model=model, instruments=published.instruments
         )
         eff_f = effective_f_statistic(
-            pi_hat=np.array(model.coef()[list(published.instruments)]),
+            pi_hat=model._beta_hat[instrument_positions],
             instruments_within=model.within_data.design[:, instrument_positions],
             instrument_vcov=model.variance_covariance.vcov[
                 np.ix_(instrument_positions, instrument_positions)
