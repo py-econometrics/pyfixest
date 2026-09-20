@@ -10,6 +10,7 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
     GlmWorkingState,
     SandwichComponents,
 )
@@ -43,13 +44,9 @@ class GlmFit:
         Whether the IRLS loop converged within ``maxiter`` iterations.
     n_iter : int
         Number of completed iterations.
-    coefnames : list[str]
-        Coefficient names after the collinearity drop.
-    collin_vars : list[str]
-        Names of variables dropped due to collinearity.
-    collin_index : list[bool]
-        Boolean mask over the input X's columns: True marks a dropped column.
-        Empty when no columns were dropped.
+    collinearity : CollinearityCheck
+        Names and column mask of the regressors dropped by the rank check,
+        together with the coefficient names it retained.
     """
 
     beta: np.ndarray
@@ -59,9 +56,7 @@ class GlmFit:
     deviance: float
     converged: bool
     n_iter: int
-    coefnames: list[str]
-    collin_vars: list[str]
-    collin_index: list[bool]
+    collinearity: CollinearityCheck
 
 
 def _rel_dev_change(deviance: float, deviance_old: float) -> float:
@@ -185,8 +180,11 @@ def fit_glm_irls(
     inner_tol = fixef_tol
     X_eff = X
 
-    collin_vars: list[str] = []
-    collin_index: list[bool] = []
+    collinearity = CollinearityCheck(
+        dropped_coef_names=(),
+        mask=tuple(False for _ in coefnames),
+        coefnames=tuple(coefnames),
+    )
     converged = False
     step_halved_prev = False
 
@@ -239,11 +237,10 @@ def fit_glm_irls(
         )
 
         if r == 0:
-            X_tilde, coefnames, collin_vars, collin_index = (
-                drop_multicollinear_variables(X_tilde, coefnames, collin_tol)
+            X_tilde, collinearity = drop_multicollinear_variables(
+                X_tilde, coefnames, collin_tol
             )
-            if collin_index:
-                X_eff = X_eff[:, ~np.array(collin_index)]
+            X_eff = collinearity.select(X_eff)
 
         design_solver = sqrt_working_weights.flatten()[:, None] * X_tilde
         response_solver = sqrt_working_weights.flatten() * z_tilde
@@ -326,7 +323,5 @@ def fit_glm_irls(
         deviance=deviance,
         converged=converged,
         n_iter=r,
-        coefnames=coefnames,
-        collin_vars=collin_vars,
-        collin_index=collin_index,
+        collinearity=collinearity,
     )

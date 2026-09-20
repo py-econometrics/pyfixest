@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -13,7 +14,9 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
+from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
@@ -117,12 +120,14 @@ class Feglm(Feols):
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
         # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = False
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=True,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
         self._method = "feglm"
         self._family = family
@@ -200,11 +205,15 @@ class Feglm(Feols):
             fixef_tol=self._fixef_tol,
         )
 
-        self._coefnames = fit.coefnames
-        self._collin_vars = fit.collin_vars
-        self._collin_index = fit.collin_index
+        self.collinearity = fit.collinearity
+        self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
+        # The prediction view of the same arrays: eta is the linear predictor
+        # (fixed effects and offset included), mu its inverse-link mean.
+        self.fitted_values = FittedValues(
+            link=working_state.eta, response=working_state.mu
+        )
         design_within = working_state.design_within
         self._X_is_empty = design_within.shape[1] == 0
         self._k = design_within.shape[1]
@@ -212,7 +221,7 @@ class Feglm(Feols):
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich
 
-        self.deviance = fit.deviance
+        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
 
     def _prediction_design(self) -> np.ndarray:
@@ -223,14 +232,6 @@ class Feglm(Feols):
         """
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
-
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Supply cached GLM predictions to predict() and fixef().
-
-        eta includes fixed effects and any offset; mu is the inverse-link
-        response mean. Fixed-effect recovery requests eta, not mu.
-        """
-        return self.working_state.eta if type == "link" else self.working_state.mu
 
     def _vcov_iid(self) -> VcovTerm:
         return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
@@ -252,13 +253,6 @@ class Feglm(Feols):
         )
         bread = self.sandwich.bread
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
-
-    def get_performance(self) -> None:
-        """Reject linear R² measures; only the Gaussian family reports them."""
-        raise NotImplementedError(
-            f"get_performance() is not supported for family='{self._family.name}'; "
-            "only feols() and Gaussian feglm() fits report R² measures."
-        )
 
     def resid(self, type: str = "response") -> np.ndarray:
         """

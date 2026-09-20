@@ -17,6 +17,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
@@ -182,7 +183,12 @@ class QuantregMulti:
             )
 
         for quantreg in self.all_quantregs.values():
-            quantreg._get_predictors()
+            # The response minus the residual carries the fixed-effect
+            # contribution, which `design @ beta_hat` alone would omit.
+            fitted = (
+                quantreg.model_matrix.dependent.to_numpy().flatten() - quantreg.resid()
+            )
+            quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
         # sort self.all_quantregs by q
         self.all_quantregs = dict(

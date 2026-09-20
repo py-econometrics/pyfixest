@@ -20,8 +20,8 @@ def test_multicol_overdetermined_iv():
         vcov={"CRV1": "f1"},
     )
 
-    assert fit._collin_vars == ["f1"]
-    assert fit._collin_vars_z == ["f1"]
+    assert fit.collinearity.dropped_coef_names == ("f1",)
+    assert fit.collinearity_instruments.dropped_coef_names == ("f1",)
 
     np.testing.assert_allclose(
         fit._beta_hat, np.array([-0.174227, -0.993607], dtype=float), rtol=1e-5

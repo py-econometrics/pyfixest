@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
-from scipy.stats import chi2, f, t
+from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
@@ -29,21 +29,31 @@ from pyfixest.estimation.internals.collinearity import drop_multicollinear_varia
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST, InferenceDist
 from pyfixest.estimation.internals.fit_ import fit_ols
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    linear_fit_statistics,
+)
 from pyfixest.estimation.internals.literals import (
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
     SolverOptions,
+    WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
+    CollinearityCheck,
     EstimationSample,
+    FittedValues,
     ObservationWeights,
+    RitestStatistics,
     SandwichComponents,
     VarianceCovariance,
     VcovSpec,
+    WaldTest,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
@@ -70,7 +80,7 @@ from pyfixest.estimation.post_estimation.decomposition import (
     _decompose_arg_check,
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
-    FixedEffect,
+    FixedEffectEstimates,
     build_fixed_effects,
     check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
@@ -79,7 +89,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import _wald_statistic
+from pyfixest.estimation.post_estimation.wald import wald_test
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -150,10 +160,9 @@ class Feols(ResultAccessorMixin):
         Tolerance level for collinearity checks.
     _coefnames : list
         Names of the coefficients (of the design matrix X).
-    _collin_vars : list
-        Variables identified as collinear.
-    _collin_index : list
-        Indices of collinear variables.
+    collinearity : CollinearityCheck
+        Names and column mask of the regressors dropped by the rank check,
+        set in get_fit().
     _solver: str
         The solver used for the regression.
     observation_weights : ObservationWeights
@@ -165,8 +174,8 @@ class Feols(ResultAccessorMixin):
         get_fit().
     _k : int
         Number of independent variables (or features).
-    _support_crv3_inference : bool
-        Indicates support for CRV3 inference.
+    capabilities : Capabilities
+        Inference and post-estimation features this model class supports.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
     _fml : Any
@@ -181,37 +190,33 @@ class Feols(ResultAccessorMixin):
         Small-sample correction options.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
-    _Y_hat_link : np.ndarray
-        Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta.
-    _Y_hat_response : np.ndarray
-        Prediction at the level of the response variable, i.e., the expected predictor E(Y|X).
+    fitted_values : FittedValues
+        In-sample predictions on the link and the response scale, set in
+        get_fit().
     _u_hat : np.ndarray
         Residuals of the regression model.
     variance_covariance : VarianceCovariance
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
         freedom, and the requested estimator with its cluster variables.
+    wald : WaldTest
+        Wald test published by `wald_test()`: the statistic of the reference
+        distribution used, its p-value, both scalings of the quadratic form,
+        and the degrees of freedom.
+    ritest_statistics : RitestStatistics
+        Randomization-inference draws, the centered sample statistic, and the
+        p-value, set by `ritest(store_ritest_statistics=True)`.
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
     _F_stat : Any
         F-statistic for the model, set in get_Ftest().
-    _fixef_coefficients : dict[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect]
-        Fixed effect estimates grouped by fixed effect.
-    _alpha : pd.DataFrame
-        A DataFrame with the estimated fixed effects.
-    _sumFE : np.ndarray
-        Sum of all fixed effects for each observation.
-    _rmse : float
-        Root mean squared error of the model.
-    _r2 : float
-        R-squared value of the model.
-    _r2_within : float
-        R-squared value computed on demeaned dependent variable.
-    _adj_r2 : float
-        Adjusted R-squared value of the model.
-    _adj_r2_within : float
-        Adjusted R-squared value computed on demeaned dependent variable.
+    fixef_estimates : FixedEffectEstimates
+        Fixed-effect estimates published by `fixef()`: the coefficient records
+        grouped by fixed effect, the dummy-coded solution `alpha`, and the
+        per-observation fixed-effect contribution `sumFE`.
+    fitstat : FitStatistics
+        Goodness-of-fit measures; ``NaN`` where the estimator defines none.
     _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
         "scipy.sparse.linalg.lsqr"],
         default is "scipy.linalg.solve". Solver to use for the estimation.
@@ -245,12 +250,17 @@ class Feols(ResultAccessorMixin):
     # Set in prepare_model_matrix().
     _icovars: list[str] | None
     # Set in get_fit().
+    collinearity: CollinearityCheck
     sandwich: SandwichComponents
+    fitted_values: FittedValues
     # Set in vcov().
     variance_covariance: VarianceCovariance
+    # Set in wald_test().
+    wald: WaldTest
+    # Set in ritest() when store_ritest_statistics is True.
+    ritest_statistics: RitestStatistics
     # Set in fixef().
-    _fixef_coefficients: dict[str, FixedEffect]
-    _alpha: np.ndarray
+    fixef_estimates: FixedEffectEstimates
 
     def __init__(
         self,
@@ -319,14 +329,16 @@ class Feols(ResultAccessorMixin):
         self._lean = lean
         self._context = capture_context(context)
 
-        self._support_crv3_inference = True
-        self._support_hac_inference = True
-        self._support_multiway_clustering = True
-        self._supports_wildboottest = True
-        self._supports_cluster_causal_variance = True
-        if self._has_weights or self._is_iv:
-            self._supports_wildboottest = False
-        self._support_decomposition = True
+        self.capabilities = Capabilities(
+            crv3_inference=True,
+            hac_inference=True,
+            multiway_clustering=True,
+            wildboottest=True,
+            cluster_causal_variance=True,
+            decomposition=True,
+        )
+        if self._has_weights:
+            self.capabilities = replace(self.capabilities, wildboottest=False)
 
         # attributes that have to be enriched outside of the class -
         # not really optimal code change later
@@ -338,18 +350,8 @@ class Feols(ResultAccessorMixin):
             else None
         )
 
-        # set in fixef(); None triggers the lazy fixef() call in predict()
-        self._sumFE = None
-
-        # set in get_performance()
-        self._rmse = np.nan
-        self._r2 = np.nan
-        self._r2_within = np.nan
-        self._adj_r2 = np.nan
-        self._adj_r2_within = np.nan
-
-        # special for poisson / glm
-        self.deviance: float | None = None
+        # set in get_fit(); IV and quantile fits keep the all-NaN value
+        self.fitstat = FitStatistics()
 
         # special for did
         self._res_cohort_eventtime_dict: dict[str, Any] | None = None
@@ -507,17 +509,23 @@ class Feols(ResultAccessorMixin):
     ) -> WithinLinearData:
         """Return within data after the established unweighted rank check."""
         design = within_data.design
-        if design.shape[1] > 0:
-            (
-                design,
-                self._coefnames,
-                self._collin_vars,
-                self._collin_index,
-            ) = drop_multicollinear_variables(
-                design,
-                self._coefnames,
-                self._collin_tol,
+        if design.shape[1] == 0:
+            # Fixed-effects-only model: nothing to check, but the attribute is
+            # published for every fitted model.
+            self.collinearity = CollinearityCheck(
+                dropped_coef_names=(),
+                mask=tuple(False for _ in self._coefnames),
+                coefnames=tuple(self._coefnames),
             )
+            return within_data
+
+        design, collinearity = drop_multicollinear_variables(
+            design,
+            self._coefnames,
+            self._collin_tol,
+        )
+        self.collinearity = collinearity
+        self._coefnames = list(collinearity.coefnames)
 
         return replace(within_data, design=design)
 
@@ -535,21 +543,6 @@ class Feols(ResultAccessorMixin):
         """
         require_retained(self, "predict", "within_data")
         return self.within_data.design
-
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Return cached fitted values for predict() and fixed-effect recovery.
-
-        These values include the fixed-effect contribution. Link and response
-        predictions coincide for linear models; GLMs override this method to
-        distinguish the linear predictor from the response mean.
-        """
-        return self._Y_hat_link if type == "link" else self._Y_hat_response
-
-    def _get_predictors(self) -> None:
-        self._Y_hat_link = (
-            self.model_matrix.dependent.to_numpy().flatten() - self.resid()
-        )
-        self._Y_hat_response = self._Y_hat_link
 
     def get_fit(self) -> None:
         """
@@ -579,12 +572,29 @@ class Feols(ResultAccessorMixin):
             self._u_hat = fit.residuals
             self.sandwich = fit.sandwich
 
-        self._get_predictors()
+        # The response minus the residual carries the fixed-effect
+        # contribution, which `design @ beta_hat` alone would omit.
+        fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
+        # Empty designs are used only for demeaning and may have no residual
+        # degrees of freedom. Leave their fit statistics undefined.
+        if self._X_is_empty:
+            return
+        self.fitstat = linear_fit_statistics(
+            Y=self.model_matrix.dependent.to_numpy(),
+            Y_within=within_data.response,
+            residuals=self._u_hat,
+            weights=self.observation_weights.values,
+            N=self.sample_info.n_obs,
+            k=self._k,
+            k_fe=self._n_fixef_coefficients(),
+            has_intercept=not self._drop_intercept,
+            has_fixef=self._has_fixef,
+        )
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""
         if self._method == "feols" and not self._is_iv:
-            self.get_performance()
             self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
@@ -663,7 +673,7 @@ class Feols(ResultAccessorMixin):
         G: tuple[int, ...] = ()
         df_t: int | float
         if vcov_type == "CRV":
-            if len(spec.clustervar) > 1 and not self._support_multiway_clustering:
+            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
@@ -756,7 +766,7 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self._support_crv3_inference:
+        if not self.capabilities.crv3_inference:
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self._method}'."
             )
@@ -793,7 +803,7 @@ class Feols(ResultAccessorMixin):
         _data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
 
-        if not self._support_hac_inference:
+        if not self.capabilities.hac_inference:
             raise NotImplementedError(
                 "HAC inference is not supported for this model type."
             )
@@ -891,7 +901,12 @@ class Feols(ResultAccessorMixin):
             if hasattr(self, attr):
                 delattr(self, attr)
 
-    def wald_test(self, R=None, q=None, distribution="F"):
+    def wald_test(
+        self,
+        R: np.ndarray | None = None,
+        q: float | np.ndarray | None = None,
+        distribution: WaldDistributionOptions = "F",
+    ) -> WaldTest:
         """
         Conduct Wald test.
 
@@ -899,20 +914,6 @@ class Feols(ResultAccessorMixin):
         where R is m x k matrix, beta is a k x 1 vector of coefficients,
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
-
-        This method producues the following attriutes
-
-        _dfd : int
-            degree of freedom in denominator
-        _dfn : int
-            degree of freedom in numerator
-        _wald_statistic : scalar
-            Wald-statistics computed for hypothesis testing
-        _f_statistic : scalar
-            Wald-statistics(when R is an indentity matrix, and q being zero vector)
-            computed for hypothesis testing
-        _p_value : scalar
-            corresponding p-value for statistics
 
         Parameters
         ----------
@@ -924,18 +925,21 @@ class Feols(ResultAccessorMixin):
             If None, defaults to a vector of zeros.
         distribution : str, optional
             The distribution to use for the p-value. Can be either "F" or "chi2".
-            Defaults to "F".
+            Defaults to "F". The F distribution is only used for the joint null
+            that all coefficients are zero; any other restriction falls back to
+            "chi2" with a warning.
 
         Returns
         -------
-        pd.Series
-            A pd.Series with the Wald statistic and p-value.
+        WaldTest
+            The test statistic of the reference distribution used, its p-value,
+            both scalings of the Wald quadratic form, and the degrees of
+            freedom. See [WaldTest](/reference/estimation.state.WaldTest.qmd).
 
         Examples
         --------
         ```{python}
         import numpy as np
-        import pandas as pd
         import pyfixest as pf
 
         data = pf.get_data()
@@ -945,32 +949,24 @@ class Feols(ResultAccessorMixin):
         q = np.array([0.0])
 
         # Wald test
-        fit.wald_test(R=R, q=q, distribution = "chi2")
-        f_stat = fit._f_statistic
-        p_stat = fit._p_value
+        wald = fit.wald_test(R=R, q=q, distribution = "chi2")
 
-        print(f"Python f_stat: {f_stat}")
-        print(f"Python p_stat: {p_stat}")
+        print(f"Python statistic: {wald.stat}")
+        print(f"Python p-value: {wald.pvalue}")
         ```
         """
-        k_fe = np.sum(self._k_fe.values) if self._has_fixef else 0
+        _validate_literal_argument(distribution, WaldDistributionOptions)
+
+        k_fe = np.sum(self._k_fe.to_numpy()) if self._has_fixef else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
 
-        W, self._dfn = _wald_statistic(
-            beta_hat=self._beta_hat,
-            vcov=self.variance_covariance.vcov,
-            R=R,
-            q=q,
-        )
-
-        if self.variance_covariance.spec.is_clustered:
-            self._dfd = min(self.variance_covariance.G) - 1
+        covariance = self.variance_covariance
+        if covariance.spec.is_clustered:
+            df2: int | float = min(covariance.G) - 1
         else:
-            self._dfd = self.sample_info.n_obs - self._k - k_fe
-
-        self._wald_statistic = W
+            df2 = self.sample_info.n_obs - self._k - k_fe
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
@@ -982,20 +978,17 @@ class Feols(ResultAccessorMixin):
             )
             distribution = "chi2"
 
-        if distribution == "F":
-            self._f_statistic = W / self._dfn
-            self._p_value = 1 - f.cdf(self._f_statistic, dfn=self._dfn, dfd=self._dfd)
-            res = pd.Series({"statistic": self._f_statistic, "pvalue": self._p_value})
-        elif distribution == "chi2":
-            self._f_statistic = W / self._dfn
-            self._p_value = chi2.sf(self._wald_statistic, self._dfn)
-            res = pd.Series(
-                {"statistic": self._wald_statistic, "pvalue": self._p_value}
-            )
-        else:
-            raise ValueError("Distribution must be F or chi2")
+        self.wald = wald_test(
+            beta_hat=self._beta_hat,
+            vcov=covariance.vcov,
+            R=R,
+            q=q,
+            df2=df2,
+            distribution=distribution,
+            vcov_type=covariance.spec.vcov_type_detail,
+        )
 
-        return res
+        return self.wald
 
     def wildboottest(
         self,
@@ -1093,10 +1086,14 @@ class Feols(ResultAccessorMixin):
                 f"Parameter {param} not found in the model's coefficients."
             )
 
-        if not self._supports_wildboottest:
+        if not self.capabilities.wildboottest:
             if self._is_iv:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
+                )
+            if self._method == "did2s":
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for the DID2S estimator."
                 )
             if self._has_weights:
                 raise NotImplementedError(
@@ -1138,11 +1135,6 @@ class Feols(ResultAccessorMixin):
         except ImportError:
             print(
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported with IV estimation."
             )
 
         if self._method == "fepois":
@@ -1274,7 +1266,7 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        if not self._supports_cluster_causal_variance:
+        if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
                 f"of type '{self._method}'."
@@ -1547,7 +1539,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self._support_decomposition:
+        if not self.capabilities.decomposition:
             raise NotImplementedError(
                 "Decomposition is currently only supported for regression models "
                 "estimated via feols()."
@@ -1657,10 +1649,9 @@ class Feols(ResultAccessorMixin):
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
 
-        This method creates the following attributes:
-        - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects.
-        - `_sumFE` (np.array): An array with the sum of fixed effects for each
-        observation (i = 1, ..., N).
+        Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates`
+        value holding the coefficient records, the dummy-coded solution
+        `alpha`, and the per-observation contribution `sumFE`.
 
         Parameters
         ----------
@@ -1713,9 +1704,9 @@ class Feols(ResultAccessorMixin):
             if self._method == "fepois" or self._method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self._predict_in_sample(type="link")
+                Y = self.fitted_values.link
                 # The linear predictor includes the offset; subtract it so
-                # that _sumFE represents the pure FE contribution and predict()
+                # that sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
                 if self._offset_name is not None:
                     offset = self.model_matrix.offset
@@ -1747,18 +1738,20 @@ class Feols(ResultAccessorMixin):
 
         alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
-        self._fixef_coefficients = build_fixed_effects(
-            fixed_effect_coefficients=alpha,
-            contrast_coding=contrast_coding,
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+        self.fixef_estimates = FixedEffectEstimates(
+            coefficients=build_fixed_effects(
+                fixed_effect_coefficients=alpha,
+                contrast_coding=contrast_coding,
+                transform_state=self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].transform_state,
+            ),
+            alpha=alpha,
+            # Fixed-effect contribution per observation, in the units of Y.
+            sumFE=D.dot(alpha),
         )
-        self._alpha = alpha
-        # Fixed-effect contribution per observation, in the units of Y.
-        self._sumFE = D.dot(alpha)
 
-        return fixed_effects_to_frame(self._fixef_coefficients)
+        return fixed_effects_to_frame(self.fixef_estimates.coefficients)
 
     def predict(
         self,
@@ -1857,7 +1850,7 @@ class Feols(ResultAccessorMixin):
             # note: no need to worry about fixed effects, as not supported with
             # prediction errors; will throw error later;
             X = self._prediction_design()
-            y_hat = self._predict_in_sample(type=type)
+            y_hat = getattr(self.fitted_values, type)
             n_observations = self.sample_info.n_rows
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
@@ -1885,12 +1878,12 @@ class Feols(ResultAccessorMixin):
                 warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
-                if self._sumFE is None:
+                if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self._fixef_coefficients,
+                    coefficients=self.fixef_estimates.coefficients,
                 )
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
@@ -1976,9 +1969,9 @@ class Feols(ResultAccessorMixin):
             Whether to include a plot of the distribution p-values. Defaults to False.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, stores the simulated statistics
-            in the model object via the `ritest_statistics` attribute as a
-            numpy array.
+            Defaults to False. If True, publishes the draws, the centered
+            sample statistic, and the p-value as a `RitestStatistics` value
+            in the model's `ritest_statistics` attribute.
         level: float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.
@@ -2145,9 +2138,11 @@ class Feols(ResultAccessorMixin):
         )
 
         if store_ritest_statistics:
-            self._ritest_statistics = ri_stats
-            self._ritest_pvalue = ri_pvalue
-            self._ritest_sample_stat = sample_stat - h0_value
+            self.ritest_statistics = RitestStatistics(
+                statistics=ri_stats,
+                sample_stat=float(sample_stat - h0_value),
+                pvalue=float(ri_pvalue),
+            )
 
         res = pd.Series(
             {
@@ -2187,7 +2182,7 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
 
-        if not hasattr(self, "_ritest_statistics"):
+        if not hasattr(self, "ritest_statistics"):
             raise ValueError(
                 """
                             The randomization inference statistics have not been stored
@@ -2196,11 +2191,12 @@ class Feols(ResultAccessorMixin):
                             """
             )
 
-        ri_stats = self._ritest_statistics
-        sample_stat = self._ritest_sample_stat
+        stored = self.ritest_statistics
 
         return _plot_ritest_pvalue(
-            ri_stats=ri_stats, sample_stat=sample_stat, plot_backend=plot_backend
+            ri_stats=stored.statistics,
+            sample_stat=stored.sample_stat,
+            plot_backend=plot_backend,
         )
 
     def update(

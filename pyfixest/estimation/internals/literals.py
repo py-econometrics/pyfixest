@@ -17,6 +17,7 @@ SolverOptions = Literal[
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
+WaldDistributionOptions = Literal["F", "chi2"]
 InferenceType = Literal["regular", "simult", "savi"]
 
 

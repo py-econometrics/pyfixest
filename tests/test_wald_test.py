@@ -41,8 +41,8 @@ def test_F_test_single_equation_no_clustering_with_auto_computed_wald_test():
     fit = feols(fml, data, vcov=None, ssc=ssc(k_adj=False))
 
     # Wald test (is called with R = Identity_2 and distribution = "F" by default)
-    f_stat = fit._f_statistic
-    p_stat = fit._p_value
+    f_stat = fit.wald.f_statistic
+    p_stat = fit.wald.pvalue
 
     # Compare with R
 
@@ -75,9 +75,9 @@ def test_F_test_single_equation(R):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
-    p_value = fit._p_value
+    wald = fit.wald_test(R=R)
+    f_stat = wald.f_statistic
+    p_value = wald.pvalue
 
     # Compare with R
     r_fit = fixest.feols(
@@ -129,9 +129,9 @@ def test_F_test_multiple_equation(seedn):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
-    p_value = fit._p_value
+    wald = fit.wald_test(R=R)
+    f_stat = wald.f_statistic
+    p_value = wald.pvalue
 
     r_fit = fixest.feols(
         ro.Formula(fml),
@@ -195,8 +195,7 @@ def test_F_test_multiple_equations_pvalue(R, fml):
     fit = feols(fml, data, vcov={"CRV1": "year"}, ssc=ssc(k_adj=False))
 
     # Wald test
-    fit.wald_test(R=R)
-    f_stat = fit._f_statistic
+    f_stat = fit.wald_test(R=R).f_statistic
 
     r_fit = fixest.feols(
         ro.Formula(fml),
@@ -244,13 +243,13 @@ def test_wald_test_multiple_equations(R, q, fml):
     # Define the hypothesis values q (both zero)
 
     # Perform the Wald test
-    fit2.wald_test(R=Rpf, q=q, distribution="chi2")
+    wald = fit2.wald_test(R=Rpf, q=q, distribution="chi2")
 
     r_result = car.linearHypothesis(fit_r, R_r, rhs=ro.FloatVector(q), test="Chisq")
 
     # Extracting p-value from the result
-    wald_stat = fit2._wald_statistic
-    p_value = fit2._p_value
+    wald_stat = wald.wald_statistic
+    p_value = wald.pvalue
 
     r_wald_stat = r_result[4][1]
     r_p_value = r_result[5][1]

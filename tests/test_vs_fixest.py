@@ -348,10 +348,10 @@ def test_single_fit_feols(
     check_absolute_diff(py_tstat, r_tstat, tstat_tol, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, inference_tol, "py_confint != r_confint")
 
-    py_r2 = mod._r2
-    py_r2_within = mod._r2_within
-    py_adj_r2 = mod._adj_r2
-    py_adj_r2_within = mod._adj_r2_within
+    py_r2 = mod.fitstat.r2
+    py_r2_within = mod.fitstat.r2_within
+    py_adj_r2 = mod.fitstat.adj_r2
+    py_adj_r2_within = mod.fitstat.adj_r2_within
     r_r = fixest.r2(r_fixest)
     r_r2 = r_r[1]
     r_adj_r2 = r_r[2]
@@ -491,15 +491,15 @@ def test_single_fit_fepois(
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod.sample_info.n_obs
-    py_deviance = mod.deviance
+    py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
     py_df_k = int(mod.variance_covariance.df_k)
     py_df_t = int(mod.variance_covariance.df_t)
     py_n_coefs = mod.coef().values.size
-    py_loglik = mod._loglik
-    py_loglik_null = mod._loglik_null
-    py_pseudo_r2 = mod._pseudo_r2
+    py_loglik = mod.fitstat.loglik
+    py_loglik_null = mod.fitstat.loglik_null
+    py_pseudo_r2 = mod.fitstat.pseudo_r2
 
     df_X1 = _get_r_df(r_fixest)
     ro.globalenv["r_fixest"] = r_fixest
@@ -561,6 +561,8 @@ def test_single_fit_fepois(
         check_absolute_diff(
             py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2"
         )
+    else:
+        assert np.isnan(py_loglik_null) and np.isnan(py_pseudo_r2)
 
     py_predict_response = mod.predict(type="response")
     py_predict_link = mod.predict(type="link")
@@ -713,26 +715,24 @@ def test_feglm_gaussian_reference_behavior():
         atol=1e-10,
         err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
     )
-    py_glm.get_performance()
-    py_ols.get_performance()
-    for attribute in ("_rmse", "_r2", "_adj_r2"):
+    for attribute in ("rmse", "r2", "adj_r2", "r2_within", "adj_r2_within"):
         np.testing.assert_allclose(
-            getattr(py_glm, attribute),
-            getattr(py_ols, attribute),
+            getattr(py_glm.fitstat, attribute),
+            getattr(py_ols.fitstat, attribute),
             rtol=0,
             atol=1e-10,
             err_msg=f"Gaussian GLM and OLS {attribute} differ",
         )
     r_lm_residuals = np.asarray(stats.residuals(r_lm))
     np.testing.assert_allclose(
-        py_glm._rmse,
+        py_glm.fitstat.rmse,
         np.sqrt(np.mean(r_lm_residuals**2)),
         rtol=0,
         atol=1e-10,
         err_msg="Gaussian GLM RMSE differs from base R lm residuals",
     )
     np.testing.assert_allclose(
-        py_glm._r2,
+        py_glm.fitstat.r2,
         1
         - np.sum(r_lm_residuals**2)
         / np.sum((data["Y"].to_numpy() - data["Y"].mean()) ** 2),
@@ -895,7 +895,7 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
     py_nobs = mod.sample_info.n_obs
-    py_deviance = mod.deviance
+    py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
     py_irls_weights = mod.working_state.working_weights.flatten()
     py_df_k = int(mod.variance_covariance.df_k)
@@ -1186,7 +1186,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
             )
 
         # Compare deviance
-        py_deviance = fit_py.deviance
+        py_deviance = fit_py.fitstat.deviance
         r_deviance = fit_r.rx2("deviance")
         check_absolute_diff(
             py_deviance,
@@ -1634,7 +1634,7 @@ def get_data_r(fml, data):
 @pytest.mark.skip("Wald tests will be released with pyfixest 0.14.0.")
 def test_wald_test(fml, data):
     fit1 = feols(fml, data)
-    fit1.wald_test()
+    wald = fit1.wald_test()
 
     fit_r = fixest.feols(
         ro.Formula(fml),
@@ -1646,8 +1646,8 @@ def test_wald_test(fml, data):
     wald_stat_r = wald_r[0]
     wald_pval_r = wald_r[1]  # noqa: F841
 
-    np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
-    # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+    np.testing.assert_allclose(wald.f_statistic, wald_stat_r)
+    # np.testing.assert_allclose(wald.pvalue, wald_pval_r)
 
 
 @pytest.mark.against_r_core

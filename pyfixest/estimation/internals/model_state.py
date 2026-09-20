@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.estimation.internals.literals import (
+    WaldDistributionOptions,
+    WeightsTypeOptions,
+)
 
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 _VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
@@ -151,6 +156,52 @@ class EstimationSample:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class CollinearityCheck:
+    """Outcome of one rank check that removes collinear design columns.
+
+    Parameters
+    ----------
+    dropped_coef_names : tuple[str, ...]
+        Names of the columns removed, in input order. Empty when the design
+        had full rank.
+    mask : tuple[bool, ...]
+        One entry per checked column, ``True`` where the column was dropped.
+    coefnames : tuple[str, ...]
+        Names of the retained columns, in input order.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + f1 | f1", data)
+    fit.collinearity.dropped_coef_names, fit.collinearity.coefnames
+    ```
+    """
+
+    dropped_coef_names: tuple[str, ...]
+    mask: tuple[bool, ...]
+    coefnames: tuple[str, ...]
+
+    @property
+    def any_dropped(self) -> bool:
+        """Whether the check removed at least one column."""
+        return bool(self.dropped_coef_names)
+
+    def select(self, columns: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return `columns` without the columns this check dropped.
+
+        The argument must have one column per entry of ``mask``, in the same
+        order as the checked matrix. Returns the input unchanged when the
+        design had full rank.
+        """
+        if not self.any_dropped:
+            return columns
+        return np.delete(columns, np.asarray(self.mask), axis=1)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class WithinLinearData:
     """Response and regressors after demeaning by the fixed effects.
 
@@ -268,6 +319,33 @@ class GlmWorkingState:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class FittedValues:
+    """In-sample predictions / fitted values on link and the response scale.
+
+    Parameters
+    ----------
+    link : NDArray[np.float64]
+        Prediction on the scale of the linear predictor, including the
+        fixed-effect contribution and any offset, shape (n_rows,).
+    response : NDArray[np.float64]
+        Prediction on the scale of the dependent variable, ``E(Y|X)``,
+        shape (n_rows,).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.fitted_values.response[:3]
+    ```
+    """
+
+    link: NDArray[np.float64]
+    response: NDArray[np.float64]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SandwichComponents:
     """Scores, Hessian, and bread of a fitted model's sandwich covariance.
 
@@ -370,10 +448,9 @@ class VcovSpec:
                     f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
                 )
             if any("^" in x for x in clustervar):
-                clustervar = tuple(x.replace("^", "_") for x in clustervar)
-                warnings.warn(
-                    "The '^' character in the cluster variable name is replaced by '_'. "
-                    f"In consequence, the clustering variable(s) is (are) named {list(clustervar)}."
+                raise ValueError(
+                    f"Clustering on an interaction such as {cluster_input!r} is not supported. "
+                    "Add the interacted variable as a column of the data and cluster on that column."
                 )
             return cls(vcov_type="CRV", vcov_type_detail=detail, clustervar=clustervar)
 
@@ -407,6 +484,11 @@ class VcovSpec:
             panel_id = kw.get("panel_id")
             if vcov == "DK" and panel_id is None:
                 raise ValueError("Missing required 'panel_id' for DK vcov")
+            lag = kw.get("lag")
+            if lag is not None and (
+                not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
+            ):
+                raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
@@ -472,6 +554,230 @@ class VarianceCovariance:
     df_t: int | float
     spec: VcovSpec
     G: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStageDiagnostics:
+    """Instrument-strength diagnostics of a 2SLS first stage.
+
+    Parameters
+    ----------
+    f_stat : float
+        Wald F statistic of the joint null that every excluded instrument has
+        a zero first-stage coefficient. It inherits the first stage's
+        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        whenever the second stage is.
+    p_value : float
+        P-value of `f_stat`.
+    eff_f : float or None
+        Effective F statistic of
+        [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
+        computed against a heteroskedasticity-robust first stage. ``None``
+        until `IV_Diag()` or `eff_F()` computes it.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.diagnostics
+    ```
+    """
+
+    f_stat: float
+    p_value: float
+    eff_f: float | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStage:
+    """First-stage regression retained by a fitted 2SLS model.
+
+    The first stage regresses the endogenous regressor on the exogenous
+    regressors and the excluded instruments, on the second stage's retained
+    rows and with its fixed effects, weights, and covariance estimator.
+
+    Parameters
+    ----------
+    coefficients : NDArray[np.float64]
+        First-stage coefficients pi_hat, one per first-stage regressor.
+    fitted_values : NDArray[np.float64]
+        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+    residuals : NDArray[np.float64]
+        First-stage residuals v_hat, shape (n_rows,).
+    model : Feols
+        The fitted first-stage model. It follows the second stage's
+        `store_data` and `lean` policy, so it drops the same state.
+    instruments : tuple[str, ...]
+        Names of the excluded instruments, in first-stage design order.
+    diagnostics : FirstStageDiagnostics
+        Instrument-strength statistics of that first stage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.instruments
+    ```
+
+    ```{python}
+    fit.first_stage.model.tidy()
+    ```
+    """
+
+    coefficients: NDArray[np.float64]
+    fitted_values: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    model: Feols
+    instruments: tuple[str, ...]
+    diagnostics: FirstStageDiagnostics
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WaldTest:
+    """Wald test of a linear hypothesis R @ beta = q.
+
+    Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
+    of the reference distribution actually used, `df1` and `df2` are its
+    degrees of freedom, and `vcov_type` names the covariance estimator the
+    quadratic form was built with.
+
+    Parameters
+    ----------
+    stat : float
+        Test statistic under `distribution`: the F-scaled `f_statistic` for
+        ``"F"``, the unscaled `wald_statistic` for ``"chi2"``.
+    pvalue : float
+        P-value of `stat` under `distribution`.
+    df1 : int
+        Numerator degrees of freedom, the number of restrictions in R.
+    df2 : int or float
+        Denominator degrees of freedom: the number of clusters minus one
+        under clustered inference, otherwise the number of observations minus
+        the number of estimated coefficients and fixed effects.
+    distribution : {"F", "chi2"}
+        Reference distribution. ``"F"`` is only used for the joint null that
+        every coefficient is zero; any other restriction falls back to
+        ``"chi2"``.
+    vcov_type : str
+        Covariance estimator the test was computed with, as
+        `VarianceCovariance.vcov_type_detail`.
+    wald_statistic : float
+        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+    f_statistic : float
+        F-scaled statistic W / `df1`, available under either distribution.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data(), vcov={"CRV1": "f1"})
+    fit.wald
+    ```
+
+    `feols()` fits run the joint test on all coefficients automatically; other
+    estimators publish `fit.wald` once `wald_test()` is called.
+
+    ```{python}
+    import numpy as np
+
+    fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
+    ```
+    """
+
+    stat: float
+    pvalue: float
+    df1: int
+    df2: int | float
+    distribution: WaldDistributionOptions
+    vcov_type: str
+    wald_statistic: float
+    f_statistic: float
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Capabilities:
+    """Inference and post-estimation features a fitted model supports.
+
+    Each model class publishes one value in its constructor, so a method can
+    reject an unsupported estimator before it reads any estimation state
+    rather than reinterpreting another estimator's arrays.
+
+    Parameters
+    ----------
+    crv3_inference : bool
+        Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
+        on leave-one-cluster-out samples, so it is restricted to estimators
+        whose refit replays the original estimation contract.
+    hac_inference : bool
+        Whether ``vcov()`` accepts the Newey-West and Driscoll-Kraay
+        estimators.
+    multiway_clustering : bool
+        Whether ``vcov()`` accepts more than one cluster variable.
+    wildboottest : bool
+        Whether ``wildboottest()`` can resample the fit. Unweighted OLS only.
+    cluster_causal_variance : bool
+        Whether ``ccv()``, the causal cluster variance estimator, is available.
+    decomposition : bool
+        Whether ``decompose()``, the Gelbach decomposition, is available.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    pf.feols("Y ~ X1 | f1", pf.get_data()).capabilities
+    ```
+
+    ```{python}
+    pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois")).capabilities
+    ```
+    """
+
+    crv3_inference: bool
+    hac_inference: bool
+    multiway_clustering: bool
+    wildboottest: bool
+    cluster_causal_variance: bool
+    decomposition: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RitestStatistics:
+    """Randomization-inference draws, the sample statistic, and the p-value.
+
+    ``ritest(store_ritest_statistics=True)`` publishes one value as
+    ``fit.ritest_statistics``.
+
+    Parameters
+    ----------
+    statistics : NDArray[np.float64]
+        Resampled test statistics, shape (reps + 1,). The first entry is the
+        observed statistic under the original assignment; the remaining
+        ``reps`` entries are the randomization draws.
+    sample_stat : float
+        The observed statistic, centered at the null hypothesis value.
+    pvalue : float
+        Randomization-inference p-value of the test.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2", pf.get_data())
+    fit.ritest("X1", reps=100, store_ritest_statistics=True)
+    fit.ritest_statistics.pvalue
+    ```
+    """
+
+    statistics: NDArray[np.float64]
+    sample_stat: float
+    pvalue: float
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

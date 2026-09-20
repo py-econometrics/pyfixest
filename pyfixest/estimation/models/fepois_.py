@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy.special import gammaln
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
+from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
@@ -46,6 +47,8 @@ class Fepois(Feglm):
         User-scale observation weights.
     working_state : GlmWorkingState
         Final within-scale IRLS design, response, weights, predictors and residuals.
+    fitted_values : FittedValues
+        The linear predictor and the response mean of the final IRLS iteration.
     sandwich : SandwichComponents
         IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
     coefnames : list[str]
@@ -149,51 +152,27 @@ class Fepois(Feglm):
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
         self._offset_name = offset
-        self._support_crv3_inference = True
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=True,
+            cluster_causal_variance=False,
+            decomposition=False,
+        )
 
     def get_fit(self) -> None:
-        "Fit via Feglm IRLS, then add Poisson-specific post-fit summary stats."
+        "Fit via Feglm IRLS, then add the Poisson likelihood measures."
+        super().get_fit()
         y_orig = self.model_matrix.dependent.to_numpy().flatten()
         # ``None`` is the allocation-free unweighted path shared with the rest
         # of the estimation core; no vector of ones is materialised.
         observation_weights = self.observation_weights.values
-
-        def _weighted_sum(values: np.ndarray) -> float:
-            if observation_weights is None:
-                return float(np.sum(values))
-            return float(np.sum(observation_weights * values))
-
-        super().get_fit()
-
-        self._y_hat_null = np.full_like(
-            y_orig, np.average(y_orig, weights=observation_weights), dtype=float
-        )
-
-        self._loglik = _weighted_sum(
-            y_orig * np.log(self.working_state.mu)
-            - self.working_state.mu
-            - gammaln(y_orig + 1)
-        )
-
-        # cant replicate fixest atm
-        if self._has_weights:
-            self._loglik_null = None
-            self._pseudo_r2 = None
-        else:
-            self._loglik_null = _weighted_sum(
-                y_orig * np.log(self._y_hat_null)
-                - self._y_hat_null
-                - gammaln(y_orig + 1)
-            )
-            self._pseudo_r2 = 1 - (self._loglik / self._loglik_null)
-        self._pearson_chi2 = _weighted_sum(
-            (y_orig - self.working_state.mu) ** 2 / self.working_state.mu
-        )
-
-        self.deviance = self._family.deviance(
-            y_orig, self.working_state.mu, observation_weights
+        self.fitstat = poisson_fit_statistics(
+            y=y_orig,
+            mu=self.working_state.mu,
+            weights=observation_weights,
+            deviance=self._family.deviance(
+                y_orig, self.working_state.mu, observation_weights
+            ),
         )
 
     def predict(

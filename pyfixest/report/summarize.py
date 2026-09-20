@@ -343,14 +343,14 @@ def summary(
 
         to_print = ""
 
-        if not np.isnan(fxst._rmse):
-            to_print += f"RMSE: {np.round(fxst._rmse, digits)} "
-        if not np.isnan(fxst._r2):
-            to_print += f"R2: {np.round(fxst._r2, digits)} "
-        if not np.isnan(fxst._r2_within):
-            to_print += f"R2 Within: {np.round(fxst._r2_within, digits)} "
-        if fxst.deviance is not None:
-            deviance_value = np.asarray(fxst.deviance).squeeze()
-            to_print += f"Deviance: {np.round(deviance_value, digits)} "
+        fitstat = fxst.fitstat
+        if not np.isnan(fitstat.rmse):
+            to_print += f"RMSE: {np.round(fitstat.rmse, digits)} "
+        if not np.isnan(fitstat.r2):
+            to_print += f"R2: {np.round(fitstat.r2, digits)} "
+        if not np.isnan(fitstat.r2_within):
+            to_print += f"R2 Within: {np.round(fitstat.r2_within, digits)} "
+        if not np.isnan(fitstat.deviance):
+            to_print += f"Deviance: {np.round(fitstat.deviance, digits)} "
 
         print(to_print)

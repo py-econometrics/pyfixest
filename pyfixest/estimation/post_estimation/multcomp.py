@@ -348,8 +348,9 @@ def _multcomp_resample(
                 store_ritest_statistics=True,
             )
 
-            t_stats[i] = model._ritest_sample_stat
-            boot_t_stats[:, i] = model._ritest_statistics
+            stored = model.ritest_statistics
+            t_stats[i] = stored.sample_stat
+            boot_t_stats[:, i] = stored.statistics
 
         if type == "wyoung":
             _df[i] = (

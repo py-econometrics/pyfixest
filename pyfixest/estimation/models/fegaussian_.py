@@ -8,8 +8,7 @@ from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
-from pyfixest.estimation.internals.performance_ import performance_measures
-from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.fit_statistics import linear_fit_statistics
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -87,24 +86,18 @@ class Fegaussian(Feglm):
         )
         return VcovTerm(vcov=vcov, meat=None)
 
-    def get_performance(self) -> None:
-        """Compute and store Gaussian fit statistics from retained model data.
+    def get_fit(self) -> None:
+        """Fit the Gaussian GLM, then add the linear fit statistics.
 
         Gaussian fits retain their demeaned response and residuals in
         working_state rather than the linear model's within_data and _u_hat.
         The identity link puts those arrays in the units of Y, so they can
-        be passed to the same performance_measures helper used for OLS.
-        The original response comes from model_matrix for the overall R².
+        be passed to the same kernel used for OLS. The original response
+        comes from model_matrix for the overall R².
         """
-        require_retained(
-            self,
-            "get_performance",
-            "model_matrix",
-            "working_state",
-            "observation_weights",
-        )
+        super().get_fit()
         working_state = self.working_state
-        measures = performance_measures(
+        self.fitstat = linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
@@ -114,5 +107,5 @@ class Fegaussian(Feglm):
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self._drop_intercept,
             has_fixef=self._has_fixef,
+            deviance=self.fitstat.deviance,
         )
-        self._store_performance(measures)

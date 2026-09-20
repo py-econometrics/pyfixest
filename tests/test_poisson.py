@@ -129,5 +129,5 @@ def test_against_fixest(fml):
     )
 
     np.testing.assert_allclose(
-        fit_r.rx2("deviance"), fit.deviance, atol=1e-08, rtol=1e-07
+        fit_r.rx2("deviance"), fit.fitstat.deviance, atol=1e-08, rtol=1e-07
     )
