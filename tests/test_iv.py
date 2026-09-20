@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,7 +9,7 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.estimation import feols
 from pyfixest.utils.check_r_install import check_r_install
-from pyfixest.utils.utils import get_data
+from pyfixest.utils.utils import get_data, ssc
 
 # Extend R packages
 if import_check := check_r_install("ivDiag", strict=False):
@@ -267,14 +269,33 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
     )
 
 
-def test_iv_diag_does_not_relabel_vcov_type():
-    # The effective F stat refits the first stage with "hetero" errors, but the
-    # outer model must keep the covariance type it was estimated with.
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+@pytest.mark.parametrize("k_adj", [True, False])
+def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
+    # The effective F stat uses heteroskedasticity-robust first-stage inference,
+    # but neither the outer model nor the retained first stage should change.
     data = get_data()
+    if weights_type == "fweights":
+        data["weights"] = np.maximum(1, np.rint(data["weights"])).astype(int)
 
-    fit_iid = feols("Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, weights="weights", vcov="iid")
+    fit_iid = feols(
+        "Y ~ X2 + [X1 ~ Z1 + Z2]",
+        data=data,
+        weights="weights",
+        weights_type=weights_type,
+        vcov="iid",
+        ssc=ssc(k_adj=k_adj),
+    )
     vcov_type_detail_before = fit_iid.variance_covariance.spec.vcov_type_detail
     se_before = fit_iid.se().copy()
+    first_stage_model = fit_iid.first_stage.model
+    first_stage_vcov_before = first_stage_model.variance_covariance
+    first_stage_se_before = first_stage_model.se().copy()
+    first_stage_f_before = fit_iid.first_stage.diagnostics.f_stat
+    first_stage_p_value_before = fit_iid.first_stage.diagnostics.p_value
+
+    reference_first_stage = copy.deepcopy(first_stage_model)
+    reference_first_stage.vcov("hetero")
 
     fit_iid.IV_Diag()
 
@@ -289,12 +310,40 @@ def test_iv_diag_does_not_relabel_vcov_type():
         atol=1e-12,
         err_msg="IV_Diag() changed the main model's standard errors",
     )
+    assert fit_iid.first_stage.model.variance_covariance is first_stage_vcov_before
+    np.testing.assert_allclose(first_stage_model.se(), first_stage_se_before)
+    assert fit_iid.first_stage.diagnostics.f_stat == first_stage_f_before
+    assert fit_iid.first_stage.diagnostics.p_value == first_stage_p_value_before
     assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)
+
+    instruments = list(fit_iid.first_stage.instruments)
+    iv_positions = [
+        list(first_stage_model._coefnames).index(instrument)
+        for instrument in instruments
+    ]
+    Z = reference_first_stage.within_data.design[:, iv_positions]
+    observation_weights = reference_first_stage.observation_weights.values
+    Q_zz = (
+        Z.T @ Z
+        if observation_weights is None
+        else Z.T @ (observation_weights[:, None] * Z)
+    )
+    pi_hat = np.array(reference_first_stage.coef()[instruments])
+    Sigma = reference_first_stage.variance_covariance.vcov[
+        np.ix_(iv_positions, iv_positions)
+    ]
+    expected_eff_f = (pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(Sigma @ Q_zz))
+    np.testing.assert_allclose(fit_iid.first_stage.diagnostics.eff_f, expected_eff_f)
 
     # The effective F is computed from the heteroskedasticity-robust first
     # stage, so it does not depend on the outer model's covariance type.
     fit_hetero = feols(
-        "Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, weights="weights", vcov="hetero"
+        "Y ~ X2 + [X1 ~ Z1 + Z2]",
+        data=data,
+        weights="weights",
+        weights_type=weights_type,
+        vcov="hetero",
+        ssc=ssc(k_adj=k_adj),
     )
     fit_hetero.IV_Diag()
 
@@ -305,3 +354,12 @@ def test_iv_diag_does_not_relabel_vcov_type():
         atol=1e-10,
         err_msg="Effective F differs between iid and hetero specifications",
     )
+
+
+def test_eff_f_does_not_require_stored_data():
+    # Since eff_F() no longer refits the first stage to switch its covariance,
+    # it does not need the raw data retained for an iid-vcov fit.
+    data = get_data()
+    fit_iid = feols("Y ~ X2 + [X1 ~ Z1 + Z2]", data=data, vcov="iid", store_data=False)
+    fit_iid.IV_Diag()
+    assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)

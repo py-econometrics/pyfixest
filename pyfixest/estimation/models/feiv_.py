@@ -25,7 +25,9 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.utils.utils import get_ssc
 
 
 class Feiv(Feols):
@@ -485,21 +487,37 @@ class Feiv(Feols):
         published = self.first_stage
         model = published.model
         require_retained(model, "eff_F", "within_data", "observation_weights")
-        # If vcov is iid, redo first stage regression
-
-        if self.variance_covariance.spec.vcov_type_detail == "iid":
-            require_retained(model, "eff_F", "_data")
-            model.vcov("hetero")
 
         instrument_positions = _instrument_positions(
             model=model, instruments=published.instruments
         )
+
+        if model.variance_covariance.spec.vcov_type_detail == "iid":
+            observation_weights = model.observation_weights.values
+            hetero_meat = meat_hetero(
+                sandwich=model.sandwich,
+                X=model.within_data.design,
+                frequency_weights=(
+                    observation_weights.reshape((-1, 1))
+                    if observation_weights is not None
+                    and model._weights_type == "fweights"
+                    else None
+                ),
+                normal_equation_weights=observation_weights,
+                vcov_type_detail="hetero",
+            )
+            bread = model.sandwich.bread
+            ssc, _, _ = get_ssc(
+                **model._make_ssc_kwargs(vcov_type="hetero", G=model.sample_info.n_obs)
+            )
+            vcv = bread @ (hetero_meat * ssc[0]) @ bread
+        else:
+            vcv = model.variance_covariance.vcov
+
         eff_f = effective_f_statistic(
             pi_hat=model._beta_hat[instrument_positions],
             instruments_within=model.within_data.design[:, instrument_positions],
-            instrument_vcov=model.variance_covariance.vcov[
-                np.ix_(instrument_positions, instrument_positions)
-            ],
+            instrument_vcov=vcv[np.ix_(instrument_positions, instrument_positions)],
             weights=model.observation_weights.values,
         )
         self.first_stage = replace(

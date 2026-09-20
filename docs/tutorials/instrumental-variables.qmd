@@ -344,12 +344,9 @@ Every IV fit estimates its first stage and reports the **first-stage F-statistic
 
 
 ```{python}
-# The first stage inherits the model's covariance estimator, and IV_Diag()
-# switches the first stage to hetero for the effective F computation. Refit
-# with iid errors to read the iid-based first-stage F-statistic.
-fit_iid = pf.feols("earnings ~ 1 | num_children ~ ivf_success", data=ivf_df, vcov="iid")
+fit_iv.IV_Diag()
 
-diagnostics = fit_iid.first_stage.diagnostics
+diagnostics = fit_iv.first_stage.diagnostics
 print(f"First-stage F-statistic: {diagnostics.f_stat:.1f}")
 print(f"First-stage p-value:     {diagnostics.p_value:.4f}")
 ```
@@ -369,12 +366,9 @@ where $\hat{\pi}$ are the first-stage coefficients on the excluded instruments, 
 The `.IV_Diag()` method computes both the standard F-statistic and the effective F-statistic in one call:
 
 ```{python}
-# Re-use the iid fit above: IV_Diag() reports the standard F under the first
-# stage's own covariance estimator before switching it to hetero for the
-# effective F.
-fit_iid.IV_Diag()
+fit_iv.IV_Diag()
 
-diagnostics = fit_iid.first_stage.diagnostics
+diagnostics = fit_iv.first_stage.diagnostics
 print(f"Standard F-statistic:  {diagnostics.f_stat:.1f}")
 print(f"Effective F-statistic: {diagnostics.eff_f:.1f}")
 ```

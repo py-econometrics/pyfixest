@@ -184,14 +184,6 @@ def test_cluster_na():
         (
             feols,
             "Y ~ X1 + [X2 ~ Z1]",
-            {},
-            {"store_data": False},
-            lambda fit, data: fit.eff_F(),
-            "eff_F",
-        ),
-        (
-            feols,
-            "Y ~ X1 + [X2 ~ Z1]",
             {"vcov": "hetero"},
             {"lean": True},
             lambda fit, data: fit.eff_F(),
