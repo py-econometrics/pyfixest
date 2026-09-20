@@ -492,10 +492,6 @@ class Feiv(Feols):
             model=model, instruments=published.instruments
         )
 
-        # Only IID inference needs a substitute heteroskedasticity-robust
-        # covariance; hetero and clustered first stages already carry the
-        # covariance eff_F needs. Compute it without mutating the first-stage
-        # model's stored covariance or inference.
         if model.variance_covariance.spec.vcov_type_detail == "iid":
             observation_weights = model.observation_weights.values
             hetero_meat = meat_hetero(
@@ -514,8 +510,6 @@ class Feiv(Feols):
             ssc, _, _ = get_ssc(
                 **model._make_ssc_kwargs(vcov_type="hetero", G=model.sample_info.n_obs)
             )
-            # Apply the same small-sample scaling as vcov("hetero") without
-            # modifying the first-stage model's stored covariance or inference.
             vcv = bread @ (hetero_meat * ssc[0]) @ bread
         else:
             vcv = model.variance_covariance.vcov
