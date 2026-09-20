@@ -915,8 +915,6 @@ class Feols(ResultAccessorMixin):
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
 
-        The result is also published as `fit.wald`.
-
         Parameters
         ----------
         R : array-like, optional

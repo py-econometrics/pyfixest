@@ -454,9 +454,7 @@ class Feiv(Feols):
 
         Notes
         -----
-        `f_stat` is adjusted to the specification of vcov. If
-        vcov_detail = "iid", the F statistic is not adjusted, otherwise it is
-        always adjusted.
+        `f_stat` is adjusted to the specification of vcov. 
 
         Parameters
         ----------
@@ -550,10 +548,6 @@ def first_stage_f_test(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         wald = model.wald_test(R=R)
-    # `wald_test` uses the F distribution when `R` is the identity, that is
-    # when the excluded instruments are the only first-stage regressors, and
-    # chi2 otherwise. The reported statistic is the F scaling W / p_iv under
-    # either, as in fixest.
     return FirstStageDiagnostics(
         f_stat=wald.f_statistic, p_value=wald.pvalue, eff_f=None
     )
