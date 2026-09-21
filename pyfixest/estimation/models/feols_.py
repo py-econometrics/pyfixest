@@ -752,7 +752,7 @@ class Feols(ResultAccessorMixin):
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._k_fe.sum() if self._has_fixef else 0,
+            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
