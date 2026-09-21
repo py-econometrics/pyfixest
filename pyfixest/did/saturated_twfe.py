@@ -15,24 +15,26 @@ from pyfixest.estimation import feols
 from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
 
+from .did import DidDesign, DidFit
 from .did2s import DID
 
 CohortEventTimes = Mapping[str, Mapping[str, Any]]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class EventStudyDesign:
-    """Event-study design a fitted event study was estimated on.
+class EventStudyDesign(DidDesign):
+    """Event-study design a fitted saturated event study was estimated on.
 
-    Published as `fit.event_study_design` by
-    [event_study()](/reference/did.estimation.event_study.qmd) with
-    `estimator="saturated"`. It is the only record of the design the fitted
-    model retains; the generic fitted-model classes carry no DiD state.
+    Extends [DidDesign](/reference/did.did.DidDesign.qmd) with the
+    cohort-specific effect curves that only the saturated estimator produces.
+    Published by [event_study()](/reference/did.estimation.event_study.qmd)
+    with `estimator="saturated"` as both `fit.did_design`, the design every DiD
+    wrapper records, and `fit.event_study_design`, the accessor the saturated
+    post-estimation methods read. It is the only record of the design the
+    fitted model retains; the generic fitted-model classes carry no DiD state.
 
     Parameters
     ----------
-    yname : str
-        Name of the outcome variable.
     idname : str
         Name of the unit identifier variable.
     tname : str
@@ -47,6 +49,11 @@ class EventStudyDesign:
         Cohort-specific event-study curves, keyed by treatment cohort. Each
         value holds the tidy coefficient table of that cohort (`"est"`) and
         its event times (`"time"`).
+
+    Notes
+    -----
+    A saturated event study always knows its complete panel design, so the
+    four fields above narrow the optional ones of `DidDesign`.
 
     Examples
     --------
@@ -66,7 +73,6 @@ class EventStudyDesign:
     ```
     """
 
-    yname: str
     idname: str
     tname: str
     gname: str
@@ -74,7 +80,7 @@ class EventStudyDesign:
     cohort_event_times: CohortEventTimes
 
 
-class _SaturatedEventStudyFit(Protocol):
+class _SaturatedEventStudyFit(DidFit, Protocol):
     """Structural contract of the fitted model a saturated event study returns.
 
     `feols()` returns a generic `Feols`, so the saturated event study publishes
@@ -92,6 +98,7 @@ class _SaturatedEventStudyFit(Protocol):
 def _publish_saturated_event_study(fit: Feols, design: EventStudyDesign) -> Feols:
     """Publish the event-study design and its post-estimation methods on a fit."""
     published = cast("_SaturatedEventStudyFit", fit)
+    published.did_design = design
     published.event_study_design = design
     published.iplot = _as_method(_iplot_cohort_event_study, design)
     published.aggregate = _as_method(_aggregate_by_period, fit, design)
@@ -221,10 +228,13 @@ class SaturatedEventStudy(DID):
             cluster=self._cluster,
         )
         self._design = EventStudyDesign(
+            estimator="saturated",
             yname=self._yname,
+            cluster=self._cluster,
             idname=self._idname,
             tname=self._tname,
             gname=self._gname,
+            xfml=self._xfml,
             att=self._att,
             cohort_event_times=cohort_event_times,
         )

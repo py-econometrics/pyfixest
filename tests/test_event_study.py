@@ -214,3 +214,34 @@ def test_event_study_unsupported_estimator(data):
             gname="g",
             estimator="unsupported",  # Unsupported estimator
         )
+
+
+@pytest.mark.parametrize(
+    ("estimator", "estimation_method"),
+    [
+        ("twfe", "TWFE"),
+        ("did2s", "DID2S"),
+        ("saturated", "Saturated Event Study"),
+    ],
+)
+def test_event_study_publishes_its_design(data, estimator, estimation_method, capsys):
+    """Every estimator records its design and is named by that design."""
+    fit = event_study(
+        data=data,
+        yname="dep_var",
+        idname="unit",
+        tname="year",
+        gname="g",
+        att=True,
+        estimator=estimator,
+    )
+
+    assert fit.did_design.estimator == estimator
+    assert (fit.did_design.yname, fit.did_design.idname) == ("dep_var", "unit")
+    assert fit.did_design.cluster == "unit"
+    # The wrapper must not relabel the estimation function the model was fitted
+    # with: refits such as the CRV3 jackknife dispatch on it.
+    assert fit._method == "feols"
+
+    fit.summary()
+    assert f"Estimation:  {estimation_method}" in capsys.readouterr().out

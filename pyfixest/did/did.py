@@ -1,7 +1,87 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Literal, Protocol
 
 import numpy as np
 import pandas as pd
+
+DidEstimator = Literal["did2s", "twfe", "saturated"]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class DidDesign:
+    """Difference-in-differences design a fitted model was estimated on.
+
+    Published as `fit.did_design` by
+    [event_study()](/reference/did.estimation.event_study.qmd) and
+    [did2s()](/reference/did.estimation.did2s.qmd), and absent on fits that no
+    DiD wrapper produced. The wrappers fit ordinary `feols()` models, so this
+    value, rather than the estimation method of the fitted model, records which
+    DiD estimator was used.
+
+    Parameters
+    ----------
+    estimator : {"did2s", "twfe", "saturated"}
+        The DiD estimator the wrapper ran.
+    yname : str
+        Name of the outcome variable.
+    cluster : str or None
+        Name of the variable the covariance is clustered on. `None` only when
+        a DiD class was instantiated directly without one.
+    idname : str or None
+        Name of the unit identifier variable. `None` for
+        [did2s()](/reference/did.estimation.did2s.qmd), which takes the two
+        stage formulas instead of a panel design.
+    tname : str or None
+        Name of the calendar-period variable, or `None` as for `idname`.
+    gname : str or None
+        Name of the variable holding the unit-specific period of initial
+        treatment, or `None` as for `idname`.
+    xfml : str or None
+        Formula of the additional covariates, `None` when there are none.
+    att : bool or None
+        Whether the average treatment effect on the treated was estimated
+        instead of the canonical event study with all leads and lags, or
+        `None` as for `idname`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.event_study(
+        pf.get_motherhood_event_study_data(),
+        yname="log_earnings",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="twfe",
+    )
+    fit.did_design
+    ```
+    """
+
+    estimator: DidEstimator
+    yname: str
+    cluster: str | None
+    idname: str | None = None
+    tname: str | None = None
+    gname: str | None = None
+    xfml: str | None = None
+    att: bool | None = None
+
+
+class DidFit(Protocol):
+    """Structural contract of the fitted model a DiD wrapper returns.
+
+    The wrappers return the generic `Feols` that `feols()` fitted, so they
+    publish their design record on it rather than on a DiD-specific result
+    class.
+    """
+
+    did_design: DidDesign
 
 
 class DID(ABC):

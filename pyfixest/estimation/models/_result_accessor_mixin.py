@@ -150,6 +150,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _k: int
     _inference_dist: "InferenceDist"
 
+    def _estimator_name(self) -> str:
+        """Name the estimator that produced the fit.
+
+        `_method` names the estimation function that fitted the model. A DiD
+        wrapper such as `event_study()` fits an ordinary `feols()` model and
+        records its own estimator in `did_design`, so paths that are undefined
+        for those designs, and messages naming the estimator, read this name
+        rather than `_method`. Refits, which have to call an estimation
+        function, read `_method`.
+        """
+        design = getattr(self, "did_design", None)
+        return self._method if design is None else design.estimator
+
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")

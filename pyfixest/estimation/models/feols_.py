@@ -4,7 +4,7 @@ import re
 import warnings
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 import formulaic
 import numpy as np
@@ -131,7 +131,10 @@ class Feols(ResultAccessorMixin):
     Attributes
     ----------
     _method : str
-        Specifies the method used for regression, set to "feols".
+        The estimation function that fitted the model, set to "feols". A DiD
+        wrapper such as `event_study()` leaves it untouched and records its own
+        estimator in `did_design`, so refits dispatch on the function that can
+        reproduce the fit.
     _is_iv : bool
         Indicates whether instrumental variables are used, initialized as False.
 
@@ -682,7 +685,7 @@ class Feols(ResultAccessorMixin):
 
         if not self.capabilities.crv3_inference:
             raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self._method}'."
+                f"CRV3 inference is not for models of type '{self._estimator_name()}'."
             )
         use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
@@ -1005,7 +1008,7 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
                 )
-            if self._method == "did2s":
+            if self._estimator_name() == "did2s":
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for the DID2S estimator."
                 )
@@ -1183,7 +1186,7 @@ class Feols(ResultAccessorMixin):
         if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
-                f"of type '{self._method}'."
+                f"of type '{self._estimator_name()}'."
             )
         assert isinstance(treatment, str), "treatment must be a string."
         assert isinstance(cluster, str) or cluster is None, (
@@ -1488,7 +1491,7 @@ class Feols(ResultAccessorMixin):
             has_weights=self.options.has_weights,
             weights_type=self.options.weights_type,
             is_iv=self._is_iv,
-            method=self._method,
+            method=self._estimator_name(),
             only_coef=only_coef,
         )
 
@@ -1933,7 +1936,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
-        if self._method not in {"feols", "fepois"}:
+        if self._estimator_name() not in {"feols", "fepois"}:
             raise NotImplementedError(
                 "Randomization Inference is only supported for OLS and Poisson models."
             )
@@ -2166,7 +2169,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self._method != "feols":
+        if self._estimator_name() != "feols":
             raise NotImplementedError(
                 "The update() method is currently only supported for OLS models."
             )

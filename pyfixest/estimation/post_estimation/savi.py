@@ -157,7 +157,7 @@ def optimal_mixture_precision(
 
 def _validate_savi_model(model: ResultAccessorMixin) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
-    if model._method != "feols" or model._is_iv:
+    if model._estimator_name() != "feols" or model._is_iv:
         raise NotImplementedError(
             "SAVI inference is currently supported only for feols models."
         )

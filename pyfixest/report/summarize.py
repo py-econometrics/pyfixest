@@ -18,18 +18,24 @@ _METHOD_DISPLAY_NAMES: dict[str, str] = {
     "feglm-gaussian": "Gaussian",
     "twfe": "TWFE",
     "did2s": "DID2S",
+    "saturated": "Saturated Event Study",
 }
 
 
 def _get_estimation_method_name(fxst: Feols) -> str:
-    """Get the display name for an estimation method."""
-    if fxst._method == "feols":
+    """Get the display name for an estimation method.
+
+    DiD wrappers fit ordinary `feols()` models, so the estimator to display is
+    the one recorded in `did_design` rather than the estimation function.
+    """
+    method = fxst._estimator_name()
+    if method == "feols":
         return "IV" if fxst._is_iv else "OLS"
-    if "quantreg" in fxst._method:
+    if "quantreg" in method:
         return f"quantreg: q = {fxst.options.quantile}"  # type: ignore
-    if fxst._method in _METHOD_DISPLAY_NAMES:
-        return _METHOD_DISPLAY_NAMES[fxst._method]
-    raise ValueError(f"Unknown estimation method: {fxst._method}")
+    if method in _METHOD_DISPLAY_NAMES:
+        return _METHOD_DISPLAY_NAMES[method]
+    raise ValueError(f"Unknown estimation method: {method}")
 
 
 def etable(

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
+from pyfixest.did.did import DidDesign, DidFit
 from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
@@ -59,11 +61,14 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
-        With `estimator = "saturated"`, the fit additionally carries its
-        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
-        `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`,
-        `iplot()`, and `test_treatment_heterogeneity()` methods.
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd),
+        carrying the [DidDesign](/reference/did.did.DidDesign.qmd) it was
+        estimated on as `did_design`. With `estimator = "saturated"`, that
+        design is an
+        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd),
+        also available as `event_study_design`, and the fit provides the
+        `aggregate()`, `iplot_aggregate()`, `iplot()`, and
+        `test_treatment_heterogeneity()` methods.
 
     Examples
     --------
@@ -129,7 +134,19 @@ def event_study(
         fit.variance_covariance = _did2s_covariance(
             fit=fit, vcov=vcov, G=_G, cluster=cluster
         )
-        _mark_as_did2s(fit)
+        _mark_as_did2s(
+            fit,
+            DidDesign(
+                estimator="did2s",
+                yname=yname,
+                cluster=cluster,
+                idname=idname,
+                tname=tname,
+                gname=gname,
+                xfml=xfml,
+                att=att,
+            ),
+        )
 
     elif estimator == "twfe":
         twfe = TWFE(
@@ -145,7 +162,19 @@ def event_study(
         fit = twfe.estimate()
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
-        fit._method = "twfe"
+        _publish_did_design(
+            fit,
+            DidDesign(
+                estimator="twfe",
+                yname=yname,
+                cluster=cluster,
+                idname=idname,
+                tname=tname,
+                gname=gname,
+                xfml=xfml,
+                att=att,
+            ),
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -160,8 +189,6 @@ def event_study(
         )
         fit = saturated.estimate()
         vcov = fit.vcov(vcov={"CRV1": cluster})
-
-        fit._method = "saturated"
 
     else:
         raise NotImplementedError("Estimator not supported")
@@ -202,7 +229,9 @@ def did2s(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd),
+        carrying its [DidDesign](/reference/did.did.DidDesign.qmd) as
+        `did_design`.
 
     Examples
     --------
@@ -294,18 +323,27 @@ def did2s(
         fit=fit, vcov=vcov, G=_G, cluster=cluster
     )
     fit.get_inference()  # update inference with correct vcov matrix
-    _mark_as_did2s(fit)
+    _mark_as_did2s(fit, DidDesign(estimator="did2s", yname=yname, cluster=cluster))
 
     return fit
 
 
-def _mark_as_did2s(fit: Feols) -> None:
+def _publish_did_design(fit: Feols, design: DidDesign) -> None:
+    """Record on a fit which DiD estimator produced it.
+
+    The wrappers fit ordinary `feols()` models, so `_method` keeps naming the
+    estimation function and the DiD estimator is published separately.
+    """
+    cast("DidFit", fit).did_design = design
+
+
+def _mark_as_did2s(fit: Feols, design: DidDesign) -> None:
     """Record that a fit came from the DID2S estimator.
 
     The two-step GMM covariance does not resample from an estimated model in
     the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
     """
-    fit._method = "did2s"
+    _publish_did_design(fit, design)
     fit.capabilities = replace(
         fit.capabilities, wildboottest=False, cluster_causal_variance=False
     )
