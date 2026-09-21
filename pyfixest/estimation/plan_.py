@@ -47,9 +47,6 @@ class ModelEntry:
     # Quantile regression does not absorb fixed effects, so it neither
     # demeans nor shares the runner's preconditioner cache.
     accepts_preconditioner: bool = True
-    # IRLS acceleration is a user option of the `feglm()` families only;
-    # `Fepois` always runs the accelerated path.
-    accepts_accelerate: bool = False
     # `QuantregMulti` fans one call out over several quantiles and needs
     # the quantile list and the process algorithm on top of the options.
     fits_quantile_process: bool = False
@@ -58,15 +55,9 @@ class ModelEntry:
 MODEL_REGISTRY: dict[str, ModelEntry] = {
     "feols": ModelEntry(Feols),
     "fepois": ModelEntry(Fepois, options_cls=GlmEstimationOptions),
-    "feglm-logit": ModelEntry(
-        Felogit, options_cls=GlmEstimationOptions, accepts_accelerate=True
-    ),
-    "feglm-probit": ModelEntry(
-        Feprobit, options_cls=GlmEstimationOptions, accepts_accelerate=True
-    ),
-    "feglm-gaussian": ModelEntry(
-        Fegaussian, options_cls=GlmEstimationOptions, accepts_accelerate=True
-    ),
+    "feglm-logit": ModelEntry(Felogit, options_cls=GlmEstimationOptions),
+    "feglm-probit": ModelEntry(Feprobit, options_cls=GlmEstimationOptions),
+    "feglm-gaussian": ModelEntry(Fegaussian, options_cls=GlmEstimationOptions),
     "quantreg": ModelEntry(
         Quantreg,
         options_cls=QuantregEstimationOptions,
@@ -280,7 +271,7 @@ def _build_options(
             maxiter=config.iwls_maxiter,
             tol=config.iwls_tol,
             separation_check=config.separation_check,
-            accelerate=config.accelerate if entry.accepts_accelerate else True,
+            accelerate=config.accelerate,
         )
     if issubclass(options_cls, QuantregEstimationOptions):
         quantile = config.quantile
