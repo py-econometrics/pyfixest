@@ -31,6 +31,7 @@ from pyfixest.estimation.quantreg.vcov_ import (
     vcov_iid_qreg,
     vcov_nid_qreg,
 )
+from pyfixest.utils.utils import Ssc
 
 
 class Quantreg(Feols):
@@ -71,7 +72,7 @@ class Quantreg(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -95,7 +96,7 @@ class Quantreg(Feols):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
+            ssc=ssc,
             drop_singletons=drop_singletons,
             drop_intercept=drop_intercept,
             weights=weights,

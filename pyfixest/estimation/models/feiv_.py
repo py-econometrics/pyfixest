@@ -27,7 +27,7 @@ from pyfixest.estimation.internals.model_state import (
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.utils.utils import get_ssc
+from pyfixest.utils.utils import Ssc, get_ssc
 
 
 class Feiv(Feols):
@@ -144,7 +144,7 @@ class Feiv(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -169,7 +169,7 @@ class Feiv(Feols):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
+            ssc=ssc,
             drop_singletons=drop_singletons,
             drop_intercept=drop_intercept,
             weights=weights,
@@ -507,10 +507,12 @@ class Feiv(Feols):
                 vcov_type_detail="hetero",
             )
             bread = model.sandwich.bread
-            ssc, _, _ = get_ssc(
-                **model._make_ssc_kwargs(vcov_type="hetero", G=model.sample_info.n_obs)
+            correction = get_ssc(
+                model.ssc,
+                model._dof_counts(G=model.sample_info.n_obs),
+                vcov_type="hetero",
             )
-            vcv = bread @ (hetero_meat * ssc[0]) @ bread
+            vcv = bread @ (hetero_meat * correction.adj) @ bread
         else:
             vcv = model.variance_covariance.vcov
 

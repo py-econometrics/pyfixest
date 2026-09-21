@@ -1690,3 +1690,29 @@ def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
     fit = pf.feols("Y ~ X1", get_data())
     with pytest.raises(error, match=match):
         fit.vcov(vcov, vcov_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"k_adj": "yes"}, TypeError, "k_adj must be True or False"),
+        ({"G_adj": 1}, TypeError, "G_adj must be True or False"),
+        ({"k_fixef": "all"}, ValueError, "k_fixef must be one of"),
+        ({"G_df": "max"}, ValueError, "G_df must be one of"),
+    ],
+)
+def test_ssc_rejects_invalid_options(kwargs, error, match):
+    """`Ssc` validates its options at construction."""
+    with pytest.raises(error, match=match):
+        pf.ssc(**kwargs)
+
+
+def test_estimation_rejects_malformed_ssc():
+    """The API resolves legacy dicts and rejects anything else."""
+    data = get_data()
+    with pytest.raises(ValueError, match="ssc accepts the keys"):
+        pf.feols("Y ~ X1", data, ssc={"k_adj": False, "adj": True})
+    with pytest.raises(TypeError, match=r"ssc must be created with pf\.ssc"):
+        pf.feols("Y ~ X1", data, ssc="k_adj=False")
+    legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
+    assert legacy.ssc == pf.ssc(k_adj=False)

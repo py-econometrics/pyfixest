@@ -22,6 +22,7 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import Ssc
 
 
 class Fepois(Feglm):
@@ -102,7 +103,7 @@ class Fepois(Feglm):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -126,7 +127,7 @@ class Fepois(Feglm):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
+            ssc=ssc,
             drop_singletons=drop_singletons,
             drop_intercept=drop_intercept,
             weights=weights,

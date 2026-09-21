@@ -102,7 +102,10 @@ website:
     - contents:
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
+      - reference/utils.utils.Ssc.qmd
       - reference/utils.utils.get_ssc.qmd
+      - reference/utils.utils.DegreesOfFreedomCounts.qmd
+      - reference/utils.utils.SmallSampleCorrection.qmd
       - reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd
       section: Misc / Utilities
     id: reference

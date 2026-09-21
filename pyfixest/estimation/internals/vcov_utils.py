@@ -18,7 +18,7 @@ from pyfixest.core.nw import (
 )
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
-from pyfixest.utils.utils import get_ssc
+from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63,7 +63,7 @@ class ClusterPrep:
 
     cluster_df: pd.DataFrame
     cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
-    G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
+    G: list[int]  # cluster counts per column, post ssc["G_df"] adjustment
     k_fe_nested: int
     n_fe_fully_nested: int
 
@@ -83,7 +83,7 @@ def prepare_cluster_state(
     *,
     data: DataFrameType,
     clustervar: list[str],
-    ssc_dict: dict,
+    ssc: Ssc,
     fixef: str | None,
     fe: pd.DataFrame | np.ndarray | None,
     k_fe: np.ndarray | pd.Series,
@@ -97,7 +97,7 @@ def prepare_cluster_state(
             clustervar=clustervar, cluster_df=cluster_df
         )
 
-    G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
+    G = _count_G_for_ssc_correction(cluster_df=cluster_df, G_df=ssc.G_df)
 
     cluster_arr_int = np.column_stack(
         [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
@@ -105,7 +105,7 @@ def prepare_cluster_state(
 
     k_fe_nested = 0
     n_fe_fully_nested = 0
-    if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
+    if fixef is not None and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
@@ -127,32 +127,55 @@ def prepare_cluster_state(
     )
 
 
-def cluster_ssc(
-    *, prep: ClusterPrep, make_ssc_kwargs: Callable[..., dict]
-) -> tuple[np.ndarray, int, int]:
-    """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``.
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ClusterSmallSampleCorrection:
+    """Result of ``get_ssc_cluster()``.
 
-    The factor of the two-way interaction dimension carries the negative
-    sign of the Cameron-Gelbach-Miller combination. ``df_t`` is the smallest
-    ``G - 1`` over the dimensions.
+    Attributes
+    ----------
+    adj : np.ndarray
+        Small-sample factor per cluster dimension. The two-way interaction
+        dimension carries the negative sign of the Cameron-Gelbach-Miller
+        combination.
+    df_k : int
+        Parameters counted by the ``k_adj`` adjustment.
+    df_t : int
+        Degrees of freedom of the t reference distribution: the smallest
+        ``G - 1`` over the dimensions.
     """
+
+    adj: np.ndarray
+    df_k: int
+    df_t: int
+
+
+def get_ssc_cluster(
+    *,
+    prep: ClusterPrep,
+    ssc_options: Ssc,
+    dof_counts: Callable[..., DegreesOfFreedomCounts],
+) -> ClusterSmallSampleCorrection:
+    "Small-sample factors per cluster dimension, ``df_k``, and ``df_t``."
     vcov_sign_list = (1, 1, -1)
     ssc_arr = np.zeros(prep.n_dimensions)
     df_t_full = np.zeros(prep.n_dimensions)
     df_k = 0
     for x in range(prep.n_dimensions):
-        ssc, df_k, df_t = get_ssc(
-            **make_ssc_kwargs(
-                vcov_type="CRV",
+        correction = get_ssc(
+            ssc_options,
+            dof_counts(
                 G=prep.G[x],
-                vcov_sign=vcov_sign_list[x],
                 k_fe_nested=prep.k_fe_nested,
                 n_fe_fully_nested=prep.n_fe_fully_nested,
-            )
+            ),
+            vcov_type="CRV",
         )
-        ssc_arr[x] = ssc[0]
-        df_t_full[x] = df_t
-    return ssc_arr, df_k, int(np.min(df_t_full))
+        ssc_arr[x] = correction.adj * vcov_sign_list[x]
+        df_k = correction.df_k
+        df_t_full[x] = correction.df_t
+    return ClusterSmallSampleCorrection(
+        adj=ssc_arr, df_k=df_k, df_t=int(np.min(df_t_full))
+    )
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
@@ -185,14 +208,12 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
         )
 
 
-def _count_G_for_ssc_correction(
-    cluster_df: pd.DataFrame, ssc_dict: dict[str, str | bool]
-):
+def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int]:
     G = []
     for col in cluster_df.columns:
         G.append(cluster_df[col].nunique())
 
-    if ssc_dict["G_df"] == "min":
+    if G_df == "min":
         G = [min(G)] * 3
 
     return G

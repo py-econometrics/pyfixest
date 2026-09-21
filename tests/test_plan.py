@@ -31,7 +31,6 @@ def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
         method=method,
         data=data,
         fml=fml,
-        ssc_dict={},
         context={},
     )
     base.update(overrides)

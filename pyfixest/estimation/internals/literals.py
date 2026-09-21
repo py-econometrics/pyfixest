@@ -52,3 +52,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
 
     if arg not in valid_types:
         raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+
+
+KFixefOptions = Literal["none", "full", "nonnested"]
+GDfOptions = Literal["min", "conventional"]

@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.fit_statistics import linear_fit_statistics
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
+from pyfixest.utils.utils import Ssc
 
 
 class Fegaussian(Feglm):
@@ -21,7 +22,7 @@ class Fegaussian(Feglm):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
+        ssc: Ssc,
         drop_singletons: bool,
         drop_intercept: bool,
         weights: str | None,
@@ -50,7 +51,7 @@ class Fegaussian(Feglm):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
+            ssc=ssc,
             drop_singletons=drop_singletons,
             drop_intercept=drop_intercept,
             weights=weights,
