@@ -69,6 +69,7 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    ClusterSmallSampleCorrection,
     VcovTerm,
     combine_terms,
     get_ssc_cluster,
@@ -96,6 +97,7 @@ from pyfixest.utils.dev_utils import (
 )
 from pyfixest.utils.utils import (
     DegreesOfFreedomCounts,
+    SmallSampleCorrection,
     Ssc,
     capture_context,
     get_ssc,
@@ -672,6 +674,7 @@ class Feols(ResultAccessorMixin):
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         df_t: int | float
+        correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
