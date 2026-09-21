@@ -95,6 +95,90 @@ def test_tidy_inference_type_regular():
     pd.testing.assert_frame_equal(fit.tidy(), fit.tidy(inference_type="regular"))
 
 
+@pytest.mark.parametrize(
+    "fml, fit_kwargs",
+    [
+        ("sw(Y, Y2) ~ X1 + X2", {}),
+        ("sw(Y, Y2) ~ X1 + X2 | f1", {"weights": "weights"}),
+        (
+            "sw(Y, Y2) ~ X1 + X2",
+            {"weights": "frequency", "weights_type": "fweights"},
+        ),
+        ("sw(Y, Y2) ~ X2 + [X1 ~ Z1]", {}),
+        ("sw(Y, Y2) ~ X1 + X2", {"lean": True, "store_data": False}),
+    ],
+)
+def test_multi_inference_options(fml, fit_kwargs):
+    """Container inference delegates options and retains each model's labels."""
+    data = get_data(N=200, seed=1234).dropna()
+    data["frequency"] = 1 + (np.arange(len(data)) % 3)
+    fits = feols(fml, data, **fit_kwargs)
+    expected_tidy = pd.concat(
+        [model.tidy(alpha=0.1) for model in fits.to_list()],
+        keys=[model._fml for model in fits.to_list()],
+        names=["fml"],
+    )
+    pd.testing.assert_frame_equal(
+        fits.tidy(alpha=0.1, inference_type="regular"), expected_tidy
+    )
+    pd.testing.assert_frame_equal(
+        fits.confint(alpha=0.1), expected_tidy[["5.0%", "95.0%"]]
+    )
+    for inference_type in ("regular", "simult"):
+        options = {
+            "alpha": 0.1,
+            "inference_type": inference_type,
+            "keep": ["X2", "X1"],
+            "drop": "Intercept",
+            "exact_match": True,
+            "seed": 82,
+            "reps": 200,
+        }
+        expected = pd.concat(
+            [model.confint(**options) for model in fits.to_list()],
+            keys=[model._fml for model in fits.to_list()],
+            names=["fml", "Coefficient"],
+        )
+        pd.testing.assert_frame_equal(fits.confint(**options), expected)
+
+
+def test_multi_confint_reference_and_errors():
+    """Non-default intervals match statsmodels and child errors are retained."""
+    import statsmodels.formula.api as smf
+
+    data = get_data(N=200, seed=1234).dropna()
+    fits = feols("sw(Y, Y2) ~ X1 + X2", data)
+    intervals = fits.confint(alpha=0.1, inference_type="regular")
+    for model in fits.to_list():
+        reference = smf.ols(model._fml, data).fit().conf_int(alpha=0.1)
+        # Same well-conditioned dense OLS design; only solver rounding differs.
+        np.testing.assert_allclose(
+            intervals.loc[model._fml].loc[reference.index],
+            reference,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="90% multiple-estimation OLS confidence intervals vs statsmodels",
+        )
+
+    options = {"inference_type": "savi", "mixture_precision": 0.5, "alpha": 0.1}
+    for model in fits.to_list():
+        pd.testing.assert_frame_equal(
+            fits.confint(**options).loc[model._fml],
+            model.confint(**options).rename_axis("Coefficient"),
+        )
+    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+        legacy = fits.confint(joint=True, seed=82, reps=200)
+    pd.testing.assert_frame_equal(
+        legacy, fits.confint(inference_type="simult", seed=82, reps=200)
+    )
+    with pytest.raises(ValueError, match=r"tidy.*does not support"):
+        fits.tidy(inference_type="simult")
+    with pytest.raises(NotImplementedError, match="not available in tidy"):
+        fits.tidy(inference_type="savi")
+    with pytest.raises(ValueError, match=r"Invalid argument.*Got unknown"):
+        fits.confint(inference_type="unknown")
+
+
 @pytest.mark.skipif(sys.version_info >= (3, 12), reason="requires python3.11 or lower.")
 def test_against_doubleml():
     """Test joint CIs against DoubleML."""
