@@ -70,8 +70,8 @@ from pyfixest.estimation.internals.vcov_ import (
 )
 from pyfixest.estimation.internals.vcov_utils import (
     VcovTerm,
-    cluster_ssc,
     combine_terms,
+    get_ssc_cluster,
     prepare_cluster_state,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
@@ -186,7 +186,7 @@ class Feols(ResultAccessorMixin):
         Fixed effects used in the regression.
     _icovars : Any
         Internal covariates, to be enriched outside of the class.
-    _ssc : Ssc
+    ssc : Ssc
         Small-sample correction options.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
@@ -306,7 +306,7 @@ class Feols(ResultAccessorMixin):
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if copy_data else data
-        self._ssc = ssc
+        self.ssc = ssc
         self._drop_singletons = drop_singletons
         self._drop_intercept = drop_intercept
         self._weights_name = weights
@@ -680,16 +680,17 @@ class Feols(ResultAccessorMixin):
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
                 clustervar=list(spec.clustervar),
-                ssc=self._ssc,
+                ssc=self.ssc,
                 fixef=self._fixef,
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
             )
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
-            ssc, df_k, df_t = cluster_ssc(
-                prep=prep, ssc=self._ssc, dof_counts=self._dof_counts
+            correction = get_ssc_cluster(
+                prep=prep, ssc_options=self.ssc, dof_counts=self._dof_counts
             )
+            ssc, df_k, df_t = correction.adj, correction.df_k, correction.df_t
             terms = [
                 self._vcov_crv_cluster(
                     clustid=clustid,
@@ -716,7 +717,7 @@ class Feols(ResultAccessorMixin):
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
             correction = get_ssc(
-                self._ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
+                self.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
             ssc = np.array([correction.adj])
             df_k, df_t = correction.df_k, correction.df_t

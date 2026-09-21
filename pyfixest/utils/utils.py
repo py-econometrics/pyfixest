@@ -22,10 +22,6 @@ if TYPE_CHECKING:
 class Ssc:
     """Small-sample correction options.
 
-    Build one with [ssc()](/reference/utils.utils.ssc.qmd), which also
-    accepts the deprecated argument names; the estimation functions take it
-    through their ``ssc`` argument.
-
     Parameters
     ----------
     k_adj : bool, default True
@@ -256,7 +252,7 @@ def ssc(
 
 
 def get_ssc(
-    ssc: Ssc,
+    ssc_options: Ssc,
     counts: DegreesOfFreedomCounts,
     *,
     vcov_type: str,
@@ -266,7 +262,7 @@ def get_ssc(
 
     Parameters
     ----------
-    ssc : Ssc
+    ssc_options : Ssc
         The options created via the ssc() function.
     counts : DegreesOfFreedomCounts
         Observation, coefficient, fixed-effect, and cluster counts.
@@ -298,6 +294,7 @@ def get_ssc(
     [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
     """
     N, k, k_fe, n_fe = counts.N, counts.k, counts.k_fe, counts.n_fe
+    k_fe_nested, n_fe_fully_nested = counts.k_fe_nested, counts.n_fe_fully_nested
     G: int | float = counts.G
 
     G_adj_value = 1.0
@@ -309,27 +306,27 @@ def get_ssc(
     # subtract one for each fixed effect, except for the first
     k_fe_adj = k_fe - (n_fe - 1) if n_fe > 1 else k_fe
 
-    if ssc.k_fixef == "none":
+    if ssc_options.k_fixef == "none":
         df_k = k
-    elif ssc.k_fixef == "nonnested":
+    elif ssc_options.k_fixef == "nonnested":
         if n_fe == 0:
             df_k = k
-        elif counts.k_fe_nested == 0:
+        elif k_fe_nested == 0:
             # no nested fe, so just add all fixed effects
             df_k = k + k_fe_adj
         else:
             # subtract nested fixed effects and add one for each fully nested
             # subtracted fixed effect back
-            df_k = k + k_fe_adj - counts.k_fe_nested + counts.n_fe_fully_nested
+            df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
     else:
         # "full": add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
 
-    if ssc.k_adj:
+    if ssc_options.k_adj:
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
 
     # G_adj applied with G = N for hetero but not for iid
-    if vcov_type in ["CRV", "HAC"] and ssc.G_adj:
+    if vcov_type in ["CRV", "HAC"] and ssc_options.G_adj:
         G_adj_value = G / (G - 1)
 
     df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1

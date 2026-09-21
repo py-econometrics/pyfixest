@@ -508,7 +508,7 @@ class Feiv(Feols):
             )
             bread = model.sandwich.bread
             correction = get_ssc(
-                model._ssc,
+                model.ssc,
                 model._dof_counts(G=model.sample_info.n_obs),
                 vcov_type="hetero",
             )
