@@ -208,11 +208,6 @@ class Feols(ResultAccessorMixin):
     _model_name: str
         The name of the model. Usually just the formula string. If split estimation is used,
         the model name will include the split variable and value.
-    _model_name_plot: str
-        The name of the model used when plotting and summarizing models. Usually identical to
-        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
-        and models with identical _model_name attributes are passed. In this case,
-        the _model_name_plot attribute will be modified.
     """
 
     # Set in prepare_model_matrix().
@@ -248,7 +243,6 @@ class Feols(ResultAccessorMixin):
             if self._sample_split_var is None
             else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
         )
-        self._model_name_plot = self._model_name
         self._method = "feols"
         self._is_iv = False
         self._inference_dist: InferenceDist = T_DIST

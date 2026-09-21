@@ -14,6 +14,7 @@ from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
     _check_label_keys_in_covars,
+    _model_plot_labels,
     _post_processing_input_checks,
     _relabel_expvar,
 )
@@ -165,9 +166,9 @@ def iplot(
     pf.iplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            fit1._model_name_plot: "Model 1",
-            fit2._model_name_plot: "Model 2",
-            fit3._model_name_plot: "Model 3"
+            fit1._model_name: "Model 1",
+            fit2._model_name: "Model 2",
+            fit3._model_name: "Model 3"
         },
     )
     pf.iplot(
@@ -181,9 +182,8 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
-    models = _post_processing_input_checks(
-        models, check_duplicate_model_names=True, rename_models=rename_models
-    )
+    models = _post_processing_input_checks(models)
+    model_labels = _model_plot_labels(models, rename_models=rename_models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -201,7 +201,7 @@ def iplot(
     if rename_models is None:
         rename_models = {}
 
-    for x, fxst in enumerate(list(models)):
+    for x, (fxst, label) in enumerate(zip(models, model_labels, strict=True)):
         if fxst._icovars is None:
             raise ValueError(
                 f"The {x} th estimated model did not have ivars / 'i()' model syntax."
@@ -210,7 +210,12 @@ def iplot(
         all_icovars += fxst._icovars
 
         df_model = _get_model_df(
-            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+            fxst=fxst,
+            label=label,
+            alpha=alpha,
+            joint=joint,
+            seed=seed,
+            rename_models=rename_models,
         )
         df_all.append(df_model)
 
@@ -343,9 +348,9 @@ def coefplot(
     pf.iplot(
         models = [fit1, fit2, fit3],
         rename_models = {
-            fit1._model_name_plot: "Model 1",
-            fit2._model_name_plot: "Model 2",
-            fit3._model_name_plot: "Model 3"
+            fit1._model_name: "Model 1",
+            fit2._model_name: "Model 2",
+            fit3._model_name: "Model 3"
         },
     )
     pf.iplot(
@@ -360,9 +365,8 @@ def coefplot(
 
     ```
     """
-    models = _post_processing_input_checks(
-        models, check_duplicate_model_names=True, rename_models=rename_models
-    )
+    models = _post_processing_input_checks(models)
+    model_labels = _model_plot_labels(models, rename_models=rename_models)
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
             "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
@@ -378,9 +382,14 @@ def coefplot(
         rename_models = {}
 
     df_all = []
-    for fxst in models:
+    for fxst, label in zip(models, model_labels, strict=True):
         df_model = _get_model_df(
-            fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
+            fxst=fxst,
+            label=label,
+            alpha=alpha,
+            joint=joint,
+            seed=seed,
+            rename_models=rename_models,
         )
         df_all.append(df_model)
 
@@ -464,12 +473,11 @@ def qplot(
     if figsize is None:
         figsize = (10, 6)
 
-    models = _post_processing_input_checks(
-        models, check_duplicate_model_names=True, rename_models=rename_models
-    )
+    models = _post_processing_input_checks(models)
+    model_labels = _model_plot_labels(models, rename_models=rename_models)
 
     df_all = pd.DataFrame()
-    for model in models:
+    for model, label in zip(models, model_labels, strict=True):
         if not isinstance(model, Quantreg):
             raise TypeError(
                 "The 'qplot' function is only supported for objects of type Quantreg."
@@ -477,7 +485,7 @@ def qplot(
 
         df = model.tidy()
         df["quantile"] = model.options.quantile
-        df["model"] = model._model_name_plot
+        df["model"] = label
 
         df_all = pd.concat([df_all, df], axis=0)
 
@@ -849,6 +857,7 @@ def _qplot(
 
 def _get_model_df(
     fxst: Feols | Fepois | Feiv,
+    label: str,
     alpha: float,
     joint: str | bool | None,
     seed: int | None = None,
@@ -861,6 +870,8 @@ def _get_model_df(
     ----------
     fxst : Union[Feols, Fepois, Feiv]
         The fitted model.
+    label : str
+        The plot label of the model, as computed by `_model_plot_labels()`.
     alpha : float
         The significance level for the confidence intervals.
     joint : Optional[Union[str, bool]]
@@ -883,8 +894,7 @@ def _get_model_df(
 
     df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
 
-    df_model["fml"] = fxst._model_name_plot
-    df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))
+    df_model["fml"] = rename_models.get(label, label)
 
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"

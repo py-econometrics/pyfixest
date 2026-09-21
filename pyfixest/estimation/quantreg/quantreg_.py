@@ -114,7 +114,6 @@ class Quantreg(Feols):
         )
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"
-        self._model_name_plot = self._model_name
 
         self._method_map: dict[
             str,

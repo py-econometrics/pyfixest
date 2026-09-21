@@ -889,9 +889,9 @@ pf.qplot(fit_qr, figsize = [7,3])
   pf.coefplot(
       models = [fit1, fit2, fit3],
       rename_models = {
-          fit1._model_name_plot: "Model 1",
-          fit2._model_name_plot: "Model 2",
-          fit3._model_name_plot: "Model 3"
+          fit1._model_name: "Model 1",
+          fit2._model_name: "Model 2",
+          fit3._model_name: "Model 3"
       },
   )
   ```
