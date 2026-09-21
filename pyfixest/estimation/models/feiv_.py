@@ -1,24 +1,22 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Mapping
 from dataclasses import replace
 from importlib import import_module
-from typing import Any
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
+from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
+    EstimationOptions,
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
@@ -28,7 +26,7 @@ from pyfixest.estimation.internals.model_state import (
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.utils.utils import Ssc, get_ssc
+from pyfixest.utils.utils import get_ssc
 
 
 class Feiv(Feols):
@@ -42,32 +40,21 @@ class Feiv(Feols):
 
     Parameters
     ----------
-    Y : np.ndarray
-        Dependent variable, a two-dimensional np.array.
-    X : np.ndarray
-        Independent variables, a two-dimensional np.array.
-    endgvar : np.ndarray
-        Endogenous Indenpendent variables, a two-dimensional np.array.
-    Z : np.ndarray
-        Instruments, a two-dimensional np.array.
-    weights : np.ndarray
-        Weights, a one-dimensional np.array.
-    coefnames_x : list
-        Names of the coefficients of X.
-    coefnames_z : list
-        Names of the coefficients of Z.
-    collin_tol : float
-        Tolerance for collinearity check.
-    solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr"],
-        default is "scipy.linalg.solve". Solver to use for the estimation.
-    demeaner : Optional[AnyDemeaner]
-        Resolved typed demeaner configuration.
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of the weights variable. Either "aweights" for analytic weights
-        or "fweights" for frequency weights.
+    FixestFormula : Formula
+        Parsed fixest formula, including the first stage.
+    data : pd.DataFrame
+        Estimation data, already converted to pandas and reindexed.
+    options : EstimationOptions
+        Every estimation option the fit is built with, assembled from the
+        `EstimationConfig` by the estimation planner.
+    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
+        Demeaning cache shared across the models of one cache block.
+    lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
+        Preconditioner cache shared across the models of one cache block.
+    sample_split_var : Optional[str]
+        Name of the sample-split variable, or ``None`` for the full sample.
+    sample_split_value : Optional[str | int]
+        Value of `sample_split_var` this model is fitted on.
 
     Attributes
     ----------
@@ -145,42 +132,21 @@ class Feiv(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc: Ssc,
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        *,
+        options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "scipy.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc=ssc,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
+            lookup_preconditioner=lookup_preconditioner,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
         )
 
         self._is_iv = True

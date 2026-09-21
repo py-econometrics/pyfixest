@@ -1,27 +1,22 @@
 from __future__ import annotations
 
 import gc
-import inspect
-from collections.abc import Mapping
-from typing import Any
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.literals import (
-    QuantregMethodOptions,
-    QuantregMultiOptions,
-    SolverOptions,
+from pyfixest.estimation.internals.literals import QuantregMultiOptions
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    QuantregEstimationOptions,
 )
-from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import Ssc
 
 
 class QuantregMulti:
@@ -31,44 +26,29 @@ class QuantregMulti:
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
+        *,
+        options: QuantregEstimationOptions,
         quantile: list[float],
-        ssc: Ssc,
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        multi_method: QuantregMultiOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
-        method: QuantregMethodOptions = "fn",
-        multi_method: QuantregMultiOptions = "cfm1",
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: int | None = None,
-        seed: int | None = None,
     ):
-        frame = inspect.currentframe()
-        if frame is None:
-            raise ValueError("The current frame is None.")
-        args, _, _, values = inspect.getargvalues(frame)
-        args_dict = {
-            arg: values[arg]
-            for arg in args
-            if arg not in ("self", "quantile", "multi_method")
-        }
-
-        # initiate a list of Quantreg objects
+        # `options.quantile` is the first requested quantile; each child fit
+        # carries its own quantile and shares every other option.
+        self.options = options
         self.quantiles = quantile
         self.all_quantregs = {
-            q: Quantreg(**args_dict, quantile=q) for q in self.quantiles
+            q: Quantreg(
+                FixestFormula=FixestFormula,
+                data=data,
+                options=replace(options, quantile=q),
+                lookup_demeaned_data=lookup_demeaned_data,
+                sample_split_var=sample_split_var,
+                sample_split_value=sample_split_value,
+            )
+            for q in self.quantiles
         }
-        self.method = method
         self.multi_method = multi_method
         self._is_iv = False
 
@@ -110,7 +90,7 @@ class QuantregMulti:
             "q": q_median,  # first eval at the "central" quantile
         }
 
-        if self.method == "pfn":
+        if self.options.method == "pfn":
             fit_kwargs["rng"] = rng
         beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
 

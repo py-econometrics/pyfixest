@@ -1,20 +1,16 @@
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
-from typing import Any, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.literals import (
-    QuantregMethodOptions,
-    SolverOptions,
-)
+from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     QuantregEstimationOptions,
@@ -32,7 +28,6 @@ from pyfixest.estimation.quantreg.vcov_ import (
     vcov_iid_qreg,
     vcov_nid_qreg,
 )
-from pyfixest.utils.utils import Ssc
 
 
 class Quantreg(Feols):
@@ -75,45 +70,19 @@ class Quantreg(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc: Ssc,
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        *,
+        options: QuantregEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
-        quantile: float = 0.5,
-        method: QuantregMethodOptions = "fn",
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: int | None = None,
-        seed: int | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc=ssc,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
         )
 
         warnings.warn(
@@ -134,14 +103,8 @@ class Quantreg(Feols):
             decomposition=False,
         )
 
-        self.options = QuantregEstimationOptions.extend(
-            self.options,
-            quantile=quantile,
-            method=method,
-            quantile_tol=quantile_tol,
-            quantile_maxiter=quantile_maxiter,
-            seed=seed,
-        )
+        quantile = options.quantile
+        method = options.method
         self._method = f"quantreg_{method}"
 
         self._model_name = (
@@ -172,16 +135,16 @@ class Quantreg(Feols):
             "fn": partial(
                 self.fit_qreg_fn,
                 q=quantile,
-                tol=quantile_tol,
-                maxiter=quantile_maxiter,
+                tol=options.quantile_tol,
+                maxiter=options.quantile_maxiter,
                 beta_init=None,
             ),
             "pfn": partial(
                 self.fit_qreg_pfn,
                 q=quantile,
-                rng=np.random.default_rng(seed),
-                tol=quantile_tol,
-                maxiter=quantile_maxiter,
+                rng=np.random.default_rng(options.seed),
+                tol=options.quantile_tol,
+                maxiter=options.quantile_maxiter,
                 beta_init=None,
             ),
         }
