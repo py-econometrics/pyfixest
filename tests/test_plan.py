@@ -338,9 +338,7 @@ def test_fepois_and_feglm_poisson_honor_accelerate():
     fit_fepois = pf.fepois("Y ~ X1 + X2 | f1", data, accelerate=False)
     assert fit_fepois.options.accelerate is False
 
-    fit_feglm = pf.feglm(
-        "Y ~ X1 + X2 | f1", data, family="poisson", accelerate=False
-    )
+    fit_feglm = pf.feglm("Y ~ X1 + X2 | f1", data, family="poisson", accelerate=False)
     assert fit_feglm.options.accelerate is False
 
 
