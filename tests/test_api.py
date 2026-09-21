@@ -5,6 +5,7 @@ import pytest
 from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
+from pyfixest.estimation.internals.retention import RetentionPolicy
 from pyfixest.utils.utils import get_data
 
 
@@ -109,8 +110,8 @@ def test_map_demeaner_defaults_to_rust():
 
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
-    assert isinstance(fit._demeaner, pf.MapDemeaner)
-    assert fit._demeaner.backend == "rust"
+    assert isinstance(fit.options.demeaner, pf.MapDemeaner)
+    assert fit.options.demeaner.backend == "rust"
 
 
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
@@ -321,10 +322,10 @@ def test_feiv_first_stage_reuses_within_preconditioner():
 
     preconditioner = fit.preconditioner
     assert isinstance(preconditioner, pf.Preconditioner)
-    assert isinstance(fit.first_stage.model._demeaner, pf.LsmrDemeaner)
+    assert isinstance(fit.first_stage.model.options.demeaner, pf.LsmrDemeaner)
     # The 1st-stage demeaner's config stores the 2nd-stage's preconditioner
     # verbatim (identity preserved on assignment).
-    assert fit.first_stage.model._demeaner.preconditioner is preconditioner
+    assert fit.first_stage.model.options.demeaner.preconditioner is preconditioner
     # The 1st-stage model's preconditioner is what came back from the solve;
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
@@ -354,6 +355,8 @@ def test_lean(estimator, kwargs, lean, store_data):
         **kwargs,
     )
 
+    # the storage options survive the cleanup they describe
+    assert fit.options.retention == RetentionPolicy(store_data=store_data, lean=lean)
     assert hasattr(fit, "_data") == (store_data and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
     assert hasattr(fit, "fitted_values") == (not lean)

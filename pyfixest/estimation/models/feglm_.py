@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -15,8 +15,14 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
-from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
-from pyfixest.estimation.internals.model_state import FittedValues
+from pyfixest.estimation.internals.literals import (
+    HeteroVcovTypeOptions,
+    SolverOptions,
+)
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    GlmEstimationOptions,
+)
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
 from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
@@ -55,6 +61,8 @@ class Feglm(Feols):
     ```
     """
 
+    options: GlmEstimationOptions
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -68,12 +76,7 @@ class Feglm(Feols):
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
+        solver: SolverOptions,
         family: GlmFamily,
         demeaner: AnyDemeaner | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
@@ -85,6 +88,7 @@ class Feglm(Feols):
         separation_check: list[str] | None = None,
         context: int | Mapping[str, Any] = 0,
         accelerate: bool = True,
+        offset: str | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -105,6 +109,7 @@ class Feglm(Feols):
             context=context,
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
+            offset=offset,
         )
 
         _glm_input_checks(
@@ -113,10 +118,13 @@ class Feglm(Feols):
             maxiter=maxiter,
         )
 
-        self.maxiter = maxiter
-        self.tol = tol
-        self.separation_check = separation_check
-        self._accelerate = accelerate
+        self.options = GlmEstimationOptions.extend(
+            self.options,
+            maxiter=maxiter,
+            tol=tol,
+            separation_check=separation_check,
+            accelerate=accelerate,
+        )
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
         # cannot yet preserve a generic GLM family's estimation contract.
@@ -141,8 +149,8 @@ class Feglm(Feols):
         na_separation: list[int] = []
         if (
             model_matrix.fixed_effects is not None
-            and self.separation_check is not None
-            and self.separation_check  # not an empty list
+            and self.options.separation_check is not None
+            and self.options.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
@@ -150,8 +158,8 @@ class Feglm(Feols):
                 fe=model_matrix.fixed_effects,
                 fml=self._fml,
                 data=self._data,
-                demeaner=self._demeaner,
-                methods=self.separation_check,
+                demeaner=self.options.demeaner,
+                methods=self.options.separation_check,
             )
 
         if na_separation:
@@ -195,14 +203,14 @@ class Feglm(Feols):
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
-            collin_tol=self._collin_tol,
-            accelerate=self._accelerate and fixed_effects is not None,
+            collin_tol=self.options.collin_tol,
+            accelerate=self.options.accelerate and fixed_effects is not None,
             offset=offset,
             weights=self.observation_weights.values,
-            solver=self._solver,
-            maxiter=self.maxiter,
-            tol=self.tol,
-            fixef_tol=self._fixef_tol,
+            solver=self.options.solver,
+            maxiter=self.options.maxiter,
+            tol=self.options.tol,
+            fixef_tol=self.options.fixef_tol,
         )
 
         self.collinearity = fit.collinearity
@@ -245,7 +253,8 @@ class Feglm(Feols):
             X=self.working_state.design_within,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
-                if observation_weights is not None and self._weights_type == "fweights"
+                if observation_weights is not None
+                and self.options.weights_type == "fweights"
                 else None
             ),
             normal_equation_weights=self.working_state.working_weights,
@@ -288,7 +297,7 @@ class Feglm(Feols):
         if flist is None:
             return v, X
 
-        effective_demeaner = self._demeaner.with_tol(tol)
+        effective_demeaner = self.options.demeaner.with_tol(tol)
         vX_tilde = self._demean_cache.demean_array(
             x=np.c_[v, X],
             flist=flist,

@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any
 
 import pandas as pd
 
@@ -9,6 +9,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.fit_statistics import linear_fit_statistics
+from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -31,12 +32,7 @@ class Fegaussian(Feglm):
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         tol: float,
         maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
+        solver: SolverOptions,
         store_data: bool = True,
         copy_data: bool = True,
         lean: bool = False,
@@ -105,7 +101,7 @@ class Fegaussian(Feglm):
             N=self.sample_info.n_obs,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
-            has_intercept=not self._drop_intercept,
+            has_intercept=not self.options.drop_intercept,
             has_fixef=self._has_fixef,
             deviance=self.fitstat.deviance,
         )

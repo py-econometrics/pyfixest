@@ -186,7 +186,7 @@ def test_materializer_cache_contains_evaluated_factor_values(
     """The materializer cache stores evaluated rather than source values."""
     fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
     rhs_spec = fit._model_spec["second_stage"].rhs
-    context = FORMULAIC_TRANSFORMS | {**fit._context}
+    context = FORMULAIC_TRANSFORMS | {**fit.options.context}
 
     materializer = rhs_spec.get_materializer(data, context=context)
     materializer.get_model_matrix(rhs_spec)

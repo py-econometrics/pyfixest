@@ -15,7 +15,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import AnyDemeaner, MapDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -46,6 +46,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
     CollinearityCheck,
+    EstimationOptions,
     EstimationSample,
     FittedValues,
     ObservationWeights,
@@ -57,7 +58,6 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import (
-    RetentionPolicy,
     omitted_attributes,
     require_retained,
 )
@@ -143,6 +143,8 @@ class Feols(ResultAccessorMixin):
         formulaic during the creation of the model matrix. This can include
         custom factorization functions, transformations, or any other
         variables that need to be available in the formula environment.
+    offset : Optional[str]
+        Name of the offset column. Only used by GLM fits; ``None`` otherwise.
 
     Attributes
     ----------
@@ -158,15 +160,16 @@ class Feols(ResultAccessorMixin):
         collinear regressor columns, without multiplication by square-root weights.
     _X_is_empty : bool
         Indicates whether the X array is empty.
-    _collin_tol : float
-        Tolerance level for collinearity checks.
+    options : EstimationOptions
+        The estimation options the model was built with: the small-sample
+        correction, the sample, weight, and offset options, the collinearity
+        tolerance, the solver, the demeaner, the storage policy, and the
+        formulaic context.
     _coefnames : list
         Names of the coefficients (of the design matrix X).
     collinearity : CollinearityCheck
         Names and column mask of the regressors dropped by the rank check,
         set in get_fit().
-    _solver: str
-        The solver used for the regression.
     observation_weights : ObservationWeights
         User-scale weights and their analytic or frequency interpretation.
     sample_info : EstimationSample
@@ -188,8 +191,6 @@ class Feols(ResultAccessorMixin):
         Fixed effects used in the regression.
     _icovars : Any
         Internal covariates, to be enriched outside of the class.
-    ssc : Ssc
-        Small-sample correction options.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
@@ -219,9 +220,6 @@ class Feols(ResultAccessorMixin):
         per-observation fixed-effect contribution `sumFE`.
     fitstat : FitStatistics
         Goodness-of-fit measures; ``NaN`` where the estimator defines none.
-    _solver: Literal["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve",
-        "scipy.sparse.linalg.lsqr"],
-        default is "scipy.linalg.solve". Solver to use for the estimation.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -233,8 +231,6 @@ class Feols(ResultAccessorMixin):
         `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical _model_name attributes are passed. In this case,
         the _model_name_plot attribute will be modified.
-    _quantile: Optional[float]
-        The quantile used for quantile regression. None if not a quantile regression.
 
     # special for did
     _res_cohort_eventtime_dict: Optional[dict[str, Any]]
@@ -284,6 +280,7 @@ class Feols(ResultAccessorMixin):
         context: int | Mapping[str, Any] = 0,
         sample_split_var: str | None = None,
         sample_split_value: str | int | float | _AllSampleSentinel | None = None,
+        offset: str | None = None,
     ) -> None:
         self._sample_split_value = sample_split_value
         self._sample_split_var = sample_split_var
@@ -308,28 +305,21 @@ class Feols(ResultAccessorMixin):
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if copy_data else data
-        self.ssc = ssc
-        self._drop_singletons = drop_singletons
-        self._drop_intercept = drop_intercept
-        self._weights_name = weights
-        self._weights_type = weights_type
-        self._has_weights = weights is not None
-        self._offset_name: str | None = None
-        self._collin_tol = collin_tol
-        self._solver = solver
-        if demeaner is None:
-            demeaner = MapDemeaner()
-        self._demeaner = demeaner
-        if isinstance(demeaner, LsmrDemeaner):
-            self._fixef_tol = max(demeaner.fixef_atol, demeaner.fixef_btol)
-        else:
-            self._fixef_tol = demeaner.fixef_tol
-        self._fixef_maxiter = demeaner.fixef_maxiter
+        self.options = EstimationOptions(
+            ssc=ssc,
+            drop_singletons=drop_singletons,
+            drop_intercept=drop_intercept,
+            weights=weights,
+            weights_type=cast("WeightsTypeOptions | None", weights_type),
+            offset=offset,
+            collin_tol=collin_tol,
+            solver=solver,
+            demeaner=MapDemeaner() if demeaner is None else demeaner,
+            store_data=store_data,
+            lean=lean,
+            context=capture_context(context),
+        )
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
-        self._store_data = store_data
-        self._copy_data = copy_data
-        self._lean = lean
-        self._context = capture_context(context)
 
         self.capabilities = Capabilities(
             crv3_inference=True,
@@ -339,7 +329,7 @@ class Feols(ResultAccessorMixin):
             cluster_causal_variance=True,
             decomposition=True,
         )
-        if self._has_weights:
+        if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
 
         # attributes that have to be enriched outside of the class -
@@ -381,11 +371,11 @@ class Feols(ResultAccessorMixin):
         model_matrix = model_matrix_fixest.create_model_matrix(
             formula=self.FixestFormula,
             data=self._data,
-            drop_singletons=self._drop_singletons,
-            drop_intercept=self._drop_intercept,
-            weights=self._weights_name,
-            offset=self._offset_name,
-            context=self._context,
+            drop_singletons=self.options.drop_singletons,
+            drop_intercept=self.options.drop_intercept,
+            weights=self.options.weights,
+            offset=self.options.offset,
+            context=self.options.context,
         )
         self._publish_model_matrix(model_matrix)
 
@@ -460,7 +450,7 @@ class Feols(ResultAccessorMixin):
             return ObservationWeights.unweighted()
 
         # `weights_type` is validated at the API boundary (estimation/api/utils.py).
-        weights_type = cast(WeightsTypeOptions, self._weights_type)
+        weights_type = cast(WeightsTypeOptions, self.options.weights_type)
         return ObservationWeights.from_values(
             weights.to_numpy().reshape(-1),
             weights_type=weights_type,
@@ -487,7 +477,7 @@ class Feols(ResultAccessorMixin):
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
-                demeaner=self._demeaner,
+                demeaner=self.options.demeaner,
             )
         return WithinLinearData(response=response, design=design)
 
@@ -524,7 +514,7 @@ class Feols(ResultAccessorMixin):
         design, collinearity = drop_multicollinear_variables(
             design,
             self._coefnames,
-            self._collin_tol,
+            self.options.collin_tol,
         )
         self.collinearity = collinearity
         self._coefnames = list(collinearity.coefnames)
@@ -567,7 +557,7 @@ class Feols(ResultAccessorMixin):
                 X=within_data.design,
                 Y=within_data.response,
                 weights=self.observation_weights.values,
-                solver=self._solver,
+                solver=self.options.solver,
             )
 
             self._beta_hat = fit.beta
@@ -590,7 +580,7 @@ class Feols(ResultAccessorMixin):
             N=self.sample_info.n_obs,
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
-            has_intercept=not self._drop_intercept,
+            has_intercept=not self.options.drop_intercept,
             has_fixef=self._has_fixef,
         )
 
@@ -683,7 +673,7 @@ class Feols(ResultAccessorMixin):
             prep = prepare_cluster_state(
                 data=data if data is not None else self._data,
                 clustervar=list(spec.clustervar),
-                ssc=self.ssc,
+                ssc=self.options.ssc,
                 fixef=self._fixef,
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
@@ -691,7 +681,7 @@ class Feols(ResultAccessorMixin):
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
             correction = get_ssc_cluster(
-                prep=prep, ssc_options=self.ssc, dof_counts=self._dof_counts
+                prep=prep, ssc_options=self.options.ssc, dof_counts=self._dof_counts
             )
             ssc, df_k, df_t = correction.adj, correction.df_k, correction.df_t
             terms = [
@@ -720,7 +710,7 @@ class Feols(ResultAccessorMixin):
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
             correction = get_ssc(
-                self.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
+                self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
             ssc = np.array([correction.adj])
             df_k, df_t = correction.df_k, correction.df_t
@@ -794,7 +784,8 @@ class Feols(ResultAccessorMixin):
             X=self.within_data.design,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
-                if observation_weights is not None and self._weights_type == "fweights"
+                if observation_weights is not None
+                and self.options.weights_type == "fweights"
                 else None
             ),
             normal_equation_weights=observation_weights,
@@ -813,7 +804,7 @@ class Feols(ResultAccessorMixin):
             )
 
         # fweights not supported
-        if self._has_weights and self._weights_type == "fweights":
+        if self.options.has_weights and self.options.weights_type == "fweights":
             raise NotImplementedError(
                 "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
             )
@@ -878,8 +869,8 @@ class Feols(ResultAccessorMixin):
                 fml=self._fml,
                 data=data,
                 vcov="iid",
-                weights=self._weights_name,
-                weights_type=self._weights_type,
+                weights=self.options.weights,
+                weights_type=self.options.weights_type,
             )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
@@ -900,8 +891,7 @@ class Feols(ResultAccessorMixin):
 
     def _clear_attributes(self):
         """Apply the configured fitted-model retention policy."""
-        policy = RetentionPolicy(store_data=self._store_data, lean=self._lean)
-        for attr in omitted_attributes(policy):
+        for attr in omitted_attributes(self.options.retention):
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -1099,7 +1089,7 @@ class Feols(ResultAccessorMixin):
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for the DID2S estimator."
                 )
-            if self._has_weights:
+            if self.options.has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
@@ -1288,7 +1278,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
             )
-        if self._has_weights:
+        if self.options.has_weights:
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with weights."
             )
@@ -1358,7 +1348,7 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
-                demeaner=self._demeaner,
+                demeaner=self.options.demeaner,
             )
             vcov_splits += vcov_ccv
 
@@ -1427,7 +1417,7 @@ class Feols(ResultAccessorMixin):
             Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
                 self._data,
                 output=output,
-                context=FORMULAIC_TRANSFORMS | {**self._context},
+                context=FORMULAIC_TRANSFORMS | {**self.options.context},
             )
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
@@ -1575,8 +1565,8 @@ class Feols(ResultAccessorMixin):
 
         _decompose_arg_check(
             type=type,
-            has_weights=self._has_weights,
-            weights_type=self._weights_type,
+            has_weights=self.options.has_weights,
+            weights_type=self.options.weights_type,
             is_iv=self._is_iv,
             method=self._method,
             only_coef=only_coef,
@@ -1697,7 +1687,7 @@ class Feols(ResultAccessorMixin):
         Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**self._context},
+            context=FORMULAIC_TRANSFORMS | {**self.options.context},
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
@@ -1712,7 +1702,7 @@ class Feols(ResultAccessorMixin):
                 # The linear predictor includes the offset; subtract it so
                 # that sumFE represents the pure FE contribution and predict()
                 # can add the offset back from newdata without double-counting.
-                if self._offset_name is not None:
+                if self.options.offset is not None:
                     offset = self.model_matrix.offset
                     assert offset is not None
                     Y = Y - offset.to_numpy().flatten()
@@ -1725,14 +1715,14 @@ class Feols(ResultAccessorMixin):
                 _ModelMatrixKey.fixed_effects
             ].column_names,
             data=self._data,
-            context=FORMULAIC_TRANSFORMS | {**self._context},
+            context=FORMULAIC_TRANSFORMS | {**self.options.context},
             transform_state=self._model_spec[
                 _ModelMatrixKey.fixed_effects
             ].transform_state,
         )
         D = contrast_coding.matrix
         D_w = D
-        if self._has_weights:
+        if self.options.has_weights:
             # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
             observation_weights = self.observation_weights.values
             assert observation_weights is not None
@@ -1841,7 +1831,7 @@ class Feols(ResultAccessorMixin):
                     "Prediction errors are currently not supported for models with fixed effects."
                 )
 
-            if self._has_weights:
+            if self.options.has_weights:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with weights."
                 )
@@ -1859,7 +1849,7 @@ class Feols(ResultAccessorMixin):
         else:
             newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
             n_observations = newdata.shape[0]
-            context = FORMULAIC_TRANSFORMS | {**self._context}
+            context = FORMULAIC_TRANSFORMS | {**self.options.context}
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
@@ -1898,7 +1888,7 @@ class Feols(ResultAccessorMixin):
             # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
-            if self._offset_name is not None:
+            if self.options.offset is not None:
                 offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
                     newdata,
                     context=context,
@@ -1907,7 +1897,7 @@ class Feols(ResultAccessorMixin):
                 )
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
-                        f"Offset expression '{self._offset_name}' evaluates to missing "
+                        f"Offset expression '{self.options.offset}' evaluates to missing "
                         "values in `newdata`."
                     )
 
@@ -2032,7 +2022,7 @@ class Feols(ResultAccessorMixin):
         if resampvar_ not in self._coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
-        if self._has_weights:
+        if self.options.has_weights:
             raise NotImplementedError(
                 """
                 Regression Weights are not supported with Randomization Inference.
@@ -2264,7 +2254,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for IV models."
             )
-        if self._has_weights:
+        if self.options.has_weights:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."
             )

@@ -53,31 +53,9 @@ class Fepois(Feglm):
         IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
-    drop_singletons : bool
-        Whether to drop singleton fixed effects.
-    collin_tol : float
-        Tolerance level for the detection of collinearity.
-    maxiter : Optional[int], default=25
-        Maximum number of iterations for the IRLS algorithm.
-    tol : Optional[float], default=1e-08
-        Tolerance level for the convergence of the IRLS algorithm.
-    solver : str, optional.
-        The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
-        Defaults to "scipy.linalg.solve".
-    demeaner : Optional[AnyDemeaner]
-        Resolved typed demeaner configuration.
-    fixef_tol: float, default = 1e-06.
-        Tolerance level for the convergence of the demeaning algorithm.
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
-    weights_name : Optional[str]
-        Name of the weights variable.
-    weights_type : Optional[str]
-        Type of weights variable.
+    options : GlmEstimationOptions
+        The estimation options the model was built with, including the IRLS
+        `maxiter` and `tol`, the separation check, and the offset.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -146,12 +124,12 @@ class Fepois(Feglm):
             context=context,
             demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
+            offset=offset,
             family=POISSON,
         )
 
         # Poisson-specific overrides on top of the Feglm-set defaults.
         self._method = "fepois"
-        self._offset_name = offset
         self.capabilities = replace(
             self.capabilities,
             crv3_inference=True,

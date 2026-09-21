@@ -273,7 +273,7 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], resid_tol, "py_resid != r_resid"
         )
 
-        if not mod._has_fixef and not mod._has_weights:
+        if not mod._has_fixef and not mod.options.has_weights:
             py_predict_all = mod.predict(interval="prediction")
             r_predict_all = pd.DataFrame(
                 stats.predict(r_fixest, interval="prediction")
@@ -305,7 +305,7 @@ def test_single_fit_feols(
                     "py_predict_newdata != r_predict_newdata",
                 )
 
-                if not mod._has_fixef and not mod._has_weights and dropna:
+                if not mod._has_fixef and not mod.options.has_weights and dropna:
                     py_predict_all_newdata = mod.predict(
                         newdata=data.iloc[0:100], interval="prediction"
                     )

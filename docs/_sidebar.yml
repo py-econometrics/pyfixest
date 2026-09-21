@@ -65,6 +65,9 @@ website:
       - reference/utils.dgps.get_motherhood_event_study_data.qmd
       section: Data Sets
     - contents:
+      - reference/estimation.state.EstimationOptions.qmd
+      - reference/estimation.state.GlmEstimationOptions.qmd
+      - reference/estimation.state.QuantregEstimationOptions.qmd
       - reference/estimation.state.ModelMatrix.qmd
       - reference/estimation.state.ObservationWeights.qmd
       - reference/estimation.state.EstimationSample.qmd

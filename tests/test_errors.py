@@ -1715,4 +1715,4 @@ def test_estimation_rejects_malformed_ssc():
     with pytest.raises(TypeError, match=r"ssc must be created with pf\.ssc"):
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
-    assert legacy.ssc == pf.ssc(k_adj=False)
+    assert legacy.options.ssc == pf.ssc(k_adj=False)

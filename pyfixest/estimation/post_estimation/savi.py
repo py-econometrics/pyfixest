@@ -161,7 +161,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         raise NotImplementedError(
             "SAVI inference is currently supported only for feols models."
         )
-    if model._has_weights:
+    if model.options.has_weights:
         raise NotImplementedError(
             "SAVI inference does not currently support weighted feols models."
         )

@@ -17,6 +17,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
+    QuantregEstimationOptions,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
@@ -67,6 +68,8 @@ class Quantreg(Feols):
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
     """
+
+    options: QuantregEstimationOptions
 
     def __init__(
         self,
@@ -131,10 +134,15 @@ class Quantreg(Feols):
             decomposition=False,
         )
 
-        self._quantile = quantile
+        self.options = QuantregEstimationOptions.extend(
+            self.options,
+            quantile=quantile,
+            method=method,
+            quantile_tol=quantile_tol,
+            quantile_maxiter=quantile_maxiter,
+            seed=seed,
+        )
         self._method = f"quantreg_{method}"
-        self._quantile_tol = quantile_tol
-        self._quantile_maxiter = quantile_maxiter
 
         self._model_name = (
             FixestFormula.formula
@@ -144,8 +152,6 @@ class Quantreg(Feols):
         # update with quantile name
         self._model_name = f"{self._model_name} (q = {quantile})"
         self._model_name_plot = self._model_name
-
-        self._seed = seed
 
         self._method_map: dict[
             str,
@@ -165,17 +171,17 @@ class Quantreg(Feols):
         ] = {
             "fn": partial(
                 self.fit_qreg_fn,
-                q=self._quantile,
-                tol=self._quantile_tol,
-                maxiter=self._quantile_maxiter,
+                q=quantile,
+                tol=quantile_tol,
+                maxiter=quantile_maxiter,
                 beta_init=None,
             ),
             "pfn": partial(
                 self.fit_qreg_pfn,
-                q=self._quantile,
-                rng=np.random.default_rng(self._seed),
-                tol=self._quantile_tol,
-                maxiter=self._quantile_maxiter,
+                q=quantile,
+                rng=np.random.default_rng(seed),
+                tol=quantile_tol,
+                maxiter=quantile_maxiter,
                 beta_init=None,
             ),
         }
@@ -410,7 +416,7 @@ class Quantreg(Feols):
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
-            q=self._quantile,
+            q=self.options.quantile,
             N=self.sample_info.n_rows,
         )
         return VcovTerm(vcov=vcov, meat=None)
@@ -420,7 +426,7 @@ class Quantreg(Feols):
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
-            q=self._quantile,
+            q=self.options.quantile,
             N=self.sample_info.n_rows,
         )
         return VcovTerm(vcov=vcov, meat=None)
@@ -437,7 +443,7 @@ class Quantreg(Feols):
             X=self.within_data.design,
             Y=self.within_data.response,
             beta_hat=self._beta_hat,
-            q=self._quantile,
+            q=self.options.quantile,
             N=self.sample_info.n_rows,
             method=cast(QuantregMethodOptions, self._method),
             fit=self._fit,
@@ -453,7 +459,7 @@ class Quantreg(Feols):
         vcov = vcov_crv1_qreg(
             X=self.within_data.design,
             u_hat=self._u_hat,
-            q=self._quantile,
+            q=self.options.quantile,
             clustid=clustid,
             cluster_col=cluster_col,
         )
@@ -463,4 +469,4 @@ class Quantreg(Feols):
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
         require_retained(self, "objective_value", "_u_hat")
-        return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
+        return np.sum(np.abs(self._u_hat) * (self.options.quantile - (self._u_hat < 0)))
