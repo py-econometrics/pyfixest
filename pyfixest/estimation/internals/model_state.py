@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
-from typing import TYPE_CHECKING, Any, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,8 +23,6 @@ if TYPE_CHECKING:
 _VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
-
-_OptionsT = TypeVar("_OptionsT", bound="EstimationOptions")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63,6 +61,9 @@ class EstimationOptions:
         Resolved fixed-effect demeaner configuration.
     store_data : bool
         Whether the estimation data and formula state were retained.
+    copy_data : bool
+        Whether the estimation data was copied before the fit, the documented
+        exception to never mutating user input.
     lean : bool
         Whether the large fit products were dropped after estimation.
     context : Mapping[str, Any]
@@ -89,23 +90,9 @@ class EstimationOptions:
     solver: SolverOptions
     demeaner: AnyDemeaner
     store_data: bool
+    copy_data: bool
     lean: bool
     context: Mapping[str, Any]
-
-    @classmethod
-    def extend(
-        cls: type[_OptionsT], options: EstimationOptions, **estimator_options: Any
-    ) -> _OptionsT:
-        """Widen shared options into an estimator-specific options value.
-
-        A subclass cannot be built with `dataclasses.replace`, so the shared
-        fields of `options` are carried over explicitly.
-        """
-        shared = {
-            field.name: getattr(options, field.name)
-            for field in fields(EstimationOptions)
-        }
-        return cls(**shared, **estimator_options)
 
     @property
     def has_weights(self) -> bool:

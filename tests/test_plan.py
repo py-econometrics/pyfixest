@@ -5,9 +5,15 @@ from __future__ import annotations
 import pytest
 
 import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.model_state import (
+    EstimationOptions,
+    GlmEstimationOptions,
+    QuantregEstimationOptions,
+)
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
@@ -220,40 +226,84 @@ def test_iv_formula_resolves_each_spec_to_feiv():
 
 
 # ---------------------------------------------------------------------------
-# Method-specific model_kwargs
+# Method-specific estimation options
 # ---------------------------------------------------------------------------
+
+_GLM_OVERRIDES = {
+    "demeaner": MapDemeaner(fixef_tol=1e-3),
+    "iwls_tol": 1e-7,
+    "iwls_maxiter": 13,
+    "separation_check": ["fe"],
+    "accelerate": False,
+}
+
+_QUANTREG_OVERRIDES = {
+    "quantile": 0.5,
+    "quantreg_method": "pfn",
+    "quantile_tol": 1e-5,
+    "quantile_maxiter": 7,
+    "seed": 42,
+}
 
 
 @pytest.mark.parametrize(
-    "method,must_have,must_not_have",
+    "method,overrides,options_cls,expected",
     [
-        # feols: demeaner yes; iwls / quantreg / accelerate no
-        ("feols", {"demeaner"}, {"tol", "maxiter", "offset", "accelerate", "quantile"}),
-        # fepois: demeaner + iwls + separation_check + offset; no accelerate, no quantile
+        # feols: the shared options only, with the configured demeaner
+        (
+            "feols",
+            {"demeaner": MapDemeaner(fixef_tol=1e-3)},
+            EstimationOptions,
+            {"demeaner": MapDemeaner(fixef_tol=1e-3), "offset": None},
+        ),
+        # fepois: the IRLS options, the offset, and the user's `accelerate`.
         (
             "fepois",
-            {"demeaner", "tol", "maxiter", "separation_check", "offset"},
-            {"accelerate", "quantile"},
+            {**_GLM_OVERRIDES, "offset": "X2"},
+            GlmEstimationOptions,
+            {
+                "demeaner": MapDemeaner(fixef_tol=1e-3),
+                "offset": "X2",
+                "tol": 1e-7,
+                "maxiter": 13,
+                "separation_check": ["fe"],
+                "accelerate": False,
+            },
         ),
-        # feglm-logit: demeaner + iwls + separation_check + accelerate; no offset, no quantile
+        # feglm-logit: the IRLS options, including the user's `accelerate`.
+        # `feglm()` rejects an offset for every family but poisson, so the
+        # config of a non-Poisson GLM never carries one.
         (
             "feglm-logit",
-            {"demeaner", "tol", "maxiter", "separation_check", "accelerate"},
-            {"offset", "quantile"},
+            _GLM_OVERRIDES,
+            GlmEstimationOptions,
+            {
+                "demeaner": MapDemeaner(fixef_tol=1e-3),
+                "offset": None,
+                "tol": 1e-7,
+                "maxiter": 13,
+                "separation_check": ["fe"],
+                "accelerate": False,
+            },
         ),
-        # quantreg: quantile knobs only; no demeaner, no iwls, no separation_check
+        # quantreg: the solver options of the quantile fit
         (
             "quantreg",
-            {"quantile", "method", "quantile_tol", "quantile_maxiter", "seed"},
-            {"demeaner", "tol", "maxiter", "separation_check", "offset", "accelerate"},
+            _QUANTREG_OVERRIDES,
+            QuantregEstimationOptions,
+            {
+                "quantile": 0.5,
+                "method": "pfn",
+                "quantile_tol": 1e-5,
+                "quantile_maxiter": 7,
+                "seed": 42,
+            },
         ),
     ],
 )
-def test_model_kwargs_filtered_by_method(method, must_have, must_not_have):
-    """`expand_specs` only threads kwargs the model class consumes."""
+def test_options_are_built_for_the_method(method, overrides, options_cls, expected):
+    """`expand_specs` builds the options value the model class takes."""
     data = pf.get_data()
-    # quantreg needs a quantile value
-    overrides = {"quantile": 0.5} if method.startswith("quantreg") else {}
     cfg = _config(method, "Y ~ X1", data, **overrides)
     fd = _parse(cfg.fml)
     specs = expand_specs(
@@ -265,11 +315,112 @@ def test_model_kwargs_filtered_by_method(method, must_have, must_not_have):
         splitvar=None,
         captured_context={},
     )
+    options = specs[0].model_kwargs["options"]
+    assert type(options) is options_cls
+    for name, value in expected.items():
+        assert getattr(options, name) == value, f"{method}: {name}"
+
+
+def test_fepois_and_feglm_poisson_honor_accelerate():
+    """`accelerate=False` must reach the fitted model, not just `fepois()`'s default.
+
+    Regression test: the `fepois` and `feglm-poisson` calls share the
+    `"fepois"` planner entry, which used to hard-code `accelerate=True` for
+    that entry regardless of what the caller asked for — silently ignoring
+    an explicit `accelerate=False` passed through either `fepois()` or
+    `feglm(family="poisson")`.
+    """
+    data = pf.get_data(model="Fepois")
+
+    fit_default = pf.fepois("Y ~ X1 + X2 | f1", data)
+    assert fit_default.options.accelerate is True
+
+    fit_fepois = pf.fepois("Y ~ X1 + X2 | f1", data, accelerate=False)
+    assert fit_fepois.options.accelerate is False
+
+    fit_feglm = pf.feglm("Y ~ X1 + X2 | f1", data, family="poisson", accelerate=False)
+    assert fit_feglm.options.accelerate is False
+
+
+def test_options_object_is_shared_across_multiple_estimation():
+    """`expand_specs` builds one options object and shares it across every spec.
+
+    Guards the options-at-boundary refactor's core invariant: a
+    multi-estimation call (here, multiple LHS combined with `csw()`) must
+    not rebuild or mutate the options per spec, since that could let option
+    values silently drift between the estimations it fans out.
+    """
+    data = pf.get_data()
+    cfg = _config("feols", "Y + Y2 ~ csw(X1, X2) | f1", data)
+    fd = _parse(cfg.fml)
+    specs = expand_specs(
+        config=cfg,
+        formula_dict=fd,
+        data=data,
+        splits=[_ALL_SAMPLE],
+        is_iv=False,
+        splitvar=None,
+        captured_context={},
+    )
+    assert len(specs) > 1
+    options = [spec.model_kwargs["options"] for spec in specs]
+    assert all(o is options[0] for o in options)
+
+
+def test_quantile_process_also_gets_the_quantile_list():
+    """`QuantregMulti` is handed the fan-out on top of the shared options."""
+    data = pf.get_data()
+    cfg = _config("quantreg_multi", "Y ~ X1", data, quantile=[0.25, 0.75])
+    fd = _parse(cfg.fml)
+    specs = expand_specs(
+        config=cfg,
+        formula_dict=fd,
+        data=data,
+        splits=[_ALL_SAMPLE],
+        is_iv=False,
+        splitvar=None,
+        captured_context={},
+    )
     kwargs = specs[0].model_kwargs
-    for key in must_have:
-        assert key in kwargs, f"{method} should have kwarg {key!r}"
-    for key in must_not_have:
-        assert key not in kwargs, f"{method} should not have kwarg {key!r}"
+    assert kwargs["quantile"] == [0.25, 0.75]
+    assert kwargs["multi_method"] == "cfm1"
+    # the process itself carries the first requested quantile
+    assert kwargs["options"].quantile == 0.25
+
+
+def test_quantile_process_children_get_distinct_quantiles_shared_options():
+    """Each child `Quantreg` in `QuantregMulti` carries its own quantile but
+    shares every other option, notably `seed`, so bootstrap-style draws stay
+    reproducible across the quantiles fit within one process.
+    """
+    data = pf.get_data()
+    cfg = _config(
+        "quantreg_multi",
+        "Y ~ X1",
+        data,
+        quantile=[0.25, 0.5, 0.75],
+        quantreg_method="pfn",
+        seed=7,
+    )
+    fd = _parse(cfg.fml)
+    specs = expand_specs(
+        config=cfg,
+        formula_dict=fd,
+        data=data,
+        splits=[_ALL_SAMPLE],
+        is_iv=False,
+        splitvar=None,
+        captured_context={},
+    )
+    model_kwargs = dict(specs[0].model_kwargs)
+    model_kwargs["lookup_demeaned_data"] = {}
+    process = QuantregMulti(**model_kwargs)
+
+    assert sorted(process.all_quantregs) == [0.25, 0.5, 0.75]
+    for q, child in process.all_quantregs.items():
+        assert child.options.quantile == q
+        assert child.options.seed == 7
+        assert child.options.method == "pfn"
 
 
 def test_cache_dicts_are_not_in_spec_kwargs():

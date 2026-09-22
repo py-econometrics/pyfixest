@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
-from pyfixest.estimation.internals.literals import (
-    HeteroVcovTypeOptions,
-    SolverOptions,
-)
+from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
@@ -33,7 +28,6 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import Ssc
 
 
 class Feglm(Feols):
@@ -67,63 +61,28 @@ class Feglm(Feols):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc: Ssc,
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        tol: float,
-        maxiter: int,
-        solver: SolverOptions,
+        *,
+        options: GlmEstimationOptions,
         family: GlmFamily,
-        demeaner: AnyDemeaner | None = None,
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
-        separation_check: list[str] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        accelerate: bool = True,
-        offset: str | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc=ssc,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
+            lookup_preconditioner=lookup_preconditioner,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
-            offset=offset,
         )
 
         _glm_input_checks(
-            drop_singletons=drop_singletons,
-            tol=tol,
-            maxiter=maxiter,
-        )
-
-        self.options = GlmEstimationOptions.extend(
-            self.options,
-            maxiter=maxiter,
-            tol=tol,
-            separation_check=separation_check,
-            accelerate=accelerate,
+            drop_singletons=options.drop_singletons,
+            tol=options.tol,
+            maxiter=options.maxiter,
         )
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
