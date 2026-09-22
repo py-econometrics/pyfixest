@@ -1,47 +1,35 @@
 ---
 name: change-verification
-description: Selects, runs, and reports the checks a pyfixest change requires. Use after an implementation stabilizes and before handing off any code, test, documentation, CI, or metadata change, and whenever a handoff message or PR body needs a verification report.
+description: Select, run, and report required checks for a pyfixest change before handoff or PR submission.
 ---
 
 # Verify a pyfixest change
 
-Test policy lives in `docs/developer/testing.md`; this skill is the procedure
-that applies its "Runtime tiers", "Selection matrix", and "Release contract"
-sections. Read those sections rather than the whole file.
+Input: the diff against the
+[resolved base](../../../docs/developer/git-and-pr-style.md#establish-the-base),
+including uncommitted and untracked changes. Output: verification evidence
+summarized in the handoff or PR.
 
-Input: the diff against the resolved base, established as described under
-"Establish the base" in `docs/developer/git-and-pr-style.md`. Output: the
-report below, written into the handoff message or PR body rather than a
-separate generated artifact.
+## Select and run checks
 
-## Procedure
+1. Classify every changed path with the
+   [Selection matrix](../../../docs/developer/testing.md#selection-matrix).
+   For documentation or workflow-metadata-only changes, follow those rows;
+   numerical suites and release-contract guidance do not apply.
+2. For code changes, read "Runtime tiers" and the commands needed for the
+   selected checks. Run targeted tests and changed-file lint/type checks while
+   editing, then the selected broader baseline once the implementation settles.
+3. For numerical changes or invariant refactors, read "Release contract".
+   Run it early for an invariant refactor and rerun after edits that can affect
+   results. Reuse a passing result after unrelated prose or metadata edits.
+   Investigate failures under that policy; do not relabel drift as intentional
+   merely to make the check pass.
+4. Reuse applicable evidence for the same code state. Defer required long
+   checks only under "Runtime tiers"; never defer failing checks or targeted
+   checks needed to resolve a material uncertainty.
 
-1. List every changed path against the resolved base and classify the change
-   with the "Selection matrix". Unknown or cross-cutting paths take the PR
-   baseline. For a change confined to the documentation or workflow-metadata
-   rows, the row is the whole procedure.
-2. For a refactor declared invariant, run the release contract first and on
-   every iteration; it is the cheapest check that can falsify the whole
-   change. A failure reclassifies the change as numerics, as "Release
-   contract" describes.
-3. While editing, run the targeted tests and the changed-file lint and type
-   checks for the touched seam. Once the implementation stabilizes, run the
-   selected broader baseline once.
-4. Assign each required long check to a local run or to exact-head CI. Defer
-   only under the conditions in "Runtime tiers", after the targeted checks pass,
-   never a failing check or a targeted check needed to understand unresolved
-   risk, and name the check, the reason for deferral, the destination, and the
-   head SHA under test.
-
-## Report
-
-For every applicable check record:
-
-- status: passed, failed, deferred, or not run;
-- the exact command and elapsed time;
-- for a deferred check, the reason, destination, and head SHA;
-- for the release contract, the passed case count or the skip reason.
-
-Do not claim implementation handoff while a required local check is
-unreported or failing, and do not claim merge readiness until all required
-merge evidence has passed on the exact head.
+Report using
+[Verification reporting](../../../docs/developer/testing.md#verification-reporting).
+Required local checks must pass and be reported before implementation handoff;
+all required merge evidence must pass on the exact head before claiming merge
+readiness.
