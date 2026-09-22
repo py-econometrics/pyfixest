@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import warnings
 from dataclasses import replace
 from importlib import import_module
@@ -1491,23 +1492,104 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        from pyfixest.estimation.post_estimation.decomposition import _run_decompose
+        from pyfixest.estimation.post_estimation.decomposition import (
+            _decompose_arg_check,
+            _run_decompose,
+        )
 
-        return _run_decompose(
-            model=self,
-            param=param,
-            x1_vars=x1_vars,
-            decomp_var=decomp_var,
+        if not self.capabilities.decomposition:
+            raise NotImplementedError(
+                "Decomposition is currently only supported for regression models "
+                "estimated via feols()."
+            )
+
+        has_param = param is not None
+        has_decomp = decomp_var is not None
+
+        if not has_param and not has_decomp:
+            raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+
+        if has_param and has_decomp:
+            raise ValueError(
+                "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+            )
+
+        if has_param:
+            warnings.warn(
+                "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+                UserWarning,
+            )
+            decomp_var = param
+
+        if x1_vars is not None:
+            if isinstance(x1_vars, str):
+                x1_vars = [x.strip() for x in x1_vars.split("+")]
+            else:
+                x1_vars = list(x1_vars)
+
+        _decompose_arg_check(
             type=type,
-            cluster=cluster,
+            has_weights=self.options.has_weights,
+            weights_type=self.options.weights_type,
+            is_iv=self._is_iv,
+            method=self._method,
+            only_coef=only_coef,
+        )
+
+        require_retained(self, "decompose", "within_data", "observation_weights")
+        if (
+            self._has_fixef
+            or cluster is not None
+            or self.variance_covariance.spec.is_clustered
+        ):
+            require_retained(self, "decompose", "_data")
+
+        nthreads_int = -1 if nthreads is None else nthreads
+
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+
+        if agg_first is None:
+            agg_first = combine_covariates is not None
+
+        cluster_df: pd.Series | None = None
+        if cluster is not None:
+            cluster_df = self._data[cluster]
+        elif self.variance_covariance.spec.is_clustered:
+            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
+        else:
+            cluster_df = None
+
+        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
+
+        if combine_covariates is not None:
+            for key, value in combine_covariates.items():
+                if isinstance(value, re.Pattern):
+                    matched = [x for x in xnames if value.search(x)]
+                    if len(matched) == 0:
+                        raise ValueError(f"No covariates match the regex {value}.")
+                    combine_covariates[key] = matched
+
+        med = _run_decompose(
+            Y=Y,
+            X=X,
+            xnames=xnames,
+            depvarname=self._depvar,
+            cluster_df=cluster_df,
+            nthreads=nthreads_int,
             combine_covariates=combine_covariates,
-            reps=reps,
-            seed=seed,
-            nthreads=nthreads,
             agg_first=agg_first,
             only_coef=only_coef,
-            digits=digits,
+            decomp_var=cast(str, decomp_var),
+            x1_vars=x1_vars,
+            observation_weights=self.observation_weights,
+            sample_info=self.sample_info,
+            rng=rng,
+            reps=reps,
         )
+        self.GelbachDecompositionResults = med
+        return med
 
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
