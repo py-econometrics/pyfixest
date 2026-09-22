@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 import numpy as np
 import pandas as pd
 
 DidEstimator = Literal["did2s", "twfe", "saturated"]
+CohortEventTimes = Mapping[str, Mapping[str, Any]]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45,6 +47,11 @@ class DidDesign:
         Whether the average treatment effect on the treated was estimated
         instead of the canonical event study with all leads and lags, or
         `None` as for `idname`.
+    cohort_event_times : Mapping[str, Mapping[str, Any]] or None
+        Cohort-specific event-study curves of the `"saturated"` estimator,
+        keyed by treatment cohort. Each value holds the tidy coefficient table
+        of that cohort (`"est"`) and its event times (`"time"`). `None` for
+        the other estimators.
 
     Examples
     --------
@@ -71,6 +78,7 @@ class DidDesign:
     gname: str | None = None
     xfml: str | None = None
     att: bool | None = None
+    cohort_event_times: CohortEventTimes | None = None
 
 
 class DidFit(Protocol):

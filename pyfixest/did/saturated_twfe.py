@@ -3,8 +3,7 @@ from __future__ import annotations
 import functools
 import re
 import warnings
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Any, Protocol, cast
 
 import numpy as np
@@ -15,69 +14,8 @@ from pyfixest.estimation import feols
 from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
 
-from .did import DidDesign, DidFit
+from .did import CohortEventTimes, DidDesign, DidFit
 from .did2s import DID
-
-CohortEventTimes = Mapping[str, Mapping[str, Any]]
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class EventStudyDesign(DidDesign):
-    """Event-study design a fitted saturated event study was estimated on.
-
-    Extends [DidDesign](/reference/did.did.DidDesign.qmd) with the
-    cohort-specific effect curves that only the saturated estimator produces.
-    Published by [event_study()](/reference/did.estimation.event_study.qmd)
-    with `estimator="saturated"` as both `fit.did_design`, the design every DiD
-    wrapper records, and `fit.event_study_design`, the accessor the saturated
-    post-estimation methods read. It is the only record of the design the
-    fitted model retains; the generic fitted-model classes carry no DiD state.
-
-    Parameters
-    ----------
-    idname : str
-        Name of the unit identifier variable.
-    tname : str
-        Name of the calendar-period variable.
-    gname : str
-        Name of the variable holding the unit-specific period of initial
-        treatment.
-    att : bool
-        Whether the average treatment effect on the treated was estimated
-        instead of the canonical event study with all leads and lags.
-    cohort_event_times : Mapping[str, Mapping[str, Any]]
-        Cohort-specific event-study curves, keyed by treatment cohort. Each
-        value holds the tidy coefficient table of that cohort (`"est"`) and
-        its event times (`"time"`).
-
-    Notes
-    -----
-    A saturated event study always knows its complete panel design, so the
-    four fields above narrow the optional ones of `DidDesign`.
-
-    Examples
-    --------
-    ```{python}
-    import pyfixest as pf
-
-    fit = pf.event_study(
-        pf.get_motherhood_event_study_data(),
-        yname="log_earnings",
-        idname="unit",
-        tname="year",
-        gname="g",
-        estimator="saturated",
-    )
-    design = fit.event_study_design
-    design.gname, sorted(design.cohort_event_times)
-    ```
-    """
-
-    idname: str
-    tname: str
-    gname: str
-    att: bool
-    cohort_event_times: CohortEventTimes
 
 
 class _SaturatedEventStudyFit(DidFit, Protocol):
@@ -88,21 +26,28 @@ class _SaturatedEventStudyFit(DidFit, Protocol):
     as `Feols._bind_report_methods` publishes the reporting methods.
     """
 
-    event_study_design: EventStudyDesign
     iplot: Callable[..., None]
     iplot_aggregate: Callable[..., None]
     aggregate: Callable[..., pd.DataFrame]
     test_treatment_heterogeneity: Callable[..., WaldTest]
 
 
-def _publish_saturated_event_study(fit: Feols, design: EventStudyDesign) -> Feols:
+def _publish_saturated_event_study(
+    fit: Feols,
+    design: DidDesign,
+    cohort_event_times: CohortEventTimes,
+    gname: str,
+) -> Feols:
     """Publish the event-study design and its post-estimation methods on a fit."""
     published = cast("_SaturatedEventStudyFit", fit)
     published.did_design = design
-    published.event_study_design = design
-    published.iplot = _as_method(_iplot_cohort_event_study, design)
-    published.aggregate = _as_method(_aggregate_by_period, fit, design)
-    published.iplot_aggregate = _as_method(_iplot_aggregate_by_period, fit, design)
+    published.iplot = _as_method(_iplot_cohort_event_study, cohort_event_times)
+    published.aggregate = _as_method(
+        _aggregate_by_period, fit, cohort_event_times, gname
+    )
+    published.iplot_aggregate = _as_method(
+        _iplot_aggregate_by_period, fit, cohort_event_times, gname
+    )
     published.test_treatment_heterogeneity = _as_method(
         _test_treatment_heterogeneity, fit
     )
@@ -216,18 +161,18 @@ class SaturatedEventStudy(DID):
         -------
         Feols
             The fitted Feols model object. It publishes the event-study design
-            as `event_study_design` and the saturated post-estimation methods
+            as `did_design` and the saturated post-estimation methods
             `aggregate()`, `iplot_aggregate()`, `iplot()`, and
             `test_treatment_heterogeneity()`.
         """
-        self.mod, cohort_event_times = _saturated_event_study(
+        self.mod, self._cohort_event_times = _saturated_event_study(
             self._data,
             outcome=self._yname,
             time_id=self._tname,
             unit_id=self._idname,
             cluster=self._cluster,
         )
-        self._design = EventStudyDesign(
+        design = DidDesign(
             estimator="saturated",
             yname=self._yname,
             cluster=self._cluster,
@@ -236,10 +181,15 @@ class SaturatedEventStudy(DID):
             gname=self._gname,
             xfml=self._xfml,
             att=self._att,
-            cohort_event_times=cohort_event_times,
+            cohort_event_times=self._cohort_event_times,
         )
 
-        return _publish_saturated_event_study(self.mod, self._design)
+        return _publish_saturated_event_study(
+            fit=self.mod,
+            design=design,
+            cohort_event_times=self._cohort_event_times,
+            gname=self._gname,
+        )
 
     # !TODO - implement the rest of the methods
     def vcov(self):
@@ -255,7 +205,7 @@ class SaturatedEventStudy(DID):
 
     def iplot(self):
         """Plot DID estimates."""
-        _iplot_cohort_event_study(self._design)
+        _iplot_cohort_event_study(self._cohort_event_times)
 
     def tidy(self):
         """Tidy result dataframe."""
@@ -302,7 +252,11 @@ class SaturatedEventStudy(DID):
             t value, p value, and the bounds of the 95% confidence interval.
         """
         return _aggregate_by_period(
-            self.mod, self._design, agg=agg, weighting=weighting
+            self.mod,
+            self._cohort_event_times,
+            self._gname,
+            agg=agg,
+            weighting=weighting,
         )
 
     def iplot_aggregate(self, agg="period", weighting: str | None = "shares"):
@@ -323,12 +277,19 @@ class SaturatedEventStudy(DID):
         -------
         None
         """
-        _iplot_aggregate_by_period(self.mod, self._design, agg=agg, weighting=weighting)
+        _iplot_aggregate_by_period(
+            self.mod,
+            self._cohort_event_times,
+            self._gname,
+            agg=agg,
+            weighting=weighting,
+        )
 
 
 def _aggregate_by_period(
     fit: Feols,
-    design: EventStudyDesign,
+    cohort_event_times: CohortEventTimes,
+    gname: str,
     agg: str = "period",
     weighting: str | None = "shares",
 ) -> pd.DataFrame:
@@ -357,7 +318,7 @@ def _aggregate_by_period(
     if weighting not in ["shares"]:
         raise ValueError("weighting must be 'shares'.")
 
-    cohort_event_dict = design.cohort_event_times
+    cohort_event_dict = cohort_event_times
     cohort_list = list(cohort_event_dict.keys())
     period_set = sorted(
         set(t for x in cohort_list for t in cohort_event_dict[x]["time"].tolist())
@@ -370,10 +331,10 @@ def _aggregate_by_period(
     if weighting == "shares":
         weights_df = compute_period_weights(
             data=fit._data,
-            cohort=design.gname,
+            cohort=gname,
             period="rel_time",
             treatment="is_treated",
-        ).set_index([design.gname, "rel_time"])
+        ).set_index([gname, "rel_time"])
 
     treated_periods = list(period_set)
 
@@ -407,7 +368,7 @@ def _aggregate_by_period(
     return df_agg
 
 
-def _iplot_cohort_event_study(design: EventStudyDesign) -> None:
+def _iplot_cohort_event_study(cohort_event_times: CohortEventTimes) -> None:
     """Plot the cohort-specific event study estimates."""
     import matplotlib.pyplot as plt
 
@@ -415,7 +376,7 @@ def _iplot_cohort_event_study(design: EventStudyDesign) -> None:
 
     _, ax = plt.subplots(figsize=(10, 6))
 
-    for cohort, values in design.cohort_event_times.items():
+    for cohort, values in cohort_event_times.items():
         time = np.array(values["time"], dtype=float)
         est = values["est"]["Estimate"].astype(float).values
         ci_lower = values["est"]["2.5%"].astype(float).values
@@ -435,7 +396,8 @@ def _iplot_cohort_event_study(design: EventStudyDesign) -> None:
 
 def _iplot_aggregate_by_period(
     fit: Feols,
-    design: EventStudyDesign,
+    cohort_event_times: CohortEventTimes,
+    gname: str,
     agg: str = "period",
     weighting: str | None = "shares",
 ) -> None:
@@ -458,7 +420,9 @@ def _iplot_aggregate_by_period(
     """
     import matplotlib.pyplot as plt
 
-    df_agg = _aggregate_by_period(fit, design, agg=agg, weighting=weighting)
+    df_agg = _aggregate_by_period(
+        fit, cohort_event_times, gname, agg=agg, weighting=weighting
+    )
 
     time = np.array(df_agg.index, dtype=float).astype(float)
     est = df_agg["Estimate"].values.astype(float)

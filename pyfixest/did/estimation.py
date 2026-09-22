@@ -64,10 +64,8 @@ def event_study(
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd),
         carrying the [DidDesign](/reference/did.did.DidDesign.qmd) it was
         estimated on as `did_design`. With `estimator = "saturated"`, that
-        design is an
-        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd),
-        also available as `event_study_design`, and the fit provides the
-        `aggregate()`, `iplot_aggregate()`, `iplot()`, and
+        design also holds the cohort-specific event-time curves, and the fit
+        provides the `aggregate()`, `iplot_aggregate()`, `iplot()`, and
         `test_treatment_heterogeneity()` methods.
 
     Examples
