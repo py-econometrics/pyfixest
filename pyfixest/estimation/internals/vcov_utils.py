@@ -127,25 +127,42 @@ def prepare_cluster_state(
     )
 
 
-def cluster_ssc(
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ClusterSmallSampleCorrection:
+    """Result of ``get_ssc_cluster()``.
+
+    Attributes
+    ----------
+    adj : np.ndarray
+        Small-sample factor per cluster dimension. The two-way interaction
+        dimension carries the negative sign of the Cameron-Gelbach-Miller
+        combination.
+    df_k : int
+        Parameters counted by the ``k_adj`` adjustment.
+    df_t : int
+        Degrees of freedom of the t reference distribution: the smallest
+        ``G - 1`` over the dimensions.
+    """
+
+    adj: np.ndarray
+    df_k: int
+    df_t: int
+
+
+def get_ssc_cluster(
     *,
     prep: ClusterPrep,
-    ssc: Ssc,
+    ssc_options: Ssc,
     dof_counts: Callable[..., DegreesOfFreedomCounts],
-) -> tuple[np.ndarray, int, int]:
-    """Small-sample factors per cluster dimension, ``df_k``, and ``df_t``.
-
-    The factor of the two-way interaction dimension carries the negative
-    sign of the Cameron-Gelbach-Miller combination. ``df_t`` is the smallest
-    ``G - 1`` over the dimensions.
-    """
+) -> ClusterSmallSampleCorrection:
+    "Small-sample factors per cluster dimension, ``df_k``, and ``df_t``."
     vcov_sign_list = (1, 1, -1)
     ssc_arr = np.zeros(prep.n_dimensions)
     df_t_full = np.zeros(prep.n_dimensions)
     df_k = 0
     for x in range(prep.n_dimensions):
         correction = get_ssc(
-            ssc,
+            ssc_options,
             dof_counts(
                 G=prep.G[x],
                 k_fe_nested=prep.k_fe_nested,
@@ -156,7 +173,9 @@ def cluster_ssc(
         ssc_arr[x] = correction.adj * vcov_sign_list[x]
         df_k = correction.df_k
         df_t_full[x] = correction.df_t
-    return ssc_arr, df_k, int(np.min(df_t_full))
+    return ClusterSmallSampleCorrection(
+        adj=ssc_arr, df_k=df_k, df_t=int(np.min(df_t_full))
+    )
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):

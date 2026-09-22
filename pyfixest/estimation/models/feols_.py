@@ -4,7 +4,7 @@ import re
 import warnings
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 import formulaic
 import numpy as np
@@ -66,9 +66,10 @@ from pyfixest.estimation.internals.vcov_ import (
     vcov_iid_ols,
 )
 from pyfixest.estimation.internals.vcov_utils import (
+    ClusterSmallSampleCorrection,
     VcovTerm,
-    cluster_ssc,
     combine_terms,
+    get_ssc_cluster,
     prepare_cluster_state,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
@@ -93,6 +94,7 @@ from pyfixest.utils.dev_utils import (
 )
 from pyfixest.utils.utils import (
     DegreesOfFreedomCounts,
+    SmallSampleCorrection,
     get_ssc,
 )
 
@@ -592,6 +594,7 @@ class Feols(ResultAccessorMixin):
         # one unadjusted term per cluster dimension, and their combination.
         G: tuple[int, ...] = ()
         df_t: int | float
+        correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
@@ -607,9 +610,10 @@ class Feols(ResultAccessorMixin):
             )
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
-            ssc, df_k, df_t = cluster_ssc(
-                prep=prep, ssc=self.options.ssc, dof_counts=self._dof_counts
+            correction = get_ssc_cluster(
+                prep=prep, ssc_options=self.options.ssc, dof_counts=self._dof_counts
             )
+            ssc, df_k, df_t = correction.adj, correction.df_k, correction.df_t
             terms = [
                 self._vcov_crv_cluster(
                     clustid=clustid,
@@ -668,7 +672,7 @@ class Feols(ResultAccessorMixin):
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._k_fe.sum() if self._has_fixef else 0,
+            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
