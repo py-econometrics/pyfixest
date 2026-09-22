@@ -1958,12 +1958,76 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
-        from pyfixest.estimation.post_estimation.ritest import _run_ritest
+        from pyfixest.estimation.post_estimation.ritest import (
+            _decode_resampvar,
+            _run_ritest,
+        )
 
-        return _run_ritest(
-            model=self,
-            resampvar=resampvar,
+        resampvar = resampvar.replace(" ", "")
+        resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
+
+        if self._is_iv:
+            raise NotImplementedError(
+                "Randomization Inference is not supported for IV models."
+            )
+        if self._method not in {"feols", "fepois"}:
+            raise NotImplementedError(
+                "Randomization Inference is only supported for OLS and Poisson models."
+            )
+
+        # check that resampvar in _coefnames
+        if resampvar_ not in self._coefnames:
+            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
+
+        if self.options.has_weights:
+            raise NotImplementedError(
+                "\n"
+                "                Regression Weights are not supported with Randomization Inference.\n"
+                "                "
+            )
+
+        require_retained(self, "ritest", "_data")
+
+        if cluster is not None and cluster not in self._data:
+            raise ValueError(f"The variable {cluster} is not found in the data.")
+
+        clustervar_arr = (
+            self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
+        )
+
+        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+            raise ValueError(
+                "\n"
+                "            The cluster variable contains missing values. This is not allowed\n"
+                "            for randomization inference via `ritest()`.\n"
+                "            "
+            )
+
+        # update vcov if cluster provided but not in model
+        if cluster is not None and not self.variance_covariance.spec.is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        result = _run_ritest(
+            data=self._data,
+            fml=self._fml,
+            method=self._method,
+            coefnames=self._coefnames,
+            has_fixef=self._has_fixef,
+            fixef=self._fixef,
+            observation_weights=self.observation_weights,
+            sample_info=self.sample_info,
+            within_data=getattr(self, "within_data", None),
+            sample_coef=np.array(self.coef().xs(resampvar_)),
+            sample_tstat=np.array(self.tstat().xs(resampvar_)),
+            resampvar=resampvar_,
+            h0_value=h0_value,
+            hypothesis=hypothesis,
+            test_type=test_type,
             cluster=cluster,
+            clustervar_arr=clustervar_arr,
             reps=reps,
             type=type,
             rng=rng,
@@ -1971,6 +2035,9 @@ class Feols(ResultAccessorMixin):
             store_ritest_statistics=store_ritest_statistics,
             level=level,
         )
+        if result.statistics is not None:
+            self.ritest_statistics = result.statistics
+        return result.summary
 
     def plot_ritest(self, plot_backend="lets_plot"):
         """
