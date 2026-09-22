@@ -1775,15 +1775,54 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.prediction import _run_predict
 
+        if self._is_iv:
+            raise NotImplementedError(
+                "The predict() method is currently not supported for IV models."
+            )
+
+        if interval == "prediction" or se_fit:
+            if self._has_fixef:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with fixed effects."
+                )
+
+            if self.options.has_weights:
+                raise NotImplementedError(
+                    "Prediction errors are currently not supported for models with weights."
+                )
+
+        _validate_literal_argument(type, PredictionType)
+        if interval is not None:
+            _validate_literal_argument(interval, PredictionErrorOptions)
+
+        in_sample_design = self._prediction_design() if newdata is None else None
+        residuals = self.resid if se_fit or interval == "prediction" else None
+
+        def recover_fixef() -> FixedEffectEstimates:
+            require_retained(self, "predict", "_data")
+            self.fixef(atol, btol)
+            return self.fixef_estimates
+
         return _run_predict(
-            model=self,
             newdata=newdata,
-            atol=atol,
-            btol=btol,
             type=type,
             se_fit=se_fit,
             interval=interval,
             alpha=alpha,
+            has_fixef=self._has_fixef,
+            method=self._method,
+            options=self.options,
+            sample_info=self.sample_info,
+            fitted_values=self.fitted_values,
+            variance_covariance=getattr(self, "variance_covariance", None),
+            model_spec=getattr(self, "_model_spec", None),
+            coefnames=self._coefnames,
+            beta_hat=self._beta_hat,
+            k=self._k,
+            fixef_estimates=getattr(self, "fixef_estimates", None),
+            recover_fixef=recover_fixef,
+            in_sample_design=in_sample_design,
+            residuals=residuals,
         )
 
     def ritest(
