@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
 from scipy.sparse.linalg import lsqr
-from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
@@ -1220,131 +1219,17 @@ class Feols(ResultAccessorMixin):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
         """
-        if not self.capabilities.cluster_causal_variance:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is not supported for models "
-                f"of type '{self._method}'."
-            )
-        assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, (
-            "cluster must be a string or None."
+        from pyfixest.estimation.post_estimation.ccv import _run_ccv
+
+        return _run_ccv(
+            model=self,
+            treatment=treatment,
+            cluster=cluster,
+            seed=seed,
+            n_splits=n_splits,
+            pk=pk,
+            qk=qk,
         )
-        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
-        assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
-        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
-
-        if self._has_fixef:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is currently not supported for models with fixed effects."
-            )
-        if self.options.has_weights:
-            raise NotImplementedError(
-                "The causal cluster variance estimator is currently not supported for models with weights."
-            )
-
-        if treatment not in self._coefnames:
-            raise ValueError(
-                f"Variable {treatment} not found in the model's coefficients."
-            )
-
-        if cluster is None:
-            clustervar = self.variance_covariance.spec.clustervar
-            if not clustervar:
-                raise ValueError("No cluster variable found in the model fit.")
-            elif len(clustervar) > 1:
-                raise ValueError(
-                    "Multiway clustering is currently not supported with the causal cluster variance estimator."
-                )
-            else:
-                cluster = clustervar[0]
-
-        # check that cluster is in data
-        require_retained(self, "ccv", "_data", "within_data")
-        if cluster not in self._data.columns:
-            raise ValueError(
-                f"Cluster variable {cluster} not found in the data used for the model fit."
-            )
-
-        if not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
-            )
-            self.vcov({"CRV1": cluster})
-
-        if seed is None:
-            seed = np.random.randint(1, 100_000_000)
-        rng = np.random.default_rng(seed)
-
-        fml = self._fml
-        data = self._data
-        Y = self.within_data.response.flatten()
-        W = data[treatment].to_numpy()
-        assert np.all(np.isin(W, [0, 1])), (
-            "Treatment variable must be binary with values 0 and 1"
-        )
-        X = self.within_data.design
-        cluster_vec = data[cluster].to_numpy()
-        unique_clusters = np.unique(cluster_vec)
-
-        tau_full = np.array(self.coef().xs(treatment))
-
-        N = self.sample_info.n_obs
-        G = len(unique_clusters)
-
-        ccv_module = import_module("pyfixest.estimation.post_estimation.ccv")
-        _compute_CCV = ccv_module._compute_CCV
-
-        vcov_splits = 0.0
-        for _ in range(n_splits):
-            vcov_ccv = _compute_CCV(
-                fml=fml,
-                Y=Y,
-                X=X,
-                W=W,
-                rng=rng,
-                data=data,
-                treatment=treatment,
-                cluster_vec=cluster_vec,
-                pk=pk,
-                tau_full=tau_full,
-                demeaner=self.options.demeaner,
-            )
-            vcov_splits += vcov_ccv
-
-        vcov_splits /= n_splits
-        vcov_splits /= N
-
-        crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
-        vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
-
-        se = np.sqrt(vcov_ccv)
-        tstat = tau_full / se
-        df = G - 1
-        pvalue = 2 * (1 - t.cdf(np.abs(tstat), df))
-        alpha = 0.95
-        z = np.abs(t.ppf((1 - alpha) / 2, df))
-        z_se = z * se
-        conf_int = np.array([tau_full - z_se, tau_full + z_se])
-
-        res_ccv_dict: dict[str, float | np.ndarray] = {
-            "Estimate": tau_full,
-            "Std. Error": se,
-            "t value": tstat,
-            "Pr(>|t|)": pvalue,
-            "2.5%": conf_int[0],
-            "97.5%": conf_int[1],
-        }
-
-        res_ccv = pd.Series(res_ccv_dict)
-
-        res_ccv.name = "CCV"
-
-        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
-        res_crv1.name = "CRV1"
-
-        return pd.concat([res_ccv, res_crv1], axis=1).T
 
     def _model_matrix_one_hot(
         self, output="numpy"
