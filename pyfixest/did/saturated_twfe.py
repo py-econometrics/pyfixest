@@ -32,13 +32,10 @@ class _SaturatedEventStudyFit(DidFit, Protocol):
     test_treatment_heterogeneity: Callable[..., WaldTest]
 
 
-def _publish_saturated_event_study(
-    fit: Feols,
-    design: DidDesign,
-    cohort_event_times: CohortEventTimes,
-    gname: str,
-) -> Feols:
+def _publish_saturated_event_study(fit: Feols, design: DidDesign) -> Feols:
     """Publish the event-study design and its post-estimation methods on a fit."""
+    cohort_event_times, gname = design.cohort_event_times, design.gname
+    assert cohort_event_times is not None and gname is not None  # set by estimate()
     published = cast("_SaturatedEventStudyFit", fit)
     published.did_design = design
     published.iplot = _as_method(_iplot_cohort_event_study, cohort_event_times)
@@ -165,7 +162,7 @@ class SaturatedEventStudy(DID):
             `aggregate()`, `iplot_aggregate()`, `iplot()`, and
             `test_treatment_heterogeneity()`.
         """
-        self.mod, self._cohort_event_times = _saturated_event_study(
+        self.mod, cohort_event_times = _saturated_event_study(
             self._data,
             outcome=self._yname,
             time_id=self._tname,
@@ -181,15 +178,14 @@ class SaturatedEventStudy(DID):
             gname=self._gname,
             xfml=self._xfml,
             att=self._att,
-            cohort_event_times=self._cohort_event_times,
+            cohort_event_times=cohort_event_times,
         )
 
-        return _publish_saturated_event_study(
-            fit=self.mod,
-            design=design,
-            cohort_event_times=self._cohort_event_times,
-            gname=self._gname,
-        )
+        return _publish_saturated_event_study(fit=self.mod, design=design)
+
+    def _published_fit(self) -> _SaturatedEventStudyFit:
+        """Return the fitted model with its published post-estimation methods."""
+        return cast("_SaturatedEventStudyFit", self.mod)
 
     # !TODO - implement the rest of the methods
     def vcov(self):
@@ -205,7 +201,7 @@ class SaturatedEventStudy(DID):
 
     def iplot(self):
         """Plot DID estimates."""
-        _iplot_cohort_event_study(self._cohort_event_times)
+        self._published_fit().iplot()
 
     def tidy(self):
         """Tidy result dataframe."""
@@ -229,7 +225,7 @@ class SaturatedEventStudy(DID):
             The chi2 test statistic of the joint null of no heterogeneity and
             its p-value.
         """
-        return _test_treatment_heterogeneity(self.mod)
+        return self._published_fit().test_treatment_heterogeneity()
 
     def aggregate(self, agg="period", weighting: str | None = "shares") -> pd.DataFrame:
         """
@@ -251,13 +247,7 @@ class SaturatedEventStudy(DID):
             The aggregated estimate per event time, with standard error,
             t value, p value, and the bounds of the 95% confidence interval.
         """
-        return _aggregate_by_period(
-            self.mod,
-            self._cohort_event_times,
-            self._gname,
-            agg=agg,
-            weighting=weighting,
-        )
+        return self._published_fit().aggregate(agg=agg, weighting=weighting)
 
     def iplot_aggregate(self, agg="period", weighting: str | None = "shares"):
         """
@@ -277,13 +267,7 @@ class SaturatedEventStudy(DID):
         -------
         None
         """
-        _iplot_aggregate_by_period(
-            self.mod,
-            self._cohort_event_times,
-            self._gname,
-            agg=agg,
-            weighting=weighting,
-        )
+        self._published_fit().iplot_aggregate(agg=agg, weighting=weighting)
 
 
 def _aggregate_by_period(
