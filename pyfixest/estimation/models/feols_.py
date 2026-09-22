@@ -1221,15 +1221,92 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.ccv import _run_ccv
 
-        return _run_ccv(
-            model=self,
+        if not self.capabilities.cluster_causal_variance:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is not supported for models "
+                f"of type '{self._method}'."
+            )
+        assert isinstance(treatment, str), "treatment must be a string."
+        assert isinstance(cluster, str) or cluster is None, (
+            "cluster must be a string or None."
+        )
+        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
+        assert isinstance(n_splits, int), "n_splits must be an integer."
+        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
+        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
+
+        if self._has_fixef:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is currently not supported for models with fixed effects."
+            )
+        if self.options.has_weights:
+            raise NotImplementedError(
+                "The causal cluster variance estimator is currently not supported for models with weights."
+            )
+
+        if treatment not in self._coefnames:
+            raise ValueError(
+                f"Variable {treatment} not found in the model's coefficients."
+            )
+
+        if cluster is None:
+            clustervar = self.variance_covariance.spec.clustervar
+            if not clustervar:
+                raise ValueError("No cluster variable found in the model fit.")
+            elif len(clustervar) > 1:
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the causal cluster variance estimator."
+                )
+            else:
+                cluster = clustervar[0]
+
+        # check that cluster is in data
+        require_retained(self, "ccv", "_data", "within_data")
+        if cluster not in self._data.columns:
+            raise ValueError(
+                f"Cluster variable {cluster} not found in the data used for the model fit."
+            )
+
+        if not self.variance_covariance.spec.is_clustered:
+            warnings.warn(
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+            )
+            self.vcov({"CRV1": cluster})
+
+        if seed is None:
+            seed = np.random.randint(1, 100_000_000)
+        rng = np.random.default_rng(seed)
+
+        fml = self._fml
+        data = self._data
+        W = data[treatment].to_numpy()
+        assert np.all(np.isin(W, [0, 1])), (
+            "Treatment variable must be binary with values 0 and 1"
+        )
+        cluster_vec = data[cluster].to_numpy()
+
+        tau_full = np.array(self.coef().xs(treatment))
+
+        res_ccv = _run_ccv(
+            fml=fml,
+            data=data,
+            W=W,
             treatment=treatment,
-            cluster=cluster,
-            seed=seed,
+            cluster_vec=cluster_vec,
+            tau_full=tau_full,
+            rng=rng,
             n_splits=n_splits,
             pk=pk,
             qk=qk,
+            within_data=self.within_data,
+            sample_info=self.sample_info,
+            variance_covariance=self.variance_covariance,
+            coefnames=self._coefnames,
+            demeaner=self.options.demeaner,
         )
+        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
+        res_crv1.name = "CRV1"
+        return pd.concat([res_ccv, res_crv1], axis=1).T
 
     def _model_matrix_one_hot(
         self, output="numpy"
