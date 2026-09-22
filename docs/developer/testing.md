@@ -12,12 +12,14 @@ may not have the compiled extension or the right optional dependencies.
 - [Commands](#commands): the `pixi run` tasks for each stage
 - [Selection matrix](#selection-matrix): which checks each kind of change
   requires
-- [Release contract](#release-contract): the pinned-release regression alarm,
-  its baseline, and declared differences
+- [Verification reporting](#verification-reporting): concise evidence and status
+- [Release contract](#release-contract): regression checks and declared differences
 - [External numerical references](#external-numerical-references): reference
   preference order, rpy2 rules, and the [tolerance contract](#tolerance-contract)
 - [Test design](#test-design): controlling suite growth, error-path tests,
   fixtures, and edge coverage
+- [Release-baseline maintenance](#release-baseline-maintenance): recording and
+  rolling the pin
 
 ## Runtime tiers
 
@@ -40,9 +42,10 @@ Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
 `test-r-fixest-fast` instead. Once the design is stable, run the selected
 baseline once. A required long check may be deferred to exact-head CI at
 implementation handoff when a local run would add no diagnostic value and
-the report names the check, reason for deferral, destination, and head SHA.
-Deferred is never equivalent to passed, and the change is not merge-ready
-until all required merge evidence is green.
+targeted checks have passed, and the report follows "Verification reporting".
+Never defer a failing check or a targeted check needed to resolve a material
+uncertainty. The change is not merge-ready until all required merge evidence
+is green.
 
 `test-py` is the broad Python-only regression baseline. It does not compare
 results with R or another external implementation, so it cannot establish
@@ -75,7 +78,6 @@ pixi run test-py
 pixi run -e py312-r test-r-core
 pixi run -e py312-r test-r-fixest
 pixi run -e py312-r test-r-hac
-pixi run -e py312-r test-r-extended
 
 # All tests available in the current environment
 pixi run -e py312-r test-all
@@ -107,8 +109,8 @@ This matrix is authoritative for which checks a change requires.
 | Change | Required edit or handoff evidence | Merge or long evidence |
 |---|---|---|
 | Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
-| Content under `docs/` | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
-| Repository guidance or workflow metadata outside `docs/` | `git diff --check`; targeted skill, template, or configuration validation | affected CI workflow only; no docs build by default |
+| Rendered content under `docs/` (excluding `docs/developer/`) | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
+| Repository guidance (including `docs/developer/`) or workflow metadata | `git diff --check`; validate changed links and applicable skills, templates, or configuration | affected CI workflow only; no docs build or render |
 | Python API or internals | targeted public tests; changed-file lint/type checks | Python baseline |
 | Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint/type checks | Python baseline; applicable external suite for every estimator the refactor touches |
 | Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
@@ -124,72 +126,62 @@ selecting no tests.
 
 Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
 it is not a general Markdown validator. Do not run it for changes limited to
-`AGENTS.md`, `.agents/`, `.github/` templates, or contributor workflow metadata.
-For prose under `docs/`, prefer an affected-page render. Reserve the full
-`docs-render` task for changes that can affect the site broadly.
+`AGENTS.md`, `.agents/`, `docs/developer/`, `.github/` templates, or contributor
+workflow metadata. For rendered prose under `docs/`, prefer an affected-page
+render. Reserve the full `docs-render` task for changes that can affect the site
+broadly.
+
+## Verification reporting
+
+Account for every applicable check as **passed**, **failed**, **deferred**, or
+**not run**. Group successful checks in a concise sentence with recognizable
+suite names or test selections; link detailed output when available. Identify
+which results came from CI on the exact head. Do not count duplicate local and
+CI runs as independent evidence.
+
+Give exact commands and details for failures, deferrals, and checks not run:
+reason, unresolved risk, and, for deferrals, destination and head SHA. Include
+elapsed time when it explains a deferral or supports a runtime claim. For the
+release contract, always give the passed case count or skip reason; skipped
+comparisons are not passes. Deferred or merely scheduled CI is not a pass.
+
+Use this format in handoffs and PR bodies without a second checklist or a
+command-by-command success log. Required local checks must pass and be reported
+before implementation handoff. All required merge evidence must pass on the
+exact PR head before claiming merge readiness.
 
 ## Release contract
 
-`tests/test_release_contract.py` mirrors the structure of
-`tests/test_vs_fixest.py` — the same data fixtures, the same parametrization
-over the shared formula tuples in `tests/_feols_test_cases.py`, one test per
-estimator — but replaces the R reference with results recorded from a pinned
-pyfixest release. It is a fast regression alarm, not an external correctness
-oracle: a bug already present in the pinned release is recorded, not caught.
+`tests/test_release_contract.py` compares public estimator results with a
+pinned pyfixest release, using the same fixtures and shared formula matrix as
+its recorder. This is an invariance check, not an external correctness oracle:
+existing release bugs are recorded, not caught.
 
-The baseline is recorded by running that same test file under the release
-wheel, in the locked workspace in `tests/snapshots/release/`, so the two sides
-cannot describe different case matrices. `test-release-contract` records it on
-first use and reuses it afterwards; the recording is platform-local and
-gitignored, so every operating system and architecture compares against its own
-floating-point output. `test-py` picks the suite up once a baseline exists and
-skips it otherwise, so it never forces a recording. CI deliberately does not
-record a baseline, so the suite is local-only: it skips on every runner, and the
-canonical R suites remain the exact-head merge evidence. A fingerprint over the test file, the baseline module,
-the shared case lists, the release lockfile, and the platform invalidates it
-automatically. To record it without running the checkout's tests:
+`pixi run -e py312 test-release-contract` records a missing or stale baseline
+before testing. `test-py` runs these comparisons only when a valid baseline
+exists and skips the release-contract cases otherwise; it never records one.
+CI does not record a baseline, so these cases skip there and the canonical R
+suites remain the merge evidence. Only passed comparisons establish invariance.
 
-```bash
-pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
-```
+For an invariant refactor, run the contract early and after edits that can
+affect results. Reuse evidence after unrelated prose or metadata edits.
+Unexplained drift is a regression: fix it, or explicitly reclassify the change
+as numerics. An intentional change needs a `reason` in
+`tests/test_release_contract.py`, the applicable external comparison, and a
+changelog entry. Widen an individual `baseline.check(...)` or use
+`baseline.skip(...)` only for a documented behavior change since the pinned
+release, never simply to make a failure pass. The default comparison is near
+machine precision.
 
-The nested workspace's lockfile is format v7, like the checkout's own, so
-recording needs pixi 0.71.0 or newer, the same minimum as the rest of the
-repository. It deliberately avoids `--clean-env`, which pixi does not support
-on Windows; `scripts/record_release_baseline.py` guards the release import
-itself.
-
-The pinned release lives in one place, the `pyfixest` entry of
-`tests/snapshots/release/pixi.toml`. Roll it just after tagging a release --
-that is what brings back the comparisons the documented differences currently
-skip, and the skip list is shortest right then:
-
-```bash
-pixi run roll-release-baseline          # newest release tag in this checkout
-pixi run roll-release-baseline 0.61.0   # a specific release
-```
-
-The suite warns when a newer release tag exists than the pinned version.
-
-Comparisons use a near-machine-precision default. Widen a single
-`baseline.check(...)` call, or `baseline.skip(...)` a quantity, only for a
-behaviour change that post-dates the pinned release, and give the call an
-explicit `reason`; unexplained drift is a regression for human review, not a
-tolerance to raise. Change the pin in `tests/snapshots/release/pixi.toml` only
-through `roll-release-baseline`, for a deliberate roll to a stable release.
-
-The recording lives under the checkout root, so each worktree records its own
-baseline. When the suite fails after a change you intended as a pure refactor,
-the change is no longer a refactor: either fix the regression, or reclassify it
-as a numerics change. Declare the difference in
-`tests/test_release_contract.py` with a `reason`, add the external comparison
-the "Estimation or inference numerics" row requires, and record it in the
-changelog.
+For baseline setup, invalidation, or release rolls, read
+[Release-baseline maintenance](#release-baseline-maintenance).
 
 ## External numerical references
 
-Every new estimator requires a permanent comparison with existing software.
-Choose the reference in this order:
+Every new estimator requires a permanent comparison with existing software;
+numerical changes to existing estimators require one wherever overlapping
+software exists. Simulations, shape checks, and internal reimplementations do
+not substitute for external evidence. Choose the reference in this order:
 
 1. live R `fixest`, another established R package, or a well-established Python
    package available in a maintained environment;
@@ -288,3 +280,29 @@ than an entire vector and give each quantity its own tolerance. Cover singleton
 clusters, collinearity, tiny samples, invalid inputs, and every supported
 weights/FE/IV/multiple-estimation path. Unsupported paths must raise a specific
 informative error.
+
+## Release-baseline maintenance
+
+The recorder runs the same test file under the pinned release wheel in the
+locked workspace `tests/snapshots/release/`. Recordings are gitignored and local
+to each worktree and platform. A fingerprint of the test file, baseline module,
+shared case lists, release lockfile, and platform invalidates stale recordings.
+To record without running the checkout's tests:
+
+```bash
+pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
+```
+
+Recording requires pixi 0.71.0 or newer for the v7 lockfile. Do not add
+`--clean-env`, which pixi does not support on Windows;
+`scripts/record_release_baseline.py` guards the release import.
+
+The pin lives in the `pyfixest` entry of `tests/snapshots/release/pixi.toml`.
+Change it only through `roll-release-baseline`, for a deliberate roll to a
+stable release. Roll just after tagging a release, then reassess the declared
+differences; the suite warns when a newer release tag exists than the pin.
+
+```bash
+pixi run roll-release-baseline          # newest release tag in this checkout
+pixi run roll-release-baseline 0.61.0   # a specific release
+```

@@ -9,11 +9,6 @@ Preserve public behavior and numerical correctness while extending pyfixest.
 - [Stable core](#stable-core): the contracts that need design approval
 - [Estimator add-ons](#estimator-add-ons): where a new estimator lives
 - [Estimation flow](#estimation-flow): the shared pipeline diagram
-- [Current estimator-state lifecycle](#current-estimator-state-lifecycle):
-  status quo of in-place model mutation for
-  [linear and IV](#linear-and-iv-models),
-  [GLM, Poisson, and quantile](#glm-poisson-and-quantile-models) models, and
-  [shared caches and cleanup](#shared-caches-result-completion-and-cleanup)
 - [Formula-state and lifecycle boundaries](#formula-state-and-lifecycle-boundaries)
 - [Estimation-state vocabulary](#estimation-state-vocabulary): the terms new
   shared-core work must use
@@ -22,6 +17,7 @@ Preserve public behavior and numerical correctness while extending pyfixest.
 - [Repository map and extension seams](#repository-map-and-extension-seams)
 - [Result and numerical boundaries](#result-and-numerical-boundaries): the
   support-matrix requirement
+- [Public documentation](#public-documentation)
 - [Compatibility changes](#compatibility-changes)
 
 ## Design principles
@@ -46,8 +42,10 @@ The stable core contains:
 - fitted-result interfaces and multiple-estimation containers;
 - backend contracts and native kernels.
 
-Changes to these contracts affect multiple estimators and require maintainer
-design approval before implementation.
+Obtain maintainer design approval before changing these contracts, including
+expanding the core for one estimator. Implementation changes that preserve the
+contracts follow normal implementation and verification; they do not need a
+separate design approval.
 
 ## Estimator add-ons
 
@@ -96,111 +94,18 @@ shared estimator API
 `FixestMulti` is a container for fitted results. Numerical behavior belongs in
 the individual models and shared primitives, not in the container.
 
-## Current estimator-state lifecycle
-
-The fitted-model classes currently use themselves as both a work area and a
-result object. Several private attributes therefore change representation and
-numerical scale while a model is fitted. This section records that status quo;
-it is not a contract for new code.
-
-For linear models, the transformations are:
-
-```text
-formula-materialized scale
-  -> weighted fixed-effect projection
-within scale (original units; not premultiplied)
-  -> multiplication by sqrt(observation weights)
-solver scale
-```
-
-The word *weighted* has two distinct meanings in that sequence. Fixed-effect
-residualization uses the observation weights when computing group projections,
-but its output is still in the dependent variable's and covariates' original
-units. Only `wls_transform()` premultiplies those within-scale values by the
-square root of the weights.
-
-### Linear and IV models
-
-`Feols.prepare_model_matrix()` initially stores formula-materialized pandas
-objects in `_Y`, `_X`, `_fe`, `_weights_df`, and, for IV models, `_Z` and
-`_endogvar`. It also retains a copy of the response in `_Y_untransformed`.
-The subsequent stages reuse the same model object:
-
-| Stage | OLS fields | Additional IV fields | Representation and scale |
-|---|---|---|---|
-| `demean()` | `_Yd`, `_Xd` | `_Zd`, `_endogvard` | pandas DataFrames on within scale; the FE projection uses observation weights |
-| `to_array()` | `_Y`, `_X` are reassigned | `_Z` and `_endogvar` are reassigned | NumPy arrays; `_Y` and `_X` now hold within-scale values |
-| `drop_multicol_vars()` | `_X` may lose columns | `_Z` may lose columns | NumPy arrays on within scale; coefficient-name lists mutate in parallel |
-| `wls_transform()` | `_Y`, `_X` are reassigned again | `_Z` and `_endogvar` are reassigned again | NumPy arrays on solver scale, premultiplied by `sqrt(_weights)` |
-| solve | `_Z` aliases `_X`; fit products overwrite empty placeholders | IV cross-products and fit outputs replace placeholders | Solver-scale arrays remain attached to the fitted result |
-
-Consequently, the meaning of `_X`, `_Y`, and `_Z` cannot be inferred from
-their names or type annotations alone. OLS and IV `_u_hat` are also stored on
-solver scale; the public `resid()` accessor divides by `sqrt(_weights)` to
-return residuals in response units. Consumers such as leverage, covariance,
-fixed-effect recovery, and decomposition either expect solver-scale fields or
-undo the transform locally.
-
-The API currently accepts analytic weights (`aweights`) and frequency weights
-(`fweights`), not probability weights. Both weight types use the same weighted
-point-estimation transform. They differ in effective sample size and parts of
-inference: analytic weights use the number of retained rows, while frequency
-weights use the sum of the weights. Estimator-specific support limitations
-must remain explicit rather than being inferred from the array representation.
-
-### GLM, Poisson, and quantile models
-
-`Feglm` starts with formula-materialized DataFrames and converts `_Y`, `_X`,
-and `_fe` to arrays before IRLS. Each iteration creates a working response and
-working weights, performs a weighted FE projection, and solves a square-root-
-weighted least-squares problem. After the final iteration:
-
-- `_X` and `_Y` are replaced by the final solver-scale working design and
-  response;
-- `_weights`, which initially contains observation weights, is replaced by the
-  final IRLS weights and duplicated in `_irls_weights`;
-- `_u_hat` is the solver-scale working residual, while
-  `_u_hat_response` and `_u_hat_working` record two public residual domains;
-- `_scores`, `_scores_response`, and `_scores_working` similarly coexist on
-  different scales.
-
-`Fepois` must copy the observation weights before delegating to this GLM path
-because the inherited `_weights` field changes meaning. `Quantreg` does not
-support fixed effects or weights, but it still reassigns formula-materialized
-`_Y` and `_X` DataFrames to NumPy arrays before solving.
-
-### Shared caches, result completion, and cleanup
-
-For a multiple-estimation cache block, the runner gives each model a
-`DemeanCache` backed by the same mutable dictionaries. Its linear-model cache
-converts pandas inputs to arrays for demeaning, wraps the results in a
-DataFrame, stores that frame, and converts selected columns back to arrays in
-each model. The cache key is the retained-row index set because formulas in one
-cache block share fixed effects and observation weights. GLM iterations do not
-cache demeaned values because their working weights change; they share only a
-preconditioner cache.
-
-Model constructors also create many empty-array and `None` placeholders. The
-runner then mutates the model through preparation, fitting, covariance
-calculation, inference, performance statistics or IV first stages, and finally
-`_clear_attributes()`. `store_data=False` deletes `_data`; `lean=True` deletes
-the retained matrices and several fit products. The public `vcov()` method is
-intentionally in-place and remains a post-fit mutation boundary. User input is
-copied by default, with the documented `copy_data=False` path as the exception.
-
 ## Formula-state and lifecycle boundaries
 
 `ModelMatrix` builds the formula inputs and is also the formula state a fitted
 model retains. Missing, infinite, singleton, and other formula-level row filters
 run during construction; afterwards the instance is treated as read-only, and
 its dependent, independent, fixed-effect, IV, weight, and offset roles stay on
-formula scale. Models populate legacy attributes from it in one
-direction; later transformations produce separate within- or solver-scale
-arrays and do not change the role or representation of the retained formula
-state. Estimator-level filters that need the materialized design, such as GLM
-separation, call `ModelMatrix.without_rows()`, which returns a filtered copy
-whose `na_index` includes the dropped rows, so the canonical row sample and the
-demeaning-cache key stay aligned with the data that enter IRLS.
+formula scale. Later transformations produce separate within- or solver-scale
+arrays without changing the retained formula state. Estimator-level filters
+that need the materialized design, such as GLM separation, call
+`ModelMatrix.without_rows()`, which returns a filtered copy whose
+`dropped_row_index` includes the dropped rows, so the canonical row sample and
+the demeaning-cache key stay aligned with the data that enter IRLS.
 `store_data=False` and `lean=True` discard the formula state together with the
 other retained input state.
 
@@ -211,16 +116,19 @@ constructors only assemble configuration and child objects; for example,
 `QuantregMulti` prepares its children in `prepare_model_matrix`, not during
 construction.
 
-This is the representation foundation, not the final within/weight cleanup.
-The compatibility fields documented above still move through their established
-DataFrame, within-array, and solver-array states until the numerical primitives
-and inference consumers move to explicit within-scale inputs.
+`DemeanCache` shares named, read-only array entries within a multiple-estimation
+cache block. Its key is the dropped-row index set; the block shares fixed
+effects and observation weights. GLM iterations share a preconditioner cache,
+but do not cache demeaned values because their working weights change.
+
+After fitting, inference, and estimator-specific completion, `_clear_attributes()`
+applies the retention policy. Post-estimation paths use `require_retained` to
+fail informatively when required state was removed. The public `vcov()` method
+remains an explicitly in-place post-fit operation.
 
 ## Estimation-state vocabulary
 
-New shared-core work should name the transformation domain instead of relying
-on `_X`, `_Y`, `_Z`, or `_weights`. The immutable-state refactor uses
-the following vocabulary:
+Name the transformation domain explicitly in shared-core work:
 
 | Term | Meaning |
 |---|---|
@@ -239,9 +147,9 @@ estimation fields.
 
 ## Implemented array and weight domains
 
-The shared linear and GLM paths now implement the vocabulary above with frozen,
-slotted state values. Frozen state prevents field rebinding, but contained NumPy
-arrays remain mutable unless they are explicitly marked read-only:
+The shared linear and GLM paths use frozen, slotted state values. Frozen state
+prevents field rebinding, but contained NumPy arrays remain mutable unless
+they are explicitly marked read-only:
 
 | State | Persisted contract |
 |---|---|
@@ -250,7 +158,7 @@ arrays remain mutable unless they are explicitly marked read-only:
 | `WithinLinearData` | Unpremultiplied within-scale response and design arrays. |
 | `WithinIvData` | Extends `WithinLinearData` with the instrument and endogenous arrays that only IV models carry. |
 | `GlmWorkingState` | Final within-scale working response and design, IRLS working weights, predictors, means, and response- and working-residual domains. |
-| `SandwichComponents` | Weighted scores, Hessian, and bread built by the OLS, 2SLS, and IRLS fit primitives; the vcov primitives read nothing else. The 2SLS fit scores the first-stage projection of the design, so every estimator shares one sandwich form. |
+| `SandwichComponents` | Weighted scores, Hessian, and bread built by the OLS, 2SLS, and IRLS fit primitives for covariance calculations. The 2SLS fit scores the first-stage projection of the design, so every estimator shares one sandwich form. |
 | `DemeanedData` | Array-native cache entries whose ordered column names are metadata rather than DataFrame conversions around each reuse. |
 
 Analytic weights keep the retained row count as the effective sample size;
@@ -270,9 +178,9 @@ working weights and the final values live in `GlmWorkingState`. Response
 residuals and working residuals likewise have separate fields.
 
 A post-estimation path states which estimators, weighting schemes, and design
-features it can represent, and rejects the rest. Declare support as a
-capability flag on the result class, check it before any estimation state is
-read, and raise `NotImplementedError` naming the unsupported combination.
+features it can represent, and rejects the rest. Declare support in the result's
+`Capabilities`, check it before reading estimation state, and raise
+`NotImplementedError` naming the unsupported combination.
 Reinterpreting one estimator's arrays as another estimator's domain, such as
 reading GLM working state or a quantile solver's output as linear-model arrays,
 is a silently wrong result rather than a fallback. A path whose refits cannot
@@ -284,37 +192,69 @@ returns its value instead of mutating the result in place.
 
 ## Repository map and extension seams
 
-Step-by-step recipes for estimators, post-estimation features, vcov types,
-estimation-time options, and Rust kernels live in
-[`AGENTS.md`](../../AGENTS.md) under "Wiring recipes". This table covers the
-remaining seams.
+Paths below are relative to `pyfixest/` unless shown otherwise.
 
 | Change | Primary location | Pattern to follow |
 |---|---|---|
+| Estimator API | `estimation/api/` or the domain package | nearest API/result pair; tests, exports, and quartodoc registration |
 | Model/result type | `estimation/models/<name>_.py` | nearest compatible result class |
+| Post-estimation | `estimation/post_estimation/` | `ritest.py` plus the thin `Feols.ritest` wrapper |
 | Shared numerical primitive | `estimation/internals/` | `fit_.py`, `vcov_.py`, or nearest analogue |
 | Formula behavior | `estimation/formula/` | existing parser/model-matrix seams |
-| DiD estimator | `pyfixest/did/` | nearest DiD API/result pair |
-| User documentation | `docs/` | nearest tutorial/how-to plus quartodoc registration |
+| Configuration and orchestration | `estimation/config.py`, `plan_.py`, `runner.py` | typed options and generic model hooks |
+| Demeaner configuration | `demeaners.py` | existing public configurations |
+| Rust kernel | `core/` and repository-root `src/` | `src/nw.rs` → `core/nw.py` |
+| DiD, reporting, utilities | `did/`, `report/`, `utils/` | nearest domain implementation |
+| Tests and user documentation | repository-root `tests/` and `docs/` | nearest test matrix and tutorial/how-to |
 
-Public estimation functions use one module per entry point. Model modules end in
-`_` so they do not shadow public functions. Compatibility shims in the
+Public estimation functions use one module per entry point. Model modules end
+in `_` so they do not shadow public functions. Compatibility shims in the
 `estimation/` root are not implementation locations.
+
+- **Vcov type:** literal in `internals/literals.py`, model validation and small
+  dispatch method, math in `internals/vcov_utils.py`, `internals/vcov_.py`, or
+  Rust, and wiring through `FixestMulti`/quantreg where supported. Follow NW/DK HAC.
+- **Estimation-time option:** shared typed alias in `internals/literals.py`, API
+  validation, `EstimationConfig`, and `plan_._build_model_kwargs`.
+- **Rust kernel:** implementation in `src/<topic>.rs`, registration in
+  `src/lib.rs`, stub in `core/_core_impl.pyi`, and wrapper in `core/`. Keep a
+  readable NumPy reference where feasible. Reserve Rust for measured,
+  non-vectorizable hot loops; use ordinary NumPy elsewhere.
+
+Reuse formula handling, `capture_context`, `_narwhals_to_pandas`, cluster
+preparation, `run_crv_loop`, and `_create_rng` rather than rederiving them.
 
 ## Result and numerical boundaries
 
 A model method validates inputs, unpacks model state, calls a module-level
 function with keyword arguments, and stores or returns the result. Numerical
 functions operate on arrays and return small typed dataclasses whose docstrings
-state array shapes.
+state array shapes. Keep functions single-purpose; splitting a solver loop
+should not obscure the algorithm or hurt compilation.
 
-Every estimator or inference feature specifies behavior for weights, fixed
-effects, IV, multiple estimation, `lean=True`, and `store_data=False`.
-Unsupported combinations fail explicitly. Silent fallback is never acceptable.
+Every estimator or inference feature specifies and tests behavior for
+`aweights`, `fweights`, fixed effects, IV, multiple estimation, `lean=True`,
+`store_data=False`, and relevant backends. Unsupported combinations fail
+explicitly. Post-estimation code must reject stripped-data paths it cannot
+support; silent fallback is never acceptable.
+
+## Public documentation
+
+Public functions, methods, and classes need NumPy docstrings with complete
+Parameters/Returns, an executable `{python}` example, root-relative `.qmd`
+links, and a linked paper for econometric methods. New public functions/classes
+need exports and quartodoc registration. User workflows usually need a
+`docs/how-to/` guide or an extension to the nearest guide; documentation ships
+with the feature.
+
+Add a one- or two-line `docs/changelog.qmd` entry for features, behavior/default
+changes, bug fixes, deprecations, performance changes, or new contributor
+tooling. Internal refactors, guidance edits, CI tweaks, and typo fixes need no
+entry. Never hand-edit generated `docs/reference/**`.
 
 ## Compatibility changes
 
 Fixest parity is the default. Record intentional differences in
 [fixest-compatibility.md](fixest-compatibility.md) with their rationale and
-tests. Public changes also require a changelog entry and, when compatibility
-cannot be preserved directly, a reviewed deprecation path.
+tests. When compatibility cannot be preserved directly, use a reviewed
+deprecation path.
