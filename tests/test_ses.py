@@ -1,8 +1,100 @@
 import numpy as np
+import pandas as pd
 import pytest
 
+from pyfixest.errors import MissingModelDataError
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
+
+
+@pytest.mark.parametrize(
+    "model,fml", [(feols, "y ~ x"), (feols, "y ~ x | fe"), (fepois, "y ~ x | fe")]
+)
+@pytest.mark.parametrize("vcov_type", ["CRV1", "CRV3"])
+def test_multiway_cluster_intersections(model, fml, vcov_type):
+    """Exercise the CRV loop with colliding string labels and refit paths."""
+    rng = np.random.default_rng(221)
+    groups = np.tile(np.indices((2, 3, 4)).reshape(3, -1), 8)
+    data = pd.DataFrame(
+        {
+            "a": np.array(["a-b", "a"])[groups[0]],
+            "b": np.array(["c", "b-c", "d"])[groups[1]],
+            "c": groups[2],
+            "fe": rng.integers(2, size=groups.shape[1]),
+            "x": rng.normal(size=groups.shape[1]),
+            "y": rng.poisson(4, size=groups.shape[1]),
+        }
+    )
+    original = data.copy(deep=True)
+    options = ssc(k_adj=False, G_adj=False)
+    fit = model(fml, data, vcov={vcov_type: "a+b+c"}, ssc=options)
+    expected = np.zeros_like(fit.variance_covariance.vcov)
+    # Explicit seven-term identity, independently encoded with tuple labels.
+    for columns, sign in [
+        ("a", 1),
+        ("b", 1),
+        ("c", 1),
+        ("ab", -1),
+        ("ac", -1),
+        ("bc", -1),
+        ("abc", 1),
+    ]:
+        reference_data = data.assign(
+            group=list(zip(*(data[c] for c in columns), strict=True))
+        )
+        reference = model(fml, reference_data, vcov={vcov_type: "group"}, ssc=options)
+        expected += sign * reference.variance_covariance.vcov
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        expected,
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="multiway inclusion-exclusion covariance",
+    )
+    if vcov_type == "CRV1":
+        bread = fit.sandwich.bread
+        np.testing.assert_allclose(
+            expected,
+            bread @ fit.variance_covariance.meat @ bread,
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="multiway sandwich meat",
+        )
+    fit.vcov({vcov_type: "c+b+a"})
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        expected,
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="cluster ordering",
+    )
+    pd.testing.assert_frame_equal(data, original)
+
+
+@pytest.mark.parametrize("storage", [{}, {"lean": True}, {"store_data": False}])
+def test_multiway_cluster_multiple_estimation_storage(storage):
+    data = get_data(N=500, seed=9289).dropna()
+    vcov = {"CRV1": "f1+f2+group_id"}
+    fits = feols("Y ~ sw(X1, X2) | f1", data, vcov=vcov, **storage).to_list()
+    for fit, regressor in zip(fits, ["X1", "X2"], strict=True):
+        reference = feols(f"Y ~ {regressor} | f1", data).vcov(vcov)
+        np.testing.assert_allclose(
+            fit.variance_covariance.vcov,
+            reference.variance_covariance.vcov,
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="multiway multiple estimation covariance",
+        )
+        np.testing.assert_allclose(
+            fit.pvalue(),
+            reference.pvalue(),
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="multiway retained inference",
+        )
+        if storage:
+            with pytest.raises(MissingModelDataError, match="vcov"):
+                fit.vcov(vcov)
 
 
 @pytest.mark.parametrize("seed", [3212, 3213, 3214])
