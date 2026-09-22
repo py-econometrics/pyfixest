@@ -1253,9 +1253,10 @@ def test_errors_quantreg(data):
     with pytest.raises(VcovTypeNotSupportedError):
         pf.quantreg("Y ~ X1", data=data, vcov={"CRV3": "f1"})
 
-    # error for two-way clustering
-    with pytest.raises(NotImplementedError):
-        pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": "f1+f2"})
+    # error for multiway clustering
+    for cluster in ("f1+f2", "f1+f2+group_id"):
+        with pytest.raises(NotImplementedError, match="Multiway clustering"):
+            pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": cluster})
 
     # error for quantile outside [0, 1]
     with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
@@ -1671,7 +1672,6 @@ def test_fixest_multi_rejects_savi_tidy_argument():
         ("HC4", None, ValueError, "vcov must be one of"),
         (["f1"], None, TypeError, "vcov must be a string or a dict"),
         ({"CRV2": "f1"}, None, ValueError, "exactly one key"),
-        ({"CRV1": "f1+f2+f3"}, None, ValueError, "two-way clustering"),
         ({"CRV1": 1}, None, TypeError, "must be a string"),
         ({"CRV1": "f1^f2"}, None, ValueError, "interaction"),
         ("NW", None, ValueError, "Missing required 'time_id'"),

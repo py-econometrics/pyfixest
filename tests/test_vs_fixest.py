@@ -1498,6 +1498,132 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("G_df", ["min", "conventional"])
+@pytest.mark.parametrize(
+    "model,fml,weights_type,n_clusters,k_fixef,adjust",
+    [
+        ("feols", "y ~ x", None, 3, "nonnested", True),
+        ("feols", "y ~ x", None, 4, "nonnested", False),
+        ("feols", "y ~ x | c1", "aweights", 3, "nonnested", True),
+        ("feols", "y ~ x | c1", "fweights", 4, "full", True),
+        ("feols", "y ~ x | fe", None, 3, "none", True),
+        ("feols", "y ~ x | fe", None, 4, "nonnested", True),
+        ("feols", "y ~ x | d ~ z", None, 3, "nonnested", True),
+        ("feols", "y ~ x | c1 | d ~ z", "aweights", 4, "nonnested", True),
+        ("feols", "y ~ x | c1 | d ~ z", "fweights", 3, "nonnested", True),
+        ("fepois", "count ~ x | c1", "aweights", 3, "nonnested", True),
+        ("fepois", "count ~ x | c1", "fweights", 4, "nonnested", True),
+        ("logit", "binary ~ x | c1", None, 3, "nonnested", True),
+        ("probit", "binary ~ x", None, 4, "nonnested", True),
+        ("gaussian", "y ~ x | c1", None, 3, "nonnested", True),
+    ],
+)
+def test_multiway_clustering_against_fixest(
+    G_df, model, fml, weights_type, n_clusters, k_fixef, adjust
+):
+    """Compare all CRV1 terms and inference, including weighted/IV/GLM paths."""
+    rng = np.random.default_rng(20260922)
+    n = 1200
+    data = pd.DataFrame(
+        {f"c{i}": rng.integers(g, size=n) for i, g in enumerate([12, 17, 23, 29], 1)}
+    )
+    data["fe"] = rng.integers(8, size=n)
+    data["x"] = rng.normal(size=n)
+    data["z"] = rng.normal(size=n)
+    data["d"] = data.z + rng.normal(size=n)
+    shock = sum(
+        rng.normal(scale=0.3, size=data[c].max() + 1)[data[c]]
+        for c in ["c1", "c2", "c3", "c4"]
+    )
+    eta = 0.2 + 0.3 * data.x + shock
+    data["y"] = eta + 0.4 * data.d + rng.normal(size=n)
+    data["count"] = rng.poisson(np.exp(eta))
+    data["binary"] = rng.binomial(1, 1 / (1 + np.exp(-eta)))
+    data["w"] = rng.integers(1, 4, size=n)
+    cluster = "+".join(f"c{i}" for i in range(1, n_clusters + 1))
+    kwargs = (
+        {} if weights_type is None else {"weights": "w", "weights_type": weights_type}
+    )
+    r_kwargs = {}
+    r_data = data
+    if weights_type == "aweights":
+        r_kwargs["weights"] = ro.Formula("~w")
+    elif weights_type == "fweights":
+        # fixest frequency weights are represented by literal row replication.
+        r_data = data.loc[data.index.repeat(data.w)].reset_index(drop=True)
+    if model in ("feols", "fepois"):
+        py_estimator, r_estimator = getattr(pf, model), getattr(fixest, model)
+    else:
+        py_estimator, r_estimator = pf.feglm, fixest.feglm
+        kwargs["family"] = model
+        if model == "gaussian":
+            # Gaussian inference follows OLS; see the compatibility ledger.
+            r_estimator = fixest.feols
+        else:
+            r_kwargs["family"] = stats.binomial(link=model)
+    fit = py_estimator(
+        fml,
+        data,
+        vcov={"CRV1": cluster},
+        ssc=ssc(k_adj=adjust, G_adj=adjust, k_fixef=k_fixef, G_df=G_df),
+        **kwargs,
+    )
+    r_fit = r_estimator(
+        ro.Formula(fml),
+        data=r_data,
+        # fixest 0.14.0 needs an explicit fourway type for four-variable formulas.
+        vcov=ro.Formula(("fourway" if n_clusters == 4 else "cluster") + "~" + cluster),
+        ssc=fixest.ssc(adjust, k_fixef, False, adjust, G_df, "min"),
+        **r_kwargs,
+    )
+    ro.globalenv["multiway_fit"] = r_fit
+    r_names = list(ro.r("names(coef(multiway_fit))"))
+    order = [
+        r_names.index({"Intercept": "(Intercept)", "d": "fit_d"}.get(name, name))
+        for name in fit.coef().index
+    ]
+    # Cluster reductions can differ in accumulation order; IRLS adds stopping
+    # error, so allow 1e-6 for GLM inference versus 1e-8 for linear fits.
+    inference_atol = 1e-8 if model == "feols" else 1e-6
+    np.testing.assert_allclose(
+        fit.coef(),
+        np.asarray(stats.coef(r_fit))[order],
+        rtol=0,
+        atol=1e-8,
+        err_msg="multiway coefficients",
+    )
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(order, order)],
+        rtol=0,
+        atol=inference_atol,
+        err_msg="multiway covariance",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        np.asarray(fixest.se(r_fit))[order],
+        rtol=0,
+        atol=inference_atol,
+        err_msg="multiway standard errors",
+    )
+    np.testing.assert_allclose(
+        fit.pvalue(),
+        np.asarray(fixest.pvalue(r_fit))[order],
+        rtol=0,
+        atol=inference_atol,
+        err_msg="multiway p-values",
+    )
+    assert fit.variance_covariance.df_k == int(
+        ro.r('attr(multiway_fit$cov.scaled, "df.K")')[0]
+    ), "multiway df_k"
+    assert fit.variance_covariance.df_t == int(
+        ro.r('attr(multiway_fit$cov.scaled, "df.t")')[0]
+    ), "multiway df_t"
+    assert fit.sample_info.n_obs == int(stats.nobs(r_fit)[0]), "multiway observations"
+    assert len(fit.variance_covariance.G) == 2**n_clusters - 1
+
+
+@pytest.mark.against_r_core
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()

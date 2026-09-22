@@ -69,15 +69,27 @@ fit_crv1 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "group_id"})
 fit_crv3 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV3": "group_id"})
 ```
 
-Multi-way clustering is supported as well:
+Multi-way clustering accepts any number of cluster variables separated by `+`:
 
 ```python
-fit_twoway = pf.feols(
+fit_multiway = pf.feols(
     "Y ~ X1 + X2 | f1",
-    data=data,
-    vcov={"CRV1": "f1 + f2"},
+    data=data.dropna(),
+    vcov={"CRV1": "f1 + f2 + group_id"},
 )
 ```
+
+CRV1 supports OLS, IV, and GLM fits, including their supported weights and fixed
+effects. CRV3 uses the same multi-way combination for OLS and Poisson fits;
+quantile regression supports only one cluster variable. You can also update a
+retained fit with `fit.vcov({"CRV1": "f1 + f2 + group_id"})`.
+
+Following [Cameron, Gelbach, and Miller (2011)](https://doi.org/10.1198/jbes.2010.07136),
+the covariance adds odd-order cluster intersections and subtracts even-order
+intersections. With `d` cluster variables this requires `2**d - 1` terms, so
+cost grows quickly with the number of dimensions, particularly for CRV3 refits.
+The default small-sample correction uses the smallest cluster count; see
+[small-sample corrections](/explanation/ssc.qmd) for other choices.
 
 ## 5. Which Level Should You Cluster On?
 

@@ -613,10 +613,6 @@ class VcovSpec:
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
             clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
-            if len(clustervar) > 2:
-                raise ValueError(
-                    f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
-                )
             if any("^" in x for x in clustervar):
                 raise ValueError(
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "
@@ -688,7 +684,7 @@ class VarianceCovariance:
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
         Small-sample adjustment factors. Length one, or one entry per cluster
-        dimension for CRV inference: three for two-way clustering.
+        combination for CRV inference: ``2**n_clusters - 1`` entries.
     df_k : int
         Number of parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
