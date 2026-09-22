@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import itertools
+import re
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -10,6 +13,13 @@ from numpy.typing import NDArray
 from scipy.sparse import diags, hstack, spmatrix, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
+
+from pyfixest.estimation.internals.retention import require_retained
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
+
+decomposition_type = Literal["gelbach"]
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -1057,3 +1067,124 @@ def _decompose_arg_check(
         )
 
     return None
+
+
+def _run_decompose(
+    model: Feols,
+    param: str | None = None,
+    x1_vars: list[str] | str | None = None,
+    decomp_var: str | None = None,
+    type: decomposition_type = "gelbach",
+    cluster: str | None = None,
+    combine_covariates: dict[str, list[str]] | None = None,
+    reps: int = 1000,
+    seed: int | None = None,
+    nthreads: int | None = None,
+    agg_first: bool | None = None,
+    only_coef: bool = False,
+    digits=4,
+) -> GelbachDecomposition:
+    """Run the fitted-model post-estimation operation."""
+    if not model.capabilities.decomposition:
+        raise NotImplementedError(
+            "Decomposition is currently only supported for regression models "
+            "estimated via feols()."
+        )
+
+    has_param = param is not None
+    has_decomp = decomp_var is not None
+
+    if not has_param and not has_decomp:
+        raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+
+    if has_param and has_decomp:
+        raise ValueError(
+            "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+        )
+
+    if has_param:
+        warnings.warn(
+            "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
+            UserWarning,
+        )
+        decomp_var = param
+
+    if x1_vars is not None:
+        if isinstance(x1_vars, str):
+            x1_vars = [x.strip() for x in x1_vars.split("+")]
+        else:
+            x1_vars = list(x1_vars)
+
+    _decompose_arg_check(
+        type=type,
+        has_weights=model.options.has_weights,
+        weights_type=model.options.weights_type,
+        is_iv=model._is_iv,
+        method=model._method,
+        only_coef=only_coef,
+    )
+
+    require_retained(model, "decompose", "within_data", "observation_weights")
+    if (
+        model._has_fixef
+        or cluster is not None
+        or model.variance_covariance.spec.is_clustered
+    ):
+        require_retained(model, "decompose", "_data")
+
+    nthreads_int = -1 if nthreads is None else nthreads
+
+    rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+
+    if agg_first is None:
+        agg_first = combine_covariates is not None
+
+    cluster_df: pd.Series | None = None
+    if cluster is not None:
+        cluster_df = model._data[cluster]
+    elif model.variance_covariance.spec.is_clustered:
+        cluster_df = model._data[model.variance_covariance.spec.clustervar[0]]
+    else:
+        cluster_df = None
+
+    Y, X, xnames = model._model_matrix_one_hot(output="sparse")
+
+    if combine_covariates is not None:
+        for key, value in combine_covariates.items():
+            if isinstance(value, re.Pattern):
+                matched = [x for x in xnames if value.search(x)]
+                if len(matched) == 0:
+                    raise ValueError(f"No covariates match the regex {value}.")
+                combine_covariates[key] = matched
+
+    med = GelbachDecomposition(
+        decomp_var=cast(str, decomp_var),
+        x1_vars=x1_vars,
+        coefnames=xnames,
+        depvarname=model._depvar,
+        cluster_df=cluster_df,
+        nthreads=nthreads_int,
+        combine_covariates=combine_covariates,
+        agg_first=agg_first,
+        only_coef=only_coef,
+        atol=1e-12,
+        btol=1e-12,
+    )
+
+    med.fit(
+        X=X,
+        Y=Y,
+        weights=(
+            np.ones((model.sample_info.n_rows, 1))
+            if model.observation_weights.values is None
+            else model.observation_weights.values[:, None]
+        ),
+        store=True,
+    )
+
+    if not only_coef:
+        med.bootstrap(rng=rng, B=reps)
+
+    model.GelbachDecompositionResults = med
+
+    return med
