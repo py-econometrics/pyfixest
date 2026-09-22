@@ -1037,10 +1037,68 @@ class Feols(ResultAccessorMixin):
         """
         from pyfixest.estimation.post_estimation.wildboottest import _run_wildboottest
 
+        if param is not None and param not in self._coefnames:
+            raise ValueError(
+                f"Parameter {param} not found in the model's coefficients."
+            )
+
+        if not self.capabilities.wildboottest:
+            if self._is_iv:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for IV estimation."
+                )
+            if self._method == "did2s":
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for the DID2S estimator."
+                )
+            if self.options.has_weights:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for WLS estimation."
+                )
+            raise NotImplementedError(
+                "Wild cluster bootstrap is only supported for unweighted OLS models."
+            )
+
+        cluster_list = []
+        if cluster is not None and isinstance(cluster, str):
+            cluster_list = [cluster]
+        if cluster is not None and isinstance(cluster, list):
+            cluster_list = cluster
+        if cluster is None and self.variance_covariance.spec.is_clustered:
+            cluster_list = list(self.variance_covariance.spec.clustervar)
+
+        run_heteroskedastic = not cluster_list
+        if not run_heteroskedastic and len(cluster_list) != 1:
+            raise NotImplementedError(
+                "Multiway clustering is currently not supported with the wild cluster bootstrap."
+            )
+        if self._has_fixef or not run_heteroskedastic:
+            require_retained(self, "wildboottest", "_data")
+        else:
+            require_retained(self, "wildboottest", "within_data")
+        if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
+            raise ValueError(
+                f"Cluster variable {cluster_list[0]} not found in the data."
+            )
+        if self._method == "fepois":
+            raise NotImplementedError(
+                "Wild cluster bootstrap is not supported for Poisson regression."
+            )
+
+        Y, X, xnames = self._model_matrix_one_hot()
+        cluster_name = None if run_heteroskedastic else cluster_list[0]
+        cluster_array = (
+            None
+            if cluster_name is None
+            else self._data[cluster_name].to_numpy().flatten()
+        )
         return _run_wildboottest(
-            model=self,
+            Y=Y,
+            X=X,
+            xnames=xnames,
+            cluster_name=cluster_name,
+            cluster_array=cluster_array,
             reps=reps,
-            cluster=cluster,
             param=param,
             weights_type=weights_type,
             impose_null=impose_null,

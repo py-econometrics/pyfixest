@@ -1,21 +1,18 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-from pyfixest.estimation.internals.retention import require_retained
-
-if TYPE_CHECKING:
-    from pyfixest.estimation.models.feols_ import Feols
-
 
 def _run_wildboottest(
-    model: Feols,
+    Y: np.ndarray,
+    X: np.ndarray,
+    xnames: list[str],
+    cluster_name: str | None,
+    cluster_array: np.ndarray | None,
     reps: int,
-    cluster: str | None = None,
     param: str | None = None,
     weights_type: str | None = "rademacher",
     impose_null: bool | None = True,
@@ -26,52 +23,7 @@ def _run_wildboottest(
     parallel: bool | None = False,
     return_bootstrapped_t_stats=False,
 ):
-    """Run the fitted-model post-estimation operation."""
-    if param is not None and param not in model._coefnames:
-        raise ValueError(f"Parameter {param} not found in the model's coefficients.")
-
-    if not model.capabilities.wildboottest:
-        if model._is_iv:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for IV estimation."
-            )
-        if model._method == "did2s":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for the DID2S estimator."
-            )
-        if model.options.has_weights:
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for WLS estimation."
-            )
-        raise NotImplementedError(
-            "Wild cluster bootstrap is only supported for unweighted OLS models."
-        )
-
-    cluster_list = []
-
-    if cluster is not None and isinstance(cluster, str):
-        cluster_list = [cluster]
-    if cluster is not None and isinstance(cluster, list):
-        cluster_list = cluster
-
-    if cluster is None and model.variance_covariance.spec.is_clustered:
-        cluster_list = list(model.variance_covariance.spec.clustervar)
-
-    run_heteroskedastic = not cluster_list
-
-    if not run_heteroskedastic and not len(cluster_list) == 1:
-        raise NotImplementedError(
-            "Multiway clustering is currently not supported with the wild cluster bootstrap."
-        )
-
-    if model._has_fixef or not run_heteroskedastic:
-        require_retained(model, "wildboottest", "_data")
-    else:
-        require_retained(model, "wildboottest", "within_data")
-
-    if not run_heteroskedastic and cluster_list[0] not in model._data.columns:
-        raise ValueError(f"Cluster variable {cluster_list[0]} not found in the data.")
-
+    """Compute wild bootstrap inference from a prepared design and clusters."""
     try:
         from wildboottest.wildboottest import WildboottestCL, WildboottestHC
     except ImportError:
@@ -79,23 +31,16 @@ def _run_wildboottest(
             "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
         )
 
-    if model._method == "fepois":
-        raise NotImplementedError(
-            "Wild cluster bootstrap is not supported for Poisson regression."
-        )
-
-    _Y, _X, _xnames = model._model_matrix_one_hot()
-
     # later: allow r <> 0 and custom R
-    R = np.zeros(len(_xnames))
+    R = np.zeros(len(xnames))
     if param is not None:
-        R[_xnames.index(param)] = 1
+        R[xnames.index(param)] = 1
     r = 0
 
-    if run_heteroskedastic:
+    if cluster_array is None:
         inference = "HC"
 
-        boot = WildboottestHC(X=_X, Y=_Y, R=R, r=r, B=reps, seed=seed)
+        boot = WildboottestHC(X=X, Y=Y, R=R, r=r, B=reps, seed=seed)
         boot.get_adjustments(bootstrap_type=bootstrap_type)
         boot.get_uhat(impose_null=impose_null)
         boot.get_tboot(weights_type=weights_type)
@@ -104,13 +49,11 @@ def _run_wildboottest(
         full_enumeration_warn = False
 
     else:
-        inference = f"CRV({cluster_list[0]})"
-
-        cluster_array = model._data[cluster_list[0]].to_numpy().flatten()
+        inference = f"CRV({cluster_name})"
 
         boot = WildboottestCL(
-            X=_X,
-            Y=_Y,
+            X=X,
+            Y=Y,
             cluster=cluster_array,
             R=R,
             B=reps,
@@ -148,7 +91,7 @@ def _run_wildboottest(
         "bootstrap_type": bootstrap_type,
         "inference": inference,
         "impose_null": impose_null,
-        "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
+        "ssc": boot.small_sample_correction if cluster_array is None else boot.ssc,
     }
 
     res_df = pd.Series(res)
