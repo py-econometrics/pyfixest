@@ -18,9 +18,6 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
-from pyfixest.estimation.formula.formulaic_compat import (
-    materialize_model_spec_with_unseen_mask,
-)
 from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -80,13 +77,9 @@ from pyfixest.estimation.post_estimation.decomposition import (
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
     build_fixed_effects,
-    check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
     fixed_effects_to_frame,
-    predict_fixed_effects,
-    warn_on_unseen_fixed_effect_levels,
 )
-from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -1780,106 +1773,18 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self._is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
+        from pyfixest.estimation.post_estimation.prediction import _run_predict
 
-        if interval == "prediction" or se_fit:
-            if self._has_fixef:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with fixed effects."
-                )
-
-            if self.options.has_weights:
-                raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with weights."
-                )
-
-        _validate_literal_argument(type, PredictionType)
-        if interval is not None:
-            _validate_literal_argument(interval, PredictionErrorOptions)
-
-        if newdata is None:
-            # note: no need to worry about fixed effects, as not supported with
-            # prediction errors; will throw error later;
-            X = self._prediction_design()
-            y_hat = getattr(self.fitted_values, type)
-            n_observations = self.sample_info.n_rows
-        else:
-            newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
-            n_observations = newdata.shape[0]
-            context = FORMULAIC_TRANSFORMS | {**self.options.context}
-            # Use na_action="drop" on each sub-spec separately because dependent variable
-            # may not be available in newdata, then intersect indices so a NaN in *any* variable
-            # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
-            X_mm, unseen = materialize_model_spec_with_unseen_mask(
-                rhs_spec, newdata, context
-            )
-            valid_idx = X_mm.index.to_numpy()
-            # rows with a categorical level unseen during fitting (in C()/i()) would
-            # be silently encoded as the reference level -> drop them to NaN instead,
-            # matching how unseen fixed-effect levels are handled below.
-            valid_idx = valid_idx[~unseen[valid_idx]]
-            if self._has_fixef:
-                fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
-                check_fe_dtype_compatibility(fe_spec, newdata)
-                # na_action="ignore" keeps unseen-level rows as NaN codes
-                fe_mm = fe_spec.get_model_matrix(
-                    newdata, context=context, na_action="ignore"
-                )
-                warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
-                valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
-                valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
-                if not hasattr(self, "fixef_estimates"):
-                    require_retained(self, "predict", "_data")
-                    self.fixef(atol, btol)
-                fe_hat = predict_fixed_effects(
-                    model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self.fixef_estimates.coefficients,
-                )
-
-            X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
-            y_hat = np.full(n_observations, np.nan)
-            y_hat[valid_idx] = X_coef @ self._beta_hat
-            if self._has_fixef:
-                y_hat[valid_idx] += fe_hat
-            # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
-            X = np.full((n_observations, X_coef.shape[1]), np.nan)
-            X[valid_idx] = X_coef
-            if self.options.offset is not None:
-                offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
-                    newdata,
-                    context=context,
-                    na_action="drop",
-                    output="pandas",
-                )
-                if not offset_mm.index.equals(newdata.index):
-                    raise ValueError(
-                        f"Offset expression '{self.options.offset}' evaluates to missing "
-                        "values in `newdata`."
-                    )
-
-                y_hat += offset_mm.iloc[:, 0].to_numpy()
-
-            if type == "response" and self._method == "fepois":
-                y_hat = np.exp(y_hat)
-
-        if se_fit or interval == "prediction":
-            prediction_df = _compute_prediction_error(
-                model=self,
-                nobs=n_observations,
-                yhat=y_hat,
-                X=X,
-                alpha=alpha,
-            )
-            if interval == "prediction":
-                return prediction_df
-            else:
-                return prediction_df["se_fit"].to_numpy()
-        else:
-            return y_hat
+        return _run_predict(
+            model=self,
+            newdata=newdata,
+            atol=atol,
+            btol=btol,
+            type=type,
+            se_fit=se_fit,
+            interval=interval,
+            alpha=alpha,
+        )
 
     def ritest(
         self,
