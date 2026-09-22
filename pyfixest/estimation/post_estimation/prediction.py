@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from typing import Any
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey, _ModelSpecMapping
 from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
@@ -128,7 +127,7 @@ def _run_predict(
     sample_info: EstimationSample,
     fitted_values: FittedValues,
     variance_covariance: VarianceCovariance | None,
-    model_spec: Mapping[_ModelMatrixKey, Any] | None,
+    model_spec: _ModelSpecMapping | None,
     coefnames: list[str],
     beta_hat: np.ndarray,
     k: int,
