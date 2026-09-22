@@ -1958,166 +1958,19 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
-        from pyfixest.estimation.post_estimation.ritest import (
-            _HAS_NUMBA,
-            _decode_resampvar,
-            _get_ritest_pvalue,
-            _get_ritest_stats_fast,
-            _get_ritest_stats_slow,
-        )
+        from pyfixest.estimation.post_estimation.ritest import _run_ritest
 
-        resampvar = resampvar.replace(" ", "")
-        resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
-
-        if self._is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self._method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
-            )
-
-        # check that resampvar in _coefnames
-        if resampvar_ not in self._coefnames:
-            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
-
-        if self.options.has_weights:
-            raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
-            )
-
-        require_retained(self, "ritest", "_data")
-
-        if cluster is not None and cluster not in self._data:
-            raise ValueError(f"The variable {cluster} is not found in the data.")
-
-        clustervar_arr = (
-            self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
-        )
-
-        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
-            raise ValueError(
-                """
-            The cluster variable contains missing values. This is not allowed
-            for randomization inference via `ritest()`.
-            """
-            )
-
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
-            )
-            self.vcov({"CRV1": cluster})
-
-        rng = np.random.default_rng() if rng is None else rng
-
-        sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
-
-        if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
-
-        # always run slow algorithm for randomization-t
-        choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
-
-        if choose_algorithm == "auto":
-            choose_algorithm = "fast" if _HAS_NUMBA else "slow"
-
-        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        if choose_algorithm == "slow" or self._method == "fepois":
-            vcov_input: str | dict[str, str]
-            if cluster is not None:
-                vcov_input = {"CRV1": cluster}
-            else:
-                # "iid" for models without controls, else HC1
-                vcov_input = (
-                    "hetero"
-                    if (self._has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
-                    else "iid"
-                )
-
-            # for performance reasons
-            if type == "randomization-c":
-                vcov_input = "iid"
-
-            ri_stats = _get_ritest_stats_slow(
-                data=self._data,
-                resampvar=resampvar_,
-                clustervar_arr=clustervar_arr,
-                fml=self._fml,
-                reps=reps,
-                vcov=vcov_input,
-                type=type,
-                rng=rng,
-                model=self._method,
-            )
-
-        else:
-            weights = (
-                np.ones(self.sample_info.n_rows)
-                if self.observation_weights.values is None
-                else self.observation_weights.values
-            )
-            fval_df = (
-                self._data[self._fixef.split("+")] if self._fixef is not None else None
-            )
-            D = self._data[resampvar_].to_numpy()
-
-            ri_stats = _get_ritest_stats_fast(
-                Y=self.within_data.response,
-                X=self.within_data.design,
-                D=D,
-                coefnames=self._coefnames,
-                resampvar=resampvar_,
-                clustervar_arr=clustervar_arr,
-                reps=reps,
-                rng=rng,
-                fval_df=fval_df,
-                weights=weights,
-            )
-
-        ri_pvalue, se_pvalue, ci_pvalue = _get_ritest_pvalue(
-            sample_stat=sample_stat,
-            ri_stats=ri_stats[1:],
-            method=test_type,
-            h0_value=h0_value,
+        return _run_ritest(
+            model=self,
+            resampvar=resampvar,
+            cluster=cluster,
+            reps=reps,
+            type=type,
+            rng=rng,
+            choose_algorithm=choose_algorithm,
+            store_ritest_statistics=store_ritest_statistics,
             level=level,
         )
-
-        if store_ritest_statistics:
-            self.ritest_statistics = RitestStatistics(
-                statistics=ri_stats,
-                sample_stat=float(sample_stat - h0_value),
-                pvalue=float(ri_pvalue),
-            )
-
-        res = pd.Series(
-            {
-                "H0": hypothesis,
-                "ri-type": type,
-                "Estimate": sample_coef,
-                "Pr(>|t|)": ri_pvalue,
-                "Std. Error (Pr(>|t|))": se_pvalue,
-            }
-        )
-
-        alpha = 1 - level
-        ci_lower_name = str(f"{alpha / 2 * 100:.1f}% (Pr(>|t|))")
-        ci_upper_name = str(f"{(1 - alpha / 2) * 100:.1f}% (Pr(>|t|))")
-        res[ci_lower_name] = ci_pvalue[0]
-        res[ci_upper_name] = ci_pvalue[1]
-
-        if cluster is not None:
-            res["Cluster"] = cluster
-
-        return res
 
     def plot_ritest(self, plot_backend="lets_plot"):
         """
