@@ -202,12 +202,12 @@ def iplot(
         rename_models = {}
 
     for x, fxst in enumerate(list(models)):
-        if fxst._icovars is None:
+        if not fxst.model.interacted_covariates:
             raise ValueError(
                 f"The {x} th estimated model did not have ivars / 'i()' model syntax."
                 "In consequence, the '.iplot()' method is not supported."
             )
-        all_icovars += fxst._icovars
+        all_icovars += fxst.model.interacted_covariates
 
         df_model = _get_model_df(
             fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models

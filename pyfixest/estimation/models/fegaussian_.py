@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from dataclasses import replace
+from typing import Any
+
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
@@ -5,7 +10,10 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
 from pyfixest.estimation.internals.fit_statistics import linear_fit_statistics
-from pyfixest.estimation.internals.model_state import GlmEstimationOptions
+from pyfixest.estimation.internals.model_state import (
+    GlmEstimationOptions,
+    ModelDescription,
+)
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feglm_ import Feglm
@@ -36,7 +44,9 @@ class Fegaussian(Feglm):
             family=GAUSSIAN,
         )
 
-        self._method = "feglm-gaussian"
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the Gaussian estimation function."""
+        return replace(super()._describe_model(**kwargs), method="feglm-gaussian")
 
     def _vcov_iid(self) -> VcovTerm:
         # we set gaussian glms to match pf.feols exactly
@@ -68,6 +78,6 @@ class Fegaussian(Feglm):
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self.options.drop_intercept,
-            has_fixef=self._has_fixef,
+            has_fixef=self.model.has_fixef,
             deviance=self.fitstat.deviance,
         )

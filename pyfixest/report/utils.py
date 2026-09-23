@@ -259,25 +259,27 @@ def _post_processing_input_checks(
         raise TypeError("Invalid type for models argument.")
 
     if check_duplicate_model_names or rename_models is not None:
-        all_model_names = [model._model_name for model in models_list]
+        all_model_names = [model.model.model_name for model in models_list]
 
     if check_duplicate_model_names:
         # create model_name_plot attribute to differentiate between models with the
         # same model_name / model formula
         for model in models_list:
-            model._model_name_plot = model._model_name
+            model._model_name_plot = model.model.model_name
 
         counter = Counter(all_model_names)
         duplicate_model_names = [item for item, count in counter.items() if count > 1]
 
         for duplicate_model in duplicate_model_names:
             duplicates = [
-                model for model in models_list if model._model_name == duplicate_model
+                model
+                for model in models_list
+                if model.model.model_name == duplicate_model
             ]
             for i, model in enumerate(duplicates):
-                model._model_name_plot = f"Model {i}: {model._model_name}"
+                model._model_name_plot = f"Model {i}: {model.model.model_name}"
                 warnings.warn(
-                    f"The _model_name attribute {model._model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+                    f"The model name '{model.model.model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
                 )
 
         if rename_models is not None:

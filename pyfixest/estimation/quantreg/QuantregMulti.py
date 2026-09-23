@@ -50,7 +50,6 @@ class QuantregMulti:
             for q in self.quantiles
         }
         self.multi_method = multi_method
-        self._is_iv = False
 
     def prepare_model_matrix(self) -> None:
         """Prepare the model inputs for every requested quantile."""

@@ -23,13 +23,14 @@ _METHOD_DISPLAY_NAMES: dict[str, str] = {
 
 def _get_estimation_method_name(fxst: Feols) -> str:
     """Get the display name for an estimation method."""
-    if fxst._method == "feols":
-        return "IV" if fxst._is_iv else "OLS"
-    if "quantreg" in fxst._method:
+    method = fxst.model.method
+    if method == "feols":
+        return "IV" if fxst.model.is_iv else "OLS"
+    if "quantreg" in method:
         return f"quantreg: q = {fxst.options.quantile}"  # type: ignore
-    if fxst._method in _METHOD_DISPLAY_NAMES:
-        return _METHOD_DISPLAY_NAMES[fxst._method]
-    raise ValueError(f"Unknown estimation method: {fxst._method}")
+    if method in _METHOD_DISPLAY_NAMES:
+        return _METHOD_DISPLAY_NAMES[method]
+    raise ValueError(f"Unknown estimation method: {method}")
 
 
 def etable(
@@ -320,7 +321,7 @@ def summary(
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
-        depvar = fxst._depvar
+        depvar = fxst.model.depvar
 
         df = fxst.tidy(inference_type=inference_type).round(digits)
 
@@ -329,12 +330,16 @@ def summary(
         print("")
         print("Estimation: ", estimation_method)
         depvar_fixef = f"Dep. var.: {depvar}"
-        if fxst._fixef is not None:
-            depvar_fixef += f", Fixed effects: {fxst._fixef}"
+        if fxst.model.has_fixef:
+            depvar_fixef += f", Fixed effects: {fxst.model.fixef}"
         print(depvar_fixef)
-        if fxst._sample_split_value != "all":
-            split = f"sample: {fxst._sample_split_var} = {fxst._sample_split_value}"
-            print(split)
+        split_var = fxst.model.sample_split_var
+        split_value = fxst.model.sample_split_value
+        if split_var is None:
+            # An unsplit fit reports the full sample, with no split variable.
+            print("sample: None = all")
+        elif split_value != "all":
+            print(f"sample: {split_var} = {split_value}")
         print("Inference: ", fxst.variance_covariance.spec.vcov_type_detail)
         print("Observations: ", fxst.sample_info.n_obs)
         print("")

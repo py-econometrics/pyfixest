@@ -12,11 +12,11 @@ from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
-    from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.fit_statistics import FitStatistics
     from pyfixest.estimation.internals.model_state import (
         EstimationOptions,
         EstimationSample,
+        ModelDescription,
         ObservationWeights,
         VarianceCovariance,
         WithinLinearData,
@@ -143,12 +143,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     within_data: "WithinLinearData"
     fitstat: "FitStatistics"
     _coefnames: list[str]
-    _method: str
-    _has_fixef: bool
-    _is_iv: bool
+    model: "ModelDescription"
     _k_fe: pd.Series
     _k: int
-    _inference_dist: "InferenceDist"
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -263,7 +260,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
         covariance = self.variance_covariance
-        dist = self._inference_dist
+        dist = self.model.inference_dist
 
         beta_hat = self._beta_hat
         se = np.sqrt(np.diagonal(covariance.vcov))
@@ -282,7 +279,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
     def _n_fixef_coefficients(self) -> int:
         """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
+        return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
 
     def tidy(
         self,
@@ -362,8 +359,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{ub * 100:.1f}%": conf_int[1],
         }
         if (
-            getattr(self, "_sample_split_var", None) is not None
-            and (sample := getattr(self, "_sample_split_value", None)) is not None
+            self.model.sample_split_var is not None
+            and (sample := self.model.sample_split_value) is not None
         ):
             data["Sample"] = sample
         return pd.DataFrame(data).set_index("Coefficient")
@@ -505,7 +502,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
         se = self.coeftable.se
         if inference_type == "regular":
-            crit_val = self._inference_dist.crit_val(
+            crit_val = self.model.inference_dist.crit_val(
                 alpha, self.variance_covariance.df_t
             )
         else:

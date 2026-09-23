@@ -100,7 +100,7 @@ def run_estimation(
         )
 
         for fitted_result in FIT._iter_fitted_models():
-            fixest.all_fitted_models[fitted_result._model_name] = fitted_result
+            fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
 
     if parsed.is_multiple_estimation:
         return fixest

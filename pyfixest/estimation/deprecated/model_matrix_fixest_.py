@@ -87,7 +87,7 @@ def model_matrix_fixest(
 
     data = pf.get_data()
     fit = pf.feols("Y ~ X1 + f1 + f2", data=data)
-    FixestFormula = fit.FixestFormula
+    FixestFormula = fit.model.fixest_formula
 
     mm = model_matrix_fixest(FixestFormula, data)
     mm

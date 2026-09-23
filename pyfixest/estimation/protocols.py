@@ -11,7 +11,6 @@ class FittedModel(Protocol):
     """Structural contract consumed by the generic estimation pipeline."""
 
     _X_is_empty: bool
-    _is_iv: bool
 
     def prepare_model_matrix(self) -> object:
         """Prepare and retain estimator inputs derived from the formula."""

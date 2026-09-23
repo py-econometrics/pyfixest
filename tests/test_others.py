@@ -440,8 +440,8 @@ def test_fixef_interacted_labels():
     fit = feols("Y ~ X1 | g:h", data=df)
     coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert fit._fml == "Y ~ X1 | g:h"
-    assert fit._fixef == "g:h"
+    assert fit.model.formula == "Y ~ X1 | g:h"
+    assert fit.model.fixef == "g:h"
     assert coefficients["variable"].unique().tolist() == ["g:h"]
     levels = set(coefficients["level"])
     assert all("," in level for level in levels)

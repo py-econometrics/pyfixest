@@ -84,7 +84,7 @@ def prepare_cluster_state(
     data: DataFrameType,
     clustervar: list[str],
     ssc: Ssc,
-    fixef: str | None,
+    fixef: tuple[str, ...],
     fe: pd.DataFrame | np.ndarray | None,
     k_fe: np.ndarray | pd.Series,
 ) -> ClusterPrep:
@@ -105,11 +105,11 @@ def prepare_cluster_state(
 
     k_fe_nested = 0
     n_fe_fully_nested = 0
-    if fixef is not None and ssc.k_fixef == "nonnested":
+    if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-            all_fixef_array=np.array(fixef.split("+"), dtype=str),
+            all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
             cluster_data=cluster_arr_int.astype(np.uintp),
             fe_data=fe.to_numpy().astype(np.uintp)

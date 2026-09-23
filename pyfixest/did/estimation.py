@@ -145,7 +145,7 @@ def event_study(
         fit = twfe.estimate()
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
-        fit._method = "twfe"
+        fit.model = replace(fit.model, method="twfe")
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -161,7 +161,7 @@ def event_study(
         fit = saturated.estimate()
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
-        fit._method = "saturated"
+        fit.model = replace(fit.model, method="saturated")
 
     else:
         raise NotImplementedError("Estimator not supported")
@@ -305,7 +305,7 @@ def _mark_as_did2s(fit: Feols) -> None:
     The two-step GMM covariance does not resample from an estimated model in
     the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
     """
-    fit._method = "did2s"
+    fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
         fit.capabilities, wildboottest=False, cluster_causal_variance=False
     )

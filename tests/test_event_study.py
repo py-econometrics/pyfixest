@@ -36,6 +36,7 @@ def test_event_study_twfe(data):
     assert np.allclose(twfe.pvalue().values, twfe_feols.pvalue().values), (
         "TWFE p-values are not the same."
     )
+    assert twfe.model.method == "twfe"
 
     # TODO - minor difference, likely due to how z statistic is
     # calculated

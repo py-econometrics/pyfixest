@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
+    ModelDescription,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -69,6 +70,9 @@ class Feglm(Feols):
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
     ) -> None:
+        # `_describe_model()`, called by the base constructor, names the
+        # family's inference distribution.
+        self._family = family
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -96,9 +100,13 @@ class Feglm(Feols):
             decomposition=False,
         )
 
-        self._method = "feglm"
-        self._family = family
-        self._inference_dist = family.inference_dist
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Describe a GLM fit and the inference distribution of its family."""
+        return replace(
+            super()._describe_model(**kwargs),
+            method="feglm",
+            inference_dist=self._family.inference_dist,
+        )
 
     def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
@@ -115,7 +123,7 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
-                fml=self._fml,
+                fml=self.model.formula,
                 data=self._data,
                 demeaner=self.options.demeaner,
                 methods=self.options.separation_check,
@@ -127,7 +135,7 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._n_fe = np.sum(self._k_fe > 1) if self.model.has_fixef else 0
 
         return model_matrix
 

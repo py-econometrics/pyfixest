@@ -42,7 +42,7 @@ def test_ols_prediction_internally(data, fml, weights):
     """
     # predict via pf.feols, without fixed effect
     mod = pf.feols(fml=fml, data=data, vcov="iid", weights=weights)
-    if mod._has_fixef:
+    if mod.model.has_fixef:
         # predict(newdata=...) adds fixed effects recovered by fixef(); solve
         # them tightly so the comparison is not limited by lsqr's default 1e-6.
         mod.fixef(atol=1e-12, btol=1e-12)
@@ -63,7 +63,7 @@ def test_ols_prediction_internally(data, fml, weights):
 @pytest.mark.parametrize("weights", ["weights"])
 def test_poisson_prediction_internally(data, weights, fml):
     mod = pf.fepois(fml=fml, data=data, vcov="hetero", weights=weights)
-    if mod._has_fixef:
+    if mod.model.has_fixef:
         mod.fixef(atol=1e-12, btol=1e-12)
     original_prediction = mod.predict()
     updated_prediction = mod.predict(newdata=mod._data)

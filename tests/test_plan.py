@@ -460,7 +460,6 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
 
     class StubModel:
         _X_is_empty = False
-        _is_iv = False
 
         def __init__(self, *, events, **kwargs):
             self.events = events

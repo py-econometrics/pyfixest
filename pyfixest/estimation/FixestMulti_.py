@@ -169,7 +169,7 @@ class FixestMulti(TidyColumnAccessors):
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
             df = fxst.tidy().reset_index()
-            df["fml"] = fxst._fml
+            df["fml"] = fxst.model.formula
             res.append(df)
 
         res_df = pd.concat(res, axis=0)

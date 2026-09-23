@@ -210,7 +210,7 @@ def test_formula_data_remains_canonical_after_linear_fit(
         model_matrix.weights,
         lifecycle_data.loc[:, ["weight"]],
     )
-    assert fit._model_spec is model_matrix.model_spec
+    assert fit.model.model_spec is model_matrix.model_spec
 
 
 def test_unweighted_effective_n_remains_integer_for_prediction_errors(
@@ -351,7 +351,7 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     fitstat = fit.fitstat
     assert isinstance(fitstat, FitStatistics)
     assert np.isfinite(fitstat.deviance)
-    assert np.isnan(fitstat.r2_within) is not fit._has_fixef
+    assert np.isnan(fitstat.r2_within) is not fit.model.has_fixef
     reference = pf.feglm(
         fml,
         data=lifecycle_data,
@@ -381,7 +381,7 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssy = np.sum(observation_weights * (response - center) ** 2)
     np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
     np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
-    if fit._has_fixef:
+    if fit.model.has_fixef:
         assert observation_weights is not None
         weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
         group_mean = weighted_y.groupby(lifecycle_data["fe"]).transform("sum")
@@ -725,7 +725,7 @@ def test_estimation_sample_counts_dropped_rows_by_stage(
         else:
             assert sample_info.n_obs == sample_info.n_rows
             assert isinstance(sample_info.n_obs, int)
-        if model._is_iv:
+        if model.model.is_iv:
             # The first stage is refit on the retained rows: it owns a sample
             # with no dropped rows of its own.
             first_stage = model.first_stage.model.sample_info
@@ -741,7 +741,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
-        level = model._sample_split_value
+        level = model.model.sample_split_value
         population = data.index[data["fe"] == level]
         sample_info = model.sample_info
         assert sample_info.n_rows == len(population) - int(level == "b")
