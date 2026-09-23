@@ -207,7 +207,7 @@ class ModelDescription:
     Parameters
     ----------
     formula : str
-        The fixest formula the model was fitted from.
+        The formula the model was fitted from.
     fixest_formula : Formula
         The parsed formula, with its stages, fixed effects, and instruments.
     method : str
@@ -219,11 +219,9 @@ class ModelDescription:
         `summary()` labels the estimation with it, and refits such as the
         CRV3 jackknife dispatch on it.
     is_iv : bool
-        Whether the formula has an instrumental-variable stage.
+        Whether a model with instrumental variables was fitted.
     model_name : str
-        Key the model is stored under in a multiple-estimation result, and its
-        default label in `coefplot()` and `iplot()`: the formula, extended by
-        the sample split and, for quantile regression, the quantile.
+        Key the model is stored under in a multiple-estimation result.
     sample_split_var : str or None
         Name of the `split` or `fsplit` variable, ``None`` for an unsplit fit.
     sample_split_value : str, int, float, the full-sample marker, or None
