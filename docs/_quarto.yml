@@ -240,6 +240,7 @@ quartodoc:
         - estimation.state.EstimationOptions
         - estimation.state.GlmEstimationOptions
         - estimation.state.QuantregEstimationOptions
+        - estimation.state.ModelDescription
         - estimation.state.ModelMatrix
         - estimation.state.ObservationWeights
         - estimation.state.EstimationSample
