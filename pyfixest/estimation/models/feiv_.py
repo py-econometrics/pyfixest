@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import replace
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,7 @@ from pyfixest.estimation.internals.model_state import (
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
+    ModelDescription,
     WithinIvData,
     WithinLinearData,
 )
@@ -69,8 +71,6 @@ class Feiv(Feols):
     collinearity_instruments : CollinearityCheck
         Names and column mask of the instruments dropped by the rank check,
         set in get_fit().
-    _is_iv : bool
-        Indicator if instrumental variables are used.
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
@@ -149,7 +149,6 @@ class Feiv(Feols):
             sample_split_value=sample_split_value,
         )
 
-        self._is_iv = True
         self.capabilities = replace(
             self.capabilities,
             crv3_inference=False,
@@ -157,6 +156,10 @@ class Feiv(Feols):
             cluster_causal_variance=False,
             decomposition=False,
         )
+
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Describe the second stage of an instrumental-variable fit."""
+        return replace(super()._describe_model(**kwargs), is_iv=True)
 
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
@@ -238,11 +241,11 @@ class Feiv(Feols):
         fixest_module = import_module("pyfixest.estimation")
         fit_ = fixest_module.feols
 
-        fml_first_stage = self.FixestFormula.first_stage
+        fml_first_stage = self.model.fixest_formula.first_stage
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
-        if self._has_fixef and fml_first_stage is not None:
-            fml_first_stage += f" | {self._fixef}"
+        if self.model.has_fixef and fml_first_stage is not None:
+            fml_first_stage += f" | {self.model.fixef}"
 
         # Type hint to reflect that vcov_detail can be either a dict or a str
         vcov_detail: dict[str, str] | str

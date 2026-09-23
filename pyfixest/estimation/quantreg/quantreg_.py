@@ -2,7 +2,7 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
+    ModelDescription,
     QuantregEstimationOptions,
     WithinLinearData,
 )
@@ -105,16 +106,6 @@ class Quantreg(Feols):
 
         quantile = options.quantile
         method = options.method
-        self._method = f"quantreg_{method}"
-
-        self._model_name = (
-            FixestFormula.formula
-            if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
-        )
-        # update with quantile name
-        self._model_name = f"{self._model_name} (q = {quantile})"
-        self._model_name_plot = self._model_name
 
         self._method_map: dict[
             str,
@@ -154,6 +145,15 @@ class Quantreg(Feols):
         except KeyError as exc:
             valid = ", ".join(self._method_map)
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
+
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the quantile solver and append the quantile to the model name."""
+        description = super()._describe_model(**kwargs)
+        return replace(
+            description,
+            method=f"quantreg_{self.options.method}",
+            model_name=f"{description.model_name} (q = {self.options.quantile})",
+        )
 
     def to_array(self):
         "Publish quantile-regression arrays from the formula state."
@@ -408,7 +408,7 @@ class Quantreg(Feols):
             beta_hat=self._beta_hat,
             q=self.options.quantile,
             N=self.sample_info.n_rows,
-            method=cast(QuantregMethodOptions, self._method),
+            method=cast(QuantregMethodOptions, self.model.method),
             fit=self._fit,
         )
         return VcovTerm(vcov=vcov, meat=None)

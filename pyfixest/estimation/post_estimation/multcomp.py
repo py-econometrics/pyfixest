@@ -53,7 +53,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     for i, model in enumerate(models):
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
         pvalues[i] = model.pvalue().xs(param)
         all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
@@ -299,7 +299,7 @@ def _multcomp_resample(
     for model in models:
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
 
         if model.variance_covariance.spec.is_clustered:

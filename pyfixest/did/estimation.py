@@ -60,6 +60,10 @@ def event_study(
     -------
     object
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        With `estimator = "saturated"`, the fit additionally carries its
+        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
+        `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`,
+        `iplot()`, and `test_treatment_heterogeneity()` methods.
 
     Examples
     --------
@@ -139,14 +143,9 @@ def event_study(
             cluster=cluster,
         )
         fit = twfe.estimate()
-        fit._yname = twfe._yname
-        fit._gname = twfe._gname
-        fit._tname = twfe._tname
-        fit._idname = twfe._idname
-        fit._att = twfe._att
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
-        fit._method = "twfe"
+        fit.model = replace(fit.model, method="twfe")
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -162,20 +161,13 @@ def event_study(
         fit = saturated.estimate()
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
-        fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
-        fit._yname = saturated._yname
-        fit._gname = saturated._gname
-        fit._tname = saturated._tname
-        fit._idname = saturated._idname
-        fit._att = saturated._att
-
-        fit._method = "saturated"
+        fit.model = replace(fit.model, method="saturated")
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
-        fit.test_treatment_heterogeneity = (
+        fit.test_treatment_heterogeneity = (  # type: ignore[attr-defined]
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
         )
-        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))
-        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))
+        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore[attr-defined]
+        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore[attr-defined]
 
     else:
         raise NotImplementedError("Estimator not supported")
@@ -319,7 +311,7 @@ def _mark_as_did2s(fit: Feols) -> None:
     The two-step GMM covariance does not resample from an estimated model in
     the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
     """
-    fit._method = "did2s"
+    fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
         fit.capabilities, wildboottest=False, cluster_causal_variance=False
     )

@@ -136,7 +136,7 @@ def _assert_matches_expansion(fit_weighted, fit_expanded, counts, vcov_types, to
         err_msg="Residuals differ",
         **tol,
     )
-    if not fit_weighted._is_iv:  # predict() is unsupported for IV models
+    if not fit_weighted.model.is_iv:  # predict() is unsupported for IV models
         np.testing.assert_allclose(
             np.repeat(fit_weighted.predict(), counts),
             fit_expanded.predict(),

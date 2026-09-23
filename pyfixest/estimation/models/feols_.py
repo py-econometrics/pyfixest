@@ -4,7 +4,7 @@ import re
 import warnings
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 import formulaic
 import numpy as np
@@ -21,11 +21,11 @@ from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
-from pyfixest.estimation.internals.families import T_DIST, InferenceDist
+from pyfixest.estimation.internals.families import T_DIST
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.fit_statistics import (
     FitStatistics,
@@ -46,6 +46,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     EstimationSample,
     FittedValues,
+    ModelDescription,
     ObservationWeights,
     RitestStatistics,
     SandwichComponents,
@@ -102,6 +103,18 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
+def _fixed_effect_names(
+    model_matrix: ModelMatrix, fixest_formula: FixestFormula
+) -> tuple[str, ...]:
+    """Name the absorbed fixed effects in the order the formula writes them.
+
+    Empty when the materialized model matrix carries no fixed-effect block.
+    """
+    if model_matrix.fixed_effects is None:
+        return ()
+    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+
+
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -132,11 +145,11 @@ class Feols(ResultAccessorMixin):
 
     Attributes
     ----------
-    _method : str
-        Specifies the method used for regression, set to "feols".
-    _is_iv : bool
-        Indicates whether instrumental variables are used, initialized as False.
-
+    model : ModelDescription
+        What the model estimates: its formula, the estimation function and its
+        inference distribution, the sample split, the dependent variable, the
+        absorbed fixed effects, the `i()` interaction coefficients, and the
+        formulaic model specification.
     model_matrix : ModelMatrix
         Model frames containing the response, regressors, and other model inputs.
     within_data : WithinLinearData
@@ -167,14 +180,6 @@ class Feols(ResultAccessorMixin):
         Inference and post-estimation features this model class supports.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
-    _fml : Any
-        Formula used in the regression, to be enriched outside of the class.
-    _has_fixef : bool
-        Indicates whether fixed effects are used.
-    _fixef : Any
-        Fixed effects used in the regression.
-    _icovars : Any
-        Internal covariates, to be enriched outside of the class.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
@@ -207,30 +212,13 @@ class Feols(ResultAccessorMixin):
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
-    _model_name: str
-        The name of the model. Usually just the formula string. If split estimation is used,
-        the model name will include the split variable and value.
     _model_name_plot: str
         The name of the model used when plotting and summarizing models. Usually identical to
-        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
-        and models with identical _model_name attributes are passed. In this case,
+        `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        and models with identical model names are passed. In this case,
         the _model_name_plot attribute will be modified.
-
-    # special for did
-    _res_cohort_eventtime_dict: Optional[dict[str, Any]]
-    _yname: Optional[str]
-    _gname: Optional[str]
-    _tname: Optional[str]
-    _idname: Optional[str]
-    _att: Optional[Any]
-    test_treatment_heterogeneity: Callable[..., Any]
-    aggregate: Callable[..., Any]
-    iplot_aggregate: Callable[..., Any]
-
     """
 
-    # Set in prepare_model_matrix().
-    _icovars: list[str] | None
     # Set in get_fit().
     collinearity: CollinearityCheck
     sandwich: SandwichComponents
@@ -255,29 +243,23 @@ class Feols(ResultAccessorMixin):
         sample_split_var: str | None = None,
         sample_split_value: str | int | float | _AllSampleSentinel | None = None,
     ) -> None:
-        self._sample_split_value = sample_split_value
-        self._sample_split_var = sample_split_var
-        self._model_name = (
-            FixestFormula.formula
-            if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self.options = options
+        self.model = self._describe_model(
+            fixest_formula=FixestFormula,
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
         )
-        self._model_name_plot = self._model_name
-        self._method = "feols"
-        self._is_iv = False
-        self._inference_dist: InferenceDist = T_DIST
-        self.FixestFormula = FixestFormula
+        self._model_name_plot = self.model.model_name
 
-        if self._sample_split_var is None:
+        if sample_split_var is None:
             pass
-        elif self._sample_split_value is _ALL_SAMPLE:
+        elif sample_split_value is _ALL_SAMPLE:
             data = data.loc[data[sample_split_var].notnull()]
         else:
-            data = data.loc[data[self._sample_split_var] == sample_split_value]
+            data = data.loc[data[sample_split_var] == sample_split_value]
 
         data = data.reset_index(drop=True)
 
-        self.options = options
         self._data = data.copy() if options.copy_data else data
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
@@ -292,44 +274,48 @@ class Feols(ResultAccessorMixin):
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
 
-        # attributes that have to be enriched outside of the class -
-        # not really optimal code change later
-        self._fml = FixestFormula.formula
-        self._has_fixef = False
-        self._fixef = (
-            str(FixestFormula.fixed_effects).replace(" ", "")
-            if FixestFormula.is_fixed_effects
-            else None
-        )
-
         # set in get_fit(); IV and quantile fits keep the all-NaN value
         self.fitstat = FitStatistics()
-
-        # special for did
-        self._res_cohort_eventtime_dict: dict[str, Any] | None = None
-        self._yname: str | None = None
-        self._gname: str | None = None
-        self._tname: str | None = None
-        self._idname: str | None = None
-        self._att: bool | None = None
 
         # set functions inherited from other modules
         self._bind_report_methods()
 
-        # DiD methods - assign placeholder functions
-        def _not_implemented_did(*args, **kwargs):
-            raise NotImplementedError(
-                "This method is only available for DiD models, not for vanilla 'feols'."
-            )
+    def _describe_model(
+        self,
+        *,
+        fixest_formula: FixestFormula,
+        sample_split_var: str | None,
+        sample_split_value: str | int | float | _AllSampleSentinel | None,
+    ) -> ModelDescription:
+        """Describe the model this class fits, before its model matrix exists.
 
-        self.test_treatment_heterogeneity = _not_implemented_did
-        self.aggregate = _not_implemented_did
-        self.iplot_aggregate = _not_implemented_did
+        Subclasses override this to name their estimation function and its
+        inference distribution. The matrix-time fields stay empty until
+        `_publish_model_matrix()` republishes the description with them. An
+        unsplit fit publishes ``None`` as its split value: the planner hands
+        it the full-sample marker, which only an `fsplit` fit reports.
+        """
+        if sample_split_var is None:
+            sample_split_value = None
+        return ModelDescription(
+            formula=fixest_formula.formula,
+            fixest_formula=fixest_formula,
+            method="feols",
+            is_iv=False,
+            model_name=(
+                fixest_formula.formula
+                if sample_split_var is None
+                else f"{fixest_formula.formula} (Sample: {sample_split_var} = {sample_split_value})"
+            ),
+            sample_split_var=sample_split_var,
+            sample_split_value=sample_split_value,
+            inference_dist=T_DIST,
+        )
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
         model_matrix = model_matrix_fixest.create_model_matrix(
-            formula=self.FixestFormula,
+            formula=self.model.fixest_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
             drop_intercept=self.options.drop_intercept,
@@ -357,13 +343,20 @@ class Feols(ResultAccessorMixin):
             if not independent.empty
             else None
         )
-        self._icovars = (
-            independent.columns[is_icovar].tolist()
-            if is_icovar is not None and is_icovar.any()
-            else None
+        self.model = replace(
+            self.model,
+            depvar=model_matrix.dependent.columns[0],
+            fixed_effects=_fixed_effect_names(
+                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
+            ),
+            interacted_covariates=(
+                tuple(independent.columns[is_icovar])
+                if is_icovar is not None and is_icovar.any()
+                else ()
+            ),
+            model_spec=model_matrix.model_spec,
         )
         self._X_is_empty = independent.shape[1] == 0
-        self._model_spec = model_matrix.model_spec
 
         self._coefnames = independent.columns.tolist()
         self._coefnames_z = (
@@ -371,19 +364,12 @@ class Feols(ResultAccessorMixin):
             if model_matrix.instruments is not None
             else None
         )
-        self._depvar = model_matrix.dependent.columns[0]
 
-        self._has_fixef = self.model_matrix.fixed_effects is not None
-        self._fixef = (
-            str(self.FixestFormula.fixed_effects).replace(" ", "")
-            if self.FixestFormula.is_fixed_effects
-            else None
-        )
-
+        has_fixef = self.model.has_fixef
         self._k_fe = (
-            self.model_matrix.fixed_effects.nunique(axis=0) if self._has_fixef else None
+            self.model_matrix.fixed_effects.nunique(axis=0) if has_fixef else None
         )
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
+        self._n_fe = len(self._k_fe) if has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
@@ -541,12 +527,12 @@ class Feols(ResultAccessorMixin):
             k=self._k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self.options.drop_intercept,
-            has_fixef=self._has_fixef,
+            has_fixef=self.model.has_fixef,
         )
 
     def _finalize_fit(self) -> None:
         """Compute OLS-only post-fit statistics."""
-        if self._method == "feols" and not self._is_iv:
+        if self.model.method == "feols" and not self.model.is_iv:
             self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
@@ -616,7 +602,7 @@ class Feols(ResultAccessorMixin):
             ) from e
 
         spec = VcovSpec.from_user_input(
-            vcov, vcov_kwargs, has_fixef=self._has_fixef, is_iv=self._is_iv
+            vcov, vcov_kwargs, has_fixef=self.model.has_fixef, is_iv=self.model.is_iv
         )
         vcov_type = spec.vcov_type
 
@@ -634,7 +620,7 @@ class Feols(ResultAccessorMixin):
                 data=data if data is not None else self._data,
                 clustervar=list(spec.clustervar),
                 ssc=self.options.ssc,
-                fixef=self._fixef,
+                fixef=self.model.fixed_effects,
                 fe=self.model_matrix.fixed_effects,
                 k_fe=self._k_fe,
             )
@@ -702,7 +688,7 @@ class Feols(ResultAccessorMixin):
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
+            k_fe=int(self._k_fe.sum()) if self.model.has_fixef else 0,
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
@@ -722,9 +708,13 @@ class Feols(ResultAccessorMixin):
 
         if not self.capabilities.crv3_inference:
             raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self._method}'."
+                f"CRV3 inference is not for models of type '{self.model.method}'."
             )
-        use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
+        use_fast = (
+            not self.model.has_fixef
+            and self.model.method == "feols"
+            and not self.model.is_iv
+        )
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
@@ -820,13 +810,17 @@ class Feols(ResultAccessorMixin):
 
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols if self._method == "feols" else fixest_module.fepois
+        fit_ = (
+            fixest_module.feols
+            if self.model.method == "feols"
+            else fixest_module.fepois
+        )
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
             fit = fit_(
-                fml=self._fml,
+                fml=self.model.formula,
                 data=data,
                 vcov="iid",
                 weights=self.options.weights,
@@ -911,7 +905,7 @@ class Feols(ResultAccessorMixin):
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
-        k_fe = np.sum(self._k_fe.to_numpy()) if self._has_fixef else 0
+        k_fe = np.sum(self._k_fe.to_numpy()) if self.model.has_fixef else 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -1041,11 +1035,11 @@ class Feols(ResultAccessorMixin):
             )
 
         if not self.capabilities.wildboottest:
-            if self._is_iv:
+            if self.model.is_iv:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for IV estimation."
                 )
-            if self._method == "did2s":
+            if self.model.method == "did2s":
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for the DID2S estimator."
                 )
@@ -1074,7 +1068,7 @@ class Feols(ResultAccessorMixin):
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
-        if self._has_fixef or not run_heteroskedastic:
+        if self.model.has_fixef or not run_heteroskedastic:
             require_retained(self, "wildboottest", "_data")
         else:
             require_retained(self, "wildboottest", "within_data")
@@ -1091,7 +1085,7 @@ class Feols(ResultAccessorMixin):
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
             )
 
-        if self._method == "fepois":
+        if self.model.method == "fepois":
             raise NotImplementedError(
                 "Wild cluster bootstrap is not supported for Poisson regression."
             )
@@ -1223,7 +1217,7 @@ class Feols(ResultAccessorMixin):
         if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
-                f"of type '{self._method}'."
+                f"of type '{self.model.method}'."
             )
         assert isinstance(treatment, str), "treatment must be a string."
         assert isinstance(cluster, str) or cluster is None, (
@@ -1234,7 +1228,7 @@ class Feols(ResultAccessorMixin):
         assert isinstance(pk, (int, float)) and 0 <= pk <= 1
         assert isinstance(qk, (int, float)) and 0 <= qk <= 1
 
-        if self._has_fixef:
+        if self.model.has_fixef:
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
             )
@@ -1276,7 +1270,7 @@ class Feols(ResultAccessorMixin):
             seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
-        fml = self._fml
+        fml = self.model.formula
         data = self._data
         Y = self.within_data.response.flatten()
         W = data[treatment].to_numpy()
@@ -1364,8 +1358,8 @@ class Feols(ResultAccessorMixin):
         Tuple[np.ndarray, np.ndarray, list[str]]
             A tuple with the dependent variable, the model matrix, and the column names.
         """
-        if self._has_fixef:
-            fml_linear, fixef = self._fml.split("|")
+        if self.model.has_fixef:
+            fml_linear, fixef = self.model.formula.split("|")
             fixef_vars = fixef.split("+")
             fixef_vars_C = [f"C({x})" for x in fixef_vars]
             fixef_fml = "+".join(fixef_vars_C)
@@ -1527,14 +1521,14 @@ class Feols(ResultAccessorMixin):
             type=type,
             has_weights=self.options.has_weights,
             weights_type=self.options.weights_type,
-            is_iv=self._is_iv,
-            method=self._method,
+            is_iv=self.model.is_iv,
+            method=self.model.method,
             only_coef=only_coef,
         )
 
         require_retained(self, "decompose", "within_data", "observation_weights")
         if (
-            self._has_fixef
+            self.model.has_fixef
             or cluster is not None
             or self.variance_covariance.spec.is_clustered
         ):
@@ -1571,7 +1565,7 @@ class Feols(ResultAccessorMixin):
             decomp_var=cast(str, decomp_var),
             x1_vars=x1_vars,
             coefnames=xnames,
-            depvarname=self._depvar,
+            depvarname=self.model.depvar,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
@@ -1634,17 +1628,21 @@ class Feols(ResultAccessorMixin):
         fixed_effects.head()
         ```
         """
-        if not self._has_fixef:
+        if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self._is_iv:
+        if self.model.is_iv:
             raise NotImplementedError(
                 "The fixef() method is currently not supported for IV models."
             )
 
         require_retained(self, "fixef", "_data")
 
-        Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
+        model_spec = self.model.model_spec
+        assert model_spec is not None, "fixef() runs after the model matrix is built"
+        fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+
+        Y, X = model_spec[_ModelMatrixKey.main].get_model_matrix(
             self._data,
             output="pandas",
             context=FORMULAIC_TRANSFORMS | {**self.options.context},
@@ -1655,7 +1653,7 @@ class Feols(ResultAccessorMixin):
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
+            if self.model.method == "fepois" or self.model.method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
                 Y = self.fitted_values.link
@@ -1670,15 +1668,11 @@ class Feols(ResultAccessorMixin):
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
-            fixed_effects=self.FixestFormula.fixed_effects_wrapped,
-            fixed_effect_names=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].column_names,
+            fixed_effects=self.model.fixest_formula.fixed_effects_wrapped,
+            fixed_effect_names=fe_spec.column_names,
             data=self._data,
             context=FORMULAIC_TRANSFORMS | {**self.options.context},
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+            transform_state=fe_spec.transform_state,
         )
         D = contrast_coding.matrix
         D_w = D
@@ -1696,9 +1690,7 @@ class Feols(ResultAccessorMixin):
             coefficients=build_fixed_effects(
                 fixed_effect_coefficients=alpha,
                 contrast_coding=contrast_coding,
-                transform_state=self._model_spec[
-                    _ModelMatrixKey.fixed_effects
-                ].transform_state,
+                transform_state=fe_spec.transform_state,
             ),
             alpha=alpha,
             # Fixed-effect contribution per observation, in the units of Y.
@@ -1780,13 +1772,13 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self._is_iv:
+        if self.model.is_iv:
             raise NotImplementedError(
                 "The predict() method is currently not supported for IV models."
             )
 
         if interval == "prediction" or se_fit:
-            if self._has_fixef:
+            if self.model.has_fixef:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with fixed effects."
                 )
@@ -1813,7 +1805,11 @@ class Feols(ResultAccessorMixin):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            model_spec = self.model.model_spec
+            assert model_spec is not None, (
+                "predict() runs after the model matrix is built"
+            )
+            rhs_spec = model_spec[_ModelMatrixKey.main].rhs
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )
@@ -1822,8 +1818,8 @@ class Feols(ResultAccessorMixin):
             # be silently encoded as the reference level -> drop them to NaN instead,
             # matching how unseen fixed-effect levels are handled below.
             valid_idx = valid_idx[~unseen[valid_idx]]
-            if self._has_fixef:
-                fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
+            if self.model.has_fixef:
+                fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
                 check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
@@ -1843,13 +1839,13 @@ class Feols(ResultAccessorMixin):
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
             y_hat = np.full(n_observations, np.nan)
             y_hat[valid_idx] = X_coef @ self._beta_hat
-            if self._has_fixef:
+            if self.model.has_fixef:
                 y_hat[valid_idx] += fe_hat
             # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
             if self.options.offset is not None:
-                offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
+                offset_mm = model_spec[_ModelMatrixKey.offset].get_model_matrix(
                     newdata,
                     context=context,
                     na_action="drop",
@@ -1863,7 +1859,7 @@ class Feols(ResultAccessorMixin):
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
 
-            if type == "response" and self._method == "fepois":
+            if type == "response" and self.model.method == "fepois":
                 y_hat = np.exp(y_hat)
 
         if se_fit or interval == "prediction":
@@ -1969,11 +1965,11 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self._is_iv:
+        if self.model.is_iv:
             raise NotImplementedError(
                 "Randomization Inference is not supported for IV models."
             )
-        if self._method not in {"feols", "fepois"}:
+        if self.model.method not in {"feols", "fepois"}:
             raise NotImplementedError(
                 "Randomization Inference is only supported for OLS and Poisson models."
             )
@@ -2030,7 +2026,7 @@ class Feols(ResultAccessorMixin):
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
-        if choose_algorithm == "slow" or self._method == "fepois":
+        if choose_algorithm == "slow" or self.model.method == "fepois":
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2038,7 +2034,7 @@ class Feols(ResultAccessorMixin):
                 # "iid" for models without controls, else HC1
                 vcov_input = (
                     "hetero"
-                    if (self._has_fixef and len(self._coefnames) > 1)
+                    if (self.model.has_fixef and len(self._coefnames) > 1)
                     or len(self._coefnames) > 2
                     else "iid"
                 )
@@ -2051,12 +2047,12 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
-                fml=self._fml,
+                fml=self.model.formula,
                 reps=reps,
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self._method,
+                model=self.model.method,
             )
 
         else:
@@ -2066,7 +2062,9 @@ class Feols(ResultAccessorMixin):
                 else self.observation_weights.values
             )
             fval_df = (
-                self._data[self._fixef.split("+")] if self._fixef is not None else None
+                self._data[list(self.model.fixed_effects)]
+                if self.model.has_fixef
+                else None
             )
             D = self._data[resampvar_].to_numpy()
 
@@ -2202,15 +2200,15 @@ class Feols(ResultAccessorMixin):
         fit.update(X_new, y_new)
         ```
         """
-        if self._has_fixef:
+        if self.model.has_fixef:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self._method != "feols":
+        if self.model.method != "feols":
             raise NotImplementedError(
                 "The update() method is currently only supported for OLS models."
             )
-        if self._is_iv:
+        if self.model.is_iv:
             raise NotImplementedError(
                 "The update() method is currently not supported for IV models."
             )

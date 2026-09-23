@@ -157,7 +157,7 @@ def optimal_mixture_precision(
 
 def _validate_savi_model(model: ResultAccessorMixin) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
-    if model._method != "feols" or model._is_iv:
+    if model.model.method != "feols" or model.model.is_iv:
         raise NotImplementedError(
             "SAVI inference is currently supported only for feols models."
         )
@@ -165,7 +165,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         raise NotImplementedError(
             "SAVI inference does not currently support weighted feols models."
         )
-    if model._has_fixef:
+    if model.model.has_fixef:
         raise NotImplementedError(
             "SAVI inference does not currently support feols models with fixed effects."
         )

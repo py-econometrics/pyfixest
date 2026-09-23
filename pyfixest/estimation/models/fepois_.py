@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,10 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
-from pyfixest.estimation.internals.model_state import GlmEstimationOptions
+from pyfixest.estimation.internals.model_state import (
+    GlmEstimationOptions,
+    ModelDescription,
+)
 from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.estimation.models.feols_ import (
     PredictionErrorOptions,
@@ -94,13 +98,16 @@ class Fepois(Feglm):
         )
 
         # Poisson-specific overrides on top of the Feglm-set defaults.
-        self._method = "fepois"
         self.capabilities = replace(
             self.capabilities,
             crv3_inference=True,
             cluster_causal_variance=False,
             decomposition=False,
         )
+
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the Poisson estimation function."""
+        return replace(super()._describe_model(**kwargs), method="fepois")
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add the Poisson likelihood measures."

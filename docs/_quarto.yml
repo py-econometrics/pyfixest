@@ -155,6 +155,7 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.saturated_twfe.SaturatedEventStudy
+        - did.saturated_twfe.EventStudyDesign
         - did.visualize.panelview
     - title: Multiple Hypothesis Testing
       desc: |
@@ -239,6 +240,7 @@ quartodoc:
         - estimation.state.EstimationOptions
         - estimation.state.GlmEstimationOptions
         - estimation.state.QuantregEstimationOptions
+        - estimation.state.ModelDescription
         - estimation.state.ModelMatrix
         - estimation.state.ObservationWeights
         - estimation.state.EstimationSample

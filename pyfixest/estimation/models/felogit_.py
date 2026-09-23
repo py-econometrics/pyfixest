@@ -1,10 +1,18 @@
+from __future__ import annotations
+
+from dataclasses import replace
+from typing import Any
+
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import LOGIT
-from pyfixest.estimation.internals.model_state import GlmEstimationOptions
+from pyfixest.estimation.internals.model_state import (
+    GlmEstimationOptions,
+    ModelDescription,
+)
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -33,4 +41,6 @@ class Felogit(Feglm):
             family=LOGIT,
         )
 
-        self._method = "feglm-logit"
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the logit estimation function."""
+        return replace(super()._describe_model(**kwargs), method="feglm-logit")
