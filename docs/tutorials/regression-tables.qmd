@@ -233,9 +233,9 @@ fit9 = pf.feols("Y ~ X1 + X2 + i(job,ref='Managerial') + i(job,X2,ref='Manageria
 pf.etable([fit9], labels=labels, cat_template="{value}")
 ```
 
-Notice that this process will change the `_coefnames`. In this example, the new `_coefnames` are:
+Notice that this process will change the `coefnames`. In this example, the new `coefnames` are:
 ```{python}
-fit9._coefnames
+fit9.coefnames
 ```
 
 ## Custom model headlines
