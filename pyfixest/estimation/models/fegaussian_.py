@@ -75,7 +75,7 @@ class Fegaussian(Feglm):
             residuals=working_state.response_residuals,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
-            k=self._k,
+            k=self.k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self.options.drop_intercept,
             has_fixef=self.model.has_fixef,

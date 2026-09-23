@@ -59,7 +59,13 @@ class QuantregMulti:
             quantreg.to_array()
             quantreg.drop_multicol_vars()
 
-        self._X_is_empty = False
+    @property
+    def X_is_empty(self) -> bool:
+        """Whether the shared design has no columns, read from the child fits.
+
+        Every quantile shares one design, so the child fits agree.
+        """
+        return any(fit.X_is_empty for fit in self.all_quantregs.values())
 
     def get_fit(self) -> dict[float, Quantreg]:
         "Fit multiple quantile regressions via either algo 2 or 3 of CFM."

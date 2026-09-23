@@ -155,15 +155,14 @@ class Feols(ResultAccessorMixin):
     within_data : WithinLinearData
         Response and regressors after demeaning by fixed effects and removing
         collinear regressor columns, without multiplication by square-root weights.
-    _X_is_empty : bool
-        Indicates whether the X array is empty.
     options : EstimationOptions
         The estimation options the model was built with: the small-sample
         correction, the sample, weight, and offset options, the collinearity
         tolerance, the solver, the demeaner, the storage policy, and the
         formulaic context.
-    _coefnames : list
-        Names of the coefficients (of the design matrix X).
+    coefnames : list[str]
+        Names of the estimated coefficients after the collinearity drop, read
+        from `collinearity`.
     collinearity : CollinearityCheck
         Names and column mask of the regressors dropped by the rank check,
         set in get_fit().
@@ -174,8 +173,11 @@ class Feols(ResultAccessorMixin):
     sandwich : SandwichComponents
         Weighted scores, Hessian, and bread of the sandwich covariance, set in
         get_fit().
-    _k : int
-        Number of independent variables (or features).
+    k : int
+        Number of estimated coefficients, the length of `coefnames`.
+    X_is_empty : bool
+        Whether the fit estimates no coefficients (`k == 0`), as in a
+        demeaning-only fit.
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
     _data : Any
@@ -201,8 +203,6 @@ class Feols(ResultAccessorMixin):
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
-    _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
     fixef_estimates : FixedEffectEstimates
         Fixed-effect estimates published by `fixef()`: the coefficient records
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
@@ -356,9 +356,6 @@ class Feols(ResultAccessorMixin):
             ),
             model_spec=model_matrix.model_spec,
         )
-        self._X_is_empty = independent.shape[1] == 0
-
-        self._coefnames = independent.columns.tolist()
         self._coefnames_z = (
             model_matrix.instruments.columns.tolist()
             if model_matrix.instruments is not None
@@ -447,31 +444,30 @@ class Feols(ResultAccessorMixin):
     ) -> WithinLinearData:
         """Return within data after the established unweighted rank check."""
         design = within_data.design
+        # The model-matrix columns label the design before the rank check.
+        coefnames = tuple(self.model_matrix.independent.columns)
         if design.shape[1] == 0:
             # Fixed-effects-only model: nothing to check, but the attribute is
             # published for every fitted model.
             self.collinearity = CollinearityCheck(
                 dropped_coef_names=(),
-                mask=tuple(False for _ in self._coefnames),
-                coefnames=tuple(self._coefnames),
+                mask=tuple(False for _ in coefnames),
+                coefnames=coefnames,
             )
             return within_data
 
         design, collinearity = drop_multicollinear_variables(
             design,
-            self._coefnames,
+            list(coefnames),
             self.options.collin_tol,
         )
         self.collinearity = collinearity
-        self._coefnames = list(collinearity.coefnames)
 
         return replace(within_data, design=design)
 
     def _set_within_data(self, within_data: WithinLinearData) -> None:
         """Publish canonical within data after column selection."""
         self.within_data = within_data
-        self._X_is_empty = within_data.design.shape[1] == 0
-        self._k = within_data.design.shape[1]
 
     def _prediction_design(self) -> np.ndarray:
         """Return the coefficient-ordered design for the shared predict() method.
@@ -493,7 +489,7 @@ class Feols(ResultAccessorMixin):
         within_data = self._drop_multicollinear_within_data(self._demean())
         self._set_within_data(within_data)
 
-        if self._X_is_empty:
+        if self.X_is_empty:
             # Fixed-effects-only model: no coefficients, residuals are the
             # within-transformed response, and the plan skips vcov().
             self._beta_hat = np.empty(0)
@@ -516,7 +512,7 @@ class Feols(ResultAccessorMixin):
         self.fitted_values = FittedValues(link=fitted, response=fitted)
         # Empty designs are used only for demeaning and may have no residual
         # degrees of freedom. Leave their fit statistics undefined.
-        if self._X_is_empty:
+        if self.X_is_empty:
             return
         self.fitstat = linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
@@ -524,7 +520,7 @@ class Feols(ResultAccessorMixin):
             residuals=self._u_hat,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
-            k=self._k,
+            k=self.k,
             k_fe=self._n_fixef_coefficients(),
             has_intercept=not self.options.drop_intercept,
             has_fixef=self.model.has_fixef,
@@ -687,7 +683,7 @@ class Feols(ResultAccessorMixin):
         "Bundle the model counts that enter get_ssc()."
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
-            k=self._k,
+            k=self.k,
             k_fe=int(self._k_fe.sum()) if self.model.has_fixef else 0,
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
@@ -806,7 +802,7 @@ class Feols(ResultAccessorMixin):
         )
 
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
-        beta_jack = np.zeros((len(clustid), self._k))
+        beta_jack = np.zeros((len(clustid), self.k))
 
         # lazy loading to avoid circular import
         fixest_module = import_module("pyfixest.estimation")
@@ -836,7 +832,7 @@ class Feols(ResultAccessorMixin):
         #    beta_center = np.mean(beta_jack, axis = 0)
         beta_center = self._beta_hat
 
-        vcov_mat = np.zeros((self._k, self._k))
+        vcov_mat = np.zeros((self.k, self.k))
         for ixg, _ in enumerate(clustid):
             beta_centered = beta_jack[ixg, :] - beta_center
             vcov_mat += np.outer(beta_centered, beta_centered)
@@ -908,18 +904,18 @@ class Feols(ResultAccessorMixin):
         k_fe = np.sum(self._k_fe.to_numpy()) if self.model.has_fixef else 0
 
         # If R is None, default to the identity matrix
-        R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        R = np.eye(self.k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
 
         covariance = self.variance_covariance
         if covariance.spec.is_clustered:
             df2: int | float = min(covariance.G) - 1
         else:
-            df2 = self.sample_info.n_obs - self._k - k_fe
+            df2 = self.sample_info.n_obs - self.k - k_fe
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
         if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
+            not np.array_equal(R, np.eye(self.k)) or (q is not None and np.any(q))
         ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
@@ -1029,7 +1025,7 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
-        if param is not None and param not in self._coefnames:
+        if param is not None and param not in self.coefnames:
             raise ValueError(
                 f"Parameter {param} not found in the model's coefficients."
             )
@@ -1237,7 +1233,7 @@ class Feols(ResultAccessorMixin):
                 "The causal cluster variance estimator is currently not supported for models with weights."
             )
 
-        if treatment not in self._coefnames:
+        if treatment not in self.coefnames:
             raise ValueError(
                 f"Variable {treatment} not found in the model's coefficients."
             )
@@ -1309,7 +1305,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= n_splits
         vcov_splits /= N
 
-        crv1_idx = self._coefnames.index(treatment)
+        crv1_idx = self.coefnames.index(treatment)
         vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
@@ -1380,7 +1376,7 @@ class Feols(ResultAccessorMixin):
         else:
             Y = self.within_data.response.flatten()
             X = self.within_data.design
-            xnames = self._coefnames
+            xnames = self.coefnames
 
         X = csc_matrix(X) if output == "sparse" else X
 
@@ -1648,11 +1644,11 @@ class Feols(ResultAccessorMixin):
             context=FORMULAIC_TRANSFORMS | {**self.options.context},
         )
         Y = Y.to_numpy().flatten().astype(np.float64)
-        if self._X_is_empty:
+        if self.X_is_empty:
             uhat = Y.flatten()
         else:
             # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
+            X = X[self.coefnames].to_numpy()
             if self.model.method == "fepois" or self.model.method.startswith("feglm"):
                 # determine residuals from estimated linear predictor
                 # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
@@ -1836,7 +1832,7 @@ class Feols(ResultAccessorMixin):
                     coefficients=self.fixef_estimates.coefficients,
                 )
 
-            X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
+            X_coef = X_mm.loc[valid_idx, self.coefnames].to_numpy()
             y_hat = np.full(n_observations, np.nan)
             y_hat[valid_idx] = X_coef @ self._beta_hat
             if self.model.has_fixef:
@@ -1974,8 +1970,8 @@ class Feols(ResultAccessorMixin):
                 "Randomization Inference is only supported for OLS and Poisson models."
             )
 
-        # check that resampvar in _coefnames
-        if resampvar_ not in self._coefnames:
+        # check that resampvar in coefnames
+        if resampvar_ not in self.coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
         if self.options.has_weights:
@@ -2034,8 +2030,8 @@ class Feols(ResultAccessorMixin):
                 # "iid" for models without controls, else HC1
                 vcov_input = (
                     "hetero"
-                    if (self.model.has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
+                    if (self.model.has_fixef and len(self.coefnames) > 1)
+                    or len(self.coefnames) > 2
                     else "iid"
                 )
 
@@ -2072,7 +2068,7 @@ class Feols(ResultAccessorMixin):
                 Y=self.within_data.response,
                 X=self.within_data.design,
                 D=D,
-                coefnames=self._coefnames,
+                coefnames=self.coefnames,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
                 reps=reps,

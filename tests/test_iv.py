@@ -318,8 +318,7 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
 
     instruments = list(fit_iid.first_stage.instruments)
     iv_positions = [
-        list(first_stage_model._coefnames).index(instrument)
-        for instrument in instruments
+        first_stage_model.coefnames.index(instrument) for instrument in instruments
     ]
     Z = reference_first_stage.within_data.design[:, iv_positions]
     observation_weights = reference_first_stage.observation_weights.values

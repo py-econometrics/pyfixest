@@ -233,7 +233,7 @@ class Feiv(Feols):
         require_retained(self, "_fit_first_stage", "_data")
         # The excluded instruments are the instrument-matrix columns that are
         # not also second-stage regressors, kept in instrument-matrix order.
-        exogenous = set(self._coefnames)
+        exogenous = set(self.coefnames)
         instruments = tuple(
             str(name) for name in self._coefnames_z if name not in exogenous
         )
@@ -500,7 +500,7 @@ class Feiv(Feols):
 
 def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list[int]:
     """Locate the excluded instruments among the first-stage coefficients."""
-    coefnames = list(model._coefnames)
+    coefnames = model.coefnames
     return [coefnames.index(instrument) for instrument in instruments]
 
 
@@ -533,7 +533,7 @@ def first_stage_f_test(
     # Pad an identity matrix of size p_iv by p_iv with zeros to select the
     # excluded instruments out of the first stage's k coefficients.
     p_iv = len(instrument_positions)
-    R = np.zeros((p_iv, model._k))
+    R = np.zeros((p_iv, model.k))
     R[:, instrument_positions] = np.eye(p_iv)
 
     with warnings.catch_warnings():

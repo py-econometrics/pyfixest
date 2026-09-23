@@ -351,7 +351,7 @@ def fit_one(
     FIT._validate_response()
     FIT.get_fit()
     # if X is empty: no inference (empty X only as shorthand for demeaning)
-    if not FIT._X_is_empty:
+    if not FIT.X_is_empty:
         vcov_type = _get_vcov_type(vcov)
         # vcov() reads the model's retained estimation data when data is None
         FIT.vcov(vcov=vcov_type, vcov_kwargs=vcov_kwargs)

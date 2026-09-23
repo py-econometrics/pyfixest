@@ -125,7 +125,7 @@ def iplot(
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `_coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
+        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     cat_template: str, optional
@@ -157,10 +157,10 @@ def iplot(
     fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
     fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
 
-    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
+    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1.coefnames))
     pf.iplot(
         models = [fit1, fit2, fit3],
-        labels = rename_categoricals(fit1._coefnames)
+        labels = rename_categoricals(fit1.coefnames)
     )
     pf.iplot(
         models = [fit1, fit2, fit3],
@@ -313,7 +313,7 @@ def coefplot(
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `_coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
+        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     joint: str or bool, optional

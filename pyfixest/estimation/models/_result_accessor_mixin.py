@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
     from pyfixest.estimation.internals.fit_statistics import FitStatistics
     from pyfixest.estimation.internals.model_state import (
+        CollinearityCheck,
         EstimationOptions,
         EstimationSample,
         ModelDescription,
@@ -142,10 +143,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
     sample_info: "EstimationSample"
     within_data: "WithinLinearData"
     fitstat: "FitStatistics"
-    _coefnames: list[str]
+    collinearity: "CollinearityCheck"
     model: "ModelDescription"
     _k_fe: pd.Series
-    _k: int
 
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
@@ -277,6 +277,25 @@ class ResultAccessorMixin(TidyColumnAccessors):
             alpha=alpha,
         )
 
+    @property
+    def coefnames(self) -> list[str]:
+        """Names of the estimated coefficients, after the collinearity drop.
+
+        Read from `collinearity`, which survives `lean=True`. Empty for a
+        fixed-effects-only fit.
+        """
+        return list(self.collinearity.coefnames)
+
+    @property
+    def k(self) -> int:
+        """Number of estimated coefficients, after the collinearity drop."""
+        return len(self.collinearity.coefnames)
+
+    @property
+    def X_is_empty(self) -> bool:
+        """Whether the fit estimates no coefficients, as in a demeaning-only fit."""
+        return self.k == 0
+
     def _n_fixef_coefficients(self) -> int:
         """Return the number of fixed-effect coefficients, zero without fixed effects."""
         return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
@@ -350,7 +369,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int = np.empty((2, 0))
 
         data = {
-            "Coefficient": self._coefnames,
+            "Coefficient": self.coefnames,
             "Estimate": self._beta_hat,
             "Std. Error": se,
             "t value": tstat,
@@ -497,7 +516,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             )
 
         coefnames, coef_indices = _select_coefnames_and_indices(
-            self._coefnames, keep, drop, exact_match
+            self.coefnames, keep, drop, exact_match
         )
 
         se = self.coeftable.se

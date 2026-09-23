@@ -333,12 +333,12 @@ class Quantreg(Feols):
                 if np.any(JL):
                     X_neg = np.sum(X[JL, :], axis=0)
                     Y_neg = np.sum(Y[JL])
-                    X_sub = np.concatenate([X_sub, X_neg.reshape((1, self._k))], axis=0)
+                    X_sub = np.concatenate([X_sub, X_neg.reshape((1, self.k))], axis=0)
                     Y_sub = np.concatenate([Y_sub, Y_neg.reshape((1, 1))], axis=0)
                 if np.any(JH):
                     X_pos = np.sum(X[JH, :], axis=0)
                     Y_pos = np.sum(Y[JH])
-                    X_sub = np.concatenate([X_sub, X_pos.reshape(1, self._k)], axis=0)
+                    X_sub = np.concatenate([X_sub, X_pos.reshape(1, self.k)], axis=0)
                     Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
 
                 # solve the modified problem

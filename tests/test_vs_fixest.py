@@ -144,7 +144,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
 
 def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     """Get the variance of a named coefficient from both Python and R models."""
-    py_idx = py_model._coefnames.index(coefname)
+    py_idx = py_model.coefnames.index(coefname)
     py_vcov = py_model.variance_covariance.vcov[py_idx, py_idx]
     # Get R coefficient names (pandas2ri strips names from auto-converted arrays)
     ro.globalenv[".tmp.model"] = r_model

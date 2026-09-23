@@ -169,7 +169,7 @@ class Feglm(Feols):
             Y=response,
             family=self._family,
             demean=_demean,
-            coefnames=self._coefnames,
+            coefnames=list(model_matrix.independent.columns),
             collin_tol=self.options.collin_tol,
             accelerate=self.options.accelerate and fixed_effects is not None,
             offset=offset,
@@ -181,7 +181,6 @@ class Feglm(Feols):
         )
 
         self.collinearity = fit.collinearity
-        self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
         # The prediction view of the same arrays: eta is the linear predictor
@@ -189,9 +188,6 @@ class Feglm(Feols):
         self.fitted_values = FittedValues(
             link=working_state.eta, response=working_state.mu
         )
-        design_within = working_state.design_within
-        self._X_is_empty = design_within.shape[1] == 0
-        self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich

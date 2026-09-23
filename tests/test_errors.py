@@ -621,7 +621,7 @@ def test_iv_update_is_explicitly_unsupported():
     fit = feols("Y ~ 1 + [X1 ~ Z1]", data=data)
 
     with pytest.raises(NotImplementedError, match=r"update.*not supported.*IV"):
-        fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+        fit.update(X_new=np.ones((1, fit.k)), y_new=np.ones(1))
 
 
 def test_non_ols_update_is_explicitly_unsupported():
@@ -637,7 +637,7 @@ def test_non_ols_update_is_explicitly_unsupported():
 
     for fit in models:
         with pytest.raises(NotImplementedError, match=r"update.*only supported.*OLS"):
-            fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+            fit.update(X_new=np.ones((1, fit.k)), y_new=np.ones(1))
 
 
 def test_coef_update_inplace_is_explicitly_unsupported():

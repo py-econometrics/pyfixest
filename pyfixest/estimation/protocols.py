@@ -10,7 +10,10 @@ if TYPE_CHECKING:
 class FittedModel(Protocol):
     """Structural contract consumed by the generic estimation pipeline."""
 
-    _X_is_empty: bool
+    @property
+    def X_is_empty(self) -> bool:
+        """Whether the fit estimates no coefficients."""
+        ...
 
     def prepare_model_matrix(self) -> object:
         """Prepare and retain estimator inputs derived from the formula."""

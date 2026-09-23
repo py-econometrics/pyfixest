@@ -459,7 +459,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
     events: list[str] = []
 
     class StubModel:
-        _X_is_empty = False
+        X_is_empty = False
 
         def __init__(self, *, events, **kwargs):
             self.events = events
@@ -524,6 +524,8 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
     events: list[str] = []
 
     class StubQuantreg:
+        X_is_empty = False
+
         def prepare_model_matrix(self):
             events.append("prepare")
 
@@ -546,4 +548,4 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
         "to_array",
         "drop_multicol_vars",
     ]
-    assert fit._X_is_empty is False
+    assert fit.X_is_empty is False

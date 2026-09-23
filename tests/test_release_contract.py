@@ -153,7 +153,9 @@ def _covariance_field(mod, name: str):
 
 
 def _check_structure(baseline: Baseline, mod) -> None:
-    baseline.check_exact("coefnames", list(mod._coefnames))
+    # The pinned release predates `fit.coefnames` and stores `_coefnames`.
+    coefnames = mod.coefnames if hasattr(mod, "coefnames") else mod._coefnames
+    baseline.check_exact("coefnames", list(coefnames))
     # The pinned release predates `EstimationSample`; `_N` was its `n_obs`.
     nobs = mod.sample_info.n_obs if hasattr(mod, "sample_info") else mod._N
     baseline.check_exact("nobs", int(nobs))

@@ -294,7 +294,7 @@ class SaturatedEventStudy(DID):
 
         coefs = model._beta_hat
         se = model.coeftable.se
-        coefnames = model._coefnames
+        coefnames = model.coefnames
 
         if weighting == "shares":
             weights_df = compute_period_weights(

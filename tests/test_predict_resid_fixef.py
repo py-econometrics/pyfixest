@@ -289,7 +289,7 @@ def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_ty
     )
 
     response_scale_fixed_effect = (
-        fit.predict() - weighted_data[fit._coefnames].to_numpy() @ fit.coef().to_numpy()
+        fit.predict() - weighted_data[fit.coefnames].to_numpy() @ fit.coef().to_numpy()
     )
     # With two fixed effects, iterative demeaning and the lsqr fixed-effect
     # solve agree with fixest to about 1e-8.

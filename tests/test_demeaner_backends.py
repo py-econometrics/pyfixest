@@ -166,7 +166,7 @@ def _assert_backend_matches(
 ) -> None:
     context = f"backend={case.name}"
 
-    assert actual._coefnames == reference._coefnames, context
+    assert actual.coefnames == reference.coefnames, context
     assert (
         actual.collinearity.dropped_coef_names
         == reference.collinearity.dropped_coef_names

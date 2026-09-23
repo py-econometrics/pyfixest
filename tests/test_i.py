@@ -98,7 +98,7 @@ def compare_with_r(
     """
     py_formula = py_fml if py_fml is not None else r_fml
     fit_py = feols(py_formula, df)
-    py_names = [normalize_coef_name(str(n)) for n in fit_py._coefnames]
+    py_names = [normalize_coef_name(str(n)) for n in fit_py.coefnames]
     py_values = fit_py.coef().values
 
     fit_r = fixest.feols(ro.Formula(r_fml), df)
@@ -166,7 +166,7 @@ def df_test() -> pd.DataFrame:
 def test_i_reference_exclusion(df_het, formula, excluded_coef):
     """Test that reference levels are properly excluded."""
     fit = feols(formula, df_het)
-    assert excluded_coef not in fit._coefnames, (
+    assert excluded_coef not in fit.coefnames, (
         f"{excluded_coef} should not be in coefficient names"
     )
 

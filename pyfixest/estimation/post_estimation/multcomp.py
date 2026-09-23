@@ -51,7 +51,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     S = len(models)
     pvalues = np.zeros(S)
     for i, model in enumerate(models):
-        if param not in model._coefnames:
+        if param not in model.coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model.model.formula}."
             )
@@ -297,7 +297,7 @@ def _multcomp_resample(
 
     S = 0
     for model in models:
-        if param not in model._coefnames:
+        if param not in model.coefnames:
             raise ValueError(
                 f"Parameter '{param}' not found in the model {model.model.formula}."
             )
@@ -354,7 +354,7 @@ def _multcomp_resample(
 
         if type == "wyoung":
             _df[i] = (
-                model.sample_info.n_obs - model._k
+                model.sample_info.n_obs - model.k
                 if model.variance_covariance.spec.vcov_type in ["iid", "hetero"]
                 else min(model.variance_covariance.G) - 1
             )

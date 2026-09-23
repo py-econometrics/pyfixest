@@ -18,7 +18,7 @@ def test_matrix_time_fields_survive_retention(retention):
     assert fit.model.fixed_effects == ("f1", "f3")
     assert fit.model.fixef == "f1+f3"
     assert fit.model.interacted_covariates == tuple(
-        name for name in fit._coefnames if name.startswith("f2::")
+        name for name in fit.coefnames if name.startswith("f2::")
     )
     assert fit.model.model_spec is not None
 

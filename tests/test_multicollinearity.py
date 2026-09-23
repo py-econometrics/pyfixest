@@ -53,13 +53,13 @@ def test_multicollinearity_error():
     )
 
     fit = feols("Y ~ X1 + X2", data=data)
-    assert fit._coefnames == ["Intercept", "X1"]
+    assert fit.coefnames == ["Intercept", "X1"]
 
     fit = feols("Y ~ X1 + f1 + X2 + f2", data=data)
-    assert fit._coefnames == ["Intercept", "X1", "f1"]
+    assert fit.coefnames == ["Intercept", "X1", "f1"]
 
     fit = feols("Y ~ X1 + f1 + X2 | f2", data=data)
-    assert fit._coefnames == ["X1"]
+    assert fit.coefnames == ["X1"]
 
 
 @pytest.mark.parametrize(

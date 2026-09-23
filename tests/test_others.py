@@ -297,7 +297,7 @@ def test_i_bin_bin2_separate_state():
         "Y ~ i(f1, f2, bin={'low': ['0', '1']}, bin2={'hi': ['0', '1']})",
         data=data,
     )
-    coefnames = [str(c) for c in fit._coefnames]
+    coefnames = [str(c) for c in fit.coefnames]
     f1_binned = any("low" in c for c in coefnames)
     f2_binned = any("hi" in c for c in coefnames)
     assert f1_binned, f"f1 should be binned to 'low', got: {coefnames}"

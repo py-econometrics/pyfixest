@@ -190,7 +190,7 @@ def _coefficient_evalues(
         nobs=model.sample_info.n_obs,
         mixture_precision=mixture_precision,
     )
-    return pd.Series(values, index=model._coefnames, name="e_value")
+    return pd.Series(values, index=model.coefnames, name="e_value")
 
 
 def _evalue(
@@ -227,7 +227,7 @@ def _confint(
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
 
     coefnames, coef_indices = _select_coefnames_and_indices(
-        model._coefnames, keep, drop, exact_match
+        model.coefnames, keep, drop, exact_match
     )
     critical_value = _savi_confidence_radius(
         alpha=alpha,
