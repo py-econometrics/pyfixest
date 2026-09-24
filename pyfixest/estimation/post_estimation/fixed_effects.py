@@ -6,17 +6,18 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import formulaic
+import formulaic.formula
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from formulaic import ModelSpec
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Term
 from numpy._typing import NDArray
-from scipy.sparse import spmatrix
+from scipy.sparse import csc_matrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
+    make_formula,
 )
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FIXED_EFFECT_ENCODING,
@@ -132,14 +133,15 @@ class FixedEffectContrastCoding:
 
     Attributes
     ----------
-    matrix : spmatrix
+    matrix : csc_matrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
+        formulaic's `output="sparse"` always materializes as CSC.
     coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
         Observed and retained codes with their positions in the complete
         coefficient vector, keyed by fixed effect.
     """
 
-    matrix: spmatrix
+    matrix: csc_matrix
     coefficient_positions: Mapping[str, FixedEffectCoefficientPositions]
 
 
@@ -346,26 +348,37 @@ def contrast_code_fixed_effects(
     transform_state: Mapping[str, Any],
 ) -> FixedEffectContrastCoding:
     """Build the sparse FE dummy matrix and record its coefficient alignment."""
-    contrast_coding = formulaic.Formula(
-        [f"C({fixed_effect})" for fixed_effect in fixed_effects],
-        _parser=DefaultFormulaParser(include_intercept=False),
+    contrast_coding = cast(
+        formulaic.formula.SimpleFormula,
+        make_formula(
+            [f"C({fixed_effect})" for fixed_effect in fixed_effects],
+            parser=DefaultFormulaParser(include_intercept=False),
+        ),
     )
-    matrix = contrast_coding.get_model_matrix(
-        data,
-        output="sparse",
-        ensure_full_rank=True,
-        context=context,
-        transform_state=transform_state,
+    # `contrast_coding` is built from a flat list of terms (never a dict/`~`
+    # spec), so `get_model_matrix` always returns a plain `ModelMatrix`, never
+    # the structured `Structured[ModelMatrix]`.
+    matrix = cast(
+        formulaic.ModelMatrix,
+        contrast_coding.get_model_matrix(
+            data,
+            output="sparse",
+            ensure_full_rank=True,
+            context=context,
+            transform_state=transform_state,
+        ),
     )
+    model_spec = matrix.model_spec
+    assert model_spec is not None, "model_spec is set once get_model_matrix returns"
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     for fixed_effect_name, term in zip(
-        fixed_effect_names, matrix.model_spec.terms, strict=True
+        fixed_effect_names, model_spec.terms, strict=True
     ):
         coefficient_positions[fixed_effect_name] = (
-            get_fixed_effect_coefficient_positions(term, matrix.model_spec)
+            get_fixed_effect_coefficient_positions(term, model_spec)
         )
 
     return FixedEffectContrastCoding(
-        matrix=cast(scipy.sparse.spmatrix, matrix),
+        matrix=cast(csc_matrix, matrix),
         coefficient_positions=coefficient_positions,
     )
