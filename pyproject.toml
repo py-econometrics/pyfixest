@@ -180,6 +180,14 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.ty.src]
+# rpy2 is only available in the optional `r` pixi feature, not the `py312` env
+# ty runs in; these two files exist solely to support against-R test fixtures.
+exclude = [
+    "pyfixest/utils/set_rpy2_path.py",
+    "pyfixest/utils/check_r_install.py",
+]
+
 # --------------------------------------------------------------------------------------
 # pixi configuration
 # --------------------------------------------------------------------------------------
