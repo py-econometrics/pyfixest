@@ -78,131 +78,94 @@ def test_poisson_prediction_internally(data, weights, fml):
     )
 
 
+@pytest.fixture
+def fixest_data(data):
+    data = data.copy()
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
+    return data
+
+
+@pytest.fixture
+def fits_vs_fixest(fixest_data, estimator, fml):
+    """Fit the same model with pyfixest and fixest; recover pyfixest's FEs."""
+    r_fml = fml.replace("f1:f2", "f1^f2")
+    if estimator == "logit":
+        fml, r_fml = fml.replace("Y", "Y_bin", 1), r_fml.replace("Y", "Y_bin", 1)
+
+    if estimator == "feols":
+        fit = pf.feols(fml=fml, data=fixest_data)
+        fit_r = fixest.feols(ro.Formula(r_fml), data=fixest_data)
+    elif estimator in ("fepois", "fepois_offset"):
+        offset = "off" if estimator == "fepois_offset" else None
+        r_offset = {"offset": ro.Formula("~off")} if offset is not None else {}
+        fit = pf.fepois(fml=fml, data=fixest_data, offset=offset, iwls_tol=1e-10)
+        fit_r = fixest.fepois(
+            ro.Formula(r_fml), data=fixest_data, glm_tol=1e-10, **r_offset
+        )
+    else:
+        fit = pf.feglm(fml=fml, data=fixest_data, family=estimator, iwls_tol=1e-10)
+        fit_r = fixest.feglm(
+            ro.Formula(r_fml),
+            data=fixest_data,
+            family=stats.binomial(link=estimator),
+            glm_tol=1e-10,
+        )
+
+    # predict(newdata=...) adds the fixed effects recovered by fixef(); solve
+    # them tightly so the comparison is not limited by lsqr's default 1e-6.
+    fit.fixef(atol=1e-12, btol=1e-12)
+    return fit, fit_r
+
+
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("estimator", ["feols", "fepois", "fepois_offset", "logit"])
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y~ X1 | f1",
-        "Y~ X1 | f1 + f2",
-        "Y~ X1 | f1:f2",
+        "Y ~ X1 | f1",
+        "Y ~ X1 | f1 + f2",
+        "Y ~ X1 | f1:f2",
+        "Y ~ 1 | f1",
     ],
 )
-def test_vs_fixest(data, fml):
-    """Test predict and resid methods against fixest."""
-    feols_mod = pf.feols(fml=fml, data=data, vcov="HC1")
-    fepois_mod = pf.fepois(fml=fml, data=data, vcov="HC1")
+def test_vs_fixest(request, fits_vs_fixest, fixest_data, estimator, fml):
+    """Compare fixef, predict, and resid with fixest.
 
-    data2 = data.copy()[1:500]
-
-    feols_mod.fixef(atol=1e-12, btol=1e-12)
-    fepois_mod.fixef(atol=1e-12, btol=1e-12)
-
-    # fixest estimation
-    r_fml = fml.replace("f1:f2", "f1^f2")
-    r_fixest_ols = fixest.feols(
-        ro.Formula(r_fml),
-        data=data,
-        se="hetero",
-    )
-
-    r_fixest_pois = fixest.fepois(
-        ro.Formula(r_fml),
-        data=data,
-        se="hetero",
-    )
-
-    # test OLS fit
-    if not np.allclose(feols_mod.coef().values, r_fixest_ols.rx2("coefficients")):
-        raise ValueError("Coefficients are not equal")
-
-    if not (stats.nobs(r_fixest_ols)[0] == feols_mod.sample_info.n_obs):
-        raise ValueError("The Number of Observations does not match.")
-
-    # test Poisson fit
-    if not np.allclose(fepois_mod.coef(), r_fixest_pois.rx2("coefficients")):
-        raise ValueError("Coefficients are not equal")
-
-    # test sumFE for OLS
-    if not np.allclose(feols_mod.fixef_estimates.sumFE, r_fixest_ols.rx2("sumFE")):
-        raise ValueError("sumFE for OLS are not equal")
-
-    # test sumFE for Poisson
-    if not np.allclose(
-        fepois_mod.fixef_estimates.sumFE, r_fixest_pois.rx2("sumFE"), atol=1e-07
-    ):
-        raise ValueError("sumFE for Poisson are not equal")
-
-    # test predict for OLS
-    if not np.allclose(
-        feols_mod.predict()[0:5], r_fixest_ols.rx2("fitted.values")[0:5]
-    ):
-        raise ValueError("Predictions for OLS are not equal")
-
-    if not np.allclose(len(feols_mod.predict()), len(stats.predict(r_fixest_ols))):
-        raise ValueError("Predictions for OLS are not the same length")
-
-    if not np.allclose(
-        fepois_mod.predict(type="response"), r_fixest_pois.rx2("fitted.values")
-    ):
-        raise ValueError("Predictions for Poisson are not equal")
-
-    # test on new data - OLS.
-    if not np.allclose(
-        feols_mod.predict(newdata=data2)[0:5],
-        stats.predict(r_fixest_ols, newdata=data2)[0:5],
-        equal_nan=True,
-    ):
-        raise ValueError("Predictions for OLS are not equal with newdata.")
-
-    if not np.allclose(
-        len(feols_mod.predict(newdata=data2)),
-        len(stats.predict(r_fixest_ols, newdata=data2)),
-    ):
-        raise ValueError("Predictions for OLS are not of the same length.")
-
-    # test predict for Poisson
-    if not np.allclose(
-        fepois_mod.predict(newdata=data2, type="link")[11:16],
-        stats.predict(r_fixest_pois, newdata=data2, type="link")[11:16],
-        atol=1e-07,
-        equal_nan=True,
-    ):
-        raise ValueError("Predictions for Poisson are not equal")
-
-    # test resid for OLS
-    if not np.allclose(feols_mod.resid()[20:25], r_fixest_ols.rx2("residuals")[20:25]):
-        raise ValueError("Residuals for OLS are not equal")
-
-    # test resid for Poisson
-    if not np.allclose(fepois_mod.resid(), r_fixest_pois.rx2("residuals")):
-        raise ValueError("Residuals for Poisson are not equal")
-
-    # test fepois predict on newdata with an offset
-    data_off = data.copy()
-    data_off["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data_off)))
-    fepois_mod_off = pf.fepois(fml=fml, data=data_off, offset="off")
-    r_fixest_pois_off = fixest.fepois(
-        ro.Formula(r_fml), data=data_off, offset=ro.Formula("~off")
-    )
-    data2_off = data_off.copy()[1:500]
-    if not np.allclose(
-        fepois_mod_off.predict(newdata=data2_off, type="link")[11:16],
-        stats.predict(r_fixest_pois_off, newdata=data2_off, type="link")[11:16],
-        atol=1e-05,
-        equal_nan=True,
-    ):
-        raise ValueError(
-            "Predictions for Poisson with offset are not equal for type 'link'."
+    `Y ~ 1 | f1` covers fixed effects recovered without covariates; GLM fixed
+    effects live on the link scale net of the offset.
+    """
+    if estimator == "logit" and fml == "Y ~ X1 | f1:f2":
+        request.applymarker(
+            pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    "The binomial separation check drops only all-zero FE groups; "
+                    "fixest also drops all-one groups."
+                ),
+            )
         )
+    fit, fit_r = fits_vs_fixest
+    tol = {"rtol": 1e-6, "atol": 1e-6}
 
-    if not np.allclose(
-        fepois_mod_off.predict(newdata=data2_off, type="response")[11:16],
-        stats.predict(r_fixest_pois_off, newdata=data2_off, type="response")[11:16],
-        atol=1e-05,
-        equal_nan=True,
-    ):
-        raise ValueError(
-            "Predictions for Poisson with offset are not equal for type 'response'."
+    assert fit.sample_info.n_obs == stats.nobs(fit_r)[0]
+    # fixest returns NULL coefficients when the formula has only fixed effects
+    if len(fit.coef()) > 0:
+        np.testing.assert_allclose(fit.coef(), fit_r.rx2("coefficients"), **tol)
+
+    np.testing.assert_allclose(fit.fixef_estimates.sumFE, fit_r.rx2("sumFE"), **tol)
+    np.testing.assert_allclose(
+        fit.predict(type="response"), fit_r.rx2("fitted.values"), **tol
+    )
+    np.testing.assert_allclose(fit.resid(), fit_r.rx2("residuals"), **tol)
+
+    newdata = fixest_data.iloc[1:500]
+    for prediction_type in ["link", "response"]:
+        np.testing.assert_allclose(
+            fit.predict(newdata=newdata, type=prediction_type),
+            stats.predict(fit_r, newdata=newdata, type=prediction_type),
+            equal_nan=True,
+            **tol,
         )
 
 
@@ -515,59 +478,4 @@ def test_context_capture_with_out_of_sample_predict():
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_almost_equal(
             context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
-        )
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    ("family", "offset"),
-    [("poisson", None), ("poisson", "off"), ("logit", None)],
-)
-def test_glm_fixef_without_covariates_vs_fixest(data, family, offset):
-    """GLM fixed effects without covariates live on the link scale.
-
-    With only fixed effects, `fixef()` must still recover them from the
-    linear predictor net of the offset, as fixest does, not from the observed
-    response. `predict(newdata=...)` reuses these fixed effects.
-    """
-    data = data.copy()
-    data["Y_bin"] = (data["Y"] > 0).astype(int)
-    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
-    depvar = "Y" if family == "poisson" else "Y_bin"
-    fml = f"{depvar} ~ 1 | f1"
-
-    if family == "poisson":
-        fit = pf.fepois(fml, data=data, offset=offset, iwls_tol=1e-10)
-        r_family = stats.poisson()
-    else:
-        fit = pf.feglm(fml, data=data, family=family, iwls_tol=1e-10)
-        r_family = stats.binomial(link=family)
-    r_offset = {"offset": ro.Formula(f"~{offset}")} if offset is not None else {}
-    fit_r = fixest.feglm(
-        ro.Formula(fml), data=data, family=r_family, glm_tol=1e-10, **r_offset
-    )
-
-    fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
-    ro.globalenv[".pyfixest_glm_fixef_fit"] = fit_r
-    fixed_effects_r = pd.Series(
-        np.asarray(ro.r("fixef(.pyfixest_glm_fixef_fit)$f1")),
-        index=np.asarray(ro.r("names(fixef(.pyfixest_glm_fixef_fit)$f1)"), dtype=float),
-    ).sort_index()
-    fixed_effects_by_level = fixed_effects.set_index(
-        fixed_effects["level"].astype(float)
-    )["coefficient"].sort_index()
-
-    tol = {"rtol": 1e-6, "atol": 1e-6}
-    np.testing.assert_allclose(fixed_effects_by_level, fixed_effects_r, **tol)
-    np.testing.assert_allclose(
-        fit.fixef_estimates.sumFE, np.asarray(fit_r.rx2("sumFE")), **tol
-    )
-
-    newdata = data.iloc[:100]
-    for prediction_type in ["link", "response"]:
-        np.testing.assert_allclose(
-            fit.predict(newdata=newdata, type=prediction_type),
-            np.asarray(stats.predict(fit_r, newdata=newdata, type=prediction_type)),
-            equal_nan=True,
-            **tol,
         )
