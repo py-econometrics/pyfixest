@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, fields, replace
 
 import numpy as np
 import pandas as pd
@@ -8,6 +8,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
@@ -159,28 +160,67 @@ def _capability_fit(model: str):
             treatment="treat",
             cluster="state",
         )
+    if model in {"twfe", "saturated"}:
+        return pf.event_study(
+            pd.read_csv("pyfixest/did/data/df_het.csv"),
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            estimator=model,
+        )
     raise ValueError(model)
 
 
+_ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
+
+
 @pytest.mark.parametrize(
-    "model,expected",
+    "model,enabled",
     [
-        ("feols", (True, True, True, True)),
-        ("feols-iv", (False, False, False, False)),
-        ("fepois", (True, True, True, False)),
-        ("feglm-logit", (True, True, False, False)),
-        ("quantreg", (True, True, False, False)),
-        ("did2s", (True, True, False, False)),
+        ("feols", _ALL_CAPABILITIES),
+        ("feols-iv", {"hac_inference", "multiway_clustering"}),
+        (
+            "fepois",
+            {
+                "crv3_inference",
+                "hac_inference",
+                "multiway_clustering",
+                "prediction",
+                "fixed_effect_recovery",
+                "randomization_inference",
+            },
+        ),
+        (
+            "feglm-logit",
+            {
+                "hac_inference",
+                "multiway_clustering",
+                "prediction",
+                "fixed_effect_recovery",
+            },
+        ),
+        ("quantreg", {"prediction", "fixed_effect_recovery"}),
+        (
+            "did2s",
+            {
+                "hac_inference",
+                "multiway_clustering",
+                "prediction",
+                "fixed_effect_recovery",
+            },
+        ),
+        (
+            "twfe",
+            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+        ),
+        (
+            "saturated",
+            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+        ),
     ],
 )
-def test_capabilities_post_estimation_methods(
-    model: str, expected: tuple[bool, bool, bool, bool]
-) -> None:
-    """Each model class declares predict, fixef, ritest, and update support."""
-    capabilities = _capability_fit(model).capabilities
-    assert (
-        capabilities.prediction,
-        capabilities.fixed_effect_recovery,
-        capabilities.randomization_inference,
-        capabilities.sherman_morrison_update,
-    ) == expected
+def test_capabilities_by_model_class(model: str, enabled: set[str]) -> None:
+    """Each model class declares exactly the listed capabilities."""
+    expected = Capabilities(**{name: name in enabled for name in _ALL_CAPABILITIES})
+    assert _capability_fit(model).capabilities == expected

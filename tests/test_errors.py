@@ -669,6 +669,10 @@ def _call_update(fit):
     return fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
+def _call_decompose(fit):
+    return fit.decompose(decomp_var=fit._coefnames[-1], reps=2)
+
+
 @pytest.mark.parametrize(
     "model,operation,capability",
     [
@@ -686,6 +690,7 @@ def _call_update(fit):
         ("feglm-logit", _call_update, "sherman_morrison_update"),
         ("quantreg", _call_update, "sherman_morrison_update"),
         ("did2s", _call_update, "sherman_morrison_update"),
+        ("did2s", _call_decompose, "decomposition"),
     ],
 )
 def test_capability_rejections(model, operation, capability):
@@ -1163,7 +1168,7 @@ def test_decomposition_rejects_unsupported_models(model_type):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for regression models",
+        match=r"fit\.capabilities\.decomposition is False",
     ):
         fit.decompose(decomp_var="x1", only_coef=True)
 

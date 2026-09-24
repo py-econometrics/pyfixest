@@ -324,6 +324,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         fit.capabilities,
         wildboottest=False,
         cluster_causal_variance=False,
+        decomposition=False,
         randomization_inference=False,
         sherman_morrison_update=False,
         crv3_inference=False,

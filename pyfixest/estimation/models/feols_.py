@@ -1488,8 +1488,9 @@ class Feols(ResultAccessorMixin):
         """
         if not self.capabilities.decomposition:
             raise NotImplementedError(
-                "Decomposition is currently only supported for regression models "
-                "estimated via feols()."
+                "decompose() is not supported for this estimator: "
+                "fit.capabilities.decomposition is False. decompose() supports "
+                "feols() fits without instruments."
             )
 
         has_param = param is not None
