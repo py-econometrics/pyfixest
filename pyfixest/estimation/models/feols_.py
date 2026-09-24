@@ -1640,7 +1640,8 @@ class Feols(ResultAccessorMixin):
         if self._X_is_empty:
             uhat = self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
         else:
-            # drop intercept, potentially multicollinear vars
+            # model_matrix keeps the columns the collinearity check dropped;
+            # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
             uhat = (self._fixef_response() - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
