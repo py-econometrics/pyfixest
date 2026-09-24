@@ -99,6 +99,7 @@ class Fepois(Feglm):
             crv3_inference=True,
             cluster_causal_variance=False,
             decomposition=False,
+            randomization_inference=True,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:

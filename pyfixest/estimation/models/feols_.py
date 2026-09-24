@@ -275,6 +275,10 @@ class Feols(ResultAccessorMixin):
             wildboottest=True,
             cluster_causal_variance=True,
             decomposition=True,
+            prediction=True,
+            fixed_effect_recovery=True,
+            randomization_inference=True,
+            sherman_morrison_update=True,
         )
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
@@ -1381,6 +1385,18 @@ class Feols(ResultAccessorMixin):
 
         return Y, X, xnames
 
+    def _require_capability(self, *, capability: str, method: str) -> None:
+        """Reject a post-estimation method the model class does not support."""
+        if getattr(self.capabilities, capability):
+            return
+        estimator = f"'{self.model.method}' fits"
+        if self.model.is_iv:
+            estimator += " with instruments"
+        raise NotImplementedError(
+            f"{method}() is not supported for {estimator}: "
+            f"fit.capabilities.{capability} is False."
+        )
+
     def decompose(
         self,
         param: str | None = None,
@@ -1482,11 +1498,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self.capabilities.decomposition:
-            raise NotImplementedError(
-                "Decomposition is currently only supported for regression models "
-                "estimated via feols()."
-            )
+        self._require_capability(capability="decomposition", method="decompose")
 
         has_param = param is not None
         has_decomp = decomp_var is not None
@@ -1626,10 +1638,7 @@ class Feols(ResultAccessorMixin):
         if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
         require_retained(self, "fixef", "_data", "model_matrix")
 
@@ -1751,10 +1760,7 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
             if self.model.has_fixef:
@@ -1941,14 +1947,7 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self.model.method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
-            )
+        self._require_capability(capability="randomization_inference", method="ritest")
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2180,14 +2179,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self.model.method != "feols":
-            raise NotImplementedError(
-                "The update() method is currently only supported for OLS models."
-            )
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The update() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="sherman_morrison_update", method="update")
         if self.options.has_weights:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."

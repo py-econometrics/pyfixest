@@ -146,6 +146,12 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -162,6 +168,12 @@ def event_study(
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
         fit.test_treatment_heterogeneity = (  # type: ignore[attr-defined]
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
@@ -306,19 +318,18 @@ def did2s(
 
 
 def _mark_as_did2s(fit: Feols) -> None:
-    """Record that a fit came from the DID2S estimator.
-
-    The two-step GMM covariance does not resample from an estimated model in
-    the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
-    CRV3 is disabled as well: its leave-one-cluster-out jackknife would refit
-    only the second stage and ignore the first-stage estimation.
-    """
+    """Record that a fit came from the DID2S estimator."""
     fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
         fit.capabilities,
-        crv3_inference=False,
         wildboottest=False,
         cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        crv3_inference=False,
     )
 
 
