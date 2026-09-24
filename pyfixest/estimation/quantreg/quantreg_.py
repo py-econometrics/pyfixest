@@ -428,6 +428,9 @@ class Quantreg(Feols):
         )
         return VcovTerm(vcov=vcov, meat=None)
 
+    def _finalize_fit(self) -> None:
+        """Skip the OLS Wald test; quantile regression runs none at fit time."""
+
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."

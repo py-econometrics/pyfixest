@@ -531,9 +531,8 @@ class Feols(ResultAccessorMixin):
         )
 
     def _finalize_fit(self) -> None:
-        """Compute OLS-only post-fit statistics."""
-        if self.model.method == "feols" and not self.model.is_iv:
-            self.wald_test()
+        """Run the OLS Wald test that all coefficients are zero."""
+        self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
         """Yield this fitted result to the result container."""

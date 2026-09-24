@@ -351,6 +351,9 @@ class Feglm(Feols):
         """Validate the prepared response against the family's constraints."""
         self._family.check_y(self.model_matrix.dependent.to_numpy())
 
+    def _finalize_fit(self) -> None:
+        """Skip the OLS Wald test; GLMs run no Wald test at fit time."""
+
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
     if not isinstance(drop_singletons, bool):
