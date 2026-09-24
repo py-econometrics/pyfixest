@@ -988,17 +988,21 @@ class Capabilities:
     decomposition : bool
         Whether ``decompose()``, the Gelbach decomposition, is available.
     prediction : bool
-        Whether ``predict()`` is available. IV fits do not support it.
+        Whether ``predict()`` is available. IV and ``did2s()`` fits do not
+        support it.
     fixed_effect_recovery : bool
-        Whether ``fixef()`` can recover the fixed-effect estimates. IV fits
-        do not support it; a fit without fixed effects has none to recover.
+        Whether the model class can recover fixed-effect estimates through
+        ``fixef()``. IV, ``quantreg()``, and ``did2s()`` fits do not support
+        it. ``fixef()`` additionally requires the fit to have fixed effects.
     randomization_inference : bool
         Whether ``ritest()``, randomization inference, is available. Only
-        ``feols()`` fits without instruments and ``fepois()`` fits support it.
+        ``feols()`` fits without instruments and ``fepois()`` fits support
+        it; ``did2s()`` and ``event_study()`` fits do not.
     sherman_morrison_update : bool
         Whether ``update()`` can append observations to the fit through a
         Sherman-Morrison update of the OLS coefficients. Only ``feols()``
-        fits without instruments support it.
+        fits without instruments support it; ``did2s()`` and
+        ``event_study()`` fits do not.
 
     Examples
     --------

@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from tests._capability_fits import capability_fit
 
 
 def test_observation_weights_unweighted_fast_path() -> None:
@@ -135,43 +136,6 @@ def test_within_iv_data_requires_instrument_roles() -> None:
     assert reduced.design.shape == (3, 1)
 
 
-def _capability_fit(model: str):
-    data = pf.get_data()
-    if model == "feols":
-        return pf.feols("Y ~ X1 | f1", data)
-    if model == "feols-iv":
-        return pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data)
-    if model == "fepois":
-        return pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois"))
-    if model == "feglm-logit":
-        data = data.dropna()
-        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
-        return pf.feglm("Y ~ X1 | f1", data, family="logit")
-    if model == "quantreg":
-        with pytest.warns(FutureWarning, match="experimental"):
-            return pf.quantreg("Y ~ X1", data)
-    if model == "did2s":
-        did_data = pd.read_csv("pyfixest/did/data/df_het.csv")
-        return pf.did2s(
-            did_data,
-            yname="dep_var",
-            first_stage="~ 0 | state + year",
-            second_stage="~ treat",
-            treatment="treat",
-            cluster="state",
-        )
-    if model in {"twfe", "saturated"}:
-        return pf.event_study(
-            pd.read_csv("pyfixest/did/data/df_het.csv"),
-            yname="dep_var",
-            idname="unit",
-            tname="year",
-            gname="g",
-            estimator=model,
-        )
-    raise ValueError(model)
-
-
 _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
 
 
@@ -200,14 +164,12 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
                 "fixed_effect_recovery",
             },
         ),
-        ("quantreg", {"prediction", "fixed_effect_recovery"}),
+        ("quantreg", {"prediction"}),
         (
             "did2s",
             {
                 "hac_inference",
                 "multiway_clustering",
-                "prediction",
-                "fixed_effect_recovery",
             },
         ),
         (
@@ -223,4 +185,4 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
 def test_capabilities_by_model_class(model: str, enabled: set[str]) -> None:
     """Each model class declares exactly the listed capabilities."""
     expected = Capabilities(**{name: name in enabled for name in _ALL_CAPABILITIES})
-    assert _capability_fit(model).capabilities == expected
+    assert capability_fit(model).capabilities == expected

@@ -1385,6 +1385,18 @@ class Feols(ResultAccessorMixin):
 
         return Y, X, xnames
 
+    def _require_capability(self, *, capability: str, method: str) -> None:
+        """Reject a post-estimation method the model class does not support."""
+        if getattr(self.capabilities, capability):
+            return
+        estimator = f"'{self.model.method}' fits"
+        if self.model.is_iv:
+            estimator += " with instruments"
+        raise NotImplementedError(
+            f"{method}() is not supported for {estimator}: "
+            f"fit.capabilities.{capability} is False."
+        )
+
     def decompose(
         self,
         param: str | None = None,
@@ -1486,12 +1498,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self.capabilities.decomposition:
-            raise NotImplementedError(
-                "decompose() is not supported for this estimator: "
-                "fit.capabilities.decomposition is False. decompose() supports "
-                "feols() fits without instruments."
-            )
+        self._require_capability(capability="decomposition", method="decompose")
 
         has_param = param is not None
         has_decomp = decomp_var is not None
@@ -1631,11 +1638,7 @@ class Feols(ResultAccessorMixin):
         if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if not self.capabilities.fixed_effect_recovery:
-            raise NotImplementedError(
-                "fixef() cannot recover fixed-effect estimates for this estimator: "
-                "fit.capabilities.fixed_effect_recovery is False."
-            )
+        self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
         require_retained(self, "fixef", "_data", "model_matrix")
 
@@ -1757,11 +1760,7 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if not self.capabilities.prediction:
-            raise NotImplementedError(
-                "predict() is not supported for this estimator: "
-                "fit.capabilities.prediction is False."
-            )
+        self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
             if self.model.has_fixef:
@@ -1948,12 +1947,7 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if not self.capabilities.randomization_inference:
-            raise NotImplementedError(
-                "Randomization inference is not supported for this estimator: "
-                "fit.capabilities.randomization_inference is False. ritest() "
-                "supports feols() fits without instruments and fepois() fits."
-            )
+        self._require_capability(capability="randomization_inference", method="ritest")
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2185,12 +2179,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if not self.capabilities.sherman_morrison_update:
-            raise NotImplementedError(
-                "update() is not supported for this estimator: "
-                "fit.capabilities.sherman_morrison_update is False. update() "
-                "supports feols() fits without instruments."
-            )
+        self._require_capability(capability="sherman_morrison_update", method="update")
         if self.options.has_weights:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."

@@ -104,6 +104,7 @@ class Quantreg(Feols):
             wildboottest=False,
             cluster_causal_variance=False,
             decomposition=False,
+            fixed_effect_recovery=False,
             randomization_inference=False,
             sherman_morrison_update=False,
         )
