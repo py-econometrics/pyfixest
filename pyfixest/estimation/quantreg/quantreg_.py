@@ -66,6 +66,8 @@ class Quantreg(Feols):
     """
 
     options: QuantregEstimationOptions
+    # Quantile loss fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
 
     def __init__(
         self,
@@ -153,6 +155,13 @@ class Quantreg(Feols):
             description,
             method=f"quantreg_{self.options.method}",
             model_name=f"{description.model_name} (q = {self.options.quantile})",
+        )
+
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Refuse refits: `quantreg` refits cannot yet replay the quantile and solver."
+        raise NotImplementedError(
+            f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
+            "models: a refit cannot yet replay their estimation contract."
         )
 
     def to_array(self):

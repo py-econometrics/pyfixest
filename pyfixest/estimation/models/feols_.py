@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -231,6 +232,10 @@ class Feols(ResultAccessorMixin):
     ritest_statistics: RitestStatistics
     # Set in fixef().
     fixef_estimates: FixedEffectEstimates
+
+    # The fit is a single least-squares solve, so the fast CRV3 jackknife and
+    # the fast ritest algorithm apply. Subclasses with other fits override it.
+    _closed_form_ols: bool = True
 
     def __init__(
         self,
@@ -718,11 +723,7 @@ class Feols(ResultAccessorMixin):
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self.model.method}'."
             )
-        use_fast = (
-            not self.model.has_fixef
-            and self.model.method == "feols"
-            and not self.model.is_iv
-        )
+        use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
@@ -813,16 +814,14 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Return the public estimation function used for leave-out and resampled refits."
+        # lazy loading to avoid circular import
+        return import_module("pyfixest.estimation").feols
+
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = (
-            fixest_module.feols
-            if self.model.method == "feols"
-            else fixest_module.fepois
-        )
+        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -2003,7 +2002,7 @@ class Feols(ResultAccessorMixin):
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
-        if choose_algorithm == "slow" or self.model.method == "fepois":
+        if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2029,7 +2028,7 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self.model.method,
+                fit_fn=self._refit_estimator(),
             )
 
         else:
