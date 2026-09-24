@@ -482,13 +482,13 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
-    def _fixef_response(self, Y: np.ndarray) -> np.ndarray:
+    def _fixef_response(self) -> np.ndarray:
         """Return the response whose regression residual `fixef()` decomposes.
 
-        Linear models use the observed response `Y`. The GLM override uses
-        the estimated linear predictor instead.
+        Linear models use the observed response of the estimation sample. The
+        GLM override uses the estimated linear predictor instead.
         """
-        return Y
+        return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
 
     def get_fit(self) -> None:
         """
@@ -1631,7 +1631,7 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        require_retained(self, "fixef", "_data")
+        require_retained(self, "fixef", "_data", "model_matrix")
 
         model_spec = self.model.model_spec
         assert model_spec is not None, "fixef() runs after the model matrix is built"
@@ -1648,7 +1648,7 @@ class Feols(ResultAccessorMixin):
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            uhat = (self._fixef_response(Y) - X @ self._beta_hat).flatten()
+            uhat = (self._fixef_response() - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
