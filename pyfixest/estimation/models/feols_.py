@@ -482,11 +482,12 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
-    def _fixef_response(self) -> np.ndarray:
-        """Return the response whose regression residual `fixef()` decomposes.
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the dependent variable of the fixed-effect regression in `fixef()`.
 
-        Linear models use the observed response of the estimation sample. The
-        GLM override uses the estimated linear predictor instead.
+        `fixef()` regresses this variable minus `X @ beta_hat` on the fixed
+        effects. Linear models use the observed `Y` of the estimation sample;
+        the GLM override uses the linear predictor net of the offset.
         """
         return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
 
@@ -1643,7 +1644,7 @@ class Feols(ResultAccessorMixin):
             # model_matrix keeps the columns the collinearity check dropped;
             # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
-            uhat = (self._fixef_response() - X @ self._beta_hat).flatten()
+            uhat = (self._fixef_dependent() - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(

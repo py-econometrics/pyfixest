@@ -208,7 +208,7 @@ class Feglm(Feols):
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
-    def _fixef_response(self) -> np.ndarray:
+    def _fixef_dependent(self) -> np.ndarray:
         """Return the linear predictor net of the offset for `fixef()`.
 
         The fixed effects are recovered from the estimated linear predictor,
