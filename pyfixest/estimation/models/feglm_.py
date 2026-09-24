@@ -208,6 +208,23 @@ class Feglm(Feols):
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
+    def _fixef_response(self, Y: np.ndarray) -> np.ndarray:
+        """Return the linear predictor net of the offset for `fixef()`.
+
+        The fixed effects are recovered from the estimated linear predictor,
+        equation (5.2) in Stammann (2018), http://arxiv.org/abs/1707.01815;
+        the observed response `Y` is not used. The linear predictor includes
+        the offset; subtracting it makes `sumFE` the pure fixed-effect
+        contribution, so predict() can add the offset back from newdata
+        without double-counting.
+        """
+        eta = self.fitted_values.link
+        if self.options.offset is not None:
+            offset = self.model_matrix.offset
+            assert offset is not None
+            eta = eta - offset.to_numpy().flatten()
+        return eta
+
     def _vcov_iid(self) -> VcovTerm:
         return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
 

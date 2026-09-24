@@ -482,6 +482,14 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
+    def _fixef_response(self, Y: np.ndarray) -> np.ndarray:
+        """Return the response whose regression residual `fixef()` decomposes.
+
+        Linear models use the observed response `Y`. The GLM override uses
+        the estimated linear predictor instead.
+        """
+        return Y
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -1652,18 +1660,7 @@ class Feols(ResultAccessorMixin):
         else:
             # drop intercept, potentially multicollinear vars
             X = X[self._coefnames].to_numpy()
-            if self.model.method == "fepois" or self.model.method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self.fitted_values.link
-                # The linear predictor includes the offset; subtract it so
-                # that sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self.options.offset is not None:
-                    offset = self.model_matrix.offset
-                    assert offset is not None
-                    Y = Y - offset.to_numpy().flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
+            uhat = (self._fixef_response(Y) - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
