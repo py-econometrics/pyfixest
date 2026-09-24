@@ -1637,12 +1637,13 @@ class Feols(ResultAccessorMixin):
         assert model_spec is not None, "fixef() runs after the model matrix is built"
         fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
 
-        if self._X_is_empty:
-            uhat = self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
-        else:
+        # flatten() copies: the weighting below scales uhat in place and must
+        # not touch the fitted values the GLM hook may return.
+        uhat = self._fixef_response().flatten()
+        if not self._X_is_empty:
             # drop intercept, potentially multicollinear vars
             X = self.model_matrix.independent[self._coefnames].to_numpy()
-            uhat = (self._fixef_response() - X @ self._beta_hat).flatten()
+            uhat = uhat - X @ self._beta_hat
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(

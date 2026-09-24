@@ -516,3 +516,58 @@ def test_context_capture_with_out_of_sample_predict():
         np.testing.assert_almost_equal(
             context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
         )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    ("family", "offset"),
+    [("poisson", None), ("poisson", "off"), ("logit", None)],
+)
+def test_glm_fixef_without_covariates_vs_fixest(data, family, offset):
+    """GLM fixed effects without covariates live on the link scale.
+
+    With only fixed effects, `fixef()` must still recover them from the
+    linear predictor net of the offset, as fixest does, not from the observed
+    response. `predict(newdata=...)` reuses these fixed effects.
+    """
+    data = data.copy()
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
+    data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
+    depvar = "Y" if family == "poisson" else "Y_bin"
+    fml = f"{depvar} ~ 1 | f1"
+
+    if family == "poisson":
+        fit = pf.fepois(fml, data=data, offset=offset, iwls_tol=1e-10)
+        r_family = stats.poisson()
+    else:
+        fit = pf.feglm(fml, data=data, family=family, iwls_tol=1e-10)
+        r_family = stats.binomial(link=family)
+    r_offset = {"offset": ro.Formula(f"~{offset}")} if offset is not None else {}
+    fit_r = fixest.feglm(
+        ro.Formula(fml), data=data, family=r_family, glm_tol=1e-10, **r_offset
+    )
+
+    fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
+    ro.globalenv[".pyfixest_glm_fixef_fit"] = fit_r
+    fixed_effects_r = pd.Series(
+        np.asarray(ro.r("fixef(.pyfixest_glm_fixef_fit)$f1")),
+        index=np.asarray(ro.r("names(fixef(.pyfixest_glm_fixef_fit)$f1)"), dtype=float),
+    ).sort_index()
+    fixed_effects_by_level = fixed_effects.set_index(
+        fixed_effects["level"].astype(float)
+    )["coefficient"].sort_index()
+
+    tol = {"rtol": 1e-6, "atol": 1e-6}
+    np.testing.assert_allclose(fixed_effects_by_level, fixed_effects_r, **tol)
+    np.testing.assert_allclose(
+        fit.fixef_estimates.sumFE, np.asarray(fit_r.rx2("sumFE")), **tol
+    )
+
+    newdata = data.iloc[:100]
+    for prediction_type in ["link", "response"]:
+        np.testing.assert_allclose(
+            fit.predict(newdata=newdata, type=prediction_type),
+            np.asarray(stats.predict(fit_r, newdata=newdata, type=prediction_type)),
+            equal_nan=True,
+            **tol,
+        )
