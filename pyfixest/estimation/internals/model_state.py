@@ -987,6 +987,18 @@ class Capabilities:
         Whether ``ccv()``, the causal cluster variance estimator, is available.
     decomposition : bool
         Whether ``decompose()``, the Gelbach decomposition, is available.
+    prediction : bool
+        Whether ``predict()`` is available. IV fits do not support it.
+    fixed_effect_recovery : bool
+        Whether ``fixef()`` can recover the fixed-effect estimates. IV fits
+        do not support it; a fit without fixed effects has none to recover.
+    randomization_inference : bool
+        Whether ``ritest()``, randomization inference, is available. Only
+        ``feols()`` fits without instruments and ``fepois()`` fits support it.
+    sherman_morrison_update : bool
+        Whether ``update()`` can append observations to the fit through a
+        Sherman-Morrison update of the OLS coefficients. Only ``feols()``
+        fits without instruments support it.
 
     Examples
     --------
@@ -1007,6 +1019,10 @@ class Capabilities:
     wildboottest: bool
     cluster_causal_variance: bool
     decomposition: bool
+    prediction: bool
+    fixed_effect_recovery: bool
+    randomization_inference: bool
+    sherman_morrison_update: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

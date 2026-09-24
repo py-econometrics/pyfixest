@@ -270,6 +270,10 @@ class Feols(ResultAccessorMixin):
             wildboottest=True,
             cluster_causal_variance=True,
             decomposition=True,
+            prediction=True,
+            fixed_effect_recovery=True,
+            randomization_inference=True,
+            sherman_morrison_update=True,
         )
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
@@ -1631,9 +1635,10 @@ class Feols(ResultAccessorMixin):
         if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self.model.is_iv:
+        if not self.capabilities.fixed_effect_recovery:
             raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
+                "fixef() cannot recover fixed-effect estimates for this estimator: "
+                "fit.capabilities.fixed_effect_recovery is False."
             )
 
         require_retained(self, "fixef", "_data")
@@ -1772,9 +1777,10 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self.model.is_iv:
+        if not self.capabilities.prediction:
             raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
+                "predict() is not supported for this estimator: "
+                "fit.capabilities.prediction is False."
             )
 
         if interval == "prediction" or se_fit:
@@ -1965,13 +1971,11 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self.model.is_iv:
+        if not self.capabilities.randomization_inference:
             raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self.model.method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
+                "Randomization inference is not supported for this estimator: "
+                "fit.capabilities.randomization_inference is False. ritest() "
+                "supports feols() fits without instruments and fepois() fits."
             )
 
         # check that resampvar in _coefnames
@@ -2204,13 +2208,11 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self.model.method != "feols":
+        if not self.capabilities.sherman_morrison_update:
             raise NotImplementedError(
-                "The update() method is currently only supported for OLS models."
-            )
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The update() method is currently not supported for IV models."
+                "update() is not supported for this estimator: "
+                "fit.capabilities.sherman_morrison_update is False. update() "
+                "supports feols() fits without instruments."
             )
         if self.options.has_weights:
             raise NotImplementedError(

@@ -616,28 +616,97 @@ def test_weighted_update_is_explicitly_unsupported():
         fit.update(X_new=np.ones((1, 2)), y_new=np.ones(1))
 
 
+def _capability_rejection_fit(model):
+    data = get_data()
+    if model == "feols-iv":
+        return feols("Y ~ 1 + X2 | f1 | X1 ~ Z1", data=data)
+    if model == "fepois":
+        return fepois("Y ~ X1", data=get_data(model="Fepois"))
+    if model in {"feglm-gaussian", "feglm-logit", "feglm-probit"}:
+        family = model.removeprefix("feglm-")
+        binary_data = data.dropna()
+        binary_data["Y"] = (binary_data["Y"] > binary_data["Y"].median()).astype(int)
+        return pf.feglm("Y ~ X1", data=binary_data, family=family)
+    if model == "quantreg":
+        with pytest.warns(FutureWarning, match="experimental"):
+            return pf.quantreg("Y ~ X1", data=data)
+    did_data = pd.read_csv("pyfixest/did/data/df_het.csv")
+    if model == "did2s":
+        return pf.did2s(
+            did_data,
+            yname="dep_var",
+            first_stage="~ 0 | state + year",
+            second_stage="~ treat",
+            treatment="treat",
+            cluster="state",
+        )
+    if model in {"twfe", "saturated"}:
+        return pf.event_study(
+            did_data,
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            estimator=model,
+        )
+    raise ValueError(model)
+
+
+def _call_predict(fit):
+    return fit.predict()
+
+
+def _call_fixef(fit):
+    return fit.fixef()
+
+
+def _call_ritest(fit):
+    resampvar = "X1" if "X1" in fit._coefnames else fit._coefnames[-1]
+    return fit.ritest(resampvar=resampvar, reps=2)
+
+
+def _call_update(fit):
+    return fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
+
+
+@pytest.mark.parametrize(
+    "model,operation,capability",
+    [
+        ("feols-iv", _call_predict, "prediction"),
+        ("feols-iv", _call_fixef, "fixed_effect_recovery"),
+        ("feols-iv", _call_ritest, "randomization_inference"),
+        ("feglm-gaussian", _call_ritest, "randomization_inference"),
+        ("feglm-logit", _call_ritest, "randomization_inference"),
+        ("feglm-probit", _call_ritest, "randomization_inference"),
+        ("quantreg", _call_ritest, "randomization_inference"),
+        ("did2s", _call_ritest, "randomization_inference"),
+        ("twfe", _call_ritest, "randomization_inference"),
+        ("saturated", _call_ritest, "randomization_inference"),
+        ("fepois", _call_update, "sherman_morrison_update"),
+        ("feglm-logit", _call_update, "sherman_morrison_update"),
+        ("quantreg", _call_update, "sherman_morrison_update"),
+        ("did2s", _call_update, "sherman_morrison_update"),
+    ],
+)
+def test_capability_rejections(model, operation, capability):
+    """Disabled capabilities reject the method before it reads estimation state."""
+    fit = _capability_rejection_fit(model)
+    assert getattr(fit.capabilities, capability) is False
+    with pytest.raises(
+        NotImplementedError, match=rf"fit\.capabilities\.{capability} is False"
+    ):
+        operation(fit)
+
+
 def test_iv_update_is_explicitly_unsupported():
     data = get_data().dropna(subset=["Y", "X1", "Z1"])
     fit = feols("Y ~ 1 + [X1 ~ Z1]", data=data)
 
-    with pytest.raises(NotImplementedError, match=r"update.*not supported.*IV"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"update\(\) is not supported.*sherman_morrison_update is False",
+    ):
         fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
-
-
-def test_non_ols_update_is_explicitly_unsupported():
-    poisson_data = get_data(model="Fepois").dropna()
-    linear_data = get_data().dropna()
-    binary_data = poisson_data.copy()
-    binary_data["Y"] = (binary_data["Y"] > binary_data["Y"].median()).astype(int)
-    models = (
-        pf.fepois("Y ~ X1", data=poisson_data),
-        pf.feglm("Y ~ X1", data=binary_data, family="logit"),
-        pf.quantreg("Y ~ X1", data=linear_data),
-    )
-
-    for fit in models:
-        with pytest.raises(NotImplementedError, match=r"update.*only supported.*OLS"):
-            fit.update(X_new=np.ones((1, fit._k)), y_new=np.ones(1))
 
 
 def test_coef_update_inplace_is_explicitly_unsupported():
@@ -719,8 +788,8 @@ def test_ritest_error(data):
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
 
-    with pytest.raises(NotImplementedError):
-        fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    with pytest.raises(NotImplementedError, match=r"randomization_inference is False"):
         fit_iv.ritest(resampvar="X1", reps=100)
 
     fit_wls = pf.feols("Y ~ X1", data=data, weights="weights", store_data=False)
@@ -737,27 +806,6 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
-
-
-@pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
-def test_ritest_rejects_non_ols_working_domains(estimator):
-    """RI must not interpret GLM or quantile arrays as OLS solver inputs."""
-    data = pd.DataFrame(
-        {
-            "y": [0, 1, 0, 1, 1, 0, 1, 0],
-            "x": np.linspace(-1.0, 1.0, 8),
-        }
-    )
-    if estimator == "feglm":
-        fit = pf.feglm("y ~ x", data=data, family="logit")
-    else:
-        with pytest.warns(FutureWarning, match="experimental"):
-            fit = pf.quantreg("y ~ x", data=data, maxiter=100)
-
-    with pytest.raises(
-        NotImplementedError, match=r"only supported for OLS and Poisson"
-    ):
-        fit.ritest(resampvar="x", reps=1)
 
 
 @pytest.mark.parametrize("estimator", ["feglm", "quantreg"])

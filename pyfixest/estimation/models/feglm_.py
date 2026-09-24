@@ -98,6 +98,8 @@ class Feglm(Feols):
             wildboottest=False,
             cluster_causal_variance=False,
             decomposition=False,
+            randomization_inference=False,
+            sherman_morrison_update=False,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:

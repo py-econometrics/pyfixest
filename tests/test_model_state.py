@@ -132,3 +132,55 @@ def test_within_iv_data_requires_instrument_roles() -> None:
     assert isinstance(reduced, WithinIvData)
     assert reduced.instruments is state.instruments
     assert reduced.design.shape == (3, 1)
+
+
+def _capability_fit(model: str):
+    data = pf.get_data()
+    if model == "feols":
+        return pf.feols("Y ~ X1 | f1", data)
+    if model == "feols-iv":
+        return pf.feols("Y ~ 1 | f1 | X1 ~ Z1", data)
+    if model == "fepois":
+        return pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois"))
+    if model == "feglm-logit":
+        data = data.dropna()
+        data["Y"] = (data["Y"] > data["Y"].median()).astype(int)
+        return pf.feglm("Y ~ X1 | f1", data, family="logit")
+    if model == "quantreg":
+        with pytest.warns(FutureWarning, match="experimental"):
+            return pf.quantreg("Y ~ X1", data)
+    if model == "did2s":
+        did_data = pd.read_csv("pyfixest/did/data/df_het.csv")
+        return pf.did2s(
+            did_data,
+            yname="dep_var",
+            first_stage="~ 0 | state + year",
+            second_stage="~ treat",
+            treatment="treat",
+            cluster="state",
+        )
+    raise ValueError(model)
+
+
+@pytest.mark.parametrize(
+    "model,expected",
+    [
+        ("feols", (True, True, True, True)),
+        ("feols-iv", (False, False, False, False)),
+        ("fepois", (True, True, True, False)),
+        ("feglm-logit", (True, True, False, False)),
+        ("quantreg", (True, True, False, False)),
+        ("did2s", (True, True, False, False)),
+    ],
+)
+def test_capabilities_post_estimation_methods(
+    model: str, expected: tuple[bool, bool, bool, bool]
+) -> None:
+    """Each model class declares predict, fixef, ritest, and update support."""
+    capabilities = _capability_fit(model).capabilities
+    assert (
+        capabilities.prediction,
+        capabilities.fixed_effect_recovery,
+        capabilities.randomization_inference,
+        capabilities.sherman_morrison_update,
+    ) == expected

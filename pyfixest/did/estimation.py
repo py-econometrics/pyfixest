@@ -146,6 +146,12 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -162,6 +168,12 @@ def event_study(
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))
         fit.test_treatment_heterogeneity = (  # type: ignore[attr-defined]
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
@@ -310,10 +322,17 @@ def _mark_as_did2s(fit: Feols) -> None:
 
     The two-step GMM covariance does not resample from an estimated model in
     the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
+    ``ritest()`` and ``update()`` would refit or extend only the second-stage
+    regression, ignoring the first-stage residualization, so they are disabled
+    as well.
     """
     fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
-        fit.capabilities, wildboottest=False, cluster_causal_variance=False
+        fit.capabilities,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
     )
 
 
