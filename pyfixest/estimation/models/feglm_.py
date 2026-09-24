@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, cast
 
@@ -57,6 +58,8 @@ class Feglm(Feols):
     """
 
     options: GlmEstimationOptions
+    # Iterative IRLS fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
 
     def __init__(
         self,
@@ -98,6 +101,8 @@ class Feglm(Feols):
             wildboottest=False,
             cluster_causal_variance=False,
             decomposition=False,
+            randomization_inference=False,
+            sherman_morrison_update=False,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
@@ -106,6 +111,13 @@ class Feglm(Feols):
             super()._describe_model(**kwargs),
             method="feglm",
             inference_dist=self._family.inference_dist,
+        )
+
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Refuse refits: `feglm` refits cannot yet replay the family and options."
+        raise NotImplementedError(
+            f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
+            "models: a refit cannot yet replay their estimation contract."
         )
 
     def prepare_model_matrix(self) -> ModelMatrix:
@@ -208,7 +220,7 @@ class Feglm(Feols):
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
-    def _fixef_response(self) -> np.ndarray:
+    def _fixef_dependent(self) -> np.ndarray:
         """Return the linear predictor net of the offset for `fixef()`.
 
         The fixed effects are recovered from the estimated linear predictor,

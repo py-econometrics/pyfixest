@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -232,6 +233,10 @@ class Feols(ResultAccessorMixin):
     # Set in fixef().
     fixef_estimates: FixedEffectEstimates
 
+    # The fit is a single least-squares solve, so the fast CRV3 jackknife and
+    # the fast ritest algorithm apply. Subclasses with other fits override it.
+    _closed_form_ols: bool = True
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -270,6 +275,10 @@ class Feols(ResultAccessorMixin):
             wildboottest=True,
             cluster_causal_variance=True,
             decomposition=True,
+            prediction=True,
+            fixed_effect_recovery=True,
+            randomization_inference=True,
+            sherman_morrison_update=True,
         )
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
@@ -482,11 +491,12 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
-    def _fixef_response(self) -> np.ndarray:
-        """Return the response whose regression residual `fixef()` decomposes.
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the dependent variable of the fixed-effect regression in `fixef()`.
 
-        Linear models use the observed response of the estimation sample. The
-        GLM override uses the estimated linear predictor instead.
+        `fixef()` regresses this variable minus `X @ beta_hat` on the fixed
+        effects. Linear models use the observed `Y` of the estimation sample;
+        the GLM override uses the linear predictor net of the offset.
         """
         return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
 
@@ -717,11 +727,7 @@ class Feols(ResultAccessorMixin):
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self.model.method}'."
             )
-        use_fast = (
-            not self.model.has_fixef
-            and self.model.method == "feols"
-            and not self.model.is_iv
-        )
+        use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
@@ -812,16 +818,14 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Return the public estimation function used for leave-out and resampled refits."
+        # lazy loading to avoid circular import
+        return import_module("pyfixest.estimation").feols
+
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = (
-            fixest_module.feols
-            if self.model.method == "feols"
-            else fixest_module.fepois
-        )
+        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -1381,6 +1385,18 @@ class Feols(ResultAccessorMixin):
 
         return Y, X, xnames
 
+    def _require_capability(self, *, capability: str, method: str) -> None:
+        """Reject a post-estimation method the model class does not support."""
+        if getattr(self.capabilities, capability):
+            return
+        estimator = f"'{self.model.method}' fits"
+        if self.model.is_iv:
+            estimator += " with instruments"
+        raise NotImplementedError(
+            f"{method}() is not supported for {estimator}: "
+            f"fit.capabilities.{capability} is False."
+        )
+
     def decompose(
         self,
         param: str | None = None,
@@ -1482,11 +1498,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self.capabilities.decomposition:
-            raise NotImplementedError(
-                "Decomposition is currently only supported for regression models "
-                "estimated via feols()."
-            )
+        self._require_capability(capability="decomposition", method="decompose")
 
         has_param = param is not None
         has_decomp = decomp_var is not None
@@ -1626,10 +1638,7 @@ class Feols(ResultAccessorMixin):
         if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
         require_retained(self, "fixef", "_data", "model_matrix")
 
@@ -1639,9 +1648,10 @@ class Feols(ResultAccessorMixin):
 
         # flatten() copies: the weighting below scales uhat in place and must
         # not touch the fitted values the GLM hook may return.
-        uhat = self._fixef_response().flatten()
+        uhat = self._fixef_dependent().flatten()
         if not self._X_is_empty:
-            # drop intercept, potentially multicollinear vars
+            # model_matrix keeps the columns the collinearity check dropped;
+            # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
             uhat = uhat - X @ self._beta_hat
         # one-hot encoding of fixed effects (treatment coding: reference level
@@ -1751,10 +1761,7 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
             if self.model.has_fixef:
@@ -1941,14 +1948,7 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self.model.method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
-            )
+        self._require_capability(capability="randomization_inference", method="ritest")
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2002,7 +2002,7 @@ class Feols(ResultAccessorMixin):
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
-        if choose_algorithm == "slow" or self.model.method == "fepois":
+        if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2028,7 +2028,7 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self.model.method,
+                fit_fn=self._refit_estimator(),
             )
 
         else:
@@ -2180,14 +2180,7 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self.model.method != "feols":
-            raise NotImplementedError(
-                "The update() method is currently only supported for OLS models."
-            )
-        if self.model.is_iv:
-            raise NotImplementedError(
-                "The update() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="sherman_morrison_update", method="update")
         if self.options.has_weights:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."
