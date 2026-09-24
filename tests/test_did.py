@@ -235,7 +235,7 @@ def test_did2s_wildboottest_ccv_unsupported(data):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Wild cluster bootstrap is not supported for the DID2S estimator\.",
+        match=r"Wild cluster bootstrap is only supported for unweighted OLS models",
     ):
         fit.wildboottest(param="treat", reps=99, seed=1)
 
