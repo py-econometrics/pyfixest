@@ -1085,11 +1085,6 @@ class Feols(ResultAccessorMixin):
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
             )
 
-        if self.model.method == "fepois":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for Poisson regression."
-            )
-
         _Y, _X, _xnames = self._model_matrix_one_hot()
 
         # later: allow r <> 0 and custom R
