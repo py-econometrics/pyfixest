@@ -1035,20 +1035,13 @@ class Feols(ResultAccessorMixin):
             )
 
         if not self.capabilities.wildboottest:
-            if self.model.is_iv:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for IV estimation."
-                )
-            if self.model.method == "did2s":
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for the DID2S estimator."
-                )
             if self.options.has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
             raise NotImplementedError(
-                "Wild cluster bootstrap is only supported for unweighted OLS models."
+                "Wild cluster bootstrap is only supported for unweighted OLS models; "
+                "it is not available for IV, GLM, quantile regression, or DID2S fits."
             )
 
         cluster_list = []
