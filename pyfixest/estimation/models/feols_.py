@@ -8,6 +8,7 @@ from importlib import import_module
 from typing import Any, Literal, cast
 
 import formulaic
+import formulaic.formula
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
@@ -20,7 +21,9 @@ from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
+    make_formula,
     materialize_model_spec_with_unseen_mask,
+    model_spec_rhs,
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -375,23 +378,26 @@ class Feols(ResultAccessorMixin):
         )
 
         has_fixef = self.model.has_fixef
-        self._k_fe = (
-            self.model_matrix.fixed_effects.nunique(axis=0) if has_fixef else None
-        )
-        self._n_fe = len(self._k_fe) if has_fixef else 0
+        if has_fixef:
+            self._k_fe = self.model_matrix.fixed_effects.nunique(axis=0)
+            self._n_fe = len(self._k_fe)
+        else:
+            self._k_fe = None
+            self._n_fe = 0
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
         n_rows = model_matrix.n_rows
         # Frequency weights count repeated observations; other fits count rows.
+        if weights.weights_type == "fweights":
+            assert weights.values is not None
+            n_obs: int | float = float(weights.values.sum())
+        else:
+            n_obs = n_rows
         self.sample_info = EstimationSample(
             dropped_row_index=model_matrix.dropped_row_index,
             n_rows=n_rows,
-            n_obs=(
-                float(weights.values.sum())
-                if weights.weights_type == "fweights"
-                else n_rows
-            ),
+            n_obs=n_obs,
             dropped_by_stage=model_matrix.dropped_by_stage,
         )
 
@@ -634,7 +640,7 @@ class Feols(ResultAccessorMixin):
                     f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
                 )
             prep = prepare_cluster_state(
-                data=data if data is not None else self._data,
+                data=data_to_check,
                 clustervar=list(spec.clustervar),
                 ssc=self.options.ssc,
                 fixef=self.model.fixed_effects,
@@ -702,10 +708,15 @@ class Feols(ResultAccessorMixin):
         n_fe_fully_nested: int = 0,
     ) -> DegreesOfFreedomCounts:
         "Bundle the model counts that enter get_ssc()."
+        if self.model.has_fixef:
+            assert self._k_fe is not None
+            k_fe = int(self._k_fe.sum())
+        else:
+            k_fe = 0
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=int(self._k_fe.sum()) if self.model.has_fixef else 0,
+            k_fe=k_fe,
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
@@ -916,7 +927,11 @@ class Feols(ResultAccessorMixin):
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
-        k_fe = np.sum(self._k_fe.to_numpy()) if self.model.has_fixef else 0
+        if self.model.has_fixef:
+            assert self._k_fe is not None
+            k_fe = np.sum(self._k_fe.to_numpy())
+        else:
+            k_fe = 0
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -954,13 +969,13 @@ class Feols(ResultAccessorMixin):
         reps: int,
         cluster: str | None = None,
         param: str | None = None,
-        weights_type: str | None = "rademacher",
-        impose_null: bool | None = True,
-        bootstrap_type: str | None = "11",
+        weights_type: str = "rademacher",
+        impose_null: bool = True,
+        bootstrap_type: str = "11",
         seed: int | None = None,
-        k_adj: bool | None = True,
-        G_adj: bool | None = True,
-        parallel: bool | None = False,
+        k_adj: bool = True,
+        G_adj: bool = True,
+        parallel: bool = False,
         return_bootstrapped_t_stats=False,
     ):
         """
@@ -1089,7 +1104,9 @@ class Feols(ResultAccessorMixin):
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
             )
 
-        _Y, _X, _xnames = self._model_matrix_one_hot()
+        # Default `output="numpy"` (not "sparse") always yields a dense array.
+        _Y, _X_out, _xnames = self._model_matrix_one_hot()
+        _X = cast(np.ndarray, _X_out)
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1107,6 +1124,7 @@ class Feols(ResultAccessorMixin):
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
             full_enumeration_warn = False
+            ssc_value = boot.small_sample_correction
 
         else:
             inference = f"CRV({cluster_list[0]})"
@@ -1140,6 +1158,7 @@ class Feols(ResultAccessorMixin):
                 warnings.warn(
                     "2^G < the number of boot iterations, setting full_enumeration to True."
                 )
+            ssc_value = boot.ssc
 
         if np.isscalar(boot.t_stat):
             boot.t_stat = np.asarray(boot.t_stat)
@@ -1153,7 +1172,7 @@ class Feols(ResultAccessorMixin):
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
-            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
+            "ssc": ssc_value,
         }
 
         res_df = pd.Series(res)
@@ -1280,7 +1299,7 @@ class Feols(ResultAccessorMixin):
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = np.array(self.coef().xs(treatment))
+        tau_full = float(self.coef().xs(treatment))  # type: ignore[arg-type]
 
         N = self.sample_info.n_obs
         G = len(unique_clusters)
@@ -1367,7 +1386,10 @@ class Feols(ResultAccessorMixin):
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
+            fml_dummies_formula = cast(
+                formulaic.formula.StructuredFormula, make_formula(fml_dummies)
+            )
+            Y, X = fml_dummies_formula.get_model_matrix(
                 self._data,
                 output=output,
                 context=FORMULAIC_TRANSFORMS | {**self.options.context},
@@ -1558,7 +1580,9 @@ class Feols(ResultAccessorMixin):
         else:
             cluster_df = None
 
-        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
+        # `output="sparse"` always yields a `csc_matrix` (see `_model_matrix_one_hot`).
+        Y, X_out, xnames = self._model_matrix_one_hot(output="sparse")
+        X = cast(csc_matrix, X_out)
 
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
@@ -1794,7 +1818,7 @@ class Feols(ResultAccessorMixin):
             assert model_spec is not None, (
                 "predict() runs after the model matrix is built"
             )
-            rhs_spec = model_spec[_ModelMatrixKey.main].rhs
+            rhs_spec = model_spec_rhs(model_spec, _ModelMatrixKey.main)
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import replace
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import VcovTypeOptions, WeightsTypeOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -239,6 +240,7 @@ class Feiv(Feols):
         require_retained(self, "_fit_first_stage", "_data")
         # The excluded instruments are the instrument-matrix columns that are
         # not also second-stage regressors, kept in instrument-matrix order.
+        assert self._coefnames_z is not None
         exogenous = set(self._coefnames)
         instruments = tuple(
             str(name) for name in self._coefnames_z if name not in exogenous
@@ -269,13 +271,15 @@ class Feiv(Feols):
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
-        # Do first stage regression
+        # Do first stage regression. `vcov_detail`/`weights_type` come from
+        # this same model's already-validated spec/options, so they're always
+        # one of `feols`'s narrower literal choices, not just any `str`.
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
-            vcov=vcov_detail,
+            vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
             weights=self.options.weights,
-            weights_type=self.options.weights_type,
+            weights_type=cast("WeightsTypeOptions", self.options.weights_type),
             collin_tol=self.options.collin_tol,
             solver=self.options.solver,
             demeaner=demeaner,
