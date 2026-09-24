@@ -1847,9 +1847,6 @@ class Feols(ResultAccessorMixin):
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
 
-            if type == "response" and self.model.method == "fepois":
-                y_hat = np.exp(y_hat)
-
         if se_fit or interval == "prediction":
             prediction_df = _compute_prediction_error(
                 model=self,
