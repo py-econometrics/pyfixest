@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -231,6 +232,10 @@ class Feols(ResultAccessorMixin):
     ritest_statistics: RitestStatistics
     # Set in fixef().
     fixef_estimates: FixedEffectEstimates
+
+    # The fit is a single least-squares solve, so the fast CRV3 jackknife and
+    # the fast ritest algorithm apply. Subclasses with other fits override it.
+    _closed_form_ols: bool = True
 
     def __init__(
         self,
@@ -486,6 +491,15 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the dependent variable of the fixed-effect regression in `fixef()`.
+
+        `fixef()` regresses this variable minus `X @ beta_hat` on the fixed
+        effects. Linear models use the observed `Y` of the estimation sample;
+        the GLM override uses the linear predictor net of the offset.
+        """
+        return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -535,9 +549,8 @@ class Feols(ResultAccessorMixin):
         )
 
     def _finalize_fit(self) -> None:
-        """Compute OLS-only post-fit statistics."""
-        if self.model.method == "feols" and not self.model.is_iv:
-            self.wald_test()
+        """Run the OLS Wald test that all coefficients are zero."""
+        self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
         """Yield this fitted result to the result container."""
@@ -714,11 +727,7 @@ class Feols(ResultAccessorMixin):
             raise VcovTypeNotSupportedError(
                 f"CRV3 inference is not for models of type '{self.model.method}'."
             )
-        use_fast = (
-            not self.model.has_fixef
-            and self.model.method == "feols"
-            and not self.model.is_iv
-        )
+        use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
@@ -809,16 +818,14 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Return the public estimation function used for leave-out and resampled refits."
+        # lazy loading to avoid circular import
+        return import_module("pyfixest.estimation").feols
+
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = (
-            fixest_module.feols
-            if self.model.method == "feols"
-            else fixest_module.fepois
-        )
+        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -1629,35 +1636,19 @@ class Feols(ResultAccessorMixin):
                 "fit.capabilities.fixed_effect_recovery is False."
             )
 
-        require_retained(self, "fixef", "_data")
+        require_retained(self, "fixef", "_data", "model_matrix")
 
         model_spec = self.model.model_spec
         assert model_spec is not None, "fixef() runs after the model matrix is built"
         fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
 
-        Y, X = model_spec[_ModelMatrixKey.main].get_model_matrix(
-            self._data,
-            output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-        )
-        Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
-            uhat = Y.flatten()
+            uhat = self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
         else:
-            # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
-            if self.model.method == "fepois" or self.model.method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self.fitted_values.link
-                # The linear predictor includes the offset; subtract it so
-                # that sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self.options.offset is not None:
-                    offset = self.model_matrix.offset
-                    assert offset is not None
-                    Y = Y - offset.to_numpy().flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
+            # model_matrix keeps the columns the collinearity check dropped;
+            # _coefnames names the estimated ones.
+            X = self.model_matrix.independent[self._coefnames].to_numpy()
+            uhat = (self._fixef_dependent() - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
@@ -2015,7 +2006,7 @@ class Feols(ResultAccessorMixin):
 
         assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
-        if choose_algorithm == "slow" or self.model.method == "fepois":
+        if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2041,7 +2032,7 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self.model.method,
+                fit_fn=self._refit_estimator(),
             )
 
         else:
