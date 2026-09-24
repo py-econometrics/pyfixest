@@ -174,12 +174,15 @@ def event_study(
             randomization_inference=False,
             sherman_morrison_update=False,
         )
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
-        fit.test_treatment_heterogeneity = (  # type: ignore[attr-defined]
-            saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        # These attach saturated-DID-only behavior onto `fit`, a plain `Feols`;
+        # the attributes are intentionally dynamic and unknown to `Feols`'s type.
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
+        test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
+            fit, type(fit)
         )
-        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore[attr-defined]
-        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore[attr-defined]
+        fit.test_treatment_heterogeneity = test_treatment_heterogeneity  # type: ignore
+        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
+        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
 
     else:
         raise NotImplementedError("Estimator not supported")

@@ -1,6 +1,5 @@
 from typing import cast
 
-import formulaic
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -9,6 +8,7 @@ from scipy.sparse.linalg import spsolve
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import model_matrix
+from pyfixest.estimation.formula.formulaic_compat import make_formula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -121,7 +121,9 @@ class DID2S(DID):
             treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
-            cluster=self._cluster,
+            # `DID2S.__init__` requires `cluster: str` (narrower than the base
+            # `DID.__init__`'s `str | None`), so this is never None.
+            cluster=cast(str, self._cluster),
             weights=self._weights_name,
         )
 
@@ -304,7 +306,9 @@ def _did2s_vcov(
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
-    _G = clustid.nunique()  # actually not used here, neither in did2s
+    # `clustid` (factorize's `uniques`) is an `Index` for a Series input; the
+    # pandas stubs also allow `ndarray`, which lacks `.nunique()`.
+    _G = cast(pd.Index, clustid).nunique()
 
     if weights is None:
         weights_array = np.repeat(1.0, data.shape[0])
@@ -326,7 +330,7 @@ def _did2s_vcov(
     # fixed-effect levels). Removing `- 1` would cause formulaic to drop
     # reference levels, changing the GMM vcov standard errors.
     FML1 = Formula(
-        _formula=formulaic.Formula(
+        _formula=make_formula(
             f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1"
         )
     )
@@ -335,7 +339,7 @@ def _did2s_vcov(
     # i(treat)). The intercept column is then removed by drop_intercept=True
     # below, matching what feols does in _did2s_estimate.
     FML2 = Formula(
-        _formula=formulaic.Formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
+        _formula=make_formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
     )
 
     mm_first_stage = model_matrix.create_model_matrix(
@@ -365,7 +369,7 @@ def _did2s_vcov(
     first_u *= weights_array
     second_u *= weights_array
 
-    X10 = X1.copy().tocsr()  # type: ignore
+    X10 = X1.copy().tocsr()
     treated_rows = np.where(data[treatment], 0, 1)
     X10 = X10.multiply(treated_rows[:, None])
 
@@ -373,13 +377,13 @@ def _did2s_vcov(
     X2X1 = X2.T.dot(X1)
     X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
 
-    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T  # type: ignore
+    V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
 
     k = X2.shape[1]
     vcov = np.zeros((k, k))
 
     X10 = X10.tocsr()
-    X2 = X2.tocsr()  # type: ignore
+    X2 = X2.tocsr()
 
     for _, g in enumerate(clustid):
         idx_g: np.ndarray = cluster_col.values == g

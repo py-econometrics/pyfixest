@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -27,7 +27,7 @@ def panelview(
     ax: plt.Axes | None = None,
     xlim: tuple | None = None,
     ylim: tuple | None = None,
-) -> None:
+) -> plt.Axes:
     """
     Generate a panel view of the treatment variable over time for each unit.
 
@@ -210,11 +210,14 @@ def _prepare_panelview_df_for_outcome_plot(
         def get_treatment_start(x: pd.DataFrame) -> pd.Timestamp:
             return x[x[treat]][time].min()
 
-        treatment_starts = (
-            data.groupby(unit)
-            .apply(get_treatment_start)
-            .reset_index(name="treatment_start")
+        # `.apply(get_treatment_start)` returns a Series (one scalar per
+        # group), not a DataFrame; the pandas stubs can't infer that from a
+        # generic `.apply()` call, so `.reset_index()` resolves against the
+        # wrong (DataFrame) overload set without this cast.
+        treatment_starts_series = cast(
+            pd.Series, data.groupby(unit).apply(get_treatment_start)
         )
+        treatment_starts = treatment_starts_series.reset_index(name="treatment_start")
 
         data = data.merge(treatment_starts, on=unit, how="left")
         data_agg = (
