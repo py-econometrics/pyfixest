@@ -126,6 +126,8 @@ class Feiv(Feols):
     first_stage: FirstStage
     # Set in get_fit().
     collinearity_instruments: CollinearityCheck
+    # Two-stage fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
 
     # Constructor and methods implementation...
     def __init__(

@@ -57,6 +57,8 @@ class Feglm(Feols):
     """
 
     options: GlmEstimationOptions
+    # Iterative IRLS fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
 
     def __init__(
         self,
