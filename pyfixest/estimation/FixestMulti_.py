@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Mapping
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -76,17 +76,23 @@ class FixestMulti(TidyColumnAccessors):
 
         # set functions inherited from other modules
         _module = import_module("pyfixest.report")
+        # `.values()` is a live view: models are fitted (and populate
+        # `all_fitted_models`) after `__init__` returns, so these must stay
+        # views, not be materialized into a `list` here.
+        fitted_models = cast(
+            "list[Feols | Fepois | Feiv]", self.all_fitted_models.values()
+        )
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.coefplot = functools.partial(_tmp, models=fitted_models)
         self.coefplot.__doc__ = _tmp.__doc__
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.iplot = functools.partial(_tmp, models=fitted_models)
         self.iplot.__doc__ = _tmp.__doc__
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.summary = functools.partial(_tmp, models=fitted_models)
         self.summary.__doc__ = _tmp.__doc__
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
+        self.etable = functools.partial(_tmp, models=fitted_models)
         self.etable.__doc__ = _tmp.__doc__
 
     @property

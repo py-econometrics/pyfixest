@@ -1,7 +1,7 @@
 import functools
 import warnings
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         VarianceCovariance,
         WithinLinearData,
     )
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -165,21 +166,23 @@ class ResultAccessorMixin(TidyColumnAccessors):
     def _bind_report_methods(self):
         """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
         _module = import_module("pyfixest.report")
+        # `Self` doesn't widen to `Feols` under `list`'s invariance, though at
+        # runtime this mixin is only used by `Feols`-family classes.
 
         _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
+        self.summary = functools.partial(_tmp, models=cast("list[Feols]", [self]))
         self.summary.__doc__ = _tmp.__doc__
 
         _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
+        self.coefplot = functools.partial(_tmp, models=cast("list[Feols]", [self]))
         self.coefplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
+        self.iplot = functools.partial(_tmp, models=cast("list[Feols]", [self]))
         self.iplot.__doc__ = _tmp.__doc__
 
         _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
+        self.etable = functools.partial(_tmp, models=cast("list[Feols]", [self]))
         self.etable.__doc__ = _tmp.__doc__
 
     def evalue(
