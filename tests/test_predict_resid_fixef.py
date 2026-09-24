@@ -86,30 +86,45 @@ def fixest_data(data):
     return data
 
 
+@pytest.fixture(params=[None, "weights"])
+def weights(request):
+    return request.param
+
+
 @pytest.fixture
-def fits_vs_fixest(fixest_data, estimator, fml):
+def fits_vs_fixest(fixest_data, estimator, fml, weights):
     """Fit the same model with pyfixest and fixest; recover pyfixest's FEs."""
     r_fml = fml.replace("f1:f2", "f1^f2")
+    r_weights = {"weights": ro.Formula(f"~{weights}")} if weights is not None else {}
     if estimator == "logit":
         fml, r_fml = fml.replace("Y", "Y_bin", 1), r_fml.replace("Y", "Y_bin", 1)
 
     if estimator == "feols":
-        fit = pf.feols(fml=fml, data=fixest_data)
-        fit_r = fixest.feols(ro.Formula(r_fml), data=fixest_data)
+        fit = pf.feols(fml=fml, data=fixest_data, weights=weights)
+        fit_r = fixest.feols(ro.Formula(r_fml), data=fixest_data, **r_weights)
     elif estimator in ("fepois", "fepois_offset"):
         offset = "off" if estimator == "fepois_offset" else None
         r_offset = {"offset": ro.Formula("~off")} if offset is not None else {}
-        fit = pf.fepois(fml=fml, data=fixest_data, offset=offset, iwls_tol=1e-10)
+        fit = pf.fepois(
+            fml=fml, data=fixest_data, offset=offset, weights=weights, iwls_tol=1e-10
+        )
         fit_r = fixest.fepois(
-            ro.Formula(r_fml), data=fixest_data, glm_tol=1e-10, **r_offset
+            ro.Formula(r_fml), data=fixest_data, glm_tol=1e-10, **r_offset, **r_weights
         )
     else:
-        fit = pf.feglm(fml=fml, data=fixest_data, family=estimator, iwls_tol=1e-10)
+        fit = pf.feglm(
+            fml=fml,
+            data=fixest_data,
+            family=estimator,
+            weights=weights,
+            iwls_tol=1e-10,
+        )
         fit_r = fixest.feglm(
             ro.Formula(r_fml),
             data=fixest_data,
             family=stats.binomial(link=estimator),
             glm_tol=1e-10,
+            **r_weights,
         )
 
     # predict(newdata=...) adds the fixed effects recovered by fixef(); solve
@@ -141,7 +156,7 @@ def test_vs_fixest(request, fits_vs_fixest, fixest_data, estimator, fml):
                 strict=True,
                 reason=(
                     "The binomial separation check drops only all-zero FE groups; "
-                    "fixest also drops all-one groups."
+                    "fixest also drops all-one groups (#1623)."
                 ),
             )
         )
