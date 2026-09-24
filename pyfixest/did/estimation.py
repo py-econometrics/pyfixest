@@ -322,9 +322,14 @@ def _mark_as_did2s(fit: Feols) -> None:
 
     The two-step GMM covariance does not resample from an estimated model in
     the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
+<<<<<<< HEAD
     ``ritest()`` and ``update()`` would refit or extend only the second-stage
     regression, ignoring the first-stage residualization, so they are disabled
     as well.
+=======
+    CRV3 is disabled as well: its leave-one-cluster-out jackknife would refit
+    only the second stage and ignore the first-stage estimation.
+>>>>>>> master
     """
     fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
@@ -333,6 +338,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         cluster_causal_variance=False,
         randomization_inference=False,
         sherman_morrison_update=False,
+        crv3_inference=False,
     )
 
 
