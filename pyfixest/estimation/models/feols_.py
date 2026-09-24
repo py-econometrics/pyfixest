@@ -1042,20 +1042,13 @@ class Feols(ResultAccessorMixin):
             )
 
         if not self.capabilities.wildboottest:
-            if self.model.is_iv:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for IV estimation."
-                )
-            if self.model.method == "did2s":
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for the DID2S estimator."
-                )
             if self.options.has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
             raise NotImplementedError(
-                "Wild cluster bootstrap is only supported for unweighted OLS models."
+                "Wild cluster bootstrap is only supported for unweighted OLS models; "
+                "it is not available for IV, GLM, quantile regression, or DID2S fits."
             )
 
         cluster_list = []
@@ -1090,11 +1083,6 @@ class Feols(ResultAccessorMixin):
         except ImportError:
             print(
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self.model.method == "fepois":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for Poisson regression."
             )
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
@@ -1854,9 +1842,6 @@ class Feols(ResultAccessorMixin):
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
-
-            if type == "response" and self.model.method == "fepois":
-                y_hat = np.exp(y_hat)
 
         if se_fit or interval == "prediction":
             prediction_df = _compute_prediction_error(
