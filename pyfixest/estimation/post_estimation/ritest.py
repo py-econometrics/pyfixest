@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from importlib import import_module
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -36,7 +37,7 @@ def _get_ritest_stats_slow(
     fml: str,
     type: str,
     reps: int,
-    model: str,
+    fit_fn: Callable[..., Any],
     rng: np.random.Generator,
     vcov: str | dict[str, str],
     clustervar_arr: np.ndarray | None = None,
@@ -59,8 +60,9 @@ def _get_ritest_stats_slow(
         If 'randomization-t', the statistic is the t-statistic.
     reps : int
         The number of repetitions.
-    model : str
-        The model to estimate. Must be one of 'feols' or 'fepois'.
+    fit_fn : Callable[..., Any]
+        The public estimation function that refits the model on each resampled
+        data set, e.g. `pyfixest.feols` or `pyfixest.fepois`.
     rng : np.random.Generator
         The random number generator.
     vcov : str or dict[str, str]
@@ -78,9 +80,6 @@ def _get_ritest_stats_slow(
     data_resampled = data.copy()
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
-    fixest_module = import_module("pyfixest.estimation")
-    fit_ = getattr(fixest_module, model)
-
     resampvar_arr = data_resampled[resampvar].to_numpy()
 
     ri_stats = np.zeros(reps)
@@ -95,7 +94,7 @@ def _get_ritest_stats_slow(
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
 
-        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_fn(fml_update, data=data_resampled, vcov=vcov)
         if type == "randomization-c":
             ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, cast
 
@@ -108,6 +109,13 @@ class Feglm(Feols):
             super()._describe_model(**kwargs),
             method="feglm",
             inference_dist=self._family.inference_dist,
+        )
+
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Refuse refits: `feglm` refits cannot yet replay the family and options."
+        raise NotImplementedError(
+            f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
+            "models: a refit cannot yet replay their estimation contract."
         )
 
     def prepare_model_matrix(self) -> ModelMatrix:

@@ -157,6 +157,13 @@ class Quantreg(Feols):
             model_name=f"{description.model_name} (q = {self.options.quantile})",
         )
 
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Refuse refits: `quantreg` refits cannot yet replay the quantile and solver."
+        raise NotImplementedError(
+            f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
+            "models: a refit cannot yet replay their estimation contract."
+        )
+
     def to_array(self):
         "Publish quantile-regression arrays from the formula state."
         response = self.model_matrix.dependent.to_numpy(dtype=np.float64)

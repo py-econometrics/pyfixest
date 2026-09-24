@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from importlib import import_module
 from typing import Any
 
 import numpy as np
@@ -108,6 +110,11 @@ class Fepois(Feglm):
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the Poisson estimation function."""
         return replace(super()._describe_model(**kwargs), method="fepois")
+
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Return `fepois` for leave-out and resampled refits."
+        # lazy loading to avoid circular import
+        return import_module("pyfixest.estimation").fepois
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add the Poisson likelihood measures."

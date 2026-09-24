@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import formulaic
 import numpy as np
@@ -805,16 +806,14 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
+    def _refit_estimator(self) -> Callable[..., Any]:
+        "Return the public estimation function used for leave-out and resampled refits."
+        # lazy loading to avoid circular import
+        return import_module("pyfixest.estimation").feols
+
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = (
-            fixest_module.feols
-            if self.model.method == "feols"
-            else fixest_module.fepois
-        )
+        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
@@ -2052,7 +2051,7 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self.model.method,
+                fit_fn=self._refit_estimator(),
             )
 
         else:
