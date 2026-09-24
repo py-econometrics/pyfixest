@@ -482,6 +482,15 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the dependent variable of the fixed-effect regression in `fixef()`.
+
+        `fixef()` regresses this variable minus `X @ beta_hat` on the fixed
+        effects. Linear models use the observed `Y` of the estimation sample;
+        the GLM override uses the linear predictor net of the offset.
+        """
+        return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -531,9 +540,8 @@ class Feols(ResultAccessorMixin):
         )
 
     def _finalize_fit(self) -> None:
-        """Compute OLS-only post-fit statistics."""
-        if self.model.method == "feols" and not self.model.is_iv:
-            self.wald_test()
+        """Run the OLS Wald test that all coefficients are zero."""
+        self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
         """Yield this fitted result to the result container."""
@@ -1624,35 +1632,19 @@ class Feols(ResultAccessorMixin):
                 "The fixef() method is currently not supported for IV models."
             )
 
-        require_retained(self, "fixef", "_data")
+        require_retained(self, "fixef", "_data", "model_matrix")
 
         model_spec = self.model.model_spec
         assert model_spec is not None, "fixef() runs after the model matrix is built"
         fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
 
-        Y, X = model_spec[_ModelMatrixKey.main].get_model_matrix(
-            self._data,
-            output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-        )
-        Y = Y.to_numpy().flatten().astype(np.float64)
         if self._X_is_empty:
-            uhat = Y.flatten()
+            uhat = self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
         else:
-            # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
-            if self.model.method == "fepois" or self.model.method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self.fitted_values.link
-                # The linear predictor includes the offset; subtract it so
-                # that sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self.options.offset is not None:
-                    offset = self.model_matrix.offset
-                    assert offset is not None
-                    Y = Y - offset.to_numpy().flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
+            # model_matrix keeps the columns the collinearity check dropped;
+            # _coefnames names the estimated ones.
+            X = self.model_matrix.independent[self._coefnames].to_numpy()
+            uhat = (self._fixef_dependent() - X @ self._beta_hat).flatten()
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
