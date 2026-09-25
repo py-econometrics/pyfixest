@@ -179,7 +179,7 @@ class ModelMatrix:
 
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
-        is_finite_row: NDArray[np.bool_] = cast(
+        is_finite_row = cast(
             "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
         )
         self._drop(
