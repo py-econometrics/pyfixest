@@ -180,6 +180,9 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.ty.analysis]
+replace-imports-with-any = ["formulaic", "formulaic.**"]
+
 # --------------------------------------------------------------------------------------
 # pixi configuration
 # --------------------------------------------------------------------------------------
