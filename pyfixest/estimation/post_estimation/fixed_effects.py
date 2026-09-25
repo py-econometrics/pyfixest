@@ -133,7 +133,6 @@ class FixedEffectContrastCoding:
     ----------
     matrix : csc_matrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
-        formulaic's `output="sparse"` always materializes as CSC.
     coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
         Observed and retained codes with their positions in the complete
         coefficient vector, keyed by fixed effect.

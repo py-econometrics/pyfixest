@@ -179,8 +179,6 @@ class ModelMatrix:
 
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
-        # `.all(axis=1)` on a 2D array always returns a 1D array, never a
-        # scalar `np.bool_`; the numpy stubs don't encode that.
         is_finite_row: NDArray[np.bool_] = cast(
             "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
         )
