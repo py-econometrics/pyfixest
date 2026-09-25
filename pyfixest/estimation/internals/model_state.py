@@ -747,6 +747,8 @@ class VcovSpec:
             panel_id = kw.get("panel_id")
             if vcov == "DK" and panel_id is None:
                 raise ValueError("Missing required 'panel_id' for DK vcov")
+            if panel_id is not None and not isinstance(panel_id, str):
+                raise ValueError(f"'panel_id' must be a string; got {panel_id!r}.")
             lag = kw.get("lag")
             if lag is not None and (
                 not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
@@ -755,9 +757,9 @@ class VcovSpec:
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
-                lag=kw.get("lag"),  # type: ignore[arg-type]
+                lag=lag,
                 time_id=time_id,
-                panel_id=panel_id,  # type: ignore[arg-type]
+                panel_id=panel_id,
             )
 
         vcov_type = {"iid": "iid", "nid": "nid"}.get(vcov, "hetero")
