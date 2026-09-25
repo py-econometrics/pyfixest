@@ -241,8 +241,6 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        # `fml_separation` is built from column names, never stepwise syntax,
-        # so `feols` always returns a single `Feols`, never a `FixestMulti`.
         fitted = cast(
             "Feols", feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
         )
