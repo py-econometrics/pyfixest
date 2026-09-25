@@ -9,6 +9,7 @@ from typing import Any, Final, TypeAlias, cast
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.model_matrix import ModelMatrices
 from formulaic.parser import DefaultFormulaParser
 from numpy.typing import NDArray
 
@@ -49,7 +50,7 @@ class ModelMatrix:
 
     Parameters
     ----------
-    model_matrix : formulaic.ModelMatrix
+    model_matrix : formulaic.model_matrix.ModelMatrices
         Model frames produced by formulaic, containing the response, regressors,
         and any fixed effects, instruments, weights, or offsets.
     drop_rows : frozenset[int]
@@ -101,7 +102,7 @@ class ModelMatrix:
 
     def __init__(
         self,
-        model_matrix: formulaic.ModelMatrix,
+        model_matrix: ModelMatrices,
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
@@ -117,7 +118,7 @@ class ModelMatrix:
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
-    def _get_columns(mm: formulaic.ModelMatrix, *keys: str) -> list[str] | None:
+    def _get_columns(mm: ModelMatrices, *keys: str) -> list[str] | None:
         """Extract column names by traversing nested keys, or None if missing."""
         try:
             result = mm
@@ -127,7 +128,7 @@ class ModelMatrix:
         except KeyError:
             return None
 
-    def _collect_columns(self, model_matrix: formulaic.ModelMatrix) -> None:
+    def _collect_columns(self, model_matrix: ModelMatrices) -> None:
         self._dependent_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.main, "lhs"
         )
@@ -150,7 +151,7 @@ class ModelMatrix:
             model_matrix, _ModelMatrixKey.offset
         )
 
-    def _collect_data(self, model_matrix: formulaic.ModelMatrix) -> None:
+    def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
@@ -178,8 +179,11 @@ class ModelMatrix:
 
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
+        is_finite_row = cast(
+            "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
+        )
         self._drop(
-            ~np.isfinite(maybe_infinite.to_numpy()).all(axis=1),
+            ~is_finite_row,
             "rows with infinite values",
             stage="infinite",
         )
