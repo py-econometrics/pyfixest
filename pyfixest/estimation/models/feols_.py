@@ -286,9 +286,6 @@ class Feols(ResultAccessorMixin):
         # set in get_fit(); IV and quantile fits keep the all-NaN value
         self.fitstat = FitStatistics()
 
-        # set functions inherited from other modules
-        self._bind_report_methods()
-
     def _describe_model(
         self,
         *,
@@ -1599,6 +1596,30 @@ class Feols(ResultAccessorMixin):
         self.GelbachDecompositionResults = med
 
         return med
+
+    def summary(self, **kwargs):
+        """Print a summary of this model. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        from pyfixest.report import summary
+
+        return summary(models=self, **kwargs)
+
+    def etable(self, **kwargs):
+        """Create a regression table. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        from pyfixest.report import etable
+
+        return etable(models=self, **kwargs)
+
+    def coefplot(self, **kwargs):
+        """Plot the coefficients. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        from pyfixest.report import coefplot
+
+        return coefplot(models=self, **kwargs)
+
+    def iplot(self, **kwargs):
+        """Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        from pyfixest.report import iplot
+
+        return iplot(models=self, **kwargs)
 
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
