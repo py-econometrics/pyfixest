@@ -1,6 +1,4 @@
-import functools
 import warnings
-from importlib import import_module
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -161,26 +159,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     def _vcov(self) -> np.ndarray:
         """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
         return self.variance_covariance.vcov
-
-    def _bind_report_methods(self):
-        """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
-        _module = import_module("pyfixest.report")
-
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
-        self.summary.__doc__ = _tmp.__doc__
-
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
-        self.coefplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
-        self.iplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
-        self.etable.__doc__ = _tmp.__doc__
 
     def evalue(
         self,

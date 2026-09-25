@@ -174,7 +174,7 @@ def event_study(
             randomization_inference=False,
             sherman_morrison_update=False,
         )
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
         fit.test_treatment_heterogeneity = (  # type: ignore[attr-defined]
             saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
         )
