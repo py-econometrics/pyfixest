@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import formulaic
 import formulaic.formula
 import numpy as np
 import pandas as pd
-from formulaic.model_matrix import ModelMatrices
-from formulaic.parser.types import Factor, FormulaParser
+from formulaic.parser.types import Factor
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -22,47 +21,11 @@ if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
 
 
-def model_spec_rhs(model_spec: Mapping[str, ModelSpec], key: str) -> ModelSpec:
-    """Return the RHS `ModelSpec` of a two-sided (`Y ~ X`) model-spec stage."""
-    return cast(formulaic.model_spec.ModelSpecs, model_spec[key]).rhs
-
-
-def model_spec_lhs(model_spec: Mapping[str, ModelSpec], key: str) -> ModelSpec:
-    """Return the LHS `ModelSpec` of a two-sided (`Y ~ X`) model-spec stage."""
-    return cast(formulaic.model_spec.ModelSpecs, model_spec[key]).lhs
-
-
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
-def make_formula(
-    spec: Any, *, parser: FormulaParser | None = None
-) -> formulaic.formula.Formula:
-    """
-    Construct a formulaic `Formula`, working around its abstract-class stub.
-
-    `formulaic.Formula(...)` is a factory disguised as a class: its metaclass
-    dispatches to a concrete `SimpleFormula` or `StructuredFormula` at runtime
-    depending on `spec`, but formulaic types both the constructor and its
-    return value as the abstract `Formula` base. Callers should `cast()` the
-    result to whichever concrete type `spec` is known to produce.
-    """
-    if parser is None:
-        return formulaic.Formula(spec)  # ty: ignore[call-non-callable]
-    return formulaic.Formula(spec, _parser=parser)  # ty: ignore[call-non-callable]
-
-
-def simple_formula(terms: Iterable[Any]) -> formulaic.formula.SimpleFormula:
-    """Build a `SimpleFormula` from terms, working around formulaic's `FormulaSpec` stub."""
-    return cast(
-        formulaic.formula.SimpleFormula, formulaic.formula.SimpleFormula(list(terms))
-    )
-
-
-def terms_without_intercept(
-    formula: formulaic.formula.SimpleFormula,
-) -> Iterator[Any]:
+def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
     """Yield formula terms excluding Formulaic's intercept term."""
     return (term for term in formula if term != "1")
 
@@ -112,7 +75,7 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
 
 
 def filter_multistage_endogenous_terms(
-    exogenous: formulaic.formula.SimpleFormula,
+    exogenous: formulaic.formula.Formula,
     endogenous_terms: Iterable[Any],
 ) -> formulaic.formula.SimpleFormula:
     """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
@@ -127,17 +90,12 @@ def filter_multistage_endogenous_terms(
             "formulaic MULTISTAGE endogenous suffix changed: expected generated "
             f"second-stage terms {sorted(missing)} to be present before filtering."
         )
-    return cast(
-        formulaic.formula.SimpleFormula,
-        formulaic.formula.SimpleFormula(
-            [term for term in terms if str(term) not in generated_endogenous]
-        ),
+    return formulaic.formula.SimpleFormula(
+        [term for term in terms if str(term) not in generated_endogenous]
     )
 
 
-def flatten_model_matrix(
-    model_matrix: formulaic.ModelMatrix | ModelMatrices,
-) -> list[pd.DataFrame]:
+def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:
     """Return the leaf data frames from a possibly structured ModelMatrix."""
     # formulaic internal: `_flatten()` is private and its iteration order is
     # documented as unstable. Callers must not rely on the returned order.
@@ -151,11 +109,7 @@ def materialize_model_spec_with_unseen_mask(
 ) -> tuple[formulaic.ModelMatrix, np.ndarray]:
     """Materialize a prediction matrix and flag unseen categorical levels."""
     materializer = rhs_spec.get_materializer(newdata, context=context)
-    # `rhs_spec` is a single (non-structured) `ModelSpec`, so `get_model_matrix`
-    # always returns a plain `ModelMatrix`, never the structured `ModelMatrices`.
-    model_matrix = cast(
-        "formulaic.ModelMatrix", materializer.get_model_matrix(rhs_spec)
-    )
+    model_matrix = materializer.get_model_matrix(rhs_spec)
     unseen = rows_with_unseen_contrast_levels(
         rhs_spec, newdata, materializer.factor_cache
     )
