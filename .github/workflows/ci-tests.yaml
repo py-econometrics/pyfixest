@@ -48,6 +48,24 @@ jobs:
           flags: core-tests
           files: coverage.xml
 
+  type-check-ty:
+    name: "Type check (ty, report-only)"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: py312
+
+      - name: Run ty
+        run: pixi run -e py312 ty
+
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest
