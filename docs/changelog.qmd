@@ -17,6 +17,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Benchmarks
+
+Added a reproducible multiple-estimation benchmark harness covering simple, difficult, and AKM panels, MAP/within backends, and R fixest comparisons.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
