@@ -320,6 +320,7 @@ def feglm(
         split=split,
         fsplit=fsplit,
         separation_check=separation_check,
+        vcov_kwargs=vcov_kwargs,
     )
 
     # Poisson goes through the Fepois model class (which is a Feglm subclass);

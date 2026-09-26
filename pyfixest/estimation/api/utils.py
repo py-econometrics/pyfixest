@@ -48,6 +48,7 @@ def _estimation_input_checks(
     split: str | None,
     fsplit: str | None,
     separation_check: list[str] | None = None,
+    vcov_kwargs: Mapping[str, str | int] | None = None,
 ):
     if not isinstance(fml, str):
         raise TypeError("fml must be a string")
@@ -127,7 +128,13 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
+    # Check the raw HAC columns: the spec keeps them only for "NW" and "DK".
+    hac_columns = (
+        ()
+        if vcov_kwargs is None
+        else (vcov_kwargs.get("time_id"), vcov_kwargs.get("panel_id"))
+    )
+    for column in (*vcov.clustervar, *hac_columns):
         if column is not None and column not in data.columns:
             raise ValueError(f"The variable '{column}' is not in the data.")
 

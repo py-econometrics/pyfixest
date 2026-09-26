@@ -1337,6 +1337,17 @@ def test_errors_vcov_kwargs(vcov_kwargs, match):
         pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs=vcov_kwargs)
 
 
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize("key", ["time_id", "panel_id"])
+def test_errors_vcov_kwargs_missing_column_without_hac(estimator, key):
+    """A HAC column missing from the data fails even when `vcov` ignores it."""
+    data = pf.get_data()
+    data["Y"] = data["Y"].abs()
+
+    with pytest.raises(ValueError, match=r"The variable 'nope' is not in the data\."):
+        estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
+
+
 def test_errors_hac():
     """Test all error conditions for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors."""
     rng = np.random.default_rng(123)

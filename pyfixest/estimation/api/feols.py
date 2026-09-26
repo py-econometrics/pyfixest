@@ -530,6 +530,7 @@ def feols(
         seed=seed,
         split=split,
         fsplit=fsplit,
+        vcov_kwargs=vcov_kwargs,
     )
 
     if use_compression:
