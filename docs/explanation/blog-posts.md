@@ -1,4 +1,7 @@
-# Case Studies & Blog Posts
+---
+title: "Case Studies & Blog Posts"
+description: "External write-ups on PyFixest in practice, from high-cardinality marketplace modeling at Instacart to community introductions."
+---
 
 A curated list of blog posts, tutorials, and case studies that show how pyfixest is used in practice.
 Please let us know if you have written about use cases of PyFixest =)
