@@ -320,6 +320,8 @@ def test_bootstrap_draws_independent_of_nthreads(cluster):
 
     with pytest.raises(ValueError, match=r"alpha must be in \(0, 1\)"):
         gb[1].tidy(alpha=1.5)
+
+
 def test_multiway_cluster_raises():
     "A two-way clustered fit must not silently bootstrap on its first cluster only."
     df = pd.read_stata("tests/data/gelbach.dta")
