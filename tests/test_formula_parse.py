@@ -7,7 +7,12 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import os
+import subprocess
+import sys
+import textwrap
 import warnings
+from pathlib import Path
 
 import formulaic
 import numpy as np
@@ -789,3 +794,65 @@ class TestEdgeCases:
             )
             if result[0].is_instrumental_variable:
                 assert reparsed[0].first_stage == result[0].first_stage
+
+
+def _fitted_value_digest(hash_seed: str) -> str:
+    """Estimate a three-way fixed effects model in a fresh interpreter."""
+    repo_root = Path(__file__).resolve().parents[1]
+    script = textwrap.dedent(
+        f"""
+        import hashlib
+        import sys
+
+        sys.path.insert(0, {str(repo_root)!r})
+
+        import numpy as np
+        import pandas as pd
+
+        import pyfixest as pf
+
+        rng = np.random.default_rng(0)
+        n = 2_000
+        data = pd.DataFrame(
+            {{
+                "f1": rng.integers(0, 10, n),
+                "f2": rng.integers(0, 20, n),
+                "f3": rng.integers(0, 30, n),
+                "x": rng.normal(size=n),
+            }}
+        )
+        data["y"] = (
+            0.5 * data["x"]
+            + 0.1 * data["f1"]
+            + np.sin(data["f2"])
+            + np.cos(data["f3"])
+            + rng.normal(size=n)
+        )
+
+        fitted = np.asarray(pf.feols("y ~ x | f1 + f2 + f3", data=data).predict())
+        print(hashlib.sha256(fitted.tobytes()).hexdigest())
+        """
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        env={**os.environ, "PYTHONHASHSEED": hash_seed},
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    return result.stdout.strip().splitlines()[-1]
+
+
+def test_fixed_effect_order_does_not_depend_on_the_hash_seed():
+    """Fitted values must not change with the interpreter's string hash seed.
+
+    The fixed effects used to be collected into a `set`, so their order, and
+    with it the order the demeaner sweeps them, varied between processes and
+    moved results by about `fixef_tol` (issue #1609).
+    """
+    digests = {seed: _fitted_value_digest(seed) for seed in ("0", "1", "2")}
+
+    assert len(set(digests.values())) == 1, digests
