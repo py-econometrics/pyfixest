@@ -13,6 +13,8 @@ import pyfixest as pf
 from pyfixest.estimation import fepois
 
 fixest = importr("fixest")
+stats = importr("stats")
+sandwich = importr("sandwich")
 
 
 def test_separation():
@@ -130,4 +132,75 @@ def test_against_fixest(fml):
 
     np.testing.assert_allclose(
         fit_r.rx2("deviance"), fit.fitstat.deviance, atol=1e-08, rtol=1e-07
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    ("fml", "r_fml"),
+    [
+        ("Y ~ X1 + X2", "Y ~ X1 + X2 + offset(off)"),
+        ("Y ~ X1 + X2 | f3", "Y ~ X1 + X2 + factor(f3) + offset(off)"),
+    ],
+)
+def test_crv3_offset_vs_sandwich_vcovjk(fml, r_fml):
+    "The CRV3 leave-one-cluster-out refits must keep the offset (and IRLS tolerance)."
+    data = pf.get_data(model="Fepois").dropna()[["Y", "X1", "X2", "f1", "f3"]]
+    data = data.reset_index(drop=True)
+    rng = np.random.default_rng(8123)
+    data["off"] = np.log(rng.uniform(0.5, 2.0, size=len(data)))
+    iwls_tol = 1e-12
+    n_clusters = data["f1"].nunique()
+
+    # without small-sample corrections, CRV3 is the unscaled sum of outer
+    # products of the leave-one-cluster-out deviations from the full estimate
+    fit = pf.fepois(
+        fml,
+        data=data,
+        offset="off",
+        vcov={"CRV3": "f1"},
+        ssc=pf.ssc(k_adj=False, G_adj=False),
+        iwls_tol=iwls_tol,
+        # glm() keeps singleton fixed-effect levels
+        fixef_rm="none",
+    )
+    fit_r = stats.glm(
+        ro.Formula(r_fml),
+        family=stats.poisson(),
+        data=data,
+        control=stats.glm_control(epsilon=iwls_tol, maxit=100),
+    )
+    with ro.default_converter.context():
+        coef_r = fit_r.rx2("coefficients")
+        coef_r = pd.Series(np.asarray(coef_r), index=list(coef_r.names))
+        coef_r = coef_r.rename({"(Intercept)": "Intercept"})
+        # vcovJK scales the same sum of outer products by (G - 1) / G
+        vcov_r = sandwich.vcovJK(fit_r, cluster=ro.Formula("~f1"), center="estimate")
+        vcov_r = pd.DataFrame(
+            np.asarray(vcov_r) * n_clusters / (n_clusters - 1),
+            index=list(ro.r["rownames"](vcov_r)),
+            columns=list(ro.r["colnames"](vcov_r)),
+        ).rename(
+            index={"(Intercept)": "Intercept"}, columns={"(Intercept)": "Intercept"}
+        )
+
+    coefnames = list(fit.coef().index)
+    vcov_py = pd.DataFrame(
+        fit.variance_covariance.vcov, index=coefnames, columns=coefnames
+    )
+    np.testing.assert_allclose(
+        fit.coef().to_numpy(),
+        coef_r[coefnames].to_numpy(),
+        rtol=1e-8,
+        atol=0,
+        err_msg="coefficients",
+    )
+    # each refit converges only to the IRLS tolerance, and the vcov sums G
+    # differences of such refits
+    np.testing.assert_allclose(
+        vcov_py.to_numpy(),
+        vcov_r.loc[coefnames, coefnames].to_numpy(),
+        rtol=1e-6,
+        atol=1e-12,
+        err_msg="CRV3 vcov",
     )

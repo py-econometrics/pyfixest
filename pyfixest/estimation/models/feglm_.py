@@ -113,8 +113,24 @@ class Feglm(Feols):
             inference_dist=self._family.inference_dist,
         )
 
+    def _refit_kwargs(self) -> dict[str, Any]:
+        """Extend the linear refit contract with the offset and IRLS options.
+
+        The family is not an option: the refit function returned by
+        `_refit_estimator` fixes it, which is why only `Fepois` enables refits.
+        """
+        options = self.options
+        return {
+            **super()._refit_kwargs(),
+            "offset": options.offset,
+            "iwls_tol": options.tol,
+            "iwls_maxiter": options.maxiter,
+            "separation_check": options.separation_check,
+            "accelerate": options.accelerate,
+        }
+
     def _refit_estimator(self) -> Callable[..., Any]:
-        "Refuse refits: `feglm` refits cannot yet replay the family and options."
+        "Refuse refits: `feglm` refits cannot yet replay the family."
         raise NotImplementedError(
             f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
             "models: a refit cannot yet replay their estimation contract."

@@ -4,6 +4,7 @@ import re
 import warnings
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
 from typing import Any, Literal, cast, overload
 
@@ -813,9 +814,40 @@ class Feols(ResultAccessorMixin):
         )
 
     def _refit_estimator(self) -> Callable[..., Any]:
-        "Return the public estimation function used for leave-out and resampled refits."
+        """Return `feols` with this fit's estimation options bound, for refits.
+
+        Leave-one-cluster-out (CRV3) and resampled (``ritest``) refits call the
+        returned function with ``fml``, ``data`` and ``vcov`` only; every other
+        argument comes from `_refit_kwargs`.
+        """
         # lazy loading to avoid circular import
-        return import_module("pyfixest.estimation").feols
+        feols = import_module("pyfixest.estimation").feols
+        return partial(feols, **self._refit_kwargs())
+
+    def _refit_kwargs(self) -> dict[str, Any]:
+        """Map the fitted model's `options` to keyword arguments of a refit.
+
+        This is the single refit contract: a refit through `_refit_estimator`
+        replays every option that can change the estimates. Deliberately not
+        inherited are ``vcov`` and ``vcov_kwargs`` (each caller chooses the
+        refit's covariance), ``split``/``fsplit``
+        (the refit data is already this model's sample), ``store_data`` and
+        ``lean`` (callers read only coefficients and t-statistics), and
+        ``copy_data`` (a refit copies its input, so the in-place row drops of
+        ``copy_data=False`` never reach the caller's frame).
+        """
+        options = self.options
+        return {
+            "weights": options.weights,
+            "weights_type": options.weights_type,
+            "ssc": options.ssc,
+            "fixef_rm": "singleton" if options.drop_singletons else "none",
+            "drop_intercept": options.drop_intercept,
+            "collin_tol": options.collin_tol,
+            "solver": options.solver,
+            "demeaner": options.demeaner,
+            "context": options.context,
+        }
 
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
@@ -824,13 +856,7 @@ class Feols(ResultAccessorMixin):
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = fit_(
-                fml=self.model.formula,
-                data=data,
-                vcov="iid",
-                weights=self.options.weights,
-                weights_type=self.options.weights_type,
-            )
+            fit = fit_(fml=self.model.formula, data=data, vcov="iid")
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)

@@ -281,6 +281,7 @@ We also removed:
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
 - CCV auxiliary fits now retain the original demeaner configuration.
+- `vcov({"CRV3": ...})` and `ritest()` now refit with every estimation option of the original fit. Before, the leave-one-cluster-out and resampled refits dropped every option except the CRV3 weights, so `fepois()` with an `offset` returned a jackknife and randomization distribution without the offset, and refits ignored `fixef_rm`, `drop_intercept`, `collin_tol`, `solver`, `demeaner`, `ssc`, `context`, and the IRLS options.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
   different from the model order. Previously, intervals could be associated

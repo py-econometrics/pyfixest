@@ -1,9 +1,12 @@
+from functools import partial
+
 import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.post_estimation.ritest import _get_ritest_stats_slow
 
 matplotlib.use("Agg")  # Use a non-interactive backend
 
@@ -171,6 +174,34 @@ def test_fepois_ritest():
     assert fit.ritest_statistics.statistics is not None
     assert np.allclose(
         fit.pvalue().xs("f3"), fit.ritest_statistics.pvalue, rtol=0.01, atol=0.01
+    )
+
+
+def test_ritest_slow_refits_keep_offset():
+    "The resampled fepois refits of ritest must keep the offset of the fit."
+    data = pf.get_data(model="Fepois").dropna().reset_index(drop=True)
+    data["off"] = np.log(np.random.default_rng(8123).uniform(0.5, 2.0, len(data)))
+    fit = pf.fepois("Y ~ X1 + X2", data=data, offset="off")
+    fit.ritest(
+        resampvar="X1",
+        reps=5,
+        rng=np.random.default_rng(3),
+        store_ritest_statistics=True,
+    )
+
+    expected = _get_ritest_stats_slow(
+        data=fit._data,
+        resampvar="X1",
+        fml=fit.model.formula,
+        type="randomization-c",
+        reps=5,
+        fit_fn=partial(pf.fepois, offset="off"),
+        rng=np.random.default_rng(3),
+        vcov="iid",
+    )
+
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics, expected, rtol=1e-12, err_msg="ri stats"
     )
 
 

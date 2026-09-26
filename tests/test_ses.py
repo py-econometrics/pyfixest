@@ -1,6 +1,9 @@
+from dataclasses import fields
+
 import numpy as np
 import pytest
 
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
 
@@ -252,4 +255,88 @@ def test_hac_rejects_fweights(vcov):
         vcov_kwargs=kwargs,
         weights="weights",
         weights_type="aweights",
+    )
+
+
+def _log1p_abs(x):
+    return np.log1p(np.abs(x))
+
+
+@pytest.fixture
+def data_offset():
+    data = get_data(model="Fepois").dropna().reset_index(drop=True)
+    rng = np.random.default_rng(8123)
+    data["off"] = np.log(rng.uniform(0.5, 2.0, size=len(data)))
+    return data
+
+
+@pytest.mark.parametrize(
+    ("estimator", "fml", "options"),
+    [
+        (fepois, "Y ~ X1 + X2", {"offset": "off", "iwls_tol": 1e-12}),
+        (fepois, "Y ~ X1 + X2", {"offset": "off", "drop_intercept": True}),
+        (
+            feols,
+            "Y ~ log1p_abs(X1) + X2 | f3",
+            {"context": {"log1p_abs": _log1p_abs}, "fixef_rm": "none"},
+        ),
+    ],
+)
+def test_crv3_refits_replay_estimation_options(data_offset, estimator, fml, options):
+    "The CRV3 jackknife refits with the options of the original fit."
+    fit = estimator(
+        fml,
+        data=data_offset,
+        vcov={"CRV3": "f1"},
+        ssc=ssc(k_adj=False, G_adj=False),
+        **options,
+    )
+    beta_hat = fit.coef().to_numpy()
+
+    # reference: leave-one-cluster-out refits through the public API
+    vcov_jack = np.zeros((len(beta_hat), len(beta_hat)))
+    for g in np.unique(data_offset["f1"]):
+        beta_g = estimator(fml, data=data_offset[data_offset["f1"] != g], **options)
+        deviation = beta_g.coef().to_numpy() - beta_hat
+        vcov_jack += np.outer(deviation, deviation)
+
+    # identical refits; only the accumulation order of the sum differs
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov, vcov_jack, rtol=1e-10, atol=0, err_msg="CRV3"
+    )
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+def test_refit_estimator_replays_options(data_offset, estimator):
+    "Leave-out and resampled refits inherit every option except the retention ones."
+    fml = "Y ~ log1p_abs(X1) + X2 | f3"
+    options = {
+        "weights": "weights",
+        "ssc": ssc(k_adj=False, k_fixef="full"),
+        "fixef_rm": "none",
+        "collin_tol": 1e-7,
+        "solver": "np.linalg.solve",
+        "demeaner": MapDemeaner(fixef_tol=1e-9),
+        "context": {"log1p_abs": _log1p_abs},
+    }
+    if estimator is fepois:
+        options |= {
+            "offset": "off",
+            "iwls_tol": 1e-10,
+            "iwls_maxiter": 40,
+            "separation_check": ["fe"],
+            "accelerate": False,
+        }
+    fit = estimator(fml, data=data_offset, **options)
+
+    refit = fit._refit_estimator()(fml=fml, data=data_offset, vcov="iid")
+
+    not_inherited = {"store_data", "copy_data", "lean"}
+    for option in fields(fit.options):
+        if option.name not in not_inherited:
+            assert getattr(refit.options, option.name) == getattr(
+                fit.options, option.name
+            ), option.name
+    np.testing.assert_allclose(
+        refit.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
     )

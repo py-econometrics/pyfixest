@@ -62,7 +62,9 @@ def _get_ritest_stats_slow(
         The number of repetitions.
     fit_fn : Callable[..., Any]
         The public estimation function that refits the model on each resampled
-        data set, e.g. `pyfixest.feols` or `pyfixest.fepois`.
+        data set, with the fitted model's estimation options bound, as returned
+        by the model's `_refit_estimator()`. It is called with the formula,
+        `data` and `vcov` only.
     rng : np.random.Generator
         The random number generator.
     vcov : str or dict[str, str]
