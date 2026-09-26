@@ -151,7 +151,6 @@ def _get_ritest_stats_fast(
     """
     if nb is None or demean is None:
         raise ImportError(_NUMBA_RITEST_ERROR)
-    _demean = demean
 
     X_demean = X
     Y_demean = Y.flatten()
@@ -188,7 +187,7 @@ def _get_ritest_stats_fast(
         fval=fval,
         weights=weights,
         rng=rng,
-        demean_fn=_demean,
+        demean_fn=demean,
     )
 
 
