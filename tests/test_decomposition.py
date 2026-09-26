@@ -320,6 +320,25 @@ def test_bootstrap_draws_independent_of_nthreads(cluster):
 
     with pytest.raises(ValueError, match=r"alpha must be in \(0, 1\)"):
         gb[1].tidy(alpha=1.5)
+def test_multiway_cluster_raises():
+    "A two-way clustered fit must not silently bootstrap on its first cluster only."
+    df = pd.read_stata("tests/data/gelbach.dta")
+    df["cluster2"] = np.arange(len(df)) % 7
+
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster + cluster2"}
+    )
+    with pytest.raises(ValueError, match="Multiway clustering"):
+        fit.decompose(param="x1", reps=2)
+
+    # an explicit one-way cluster overrides the fit's two-way clustering
+    fit.decompose(param="x1", reps=2, cluster="cluster")
+    fit_oneway = pf.feols("y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster"})
+    fit_oneway.decompose(param="x1", reps=2)
+    for key, value in fit.GelbachDecompositionResults.results.absolute.items():
+        np.testing.assert_allclose(
+            value, fit_oneway.GelbachDecompositionResults.results.absolute.get(key)
+        )
 
 
 def test_fixef():
