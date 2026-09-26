@@ -357,17 +357,25 @@ class GelbachDecomposition:
 
             return bootstrap_results
 
-    def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
-        "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
-        self.alpha = alpha
+    def bootstrap(self, rng: np.random.Generator, B: int = 1_000):
+        """
+        Draw bootstrap replications for Total, Mediated and Direct Effects.
+
+        Each replication draws from its own independent child generator spawned
+        from `rng`, so results for a given seed do not depend on `nthreads`.
+        Percentile confidence intervals are computed from the stored draws in
+        `tidy()`, for the `alpha` requested there.
+        """
         self.B = B
 
         # convert to csr for easier vstacking
         if self.unique_clusters is not None:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
+        # One independent stream per replication: joblib pickles the arguments of
+        # each task, so sharing one generator would repeat draws across workers.
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            delayed(self._bootstrap)(rng=child_rng) for child_rng in tqdm(rng.spawn(B))
         )
 
         # unpack
@@ -376,15 +384,6 @@ class GelbachDecomposition:
             self._bootstrap_relative_explained_df,
             self._bootstrap_relative_direct_df,
         ) = self._unpack_bootstrap_results(_bootstrapped)
-
-        # compute ci
-        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
-        self._relative_explained_ci = self._compute_ci(
-            self._bootstrap_relative_explained_df, alpha
-        )
-        self._relative_direct_ci = self._compute_ci(
-            self._bootstrap_relative_direct_df, alpha
-        )
 
     def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
         """Compute confidence intervals from bootstrap DataFrame.
@@ -552,7 +551,9 @@ class GelbachDecomposition:
         ----------
         alpha : float, optional
             The significance level for the confidence intervals, by default 0.05.
-            Computes a 95% confidence interval when alpha = 0.05.
+            Computes a 95% percentile bootstrap confidence interval when
+            alpha = 0.05. Ignored when the decomposition was fit with
+            `only_coef=True`.
         panels : str, optional
             Which panels to include. One of 'all', 'levels', 'share_explained',
             'share_full', by default "all". Also accepts full names for backward compatibility.
@@ -567,13 +568,25 @@ class GelbachDecomposition:
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+            if not 0 < alpha < 1:
+                raise ValueError(f"alpha must be in (0, 1). Got {alpha}.")
+            absolute_df = pd.concat(
+                [absolute_df, self._compute_ci(self._bootstrap_absolute_df, alpha)],
+                axis=1,
+            )
             relative_explained_df = pd.concat(
-                [relative_explained_df, self._relative_explained_ci],
+                [
+                    relative_explained_df,
+                    self._compute_ci(self._bootstrap_relative_explained_df, alpha),
+                ],
                 axis=1,
             )
             relative_direct_df = pd.concat(
-                [relative_direct_df, self._relative_direct_ci], axis=1
+                [
+                    relative_direct_df,
+                    self._compute_ci(self._bootstrap_relative_direct_df, alpha),
+                ],
+                axis=1,
             )
 
         absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))
