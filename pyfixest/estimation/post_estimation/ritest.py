@@ -149,7 +149,7 @@ def _get_ritest_stats_fast(
         The test statistics. For this algorithm, regression coefficients are
         returned.
     """
-    if nb is None:
+    if nb is None or demean is None:
         raise ImportError(_NUMBA_RITEST_ERROR)
 
     X_demean = X
@@ -187,6 +187,7 @@ def _get_ritest_stats_fast(
         fval=fval,
         weights=weights,
         rng=rng,
+        demean_fn=demean,
     )
 
 
@@ -198,6 +199,7 @@ def _run_ri(
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
+    demean_fn: Callable[..., Any],
     clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
@@ -218,6 +220,8 @@ def _run_ri(
     X_demean2 : np.ndarray
         The demeaned design matrix.
     Y_demean : np.ndarray
+    demean_fn : Callable
+        The numba-backed `demean` function, validated as importable by the caller.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -240,7 +244,7 @@ def _run_ri(
             iterations=1,
         )
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+        D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
         ri_coefs[i] = lstsq_numba(
             np.concatenate((D2_demean, X_demean2), axis=1), Y_demean

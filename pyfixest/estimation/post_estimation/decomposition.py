@@ -1,13 +1,13 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from scipy.sparse import csc_matrix, diags, hstack, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
@@ -190,7 +190,7 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            self.unique_clusters = cast(np.ndarray, self.cluster_df.unique())
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
                 for cluster in self.unique_clusters
@@ -268,7 +268,7 @@ class GelbachDecomposition:
 
     def fit(
         self,
-        X: spmatrix,
+        X: csc_matrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
@@ -453,10 +453,10 @@ class GelbachDecomposition:
 
     def compute_gelbach(
         self,
-        X1: spmatrix,
-        X2: spmatrix,
+        X1: csc_matrix,
+        X2: csc_matrix,
         Y: np.ndarray,
-        X: spmatrix,
+        X: csc_matrix,
         agg_first: bool | None,
     ) -> tuple[
         np.ndarray,
