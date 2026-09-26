@@ -23,6 +23,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Multiple estimations reuse immutable blocks of demeaned columns, avoid copying the growing cache on every new regressor, and share repeated design selections across outcomes.
+
 - `decompose()` now raises `ValueError` on a fit with multiway clustering instead of silently bootstrapping on the first cluster variable only; pass a single `cluster` to choose the bootstrap dimension.
 - Removed the deprecated `FixestFormulaParser` class and `model_matrix_fixest()` function (deprecated since 0.50.0; use `Formula.parse()` and `create_model_matrix()`), together with the `pyfixest.estimation.deprecated` package and the `pyfixest.estimation.feols_`, `feiv_`, and `fepois_` import shims. Import `Feols`, `Feiv`, and `Fepois` from `pyfixest` or `pyfixest.estimation.models`.
 - IV diagnostics now compute the heteroskedasticity-robust effective F-statistic without replacing the retained first-stage covariance, so its original F-statistic and inference remain available.

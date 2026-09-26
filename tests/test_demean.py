@@ -687,8 +687,8 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     cached_data = lookup_dict[frozenset()]
     assert isinstance(cached_data, DemeanedData)
     assert cached_data.columns == ("y", "x1", "x2")
-    assert np.allclose(cached_data.values[:, :1], Yd)
-    assert np.allclose(cached_data.values[:, 1:], Xd)
+    assert np.allclose(cached_data.blocks[0][:, :1], Yd)
+    assert np.allclose(cached_data.blocks[0][:, 1:], Xd)
 
 
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
@@ -778,9 +778,9 @@ def test_demean_model_caching(benchmark, demeaner):
     assert np.allclose(Yd1, Yd2)
     assert np.allclose(Xd1, Xd2)
     original_entry = lookup_dict[frozenset()]
-    assert np.shares_memory(Xd1, original_entry.values)
-    assert np.shares_memory(Xd2, original_entry.values)
-    original_values = original_entry.values.copy()
+    assert np.shares_memory(Xd1, original_entry.blocks[0])
+    assert np.shares_memory(Xd2, original_entry.blocks[0])
+    original_values = original_entry.blocks[0].copy()
 
     # A complete cache hit still follows the requested order, including the
     # empty-design case used by fixed-effect-only specifications.
@@ -861,9 +861,9 @@ def test_demean_model_caching(benchmark, demeaner):
         demeaner=demeaner,
     )
     assert lookup_dict[frozenset()] is not original_entry
-    np.testing.assert_array_equal(original_entry.values, original_values)
-    assert np.shares_memory(Xd1, original_entry.values)
-    assert np.shares_memory(Xd2, original_entry.values)
+    np.testing.assert_array_equal(original_entry.blocks[0], original_values)
+    assert np.shares_memory(Xd1, original_entry.blocks[0])
+    assert np.shares_memory(Xd2, original_entry.blocks[0])
 
     # Requested output order matches an independent solve, while the shared
     # cache keeps first-seen insertion order and all earlier columns.
@@ -872,7 +872,8 @@ def test_demean_model_caching(benchmark, demeaner):
     cached_data = lookup_dict[frozenset()]
     assert isinstance(cached_data, DemeanedData)
     assert cached_data.columns == ("y", "x1", "x2", "x4", "x3")
-    assert not cached_data.values.flags.writeable
+    assert all(not block.flags.writeable for block in cached_data.blocks)
+    assert cached_data.blocks[0] is original_entry.blocks[0]
 
 
 @pytest.mark.parametrize(
@@ -991,3 +992,103 @@ def generate_complex_fixed_effects_data():
     flist = np.column_stack([id_indiv, id_firm, id_year]).astype(np.uint64)
     weights = rng.uniform(0.5, 2.0, n)
     return X, flist, weights
+
+
+@pytest.mark.parametrize("demeaner", [MapDemeaner(), LsmrDemeaner()])
+def test_cache_blocks_share_repeated_design_and_only_demean_missing(
+    monkeypatch, demeaner
+):
+    """Cache growth preserves arrays; new outcomes reuse even assembled designs."""
+    rng = np.random.default_rng(913)
+    values = rng.normal(size=(100, 5))
+    fe = rng.integers(0, 8, size=(100, 2))
+    shared = {}
+    calls = []
+    original = DemeanCache._run_or_raise
+
+    def trace(self, x, *args, **kwargs):
+        calls.append(x.copy())
+        return original(self, x, *args, **kwargs)
+
+    monkeypatch.setattr(DemeanCache, "_run_or_raise", trace)
+
+    def fit(y, xs):
+        return DemeanCache(shared).demean_yx(
+            Y=values[:, [y]],
+            X=values[:, xs],
+            y_names=(f"v{y}",),
+            x_names=tuple(f"v{x}" for x in xs),
+            fe=fe,
+            weights=None,
+            na_index=frozenset(),
+            demeaner=demeaner,
+        )[:2]
+
+    _, first = fit(0, [1, 2])
+    initial_block = shared[frozenset()].blocks[0]
+    # A contiguous interior selection is a view, without copying the response.
+    _, interior = fit(0, [2])
+    assert np.shares_memory(interior, first)
+    _, expanded = fit(0, [1, 2, 3])
+    _, repeated = fit(4, [1, 2, 3])
+    assert repeated is expanded
+    assert shared[frozenset()].blocks[0] is initial_block
+    assert [call.shape[1] for call in calls] == [3, 1, 1]
+    np.testing.assert_array_equal(
+        calls[1], values[:, [3]], err_msg="missing regressor input"
+    )
+    np.testing.assert_array_equal(
+        calls[2], values[:, [4]], err_msg="missing response input"
+    )
+    assert not repeated.flags.writeable
+    _, reordered = fit(4, [3, 1, 2])
+    np.testing.assert_array_equal(
+        reordered, expanded[:, [2, 0, 1]], err_msg="block selection order"
+    )
+    assert not reordered.flags.writeable
+    assert shared[frozenset()].design is reordered
+    assert sum(block.shape[1] for block in shared[frozenset()].blocks) == 5
+
+
+@pytest.mark.parametrize("demeaner", [MapDemeaner(), LsmrDemeaner()])
+@pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
+@pytest.mark.parametrize("storage", [{}, {"lean": True}, {"store_data": False}])
+def test_multiple_cache_sample_isolation(demeaner, weights_type, storage):
+    """Different missing rows and singleton cascades must not share projections."""
+    import pyfixest as pf
+
+    rng = np.random.default_rng(47)
+    n = 200
+    data = pd.DataFrame(rng.normal(size=(n, 4)), columns=["y", "y2", "x", "z"])
+    data["f"] = np.repeat(np.arange(20), 10)
+    data["g"] = rng.integers(0, 5, n)
+    data["w"] = (
+        rng.integers(1, 4, n) if weights_type == "fweights" else rng.uniform(0.5, 2, n)
+    )
+    data.loc[:8, "z"] = np.nan  # Leaves a singleton in the z sample.
+    data.loc[15:18, "y2"] = np.nan
+    kwargs = {"data": data, "demeaner": demeaner, "vcov": "hetero", **storage}
+    if weights_type:
+        kwargs.update(weights="w", weights_type=weights_type)
+    models = pf.feols("y + y2 ~ csw(x, z) | f + g", **kwargs).to_list()
+    for model, formula in zip(
+        models, ["y ~ x", "y ~ x + z", "y2 ~ x", "y2 ~ x + z"], strict=True
+    ):
+        separate = pf.feols(formula + " | f + g", **kwargs)
+        assert model.coef().index.equals(separate.coef().index)
+        assert model.sample_info == separate.sample_info
+        # Identical projections/solves; allow only floating-point roundoff.
+        np.testing.assert_allclose(
+            model.coef(),
+            separate.coef(),
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg="multiple coefficients",
+        )
+        np.testing.assert_allclose(
+            model.variance_covariance.vcov,
+            separate.variance_covariance.vcov,
+            rtol=1e-12,
+            atol=1e-12,
+            err_msg="multiple vcov",
+        )

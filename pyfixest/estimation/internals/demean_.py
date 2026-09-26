@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
@@ -12,27 +12,22 @@ from pyfixest.demeaners import AnyDemeaner
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DemeanedData:
-    """Cache entry for named, demeaned columns.
+    """Immutable blocks of demeaned columns for one estimation sample.
 
-    Attributes
-    ----------
-    values : NDArray[np.float64]
-        Demeaned columns, shape ``(n_rows, len(columns))``.
-    columns : tuple[str, ...]
-        Column names, in the insertion order of the columns in ``values``.
-
-    Notes
-    -----
-    One entry is shared by every model fitted on the same ``na_index``, and
-    callers receive slices of ``values`` rather than copies, so the entry must
-    not change after publication. The frozen dataclass prevents field
-    rebinding, and ``values`` is flagged read-only before it is stored, so a
-    model writing into a returned slice fails loudly instead of silently
-    corrupting the demeaned data of the models it shares the cache with.
+    Each block has shape ``(n_rows, n_new_columns)`` and is read-only. Appending
+    a block shares all earlier arrays. ``columns`` follows block insertion
+    order; ``locations`` maps each name to its block and column position and is
+    replaced, never mutated, when the cache grows. ``design`` retains only the
+    most recently requested design selection
+    (shape ``(n_rows, len(design_names))``), so identical X across responses can
+    share an assembled array without retaining every historical combination.
     """
 
-    values: NDArray[np.float64]
+    blocks: tuple[NDArray[np.float64], ...]
     columns: tuple[str, ...]
+    locations: Mapping[str, tuple[int, int]]
+    design_names: tuple[str, ...] = ()
+    design: NDArray[np.float64] | None = None
 
 
 class DemeanCache:
@@ -130,7 +125,7 @@ class DemeanCache:
     ]:
         """Demean response and design arrays and cache missing named columns.
 
-        New columns are appended to the cache in their requested order. Returned
+        New blocks are appended to the cache in their requested order. Returned
         arrays always follow ``y_names`` and ``x_names``, independently of the
         cache's insertion order.
 
@@ -177,61 +172,78 @@ class DemeanCache:
             YX_demeaned, used_preconditioner = self._run_or_raise(
                 YX, fe, weights, na_index, demeaner
             )
-            # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
             cached = DemeanedData(
-                values=YX_demeaned,
+                blocks=(YX_demeaned,),
                 columns=yx_names,
+                locations={
+                    name: (0, position) for position, name in enumerate(yx_names)
+                },
             )
-            self.lookup_demeaned_data[na_index] = cached
         else:
             cached_names = cached.columns
-            cached_name_set = frozenset(cached_names)
             uncached_positions = tuple(
                 index
                 for index, name in enumerate(yx_names)
-                if name not in cached_name_set
+                if name not in cached.locations
             )
             if uncached_positions:
-                YX = np.concatenate((Y_array, X_array), axis=1)
+                # Gather only missing columns; never concatenate the already
+                # cached response and controls just to discard them again.
+                missing = np.empty(
+                    (Y_array.shape[0], len(uncached_positions)), order="F"
+                )
+                for target, position in enumerate(uncached_positions):
+                    if position < len(y_names_tuple):
+                        missing[:, target] = Y_array[:, position]
+                    else:
+                        missing[:, target] = X_array[:, position - len(y_names_tuple)]
                 uncached_demeaned, used_preconditioner = self._run_or_raise(
-                    YX[:, uncached_positions], fe, weights, na_index, demeaner
+                    x=missing,
+                    flist=fe,
+                    weights=weights,
+                    na_index=na_index,
+                    demeaner=demeaner,
                 )
                 uncached_names = tuple(yx_names[index] for index in uncached_positions)
-                cached_demeaned = np.concatenate(
-                    (cached.values, uncached_demeaned), axis=1
-                )
-                cached_demeaned.setflags(write=False)
-                cached = DemeanedData(
-                    values=cached_demeaned,
+                uncached_demeaned.setflags(write=False)
+                cached = replace(
+                    cached,
+                    blocks=(*cached.blocks, uncached_demeaned),
                     columns=cached_names + uncached_names,
+                    locations={
+                        **cached.locations,
+                        **{
+                            name: (len(cached.blocks), position)
+                            for position, name in enumerate(uncached_names)
+                        },
+                    },
                 )
-                self.lookup_demeaned_data[na_index] = cached
-            # Every requested column is demeaned and cached at this point.
-            YX_demeaned = self._select_columns(cached, yx_names)
 
-        # ``yx_names`` lists the responses first, so they lead the columns.
-        n_response_columns = len(y_names_tuple)
-        response_demeaned = YX_demeaned[:, :n_response_columns]
-        design_demeaned = YX_demeaned[:, n_response_columns:]
+        # Select roles independently: a new response must not force a copy of
+        # an unchanged design, and contiguous ranges anywhere in a block view it.
+        response_demeaned = self._select_columns(cached=cached, names=y_names_tuple)
+        if cached.design is not None and cached.design_names == x_names_tuple:
+            design_demeaned = cached.design
+        else:
+            design_demeaned = self._select_columns(cached=cached, names=x_names_tuple)
+            cached = replace(cached, design_names=x_names_tuple, design=design_demeaned)
+        self.lookup_demeaned_data[na_index] = cached
         return response_demeaned, design_demeaned, used_preconditioner
 
     @staticmethod
     def _select_columns(
         cached: DemeanedData,
-        yx_names: tuple[str, ...],
+        names: tuple[str, ...],
     ) -> NDArray[np.float64]:
-        cached_position_by_name = {
-            name: position for position, name in enumerate(cached.columns)
-        }
-        positions = tuple(cached_position_by_name[name] for name in yx_names)
-        selects_cached_prefix = positions == tuple(range(len(positions)))
-        if selects_cached_prefix:
-            # Basic slicing gives a view, which inherits the read-only flag.
-            return cached.values[:, : len(positions)]
-        # Fancy indexing gives a fresh, writable copy. Flag it too, so that
-        # whether a caller may write into its demeaned data never depends on
-        # the order the cache happened to fill up in.
-        reordered = cached.values[:, positions]
-        reordered.setflags(write=False)
-        return reordered
+        if not names:
+            return cached.blocks[0][:, :0]
+        positions = tuple(cached.locations[name] for name in names)
+        first_block, start = positions[0]
+        if positions == tuple((first_block, start + j) for j in range(len(names))):
+            return cached.blocks[first_block][:, start : start + len(names)]
+        selected = np.empty((cached.blocks[0].shape[0], len(names)), order="F")
+        for target, (block_index, position) in enumerate(positions):
+            selected[:, target] = cached.blocks[block_index][:, position]
+        selected.setflags(write=False)
+        return selected
