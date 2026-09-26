@@ -11,6 +11,9 @@ from pyfixest.estimation import feols
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data, ssc
 
+fixest = importr("fixest")
+stats = importr("stats")
+
 # Extend R packages
 if import_check := check_r_install("ivDiag", strict=False):
     ivDiag = importr("ivDiag")
@@ -178,6 +181,77 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         rtol=1e-5,
         atol=1e-5,
         err_msg="Effective F stats estimate mismatch between pyfixest and IV_Diag packages",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f2"}])
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize(
+    "fml, fml_r, drop_intercept",
+    [
+        ("Y ~ X2 + [X1 ~ Z1 + Z2] | f1", "Y ~ X2 | f1 | X1 ~ Z1 + Z2", False),
+        # fixest has no `drop_intercept`; `-1` removes the intercept from both
+        # stages.
+        ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", True),
+    ],
+)
+def test_first_stage_vs_fixest(vcov, k_adj, fml, fml_r, drop_intercept):
+    # The first stage is fitted on the second stage's rows, with its
+    # small-sample correction and intercept choice. The data keep missing
+    # values and add a complete singleton row, which `fixef_rm="none"` keeps
+    # in both stages.
+    data = get_data()
+    complete_row = data[["Y", "X1", "X2", "Z1", "Z2", "f1"]].notna().all(axis=1)
+    data.loc[complete_row.idxmax(), "f1"] = 999
+
+    fit = feols(
+        fml,
+        data=data,
+        vcov=vcov,
+        ssc=ssc(k_adj=k_adj),
+        fixef_rm="none",
+        drop_intercept=drop_intercept,
+    )
+    fit_r = fixest.feols(
+        ro.Formula(fml_r),
+        data=pandas2ri.py2rpy(data),
+        vcov=ro.Formula("~f2") if isinstance(vcov, dict) else vcov,
+        ssc=fixest.ssc(k_adj, "nonnested", False, True, "min", "min"),
+        fixef_rm="none",
+    )
+    first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
+    first_stage = fit.first_stage.model
+
+    n_obs_r = int(stats.nobs(fit_r)[0])
+    assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"
+    assert first_stage.sample_info.n_obs == n_obs_r, "first-stage n_obs != fixest"
+
+    names_r = list(ro.r("function(fit) names(coef(fit))")(first_stage_r))
+    assert sorted(first_stage.coef().index) == sorted(names_r), "coefnames differ"
+    np.testing.assert_allclose(
+        first_stage.coef()[names_r],
+        np.asarray(stats.coef(first_stage_r)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="first-stage coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        first_stage.se()[names_r],
+        np.asarray(fixest.se(first_stage_r)),
+        rtol=0,
+        atol=1e-7,
+        err_msg="first-stage standard errors != fixest",
+    )
+    # fixest's `ivwald` is the Wald test of the excluded instruments under the
+    # first stage's covariance, the statistic pyfixest reports as `f_stat`. It
+    # is O(100-1000) here, so it is compared on a relative scale.
+    ivwald_r = ro.r("function(fit) fixest::fitstat(fit, 'ivwald')[[1]]$stat")(fit_r)
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        np.asarray(ivwald_r)[0],
+        rtol=1e-8,
+        err_msg="first-stage F statistic != fixest ivwald",
     )
 
 

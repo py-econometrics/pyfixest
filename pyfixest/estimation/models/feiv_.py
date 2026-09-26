@@ -274,6 +274,12 @@ class Feiv(Feols):
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
+        # The first stage is fitted on the second stage's retained rows, which
+        # `prepare_model_matrix()` left in `_data`. Its variables are the
+        # instrument part of the IV model matrix, whose missing and infinite
+        # rows were dropped jointly with the second stage's, so the only row
+        # filter left to disable is singleton removal. As in fixest, it shares
+        # the second stage's design options and small-sample correction.
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
@@ -283,6 +289,10 @@ class Feiv(Feols):
             collin_tol=self.options.collin_tol,
             solver=self.options.solver,
             demeaner=demeaner,
+            ssc=self.options.ssc,
+            fixef_rm="none",
+            drop_intercept=self.options.drop_intercept,
+            context=self.options.context,
         )
 
         # Ensure model1 is of type Feols
