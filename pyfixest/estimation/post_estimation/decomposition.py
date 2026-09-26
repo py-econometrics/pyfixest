@@ -358,22 +358,13 @@ class GelbachDecomposition:
             return bootstrap_results
 
     def bootstrap(self, rng: np.random.Generator, B: int = 1_000):
-        """
-        Draw bootstrap replications for Total, Mediated and Direct Effects.
-
-        Each replication draws from its own independent child generator spawned
-        from `rng`, so results for a given seed do not depend on `nthreads`.
-        Percentile confidence intervals are computed from the stored draws in
-        `tidy()`, for the `alpha` requested there.
-        """
+        """Draw bootstrap replications for Total, Mediated and Direct Effects."""
         self.B = B
 
         # convert to csr for easier vstacking
         if self.unique_clusters is not None:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
-        # One independent stream per replication: joblib pickles the arguments of
-        # each task, so sharing one generator would repeat draws across workers.
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
             delayed(self._bootstrap)(rng=child_rng) for child_rng in tqdm(rng.spawn(B))
         )
