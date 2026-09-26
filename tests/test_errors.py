@@ -1339,13 +1339,15 @@ def test_errors_vcov_kwargs(vcov_kwargs, match):
 
 @pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
 @pytest.mark.parametrize("key", ["time_id", "panel_id"])
-def test_errors_vcov_kwargs_missing_column_without_hac(estimator, key):
-    """A HAC column missing from the data fails even when `vcov` ignores it."""
+def test_vcov_kwargs_missing_column_ignored_without_hac(estimator, key):
+    """A HAC column that `vcov` does not use is not checked against the data."""
     data = pf.get_data()
     data["Y"] = data["Y"].abs()
 
-    with pytest.raises(ValueError, match=r"The variable 'nope' is not in the data\."):
-        estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
+    fit = estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
+    expected = estimator("Y ~ X1", data=data, vcov="iid")
+
+    np.testing.assert_allclose(fit.coeftable.se, expected.coeftable.se)
 
 
 def test_errors_hac():
