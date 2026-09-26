@@ -297,8 +297,9 @@ We also removed:
   effects on the response scale.
 - `decompose()` bootstrap replications now draw from independent random streams.
   With `nthreads` other than 1 (including the default), parallel workers repeated
-  the same resamples, so confidence intervals were too narrow; a `seed` now gives
-  the same results for any `nthreads`. `tidy(alpha=...)` now honors `alpha`
+  the same resamples, so confidence intervals rested on only a handful of distinct
+  draws and were typically too narrow; a `seed` now gives the same results for
+  any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
 
 
