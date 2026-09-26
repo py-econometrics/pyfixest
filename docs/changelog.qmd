@@ -17,6 +17,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Word Regression Tables
+
+`pf.etable()` now supports `type="docx"` to return or save editable Word tables,
+with per-call formatting through `docx_style`.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
