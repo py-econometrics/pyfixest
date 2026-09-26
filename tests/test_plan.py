@@ -13,6 +13,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
     QuantregEstimationOptions,
+    VcovSpec,
 )
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -37,6 +38,7 @@ def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
         method=method,
         data=data,
         fml=fml,
+        vcov=VcovSpec.from_user_input("iid"),
         context={},
     )
     base.update(overrides)
@@ -473,9 +475,12 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def get_fit(self):
             self.events.append("fit")
 
-        def vcov(self, vcov, vcov_kwargs=None, data=None):
-            assert vcov == "iid"
-            assert data is None
+        def _check_vcov_support(self, spec):
+            assert spec == iid
+            self.events.append("check vcov")
+
+        def _vcov_from_spec(self, spec):
+            assert spec == iid
             self.events.append("vcov")
 
         def get_inference(self):
@@ -490,6 +495,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def _iter_fitted_models(self):
             return ()
 
+    iid = VcovSpec.from_user_input("iid")
     formula = Formula.parse_to_dict("Y ~ X1")[None][0]
     spec = ModelSpec(
         method="quantreg",
@@ -504,13 +510,13 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         spec,
         lookup_demeaned_data={},
         lookup_preconditioner={},
-        vcov=None,
-        vcov_kwargs=None,
+        vcov=iid,
     )
 
     assert events == [
         "prepare",
         "validate",
+        "check vcov",
         "fit",
         "vcov",
         "inference",

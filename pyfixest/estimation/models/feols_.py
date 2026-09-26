@@ -601,8 +601,57 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        self._check_vcov_support(spec)
+        return self._vcov_from_spec(spec, data=data)
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        """Reject a covariance estimator this model cannot compute.
+
+        Reads only the model description, options, and capabilities, so the
+        estimation pipeline runs it before fitting.
+        """
+        if spec.vcov_type_detail in ("HC2", "HC3"):
+            if self.model.has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if self.model.is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+        if spec.vcov_type == "CRV":
+            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
+                raise NotImplementedError(
+                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
+                )
+            if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
+                raise VcovTypeNotSupportedError(
+                    f"CRV3 inference is not for models of type '{self.model.method}'."
+                )
+        if spec.vcov_type == "HAC":
+            if not self.capabilities.hac_inference:
+                raise NotImplementedError(
+                    "HAC inference is not supported for this model type."
+                )
+            if self.options.has_weights and self.options.weights_type == "fweights":
+                raise NotImplementedError(
+                    "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
+                )
+        if spec.vcov_type == "nid":
+            raise NotImplementedError(
+                "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+            )
+
+    def _vcov_from_spec(
+        self, spec: VcovSpec, data: DataFrameType | None = None
+    ) -> Feols:
+        """Compute and publish the covariance of a parsed, supported `spec`.
+
+        `vcov()` parses and checks the user's input first; the estimation
+        pipeline passes the spec it parsed before fitting.
+        """
         require_retained(self, "vcov", "_data")
-        # Assuming `data` is the DataFrame in question
 
         data_to_check = data if data is not None else self._data
         try:
@@ -612,9 +661,6 @@ class Feols(ResultAccessorMixin):
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
 
-        spec = VcovSpec.from_user_input(
-            vcov, vcov_kwargs, has_fixef=self.model.has_fixef, is_iv=self.model.is_iv
-        )
         vcov_type = spec.vcov_type
 
         # Every estimator follows the same three steps: small-sample factors,
@@ -623,10 +669,6 @@ class Feols(ResultAccessorMixin):
         df_t: int | float
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
-            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
-                raise NotImplementedError(
-                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
-                )
             prep = prepare_cluster_state(
                 data=data_to_check,
                 clustervar=list(spec.clustervar),
@@ -666,6 +708,8 @@ class Feols(ResultAccessorMixin):
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
+            else:
+                raise ValueError(f"Unknown vcov type {vcov_type!r}.")
             correction = get_ssc(
                 self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
@@ -717,10 +761,6 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self.capabilities.crv3_inference:
-            raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self.model.method}'."
-            )
         use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
@@ -754,17 +794,6 @@ class Feols(ResultAccessorMixin):
     def _vcov_hac(self, spec: VcovSpec) -> VcovTerm:
         _data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
-
-        if not self.capabilities.hac_inference:
-            raise NotImplementedError(
-                "HAC inference is not supported for this model type."
-            )
-
-        # fweights not supported
-        if self.options.has_weights and self.options.weights_type == "fweights":
-            raise NotImplementedError(
-                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
-            )
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time

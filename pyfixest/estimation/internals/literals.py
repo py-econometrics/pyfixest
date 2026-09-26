@@ -1,7 +1,8 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
+VcovFamilyOptions = Literal["iid", "hetero", "HAC", "CRV", "nid"]
 HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 HacVcovTypeOptions = Literal["NW", "DK"]
 WeightsTypeOptions = Literal["aweights", "fweights"]

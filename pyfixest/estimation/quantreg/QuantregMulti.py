@@ -13,6 +13,7 @@ from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     QuantregEstimationOptions,
+    VcovSpec,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
@@ -184,6 +185,18 @@ class QuantregMulti:
         "Compute variance-covariance matrices for all models in the quantile regression process."
         for quantreg in self.all_quantregs.values():
             quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
+
+        return self.all_quantregs
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        "Reject a covariance estimator the quantile regressions cannot compute."
+        for quantreg in self.all_quantregs.values():
+            quantreg._check_vcov_support(spec)
+
+    def _vcov_from_spec(self, spec: VcovSpec) -> dict[float, Quantreg]:
+        "Compute the covariance of a parsed `spec` for every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._vcov_from_spec(spec)
 
         return self.all_quantregs
 

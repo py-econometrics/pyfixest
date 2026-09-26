@@ -17,8 +17,8 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
     QuantregEstimationOptions,
+    VcovSpec,
 )
-from pyfixest.estimation.internals.vcov_utils import _get_vcov_type
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.felogit_ import Felogit
@@ -329,14 +329,15 @@ def fit_one(
     *,
     lookup_demeaned_data: dict[frozenset[int], DemeanedData],
     lookup_preconditioner: dict[frozenset[int], Preconditioner],
-    vcov: str | dict[str, str] | None,
-    vcov_kwargs: dict[str, str | int] | None,
+    vcov: VcovSpec,
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
     Constructs the model class, runs prepare → fit → vcov → inference,
-    and clears large attributes. The two per-cache-block dicts are
-    injected here so they're shared across every spec in the block.
+    and clears large attributes. `vcov` was parsed at the API boundary;
+    the model rejects an estimator it does not support before fitting.
+    The two per-cache-block dicts are injected here so they're shared
+    across every spec in the block.
 
     Returns the fitted model.
     """
@@ -349,13 +350,12 @@ def fit_one(
 
     FIT.prepare_model_matrix()
     FIT._validate_response()
-    FIT.get_fit()
     # if X is empty: no inference (empty X only as shorthand for demeaning)
     if not FIT._X_is_empty:
-        vcov_type = _get_vcov_type(vcov)
-        # vcov() reads the model's retained estimation data when data is None
-        FIT.vcov(vcov=vcov_type, vcov_kwargs=vcov_kwargs)
-
+        FIT._check_vcov_support(vcov)
+    FIT.get_fit()
+    if not FIT._X_is_empty:
+        FIT._vcov_from_spec(vcov)
         FIT.get_inference()
         FIT._finalize_fit()
     # delete large attributes

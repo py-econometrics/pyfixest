@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.internals.literals import (
     QuantregMethodOptions,
     SolverOptions,
+    VcovFamilyOptions,
+    VcovTypeOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
 )
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
     from pyfixest.estimation.formula.parse import Formula
     from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.models.feols_ import Feols
-_VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
+_VCOV_STRINGS: tuple[str, ...] = get_args(VcovTypeOptions)
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
 
@@ -668,7 +669,7 @@ class VcovSpec:
     ```
     """
 
-    vcov_type: str
+    vcov_type: VcovFamilyOptions
     vcov_type_detail: str
     clustervar: tuple[str, ...] = ()
     lag: int | None = None
@@ -684,17 +685,20 @@ class VcovSpec:
     def from_user_input(
         cls,
         vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
-        *,
-        has_fixef: bool,
-        is_iv: bool,
+        vcov_kwargs: Mapping[str, str | int] | None = None,
     ) -> VcovSpec:
         """Parse and validate the ``vcov`` and ``vcov_kwargs`` arguments.
 
-        Raises ``TypeError`` for input of the wrong type, ``ValueError`` for
-        unknown or incomplete values, and ``VcovTypeNotSupportedError`` for
-        HC2/HC3 with fixed effects or IV.
+        The check is syntactic, so the estimation functions run it before
+        fitting and ``vcov()`` runs it on each call. Whether a fitted model
+        supports the parsed estimator is checked by the model.
+
+        Raises ``TypeError`` for input of the wrong type and ``ValueError`` for
+        unknown or incomplete values. ``vcov_kwargs`` is validated whenever it
+        is given but only read by ``"NW"`` and ``"DK"``.
         """
+        lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
+
         if isinstance(vcov, dict):
             if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:
                 raise ValueError(
@@ -724,36 +728,11 @@ class VcovSpec:
         if vcov not in _VCOV_STRINGS:
             raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
 
-        if vcov in ("HC2", "HC3"):
-            if has_fixef:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
-                )
-            if is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
-                )
-
         if vcov in ("NW", "DK"):
-            kw = vcov_kwargs or {}
-            unknown = set(kw) - set(_VCOV_KWARGS_KEYS)
-            if unknown:
-                raise ValueError(
-                    f"vcov_kwargs accepts the keys {_VCOV_KWARGS_KEYS}; got {sorted(unknown)}."
-                )
-            time_id = kw.get("time_id")
-            if not isinstance(time_id, str):
+            if time_id is None:
                 raise ValueError("Missing required 'time_id' for NW/DK vcov")
-            panel_id = kw.get("panel_id")
             if vcov == "DK" and panel_id is None:
                 raise ValueError("Missing required 'panel_id' for DK vcov")
-            if panel_id is not None and not isinstance(panel_id, str):
-                raise ValueError(f"'panel_id' must be a string; got {panel_id!r}.")
-            lag = kw.get("lag")
-            if lag is not None and (
-                not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
-            ):
-                raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
@@ -762,8 +741,43 @@ class VcovSpec:
                 panel_id=panel_id,
             )
 
-        vcov_type = {"iid": "iid", "nid": "nid"}.get(vcov, "hetero")
+        vcov_type: VcovFamilyOptions = (
+            "iid" if vcov == "iid" else "nid" if vcov == "nid" else "hetero"
+        )
         return cls(vcov_type=vcov_type, vcov_type_detail=vcov)
+
+
+def _parse_vcov_kwargs(
+    vcov_kwargs: Mapping[str, str | int] | None,
+) -> tuple[int | None, str | None, str | None]:
+    """Validate ``vcov_kwargs`` and return its ``(lag, time_id, panel_id)``."""
+    if vcov_kwargs is None:
+        return None, None, None
+    if not isinstance(vcov_kwargs, Mapping):
+        raise TypeError(
+            f"vcov_kwargs must be a dict with keys {_VCOV_KWARGS_KEYS}; got {type(vcov_kwargs).__name__}."
+        )
+    unknown = set(vcov_kwargs) - set(_VCOV_KWARGS_KEYS)
+    if unknown:
+        raise ValueError(
+            f"vcov_kwargs accepts the keys {_VCOV_KWARGS_KEYS}; got {sorted(unknown)}."
+        )
+    lag = vcov_kwargs.get("lag")
+    if "lag" in vcov_kwargs and (
+        not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
+    ):
+        raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
+    time_id = vcov_kwargs.get("time_id")
+    if "time_id" in vcov_kwargs and not isinstance(time_id, str):
+        raise ValueError(f"'time_id' must be a column name; got {time_id!r}.")
+    panel_id = vcov_kwargs.get("panel_id")
+    if "panel_id" in vcov_kwargs and not isinstance(panel_id, str):
+        raise ValueError(f"'panel_id' must be a column name; got {panel_id!r}.")
+    return (
+        lag if isinstance(lag, int) else None,
+        time_id if isinstance(time_id, str) else None,
+        panel_id if isinstance(panel_id, str) else None,
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

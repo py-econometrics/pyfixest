@@ -10,6 +10,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.utils.utils import Ssc
 
 
@@ -31,6 +32,9 @@ class EstimationConfig:
     # --- formula ---
     fml: str
 
+    # --- vcov (required: the API boundary parses it and owns the default) ---
+    vcov: VcovSpec
+
     # --- data flags ---
     copy_data: bool = True
     store_data: bool = True
@@ -40,9 +44,7 @@ class EstimationConfig:
     fixef_rm: str = "singleton"
     drop_intercept: bool = False
 
-    # --- vcov ---
-    vcov: str | dict[str, str] | None = None
-    vcov_kwargs: dict[str, str | int] | None = None
+    # --- small-sample correction ---
     ssc: Ssc | None = None
 
     # --- fit knobs ---

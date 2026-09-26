@@ -4,7 +4,11 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks, _resolve_ssc
+from pyfixest.estimation.api.utils import (
+    _estimation_input_checks,
+    _resolve_ssc,
+    _resolve_vcov,
+)
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
@@ -292,6 +296,7 @@ def feglm(
     if separation_check is None:
         separation_check = ["fe"]
     ssc = _resolve_ssc(ssc)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
 
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
@@ -301,8 +306,7 @@ def feglm(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -330,8 +334,7 @@ def feglm(
         lean=lean,
         fixef_rm=fixef_rm,
         drop_intercept=drop_intercept,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        vcov=vcov_spec,
         ssc=ssc,
         solver=solver,
         demeaner=demeaner,
