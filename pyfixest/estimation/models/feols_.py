@@ -1447,8 +1447,10 @@ class Feols(ResultAccessorMixin):
             The type of decomposition method to use. Defaults to "gelbach", which
             currently is the only supported option.
         cluster: Optional
-            The name of the cluster variable. If None, uses the cluster variable
-            from the model fit. Defaults to None.
+            The name of the cluster variable for the bootstrap. If None, uses the
+            cluster variable from the model fit. Only one-way clustering is
+            supported; a fit with multiway clustering raises ``ValueError`` unless
+            a single cluster variable is passed here. Defaults to None.
         combine_covariates: Optional.
             A dictionary that specifies which covariates to combine into groups.
             See the example for how to use this argument. Defaults to None.
@@ -1560,9 +1562,14 @@ class Feols(ResultAccessorMixin):
         if cluster is not None:
             cluster_df = self._data[cluster]
         elif self.variance_covariance.spec.is_clustered:
-            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
-        else:
-            cluster_df = None
+            clustervar = self.variance_covariance.spec.clustervar
+            if len(clustervar) > 1:
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the Gelbach "
+                    "decomposition bootstrap. Pass a single cluster variable via "
+                    "`cluster` instead."
+                )
+            cluster_df = self._data[clustervar[0]]
 
         Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
