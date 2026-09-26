@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import replace
 from importlib import import_module
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.literals import VcovTypeOptions, WeightsTypeOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -66,7 +67,7 @@ class Feiv(Feols):
         Type of the weights variable defined in Feiv class.
         Either "aweights" for analytic weights or "fweights"
         for frequency weights.
-    _coefnames_z : list
+    _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
         Names and column mask of the instruments dropped by the rank check,
@@ -163,6 +164,11 @@ class Feiv(Feols):
             sherman_morrison_update=False,
         )
 
+    def _publish_model_matrix(self, model_matrix):
+        """Publish the base model-matrix state plus the instrument names."""
+        super()._publish_model_matrix(model_matrix)
+        self._coefnames_z: list[str] = model_matrix.instruments.columns.tolist()
+
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Describe the second stage of an instrumental-variable fit."""
         return replace(super()._describe_model(**kwargs), is_iv=True)
@@ -201,7 +207,6 @@ class Feiv(Feols):
         """Drop collinear columns from the second-stage design and the instruments."""
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
-        assert self._coefnames_z is not None
         instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
@@ -269,13 +274,12 @@ class Feiv(Feols):
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
-        # Do first stage regression
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,
-            vcov=vcov_detail,
+            vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
             weights=self.options.weights,
-            weights_type=self.options.weights_type,
+            weights_type=cast("WeightsTypeOptions", self.options.weights_type),
             collin_tol=self.options.collin_tol,
             solver=self.options.solver,
             demeaner=demeaner,
