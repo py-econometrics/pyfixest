@@ -210,10 +210,6 @@ def _prepare_panelview_df_for_outcome_plot(
         def get_treatment_start(x: pd.DataFrame) -> pd.Timestamp:
             return x[x[treat]][time].min()
 
-        # `.apply(get_treatment_start)` returns a Series (one scalar per
-        # group), not a DataFrame; the pandas stubs can't infer that from a
-        # generic `.apply()` call, so `.reset_index()` resolves against the
-        # wrong (DataFrame) overload set without this cast.
         treatment_starts_series = cast(
             pd.Series, data.groupby(unit).apply(get_treatment_start)
         )
