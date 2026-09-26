@@ -1,13 +1,47 @@
 cff-version: 1.2.0
-message: "If you use pyfixest in your research, please cite it as below."
-title: "pyfixest: Fast high-dimensional fixed effect estimation in Python"
+message: >-
+  If you use pyfixest in your research, please cite it as below,
+  and consider citing fixest (Bergé, Butts & McDermott, 2026), whose API
+  design and behavioral conventions pyfixest adapts for Python.
+title: "PyFixest: Fast high-dimensional fixed-effects regression in Python"
 type: software
 authors:
-  - name: "The PyFixest Authors"
-
+  - family-names: Fischer
+    given-names: Alexander
+    affiliation: trivago N.V.
+    email: alexander-fischer1801@t-online.de
+  - family-names: Stimpfle
+    given-names: Leonard
+    affiliation: Ghent University
+    orcid: "https://orcid.org/0009-0000-7033-7010"
+  - family-names: Schröder
+    given-names: Kristof
+    affiliation: appliedAI Institute for Europe gGmbH
+  - family-names: Sliwka
+    given-names: Dirk
+    affiliation: University of Cologne
+    orcid: "https://orcid.org/0000-0002-8026-0165"
+  - family-names: Orduz
+    given-names: Juan Camilo
+    affiliation: PyMC Labs
+  - family-names: Lal
+    given-names: Apoorva
+    affiliation: OpenAI
+  - family-names: Dhaliwal
+    given-names: Daman
+    affiliation: Independent researcher
+  - family-names: Ding
+    given-names: Wenzhi
+    affiliation: The Hong Kong Polytechnic University
+    orcid: "https://orcid.org/0000-0002-4784-8848"
+doi: 10.5281/zenodo.15814089
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.15814089
+    description: Concept DOI (always resolves to the latest version)
 repository-code: 'https://github.com/py-econometrics/pyfixest'
 url: 'https://pyfixest.org/'
-abstract: "A Python package for fast high-dimensional fixed effect estimation, inspired by the syntax of the popular R package `fixest`. It provides a familiar and intuitive interface for economists and other social scientists to estimate complex regression models with multiple fixed effects efficiently."
+abstract: "A Python package for fast high-dimensional fixed-effects estimation that adapts the API design and behavioral conventions of the R package `fixest`. It provides economists and other social scientists with an efficient interface for regression models containing multiple fixed effects."
 keywords:
   - 'fixed effects'
   - 'panel data'
@@ -17,3 +51,28 @@ keywords:
   - 'regression'
   - 'python'
 license: MIT
+references:
+  - type: article
+    title: "fixest: A fast and feature-rich framework for econometric estimations in R"
+    authors:
+      - family-names: Bergé
+        given-names: Laurent R
+      - family-names: Butts
+        given-names: Kyle
+      - family-names: McDermott
+        given-names: Grant
+    year: 2026
+    journal: "arXiv preprint arXiv:2601.21749"
+    doi: 10.48550/arXiv.2601.21749
+    url: "https://arxiv.org/abs/2601.21749"
+    notes: >-
+      Please consider citing fixest alongside pyfixest. PyFixest
+      adapts fixest's API design and behavioral conventions for Python.
+  - type: software
+    title: "Formulaic: A high-performance implementation of Wilkinson formulas for Python"
+    authors:
+      - family-names: Wardrop
+        given-names: Matthew
+    year: 2026
+    version: 1.2.2
+    repository-code: "https://github.com/matthewwardrop/formulaic"
