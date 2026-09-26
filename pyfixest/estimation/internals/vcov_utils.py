@@ -17,7 +17,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -81,12 +81,12 @@ class ClusterPrep:
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: pd.DataFrame,
     clustervar: list[str],
     ssc: Ssc,
     fixef: tuple[str, ...],
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    k_fe: np.ndarray | pd.Series | None,
 ) -> ClusterPrep:
     "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
@@ -108,6 +108,8 @@ def prepare_cluster_state(
     if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
+        if k_fe is None:
+            raise ValueError("`k_fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),

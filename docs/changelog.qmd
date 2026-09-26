@@ -291,6 +291,10 @@ We also removed:
   no not-yet-treated observations), instead of failing later with an opaque
   broadcasting `ValueError` in the vcov computation
   ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244)).
+- `fixef()` and `predict(newdata=...)` for GLM and Poisson fits with only fixed
+  effects (`Y ~ 1 | f1`) now recover the fixed effects from the linear
+  predictor net of the offset, matching fixest. Before, they returned fixed
+  effects on the response scale.
 
 
 ## PyFixest 0.60.0
