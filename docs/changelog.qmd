@@ -265,6 +265,8 @@ We also removed:
 
 ### Bug Fixes
 
+- Simultaneous confidence intervals now handle rank-deficient covariance
+  matrices without returning NaN from roundoff-negative eigenvalues.
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
