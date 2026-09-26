@@ -221,28 +221,6 @@ def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int
     return G
 
 
-def _get_vcov_type(
-    vcov: str | dict[str, str] | None,
-) -> str | dict[str, str]:
-    """
-    Pass the specified vcov type.
-
-    Passes the specified vcov type. If no vcov type specified, always defaults
-    to "iid" inference, regardless of whether fixed effects are included in the model.
-
-    Parameters
-    ----------
-    vcov : Union[str, dict[str, str], None]
-        The specified vcov type.
-
-    Returns
-    -------
-    str
-        vcov_type (str) : The specified vcov type, or "iid" by default.
-    """
-    return vcov if vcov is not None else "iid"
-
-
 def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
     """Compute time-series Newey-West HAC meat matrix (Rust backend)."""
     return np.asarray(

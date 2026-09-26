@@ -96,7 +96,6 @@ def run_estimation(
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
             vcov=config.vcov,
-            vcov_kwargs=config.vcov_kwargs,
         )
 
         for fitted_result in FIT._iter_fitted_models():

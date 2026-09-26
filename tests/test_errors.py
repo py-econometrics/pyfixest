@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -14,7 +16,12 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.models.feglm_ import Feglm
+from pyfixest.estimation.models.feiv_ import Feiv
+from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.post_estimation.multcomp import rwolf
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
+from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
@@ -1293,103 +1300,41 @@ def test_errors_quantreg(data):
             pf.quantreg("Y ~ X1", data=data, tol=tol)
 
 
-def test_errors_vcov_kwargs():
-    """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
+@pytest.mark.parametrize(
+    ("vcov_kwargs", "match"),
+    [
+        ({"invalid_key": 5}, r"vcov_kwargs accepts the keys"),
+        ({"wrong1": 1, "wrong2": 2}, r"vcov_kwargs accepts the keys"),
+        ({"lag": 5, "invalid_key": "test"}, r"vcov_kwargs accepts the keys"),
+        ({"time_id": "time_id", "lag": "5"}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": 5.5}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": None}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": True}, r"'lag' must be a non-negative integer"),
+        ({"time_id": 123}, r"'time_id' must be a column name"),
+        ({"time_id": None}, r"'time_id' must be a column name"),
+        (
+            {"time_id": "nonexistent_column"},
+            r"The variable 'nonexistent_column' is not in the data\.",
+        ),
+        ({"time_id": "time_id", "panel_id": 456}, r"'panel_id' must be a column name"),
+        (
+            {"time_id": "time_id", "panel_id": ["col1", "col2"]},
+            r"'panel_id' must be a column name",
+        ),
+        (
+            {"time_id": "time_id", "panel_id": "missing_panel_column"},
+            r"The variable 'missing_panel_column' is not in the data\.",
+        ),
+    ],
+)
+def test_errors_vcov_kwargs(vcov_kwargs, match):
+    """Malformed `vcov_kwargs` fail at the API boundary, before any fit."""
     data = pf.get_data()
     data["time_id"] = data["X2"]
     data["panel_id"] = data["f1"]
 
-    # Error 1: Invalid keys in vcov_kwargs
-    with pytest.raises(
-        ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
-
-    # Error 2: Multiple invalid keys
-    with pytest.raises(
-        ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
-
-    # Error 3: Mix of valid and invalid keys
-    with pytest.raises(
-        ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"lag": 5, "invalid_key": "test"},
-        )
-
-    # Error 4: lag value is not an integer (string)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
-
-    # Error 5: lag value is not an integer (float)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
-
-    # Error 6: lag value is not an integer (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
-
-    # Error 7: time_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
-
-    # Error 8: time_id value is not a string (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
-
-    # Error 9: time_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"time_id": "nonexistent_column"},
-        )
-
-    # Error 10: panel_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
-
-    # Error 11: panel_id value is not a string (list)
-    with pytest.raises(
-        ValueError, match=r"The function argument `vcov_kwargs` must be a."
-    ):
-        pf.feols(
-            "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
-        )
-
-    # Error 12: panel_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'missing_panel_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"panel_id": "missing_panel_column"},
-        )
+    with pytest.raises(ValueError, match=match):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs=vcov_kwargs)
 
 
 def test_errors_hac():
@@ -1691,6 +1636,9 @@ def test_fixest_multi_rejects_savi_tidy_argument():
             ValueError,
             "'lag' must be a non-negative integer",
         ),
+        # malformed kwargs are rejected even where only HAC would read them
+        ("iid", {"lags": 2}, ValueError, "vcov_kwargs accepts"),
+        ("iid", ["lag"], TypeError, "vcov_kwargs must be a dict"),
     ],
 )
 def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
@@ -1698,6 +1646,80 @@ def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
     fit = pf.feols("Y ~ X1", get_data())
     with pytest.raises(error, match=match):
         fit.vcov(vcov, vcov_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("estimator", "fml", "vcov", "vcov_kwargs", "error", "match"),
+    [
+        (pf.feols, "Y ~ X1", "hc1", None, ValueError, "vcov must be one of"),
+        (pf.feols, "Y ~ X1", {"CRV1": "nope"}, None, ValueError, "'nope' is not in"),
+        (pf.feols, "Y ~ X1", "NW", {"lag": 2}, ValueError, "Missing required"),
+        (
+            pf.feols,
+            "Y ~ X1 | f1",
+            "HC2",
+            None,
+            VcovTypeNotSupportedError,
+            "fixed effects",
+        ),
+        (
+            pf.feols,
+            "Y ~ 1 | X1 ~ Z1",
+            "HC3",
+            None,
+            VcovTypeNotSupportedError,
+            "IV regressions",
+        ),
+        (
+            pf.feols,
+            "Y ~ X1 | sw0(f1, f2)",
+            "HC2",
+            None,
+            VcovTypeNotSupportedError,
+            "fixed effects",
+        ),
+        (pf.feols, "Y ~ X1", "nid", None, NotImplementedError, "type 'nid'"),
+        (
+            pf.quantreg,
+            "Y ~ X1",
+            {"CRV1": "f1+f2"},
+            None,
+            NotImplementedError,
+            "Multiway clustering",
+        ),
+        (
+            partial(pf.quantreg, quantile=[0.25, 0.75]),
+            "Y ~ X1",
+            {"CRV3": "f1"},
+            None,
+            VcovTypeNotSupportedError,
+            "CRV3 inference",
+        ),
+    ],
+)
+def test_estimation_rejects_vcov_before_fitting(
+    monkeypatch, estimator, fml, vcov, vcov_kwargs, error, match
+):
+    """Malformed or unsupported `vcov` input fails before any model is fitted."""
+    data = get_data().dropna()
+    fitted: list[str] = []
+
+    def spy(get_fit):
+        def get_fit_spy(self):
+            fitted.append(type(self).__name__)
+            return get_fit(self)
+
+        return get_fit_spy
+
+    for model_cls in (Feols, Feiv, Feglm, Quantreg, QuantregMulti):
+        if "get_fit" in vars(model_cls):
+            monkeypatch.setattr(model_cls, "get_fit", spy(vars(model_cls)["get_fit"]))
+
+    kwargs = {"vcov_kwargs": vcov_kwargs} if vcov_kwargs is not None else {}
+    with pytest.raises(error, match=match):
+        estimator(fml, data, vcov=vcov, **kwargs)
+    # with sw0(f1) the model without fixed effects fits; the one with does not
+    assert fitted == (["Feols"] if "sw0" in fml else [])
 
 
 @pytest.mark.parametrize(

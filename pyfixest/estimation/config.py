@@ -10,6 +10,7 @@ from pyfixest.estimation.internals.literals import (
     QuantregMultiOptions,
     SolverOptions,
 )
+from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.utils.utils import Ssc
 
 
@@ -41,8 +42,9 @@ class EstimationConfig:
     drop_intercept: bool = False
 
     # --- vcov ---
-    vcov: str | dict[str, str] | None = None
-    vcov_kwargs: dict[str, str | int] | None = None
+    vcov: VcovSpec = field(
+        default_factory=lambda: VcovSpec(vcov_type="iid", vcov_type_detail="iid")
+    )
     ssc: Ssc | None = None
 
     # --- fit knobs ---

@@ -211,9 +211,11 @@ Public estimation functions use one module per entry point. Model modules end
 in `_` so they do not shadow public functions. Compatibility shims in the
 `estimation/` root are not implementation locations.
 
-- **Vcov type:** literal in `internals/literals.py`, model validation and small
-  dispatch method, math in `internals/vcov_utils.py`, `internals/vcov_.py`, or
-  Rust, and wiring through `FixestMulti`/quantreg where supported. Follow NW/DK HAC.
+- **Vcov type:** literal in `internals/literals.py`, parsing in
+  `VcovSpec.from_user_input` (run before fitting), model support in
+  `_check_vcov_support`, a small dispatch method in `_vcov_from_spec`, math in
+  `internals/vcov_utils.py`, `internals/vcov_.py`, or Rust, and wiring through
+  `FixestMulti`/quantreg where supported. Follow NW/DK HAC.
 - **Estimation-time option:** shared typed alias in `internals/literals.py`, API
   validation, `EstimationConfig`, and `plan_._build_model_kwargs`.
 - **Rust kernel:** implementation in `src/<topic>.rs`, registration in
