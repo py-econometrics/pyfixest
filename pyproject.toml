@@ -162,24 +162,6 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
-]
-ignore_missing_imports = true
-
 [tool.ty.analysis]
 replace-imports-with-any = ["formulaic", "formulaic.**"]
 [tool.ty.src]
@@ -239,8 +221,8 @@ test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or a
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
 test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
-# Report-only while we evaluate ty as a mypy replacement; not yet wired into
-# pre-commit or a blocking CI gate.
+# mypy has been retired in favor of ty; not yet wired into pre-commit or a
+# blocking CI gate.
 ty = { cmd = "ty check pyfixest", description = "Type-check with ty (report-only, not yet gating)" }
 
 [tool.pixi.tasks._setup]
