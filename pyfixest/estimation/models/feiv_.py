@@ -274,9 +274,6 @@ class Feiv(Feols):
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
-        # Do first stage regression. `vcov_detail`/`weights_type` come from
-        # this same model's already-validated spec/options, so they're always
-        # one of `feols`'s narrower literal choices, not just any `str`.
         model1 = fit_(
             fml=fml_first_stage,
             data=self._data,

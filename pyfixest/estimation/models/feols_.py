@@ -366,8 +366,6 @@ class Feols(ResultAccessorMixin):
 
         self._coefnames = independent.columns.tolist()
 
-        # Levels per fixed-effect dimension; empty without fixed effects, so
-        # sums and counts over it are zero.
         self._k_fe: pd.Series = (
             self.model_matrix.fixed_effects.nunique(axis=0)
             if self.model.has_fixef
