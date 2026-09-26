@@ -1,5 +1,6 @@
 from typing import cast
 
+import formulaic
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -8,7 +9,6 @@ from scipy.sparse.linalg import spsolve
 from pyfixest.did.did import DID
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import model_matrix
-from pyfixest.estimation.formula.formulaic_compat import make_formula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.models.feols_ import Feols
 
@@ -330,7 +330,7 @@ def _did2s_vcov(
     # fixed-effect levels). Removing `- 1` would cause formulaic to drop
     # reference levels, changing the GMM vcov standard errors.
     FML1 = Formula(
-        _formula=make_formula(
+        _formula=formulaic.Formula(
             f"{yname} ~ {first_stage_fml.replace('~', '').strip()} - 1"
         )
     )
@@ -339,7 +339,7 @@ def _did2s_vcov(
     # i(treat)). The intercept column is then removed by drop_intercept=True
     # below, matching what feols does in _did2s_estimate.
     FML2 = Formula(
-        _formula=make_formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
+        _formula=formulaic.Formula(f"{yname} ~ {second_stage.replace('~', '').strip()}")
     )
 
     mm_first_stage = model_matrix.create_model_matrix(
