@@ -355,8 +355,6 @@ def _get_ritest_pvalue(
     standard error and CI of the p-value.
     """
     reps = len(ri_stats)
-    ci_sides = [0, 1]
-
     if method == "two-sided":
         probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
     elif method == "greater":
@@ -369,9 +367,9 @@ def _get_ritest_pvalue(
         )
 
     p_value = probs.mean()
-    se_pval = norm.ppf(level) * np.std(probs) / np.sqrt(reps)
-    ci_margin = norm.ppf(level) * se_pval
-    ci_pval = p_value + np.array([-ci_margin, ci_margin])[ci_sides]
+    se_pval = np.std(probs) / np.sqrt(reps)
+    ci_margin = norm.isf((1 - level) / 2) * se_pval
+    ci_pval = np.clip(p_value + np.array([-ci_margin, ci_margin]), 0, 1)
 
     return p_value, se_pval, ci_pval
 
