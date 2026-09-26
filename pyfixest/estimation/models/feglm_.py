@@ -147,11 +147,7 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            if self.model.has_fixef:
-                assert self._k_fe is not None
-                self._n_fe = np.sum(self._k_fe > 1)
-            else:
-                self._n_fe = 0
+            self._n_fe = int(np.sum(self._k_fe > 1))
 
         return model_matrix
 

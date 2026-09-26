@@ -67,7 +67,7 @@ class Feiv(Feols):
         Type of the weights variable defined in Feiv class.
         Either "aweights" for analytic weights or "fweights"
         for frequency weights.
-    _coefnames_z : list
+    _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
         Names and column mask of the instruments dropped by the rank check,
@@ -164,6 +164,11 @@ class Feiv(Feols):
             sherman_morrison_update=False,
         )
 
+    def _publish_model_matrix(self, model_matrix):
+        """Publish the base model-matrix state plus the instrument names."""
+        super()._publish_model_matrix(model_matrix)
+        self._coefnames_z: list[str] = model_matrix.instruments.columns.tolist()
+
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Describe the second stage of an instrumental-variable fit."""
         return replace(super()._describe_model(**kwargs), is_iv=True)
@@ -202,7 +207,6 @@ class Feiv(Feols):
         """Drop collinear columns from the second-stage design and the instruments."""
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
-        assert self._coefnames_z is not None
         instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
@@ -240,7 +244,6 @@ class Feiv(Feols):
         require_retained(self, "_fit_first_stage", "_data")
         # The excluded instruments are the instrument-matrix columns that are
         # not also second-stage regressors, kept in instrument-matrix order.
-        assert self._coefnames_z is not None
         exogenous = set(self._coefnames)
         instruments = tuple(
             str(name) for name in self._coefnames_z if name not in exogenous

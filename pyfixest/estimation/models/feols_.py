@@ -5,12 +5,12 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, overload
 
 import formulaic
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix, diags, spmatrix
+from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
@@ -365,19 +365,15 @@ class Feols(ResultAccessorMixin):
         self._X_is_empty = independent.shape[1] == 0
 
         self._coefnames = independent.columns.tolist()
-        self._coefnames_z = (
-            model_matrix.instruments.columns.tolist()
-            if model_matrix.instruments is not None
-            else None
-        )
 
-        has_fixef = self.model.has_fixef
-        if has_fixef:
-            self._k_fe = self.model_matrix.fixed_effects.nunique(axis=0)
-            self._n_fe = len(self._k_fe)
-        else:
-            self._k_fe = None
-            self._n_fe = 0
+        # Levels per fixed-effect dimension; empty without fixed effects, so
+        # sums and counts over it are zero.
+        self._k_fe: pd.Series = (
+            self.model_matrix.fixed_effects.nunique(axis=0)
+            if self.model.has_fixef
+            else pd.Series(dtype=np.int64)
+        )
+        self._n_fe = len(self._k_fe)
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
@@ -702,15 +698,10 @@ class Feols(ResultAccessorMixin):
         n_fe_fully_nested: int = 0,
     ) -> DegreesOfFreedomCounts:
         "Bundle the model counts that enter get_ssc()."
-        if self.model.has_fixef:
-            assert self._k_fe is not None
-            k_fe = int(self._k_fe.sum())
-        else:
-            k_fe = 0
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=k_fe,
+            k_fe=int(self._k_fe.sum()),
             n_fe=self._n_fe,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
@@ -921,11 +912,7 @@ class Feols(ResultAccessorMixin):
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
-        if self.model.has_fixef:
-            assert self._k_fe is not None
-            k_fe = np.sum(self._k_fe.to_numpy())
-        else:
-            k_fe = 0
+        k_fe = np.sum(self._k_fe.to_numpy())
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -1098,9 +1085,7 @@ class Feols(ResultAccessorMixin):
                 "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
             )
 
-        # Default `output="numpy"` (not "sparse") always yields a dense array.
-        _Y, _X_out, _xnames = self._model_matrix_one_hot()
-        _X = cast(np.ndarray, _X_out)
+        _Y, _X, _xnames = self._model_matrix_one_hot()
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
@@ -1352,9 +1337,19 @@ class Feols(ResultAccessorMixin):
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
+    @overload
     def _model_matrix_one_hot(
-        self, output="numpy"
-    ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
+        self, output: Literal["numpy"] = ...
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]: ...
+
+    @overload
+    def _model_matrix_one_hot(
+        self, output: Literal["sparse"]
+    ) -> tuple[np.ndarray, csc_matrix, list[str]]: ...
+
+    def _model_matrix_one_hot(
+        self, output: Literal["numpy", "sparse"] = "numpy"
+    ) -> tuple[np.ndarray, np.ndarray | csc_matrix, list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
 
@@ -1571,9 +1566,7 @@ class Feols(ResultAccessorMixin):
         else:
             cluster_df = None
 
-        # `output="sparse"` always yields a `csc_matrix` (see `_model_matrix_one_hot`).
-        Y, X_out, xnames = self._model_matrix_one_hot(output="sparse")
-        X = cast(csc_matrix, X_out)
+        Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
         if combine_covariates is not None:
             for key, value in combine_covariates.items():
