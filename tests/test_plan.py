@@ -38,6 +38,7 @@ def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
         method=method,
         data=data,
         fml=fml,
+        vcov=VcovSpec.from_user_input("iid"),
         context={},
     )
     base.update(overrides)

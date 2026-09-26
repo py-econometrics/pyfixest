@@ -32,6 +32,9 @@ class EstimationConfig:
     # --- formula ---
     fml: str
 
+    # --- vcov (required: the API boundary parses it and owns the default) ---
+    vcov: VcovSpec
+
     # --- data flags ---
     copy_data: bool = True
     store_data: bool = True
@@ -41,10 +44,7 @@ class EstimationConfig:
     fixef_rm: str = "singleton"
     drop_intercept: bool = False
 
-    # --- vcov ---
-    vcov: VcovSpec = field(
-        default_factory=lambda: VcovSpec(vcov_type="iid", vcov_type_detail="iid")
-    )
+    # --- small-sample correction ---
     ssc: Ssc | None = None
 
     # --- fit knobs ---
