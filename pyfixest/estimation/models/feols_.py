@@ -8,7 +8,6 @@ from importlib import import_module
 from typing import Any, Literal, cast
 
 import formulaic
-import formulaic.formula
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags, spmatrix
@@ -21,9 +20,7 @@ from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
-    make_formula,
     materialize_model_spec_with_unseen_mask,
-    model_spec_rhs,
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -1383,10 +1380,7 @@ class Feols(ResultAccessorMixin):
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            fml_dummies_formula = cast(
-                formulaic.formula.StructuredFormula, make_formula(fml_dummies)
-            )
-            Y, X = fml_dummies_formula.get_model_matrix(
+            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
                 self._data,
                 output=output,
                 context=FORMULAIC_TRANSFORMS | {**self.options.context},
@@ -1840,7 +1834,7 @@ class Feols(ResultAccessorMixin):
             assert model_spec is not None, (
                 "predict() runs after the model matrix is built"
             )
-            rhs_spec = model_spec_rhs(model_spec, _ModelMatrixKey.main)
+            rhs_spec = model_spec[_ModelMatrixKey.main].rhs
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )

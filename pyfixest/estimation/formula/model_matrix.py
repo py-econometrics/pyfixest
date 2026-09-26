@@ -15,12 +15,7 @@ from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula.formulaic_compat import (
-    flatten_model_matrix,
-    make_formula,
-    model_spec_lhs,
-    model_spec_rhs,
-)
+from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
@@ -163,16 +158,8 @@ class ModelMatrix:
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 
-    def model_spec_lhs(self, key: str) -> formulaic.ModelSpec:
-        """Return the LHS `ModelSpec` of a two-sided (`Y ~ X`) model-spec stage."""
-        return model_spec_lhs(self.model_spec, key)
-
-    def model_spec_rhs(self, key: str) -> formulaic.ModelSpec:
-        """Return the RHS `ModelSpec` of a two-sided (`Y ~ X`) model-spec stage."""
-        return model_spec_rhs(self.model_spec, key)
-
     def _process(self, drop_singletons: bool = False) -> None:
-        if self.model_spec_lhs(_ModelMatrixKey.main).factor_contrasts:
+        if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
             raise TypeError("The dependent variable must be numeric.")
         elif (
             self._dependent_column_names is None
@@ -181,9 +168,9 @@ class ModelMatrix:
             raise TypeError("The model must contain exactly one dependent variable.")
 
         if self._endogenous_column_names is not None:
-            if self.model_spec_lhs(
+            if self.model_spec[
                 _ModelMatrixKey.instrumental_variable
-            ).factor_contrasts:
+            ].lhs.factor_contrasts:
                 raise TypeError("The endogenous variable must be numeric.")
             elif len(self._endogenous_column_names) != 1:
                 raise TypeError(
@@ -481,18 +468,12 @@ def create_model_matrix(
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
     )
-    # `formula_formulaic` is always built from a dict spec (see
-    # `_get_formulaic_formula`), so `get_model_matrix` always returns the
-    # structured `ModelMatrices`, never a plain `ModelMatrix`.
-    model_matrix = cast(
-        ModelMatrices,
-        formula_formulaic.get_model_matrix(
-            data=data,
-            ensure_full_rank=ensure_full_rank,
-            na_action="drop",
-            output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
-        ),
+    model_matrix = formula_formulaic.get_model_matrix(
+        data=data,
+        ensure_full_rank=ensure_full_rank,
+        na_action="drop",
+        output="pandas",
+        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
     )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
@@ -538,9 +519,9 @@ def _get_formulaic_formula(
         formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
     if offset is not None:
         formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
-    formula_formulaic = make_formula(
+    formula_formulaic = formulaic.Formula(
         formula_kwargs,
-        parser=DefaultFormulaParser(
+        _parser=DefaultFormulaParser(
             feature_flags=FORMULAIC_FEATURE_FLAG,
             # When FEs are present, include_intercept=True so that spans_intercept=True
             # terms (like i()) receive reduced_rank=True from formulaic, causing them to
