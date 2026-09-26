@@ -1,4 +1,4 @@
-![](figures/pyfixest-logo.png)
+![PyFixest logo](figures/pyfixest-logo.png)
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
@@ -152,7 +152,7 @@ For a full list of software packages and papers that have influenced PyFixest, p
 
 We thank all institutions that have funded or supported work on PyFixest!
 
-<img src="figures/aai-institute-logo.svg" width="185">
+<img src="figures/aai-institute-logo.svg" width="185" alt="AAI Institute logo">
 
 ## How to Cite
 
