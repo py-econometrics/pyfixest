@@ -49,7 +49,7 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
         vcov: VcovTypeOptions | dict[str, str] | None = None,
