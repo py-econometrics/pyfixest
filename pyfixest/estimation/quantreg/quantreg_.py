@@ -6,6 +6,7 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sparse
 from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
@@ -22,6 +23,9 @@ from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
     frisch_newton_solver,
+)
+from pyfixest.estimation.quantreg.frisch_newton_ip_sparse import (
+    frisch_newton_solver_sparse,
 )
 from pyfixest.estimation.quantreg.vcov_ import (
     vcov_crv1_qreg,
@@ -134,6 +138,22 @@ class Quantreg(Feols):
                 tol=options.quantile_tol,
                 maxiter=options.quantile_maxiter,
                 beta_init=None,
+            ),
+            "sfn": partial(
+                self.fit_qreg_sfn,
+                q=self._quantile,
+                tol=self._quantile_tol,
+                maxiter=self._quantile_maxiter,
+                beta_init=None,
+            ),
+            "psfn": partial(
+                self.fit_qreg_pfn,
+                q=self._quantile,
+                rng=np.random.default_rng(self._seed),
+                tol=self._quantile_tol,
+                maxiter=self._quantile_maxiter,
+                beta_init=None,
+                solver=self.fit_qreg_sfn,
             ),
             "pfn": partial(
                 self.fit_qreg_pfn,
@@ -268,6 +288,60 @@ class Quantreg(Feols):
 
         return fn_res
 
+    def fit_qreg_sfn(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        q: float,
+        tol: float | None = None,
+        maxiter: int | None = None,
+        beta_init: np.ndarray | None = None,
+    ) -> tuple[
+        np.ndarray,
+        bool,
+        int,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Fit a quantile regression model using the sparse Frisch-Newton solver.
+
+        Identical to :meth:`fit_qreg_fn` except that the design is held as a scipy sparse
+        matrix, so the normal matrix is formed and factorised sparsely. Intended for designs
+        with categorical regressors, which are mostly zeros.
+        """
+        N, _ = X.shape
+        if tol is None:
+            tol = 1e-06
+        if maxiter is None:
+            maxiter = N
+
+        A = sparse.csr_matrix(X.T)
+
+        fn_res = frisch_newton_solver_sparse(
+            A=A,
+            b=(1 - q) * (X.T @ np.ones(N)),
+            c=-Y,
+            u=np.ones(N),
+            q=q,
+            tol=tol,
+            max_iter=maxiter,
+            backoff=0.9995,
+            beta_init=beta_init,
+        )
+
+        has_converged = fn_res[1]
+        it = fn_res[2]
+
+        if not has_converged:
+            warnings.warn(
+                f"The sparse Frisch-Newton Interior Point solver has not converged after {it} iterations."
+            )
+
+        return fn_res
+
     def fit_qreg_pfn(
         self,
         X: np.ndarray,
@@ -279,6 +353,7 @@ class Quantreg(Feols):
         beta_init: np.ndarray | None = None,
         rng: np.random.Generator | None = None,
         eta: float | None = None,
+        solver: Callable[..., tuple] | None = None,
     ) -> tuple[
         np.ndarray,
         bool,
@@ -289,7 +364,12 @@ class Quantreg(Feols):
         np.ndarray,
         np.ndarray,
     ]:
-        """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing."""
+        """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing.
+
+        ``solver`` selects the inner Frisch-Newton routine, so the same preprocessing serves
+        both the dense method ("pfn") and the sparse one ("psfn").
+        """
+        inner = solver if solver is not None else self.fit_qreg_fn
         N, k = X.shape
         if tol is None:
             tol = 1e-06
@@ -319,7 +399,7 @@ class Quantreg(Feols):
             if compute_beta_init:
                 # get initial sample
                 idx_init = rng.choice(N, size=n_init, replace=False)
-                beta_hat_init = self.fit_qreg_fn(
+                beta_hat_init = inner(
                     X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
                 )[0]
 
@@ -354,7 +434,7 @@ class Quantreg(Feols):
                     Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
 
                 # solve the modified problem
-                fn_res = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
+                fn_res = inner(X=X_sub, Y=Y_sub, q=q)
                 beta_hat = fn_res[0]
 
                 r = Y.flatten() - X @ beta_hat

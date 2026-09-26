@@ -1,0 +1,210 @@
+---
+title: Linear Model and Extensions
+description: "Heteroskedasticity-robust standard errors (HC0 to HC4) from Chapter 6 of Peng Ding's open-access textbook, translated from R to PyFixest."
+jupyter: python3
+---
+
+In this notebook, we translate R code from Peng Ding's open-access textbook [Linear Model and Extensions](https://arxiv.org/abs/2401.00649) (arXiv:2401.00649) to PyFixest. The book's R scripts and data sets are on the Harvard Dataverse ([doi:10.7910/DVN/DBDYVJ](https://doi.org/10.7910/DVN/DBDYVJ), CC0 1.0). So far, only Chapter 6 is covered; the other chapters are tracked in [this github issue](https://github.com/py-econometrics/pyfixest/issues/957).
+
+```{python}
+import numpy as np
+import pandas as pd
+
+import pyfixest as pf
+```
+
+## Chapter 6: Asymptotic Inference in OLS and the Eicker–Huber–White (EHW) Robust Standard Error
+
+Chapter 6 compares the classical OLS standard error with the heteroskedasticity-consistent standard errors HC0 to HC4. The book fits each model with `lm()` and computes the robust covariance matrices with `hccm()` from the R package `car`. All estimators have the sandwich form
+
+$$
+\hat{V}_k = (X'X)^{-1} \Big( \sum_{i=1}^n \hat{\varepsilon}_{i,k}^2 \, x_i x_i' \Big) (X'X)^{-1}
+$$
+
+and differ in how they rescale the OLS residual $\hat{\varepsilon}_i$. With $n$ observations, $p$ coefficients and leverage $h_{ii} = x_i'(X'X)^{-1}x_i$:
+
+| | rescaled residual $\hat{\varepsilon}_{i,k}$ | `car::hccm()` | PyFixest |
+|---|---|---|---|
+| OLS | (classical $\hat{\sigma}^2 (X'X)^{-1}$) | `summary(lm())` | `vcov="iid"` |
+| HC0 | $\hat{\varepsilon}_i$ | `type = "hc0"` | `vcov="HC1"`, `ssc=pf.ssc(k_adj=False)` |
+| HC1 | $\hat{\varepsilon}_i \sqrt{n / (n - p)}$ | `type = "hc1"` | `vcov="HC1"` |
+| HC2 | $\hat{\varepsilon}_i / \sqrt{1 - h_{ii}}$ | `type = "hc2"` | `vcov="HC2"`, `ssc=pf.ssc(k_adj=False)` |
+| HC3 | $\hat{\varepsilon}_i / (1 - h_{ii})$ | `type = "hc3"` (default) | `vcov="HC3"`, `ssc=pf.ssc(k_adj=False)` |
+| HC4 | $\hat{\varepsilon}_i / (1 - h_{ii})^{\min\{4,\, n h_{ii} / p\} / 2}$ | `type = "hc4"` | not implemented, computed by hand below |
+
+The `ssc` argument matters. By default, PyFixest multiplies every heteroskedasticity-robust covariance matrix, including HC2 and HC3, by $n / (n - p)$. For `vcov="HC1"` this factor is the HC1 correction itself. `car::hccm()` and `sandwich::vcovHC()` apply no such factor to HC2 and HC3, so we switch it off with `pf.ssc(k_adj=False)` to reproduce the book. HC1 without the factor is HC0. See [On Small Sample Corrections](../explanation/ssc.qmd) for details.
+
+### Section 6.1.1: Numerical Examples
+
+The book motivates the chapter with a simulation of $y_i = x_i + \varepsilon_i$ under four error distributions. For each one it reports the standard deviation of $\hat{\beta}$ over the replications (`se0`), the average classical standard error (`se1`) and the average of `sqrt(hccm(ols.fit)[2, 2])` (`se2`). `hccm()` defaults to HC3, so `se2` is an HC3 standard error. The book uses 5000 replications and no random seed; we use 200 replications and a fixed seed to keep the notebook fast, so the numbers agree with Figure 6.1 of the book only up to simulation error.
+
+```{python}
+rng = np.random.default_rng(2401)
+n, n_rep = 200, 200
+x = rng.uniform(-2, 2, n)
+
+errors = {
+    ("homoskedastic", "Normal"): lambda: rng.normal(size=n),
+    ("homoskedastic", "non-Normal"): lambda: rng.exponential(size=n),
+    ("heteroskedastic", "Normal"): lambda: rng.normal(scale=np.abs(x)),
+    ("heteroskedastic", "non-Normal"): lambda: rng.uniform(-(x**2), x**2),
+}
+
+
+def simulate(draw_errors):
+    "Return the standard deviation of the OLS slope and both average standard errors."
+    draws = np.empty((n_rep, 3))
+    for r in range(n_rep):
+        data = pd.DataFrame({"x": x, "y": x + draw_errors()})
+        fit = pf.feols("y ~ x", data=data, vcov="iid")
+        draws[r, :2] = fit.coef()["x"], fit.se()["x"]
+        # undo the default factor n / (n - p), which hccm() does not apply to HC3
+        draws[r, 2] = fit.vcov("HC3").se()["x"] / np.sqrt(n / (n - 2))
+    return pd.Series(
+        {
+            "se0": draws[:, 0].std(ddof=1),
+            "se1": draws[:, 1].mean(),
+            "se2": draws[:, 2].mean(),
+        }
+    )
+
+
+simulation = pd.DataFrame({design: simulate(draw) for design, draw in errors.items()}).T
+simulation.round(3)
+```
+
+As in the book, the classical standard error `se1` is too small under heteroskedasticity, while the robust standard error `se2` is close to the true standard deviation `se0` in all four designs.
+
+### Section 6.5.1: LaLonde Experimental Data
+
+```{python}
+# read the data from the Harvard Dataverse. The server rejects the default
+# user agent of Python's urllib, so we set our own.
+dataverse = "https://dataverse.harvard.edu/api/access/datafile/"
+storage_options = {"User-Agent": "pyfixest-docs"}
+
+# file lalonde.txt, identical to data(lalonde) in the R package Matching
+lalonde = pd.read_csv(
+    dataverse + "10123764", sep=r"\s+", storage_options=storage_options
+)
+lalonde.head()
+```
+
+The book's `lm(re78 ~ ., data = lalonde)` regresses 1978 earnings on all other columns. PyFixest formulas do not support the `.` shortcut, so we spell the formula out.
+
+```{python}
+covars_lalonde = [col for col in lalonde.columns if col != "re78"]
+fml_lalonde = "re78 ~ " + " + ".join(covars_lalonde)
+fml_lalonde
+```
+
+```{python}
+fit_iid = pf.feols(fml_lalonde, data=lalonde, vcov="iid")
+fit_hc1 = pf.feols(fml_lalonde, data=lalonde, vcov="HC1")
+fit_hc2 = pf.feols(fml_lalonde, data=lalonde, vcov="HC2", ssc=pf.ssc(k_adj=False))
+fit_hc3 = pf.feols(fml_lalonde, data=lalonde, vcov="HC3", ssc=pf.ssc(k_adj=False))
+
+pf.etable(
+    [fit_iid, fit_hc1, fit_hc2, fit_hc3],
+    model_heads=["OLS", "HC1", "HC2", "HC3"],
+    keep=["treat", "educ", "re74"],
+    coef_fmt="b:.2f \n (se:.2f) \n [t:.2f]",
+)
+```
+
+The book reports one table of t-statistics per model, with one column per standard error. The two functions below collect the standard errors for such a table. HC4 is not available in PyFixest, so `hc4_se()` computes it from the residuals and the leverage scores.
+
+```{python}
+def hc4_se(fit, data, covars):
+    "Compute HC4 standard errors (Cribari-Neto, 2004) for OLS with an intercept."
+    X = np.column_stack([np.ones(len(data)), data[covars].to_numpy(dtype=float)])
+    n, p = X.shape
+    bread = np.linalg.inv(X.T @ X)
+    leverage = np.sum(X * (X @ bread), axis=1)
+    delta = np.minimum(4, n * leverage / p)
+    u_hat_sq = fit.resid() ** 2 / (1 - leverage) ** delta
+    meat = (X * u_hat_sq[:, None]).T @ X
+    return pd.Series(np.sqrt(np.diag(bread @ meat @ bread)), index=fit.coef().index)
+
+
+def standard_errors(depvar, covars, data):
+    "Return the coefficients and the six standard errors compared in the book."
+    fml = depvar + " ~ " + " + ".join(covars)
+    # default small sample correction, n / (n - p) for robust standard errors
+    fit_adj = pf.feols(fml, data=data)
+    # small sample correction switched off
+    fit_raw = pf.feols(fml, data=data, ssc=pf.ssc(k_adj=False))
+    assert list(fit_raw.coef().index) == ["Intercept", *covars]
+    se = pd.DataFrame(
+        {
+            "ols": fit_adj.vcov("iid").se(),
+            "hc0": fit_raw.vcov("HC1").se(),
+            "hc1": fit_adj.vcov("HC1").se(),
+            "hc2": fit_raw.vcov("HC2").se(),
+            "hc3": fit_raw.vcov("HC3").se(),
+            "hc4": hc4_se(fit_raw, data, covars),
+        }
+    )
+    return fit_adj.coef(), se
+```
+
+```{python}
+coef, se = standard_errors("re78", covars_lalonde, lalonde)
+# as in the book: t-statistic = coefficient / standard error
+tvalues_lalonde = se.rdiv(coef, axis=0)
+tvalues_lalonde.round(2)
+```
+
+This reproduces the table in Section 6.5.1 of the book: the different standard errors give similar t-statistics.
+
+### Section 6.5.2: Data from King and Roberts (2015)
+
+```{python}
+covars_isq = [
+    "lnpop",
+    "lnpopsq",
+    "lngdp",
+    "lncolony",
+    "lndist",
+    "freedom",
+    "militexp",
+    "arms",
+    "year83",
+    "year86",
+    "year89",
+    "year92",
+]
+
+# file isq.dta in its original Stata format
+isq = pd.read_stata(
+    dataverse + "10123779?format=original", storage_options=storage_options
+)
+# as na.omit() in R: keep the complete cases of the model variables
+isq = isq[["multish", *covars_isq]].dropna().astype(float)
+isq["log_multish"] = np.log(isq["multish"] + 1)
+isq.shape
+```
+
+```{python}
+coef, se = standard_errors("multish", covars_isq, isq)
+tvalues_isq = se.rdiv(coef, axis=0)
+tvalues_isq.round(2)
+```
+
+For the outcome in levels, the classical and the robust t-statistics differ a lot for some coefficients, for example `lnpop` and `lnpopsq`. After the transformation $\log(\text{multish} + 1)$, all standard errors give similar t-statistics:
+
+```{python}
+coef, se = standard_errors("log_multish", covars_isq, isq)
+tvalues_isq_log = se.rdiv(coef, axis=0)
+tvalues_isq_log.round(2)
+```
+
+Both tables match the book. Section 6.5.3 of the book repeats the comparison for the Boston housing data, which is not part of the Dataverse files (the book loads it from the R package `mlbench`), so we skip it here; `standard_errors()` applies unchanged.
+
+### A Note on p-values
+
+The book bases inference with robust standard errors on the Normal approximation $\hat{\beta}_j \overset{a}{\sim} N(\beta_j, \hat{\text{se}}_j^2)$. PyFixest computes p-values and confidence intervals for `iid` and `HC` standard errors from a t distribution with $n - p$ degrees of freedom, as `lmtest::coeftest()` does in R by default. In the examples above, the difference is small.
+
+```{python}
+fit_hc1.tidy().loc[["treat"]]
+```

@@ -15,7 +15,7 @@ SolverOptions = Literal[
     "scipy.sparse.linalg.lsqr",
 ]
 PredictionErrorOptions = Literal["prediction"]
-QuantregMethodOptions = Literal["fn", "pfn"]
+QuantregMethodOptions = Literal["fn", "pfn", "sfn", "psfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
 WaldDistributionOptions = Literal["F", "chi2"]
 InferenceType = Literal["regular", "simult", "savi"]
