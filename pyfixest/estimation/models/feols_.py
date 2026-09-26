@@ -266,7 +266,11 @@ class Feols(ResultAccessorMixin):
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if options.copy_data else data
-        self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
+        self._demean_cache = DemeanCache(
+            lookup_demeaned_data=lookup_demeaned_data,
+            lookup_preconditioner=lookup_preconditioner,
+            cache_design=not options.lean,
+        )
 
         self.capabilities = Capabilities(
             crv3_inference=True,
