@@ -190,9 +190,6 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            # `.unique()` on a Series only returns `ExtensionArray` for
-            # extension dtypes (e.g. nullable/categorical); cluster ids here
-            # are always a plain-dtype ndarray-backed Series.
             self.unique_clusters = cast(np.ndarray, self.cluster_df.unique())
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index

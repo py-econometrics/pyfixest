@@ -30,7 +30,9 @@ def _solve_ADAt(
     K = W @ W.T
 
     u_buf = u.copy()
-    lapack.dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
+    lapack.dposv(  # ty: ignore[unresolved-attribute]
+        K, u_buf, lower=1, overwrite_a=True, overwrite_b=True
+    )
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
     # S = np.linalg.cholesky(K)

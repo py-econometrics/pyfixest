@@ -220,19 +220,16 @@ class Formula:
             raise AttributeError(
                 "Instruments are available only in instrumental variables specifications."
             )
-        return cast(
-            formulaic.formula.SimpleFormula,
-            get_first_multistage_rhs(self._right_hand_side),
-        )
+        return get_first_multistage_rhs(self._right_hand_side)
 
     @property
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
-        rhs = self._structured.rhs
-        assert isinstance(rhs, tuple)  # guaranteed by `is_fixed_effects`
-        return simple_formula(terms_without_intercept(rhs[1]))
+        return formulaic.formula.SimpleFormula(
+            terms_without_intercept(self._formula.rhs[1])
+        )
 
     @property
     def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:

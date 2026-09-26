@@ -289,9 +289,6 @@ class Feols(ResultAccessorMixin):
         # set in get_fit(); IV and quantile fits keep the all-NaN value
         self.fitstat = FitStatistics()
 
-        # set functions inherited from other modules
-        self._bind_report_methods()
-
     def _describe_model(
         self,
         *,
@@ -1624,6 +1621,30 @@ class Feols(ResultAccessorMixin):
 
         return med
 
+    def summary(self, **kwargs):
+        """Print a summary of this model. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        from pyfixest.report import summary
+
+        return summary(models=self, **kwargs)
+
+    def etable(self, **kwargs):
+        """Create a regression table. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        from pyfixest.report import etable
+
+        return etable(models=self, **kwargs)
+
+    def coefplot(self, **kwargs):
+        """Plot the coefficients. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        from pyfixest.report import coefplot
+
+        return coefplot(models=self, **kwargs)
+
+    def iplot(self, **kwargs):
+        """Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        from pyfixest.report import iplot
+
+        return iplot(models=self, **kwargs)
+
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
         Compute the coefficients of (swept out) fixed effects for a regression model.
@@ -1670,13 +1691,14 @@ class Feols(ResultAccessorMixin):
         assert model_spec is not None, "fixef() runs after the model matrix is built"
         fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
 
-        if self._X_is_empty:
-            uhat = self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
-        else:
+        # flatten() copies: the weighting below scales uhat in place and must
+        # not touch the fitted values the GLM hook may return.
+        uhat = self._fixef_dependent().flatten()
+        if not self._X_is_empty:
             # model_matrix keeps the columns the collinearity check dropped;
             # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
-            uhat = (self._fixef_dependent() - X @ self._beta_hat).flatten()
+            uhat = uhat - X @ self._beta_hat
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(

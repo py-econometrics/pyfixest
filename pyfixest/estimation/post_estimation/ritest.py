@@ -151,9 +151,6 @@ def _get_ritest_stats_fast(
     """
     if nb is None or demean is None:
         raise ImportError(_NUMBA_RITEST_ERROR)
-    # Bind to a local and thread it through explicitly: ty doesn't narrow the
-    # module-level `demean` global inside `_run_ri`, which is called below.
-    _demean = demean
 
     X_demean = X
     Y_demean = Y.flatten()
@@ -190,7 +187,7 @@ def _get_ritest_stats_fast(
         fval=fval,
         weights=weights,
         rng=rng,
-        demean_fn=_demean,
+        demean_fn=demean,
     )
 
 

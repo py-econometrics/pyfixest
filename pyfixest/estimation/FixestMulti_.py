@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import functools
 from collections.abc import Mapping
-from importlib import import_module
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 
@@ -74,27 +72,6 @@ class FixestMulti(TidyColumnAccessors):
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
-        # set functions inherited from other modules
-        _module = import_module("pyfixest.report")
-        # `.values()` is a live view: models are fitted (and populate
-        # `all_fitted_models`) after `__init__` returns, so these must stay
-        # views, not be materialized into a `list` here.
-        fitted_models = cast(
-            "list[Feols | Fepois | Feiv]", self.all_fitted_models.values()
-        )
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=fitted_models)
-        self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=fitted_models)
-        self.iplot.__doc__ = _tmp.__doc__
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=fitted_models)
-        self.summary.__doc__ = _tmp.__doc__
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=fitted_models)
-        self.etable.__doc__ = _tmp.__doc__
-
     @property
     def _is_iv(self) -> bool:
         """Whether the call expanded into an IV model."""
@@ -109,6 +86,30 @@ class FixestMulti(TidyColumnAccessors):
     def FixestFormulaDict(self):
         """Parsed formula dict keyed by fixed-effects spec."""
         return self._parsed.formula_dict
+
+    def summary(self, **kwargs):
+        """Print a summary of all models. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        from pyfixest.report import summary
+
+        return summary(models=self, **kwargs)
+
+    def etable(self, **kwargs):
+        """Create a regression table of all models. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        from pyfixest.report import etable
+
+        return etable(models=self, **kwargs)
+
+    def coefplot(self, **kwargs):
+        """Plot the coefficients of all models. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        from pyfixest.report import coefplot
+
+        return coefplot(models=self, **kwargs)
+
+    def iplot(self, **kwargs):
+        """Plot the `i()` interaction coefficients of all models. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        from pyfixest.report import iplot
+
+        return iplot(models=self, **kwargs)
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """

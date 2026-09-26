@@ -10,9 +10,6 @@ FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
 @stateful_transform
 def encode_fixed_effects(*args, _state=None, _metadata=None, _spec=None):
     """Encode fixed effect interactions for model matrix construction."""
-    # `@stateful_transform`'s wrapper always passes a real dict for `_state`
-    # (defaulting `None` to `{}` itself); `_state=None` here is only a
-    # signature placeholder, matching formulaic's own convention.
     state = cast(MutableMapping[str, Any], _state)
     data = pd.concat(args, axis=1)
     if FIXED_EFFECT_ENCODING not in state:
