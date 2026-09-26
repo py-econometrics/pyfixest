@@ -3,7 +3,7 @@ from dataclasses import fields
 import numpy as np
 import pytest
 
-from pyfixest.demeaners import MapDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
 from pyfixest.utils.utils import get_data, ssc
 
@@ -339,4 +339,36 @@ def test_refit_estimator_replays_options(data_offset, estimator):
             ), option.name
     np.testing.assert_allclose(
         refit.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
+    )
+
+
+@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+def test_refits_rebuild_prebuilt_preconditioner(variant):
+    "A preconditioner built on the full sample is not reused on refit samples."
+    data = get_data().dropna()
+    data["Y"] = np.abs(data["Y"]).round()
+    fml = "Y ~ X1 | f1 + f2"
+    by_name = LsmrDemeaner(preconditioner=variant)
+    prebuilt = LsmrDemeaner(
+        preconditioner=fepois(fml, data, demeaner=by_name).preconditioner
+    )
+
+    fit = fepois(fml, data, demeaner=prebuilt, vcov={"CRV3": "f1"})
+    expected = fepois(fml, data, demeaner=by_name, vcov={"CRV3": "f1"})
+    # same preconditioner variant; the LSMR solves stop at their 1e-8 tolerance
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        expected.variance_covariance.vcov,
+        rtol=1e-6,
+        err_msg="CRV3",
+    )
+
+    ritest_kwargs = {"resampvar": "X1", "reps": 3, "store_ritest_statistics": True}
+    fit.ritest(rng=np.random.default_rng(5), **ritest_kwargs)
+    expected.ritest(rng=np.random.default_rng(5), **ritest_kwargs)
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected.ritest_statistics.statistics,
+        rtol=1e-6,
+        err_msg="ri stats",
     )

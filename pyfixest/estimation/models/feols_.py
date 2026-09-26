@@ -16,6 +16,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -829,12 +830,20 @@ class Feols(ResultAccessorMixin):
 
         This is the single refit contract: a refit through `_refit_estimator`
         replays every option that can change the estimates. Deliberately not
-        inherited are ``vcov`` and ``vcov_kwargs`` (each caller chooses the
-        refit's covariance), ``split``/``fsplit``
-        (the refit data is already this model's sample), ``store_data`` and
-        ``lean`` (callers read only coefficients and t-statistics), and
-        ``copy_data`` (a refit copies its input, so the in-place row drops of
-        ``copy_data=False`` never reach the caller's frame).
+        inherited are:
+
+        - ``vcov`` and ``vcov_kwargs``: each caller chooses the refit's
+          covariance.
+        - ``split`` and ``fsplit``: the refit data is already this model's
+          sample.
+        - ``store_data`` and ``lean``: callers read only coefficients and
+          t-statistics.
+        - ``copy_data``: a refit copies its input, so the in-place row drops of
+          ``copy_data=False`` never reach the caller's frame.
+        - A prebuilt `Preconditioner` on an `LsmrDemeaner`: it is built for the
+          full sample's fixed-effect design, which a leave-out or resampled
+          sample need not share. The refit builds a fresh preconditioner of the
+          same variant instead.
         """
         options = self.options
         return {
@@ -845,7 +854,7 @@ class Feols(ResultAccessorMixin):
             "drop_intercept": options.drop_intercept,
             "collin_tol": options.collin_tol,
             "solver": options.solver,
-            "demeaner": options.demeaner,
+            "demeaner": _without_prebuilt_preconditioner(options.demeaner),
             "context": options.context,
         }
 
@@ -2255,3 +2264,26 @@ class Feols(ResultAccessorMixin):
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
         return beta_n_plus_1
+
+
+def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
+    """Replace a prebuilt LSMR `Preconditioner` by the name of its variant.
+
+    A prebuilt preconditioner is tied to the fixed-effect design it was built
+    on, so a refit on another sample must build its own. Variants without a
+    public name fall back to ``"auto"``, the `LsmrDemeaner` default.
+    """
+    if not (
+        isinstance(demeaner, LsmrDemeaner)
+        and isinstance(demeaner.preconditioner, Preconditioner)
+    ):
+        return demeaner
+    variant = demeaner.preconditioner.variant.lower()
+    preconditioner: LsmrPreconditioner = (
+        "additive"
+        if variant == "additive"
+        else "diagonal"
+        if variant == "diagonal"
+        else "auto"
+    )
+    return replace(demeaner, preconditioner=preconditioner)
