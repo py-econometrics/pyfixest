@@ -1071,6 +1071,12 @@ def test_multiple_cache_sample_isolation(demeaner, weights_type, storage):
     if weights_type:
         kwargs.update(weights="w", weights_type=weights_type)
     models = pf.feols("y + y2 ~ csw(x, z) | f + g", **kwargs).to_list()
+    if storage.get("lean"):
+        assert all(
+            entry.design is None
+            for model in models
+            for entry in model._demean_cache.lookup_demeaned_data.values()
+        )
     for model, formula in zip(
         models, ["y ~ x", "y ~ x + z", "y2 ~ x", "y2 ~ x + z"], strict=True
     ):

@@ -50,7 +50,12 @@ class DemeanCache:
         self,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData] | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
+        *,
+        cache_design: bool = True,
     ) -> None:
+        # Lean fits release their within arrays. Do not extend the lifetime of
+        # an assembled design just for this optional selection memo.
+        self._cache_design = cache_design
         self.lookup_demeaned_data = (
             {} if lookup_demeaned_data is None else lookup_demeaned_data
         )
@@ -227,7 +232,12 @@ class DemeanCache:
             design_demeaned = cached.design
         else:
             design_demeaned = self._select_columns(cached=cached, names=x_names_tuple)
-            cached = replace(cached, design_names=x_names_tuple, design=design_demeaned)
+            if self._cache_design:
+                cached = replace(
+                    cached, design_names=x_names_tuple, design=design_demeaned
+                )
+        if not self._cache_design and cached.design is not None:
+            cached = replace(cached, design_names=(), design=None)
         self.lookup_demeaned_data[na_index] = cached
         return response_demeaned, design_demeaned, used_preconditioner
 
