@@ -249,10 +249,6 @@ python = "~=3.14.0"
 pytorch = "*"
 
 # -- ty feature ---------------------------------------------------------------------------
-# Marker feature with no dependencies of its own, added only to the `py312`
-# environment below. It gives the `ty` task exactly one environment to run
-# in, so bare `pixi run ty` unambiguously resolves to `py312` (which has
-# `torch`) instead of the featureless `default` environment (which does not).
 
 [tool.pixi.feature.ty.tasks]
 ty = { cmd = "ty check pyfixest", description = "Type-check with ty (blocking CI gate)" }
