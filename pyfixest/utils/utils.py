@@ -399,7 +399,8 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     X["f2"] = X["f2"].astype("category")
     X["f3"] = X["f3"].astype("category")
 
-    mm = Formula("~ X1 + X2 + f1 + f2 + f3").get_model_matrix(data=X, output="pandas")
+    formula = Formula("~ X1 + X2 + f1 + f2 + f3")  # ty: ignore[call-non-callable]
+    mm = formula.get_model_matrix(data=X, output="pandas")
 
     k = mm.shape[1]
 
@@ -538,7 +539,11 @@ def capture_context(context: int | Mapping[str, Any]) -> Mapping[str, Any]:
         The context that should be later passed to the Formulaic materialization
         procedure like: `.get_model_matrix(..., context=<this object>)`.
     """
-    return _capture_context(context + 2) if isinstance(context, int) else context
+    # formulaic's `_capture_context` returns `None` when frame introspection
+    # fails; callers rely on an empty mapping (not None) for "no context".
+    return (
+        (_capture_context(context + 2) or {}) if isinstance(context, int) else context
+    )
 
 
 def _check_balanced(panel_arr: np.ndarray, time_arr: np.ndarray) -> bool:
