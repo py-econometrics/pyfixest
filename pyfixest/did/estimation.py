@@ -174,8 +174,6 @@ def event_study(
             randomization_inference=False,
             sherman_morrison_update=False,
         )
-        # These attach saturated-DID-only behavior onto `fit`, a plain `Feols`;
-        # the attributes are intentionally dynamic and unknown to `Feols`'s type.
         fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
         test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
             fit, type(fit)

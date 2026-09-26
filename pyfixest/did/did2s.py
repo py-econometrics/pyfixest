@@ -121,8 +121,7 @@ class DID2S(DID):
             treatment="is_treated",
             first_u=self._first_u,
             second_u=self._second_u,
-            # `DID2S.__init__` requires `cluster: str` (narrower than the base
-            # `DID.__init__`'s `str | None`), so this is never None.
+            # `DID2S.__init__` requires `cluster: str` 
             cluster=cast(str, self._cluster),
             weights=self._weights_name,
         )
