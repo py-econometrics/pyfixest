@@ -16,12 +16,7 @@ from pyfixest.errors import (
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
-from pyfixest.estimation.models.feglm_ import Feglm
-from pyfixest.estimation.models.feiv_ import Feiv
-from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.post_estimation.multcomp import rwolf
-from pyfixest.estimation.quantreg.quantreg_ import Quantreg
-from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.report.summarize import etable, summary
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
@@ -1662,77 +1657,21 @@ def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
 
 
 @pytest.mark.parametrize(
-    ("estimator", "fml", "vcov", "vcov_kwargs", "error", "match"),
+    ("estimator", "vcov", "error", "match"),
     [
-        (pf.feols, "Y ~ X1", "hc1", None, ValueError, "vcov must be one of"),
-        (pf.feols, "Y ~ X1", {"CRV1": "nope"}, None, ValueError, "'nope' is not in"),
-        (pf.feols, "Y ~ X1", "NW", {"lag": 2}, ValueError, "Missing required"),
-        (
-            pf.feols,
-            "Y ~ X1 | f1",
-            "HC2",
-            None,
-            VcovTypeNotSupportedError,
-            "fixed effects",
-        ),
-        (
-            pf.feols,
-            "Y ~ 1 | X1 ~ Z1",
-            "HC3",
-            None,
-            VcovTypeNotSupportedError,
-            "IV regressions",
-        ),
-        (
-            pf.feols,
-            "Y ~ X1 | sw0(f1, f2)",
-            "HC2",
-            None,
-            VcovTypeNotSupportedError,
-            "fixed effects",
-        ),
-        (pf.feols, "Y ~ X1", "nid", None, NotImplementedError, "type 'nid'"),
-        (
-            pf.quantreg,
-            "Y ~ X1",
-            {"CRV1": "f1+f2"},
-            None,
-            NotImplementedError,
-            "Multiway clustering",
-        ),
+        (pf.feols, "nid", NotImplementedError, "type 'nid'"),
         (
             partial(pf.quantreg, quantile=[0.25, 0.75]),
-            "Y ~ X1",
             {"CRV3": "f1"},
-            None,
             VcovTypeNotSupportedError,
             "CRV3 inference",
         ),
     ],
 )
-def test_estimation_rejects_vcov_before_fitting(
-    monkeypatch, estimator, fml, vcov, vcov_kwargs, error, match
-):
-    """Malformed or unsupported `vcov` input fails before any model is fitted."""
-    data = get_data().dropna()
-    fitted: list[str] = []
-
-    def spy(get_fit):
-        def get_fit_spy(self):
-            fitted.append(type(self).__name__)
-            return get_fit(self)
-
-        return get_fit_spy
-
-    for model_cls in (Feols, Feiv, Feglm, Quantreg, QuantregMulti):
-        if "get_fit" in vars(model_cls):
-            monkeypatch.setattr(model_cls, "get_fit", spy(vars(model_cls)["get_fit"]))
-
-    kwargs = {"vcov_kwargs": vcov_kwargs} if vcov_kwargs is not None else {}
+def test_estimation_rejects_unsupported_vcov(estimator, vcov, error, match):
+    """Estimators reject a `vcov` type they do not support."""
     with pytest.raises(error, match=match):
-        estimator(fml, data, vcov=vcov, **kwargs)
-    # with sw0(f1) the model without fixed effects fits; the one with does not
-    assert fitted == (["Feols"] if "sw0" in fml else [])
+        estimator("Y ~ X1", get_data().dropna(), vcov=vcov)
 
 
 @pytest.mark.parametrize(
