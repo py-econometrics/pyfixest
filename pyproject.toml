@@ -162,24 +162,6 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
-]
-ignore_missing_imports = true
-
 [tool.ty.analysis]
 replace-imports-with-any = ["formulaic", "formulaic.**"]
 [tool.ty.src]
@@ -239,8 +221,6 @@ test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or a
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
 test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
-# Blocking CI gate; not yet wired into pre-commit.
-ty = { cmd = "ty check pyfixest", description = "Type-check with ty (blocking CI gate)" }
 
 [tool.pixi.tasks._setup]
 cmd = "python scripts/setup_maturin_hook.py"
@@ -267,6 +247,11 @@ python = "~=3.14.0"
 
 [tool.pixi.feature.torch.dependencies]
 pytorch = "*"
+
+# -- ty feature ---------------------------------------------------------------------------
+
+[tool.pixi.feature.ty.tasks]
+ty = { cmd = "ty check pyfixest", description = "Type-check with ty (blocking CI gate)" }
 
 # -- r feature --------------------------------------------------------------------------
 
@@ -366,7 +351,7 @@ torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" 
 [tool.pixi.environments]
 py310 = ["py310", "torch"]
 py311 = ["py311", "torch"]
-py312 = ["py312", "torch"]
+py312 = ["py312", "torch", "ty"]
 py313 = ["py313", "torch"]
 py314 = ["py314", "torch"]
 py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }
