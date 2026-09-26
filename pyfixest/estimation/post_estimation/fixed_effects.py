@@ -8,12 +8,11 @@ from typing import Any, cast
 import formulaic
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from formulaic import ModelSpec
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Term
 from numpy._typing import NDArray
-from scipy.sparse import spmatrix
+from scipy.sparse import csc_matrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -132,14 +131,14 @@ class FixedEffectContrastCoding:
 
     Attributes
     ----------
-    matrix : spmatrix
+    matrix : csc_matrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
     coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
         Observed and retained codes with their positions in the complete
         coefficient vector, keyed by fixed effect.
     """
 
-    matrix: spmatrix
+    matrix: csc_matrix
     coefficient_positions: Mapping[str, FixedEffectCoefficientPositions]
 
 
@@ -366,6 +365,6 @@ def contrast_code_fixed_effects(
         )
 
     return FixedEffectContrastCoding(
-        matrix=cast(scipy.sparse.spmatrix, matrix),
+        matrix=cast(csc_matrix, matrix),
         coefficient_positions=coefficient_positions,
     )
