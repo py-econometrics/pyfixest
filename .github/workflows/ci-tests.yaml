@@ -49,9 +49,8 @@ jobs:
           files: coverage.xml
 
   type-check-ty:
-    name: "Type check (ty, report-only)"
+    name: "Type check (ty)"
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
 
