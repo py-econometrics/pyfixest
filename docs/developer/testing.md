@@ -28,7 +28,7 @@ selection affect wall time.
 
 | Stage | Purpose | Typical scale | Examples |
 |---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff, `pixi run ty` |
+| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff, `pixi run -e py312 ty` |
 | Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
 | Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
 | Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
@@ -113,8 +113,8 @@ This matrix is authoritative for which checks a change requires.
 | Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
 | Rendered content under `docs/` (excluding `docs/developer/`) | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
 | Repository guidance (including `docs/developer/`) or workflow metadata | `git diff --check`; validate changed links and applicable skills, templates, or configuration | affected CI workflow only; no docs build or render |
-| Python API or internals | targeted public tests; changed-file lint; `pixi run ty` | Python baseline |
-| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint; `pixi run ty` | Python baseline; applicable external suite for every estimator the refactor touches |
+| Python API or internals | targeted public tests; changed-file lint; `pixi run -e py312 ty` | Python baseline |
+| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint; `pixi run -e py312 ty` | Python baseline; applicable external suite for every estimator the refactor touches |
 | Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
