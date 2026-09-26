@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 
+from benchmarks.modular import benchmark_multiple
 from benchmarks.modular.benchmark_multiple import prepare, worker, write_json
 
 
-def test_multiple_benchmark_saved_cases(tmp_path):
+def test_multiple_benchmark_saved_cases(tmp_path, monkeypatch):
     """All formula recipes execute and validate separate versus multiple fits."""
+    monkeypatch.setattr(benchmark_multiple, "resource", None)
     prepare(
         argparse.Namespace(
             directory=tmp_path,
@@ -42,6 +44,7 @@ def test_multiple_benchmark_saved_cases(tmp_path):
         )
         result = json.loads(output.read_text())
         assert result["status"] == "passed"
+        assert result["process_peak_rss_bytes"] is None
         assert len(result["estimates"]) == 3
         assert len(result["times"]["multi"]) == 1
         assert len(result["times"]["separate"]) == 1

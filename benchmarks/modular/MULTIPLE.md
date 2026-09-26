@@ -77,10 +77,11 @@ The timeout is a process wall-clock limit, not a per-fit limit.
 
 JSON preserves every timing, estimates, environment, settings, Git SHA, tracked
 diff hash, native-extension hash, and dataset hash. CSV reports median/min/max
-seconds and independent/multiple speedup. Python also reports process peak RSS
+seconds and independent/multiple speedup. On Unix, Python also reports process peak RSS
 (in bytes, including imports, data, correctness warmup, and both fit paths).
 This is a process high-water mark, not an isolated estimate of cache memory or
-per-path memory. Native allocations are included; R RSS is not collected.
+per-path memory. Native allocations are included; R RSS is not collected, and
+the Python RSS field is null on Windows.
 
 For base-versus-PR comparisons, use separate worktrees with the **same saved
 manifest** and harness version. The harness can be executed by absolute path

@@ -10,12 +10,16 @@ import importlib.metadata
 import json
 import os
 import platform
-import resource
 import statistics
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+try:
+    import resource
+except ImportError:  # Windows has no resource module.
+    resource = None
 
 import numpy as np
 import pandas as pd
@@ -304,8 +308,12 @@ def worker(args):
             "estimates": shared,
             "environment": metadata,
             **record,
-            "process_peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            * (1 if sys.platform == "darwin" else 1024),
+            "process_peak_rss_bytes": (
+                resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                * (1 if sys.platform == "darwin" else 1024)
+                if resource is not None
+                else None
+            ),
         },
     )
 
