@@ -696,8 +696,6 @@ def _coefplot_matplotlib(
     if ax is None:
         f, ax = plt.subplots(figsize=figsize, **fig_kwargs)
     else:
-        # `ax` here is always a plain top-level Axes (from `plt.subplots` or
-        # the caller), never one embedded in a `SubFigure`.
         f = cast(plt.Figure, ax.get_figure())
 
     # Check if we have multiple models
