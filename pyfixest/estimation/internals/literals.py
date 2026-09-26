@@ -9,6 +9,15 @@ WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+EstimationMethod = Literal[
+    "feols",
+    "fepois",
+    "feglm-logit",
+    "feglm-probit",
+    "feglm-gaussian",
+    "quantreg",
+    "quantreg_multi",
+]
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",

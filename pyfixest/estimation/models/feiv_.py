@@ -48,8 +48,8 @@ class Feiv(Feols):
     data : pd.DataFrame
         Estimation data, already converted to pandas and reindexed.
     options : EstimationOptions
-        Every estimation option the fit is built with, assembled from the
-        `EstimationConfig` by the estimation planner.
+        Every estimation option the fit is built with, as built by the
+        estimation function.
     lookup_demeaned_data : dict[frozenset[int], DemeanedData]
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
