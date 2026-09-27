@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
@@ -19,7 +18,6 @@ from pyfixest.estimation.plan_ import (
     fit_one,
 )
 from pyfixest.utils.dev_utils import _narwhals_to_pandas
-from pyfixest.utils.utils import capture_context
 
 
 def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
@@ -29,7 +27,7 @@ def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
     and downstream `dropna()` calls would otherwise produce mis-aligned indices.
     """
     data = _narwhals_to_pandas(config.data)
-    if config.copy_data:
+    if config.options.copy_data:
         data = data.copy()
     data.reset_index(drop=True, inplace=True)
     return data
@@ -51,14 +49,13 @@ def run_estimation(
 ) -> Feols | Fepois | Feiv | FixestMulti:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
-    Prepares the runtime inputs (data, context, split plan), builds a
+    Prepares the runtime inputs (data, split plan), builds a
     `FixestMulti` results container, fits models based on the planner's
     specs block-by-block (sharing the demean / preconditioner cache within
     each `cache_key` block), and returns either the multi-object or the
     single fitted model.
     """
     data = _prepare_data(config)
-    context: Mapping[str, Any] = capture_context(config.context)
     run_full, run_split, splitvar = _split_plan(config)
 
     fixest = FixestMulti(formula_dict=parsed.formula_dict)
@@ -77,7 +74,6 @@ def run_estimation(
         splits=all_splits,
         is_iv=parsed.is_iv,
         splitvar=splitvar,
-        captured_context=context,
     )
 
     _NO_CACHE_KEY: Any = object()

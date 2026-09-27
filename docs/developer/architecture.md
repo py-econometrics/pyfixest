@@ -66,7 +66,8 @@ and a generic contract. Hypothetical future reuse is not sufficient.
 
 ## Estimation flow
 
-Estimators using the shared estimation pipeline build an `EstimationConfig`.
+Estimators using the shared estimation pipeline build an `EstimationConfig`
+holding the typed `EstimationOptions` and the parsed `VcovSpec`.
 `parse_formula` expands multiple-estimation syntax, and
 `runner.run_estimation` and `fit_one` prepare each model before dispatching to
 its estimator-specific fit path. DiD estimators use their own domain-specific
@@ -217,7 +218,8 @@ in `_` so they do not shadow public functions. Compatibility shims in the
   `internals/vcov_utils.py`, `internals/vcov_.py`, or Rust, and wiring through
   `FixestMulti`/quantreg where supported. Follow NW/DK HAC.
 - **Estimation-time option:** shared typed alias in `internals/literals.py`, API
-  validation, `EstimationConfig`, and `plan_._build_model_kwargs`.
+  validation, and a field of the `EstimationOptions` class the model takes,
+  which the estimation function fills.
 - **Rust kernel:** implementation in `src/<topic>.rs`, registration in
   `src/lib.rs`, stub in `core/_core_impl.pyi`, and wrapper in `core/`. Keep a
   readable NumPy reference where feasible. Reserve Rust for measured,
