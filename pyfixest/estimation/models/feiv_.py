@@ -270,22 +270,17 @@ class Feiv(Feols):
         if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
-        # The first stage is fitted on the second stage's retained rows, which
-        # `prepare_model_matrix()` left in `_data`, and, as in fixest, with the
-        # second stage's estimation options. Its variables are the instrument
-        # part of the IV model matrix, whose missing and infinite rows were
-        # dropped jointly with the second stage's, so the only row filter left
-        # to disable is singleton removal. It is fitted in full because
-        # `first_stage` is built from its within data and residuals;
-        # `_clear_attributes()` applies the storage options afterwards.
+        # As in fixest, the first stage uses the second stage's rows and options.
         model1 = self._refit(
             fml=fml_first_stage,
             data=self._data,
             vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
             options=replace(
                 self.options,
+                # `_data` holds the second stage's rows, singletons included
                 drop_singletons=False,
-                store_data=True,
+                # `first_stage` reads within data and residuals;
+                # `_clear_attributes()` applies `lean` afterwards
                 lean=False,
                 demeaner=demeaner,
             ),
