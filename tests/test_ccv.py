@@ -1,8 +1,9 @@
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation import feols
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
 
@@ -135,7 +136,7 @@ def test_ccv_against_AAIW(data, pk):
         data, depvar="ln_earnings", cluster="state", seed=seed, nmx="college", pk=pk
     )
     vcov = _compute_CCV(
-        fml=fml,
+        fit_fn=partial(feols, fml),
         X=X,
         Y=Y,
         W=W,
@@ -145,7 +146,6 @@ def test_ccv_against_AAIW(data, pk):
         rng=rng,
         data=data,
         tau_full=tau_full,
-        demeaner=MapDemeaner(),
     )
 
     assert np.abs(vcov - vcov_AAIW) < 1e-6

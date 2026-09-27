@@ -1352,7 +1352,12 @@ class Feols(ResultAccessorMixin):
         vcov_splits = 0.0
         for _ in range(n_splits):
             vcov_ccv = _compute_CCV(
-                fml=fml,
+                fit_fn=partial(
+                    self._refit,
+                    fml=fml,
+                    # only the coefficients are read; iid is fastest to compute
+                    vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+                ),
                 Y=Y,
                 X=X,
                 W=W,
@@ -1362,7 +1367,6 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
-                demeaner=self.options.demeaner,
             )
             vcov_splits += vcov_ccv
 

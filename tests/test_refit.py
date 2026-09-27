@@ -1,9 +1,10 @@
 """Leave-out and resampled refits replay the estimation options of a fit.
 
 `Feols._refit` reruns a fitted model's estimator on other data. `vcov("CRV3")`
-uses it for the leave-one-cluster-out fits and `ritest()` for the resampled
-fits, so both must see every non-default argument of the original fit: the
-weights of a `feols` fit, the offset of a `fepois` fit, and so on.
+uses it for the leave-one-cluster-out fits, `ritest()` for the resampled fits
+and `ccv()` for the split and cluster fits, so all must see every non-default
+argument of the original fit: the weights of a `feols` fit, the offset of a
+`fepois` fit, and so on.
 """
 
 from dataclasses import fields, replace
@@ -17,6 +18,7 @@ import pytest
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.internals.model_state import VcovSpec
+from pyfixest.estimation.post_estimation.ccv import _compute_CCV
 from pyfixest.estimation.post_estimation.ritest import _get_ritest_stats_slow
 from pyfixest.utils.utils import get_data, ssc
 
@@ -133,6 +135,40 @@ def test_ritest_refits_replay_options(data, case):
     )
     np.testing.assert_allclose(
         fit.ritest_statistics.statistics, expected, rtol=1e-12, err_msg="ri stats"
+    )
+
+
+def test_ccv_refits_replay_options(data):
+    "The split and cluster refits of `ccv()` keep the fit's options."
+    # ccv rejects fixed effects and weights; without an intercept, split
+    # coefficients that ignored `drop_intercept` would not match the design
+    options = {**_COMMON_OPTIONS, "drop_intercept": True}
+    fml = "Y ~ D + log1p_abs(X1) + X2"
+    rng = np.random.default_rng(41)
+    data["D"] = rng.integers(0, 2, size=len(data))
+    # few large clusters, so every cluster's split subsample has full rank
+    data["cluster"] = rng.integers(0, 5, size=len(data))
+    fit = feols(fml, data=data, vcov={"CRV1": "cluster"}, **options)
+
+    ccv = fit.ccv(treatment="D", seed=7, n_splits=1, pk=0.5)
+
+    expected = _compute_CCV(
+        fit_fn=partial(feols, fml, vcov="iid", **options),
+        Y=fit.within_data.response.flatten(),
+        X=fit.within_data.design,
+        W=fit._data["D"].to_numpy(),
+        rng=np.random.default_rng(7),
+        data=fit._data,
+        treatment="D",
+        cluster_vec=fit._data["cluster"].to_numpy(),
+        pk=0.5,
+        tau_full=fit.coef()["D"],
+    )
+    np.testing.assert_allclose(
+        ccv.loc["CCV", "Std. Error"],
+        np.sqrt(expected / fit.sample_info.n_obs),
+        rtol=1e-12,
+        err_msg="ccv se",
     )
 
 

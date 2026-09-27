@@ -285,7 +285,11 @@ We also removed:
   unchanged.
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
-- CCV auxiliary fits now retain the original demeaner configuration.
+- `ccv()` now refits the split and cluster samples with every estimation option
+  of the original fit. Before, its auxiliary fits kept only the demeaner, so
+  they ignored `drop_intercept`, `collin_tol`, `solver`, and `context`: with
+  `drop_intercept=True` the split coefficients did not match the design, and a
+  formula using a function from `context` failed to evaluate.
 - `vcov({"CRV3": ...})` and `ritest()` now refit with every estimation option
   of the original fit. Before, the leave-one-cluster-out and resampled refits
   dropped every option except the CRV3 weights, so `fepois()` with an `offset`
