@@ -251,7 +251,7 @@ absolute tolerances are different.
 Prefer a small number of heavily parametrized integration tests over many thin
 wrapper tests. Extend an existing formula/vcov/weights/SSC matrix when the new
 case fits it. Unit-test internal seams only when the public API cannot exercise
-them cleanly.
+them cleanly and a regression there would change what users see.
 
 Every behavioral change needs regression evidence, but it does not necessarily
 need a new test. Control suite growth in this order:
@@ -265,10 +265,15 @@ need a new test. Control suite growth in this order:
 4. Add a test file only for a distinct subsystem, dependency marker, or fixture
    lifecycle.
 
-Every new or changed error or warning path needs a test that triggers it.
+Every new or changed error or warning that users can trigger through the
+public API needs a test that triggers it.
 Extend `tests/test_errors.py` or the nearest subsystem suite, and assert the
 exception or warning category plus stable message text with
-`pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`.
+`pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`. Internal
+guards the public API cannot reach, such as a planner or constructor check
+against wiring mistakes, need no dedicated test; the guard is the protection.
+Fixes to non-estimation helpers such as DGPs or RNG plumbing rely on existing
+coverage.
 
 Reuse seeded fixtures, external-reference adapters, and assertion helpers. A
 new test file or unusually large test diff must explain why an existing matrix
