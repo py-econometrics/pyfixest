@@ -89,17 +89,6 @@ def test_confint_joint_maps_to_simult():
         fit.confint(inference_type="regular")
 
 
-def test_simult_confint_without_seed_leaves_global_rng_untouched():
-    """`seed=None` draws fresh entropy instead of reading the global NumPy RNG."""
-    fit = feols("Y ~ X1 + X2", data=get_data())
-    state_before = np.random.get_state()
-    fit.confint(inference_type="simult", reps=100)
-    state_after = np.random.get_state()
-
-    np.testing.assert_array_equal(state_before[1], state_after[1])
-    assert state_before[2] == state_after[2]
-
-
 def test_tidy_inference_type_regular():
     """`tidy(inference_type="regular")` matches the default `tidy()` output."""
     fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())

@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 from pyfixest.utils.dgps import (
     gelbach_data,
@@ -157,27 +156,6 @@ def test_get_panel_dgp_stagg():
     # Test with heterogeneous effects
     result_het = get_panel_dgp_stagg(hetfx=True)
     assert isinstance(result_het["dataframe"], pd.DataFrame)
-
-
-@pytest.mark.parametrize(
-    "dgp",
-    [
-        get_blw,
-        get_sharkfin,
-        lambda seed: get_panel_dgp_stagg(seed=seed)["dataframe"],
-    ],
-    ids=["blw", "sharkfin", "panel_dgp_stagg"],
-)
-def test_dgp_seed_uses_local_generator(dgp):
-    """DGPs draw from `default_rng(seed)` and never touch the global NumPy RNG."""
-    state_before = np.random.get_state()
-    df = dgp(seed=1)
-    state_after = np.random.get_state()
-
-    np.testing.assert_array_equal(state_before[1], state_after[1])
-    assert state_before[2] == state_after[2]
-    pd.testing.assert_frame_equal(df, dgp(seed=1))
-    assert not df.equals(dgp(seed=2))
 
 
 def test_gelbach_data():

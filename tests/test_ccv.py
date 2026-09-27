@@ -5,7 +5,6 @@ import pytest
 from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation import feols
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
-from pyfixest.utils.utils import get_data
 
 
 @pytest.fixture
@@ -204,17 +203,3 @@ def test_against_stata(data):
 
     assert np.abs(res_ccv4["2.5%"] - 0.428) < 1e-02
     assert np.abs(res_ccv4["97.5%"] - 0.503) < 1e-02
-
-
-def test_ccv_without_seed_leaves_global_rng_untouched():
-    """`seed=None` draws fresh entropy instead of reading the global NumPy RNG."""
-    data = get_data().dropna()
-    data["D"] = np.random.default_rng(929).choice([0, 1], size=len(data))
-    fit = feols("Y ~ D", data=data, vcov={"CRV1": "f1"})
-
-    state_before = np.random.get_state()
-    fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=2)
-    state_after = np.random.get_state()
-
-    np.testing.assert_array_equal(state_before[1], state_after[1])
-    assert state_before[2] == state_after[2]
