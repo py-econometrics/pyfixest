@@ -9,6 +9,7 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
+from pyfixest.utils.dev_utils import _find_stack_level
 
 ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
@@ -310,7 +311,9 @@ def _multcomp_resample(
                     f"""
                               2^(the number of clusters) < the number of boot iterations for at least one model,
                               setting full_enumeration to True and reps = {2**G}.
-                              """
+                              """,
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
                 full_enumeration = True
 

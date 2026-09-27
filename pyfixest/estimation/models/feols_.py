@@ -92,6 +92,7 @@ from pyfixest.estimation.post_estimation.prediction import _compute_prediction_e
 from pyfixest.estimation.post_estimation.wald import wald_test
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _find_stack_level,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -956,7 +957,9 @@ class Feols(ResultAccessorMixin):
             not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
         ):
             warnings.warn(
-                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             distribution = "chi2"
 
@@ -1107,10 +1110,11 @@ class Feols(ResultAccessorMixin):
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
-        except ImportError:
-            print(
-                "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
+        except ImportError as exc:
+            raise ImportError(
+                "wildboottest() requires the optional `wildboottest` package. "
+                "Install it with `pip install wildboottest`."
+            ) from exc
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
 
@@ -1162,7 +1166,9 @@ class Feols(ResultAccessorMixin):
 
             if full_enumeration_warn:
                 warnings.warn(
-                    "2^G < the number of boot iterations, setting full_enumeration to True."
+                    "2^G < the number of boot iterations, setting full_enumeration to True.",
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
             ssc_value = boot.ssc
 
@@ -1243,14 +1249,21 @@ class Feols(ResultAccessorMixin):
                 "The causal cluster variance estimator is not supported for models "
                 f"of type '{self.model.method}'."
             )
-        assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, (
-            "cluster must be a string or None."
-        )
-        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
-        assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
-        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
+        if not isinstance(treatment, str):
+            raise TypeError("treatment must be a string.")
+        if not (isinstance(cluster, str) or cluster is None):
+            raise TypeError("cluster must be a string or None.")
+        if not (isinstance(seed, int) or seed is None):
+            raise TypeError("seed must be an integer or None.")
+        if not isinstance(n_splits, int):
+            raise TypeError("n_splits must be an integer.")
+        if n_splits < 1:
+            raise ValueError(f"n_splits must be a positive integer, got {n_splits}.")
+        for name, share in (("pk", pk), ("qk", qk)):
+            if not isinstance(share, (int, float)):
+                raise TypeError(f"{name} must be a number.")
+            if not 0 <= share <= 1:
+                raise ValueError(f"{name} must be between 0 and 1, got {share}.")
 
         if self.model.has_fixef:
             raise NotImplementedError(
@@ -1286,7 +1299,9 @@ class Feols(ResultAccessorMixin):
 
         if not self.variance_covariance.spec.is_clustered:
             warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             self.vcov({"CRV1": cluster})
 
@@ -1298,9 +1313,10 @@ class Feols(ResultAccessorMixin):
         data = self._data
         Y = self.within_data.response.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(np.isin(W, [0, 1])), (
-            "Treatment variable must be binary with values 0 and 1"
-        )
+        if not np.all(np.isin(W, [0, 1])):
+            raise ValueError(
+                f"Treatment variable '{treatment}' must be binary with values 0 and 1."
+            )
         X = self.within_data.design
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
@@ -1551,7 +1567,8 @@ class Feols(ResultAccessorMixin):
         if has_param:
             warnings.warn(
                 "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
-                UserWarning,
+                FutureWarning,
+                stacklevel=_find_stack_level(),
             )
             decomp_var = param
 
@@ -2044,10 +2061,20 @@ class Feols(ResultAccessorMixin):
             """
             )
 
+        if type not in ["randomization-t", "randomization-c"]:
+            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        if isinstance(reps, bool) or not isinstance(reps, int):
+            raise TypeError("reps must be an integer.")
+        if reps < 1:
+            raise ValueError(f"reps must be a positive integer, got {reps}.")
+
         # update vcov if cluster provided but not in model
         if cluster is not None and not self.variance_covariance.spec.is_clustered:
             warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             self.vcov({"CRV1": cluster})
 
@@ -2057,16 +2084,11 @@ class Feols(ResultAccessorMixin):
         sample_tstat = np.array(self.tstat().xs(resampvar_))
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
-        if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
-
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         if choose_algorithm == "auto":
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
-
-        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
 
         if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]

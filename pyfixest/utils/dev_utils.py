@@ -1,3 +1,5 @@
+import inspect
+import os
 import re
 
 import narwhals.stable.v1 as nw
@@ -6,6 +8,40 @@ import pandas as pd
 from narwhals.typing import IntoDataFrame
 
 DataFrameType = IntoDataFrame
+
+_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os.sep
+
+
+def _find_stack_level() -> int:
+    """
+    Return the `stacklevel` that attributes a warning to the caller of pyfixest.
+
+    Use as `warnings.warn(message, category, stacklevel=_find_stack_level())`.
+    The call stack is walked outward from the frame that issues the warning,
+    and the returned level points just past the outermost pyfixest frame. A
+    warning therefore names the user's call site however deep inside pyfixest
+    it is raised, including pyfixest code called back by a third-party library
+    such as a formulaic transform. Adapted from pandas' `find_stack_level`.
+
+    Returns
+    -------
+    int
+        The `stacklevel` argument for `warnings.warn`.
+    """
+    frame = inspect.currentframe()
+    outermost_level = 1
+    try:
+        # Level 1 is the function that calls `warnings.warn`.
+        frame = frame.f_back if frame is not None else None
+        level = 1
+        while frame is not None:
+            if frame.f_code.co_filename.startswith(_PACKAGE_DIR):
+                outermost_level = level
+            frame = frame.f_back
+            level += 1
+    finally:
+        del frame
+    return outermost_level + 1
 
 
 def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:
