@@ -1,10 +1,10 @@
 """Leave-out and resampled refits replay the estimation options of a fit.
 
-`Feols._refit` reruns a fitted model's estimator on other data. `vcov("CRV3")`
-uses it for the leave-one-cluster-out fits, `ritest()` for the resampled fits
-and `ccv()` for the split and cluster fits, so all must see every non-default
-argument of the original fit: the weights of a `feols` fit, the offset of a
-`fepois` fit, and so on.
+`refit()` reruns a fitted model's estimator on other data. `vcov("CRV3")`
+uses it for the leave-one-cluster-out fits, `ritest()` for the resampled fits,
+`ccv()` for the split and cluster fits, and IV fits for their first stage, so
+all must see every non-default argument of the original fit: the weights of a
+`feols` fit, the offset of a `fepois` fit, and so on.
 """
 
 from dataclasses import fields, replace
@@ -20,6 +20,7 @@ from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
 from pyfixest.estimation.post_estimation.ritest import _get_ritest_stats_slow
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 
 
@@ -54,6 +55,7 @@ CASES = {
 }
 FML = "Y ~ log1p_abs(X1) + X2 | f3"
 CLUSTER = "f1"
+IID = VcovSpec(vcov_type="iid", vcov_type_detail="iid")
 
 
 def _without_weights(options):
@@ -83,15 +85,51 @@ def test_refit_replays_options(data, case):
     fit = estimator(FML, data=data, **options)
     subsample = data[data[CLUSTER] != data[CLUSTER].iloc[0]]
 
-    refit = fit._refit(
-        fml=FML, data=subsample, vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid")
-    )
+    refitted = refit(fit, data=subsample, vcov=IID)
 
-    assert refit.options == replace(fit.options, copy_data=False)
+    assert refitted.options == replace(fit.options, copy_data=False)
     expected = estimator(FML, data=subsample, **options)
     np.testing.assert_allclose(
-        refit.coef().to_numpy(), expected.coef().to_numpy(), rtol=1e-12, err_msg="coef"
+        refitted.coef().to_numpy(),
+        expected.coef().to_numpy(),
+        rtol=1e-12,
+        err_msg="coef",
     )
+
+
+def test_refit_on_the_fit_sample_keeps_every_row(data, case):
+    "A same-sample refit drops no singletons and raises if it loses rows."
+    estimator, options = case
+    fit = estimator(FML, data=data, **{**options, "fixef_rm": "singleton"})
+
+    refitted = refit(fit, data=fit._data, vcov=IID, same_sample=True)
+
+    assert not refitted.options.drop_singletons
+    assert refitted.sample_info.n_obs == fit.sample_info.n_obs
+    np.testing.assert_allclose(
+        refitted.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
+    )
+    # a missing regressor value drops a row the fit kept
+    with_missing = fit._data.copy()
+    with_missing.loc[with_missing.index[0], "X2"] = np.nan
+    with pytest.raises(ValueError, match="observations"):
+        refit(fit, data=with_missing, vcov=IID, same_sample=True)
+    # without the flag, the same data is new data and the row is dropped
+    assert (
+        refit(fit, data=with_missing, vcov=IID).sample_info.n_obs
+        == fit.sample_info.n_obs - 1
+    )
+    with pytest.raises(ValueError, match="another index"):
+        refit(fit, data=fit._data.iloc[1:], vcov=IID, same_sample=True)
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X2 | f1", "Y ~ X2"])
+def test_refit_rejects_other_fixed_effects(data, fml):
+    "No refit changes the fixed effects of the fit."
+    fit = feols(FML, data=data, context={"log1p_abs": _log1p_abs})
+
+    with pytest.raises(ValueError, match="fixed effects"):
+        refit(fit, data=fit._data, fml=fml, vcov=IID)
 
 
 def test_crv3_is_the_leave_one_cluster_out_jackknife(data, case):
@@ -173,7 +211,7 @@ def test_ccv_refits_replay_options(data):
 
 
 def test_refits_leave_data_untouched(data, case):
-    "CRV3 and ritest refits modify neither the fit's sample nor the user's frame."
+    "Refits modify neither the fit's sample nor the user's frame."
     estimator, options = case
     options = _without_weights(options)
     # copy_data=False lets the original fit reset the index; refits must not
@@ -183,6 +221,7 @@ def test_refits_leave_data_untouched(data, case):
 
     fit.vcov({"CRV3": CLUSTER})
     fit.ritest("X2", reps=2, choose_algorithm="slow", rng=np.random.default_rng(1))
+    refit(fit, data=fit._data, vcov=IID, same_sample=True)
 
     pd.testing.assert_frame_equal(fit._data, sample_before)
     pd.testing.assert_frame_equal(data, data_before)
@@ -201,16 +240,31 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
     fit = fepois(fml, data, demeaner=prebuilt)
     subsample = data[data["f1"] != data["f1"].iloc[0]]
 
-    refit = fit._refit(
-        fml=fml, data=subsample, vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid")
-    )
+    refitted = refit(fit, data=subsample, vcov=IID)
 
-    assert refit.options.demeaner == by_name
+    assert refitted.options.demeaner == by_name
     expected = fepois(fml, data=subsample, demeaner=by_name)
     # same preconditioner variant; the LSMR solves stop at their 1e-8 tolerance
     np.testing.assert_allclose(
-        refit.coef().to_numpy(), expected.coef().to_numpy(), rtol=1e-6, err_msg="coef"
+        refitted.coef().to_numpy(),
+        expected.coef().to_numpy(),
+        rtol=1e-6,
+        err_msg="coef",
     )
+
+
+@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
+    "A same-sample refit reuses the preconditioner the fit built."
+    data = get_data().dropna()
+    data["Y"] = np.abs(data["Y"]).round()
+    fml = "Y ~ X1 | f1 + f2"
+    fit = fepois(fml, data, demeaner=LsmrDemeaner(preconditioner=variant))
+
+    refitted = refit(fit, data=fit._data, vcov=IID, same_sample=True)
+
+    assert fit.preconditioner is not None
+    assert refitted.options.demeaner.preconditioner is fit.preconditioner
 
 
 # estimation arguments that are not options of a single fit: the caller of a

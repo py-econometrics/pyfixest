@@ -9,7 +9,6 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -27,6 +26,7 @@ from pyfixest.estimation.internals.model_state import (
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_ssc
 
 
@@ -253,24 +253,13 @@ class Feiv(Feols):
         if self.model.has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self.model.fixef}"
 
-        demeaner = self.options.demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(
-            self.sample_info.dropped_row_index
-        )
-        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
-            demeaner = replace(demeaner, preconditioner=cached_pre)
-
         # As in fixest, the first stage uses the second stage's rows and options.
-        model1 = self._refit(
+        model1 = refit(
+            self,
             fml=fml_first_stage,
             data=self._data,
             vcov=self.variance_covariance.spec,
-            options=replace(
-                self.options,
-                # `_data` is already the second stage's sample; keep every row
-                drop_singletons=False,
-                demeaner=demeaner,
-            ),
+            same_sample=True,
         )
 
         self.first_stage = FirstStage(
