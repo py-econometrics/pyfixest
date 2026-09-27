@@ -185,7 +185,26 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f2"}])
+@pytest.mark.parametrize(
+    "vcov, vcov_kwargs, vcov_r",
+    [
+        ("iid", None, "iid"),
+        ("hetero", None, "hetero"),
+        ({"CRV1": "f2"}, None, "~f2"),
+        ({"CRV1": "f2+f3"}, None, "~f2+f3"),
+        (
+            "NW",
+            {"lag": 2, "time_id": "year", "panel_id": "unit"},
+            ("NW", {"unit": "unit", "time": "year", "lag": 2}),
+        ),
+        (
+            "DK",
+            {"lag": 2, "time_id": "year", "panel_id": "unit"},
+            ("DK", {"time": "year", "lag": 2}),
+        ),
+    ],
+    ids=["iid", "hetero", "CRV1", "CRV1-twoway", "NW", "DK"],
+)
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize(
     "fml, fml_r, drop_intercept",
@@ -196,19 +215,31 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", True),
     ],
 )
-def test_first_stage_vs_fixest(vcov, k_adj, fml, fml_r, drop_intercept):
+def test_first_stage_vs_fixest(
+    vcov, vcov_kwargs, vcov_r, k_adj, fml, fml_r, drop_intercept
+):
     # The first stage is fitted on the second stage's rows, with its
-    # small-sample correction and intercept choice. The data keep missing
-    # values and add a complete singleton row, which `fixef_rm="none"` keeps
-    # in both stages.
+    # small-sample correction, intercept choice, and covariance estimator. The
+    # data keep missing values and add a complete singleton row, which
+    # `fixef_rm="none"` keeps in both stages.
     data = get_data()
     complete_row = data[["Y", "X1", "X2", "Z1", "Z2", "f1"]].notna().all(axis=1)
     data.loc[complete_row.idxmax(), "f1"] = 999
+    # a balanced panel of 50 units over 20 years for the HAC estimators
+    data["unit"] = data.index // 20
+    data["year"] = data.index % 20
+
+    if isinstance(vcov_r, tuple):
+        vcov_fun, vcov_args = vcov_r
+        vcov_r = (fixest.vcov_NW if vcov_fun == "NW" else fixest.vcov_DK)(**vcov_args)
+    elif vcov_r.startswith("~"):
+        vcov_r = ro.Formula(vcov_r)
 
     fit = feols(
         fml,
         data=data,
         vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
         ssc=ssc(k_adj=k_adj),
         fixef_rm="none",
         drop_intercept=drop_intercept,
@@ -216,9 +247,10 @@ def test_first_stage_vs_fixest(vcov, k_adj, fml, fml_r, drop_intercept):
     fit_r = fixest.feols(
         ro.Formula(fml_r),
         data=pandas2ri.py2rpy(data),
-        vcov=ro.Formula("~f2") if isinstance(vcov, dict) else vcov,
+        vcov=vcov_r,
         ssc=fixest.ssc(k_adj, "nonnested", False, True, "min", "min"),
         fixef_rm="none",
+        panel_time_step=1,
     )
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model

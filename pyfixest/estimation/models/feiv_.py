@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,6 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.literals import VcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -254,15 +253,6 @@ class Feiv(Feols):
         if self.model.has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self.model.fixef}"
 
-        # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: dict[str, str] | str
-
-        spec = self.variance_covariance.spec
-        if spec.is_clustered:
-            vcov_detail = {spec.vcov_type_detail: spec.clustervar[0]}
-        else:
-            vcov_detail = spec.vcov_type_detail
-
         demeaner = self.options.demeaner
         cached_pre = self._demean_cache.lookup_preconditioner.get(
             self.sample_info.dropped_row_index
@@ -274,7 +264,7 @@ class Feiv(Feols):
         model1 = self._refit(
             fml=fml_first_stage,
             data=self._data,
-            vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
+            vcov=self.variance_covariance.spec,
             options=replace(
                 self.options,
                 # `_data` is already the second stage's sample; keep every row

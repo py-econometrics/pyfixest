@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
 from typing import Literal, cast, overload
 
@@ -38,7 +39,6 @@ from pyfixest.estimation.internals.literals import (
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
-    VcovTypeOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
@@ -848,7 +848,7 @@ class Feols(ResultAccessorMixin):
         *,
         fml: str,
         data: pd.DataFrame,
-        vcov: VcovTypeOptions | dict[str, str],
+        vcov: VcovSpec,
         options: EstimationOptions | None = None,
     ) -> Feols:
         """Refit this model's estimator on other data.
@@ -879,7 +879,7 @@ class Feols(ResultAccessorMixin):
             data=data.copy(deep=False),
             fml=fml,
             options=options,
-            vcov=VcovSpec.from_user_input(vcov),
+            vcov=vcov,
         )
         fit = run_estimation(config, parse_formula(config))
         if not isinstance(fit, Feols):
@@ -892,7 +892,12 @@ class Feols(ResultAccessorMixin):
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = self._refit(fml=self.model.formula, data=data, vcov="iid")
+            fit = self._refit(
+                fml=self.model.formula,
+                data=data,
+                # inference not needed, iid fastest to compute
+                vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+            )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)
@@ -2122,10 +2127,9 @@ class Feols(ResultAccessorMixin):
                 clustervar_arr=clustervar_arr,
                 fml=self.model.formula,
                 reps=reps,
-                vcov=vcov_input,
                 type=type,
                 rng=rng,
-                fit_fn=self._refit,
+                fit_fn=partial(self._refit, vcov=VcovSpec.from_user_input(vcov_input)),
             )
 
         else:
