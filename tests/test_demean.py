@@ -1,4 +1,5 @@
 import pickle
+import sys
 
 import numpy as np
 import pandas as pd
@@ -614,6 +615,31 @@ def test_feols_warns_for_experimental_torch_demeaner():
             "y ~ x | fe",
             data=data,
             demeaner=LsmrDemeaner(backend="torch", device="cpu"),
+        )
+
+
+@pytest.mark.filterwarnings(
+    "ignore:The torch LSMR demeaner backend is experimental:UserWarning"
+)
+@pytest.mark.parametrize("device", ["auto", "cpu"])
+def test_torch_demeaner_without_torch_raises_actionable_import_error(
+    monkeypatch, device
+):
+    """A missing torch raises an ImportError naming the extra instead of falling back."""
+    monkeypatch.setitem(sys.modules, "torch", None)
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0],
+            "x": [0.0, 1.0, 0.0, 1.0],
+            "fe": [0, 0, 1, 1],
+        }
+    )
+
+    with pytest.raises(ImportError, match=r"pip install pyfixest\[torch\]"):
+        pf.feols(
+            "y ~ x | fe",
+            data=data,
+            demeaner=LsmrDemeaner(backend="torch", device=device),
         )
 
 
