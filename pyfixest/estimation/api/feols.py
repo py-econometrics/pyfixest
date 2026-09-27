@@ -8,6 +8,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _warn_ignored_arguments,
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -47,7 +48,7 @@ def feols(
     solver: SolverOptions = "scipy.linalg.solve",
     demeaner: AnyDemeaner | None = None,
     use_compression: bool = False,
-    reps: int = 100,
+    reps: int | None = None,
     context: int | Mapping[str, Any] | None = None,
     seed: int | None = None,
     split: str | None = None,
@@ -71,38 +72,37 @@ def feols(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
+    vcov : VcovTypeOptions | dict[str, str] | None, optional
         Type of variance-covariance matrix for inference. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
+        "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
+        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to
         pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
+    vcov_kwargs : dict[str, str | int] | None, optional
+        Additional keyword arguments to pass to the vcov function. These keywords include
         "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+        identifier used for NW and DK standard errors. Currently, the time difference between consecutive time
+        periods is always treated as 1. More flexible time-step selection is work in progress.
 
-    weights : Union[None, str], optional.
-        Default is None. Weights for WLS estimation. If None, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
+    weights : str | None, optional
+        Default is None. Name of the column in `data` that contains the
+        observation weights. If None, all observations are weighted equally.
 
-    ssc : str
-        A ssc object specifying the small sample correction for inference.
+    ssc : Ssc | Mapping[str, Any] | None, optional
+        Small sample correction for inference, created with `pf.ssc()`.
+        If None, uses the default settings of `pf.ssc()`.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixedRmOptions, optional
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "singleton" (default),
-        or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
+        Can be equal to "singleton" (default) or "none".
+        "singleton" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -110,11 +110,9 @@ def feols(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
-        For example, the input data set is re-index within the function.
-        As far as I know, the only other relevant case is
-        when using interacted fixed effects, in which case you'll find
-        a column with interacted fixed effects in the data set.
+        may lead to unintended changes in the input data outside of the
+        estimation function. For example, the input data set is re-indexed
+        within the function, and interacted fixed effects add a column to it.
 
     store_data : bool, optional
         Whether to store the data in the model object, by default True.
@@ -132,12 +130,13 @@ def feols(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
-    weights_type: WeightsTypeOptions, optional
-        Options include `aweights` or `fweights`. `aweights` implement analytic or
-        precision weights, while `fweights` implement frequency weights. For details
-        see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
+    weights_type : WeightsTypeOptions, optional
+        Options include `aweights` (the default) or `fweights`. `aweights` implement analytic or
+        precision weights, while `fweights` implement frequency weights. Frequency weights
+        are useful for compressed data where identical observations are aggregated.
+        For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
-    solver : SolverOptions, optional.
+    solver : SolverOptions, optional
         The solver to use for the regression. Can be "np.linalg.lstsq",
         "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
         Defaults to "scipy.linalg.solve".
@@ -167,24 +166,28 @@ def feols(
             out-of-memory regression on large datasets, consider using the
             `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
-    reps: int
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    reps : int | None, optional
+        .. deprecated::
+            ``reps`` has no effect since compressed regression was removed and
+            will be removed in a future release. Passing it emits a ``FutureWarning``.
 
-    context : int or Mapping[str, Any]
+    context : int | Mapping[str, Any] | None, optional
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
         custom factorization functions, transformations, or any other
         variables that need to be available in the formula environment.
 
-    seed: Optional[int]
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    seed : int | None, optional
+        .. deprecated::
+            ``seed`` has no effect since compressed regression was removed and
+            will be removed in a future release. Passing it emits a ``FutureWarning``.
 
-    split: Optional[str]
+    split : str | None, optional
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
         to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit: Optional[str]
+    fsplit : str | None, optional
         This argument is the same as split but also includes the full sample as the first estimation.
 
     Returns
@@ -512,6 +515,9 @@ def feols(
     _warn_if_experimental_torch_demeaner(demeaner)
     _warn_if_deprecated_demeaner_backend(demeaner)
 
+    _warn_ignored_arguments(
+        "feols", "compressed regression was removed", reps=reps, seed=seed
+    )
     if not isinstance(use_compression, bool):
         raise TypeError("The function argument `use_compression` must be of type bool.")
 
@@ -527,8 +533,6 @@ def feols(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        reps=reps,
-        seed=seed,
         split=split,
         fsplit=fsplit,
     )

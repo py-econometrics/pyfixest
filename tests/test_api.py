@@ -1,3 +1,8 @@
+import ast
+import inspect
+import re
+from collections import Counter
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -162,6 +167,95 @@ def test_demeaner_backend_scipy_emits_deprecation_warning():
             pf.LsmrDemeaner(backend="cupy", device="cpu")
         )
     assert any("default within backend" in str(r.message) for r in rec)
+
+
+@pytest.mark.parametrize(
+    "estimate, kwargs, match",
+    [
+        (pf.feols, {"reps": 100}, r"`reps` has no effect in `feols\(\)`"),
+        (pf.feols, {"seed": 1}, r"`seed` has no effect in `feols\(\)`"),
+        (pf.feols, {"reps": 100, "seed": 1}, r"`reps` and `seed` have no effect"),
+        (
+            pf.quantreg,
+            {"separation_check": ["fe"]},
+            r"`separation_check` has no effect in `quantreg\(\)`",
+        ),
+    ],
+)
+def test_ignored_arguments_emit_future_warning(estimate, kwargs, match):
+    with pytest.warns(FutureWarning, match=match):
+        estimate("Y ~ X1", data=pf.get_data(), **kwargs)
+
+
+_ENTRY_POINTS = {
+    "feols": pf.feols,
+    "fepois": pf.fepois,
+    "feglm": pf.feglm,
+    "quantreg": pf.quantreg,
+}
+# Shared parameters whose meaning differs by estimator, and the entry points
+# that document them in their own words.
+_OWN_DOCSTRING_BLOCKS = {
+    "fml": {"feols", "quantreg"},  # IV syntax; no fixed effects
+    "vcov": {"quantreg"},  # quantile-specific estimators
+    "ssc": {"quantreg"},  # note on R quantreg and Stata qreg2
+    "offset": {"feglm"},  # Poisson only
+    "separation_check": {"quantreg"},  # deprecated no-op
+    "seed": {"feols"},  # deprecated no-op
+}
+_OWN_SIGNATURE_DEFAULTS = {"vcov": {"quantreg"}}  # "nid" instead of "iid"
+_DOCUMENTED_DEFAULT = re.compile(r"(?:by default|Defaults to)\s+(\S+)")
+
+
+def _parameter_docs(func) -> dict[str, str]:
+    doc = inspect.getdoc(func)
+    section = doc.split("Parameters\n----------\n", 1)[1].split("\nReturns\n", 1)[0]
+    blocks = re.split(r"\n(?=\w+\s*:)", section.strip())
+    return {re.match(r"\w+", block).group(): block.strip() for block in blocks}
+
+
+def _shared_parameters() -> list[str]:
+    counts = Counter(
+        parameter
+        for func in _ENTRY_POINTS.values()
+        for parameter in inspect.signature(func).parameters
+    )
+    return sorted(parameter for parameter, n in counts.items() if n > 1)
+
+
+@pytest.mark.parametrize("entry_point", _ENTRY_POINTS)
+def test_entry_point_documents_its_parameters(entry_point):
+    func = _ENTRY_POINTS[entry_point]
+    parameters = inspect.signature(func).parameters
+    docs = _parameter_docs(func)
+    assert list(docs) == list(parameters)
+
+    for parameter, block in docs.items():
+        for token in _DOCUMENTED_DEFAULT.findall(" ".join(block.split())):
+            try:
+                documented = ast.literal_eval(token.rstrip(".,"))
+            except (ValueError, SyntaxError):
+                continue  # prose such as `pf.ssc()`
+            assert documented == parameters[parameter].default, parameter
+
+
+@pytest.mark.parametrize("parameter", _shared_parameters())
+def test_shared_parameters_stay_in_sync(parameter):
+    docs = {}
+    signatures = {}
+    for name, func in _ENTRY_POINTS.items():
+        signature = inspect.signature(func).parameters
+        if parameter not in signature:
+            continue
+        if name not in _OWN_DOCSTRING_BLOCKS.get(parameter, set()):
+            docs[name] = _parameter_docs(func)[parameter]
+        if name not in _OWN_SIGNATURE_DEFAULTS.get(parameter, set()):
+            signatures[name] = (
+                signature[parameter].annotation,
+                signature[parameter].default,
+            )
+    assert len(set(docs.values())) <= 1, docs
+    assert len(set(signatures.values())) <= 1, signatures
 
 
 @pytest.mark.parametrize(

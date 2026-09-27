@@ -906,15 +906,6 @@ def test_errors_compressed():
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=1)  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=1.2)
-
-    with pytest.raises(ValueError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", reps=-1)
-
-    with pytest.raises(TypeError):
-        pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
-
 
 def test_errors_panelview():
     """Test all ValueError conditions in panelview."""

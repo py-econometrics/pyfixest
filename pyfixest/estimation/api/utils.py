@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -31,6 +32,19 @@ def _resolve_vcov(
     )
 
 
+def _warn_ignored_arguments(function: str, reason: str, **arguments: object) -> None:
+    """Warn that the passed (non-None) `arguments` of `function` have no effect."""
+    passed = [f"`{name}`" for name, value in arguments.items() if value is not None]
+    if passed:
+        warnings.warn(
+            f"{' and '.join(passed)} {'has' if len(passed) == 1 else 'have'} no "
+            f"effect in `{function}()` ({reason}) and will be removed in a future "
+            "release.",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
@@ -43,8 +57,6 @@ def _estimation_input_checks(
     store_data: bool,
     lean: bool,
     weights_type: str,
-    reps: int | None,
-    seed: int | None,
     split: str | None,
     fsplit: str | None,
     separation_check: list[str] | None = None,
@@ -85,16 +97,6 @@ def _estimation_input_checks(
             (for frequency weights) but it is {weights_type}.
             """
         )
-
-    if reps is not None:
-        if not isinstance(reps, int):
-            raise TypeError("The function argument `reps` must be of type int.")
-
-        if reps <= 0:
-            raise ValueError("The function argument `reps` must be strictly positive.")
-
-    if seed is not None and not isinstance(seed, int):
-        raise TypeError("The function argument `seed` must be of type int.")
 
     if split is not None and not isinstance(split, str):
         raise TypeError("The function argument split needs to be of type str.")

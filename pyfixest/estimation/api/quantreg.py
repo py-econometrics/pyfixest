@@ -8,6 +8,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _warn_ignored_arguments,
 )
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.internals.literals import (
@@ -84,6 +85,16 @@ def quantreg(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
+    vcov : VcovTypeOptions | dict[str, str] | None, optional
+        Type of variance-covariance matrix for inference. Currently supported are
+        "iid", "nid", and cluster robust errors, "nid" by default.
+        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
+        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
+        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
+        Cluster robust inference
+        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
+        Only one-way clustering is supported.
+
     quantile : float or list[float]
         The quantile to estimate, or a list of quantiles fitted jointly as a
         quantile regression process. Each must be between 0 and 1.
@@ -114,27 +125,19 @@ def quantreg(
         The maximum number of iterations. If None, maxiter = the number of observations in the model
         (as in R's quantreg package via nit(3) = n).
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Currently supported are
-        "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
-        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
-        Cluster robust inference
-        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
-        Only one-way clustering is supported.
-
-    ssc : dict[str, Union[str, bool]], optional
-        A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set
+    ssc : Ssc | Mapping[str, Any] | None, optional
+        Small sample correction for inference, created with `pf.ssc()`.
+        If None, uses the default settings of `pf.ssc()`. Note that by default, R's quantreg
+        and Stata's qreg2 do not use small sample corrections. To match their behavior, set
         `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
-    separation_check : list[str], optional
-        Methods to identify and drop separated observations. Not used in quantile regression.
+    separation_check : list[str] | None, optional
+        .. deprecated::
+            ``separation_check`` has no effect in quantile regression and will be
+            removed in a future release. Passing it emits a ``FutureWarning``.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -142,7 +145,9 @@ def quantreg(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default True.
         If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `quantreg`.
+        may lead to unintended changes in the input data outside of the
+        estimation function. For example, the input data set is re-indexed
+        within the function, and interacted fixed effects add a column to it.
 
     store_data : bool, optional
         Whether to store the data in the model object, by default True.
@@ -160,21 +165,21 @@ def quantreg(
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
-    context : int or Mapping[str, Any], optional
+    context : int | Mapping[str, Any] | None, optional
         A dictionary containing additional context variables to be used by
         formulaic during the creation of the model matrix. This can include
         custom factorization functions, transformations, or any other
         variables that need to be available in the formula environment.
 
-    split : str, optional
+    split : str | None, optional
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
         to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit : str, optional
+    fsplit : str | None, optional
         This argument is the same as split but also includes the full sample as the first estimation.
 
-    seed: int, optional
+    seed : int | None, optional
         A random seed for reproducibility. If None, no seed is set.
         Only relevant for the "pfn" method.
         The "fn" method is deterministic and does not require a seed.
@@ -238,6 +243,11 @@ def quantreg(
     vcov_spec = _resolve_vcov(vcov, None)
 
     _quantreg_input_checks(quantile, tol, maxiter)
+    _warn_ignored_arguments(
+        "quantreg",
+        "quantile regression does not check for separation",
+        separation_check=separation_check,
+    )
 
     _estimation_input_checks(
         fml=fml,
@@ -251,11 +261,8 @@ def quantreg(
         store_data=store_data,
         lean=lean,
         weights_type=weights_type,
-        reps=None,
-        seed=None,
         split=split,
         fsplit=fsplit,
-        separation_check=separation_check,
     )
 
     options = QuantregEstimationOptions(
