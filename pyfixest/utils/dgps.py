@@ -268,12 +268,6 @@ def get_blw():
     return blw
 
 
-# convert this into a single assignment
-
-treat_effect_vector_1 = np.log(2 * np.arange(1, 30 - 15 + 1))
-treat_effect_vector_1[8:] = 0
-
-
 def get_sharkfin(
     num_units=1000,
     num_periods=30,
