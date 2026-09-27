@@ -279,8 +279,8 @@ class Feiv(Feols):
                 self.options,
                 # `_data` is already the second stage's sample; keep every row
                 drop_singletons=False,
-                # `first_stage` reads within data and residuals;
-                # `_clear_attributes()` applies `lean` afterwards
+                # within data and residuals are used later in `FirstStage` below
+                # and will be deleted in `Feiv._clear_attributes()`
                 lean=False,
                 demeaner=demeaner,
             ),
