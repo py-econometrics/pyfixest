@@ -14,8 +14,7 @@ from pyfixest.estimation.internals.model_state import EstimationOptions, VcovSpe
 class QuantileProcess:
     """The quantiles one ``quantreg()`` call fits jointly, and the algorithm.
 
-    Each child fit carries its own quantile in its options; the fan-out itself
-    is not an option of any single fit.
+    Each child fit carries its own quantile in its options.
     """
 
     quantiles: list[float]
@@ -24,12 +23,25 @@ class QuantileProcess:
 
 @dataclass(frozen=True)
 class EstimationConfig:
-    """Immutable record of what one call of a public estimation function requests.
+    """Everything a user asked for in one call to `feols()`, `feglm()`, etc.
 
-    The API function validates its arguments and builds the typed values:
-    `options` is the value every fitted model publishes, and `vcov` is the
-    parsed covariance estimator. The remaining fields say which model class
-    to dispatch to and how the call expands into several models.
+    The API function checks the user's arguments and stores the cleaned-up
+    values here; the runner then fits models from this record alone.
+
+    Attributes
+    ----------
+    method
+        Which kind of model to fit, e.g. "feols" or "fepois".
+    data, fml
+        The user's data and formula.
+    options
+        The estimation settings. Every fitted model keeps a copy.
+    vcov
+        The parsed variance-covariance choice.
+    split, fsplit
+        Optional variable to fit the model separately by group.
+    quantile_process
+        For `quantreg()` with several quantiles only.
     """
 
     method: EstimationMethod

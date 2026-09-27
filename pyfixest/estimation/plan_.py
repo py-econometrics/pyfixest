@@ -31,13 +31,19 @@ from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 
 @dataclass(frozen=True)
 class ModelEntry:
-    """One row in the model registry.
+    """How to build the model for one estimation method.
 
-    `model_cls` is the class to instantiate and `options_cls` the
-    `EstimationOptions` flavour its constructor takes; the estimation
-    function builds that options value. `iv_model_cls` replaces `model_cls`
-    for formulas with a first stage. `accepts_preconditioner` records wiring
-    that the options class alone does not express.
+    Attributes
+    ----------
+    model_cls
+        The model class to create, e.g. `Feols`.
+    options_cls
+        The type of options the model expects, e.g. `GlmEstimationOptions`
+        for GLMs.
+    iv_model_cls
+        The model class to use instead when the formula has an IV part.
+    accepts_preconditioner
+        Whether the model can reuse the runner's shared preconditioner cache.
     """
 
     model_cls: ModelFactory
