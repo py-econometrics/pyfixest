@@ -212,7 +212,7 @@ We can compare with the previous results:
 pf.etable([fit_difference_in_means, fit_cuped])
 ```
 
-Point estimates for the difference-in-means estimator is 0.762, while it is 0.192 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a regression model with covariates, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
+Point estimates for the difference-in-means estimator is -0.536, while it is 0.201 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a regression model with covariates, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
 
 ## Panel Estimator
 
