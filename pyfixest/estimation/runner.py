@@ -58,9 +58,7 @@ def run_estimation(
     data = _prepare_data(config)
     run_full, run_split, splitvar = _split_plan(config)
 
-    fixest = FixestMulti(
-        config=config, parsed=parsed, data=data, context=config.options.context
-    )
+    fixest = FixestMulti(formula_dict=parsed.formula_dict)
 
     all_splits = build_all_splits(
         run_full=run_full,
