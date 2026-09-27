@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import replace
-from functools import partial
-from importlib import import_module
 from typing import Any
 
 import pandas as pd
@@ -13,6 +10,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
+from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     GlmEstimationOptions,
     ModelDescription,
@@ -107,11 +105,9 @@ class Fepois(Feglm):
         """Name the Poisson estimation function."""
         return replace(super()._describe_model(**kwargs), method="fepois")
 
-    def _refit_estimator(self) -> Callable[..., Any]:
-        "Return `fepois` with this fit's estimation options bound, for refits."
-        # lazy loading to avoid circular import
-        fepois = import_module("pyfixest.estimation").fepois
-        return partial(fepois, **self._refit_kwargs())
+    def _refit_method(self) -> EstimationMethod:
+        "Name the estimation method that leave-out and resampled refits run."
+        return "fepois"
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add the Poisson likelihood measures."

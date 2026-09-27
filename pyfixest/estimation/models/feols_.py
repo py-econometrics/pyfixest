@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable
 from dataclasses import replace
-from functools import partial
 from importlib import import_module
-from typing import Any, Literal, cast, overload
+from typing import Literal, cast, overload
 
 import formulaic
 import numpy as np
@@ -19,6 +17,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -35,10 +34,12 @@ from pyfixest.estimation.internals.fit_statistics import (
     linear_fit_statistics,
 )
 from pyfixest.estimation.internals.literals import (
+    EstimationMethod,
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
+    VcovTypeOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
@@ -843,58 +844,61 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _refit_estimator(self) -> Callable[..., Any]:
-        """Return `feols` with this fit's estimation options bound, for refits.
+    def _refit_method(self) -> EstimationMethod:
+        "Name the estimation method that leave-out and resampled refits run."
+        return "feols"
 
-        Leave-one-cluster-out (CRV3) and resampled (``ritest``) refits call the
-        returned function with ``fml``, ``data`` and ``vcov`` only; every other
-        argument comes from `_refit_kwargs`.
-        """
-        # lazy loading to avoid circular import
-        feols = import_module("pyfixest.estimation").feols
-        return partial(feols, **self._refit_kwargs())
+    def _refit(
+        self,
+        *,
+        fml: str,
+        data: pd.DataFrame,
+        vcov: VcovTypeOptions | dict[str, str],
+    ) -> Feols:
+        """Refit this model's estimator on other data with its estimation options.
 
-    def _refit_kwargs(self) -> dict[str, Any]:
-        """Map the fitted model's `options` to keyword arguments of a refit.
+        Leave-one-cluster-out (CRV3) and resampled (``ritest``) refits pass
+        the fitted model's `options` to the estimation pipeline, so every
+        option replays without a list to maintain. The caller chooses the
+        formula, data and covariance; the data is already this model's
+        sample, so there is no split. Two options are replaced:
 
-        This is the single refit contract: a refit through `_refit_estimator`
-        replays every option that can change the estimates. Deliberately not
-        inherited are:
-
-        - ``vcov`` and ``vcov_kwargs``: each caller chooses the refit's
-          covariance.
-        - ``split`` and ``fsplit``: the refit data is already this model's
-          sample.
-        - ``store_data`` and ``lean``: callers read only coefficients and
-          t-statistics.
-        - ``copy_data``: a refit copies its input, so the in-place row drops of
-          ``copy_data=False`` never reach the caller's frame.
+        - ``copy_data``: the refit copies its input, so the in-place row drops
+          of ``copy_data=False`` never reach the caller's frame.
         - A prebuilt `Preconditioner` on an `LsmrDemeaner`: it is built for the
           full sample's fixed-effect design, which a leave-out or resampled
           sample need not share. The refit builds a fresh preconditioner of the
           same variant instead.
         """
-        options = self.options
-        return {
-            "weights": options.weights,
-            "weights_type": options.weights_type,
-            "ssc": options.ssc,
-            "fixef_rm": "singleton" if options.drop_singletons else "none",
-            "drop_intercept": options.drop_intercept,
-            "collin_tol": options.collin_tol,
-            "solver": options.solver,
-            "demeaner": _without_prebuilt_preconditioner(options.demeaner),
-            "context": options.context,
-        }
+        method = self._refit_method()
+        # lazy loading to avoid circular import
+        from pyfixest.estimation.plan_ import parse_formula
+        from pyfixest.estimation.runner import run_estimation
+
+        options = replace(
+            self.options,
+            copy_data=True,
+            demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
+        )
+        config = EstimationConfig(
+            method=method,
+            data=data,
+            fml=fml,
+            options=options,
+            vcov=VcovSpec.from_user_input(vcov),
+        )
+        fit = run_estimation(config, parse_formula(config))
+        if not isinstance(fit, Feols):
+            raise TypeError(f"A refit must return a single model, not {fit!r}.")
+        return fit
 
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = fit_(fml=self.model.formula, data=data, vcov="iid")
+            fit = self._refit(fml=self.model.formula, data=data, vcov="iid")
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)
@@ -2127,7 +2131,7 @@ class Feols(ResultAccessorMixin):
                 vcov=vcov_input,
                 type=type,
                 rng=rng,
-                fit_fn=self._refit_estimator(),
+                fit_fn=self._refit,
             )
 
         else:

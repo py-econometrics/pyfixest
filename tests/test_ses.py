@@ -1,4 +1,5 @@
-from dataclasses import fields
+from dataclasses import fields, replace
+from inspect import signature
 
 import numpy as np
 import pytest
@@ -307,8 +308,8 @@ def test_crv3_refits_replay_estimation_options(data_offset, estimator, fml, opti
 
 
 @pytest.mark.parametrize("estimator", [feols, fepois])
-def test_refit_estimator_replays_options(data_offset, estimator):
-    "Leave-out and resampled refits inherit every option except the retention ones."
+def test_refit_replays_options(data_offset, estimator):
+    "Leave-out and resampled refits reuse the fit's options; only copy_data is forced."
     fml = "Y ~ log1p_abs(X1) + X2 | f3"
     options = {
         "weights": "weights",
@@ -318,6 +319,8 @@ def test_refit_estimator_replays_options(data_offset, estimator):
         "solver": "np.linalg.solve",
         "demeaner": MapDemeaner(fixef_tol=1e-9),
         "context": {"log1p_abs": _log1p_abs},
+        "copy_data": False,
+        "lean": True,
     }
     if estimator is fepois:
         options |= {
@@ -327,19 +330,45 @@ def test_refit_estimator_replays_options(data_offset, estimator):
             "separation_check": ["fe"],
             "accelerate": False,
         }
-    fit = estimator(fml, data=data_offset, **options)
+    fit = estimator(fml, data=data_offset.copy(), **options)
 
-    refit = fit._refit_estimator()(fml=fml, data=data_offset, vcov="iid")
+    refit = fit._refit(fml=fml, data=data_offset, vcov="iid")
 
-    not_inherited = {"store_data", "copy_data", "lean"}
-    for option in fields(fit.options):
-        if option.name not in not_inherited:
-            assert getattr(refit.options, option.name) == getattr(
-                fit.options, option.name
-            ), option.name
+    assert refit.options == replace(fit.options, copy_data=True)
     np.testing.assert_allclose(
         refit.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
     )
+
+
+# estimation arguments that are not options of a single fit: the caller of a
+# refit chooses the formula, data and covariance, the refit data is already one
+# model's sample, and the compression arguments are deprecated
+_ARGUMENTS_OUTSIDE_OPTIONS = {
+    "fml",
+    "data",
+    "vcov",
+    "vcov_kwargs",
+    "split",
+    "fsplit",
+    "use_compression",
+    "reps",
+    "seed",
+}
+_OPTION_OF_ARGUMENT = {
+    "fixef_rm": "drop_singletons",
+    "iwls_tol": "tol",
+    "iwls_maxiter": "maxiter",
+}
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+def test_estimation_arguments_reach_options(data_offset, estimator):
+    "Refits replay `fit.options`, so every other estimation argument must land there."
+    fit = estimator("Y ~ X1", data=data_offset)
+    arguments = set(signature(estimator).parameters) - _ARGUMENTS_OUTSIDE_OPTIONS
+
+    option_names = {option.name for option in fields(fit.options)}
+    assert {_OPTION_OF_ARGUMENT.get(a, a) for a in arguments} <= option_names
 
 
 @pytest.mark.parametrize("variant", ["additive", "diagonal"])

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, cast
 
@@ -14,7 +13,10 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
-from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
+from pyfixest.estimation.internals.literals import (
+    EstimationMethod,
+    HeteroVcovTypeOptions,
+)
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
@@ -113,27 +115,11 @@ class Feglm(Feols):
             inference_dist=self._family.inference_dist,
         )
 
-    def _refit_kwargs(self) -> dict[str, Any]:
-        """Extend the linear refit contract with the offset and IRLS options.
-
-        The family is not an option: the refit function returned by
-        `_refit_estimator` fixes it, which is why only `Fepois` enables refits.
-        """
-        options = self.options
-        return {
-            **super()._refit_kwargs(),
-            "offset": options.offset,
-            "iwls_tol": options.tol,
-            "iwls_maxiter": options.maxiter,
-            "separation_check": options.separation_check,
-            "accelerate": options.accelerate,
-        }
-
-    def _refit_estimator(self) -> Callable[..., Any]:
-        "Refuse refits: `feglm` refits cannot yet replay the family."
+    def _refit_method(self) -> EstimationMethod:
+        "Refuse refits: `feglm` CRV3 and ritest lack an external numerical reference."
         raise NotImplementedError(
             f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
-            "models: a refit cannot yet replay their estimation contract."
+            "models: they are not yet validated against an external reference."
         )
 
     def prepare_model_matrix(self) -> ModelMatrix:

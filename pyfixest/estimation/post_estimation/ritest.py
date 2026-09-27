@@ -61,10 +61,9 @@ def _get_ritest_stats_slow(
     reps : int
         The number of repetitions.
     fit_fn : Callable[..., Any]
-        The public estimation function that refits the model on each resampled
-        data set, with the fitted model's estimation options bound, as returned
-        by the model's `_refit_estimator()`. It is called with the formula,
-        `data` and `vcov` only.
+        Refits the model on each resampled data set with the fitted model's
+        estimation options, such as the model's `_refit` method. It is called
+        with the keyword arguments `fml`, `data` and `vcov` only.
     rng : np.random.Generator
         The random number generator.
     vcov : str or dict[str, str]
@@ -96,7 +95,7 @@ def _get_ritest_stats_slow(
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
 
-        fixest_fit = fit_fn(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_fn(fml=fml_update, data=data_resampled, vcov=vcov)
         if type == "randomization-c":
             ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:

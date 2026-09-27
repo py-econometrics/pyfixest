@@ -10,7 +10,10 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.literals import QuantregMethodOptions
+from pyfixest.estimation.internals.literals import (
+    EstimationMethod,
+    QuantregMethodOptions,
+)
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     ModelDescription,
@@ -161,11 +164,11 @@ class Quantreg(Feols):
             model_name=f"{description.model_name} (q = {self.options.quantile})",
         )
 
-    def _refit_estimator(self) -> Callable[..., Any]:
-        "Refuse refits: `quantreg` refits cannot yet replay the quantile and solver."
+    def _refit_method(self) -> EstimationMethod:
+        "Refuse refits: `quantreg` CRV3 and ritest lack an external numerical reference."
         raise NotImplementedError(
             f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
-            "models: a refit cannot yet replay their estimation contract."
+            "models: they are not yet validated against an external reference."
         )
 
     def to_array(self):
