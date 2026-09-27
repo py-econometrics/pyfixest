@@ -23,7 +23,6 @@ from pyfixest.estimation.internals.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.estimation.internals.model_state import EstimationOptions
-from pyfixest.estimation.internals.retention import apply_retention
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
@@ -568,4 +567,4 @@ def feols(
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed, on_fit=apply_retention)
+    return run_estimation(config, parsed, apply_retention=True)

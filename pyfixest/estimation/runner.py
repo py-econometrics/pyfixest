@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 import pandas as pd
@@ -48,7 +47,7 @@ def run_estimation(
     config: EstimationConfig,
     parsed: ParsedFormula,
     *,
-    on_fit: Callable[[Feols], None] | None = None,
+    apply_retention: bool,
 ) -> Feols | Fepois | Feiv | FixestMulti:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
@@ -58,10 +57,10 @@ def run_estimation(
     each `cache_key` block), and returns either the multi-object or the
     single fitted model.
 
-    `on_fit` runs on each fitted model before the next one is fitted. The
-    estimation functions apply the storage options there, so a multiple
-    estimation never holds every model's full state at once; without it the
-    models are returned complete.
+    With `apply_retention`, each model drops the state its `store_data` and
+    `lean` options omit as soon as it is fitted, so a multiple estimation
+    never holds every model's full state at once. The estimation functions
+    set it; refits leave it off and get complete models.
     """
     data = _prepare_data(config)
     run_full, run_split, splitvar = _split_plan(config)
@@ -103,8 +102,8 @@ def run_estimation(
         )
 
         for fitted_result in FIT._iter_fitted_models():
-            if on_fit is not None:
-                on_fit(fitted_result)
+            if apply_retention:
+                fitted_result._clear_attributes()
             fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
 
     if parsed.is_multiple_estimation:

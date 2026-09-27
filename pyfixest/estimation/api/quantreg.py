@@ -19,7 +19,6 @@ from pyfixest.estimation.internals.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.estimation.internals.model_state import QuantregEstimationOptions
-from pyfixest.estimation.internals.retention import apply_retention
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
@@ -300,4 +299,4 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed, on_fit=apply_retention)
+    return run_estimation(config, parsed, apply_retention=True)

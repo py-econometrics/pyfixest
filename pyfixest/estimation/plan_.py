@@ -259,8 +259,8 @@ def fit_one(
     """Run the full fit pipeline for one model spec.
 
     Constructs the model class and runs prepare → fit → vcov → inference.
-    The model keeps all its state; `run_estimation` hands it to the caller's
-    `on_fit`, where the estimation functions apply the storage options.
+    The model keeps all its state; `run_estimation` applies the storage
+    options when its caller asks for it.
     `vcov` was parsed at the API boundary; the model rejects an estimator it
     does not support before fitting.
     The two per-cache-block dicts are injected here so they're shared

@@ -26,7 +26,6 @@ from pyfixest.estimation.internals.literals import (
     _validate_literal_argument,
 )
 from pyfixest.estimation.internals.model_state import GlmEstimationOptions
-from pyfixest.estimation.internals.retention import apply_retention
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import parse_formula
@@ -367,4 +366,4 @@ def feglm(
     if parsed.is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    return run_estimation(config, parsed, on_fit=apply_retention)
+    return run_estimation(config, parsed, apply_retention=True)

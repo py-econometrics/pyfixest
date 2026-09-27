@@ -881,7 +881,8 @@ class Feols(ResultAccessorMixin):
             options=options,
             vcov=vcov,
         )
-        fit = run_estimation(config, parse_formula(config))
+        # a refit is thrown away or read in full, so it keeps all its state
+        fit = run_estimation(config, parse_formula(config), apply_retention=False)
         if not isinstance(fit, Feols):
             raise TypeError(f"A refit must return a single model, not {fit!r}.")
         return fit
