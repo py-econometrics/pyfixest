@@ -78,7 +78,9 @@ def _get_ritest_stats_slow(
         `type` is 'randomization-c', otherwise t-statistics are returned.
 
     """
-    data_resampled = data.copy()
+    # the resampled column goes into a shallow copy, so `data` keeps its
+    # columns; `fit_fn` must not modify its input
+    data_resampled = data.copy(deep=False)
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
     resampvar_arr = data_resampled[resampvar].to_numpy()

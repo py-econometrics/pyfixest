@@ -2,6 +2,7 @@ from dataclasses import fields, replace
 from inspect import signature
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
@@ -337,6 +338,28 @@ def test_refit_replays_options(data_offset, estimator):
     np.testing.assert_allclose(
         refit.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
     )
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+def test_refits_leave_data_untouched(estimator):
+    "CRV3 and ritest refits modify neither the fit's sample nor the user's frame."
+    # a non-default index would expose an in-place index reset
+    data = get_data(model="Fepois").dropna()
+    data.index = data.index * 2 + 5
+    fit = estimator("Y ~ X1 + X2 | f1", data=data, copy_data=False)
+    # copy_data=False lets the original fit reset the index; refits must not
+    data_before = data.copy()
+    sample_before = fit._data.copy()
+
+    fit.vcov({"CRV3": "f2"})
+    fit.ritest("X1", reps=2, choose_algorithm="slow", rng=np.random.default_rng(1))
+
+    pd.testing.assert_frame_equal(fit._data, sample_before)
+    pd.testing.assert_frame_equal(data, data_before)
+    refit_data = fit._data[fit._data["f2"] != fit._data["f2"].iloc[0]]
+    refit_before = refit_data.copy()
+    fit._refit(fml=fit.model.formula, data=refit_data, vcov="iid")
+    pd.testing.assert_frame_equal(refit_data, refit_before)
 
 
 # estimation arguments that are not options of a single fit: the caller of a

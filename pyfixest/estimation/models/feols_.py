@@ -852,19 +852,7 @@ class Feols(ResultAccessorMixin):
     ) -> Feols:
         """Refit this model's estimator on other data with its estimation options.
 
-        Leave-one-cluster-out (CRV3) and resampled (``ritest``) refits pass
-        the fitted model's `options` to the estimation pipeline, so every
-        option replays without a list to maintain. The caller chooses the
-        formula, data and covariance; the data is already this model's
-        sample, so there is no split. Callers check the model's
-        `capabilities` first. Two options are replaced:
-
-        - ``copy_data`` is off: the caller builds the refit frame for this
-          refit alone, so copying it would only cost memory and time.
-        - A prebuilt `Preconditioner` on an `LsmrDemeaner`: it is built for the
-          full sample's fixed-effect design, which a leave-out or resampled
-          sample need not share. The refit builds a fresh preconditioner of the
-          same variant instead.
+        `data` is never modified.
         """
         # lazy loading to avoid circular import
         from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
@@ -872,12 +860,18 @@ class Feols(ResultAccessorMixin):
 
         options = replace(
             self.options,
+            # the shallow copy below keeps `data` intact without a deep copy
             copy_data=False,
+            # the preconditioner was built on other data for CRV3 and must be rebuilt
+            # TODO(PYF-19): ritest keeps the sample and could reuse it
             demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
         )
         config = EstimationConfig(
             method=estimation_method_of(type(self)),
-            data=data,
+            # a shallow copy absorbs the runner's in-place index reset; the
+            # model copies (or copy-on-write isolates) the frame before any
+            # other write
+            data=data.copy(deep=False),
             fml=fml,
             options=options,
             vcov=VcovSpec.from_user_input(vcov),
