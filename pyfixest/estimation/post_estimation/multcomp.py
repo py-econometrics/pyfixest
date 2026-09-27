@@ -360,17 +360,13 @@ def _multcomp_resample(
             )
             p_vals[i] = 2 * (1 - t.cdf(np.abs(t_stats[i]), _df[i]))
             boot_p_vals[:, i] = 2 * (1 - t.cdf(np.abs(boot_t_stats[:, i]), _df[i]))
-        elif type == "rwolf":
-            pass
 
     if type == "rwolf":
         pval = _get_rwolf_pval(t_stats, boot_t_stats)
         all_model_stats.loc["RW Pr(>|t|)"] = pval
-    elif type == "wyoung":
+    else:
         pval = _get_wyoung_pval(p_vals, boot_p_vals)
         all_model_stats.loc["WY Pr(>|t|)"] = pval
-    else:
-        raise ValueError("Invalid adjustment procedure specified")
 
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats

@@ -23,6 +23,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- `FixestMulti.FixestFormulaDict` is deprecated and emits a `FutureWarning`; read `fit.model.fixest_formula` from the models returned by `to_list()` instead. `FixestMulti` no longer retains the estimation config, the parsed formula, the input data, or the formula context, and its unread `_is_iv` and `_is_multiple_estimation` properties are removed.
+- Removed unused internal helpers: five functions in `pyfixest.utils.dev_utils` (`docstring_from`, `_check_series_or_dataframe`, `_to_list`, `_drop_cols`, `_extract_variable_level`), `pyfixest.utils.utils._check_balanced`, `pyfixest.utils._exceptions.find_stack_level`, and `pyfixest.utils.set_rpy2_path`, which modified R library paths as a side effect of being imported.
 - `decompose()` now raises `ValueError` on a fit with multiway clustering instead of silently bootstrapping on the first cluster variable only; pass a single `cluster` to choose the bootstrap dimension.
 - Removed the deprecated `FixestFormulaParser` class and `model_matrix_fixest()` function (deprecated since 0.50.0; use `Formula.parse()` and `create_model_matrix()`), together with the `pyfixest.estimation.deprecated` package and the `pyfixest.estimation.feols_`, `feiv_`, and `fepois_` import shims. Import `Feols`, `Feiv`, and `Fepois` from `pyfixest` or `pyfixest.estimation.models`.
 - IV diagnostics now compute the heteroskedasticity-robust effective F-statistic without replacing the retained first-stage covariance, so its original F-statistic and inference remain available.

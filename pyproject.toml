@@ -166,9 +166,8 @@ docstring-code-line-length = 88
 replace-imports-with-any = ["formulaic", "formulaic.**"]
 [tool.ty.src]
 # rpy2 is only available in the optional `r` pixi feature, not the `py312` env
-# ty runs in; these two files exist solely to support against-R test fixtures.
+# ty runs in; this file exists solely to support against-R test fixtures.
 exclude = [
-    "pyfixest/utils/set_rpy2_path.py",
     "pyfixest/utils/check_r_install.py",
 ]
 
