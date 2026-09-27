@@ -1,16 +1,15 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
-from typing import Any
 
 import pandas as pd
 
-from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.plan_ import ParsedFormula
 
 
 class FixestMulti(TidyColumnAccessors):
@@ -44,48 +43,31 @@ class FixestMulti(TidyColumnAccessors):
     """
 
     def __init__(
-        self,
-        *,
-        config: EstimationConfig,
-        parsed: ParsedFormula,
-        data: pd.DataFrame,
-        context: Mapping[str, Any],
+        self, *, formula_dict: Mapping[str | None, list[FixestFormula]]
     ) -> None:
         """.
 
         Parameters
         ----------
-        config : EstimationConfig
-            Immutable record of every option the public API requested.
-        parsed : ParsedFormula
-            Result of `plan_.parse_formula(config)`.
-        data : pandas.DataFrame
-            The input data after narwhals→pandas conversion, optional copy,
-            and index reset.
-        context : Mapping[str, Any]
-            Captured evaluation scope (from `capture_context`).
+        formula_dict : Mapping[str | None, list[FixestFormula]]
+            The parsed formulas keyed by fixed-effects spec, kept only for the
+            deprecated `FixestFormulaDict` attribute.
         """
-        self._config = config
-        self._parsed = parsed
-        self._data = data
-        self._context = context
+        self._formula_dict = formula_dict
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
     @property
-    def _is_iv(self) -> bool:
-        """Whether the call expanded into an IV model."""
-        return self._parsed.is_iv
-
-    @property
-    def _is_multiple_estimation(self) -> bool:
-        """Whether the call expanded into more than one model."""
-        return self._parsed.is_multiple_estimation
-
-    @property
-    def FixestFormulaDict(self):
-        """Parsed formula dict keyed by fixed-effects spec."""
-        return self._parsed.formula_dict
+    def FixestFormulaDict(self) -> Mapping[str | None, list[FixestFormula]]:
+        """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
+        warnings.warn(
+            "`FixestFormulaDict` is deprecated and will be removed in a future "
+            "release. Use `fit.model.fixest_formula` on the models returned by "
+            "`to_list()` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._formula_dict
 
     def summary(self, **kwargs):
         """Print a summary of all models. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""

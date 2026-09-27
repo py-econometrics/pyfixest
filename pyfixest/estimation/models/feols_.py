@@ -135,8 +135,8 @@ class Feols(ResultAccessorMixin):
     data : pd.DataFrame
         Estimation data, already converted to pandas and reindexed.
     options : EstimationOptions
-        Every estimation option the fit is built with, assembled from the
-        `EstimationConfig` by the estimation planner.
+        Every estimation option the fit is built with, as built by the
+        estimation function.
     lookup_demeaned_data : dict[frozenset[int], DemeanedData]
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
@@ -603,8 +603,57 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        self._check_vcov_support(spec)
+        return self._vcov_from_spec(spec, data=data)
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        """Reject a covariance estimator this model cannot compute.
+
+        Reads only the model description, options, and capabilities, so the
+        estimation pipeline runs it before fitting.
+        """
+        if spec.vcov_type_detail in ("HC2", "HC3"):
+            if self.model.has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if self.model.is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+        if spec.vcov_type == "CRV":
+            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
+                raise NotImplementedError(
+                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
+                )
+            if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
+                raise VcovTypeNotSupportedError(
+                    f"CRV3 inference is not for models of type '{self.model.method}'."
+                )
+        if spec.vcov_type == "HAC":
+            if not self.capabilities.hac_inference:
+                raise NotImplementedError(
+                    "HAC inference is not supported for this model type."
+                )
+            if self.options.has_weights and self.options.weights_type == "fweights":
+                raise NotImplementedError(
+                    "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
+                )
+        if spec.vcov_type == "nid":
+            raise NotImplementedError(
+                "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+            )
+
+    def _vcov_from_spec(
+        self, spec: VcovSpec, data: DataFrameType | None = None
+    ) -> Feols:
+        """Compute and publish the covariance of a parsed, supported `spec`.
+
+        `vcov()` parses and checks the user's input first; the estimation
+        pipeline passes the spec it parsed before fitting.
+        """
         require_retained(self, "vcov", "_data")
-        # Assuming `data` is the DataFrame in question
 
         data_to_check = data if data is not None else self._data
         try:
@@ -614,9 +663,6 @@ class Feols(ResultAccessorMixin):
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
 
-        spec = VcovSpec.from_user_input(
-            vcov, vcov_kwargs, has_fixef=self.model.has_fixef, is_iv=self.model.is_iv
-        )
         vcov_type = spec.vcov_type
 
         # Every estimator follows the same three steps: small-sample factors,
@@ -625,10 +671,6 @@ class Feols(ResultAccessorMixin):
         df_t: int | float
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
-            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
-                raise NotImplementedError(
-                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
-                )
             prep = prepare_cluster_state(
                 data=data_to_check,
                 clustervar=list(spec.clustervar),
@@ -668,6 +710,8 @@ class Feols(ResultAccessorMixin):
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
+            else:
+                raise ValueError(f"Unknown vcov type {vcov_type!r}.")
             correction = get_ssc(
                 self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
@@ -719,10 +763,6 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self.capabilities.crv3_inference:
-            raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self.model.method}'."
-            )
         use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
@@ -756,17 +796,6 @@ class Feols(ResultAccessorMixin):
     def _vcov_hac(self, spec: VcovSpec) -> VcovTerm:
         _data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
-
-        if not self.capabilities.hac_inference:
-            raise NotImplementedError(
-                "HAC inference is not supported for this model type."
-            )
-
-        # fweights not supported
-        if self.options.has_weights and self.options.weights_type == "fweights":
-            raise NotImplementedError(
-                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
-            )
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
@@ -1296,8 +1325,6 @@ class Feols(ResultAccessorMixin):
             )
             self.vcov({"CRV1": cluster})
 
-        if seed is None:
-            seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
         fml = self.model.formula
@@ -1482,8 +1509,10 @@ class Feols(ResultAccessorMixin):
             The type of decomposition method to use. Defaults to "gelbach", which
             currently is the only supported option.
         cluster: Optional
-            The name of the cluster variable. If None, uses the cluster variable
-            from the model fit. Defaults to None.
+            The name of the cluster variable for the bootstrap. If None, uses the
+            cluster variable from the model fit. Only one-way clustering is
+            supported; a fit with multiway clustering raises ``ValueError`` unless
+            a single cluster variable is passed here. Defaults to None.
         combine_covariates: Optional.
             A dictionary that specifies which covariates to combine into groups.
             See the example for how to use this argument. Defaults to None.
@@ -1595,9 +1624,14 @@ class Feols(ResultAccessorMixin):
         if cluster is not None:
             cluster_df = self._data[cluster]
         elif self.variance_covariance.spec.is_clustered:
-            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
-        else:
-            cluster_df = None
+            clustervar = self.variance_covariance.spec.clustervar
+            if len(clustervar) > 1:
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the Gelbach "
+                    "decomposition bootstrap. Pass a single cluster variable via "
+                    "`cluster` instead."
+                )
+            cluster_df = self._data[clustervar[0]]
 
         Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 

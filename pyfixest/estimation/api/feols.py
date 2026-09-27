@@ -4,7 +4,11 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks, _resolve_ssc
+from pyfixest.estimation.api.utils import (
+    _estimation_input_checks,
+    _resolve_ssc,
+    _resolve_vcov,
+)
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
@@ -18,6 +22,7 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import EstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
@@ -501,6 +506,7 @@ def feols(
     ```
     """
     ssc = _resolve_ssc(ssc)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
@@ -512,8 +518,7 @@ def feols(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -536,24 +541,27 @@ def feols(
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
 
+    options = EstimationOptions(
+        ssc=ssc,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
+        weights=weights,
+        weights_type=weights_type,
+        offset=None,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=demeaner,
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+    )
     config = EstimationConfig(
         method="feols",
         data=data,
         fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        ssc=ssc,
-        solver=solver,
-        demeaner=demeaner,
-        collin_tol=collin_tol,
-        context=context,
-        weights=weights,
-        weights_type=weights_type,
+        options=options,
+        vcov=vcov_spec,
         split=split,
         fsplit=fsplit,
     )

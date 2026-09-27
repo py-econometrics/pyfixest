@@ -239,8 +239,22 @@ def get_encouragement_data(N=4000, seed=1234):
     )
 
 
-def get_blw():
-    """DGP for effect heterogeneity in panel data from Baker, Larcker, and Wang (2022)."""
+def get_blw(seed=1234):
+    """
+    DGP for effect heterogeneity in panel data from Baker, Larcker, and Wang (2022).
+
+    Parameters
+    ----------
+    seed : int or None, optional
+        Seed for `numpy.random.default_rng`. Default is 1234. `None` draws
+        fresh entropy from the operating system.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A balanced panel of 1,000 units over 30 years (1980-2009).
+    """
+    rng = np.random.default_rng(seed)
     n = np.arange(1, 31)
     id_ = np.arange(1, 1001)
     blw = pd.DataFrame(
@@ -255,9 +269,9 @@ def get_blw():
             treat = time_til >= 0
         """
     )
-    blw["firms"] = np.random.uniform(0, 5, size=len(blw))
-    blw["e"] = np.random.normal(0, 0.5**2, size=len(blw))
-    blw["te"] = np.random.normal(10 - 2 * (blw["group"] - 1), 0.2**2, size=len(blw))
+    blw["firms"] = rng.uniform(0, 5, size=len(blw))
+    blw["e"] = rng.normal(0, 0.5**2, size=len(blw))
+    blw["te"] = rng.normal(10 - 2 * (blw["group"] - 1), 0.2**2, size=len(blw))
     blw.eval(
         """
         y = firms + n + treat * te * (year - treat_date + 1) + e
@@ -266,12 +280,6 @@ def get_blw():
         inplace=True,
     )
     return blw
-
-
-# convert this into a single assignment
-
-treat_effect_vector_1 = np.log(2 * np.arange(1, 30 - 15 + 1))
-treat_effect_vector_1[8:] = 0
 
 
 def get_sharkfin(
@@ -303,15 +311,17 @@ def get_sharkfin(
         sigma_time (float, optional): _description_. Defaults to 0.5.
         sigma_epsilon (float, optional): _description_. Defaults to 0.5.
         het_AR (bool, optional): _description_. Defaults to False.
+        seed (int or None, optional): Seed for `numpy.random.default_rng`.
+            `None` draws fresh entropy from the operating system. Defaults to 42.
     """
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     if base_treatment_effect is None:
         base_treatment_effect = np.where(
             np.arange(1, 30 - 15 + 1) <= 8,
             0.2 * np.log(2 * np.arange(1, 30 - 15 + 1)),
             0,
         )
-    unit_intercepts = np.random.normal(0, sigma_unit, num_units)
+    unit_intercepts = rng.normal(0, sigma_unit, num_units)
 
     # Generate day-of-the-week pattern
     day_effects = np.array(
@@ -321,7 +331,7 @@ def get_sharkfin(
 
     # Generate autoregressive structure
     ar_coef_time = 0.2
-    ar_noise_time = np.random.normal(0, sigma_time, num_periods)
+    ar_noise_time = rng.normal(0, sigma_time, num_periods)
     time_intercepts = np.zeros(num_periods)
     time_intercepts[0] = ar_noise_time[0]
     for t in range(1, num_periods):
@@ -329,9 +339,9 @@ def get_sharkfin(
     # Combine day-of-the-week pattern and autoregressive structure
     time_intercepts = day_pattern + time_intercepts - np.mean(time_intercepts)
     # Generate autoregressive noise for each unit
-    ar_noise = np.random.normal(0, sigma_epsilon, (num_units, num_periods))
+    ar_noise = rng.normal(0, sigma_epsilon, (num_units, num_periods))
     if het_AR:
-        ar_coef = np.random.normal(ar_coef, 0.1, num_units)
+        ar_coef = rng.normal(ar_coef, 0.1, num_units)
     noise = np.zeros((num_units, num_periods))
     noise[:, 0] = ar_noise[:, 0]
     for t in range(1, num_periods):
@@ -341,7 +351,7 @@ def get_sharkfin(
     # Generate the base treatment effect (concave structure)
     # Generate heterogeneous multipliers for each unit
     if hetfx:
-        heterogeneous_multipliers = np.random.uniform(0.5, 1.5, num_units)
+        heterogeneous_multipliers = rng.uniform(0.5, 1.5, num_units)
     else:
         heterogeneous_multipliers = np.ones(num_units)
 
@@ -351,7 +361,7 @@ def get_sharkfin(
         treatment_effect[i, :] = heterogeneous_multipliers[i] * base_treatment_effect
 
     # random assignment
-    treated_units = np.random.choice(num_units, num_treated, replace=False)
+    treated_units = rng.choice(num_units, num_treated, replace=False)
     treatment_status = np.zeros((num_units, num_periods), dtype=bool)
     treatment_status[treated_units, treatment_start:] = True
 
@@ -403,8 +413,15 @@ def get_panel_dgp_stagg(
     base_treatment_effects=None,
     return_dataframe=True,
     ar_coef=0.8,
+    seed=1234,
 ):
-    """Panel DGP with staggered treatment effects and effect heterogeneity."""
+    """
+    Panel DGP with staggered treatment effects and effect heterogeneity.
+
+    `seed` seeds `numpy.random.default_rng` (default 1234); `None` draws fresh
+    entropy from the operating system.
+    """
+    rng = np.random.default_rng(seed)
     if num_treated is None:
         num_treated = [250, 500, 150]
     if treatment_start_cohorts is None:
@@ -429,7 +446,7 @@ def get_panel_dgp_stagg(
             ),  # Treatment effect function for cohort 2
         ]
     # unit FEs
-    unit_intercepts = np.random.normal(0, sigma_unit, num_units)
+    unit_intercepts = rng.normal(0, sigma_unit, num_units)
     ####################################################################
     # time FEs: Generate day-of-the-week pattern
     day_effects = np.array(
@@ -438,7 +455,7 @@ def get_panel_dgp_stagg(
     day_pattern = np.tile(day_effects, num_periods // 7 + 1)[:num_periods]
     # autoregressive structure in time FEs
     ar_coef_time = 0.2
-    ar_noise_time = np.random.normal(0, sigma_time, num_periods)
+    ar_noise_time = rng.normal(0, sigma_time, num_periods)
     time_intercepts = np.zeros(num_periods)
     time_intercepts[0] = ar_noise_time[0]
     for t in range(1, num_periods):
@@ -447,7 +464,7 @@ def get_panel_dgp_stagg(
     time_intercepts = day_pattern + time_intercepts - np.mean(time_intercepts)
     ####################################################################
     # Generate autoregressive noise for each unit
-    ar_noise = np.random.normal(0, sigma_epsilon, (num_units, num_periods))
+    ar_noise = rng.normal(0, sigma_epsilon, (num_units, num_periods))
     noise = np.zeros((num_units, num_periods))
     noise[:, 0] = ar_noise[:, 0]
     for t in range(1, num_periods):
@@ -457,7 +474,7 @@ def get_panel_dgp_stagg(
     ####################################################################
     # Generate heterogeneous multipliers for each unit
     if hetfx:
-        heterogeneous_multipliers = np.random.uniform(0.5, 1.5, num_units)
+        heterogeneous_multipliers = rng.uniform(0.5, 1.5, num_units)
     else:
         heterogeneous_multipliers = np.ones(num_units)
     # random assignment
@@ -477,7 +494,7 @@ def get_panel_dgp_stagg(
             cohort_treatment_effect[i, :] = (
                 heterogeneous_multipliers[i] * base_treatment_effect
             )
-        cohort_treated_units = np.random.choice(
+        cohort_treated_units = rng.choice(
             np.setdiff1d(np.arange(num_units), treated_units),
             num_treated_cohort,
             replace=False,

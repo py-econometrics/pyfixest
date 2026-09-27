@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import Ssc
 
@@ -20,11 +21,20 @@ def _resolve_ssc(ssc: Ssc | Mapping[str, Any] | None) -> Ssc:
     raise TypeError(f"ssc must be created with pf.ssc(); got {type(ssc).__name__}.")
 
 
+def _resolve_vcov(
+    vcov: str | dict[str, str] | None,
+    vcov_kwargs: Mapping[str, str | int] | None,
+) -> VcovSpec:
+    """Parse the requested covariance estimator before any model is fitted."""
+    return VcovSpec.from_user_input(
+        "iid" if vcov is None else vcov, vcov_kwargs=vcov_kwargs
+    )
+
+
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
-    vcov: str | dict[str, str] | None,
-    vcov_kwargs: dict[str, str | int] | None,
+    vcov: VcovSpec,
     weights: str | None,
     ssc: Ssc,
     fixef_rm: str,
@@ -43,8 +53,6 @@ def _estimation_input_checks(
         raise TypeError("fml must be a string")
     if not isinstance(data, pd.DataFrame):
         data = _narwhals_to_pandas(data)
-    if not isinstance(vcov, (str, dict, type(None))):
-        raise TypeError("vcov must be a string, dictionary, or None")
     if not isinstance(fixef_rm, str):
         raise TypeError("fixef_rm must be a string")
     if not isinstance(collin_tol, float):
@@ -119,38 +127,9 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    if vcov_kwargs is not None:
-        # check that dict keys are either "lag", "time_id", or "panel_id"
-        if not all(key in ["lag", "time_id", "panel_id"] for key in vcov_kwargs):
-            raise ValueError(
-                "The function argument `vcov_kwargs` must be a dictionary with keys 'lag', 'time_id', or 'panel_id'."
-            )
-
-        # if lag provided, check that it is an int
-        if "lag" in vcov_kwargs and not isinstance(vcov_kwargs["lag"], int):
-            raise ValueError(
-                "The function argument `vcov_kwargs` must be a dictionary with integer values for 'lag' if explicitly provided."
-            )
-
-        if "time_id" in vcov_kwargs:
-            if not isinstance(vcov_kwargs["time_id"], str):
-                raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'time_id' if explicitly provided."
-                )
-            if vcov_kwargs["time_id"] not in data.columns:
-                raise ValueError(
-                    f"The variable '{vcov_kwargs['time_id']}' is not in the data."
-                )
-
-        if "panel_id" in vcov_kwargs:
-            if not isinstance(vcov_kwargs["panel_id"], str):
-                raise ValueError(
-                    "The function argument `vcov_kwargs` must be a dictionary with string values for 'panel_id' if explicitly provided."
-                )
-            if vcov_kwargs["panel_id"] not in data.columns:
-                raise ValueError(
-                    f"The variable '{vcov_kwargs['panel_id']}' is not in the data."
-                )
+    for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
+        if column is not None and column not in data.columns:
+            raise ValueError(f"The variable '{column}' is not in the data.")
 
 
 class _AllSampleSentinel:

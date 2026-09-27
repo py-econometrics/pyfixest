@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -1293,103 +1295,54 @@ def test_errors_quantreg(data):
             pf.quantreg("Y ~ X1", data=data, tol=tol)
 
 
-def test_errors_vcov_kwargs():
-    """Test all error conditions for vcov_kwargs in _estimation_input_checks."""
+@pytest.mark.parametrize(
+    ("vcov_kwargs", "match"),
+    [
+        ({"invalid_key": 5}, r"vcov_kwargs accepts the keys"),
+        ({"wrong1": 1, "wrong2": 2}, r"vcov_kwargs accepts the keys"),
+        ({"lag": 5, "invalid_key": "test"}, r"vcov_kwargs accepts the keys"),
+        ({"time_id": "time_id", "lag": "5"}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": 5.5}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": None}, r"'lag' must be a non-negative integer"),
+        ({"time_id": "time_id", "lag": True}, r"'lag' must be a non-negative integer"),
+        ({"time_id": 123}, r"'time_id' must be a column name"),
+        ({"time_id": None}, r"'time_id' must be a column name"),
+        (
+            {"time_id": "nonexistent_column"},
+            r"The variable 'nonexistent_column' is not in the data\.",
+        ),
+        ({"time_id": "time_id", "panel_id": 456}, r"'panel_id' must be a column name"),
+        (
+            {"time_id": "time_id", "panel_id": ["col1", "col2"]},
+            r"'panel_id' must be a column name",
+        ),
+        (
+            {"time_id": "time_id", "panel_id": "missing_panel_column"},
+            r"The variable 'missing_panel_column' is not in the data\.",
+        ),
+    ],
+)
+def test_errors_vcov_kwargs(vcov_kwargs, match):
+    """Malformed `vcov_kwargs` fail at the API boundary, before any fit."""
     data = pf.get_data()
     data["time_id"] = data["X2"]
     data["panel_id"] = data["f1"]
 
-    # Error 1: Invalid keys in vcov_kwargs
-    with pytest.raises(
-        ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"invalid_key": 5})
+    with pytest.raises(ValueError, match=match):
+        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs=vcov_kwargs)
 
-    # Error 2: Multiple invalid keys
-    with pytest.raises(
-        ValueError,
-        match="must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"wrong1": 1, "wrong2": 2})
 
-    # Error 3: Mix of valid and invalid keys
-    with pytest.raises(
-        ValueError,
-        match=r"must be a dictionary with keys 'lag', 'time_id', or 'panel_id'",
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"lag": 5, "invalid_key": "test"},
-        )
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize("key", ["time_id", "panel_id"])
+def test_vcov_kwargs_missing_column_ignored_without_hac(estimator, key):
+    """A HAC column that `vcov` does not use is not checked against the data."""
+    data = pf.get_data()
+    data["Y"] = data["Y"].abs()
 
-    # Error 4: lag value is not an integer (string)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": "5"})
+    fit = estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
+    expected = estimator("Y ~ X1", data=data, vcov="iid")
 
-    # Error 5: lag value is not an integer (float)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": 5.5})
-
-    # Error 6: lag value is not an integer (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with integer values for 'lag'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"lag": None})
-
-    # Error 7: time_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": 123})
-
-    # Error 8: time_id value is not a string (None)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'time_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"time_id": None})
-
-    # Error 9: time_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'nonexistent_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"time_id": "nonexistent_column"},
-        )
-
-    # Error 10: panel_id value is not a string (integer)
-    with pytest.raises(
-        ValueError, match="must be a dictionary with string values for 'panel_id'"
-    ):
-        pf.feols("Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": 456})
-
-    # Error 11: panel_id value is not a string (list)
-    with pytest.raises(
-        ValueError, match=r"The function argument `vcov_kwargs` must be a."
-    ):
-        pf.feols(
-            "Y ~ X1", data=data, vcov="NW", vcov_kwargs={"panel_id": ["col1", "col2"]}
-        )
-
-    # Error 12: panel_id column does not exist in data
-    with pytest.raises(
-        ValueError, match=r"The variable 'missing_panel_column' is not in the data\."
-    ):
-        pf.feols(
-            "Y ~ X1",
-            data=data,
-            vcov="NW",
-            vcov_kwargs={"panel_id": "missing_panel_column"},
-        )
+    np.testing.assert_allclose(fit.coeftable.se, expected.coeftable.se)
 
 
 def test_errors_hac():
@@ -1691,6 +1644,9 @@ def test_fixest_multi_rejects_savi_tidy_argument():
             ValueError,
             "'lag' must be a non-negative integer",
         ),
+        # malformed kwargs are rejected even where only HAC would read them
+        ("iid", {"lags": 2}, ValueError, "vcov_kwargs accepts"),
+        ("iid", ["lag"], TypeError, "vcov_kwargs must be a dict"),
     ],
 )
 def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
@@ -1698,6 +1654,24 @@ def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
     fit = pf.feols("Y ~ X1", get_data())
     with pytest.raises(error, match=match):
         fit.vcov(vcov, vcov_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("estimator", "vcov", "error", "match"),
+    [
+        (pf.feols, "nid", NotImplementedError, "type 'nid'"),
+        (
+            partial(pf.quantreg, quantile=[0.25, 0.75]),
+            {"CRV3": "f1"},
+            VcovTypeNotSupportedError,
+            "CRV3 inference",
+        ),
+    ],
+)
+def test_estimation_rejects_unsupported_vcov(estimator, vcov, error, match):
+    """Estimators reject a `vcov` type they do not support."""
+    with pytest.raises(error, match=match):
+        estimator("Y ~ X1", get_data().dropna(), vcov=vcov)
 
 
 @pytest.mark.parametrize(

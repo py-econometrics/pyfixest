@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.model_state import (
     FittedValues,
     ModelDescription,
     QuantregEstimationOptions,
+    VcovSpec,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
@@ -405,6 +406,11 @@ class Quantreg(Feols):
             N=self.sample_info.n_rows,
         )
         return VcovTerm(vcov=vcov, meat=None)
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        """Accept ``"nid"``, which only quantile regression supports."""
+        if spec.vcov_type != "nid":
+            super()._check_vcov_support(spec)
 
     def _vcov_nid(self) -> VcovTerm:
         """
