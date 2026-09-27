@@ -42,6 +42,8 @@ class ModelEntry:
         for GLMs.
     iv_model_cls
         The model class to use instead when the formula has an IV part.
+    quantile_process_model_cls
+        The model class to use instead when the call fits a quantile process.
     accepts_preconditioner
         Whether the model can reuse the runner's shared preconditioner cache.
     """
@@ -49,6 +51,7 @@ class ModelEntry:
     model_cls: ModelFactory
     options_cls: type[EstimationOptions] = EstimationOptions
     iv_model_cls: ModelFactory | None = None
+    quantile_process_model_cls: ModelFactory | None = None
     # Quantile regression does not absorb fixed effects, so it neither
     # demeans nor shares the runner's preconditioner cache.
     accepts_preconditioner: bool = True
@@ -63,23 +66,27 @@ MODEL_REGISTRY: dict[EstimationMethod, ModelEntry] = {
     "quantreg": ModelEntry(
         Quantreg,
         options_cls=QuantregEstimationOptions,
-        accepts_preconditioner=False,
-    ),
-    "quantreg_multi": ModelEntry(
-        QuantregMulti,
-        options_cls=QuantregEstimationOptions,
+        quantile_process_model_cls=QuantregMulti,
         accepts_preconditioner=False,
     ),
 }
 
 
-def _resolve_model_class(method: EstimationMethod, is_iv: bool) -> ModelFactory:
+def _resolve_model_class(
+    method: EstimationMethod, *, is_iv: bool, fits_quantile_process: bool
+) -> ModelFactory:
     """Pick the model class to instantiate for this method.
 
     IV formulas dispatch to the entry's `iv_model_cls`. Methods without one
     reject IV formulas in their estimation function, so `is_iv` is ignored.
+    A quantile process dispatches to the entry's `quantile_process_model_cls`;
+    a method without one cannot fit it.
     """
     entry = MODEL_REGISTRY[method]
+    if fits_quantile_process:
+        if entry.quantile_process_model_cls is None:
+            raise TypeError(f"{method!r} models cannot fit a quantile process.")
+        return entry.quantile_process_model_cls
     if is_iv and entry.iv_model_cls is not None:
         return entry.iv_model_cls
     return entry.model_cls
@@ -206,13 +213,11 @@ def expand_specs(
             f"{config.method!r} models take {entry.options_cls.__name__}; "
             f"got {type(config.options).__name__}."
         )
-    if (config.quantile_process is not None) != (config.method == "quantreg_multi"):
-        raise TypeError(
-            "A quantile process is fitted by, and only by, 'quantreg_multi' "
-            f"models; got method {config.method!r} with "
-            f"quantile_process={config.quantile_process!r}."
-        )
-    model_cls = _resolve_model_class(config.method, is_iv)
+    model_cls = _resolve_model_class(
+        config.method,
+        is_iv=is_iv,
+        fits_quantile_process=config.quantile_process is not None,
+    )
 
     return [
         ModelSpec(

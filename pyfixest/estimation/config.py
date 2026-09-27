@@ -51,5 +51,4 @@ class EstimationConfig:
     vcov: VcovSpec
     split: str | None = None
     fsplit: str | None = None
-    # only for the joint fit of several quantiles ("quantreg_multi")
     quantile_process: QuantileProcess | None = None

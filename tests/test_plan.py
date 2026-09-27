@@ -84,29 +84,39 @@ def test_registry_covers_every_supported_method():
         "feglm-probit",
         "feglm-gaussian",
         "quantreg",
-        "quantreg_multi",
     }
     assert set(MODEL_REGISTRY.keys()) == expected
 
 
 @pytest.mark.parametrize(
-    "method,is_iv,expected_cls",
+    "method,is_iv,fits_quantile_process,expected_cls",
     [
-        ("feols", False, Feols),
-        ("feols", True, Feiv),
-        ("fepois", False, Fepois),
-        ("feglm-logit", False, Felogit),
-        ("feglm-gaussian", False, Fegaussian),
-        ("quantreg", False, Quantreg),
+        ("feols", False, False, Feols),
+        ("feols", True, False, Feiv),
+        ("fepois", False, False, Fepois),
+        ("feglm-logit", False, False, Felogit),
+        ("feglm-gaussian", False, False, Fegaussian),
+        ("quantreg", False, False, Quantreg),
+        ("quantreg", False, True, QuantregMulti),
     ],
 )
-def test_resolve_model_class(method, is_iv, expected_cls):
-    assert _resolve_model_class(method, is_iv) is expected_cls
+def test_resolve_model_class(method, is_iv, fits_quantile_process, expected_cls):
+    resolved = _resolve_model_class(
+        method, is_iv=is_iv, fits_quantile_process=fits_quantile_process
+    )
+    assert resolved is expected_cls
 
 
 def test_iv_only_promotes_feols():
     """is_iv=True for any non-feols method falls back to the registry entry."""
-    assert _resolve_model_class("fepois", is_iv=True) is Fepois
+    resolved = _resolve_model_class("fepois", is_iv=True, fits_quantile_process=False)
+    assert resolved is Fepois
+
+
+def test_quantile_process_needs_a_method_that_fits_one():
+    """A method without a quantile-process model class rejects a process."""
+    with pytest.raises(TypeError, match="cannot fit a quantile process"):
+        _resolve_model_class("feols", is_iv=False, fits_quantile_process=True)
 
 
 # ---------------------------------------------------------------------------
@@ -390,9 +400,7 @@ def test_quantile_process_is_handed_to_every_spec():
         quantile_maxiter=None,
         seed=None,
     )
-    cfg = _config(
-        "quantreg_multi", "Y ~ X1", data, options=options, quantile_process=process
-    )
+    cfg = _config("quantreg", "Y ~ X1", data, options=options, quantile_process=process)
     specs = expand_specs(
         config=cfg,
         formula_dict=_parse(cfg.fml),
@@ -425,38 +433,6 @@ def test_options_must_match_the_model_class():
     data = pf.get_data()
     cfg = _config("fepois", "Y ~ X1", data)
     with pytest.raises(TypeError, match="GlmEstimationOptions"):
-        expand_specs(
-            config=cfg,
-            formula_dict=_parse(cfg.fml),
-            data=data,
-            splits=[_ALL_SAMPLE],
-            is_iv=False,
-            splitvar=None,
-        )
-
-
-@pytest.mark.parametrize(
-    "method,quantile_process",
-    [
-        ("quantreg_multi", None),
-        ("quantreg", QuantileProcess(quantiles=[0.25, 0.75], multi_method="cfm1")),
-    ],
-)
-def test_quantile_process_must_match_the_method(method, quantile_process):
-    """Only `quantreg_multi` fits a quantile process, and it always needs one."""
-    data = pf.get_data()
-    options = QuantregEstimationOptions(
-        **_SHARED_OPTIONS,
-        quantile=0.25,
-        method="fn",
-        quantile_tol=1e-6,
-        quantile_maxiter=None,
-        seed=None,
-    )
-    cfg = _config(
-        method, "Y ~ X1", data, options=options, quantile_process=quantile_process
-    )
-    with pytest.raises(TypeError, match="quantile process"):
         expand_specs(
             config=cfg,
             formula_dict=_parse(cfg.fml),

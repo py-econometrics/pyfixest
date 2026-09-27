@@ -281,7 +281,7 @@ def quantreg(
         seed=seed,
     )
     config = EstimationConfig(
-        method="quantreg_multi" if isinstance(quantile, list) else "quantreg",
+        method="quantreg",
         data=data,
         fml=fml,
         options=options,

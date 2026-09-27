@@ -18,7 +18,6 @@ EstimationMethod = Literal[
     "feglm-probit",
     "feglm-gaussian",
     "quantreg",
-    "quantreg_multi",
 ]
 SolverOptions = Literal[
     "np.linalg.lstsq",
