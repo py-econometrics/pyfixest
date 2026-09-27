@@ -10,7 +10,6 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
 from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
-from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     GlmEstimationOptions,
     ModelDescription,
@@ -104,10 +103,6 @@ class Fepois(Feglm):
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the Poisson estimation function."""
         return replace(super()._describe_model(**kwargs), method="fepois")
-
-    def _refit_method(self) -> EstimationMethod:
-        "Name the estimation method that leave-out and resampled refits run."
-        return "fepois"
 
     def get_fit(self) -> None:
         "Fit via Feglm IRLS, then add the Poisson likelihood measures."

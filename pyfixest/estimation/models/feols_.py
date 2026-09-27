@@ -34,7 +34,6 @@ from pyfixest.estimation.internals.fit_statistics import (
     linear_fit_statistics,
 )
 from pyfixest.estimation.internals.literals import (
-    EstimationMethod,
     HacVcovTypeOptions,
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
@@ -844,10 +843,6 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _refit_method(self) -> EstimationMethod:
-        "Name the estimation method that leave-out and resampled refits run."
-        return "feols"
-
     def _refit(
         self,
         *,
@@ -861,27 +856,27 @@ class Feols(ResultAccessorMixin):
         the fitted model's `options` to the estimation pipeline, so every
         option replays without a list to maintain. The caller chooses the
         formula, data and covariance; the data is already this model's
-        sample, so there is no split. Two options are replaced:
+        sample, so there is no split. Callers check the model's
+        `capabilities` first. Two options are replaced:
 
-        - ``copy_data``: the refit copies its input, so the in-place row drops
-          of ``copy_data=False`` never reach the caller's frame.
+        - ``copy_data`` is off: the caller builds the refit frame for this
+          refit alone, so copying it would only cost memory and time.
         - A prebuilt `Preconditioner` on an `LsmrDemeaner`: it is built for the
           full sample's fixed-effect design, which a leave-out or resampled
           sample need not share. The refit builds a fresh preconditioner of the
           same variant instead.
         """
-        method = self._refit_method()
         # lazy loading to avoid circular import
-        from pyfixest.estimation.plan_ import parse_formula
+        from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
         from pyfixest.estimation.runner import run_estimation
 
         options = replace(
             self.options,
-            copy_data=True,
+            copy_data=False,
             demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
         )
         config = EstimationConfig(
-            method=method,
+            method=estimation_method_of(type(self)),
             data=data,
             fml=fml,
             options=options,

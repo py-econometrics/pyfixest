@@ -309,7 +309,7 @@ def test_crv3_refits_replay_estimation_options(data_offset, estimator, fml, opti
 
 @pytest.mark.parametrize("estimator", [feols, fepois])
 def test_refit_replays_options(data_offset, estimator):
-    "Leave-out and resampled refits reuse the fit's options; only copy_data is forced."
+    "Leave-out and resampled refits reuse the fit's options without copying the data."
     fml = "Y ~ log1p_abs(X1) + X2 | f3"
     options = {
         "weights": "weights",
@@ -319,7 +319,6 @@ def test_refit_replays_options(data_offset, estimator):
         "solver": "np.linalg.solve",
         "demeaner": MapDemeaner(fixef_tol=1e-9),
         "context": {"log1p_abs": _log1p_abs},
-        "copy_data": False,
         "lean": True,
     }
     if estimator is fepois:
@@ -330,11 +329,11 @@ def test_refit_replays_options(data_offset, estimator):
             "separation_check": ["fe"],
             "accelerate": False,
         }
-    fit = estimator(fml, data=data_offset.copy(), **options)
+    fit = estimator(fml, data=data_offset, **options)
 
     refit = fit._refit(fml=fml, data=data_offset, vcov="iid")
 
-    assert refit.options == replace(fit.options, copy_data=True)
+    assert refit.options == replace(fit.options, copy_data=False)
     np.testing.assert_allclose(
         refit.coef().to_numpy(), fit.coef().to_numpy(), rtol=1e-12, err_msg="coef"
     )

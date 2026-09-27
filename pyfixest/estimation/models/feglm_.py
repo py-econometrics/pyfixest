@@ -13,10 +13,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
-from pyfixest.estimation.internals.literals import (
-    EstimationMethod,
-    HeteroVcovTypeOptions,
-)
+from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
@@ -113,13 +110,6 @@ class Feglm(Feols):
             super()._describe_model(**kwargs),
             method="feglm",
             inference_dist=self._family.inference_dist,
-        )
-
-    def _refit_method(self) -> EstimationMethod:
-        "Refuse refits: `feglm` CRV3 and ritest lack an external numerical reference."
-        raise NotImplementedError(
-            f"Leave-out and resampled refits are not implemented for '{self.model.method}' "
-            "models: they are not yet validated against an external reference."
         )
 
     def prepare_model_matrix(self) -> ModelMatrix:
