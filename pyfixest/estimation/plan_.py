@@ -7,7 +7,6 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -183,7 +182,7 @@ def build_all_splits(
     assert splitvar is not None
     all_splits: list[SampleSplit | None] = []
     if run_full:
-        all_splits.append(SampleSplit(var=splitvar, value=_ALL_SAMPLE))
+        all_splits.append(SampleSplit(var=splitvar, value=None))
     all_splits.extend(
         SampleSplit(var=splitvar, value=value)
         for value in data[splitvar].dropna().drop_duplicates().sort_values().tolist()

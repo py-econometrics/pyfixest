@@ -6,7 +6,6 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -141,7 +140,7 @@ def test_build_all_splits_split_only():
 def test_build_all_splits_full_plus_split_puts_full_first():
     data = pf.get_data()
     splits = build_all_splits(run_full=True, run_split=True, splitvar="f1", data=data)
-    assert splits[0] == SampleSplit(var="f1", value=_ALL_SAMPLE)
+    assert splits[0] == SampleSplit(var="f1", value=None)
     assert [split.value for split in splits[1:]] == sorted(
         data["f1"].dropna().unique().tolist()
     )

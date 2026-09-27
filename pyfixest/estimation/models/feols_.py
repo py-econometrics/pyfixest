@@ -16,7 +16,6 @@ from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -255,7 +254,7 @@ class Feols(ResultAccessorMixin):
 
         if sample_split is None:
             pass
-        elif sample_split.value is _ALL_SAMPLE:
+        elif sample_split.value is None:
             data = data.loc[data[sample_split.var].notnull()]
         else:
             data = data.loc[data[sample_split.var] == sample_split.value]
@@ -304,7 +303,8 @@ class Feols(ResultAccessorMixin):
             model_name=(
                 fixest_formula.formula
                 if sample_split is None
-                else f"{fixest_formula.formula} (Sample: {sample_split.var} = {sample_split.value})"
+                else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
+                f"{'all' if sample_split.value is None else sample_split.value})"
             ),
             sample_split_var=None if sample_split is None else sample_split.var,
             sample_split_value=None if sample_split is None else sample_split.value,

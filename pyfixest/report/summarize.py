@@ -338,8 +338,9 @@ def summary(
         if split_var is None:
             # An unsplit fit reports the full sample, with no split variable.
             print("sample: None = all")
-        elif split_value != "all":
-            print(f"sample: {split_var} = {split_value}")
+        else:
+            sample = "all" if split_value is None else split_value
+            print(f"sample: {split_var} = {sample}")
         print("Inference: ", fxst.variance_covariance.spec.vcov_type_detail)
         print("Observations: ", fxst.sample_info.n_obs)
         print("")

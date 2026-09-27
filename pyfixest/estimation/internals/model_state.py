@@ -20,7 +20,6 @@ from pyfixest.estimation.internals.retention import RetentionPolicy
 from pyfixest.utils.utils import Ssc
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.api.utils import _AllSampleSentinel
     from pyfixest.estimation.formula.model_matrix import _ModelSpecMapping
     from pyfixest.estimation.formula.parse import Formula
     from pyfixest.estimation.internals.families import InferenceDist
@@ -202,13 +201,14 @@ class SampleSplit:
     ----------
     var : str
         Name of the `split` or `fsplit` variable.
-    value : str, int, float, or the full-sample marker
-        Value of `var` the model is fitted on. The full-sample fit of an
-        `fsplit` estimation carries a marker that prints as ``all``.
+    value : str, int, float, or None
+        Value of `var` the model is fitted on, or ``None`` for the full-sample
+        fit of an `fsplit` estimation, which keeps every row where `var` is
+        not missing.
     """
 
     var: str
-    value: str | int | float | _AllSampleSentinel
+    value: str | int | float | None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -242,10 +242,9 @@ class ModelDescription:
         Key the model is stored under in a multiple-estimation result.
     sample_split_var : str or None
         Name of the `split` or `fsplit` variable, ``None`` for an unsplit fit.
-    sample_split_value : str, int, float, the full-sample marker, or None
+    sample_split_value : str, int, float, or None
         Value of `sample_split_var` this model was fitted on; ``None`` for an
-        unsplit fit. The full-sample fit of an `fsplit` estimation carries a
-        marker that prints as ``all``.
+        unsplit fit and for the full-sample fit of an `fsplit` estimation.
     inference_dist : InferenceDist
         Reference distribution of the coefficient p-values and confidence
         bounds: Student's t for OLS, IV, quantile, and Gaussian GLM fits, the
@@ -279,7 +278,7 @@ class ModelDescription:
     is_iv: bool
     model_name: str
     sample_split_var: str | None
-    sample_split_value: str | int | float | _AllSampleSentinel | None
+    sample_split_value: str | int | float | None
     inference_dist: InferenceDist
     depvar: str = ""
     fixed_effects: tuple[str, ...] = ()
