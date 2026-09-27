@@ -277,7 +277,7 @@ class Feiv(Feols):
             vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
             options=replace(
                 self.options,
-                # `_data` holds the second stage's rows, singletons included
+                # `_data` is already the second stage's sample; keep every row
                 drop_singletons=False,
                 # `first_stage` reads within data and residuals;
                 # `_clear_attributes()` applies `lean` afterwards

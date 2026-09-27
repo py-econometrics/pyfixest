@@ -314,10 +314,9 @@ We also removed:
   any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
 - The IV first stage is now fitted on exactly the second stage's rows and with
-  its `ssc`, `drop_intercept`, and `context`, as fixest does. Previously it
-  dropped singletons under `fixef_rm="none"`, its standard errors and F
-  statistics ignored `ssc`, it kept an intercept under `drop_intercept=True`,
-  and user transforms in its formula failed to evaluate.
+  its `ssc`, `drop_intercept`, and `context`. Previously, arguments from the `feols`
+  call would not be propageted, e.g.  dropped singletons always defaulted to `fixef_rm="none"`.
+
 
 
 ## PyFixest 0.60.0
