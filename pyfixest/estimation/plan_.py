@@ -92,6 +92,18 @@ def _resolve_model_class(
     return entry.model_cls
 
 
+def estimation_method_of(model_cls: type) -> EstimationMethod:
+    """Find the method the registry dispatches to `model_cls`.
+
+    Leave-out and resampled refits rerun a fitted model through the
+    pipeline, which dispatches by method rather than by model class.
+    """
+    for method, entry in MODEL_REGISTRY.items():
+        if model_cls in (entry.model_cls, entry.iv_model_cls):
+            return method
+    raise ValueError(f"{model_cls.__name__} is not a registered model class.")
+
+
 @dataclass(frozen=True)
 class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.

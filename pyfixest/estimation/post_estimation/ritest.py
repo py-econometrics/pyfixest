@@ -61,8 +61,9 @@ def _get_ritest_stats_slow(
     reps : int
         The number of repetitions.
     fit_fn : Callable[..., Any]
-        The public estimation function that refits the model on each resampled
-        data set, e.g. `pyfixest.feols` or `pyfixest.fepois`.
+        Refits the model on each resampled data set with the fitted model's
+        estimation options, such as the model's `_refit` method. It is called
+        with the keyword arguments `fml`, `data` and `vcov` only.
     rng : np.random.Generator
         The random number generator.
     vcov : str or dict[str, str]
@@ -77,7 +78,9 @@ def _get_ritest_stats_slow(
         `type` is 'randomization-c', otherwise t-statistics are returned.
 
     """
-    data_resampled = data.copy()
+    # the resampled column goes into a shallow copy, so `data` keeps its
+    # columns; `fit_fn` must not modify its input
+    data_resampled = data.copy(deep=False)
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
     resampvar_arr = data_resampled[resampvar].to_numpy()
@@ -94,7 +97,7 @@ def _get_ritest_stats_slow(
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
 
-        fixest_fit = fit_fn(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_fn(fml=fml_update, data=data_resampled, vcov=vcov)
         if type == "randomization-c":
             ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:
