@@ -269,9 +269,6 @@ class Feiv(Feols):
                 self.options,
                 # `_data` is already the second stage's sample; keep every row
                 drop_singletons=False,
-                # within data and residuals are used later in `FirstStage` below
-                # and will be deleted in `Feiv._clear_attributes()`
-                lean=False,
                 demeaner=demeaner,
             ),
         )
@@ -296,19 +293,11 @@ class Feiv(Feols):
         self._fit_first_stage()
 
     def _clear_attributes(self) -> None:
-        """Apply the parent's retention policy to the retained first stage."""
+        """Apply the retention policy to this model and its first stage."""
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            model = first_stage.model
-            # The first stage is fitted in full because `first_stage` is built
-            # from its within data and residuals; it takes over the parent's
-            # storage options once those values have been read.
-            model.options = replace(
-                model.options,
-                store_data=self.options.store_data,
-                lean=self.options.lean,
-            )
-            model._clear_attributes()
+            # the first stage replays this model's storage options
+            first_stage.model._clear_attributes()
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):

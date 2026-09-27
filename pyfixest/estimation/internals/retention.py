@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pyfixest.errors import MissingModelDataError
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +41,17 @@ def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
     if policy.lean:
         names.extend(_LEAN_ATTRIBUTES)
     return tuple(dict.fromkeys(names))
+
+
+def apply_retention(model: Feols) -> None:
+    """Drop the state the fitted model's storage options omit.
+
+    The estimation functions pass this to `run_estimation`, which applies it
+    to each model as soon as it is fitted. The fitting pipeline itself
+    returns complete models, so internal refits keep every attribute they
+    read.
+    """
+    model._clear_attributes()
 
 
 def require_retained(model, operation: str, *names: str) -> None:
