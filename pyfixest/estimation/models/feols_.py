@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
 from typing import Literal, cast, overload
 
@@ -38,7 +39,6 @@ from pyfixest.estimation.internals.literals import (
     HeteroVcovTypeOptions,
     PredictionErrorOptions,
     PredictionType,
-    VcovTypeOptions,
     WaldDistributionOptions,
     WeightsTypeOptions,
     _validate_literal_argument,
@@ -848,24 +848,29 @@ class Feols(ResultAccessorMixin):
         *,
         fml: str,
         data: pd.DataFrame,
-        vcov: VcovTypeOptions | dict[str, str],
+        vcov: VcovSpec,
+        options: EstimationOptions | None = None,
     ) -> Feols:
-        """Refit this model's estimator on other data with its estimation options.
+        """Refit this model's estimator on other data.
 
-        `data` is never modified.
+        `options` defaults to this model's estimation options without its
+        prebuilt preconditioner, which belongs to this model's sample. Callers
+        that deviate from them pass `replace(self.options, ...)`. `data` is
+        never modified.
         """
         # lazy loading to avoid circular import
         from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
         from pyfixest.estimation.runner import run_estimation
 
-        options = replace(
-            self.options,
-            # the shallow copy below keeps `data` intact without a deep copy
-            copy_data=False,
-            # the preconditioner was built on other data for CRV3 and must be rebuilt
-            # TODO(PYF-19): ritest keeps the sample and could reuse it
-            demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
-        )
+        if options is None:
+            options = replace(
+                self.options,
+                # the preconditioner was built on other data for CRV3 and must be rebuilt
+                # TODO(PYF-19): ritest keeps the sample and could reuse it
+                demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
+            )
+        # the shallow copy below keeps `data` intact without a deep copy
+        options = replace(options, copy_data=False)
         config = EstimationConfig(
             method=estimation_method_of(type(self)),
             # a shallow copy absorbs the runner's in-place index reset; the
@@ -874,7 +879,7 @@ class Feols(ResultAccessorMixin):
             data=data.copy(deep=False),
             fml=fml,
             options=options,
-            vcov=VcovSpec.from_user_input(vcov),
+            vcov=vcov,
         )
         fit = run_estimation(config, parse_formula(config))
         if not isinstance(fit, Feols):
@@ -887,7 +892,12 @@ class Feols(ResultAccessorMixin):
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = self._refit(fml=self.model.formula, data=data, vcov="iid")
+            fit = self._refit(
+                fml=self.model.formula,
+                data=data,
+                # inference not needed, iid fastest to compute
+                vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+            )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
         # optional: beta_bar in MNW (2022)
@@ -2117,10 +2127,9 @@ class Feols(ResultAccessorMixin):
                 clustervar_arr=clustervar_arr,
                 fml=self.model.formula,
                 reps=reps,
-                vcov=vcov_input,
                 type=type,
                 rng=rng,
-                fit_fn=self._refit,
+                fit_fn=partial(self._refit, vcov=VcovSpec.from_user_input(vcov_input)),
             )
 
         else:

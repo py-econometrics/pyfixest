@@ -875,7 +875,8 @@ class FirstStage:
 
     The first stage regresses the endogenous regressor on the exogenous
     regressors and the excluded instruments, on the second stage's retained
-    rows and with its fixed effects, weights, and covariance estimator.
+    rows and with its fixed effects, weights, covariance estimator, and
+    small-sample correction.
 
     Parameters
     ----------

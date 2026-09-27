@@ -313,6 +313,14 @@ We also removed:
   draws and were typically too narrow; a `seed` now gives the same results for
   any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
+- The IV first stage is now fitted on exactly the second stage's rows and with
+  its `ssc`, `drop_intercept`, and `context`. Previously, arguments from the `feols`
+  call would not be propageted, e.g.  dropped singletons always defaulted to `fixef_rm="none"`.
+- The IV first stage now uses the second stage's full covariance estimator, as
+  fixest does. Before, two-way clustering such as `vcov={"CRV1": "f1+f2"}` fell
+  back to one-way clustering on `f1` in the first stage, silently misstating its
+  standard errors and F-statistic, and `vcov="NW"` or `"DK"` raised an error.
+
 
 
 ## PyFixest 0.60.0

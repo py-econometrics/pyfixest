@@ -16,6 +16,7 @@ import pytest
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.estimation.post_estimation.ritest import _get_ritest_stats_slow
 from pyfixest.utils.utils import get_data, ssc
 
@@ -80,7 +81,9 @@ def test_refit_replays_options(data, case):
     fit = estimator(FML, data=data, **options)
     subsample = data[data[CLUSTER] != data[CLUSTER].iloc[0]]
 
-    refit = fit._refit(fml=FML, data=subsample, vcov="iid")
+    refit = fit._refit(
+        fml=FML, data=subsample, vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid")
+    )
 
     assert refit.options == replace(fit.options, copy_data=False)
     expected = estimator(FML, data=subsample, **options)
@@ -125,9 +128,8 @@ def test_ritest_refits_replay_options(data, case):
         **ritest_kwargs,
         data=fit._data,
         fml=FML,
-        fit_fn=partial(estimator, **options),
+        fit_fn=partial(estimator, vcov="iid", **options),
         rng=np.random.default_rng(3),
-        vcov="iid",
     )
     np.testing.assert_allclose(
         fit.ritest_statistics.statistics, expected, rtol=1e-12, err_msg="ri stats"
@@ -163,7 +165,9 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
     fit = fepois(fml, data, demeaner=prebuilt)
     subsample = data[data["f1"] != data["f1"].iloc[0]]
 
-    refit = fit._refit(fml=fml, data=subsample, vcov="iid")
+    refit = fit._refit(
+        fml=fml, data=subsample, vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid")
+    )
 
     assert refit.options.demeaner == by_name
     expected = fepois(fml, data=subsample, demeaner=by_name)
