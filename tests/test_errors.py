@@ -640,6 +640,14 @@ def _call_decompose(fit):
     return fit.decompose(decomp_var=fit._coefnames[-1], reps=2)
 
 
+def _call_bootstrap_bayesian(fit):
+    return fit.bootstrap_bayesian(reps=2)
+
+
+def _call_bootstrap_pairs(fit):
+    return fit.bootstrap_pairs(reps=2)
+
+
 _NO_FE = {"fixed_effects": False}
 
 
@@ -665,6 +673,14 @@ _NO_FE = {"fixed_effects": False}
         ("quantreg", _call_update, "sherman_morrison_update", {}),
         ("did2s", _call_update, "sherman_morrison_update", {}),
         ("did2s", _call_decompose, "decomposition", {}),
+        ("quantreg", _call_bootstrap_bayesian, "weighting_bootstrap", {}),
+        ("quantreg", _call_bootstrap_pairs, "weighting_bootstrap", {}),
+        ("did2s", _call_bootstrap_bayesian, "weighting_bootstrap", {}),
+        ("did2s", _call_bootstrap_pairs, "weighting_bootstrap", {}),
+        ("twfe", _call_bootstrap_bayesian, "weighting_bootstrap", {}),
+        ("twfe", _call_bootstrap_pairs, "weighting_bootstrap", {}),
+        ("saturated", _call_bootstrap_bayesian, "weighting_bootstrap", {}),
+        ("saturated", _call_bootstrap_pairs, "weighting_bootstrap", {}),
     ],
 )
 def test_capability_rejections(model, operation, capability, fit_kwargs):

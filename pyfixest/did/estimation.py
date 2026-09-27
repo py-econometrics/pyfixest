@@ -146,11 +146,13 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
-        # ritest() and update() have not supported event-study fits.
+        # ritest(), update(), and the weighting bootstraps have not supported
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            weighting_bootstrap=False,
         )
 
     elif estimator == "saturated":
@@ -168,11 +170,13 @@ def event_study(
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
-        # ritest() and update() have not supported event-study fits.
+        # ritest(), update(), and the weighting bootstraps have not supported
+        # event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            weighting_bootstrap=False,
         )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
         test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
@@ -331,6 +335,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         randomization_inference=False,
         sherman_morrison_update=False,
         crv3_inference=False,
+        weighting_bootstrap=False,
     )
 
 

@@ -108,6 +108,7 @@ class Quantreg(Feols):
             fixed_effect_recovery=False,
             randomization_inference=False,
             sherman_morrison_update=False,
+            weighting_bootstrap=False,
         )
 
         quantile = options.quantile
