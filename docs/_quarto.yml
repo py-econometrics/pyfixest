@@ -280,6 +280,22 @@ quartodoc:
         - demeaners.MapDemeaner
         - demeaners.LsmrDemeaner
         - core.demean.Preconditioner
+    - title: Errors
+      desc: |
+        Exceptions raised by PyFixest. All derive from `PyfixestError`; some
+        also derive from a built-in exception such as `TypeError`.
+      contents:
+        - errors.PyfixestError
+        - errors.FormulaSyntaxError
+        - errors.EndogVarsAsCovarsError
+        - errors.InstrumentsAsCovarsError
+        - errors.UnderDeterminedIVError
+        - errors.DepvarIsNotNumericError
+        - errors.VcovTypeNotSupportedError
+        - errors.NanInClusterVarError
+        - errors.NonConvergenceError
+        - errors.EmptyVcovError
+        - errors.MissingModelDataError
     - title: Misc / Utilities
       desc: |
         Other PyFixest internals and utilities.
