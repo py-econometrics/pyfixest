@@ -19,6 +19,7 @@ from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -70,8 +71,7 @@ class Feglm(Feols):
         family: GlmFamily,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         # `_describe_model()`, called by the base constructor, names the
         # family's inference distribution.
@@ -82,8 +82,7 @@ class Feglm(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         _glm_input_checks(

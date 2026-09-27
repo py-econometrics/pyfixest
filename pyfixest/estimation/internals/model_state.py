@@ -194,6 +194,23 @@ class QuantregEstimationOptions(EstimationOptions):
     seed: int | None
 
 
+@dataclass(frozen=True)
+class SampleSplit:
+    """The sample one model of a `split` or `fsplit` estimation is fitted on.
+
+    Parameters
+    ----------
+    var : str
+        Name of the `split` or `fsplit` variable.
+    value : str, int, float, or the full-sample marker
+        Value of `var` the model is fitted on. The full-sample fit of an
+        `fsplit` estimation carries a marker that prints as ``all``.
+    """
+
+    var: str
+    value: str | int | float | _AllSampleSentinel
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelDescription:
     """What a fitted model estimates: its formula, estimator, and design names.

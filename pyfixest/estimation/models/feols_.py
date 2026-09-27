@@ -16,7 +16,7 @@ from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
+from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -50,6 +50,7 @@ from pyfixest.estimation.internals.model_state import (
     ModelDescription,
     ObservationWeights,
     RitestStatistics,
+    SampleSplit,
     SandwichComponents,
     VarianceCovariance,
     VcovSpec,
@@ -139,10 +140,9 @@ class Feols(ResultAccessorMixin):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int | float]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The `split` or `fsplit` sample `data` holds, or ``None`` for an
+        unsplit estimation. The model keeps only the rows of that sample.
 
     Attributes
     ----------
@@ -245,23 +245,20 @@ class Feols(ResultAccessorMixin):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | float | _AllSampleSentinel | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         self.options = options
         self.model = self._describe_model(
-            fixest_formula=FixestFormula,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            fixest_formula=FixestFormula, sample_split=sample_split
         )
         self._model_name_plot = self.model.model_name
 
-        if sample_split_var is None:
+        if sample_split is None:
             pass
-        elif sample_split_value is _ALL_SAMPLE:
-            data = data.loc[data[sample_split_var].notnull()]
+        elif sample_split.value is _ALL_SAMPLE:
+            data = data.loc[data[sample_split.var].notnull()]
         else:
-            data = data.loc[data[sample_split_var] == sample_split_value]
+            data = data.loc[data[sample_split.var] == sample_split.value]
 
         data = data.reset_index(drop=True)
 
@@ -290,19 +287,15 @@ class Feols(ResultAccessorMixin):
         self,
         *,
         fixest_formula: FixestFormula,
-        sample_split_var: str | None,
-        sample_split_value: str | int | float | _AllSampleSentinel | None,
+        sample_split: SampleSplit | None,
     ) -> ModelDescription:
         """Describe the model this class fits, before its model matrix exists.
 
         Subclasses override this to name their estimation function and its
         inference distribution. The matrix-time fields stay empty until
         `_publish_model_matrix()` republishes the description with them. An
-        unsplit fit publishes ``None`` as its split value: the planner hands
-        it the full-sample marker, which only an `fsplit` fit reports.
+        unsplit fit publishes ``None`` as its split variable and value.
         """
-        if sample_split_var is None:
-            sample_split_value = None
         return ModelDescription(
             formula=fixest_formula.formula,
             fixest_formula=fixest_formula,
@@ -310,11 +303,11 @@ class Feols(ResultAccessorMixin):
             is_iv=False,
             model_name=(
                 fixest_formula.formula
-                if sample_split_var is None
-                else f"{fixest_formula.formula} (Sample: {sample_split_var} = {sample_split_value})"
+                if sample_split is None
+                else f"{fixest_formula.formula} (Sample: {sample_split.var} = {sample_split.value})"
             ),
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split_var=None if sample_split is None else sample_split.var,
+            sample_split_value=None if sample_split is None else sample_split.value,
             inference_dist=T_DIST,
         )
 
