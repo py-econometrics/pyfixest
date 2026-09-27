@@ -9,6 +9,7 @@ from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
@@ -49,7 +50,7 @@ _SHARED_OPTIONS = dict(
 )
 
 
-def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
+def _config(method: EstimationMethod, fml: str, data, **overrides) -> EstimationConfig:
     """Minimal config builder for planner tests, with feols options."""
     base = dict(
         method=method,
@@ -424,6 +425,38 @@ def test_options_must_match_the_model_class():
     data = pf.get_data()
     cfg = _config("fepois", "Y ~ X1", data)
     with pytest.raises(TypeError, match="GlmEstimationOptions"):
+        expand_specs(
+            config=cfg,
+            formula_dict=_parse(cfg.fml),
+            data=data,
+            splits=[_ALL_SAMPLE],
+            is_iv=False,
+            splitvar=None,
+        )
+
+
+@pytest.mark.parametrize(
+    "method,quantile_process",
+    [
+        ("quantreg_multi", None),
+        ("quantreg", QuantileProcess(quantiles=[0.25, 0.75], multi_method="cfm1")),
+    ],
+)
+def test_quantile_process_must_match_the_method(method, quantile_process):
+    """Only `quantreg_multi` fits a quantile process, and it always needs one."""
+    data = pf.get_data()
+    options = QuantregEstimationOptions(
+        **_SHARED_OPTIONS,
+        quantile=0.25,
+        method="fn",
+        quantile_tol=1e-6,
+        quantile_maxiter=None,
+        seed=None,
+    )
+    cfg = _config(
+        method, "Y ~ X1", data, options=options, quantile_process=quantile_process
+    )
+    with pytest.raises(TypeError, match="quantile process"):
         expand_specs(
             config=cfg,
             formula_dict=_parse(cfg.fml),

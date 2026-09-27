@@ -200,6 +200,12 @@ def expand_specs(
             f"{config.method!r} models take {entry.options_cls.__name__}; "
             f"got {type(config.options).__name__}."
         )
+    if (config.quantile_process is not None) != (config.method == "quantreg_multi"):
+        raise TypeError(
+            "A quantile process is fitted by, and only by, 'quantreg_multi' "
+            f"models; got method {config.method!r} with "
+            f"quantile_process={config.quantile_process!r}."
+        )
     model_cls = _resolve_model_class(config.method, is_iv)
 
     return [

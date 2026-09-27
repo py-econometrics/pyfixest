@@ -11,6 +11,7 @@ from pyfixest.estimation.api.utils import (
 )
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.internals.literals import (
+    FixedRmOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
@@ -225,6 +226,8 @@ def quantreg(
     weights = None
     weights_type: WeightsTypeOptions = "aweights"
     solver: SolverOptions = "np.linalg.solve"
+    # fixed effects are rejected for quantile regression; use the feols default
+    fixef_rm: FixedRmOptions = "singleton"
 
     ssc = _resolve_ssc(ssc)
 
@@ -242,7 +245,7 @@ def quantreg(
         vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
-        fixef_rm="none",  # arbitrary, not supported
+        fixef_rm=fixef_rm,
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -257,7 +260,7 @@ def quantreg(
 
     options = QuantregEstimationOptions(
         ssc=ssc,
-        drop_singletons=True,
+        drop_singletons=fixef_rm == "singleton",
         drop_intercept=drop_intercept,
         weights=weights,
         weights_type=weights_type,
