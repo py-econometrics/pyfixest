@@ -849,23 +849,28 @@ class Feols(ResultAccessorMixin):
         fml: str,
         data: pd.DataFrame,
         vcov: VcovTypeOptions | dict[str, str],
+        options: EstimationOptions | None = None,
     ) -> Feols:
-        """Refit this model's estimator on other data with its estimation options.
+        """Refit this model's estimator on other data.
 
-        `data` is never modified.
+        `options` defaults to this model's estimation options without its
+        prebuilt preconditioner, which belongs to this model's sample. Callers
+        that deviate from them pass `replace(self.options, ...)`. `data` is
+        never modified.
         """
         # lazy loading to avoid circular import
         from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
         from pyfixest.estimation.runner import run_estimation
 
-        options = replace(
-            self.options,
-            # the shallow copy below keeps `data` intact without a deep copy
-            copy_data=False,
-            # the preconditioner was built on other data for CRV3 and must be rebuilt
-            # TODO(PYF-19): ritest keeps the sample and could reuse it
-            demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
-        )
+        if options is None:
+            options = replace(
+                self.options,
+                # the preconditioner was built on other data for CRV3 and must be rebuilt
+                # TODO(PYF-19): ritest keeps the sample and could reuse it
+                demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
+            )
+        # the shallow copy below keeps `data` intact without a deep copy
+        options = replace(options, copy_data=False)
         config = EstimationConfig(
             method=estimation_method_of(type(self)),
             # a shallow copy absorbs the runner's in-place index reset; the

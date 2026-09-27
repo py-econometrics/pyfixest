@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from importlib import import_module
 from typing import Any, cast
 
 import numpy as np
@@ -15,7 +14,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.literals import VcovTypeOptions, WeightsTypeOptions
+from pyfixest.estimation.internals.literals import VcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -249,9 +248,6 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols
-
         fml_first_stage = self.model.fixest_formula.first_stage
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
@@ -275,29 +271,25 @@ class Feiv(Feols):
             demeaner = replace(demeaner, preconditioner=cached_pre)
 
         # The first stage is fitted on the second stage's retained rows, which
-        # `prepare_model_matrix()` left in `_data`. Its variables are the
-        # instrument part of the IV model matrix, whose missing and infinite
-        # rows were dropped jointly with the second stage's, so the only row
-        # filter left to disable is singleton removal. As in fixest, it shares
-        # the second stage's design options and small-sample correction.
-        model1 = fit_(
+        # `prepare_model_matrix()` left in `_data`, and, as in fixest, with the
+        # second stage's estimation options. Its variables are the instrument
+        # part of the IV model matrix, whose missing and infinite rows were
+        # dropped jointly with the second stage's, so the only row filter left
+        # to disable is singleton removal. It is fitted in full because
+        # `first_stage` is built from its within data and residuals;
+        # `_clear_attributes()` applies the storage options afterwards.
+        model1 = self._refit(
             fml=fml_first_stage,
             data=self._data,
             vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
-            weights=self.options.weights,
-            weights_type=cast("WeightsTypeOptions", self.options.weights_type),
-            collin_tol=self.options.collin_tol,
-            solver=self.options.solver,
-            demeaner=demeaner,
-            ssc=self.options.ssc,
-            fixef_rm="none",
-            drop_intercept=self.options.drop_intercept,
-            context=self.options.context,
+            options=replace(
+                self.options,
+                drop_singletons=False,
+                store_data=True,
+                lean=False,
+                demeaner=demeaner,
+            ),
         )
-
-        # Ensure model1 is of type Feols
-        if not isinstance(model1, Feols):
-            raise TypeError("The first stage model must be of type Feols")
 
         self.first_stage = FirstStage(
             coefficients=model1._beta_hat,
