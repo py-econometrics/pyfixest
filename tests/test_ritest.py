@@ -8,6 +8,56 @@ import pyfixest as pf
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+@pytest.mark.parametrize("label_dtype", ["object", "string", "category", "Int64"])
+@pytest.mark.parametrize("algorithm", ["fast", "slow"])
+def test_ritest_cluster_labels(label_dtype, algorithm):
+    """Cluster labels preserve draws and inference under an ordered relabeling."""
+    rng = np.random.default_rng(9182)
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=120),
+            "x": rng.normal(size=120),
+            "group": np.repeat(np.arange(12), 10),
+        }
+    )
+    labels = (
+        data["group"]
+        if label_dtype == "Int64"
+        else data["group"].map(lambda group: f"group-{group:02d}")
+    )
+    data["label"] = labels.astype(label_dtype)
+    if label_dtype == "category":
+        data["label"] = data["label"].cat.reorder_categories(
+            list(reversed(data["label"].cat.categories)), ordered=True
+        )
+    results, draws = [], []
+    for cluster in ("group", "label"):
+        fit = pf.feols("y ~ x", data, vcov={"CRV1": cluster})
+        results.append(
+            fit.ritest(
+                "x",
+                cluster=cluster,
+                reps=20,
+                choose_algorithm=algorithm,
+                rng=np.random.default_rng(382),
+                store_ritest_statistics=True,
+            ).drop("Cluster")
+        )
+        draws.append(fit._ritest_statistics.copy())
+    pd.testing.assert_series_equal(results[0], results[1])
+    np.testing.assert_array_equal(draws[0], draws[1])
+
+
+@pytest.mark.parametrize("missing", [None, np.nan, pd.NA])
+def test_ritest_missing_cluster_labels(missing):
+    data = pf.get_data(N=60, seed=9182).dropna()
+    data["label"] = "group"
+    data.loc[data.index[0], "label"] = missing
+    fit = pf.feols("Y ~ X1", data)
+    with pytest.raises(ValueError, match="cluster variable contains missing values"):
+        fit.ritest("X1", cluster="label", reps=20)
+
+
 def test_fast_ritest_requires_numba(monkeypatch):
     """Fast ritest must surface a clear ImportError when numba is missing."""
     import pyfixest.estimation.post_estimation.ritest as ritest
