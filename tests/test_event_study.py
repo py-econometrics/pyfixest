@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import pytest
+import statsmodels.api as sm
 
 import pyfixest as pf
 from pyfixest.did.estimation import did2s, event_study
+from pyfixest.did.twfe import TWFE
 
 
 @pytest.fixture
@@ -44,6 +46,112 @@ def test_event_study_twfe(data):
     # assert np.allclose(
     #    twfe.confint().values, twfe_feols.confint().values
     # ), "TWFE confidence intervals are not the same."
+
+
+@pytest.mark.parametrize("dtype", ["int16", "uint32", "Int64"])
+@pytest.mark.parametrize("never_treated", [False, True])
+def test_event_study_integer_time_dtypes(dtype, never_treated):
+    unit = np.repeat(np.arange(12), 5)
+    year = np.tile(np.arange(2000, 2005), 12)
+    cohort = 2001 + unit % 3
+    if never_treated:
+        cohort[unit < 4] = 0
+    treated = (year >= cohort) & (cohort > 0)
+    data = pd.DataFrame(
+        {
+            "unit": unit,
+            "year": year,
+            "g": cohort,
+            "y": 2 * treated + unit / 10 + (year - 2000) / 5 + np.sin(unit + year),
+        }
+    ).astype({"year": dtype, "g": dtype})
+    original = data.copy()
+    fit = event_study(
+        data, yname="y", idname="unit", tname="year", gname="g", estimator="twfe"
+    )
+
+    # An explicit dummy-variable OLS design is independent of DID preprocessing.
+    design = pd.DataFrame(
+        np.column_stack(
+            [
+                np.ones(len(data)),
+                treated,
+                pd.get_dummies(unit, drop_first=True),
+                pd.get_dummies(year, drop_first=True),
+            ]
+        ).astype(float)
+    ).rename(columns={1: "is_treated"})
+    reference = sm.OLS(data["y"], design).fit(
+        cov_type="cluster", cov_kwds={"groups": unit, "use_correction": False}
+    )
+    # Match fixest's small-sample convention: unit effects are nested in the
+    # clusters, so only the treatment coefficient and time effects count in K.
+    n = len(data)
+    groups = np.unique(unit).size
+    k = 1 + np.unique(year).size
+    correction = (n - 1) / (n - k) * groups / (groups - 1)
+    # Both methods solve the same small, well-conditioned least-squares problem.
+    np.testing.assert_allclose(
+        fit.coef().loc["is_treated"],
+        reference.params.loc["is_treated"],
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="Integer storage dtype must preserve the TWFE treatment coefficient",
+    )
+    np.testing.assert_allclose(
+        fit.se().loc["is_treated"],
+        reference.bse.loc["is_treated"] * np.sqrt(correction),
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="Integer storage dtype must preserve the unit-clustered standard error",
+    )
+
+    model = TWFE(data, yname="y", idname="unit", tname="year", gname="g")
+    expected_relative_time = np.where(cohort > 0, year - cohort, np.inf)
+    np.testing.assert_array_equal(
+        model._data["rel_time"],
+        expected_relative_time,
+        err_msg="Pre-treatment relative periods must be negative for unsigned inputs",
+    )
+    pd.testing.assert_frame_equal(data, original)
+
+
+@pytest.mark.parametrize("column", ["year", "g"])
+def test_event_study_nullable_time_missing(column):
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2],
+            "year": [2000, 2001, 2000, 2001],
+            "g": [2001, 2001, 0, 0],
+            "y": [1, 2, 3, 4],
+        }
+    ).astype({column: "Int64"})
+    data.loc[0, column] = pd.NA
+    with pytest.raises(
+        ValueError, match=f"The variable {column} must not contain missing values"
+    ):
+        event_study(
+            data, yname="y", idname="unit", tname="year", gname="g", estimator="twfe"
+        )
+
+
+@pytest.mark.parametrize("column", ["year", "g"])
+def test_event_study_unsigned_time_out_of_range(column):
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2],
+            "year": [2000, 2001, 2000, 2001],
+            "g": [2001, 2001, 0, 0],
+            "y": [1, 2, 3, 4],
+        }
+    ).astype({column: "uint64"})
+    data.loc[0, column] = np.uint64(2**63)
+    with pytest.raises(
+        ValueError, match=f"The variable {column} must fit in a signed 64-bit integer"
+    ):
+        event_study(
+            data, yname="y", idname="unit", tname="year", gname="g", estimator="twfe"
+        )
 
 
 def test_event_study_did2s(data):
