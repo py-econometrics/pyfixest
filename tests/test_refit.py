@@ -123,15 +123,6 @@ def test_refit_on_the_fit_sample_keeps_every_row(data, case):
         refit(fit, data=fit._data.iloc[1:], vcov=IID, same_sample=True)
 
 
-@pytest.mark.parametrize("fml", ["Y ~ X2 | f1", "Y ~ X2"])
-def test_refit_rejects_other_fixed_effects(data, fml):
-    "No refit changes the fixed effects of the fit."
-    fit = feols(FML, data=data, context={"log1p_abs": _log1p_abs})
-
-    with pytest.raises(ValueError, match="fixed effects"):
-        refit(fit, data=fit._data, fml=fml, vcov=IID)
-
-
 def test_crv3_is_the_leave_one_cluster_out_jackknife(data, case):
     "CRV3 sums the outer products of the leave-one-cluster-out deviations."
     estimator, options = case

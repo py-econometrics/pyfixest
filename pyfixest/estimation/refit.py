@@ -37,13 +37,13 @@ def refit(
     `data`, and returns a complete fitted model: the caller applies no
     storage options to it.
 
-    With `same_sample`, `data` holds the rows of the fit's sample, with some
-    columns changed (randomization inference, the IV first stage). The refit
-    then reuses the fit's preconditioner and drops no singletons, and it
-    raises if `data` has other rows or the refit loses one. Otherwise `data`
-    is any other data (CRV3, causal cluster variance): a prebuilt
-    preconditioner belongs to the fit's sample and is rebuilt, and NAs and
-    singletons are dropped as in the fit.
+    With `same_sample`, `data` holds the rows of the fit's sample, with potentially
+    some columns changed (e.g. for randomization inference, the IV first stage).
+    The refit then reuses the fit's preconditioner and drops no singletons, and it
+    raises if `data`'s row do not match the initial fit. Otherwise `data`
+    can be any other data (e.g. sample splits for CRV3, causal cluster variance).
+    In this case, preconditioners are rebuild from the new data, from which we drop
+    separated observations etc.
 
     Parameters
     ----------
@@ -52,8 +52,7 @@ def refit(
     data : pd.DataFrame
         The data to fit, with the columns of the fit's sample.
     fml : str, optional
-        The formula to fit; defaults to the fit's. It must keep the fit's
-        fixed effects.
+        The formula to fit; defaults to the fit's.
     vcov : VcovSpec
         The covariance estimator of the refit.
     same_sample : bool, optional
@@ -74,13 +73,15 @@ def refit(
     # `run_estimation` resets the index, so compare it before fitting
     if same_sample and not data.index.equals(fit._data.index):
         raise ValueError(
-            "A refit with `same_sample=True` needs the rows of the fit's "
-            "sample; `data` has another index."
+            "A refit with `same_sample=True` needs indetical rows as the fit's "
+            "sample; here `data` has non-matching index."
         )
     if same_sample:
         options = replace(
             fit.options,
+            # do not drop singletons again (they are already dropped)
             drop_singletons=False,
+            # reuse the preconditioner
             demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
         )
     else:
@@ -90,29 +91,14 @@ def refit(
         )
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
-        # a shallow copy absorbs the runner's in-place index reset; the
-        # model copies (or copy-on-write isolates) the frame before any
-        # other write
         data=data.copy(deep=False),
         fml=fit.model.formula if fml is None else fml,
-        # the shallow copy above keeps `data` intact without a deep copy
+        # the shallow copy above keeps `data` unchanged without a deep copy
         options=replace(options, copy_data=False),
         vcov=vcov,
     )
-    parsed = parse_formula(config)
-    # keyed like `Formula.parse_to_dict`: the fixed effects, or None
-    fit_formula = fit.model.fixest_formula
-    fixed_effects = (
-        str(fit_formula.fixed_effects) if fit_formula.is_fixed_effects else None
-    )
-    if list(parsed.formula_dict) != [fixed_effects]:
-        raise ValueError(
-            f"A refit must keep the fixed effects of the fit ({fixed_effects}); "
-            f"got the formula {config.fml!r}."
-        )
-
     # the caller reads the refit in full or throws it away
-    result = run_estimation(config, parsed, apply_retention=False)
+    result = run_estimation(config, parse_formula(config), apply_retention=False)
     if not isinstance(result, Feols):
         raise TypeError(f"A refit must return a single model, not {result!r}.")
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:
