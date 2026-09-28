@@ -31,6 +31,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.internals.retention import omitted_attributes
 
 
 @pytest.fixture
@@ -606,15 +607,34 @@ def test_store_data_false_retains_robust_effective_f(
     )
 
 
-@pytest.mark.parametrize(
-    "estimator,kwargs",
-    [
-        (pf.feols, {}),
-        (pf.fepois, {}),
-        (pf.feglm, {"family": "gaussian"}),
-        (pf.quantreg, {}),
-    ],
-)
+_ESTIMATION_FUNCTIONS = [
+    (pf.feols, {}),
+    (pf.fepois, {}),
+    (pf.feglm, {"family": "gaussian"}),
+    (pf.quantreg, {}),
+]
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
+def test_estimation_functions_apply_lean(
+    lifecycle_data: pd.DataFrame, estimator, kwargs
+) -> None:
+    """Each estimation function applies `lean` to every model it returns."""
+    data = lifecycle_data.assign(y_count=np.tile([1, 2, 3, 4], 6))
+    outcome = "y_count" if estimator is pf.fepois else "y"
+    single = estimator(f"{outcome} ~ x", data, lean=True, **kwargs)
+    multiple = estimator(f"{outcome} ~ sw(x, x2)", data, lean=True, **kwargs)
+
+    for fit in [single, *multiple.to_list()]:
+        retained = [
+            name
+            for name in omitted_attributes(fit.options.retention)
+            if hasattr(fit, name)
+        ]
+        assert not retained, f"lean=True retained {retained}"
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
 def test_lean_prediction_on_new_data_without_fixed_effects(
     lifecycle_data: pd.DataFrame, estimator, kwargs
 ) -> None:

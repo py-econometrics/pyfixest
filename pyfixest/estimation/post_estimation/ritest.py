@@ -62,8 +62,8 @@ def _get_ritest_stats_slow(
     fit_fn : Callable[..., Any]
         Refits the model on each resampled data set with the fitted model's
         estimation options and the covariance estimator of the test statistic,
-        such as the model's `_refit` method with `vcov` bound. It is called
-        with the keyword arguments `fml` and `data` only.
+        such as `refit` with the model and `vcov` bound. It is called with
+        the keyword arguments `fml` and `data` only.
     rng : np.random.Generator
         The random number generator.
     clustervar_arr : np.ndarray, optional

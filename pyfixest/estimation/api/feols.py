@@ -567,4 +567,4 @@ def feols(
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)
