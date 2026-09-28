@@ -17,6 +17,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+- Randomization inference now reports the binomial Monte Carlo standard error without a confidence multiplier and uses the requested two-sided coverage for its probability interval, bounded to `[0, 1]`.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
