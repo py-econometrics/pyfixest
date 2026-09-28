@@ -79,6 +79,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     get_ssc_cluster,
     prepare_cluster_state,
 )
+from pyfixest.estimation.models._deprecated_attributes import DeprecatedAttributes
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
@@ -120,7 +121,7 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
     return tuple(fixed_effects.columns)
 
 
-class Feols(ResultAccessorMixin):
+class Feols(ResultAccessorMixin, DeprecatedAttributes):
     """
     Non user-facing class to estimate a linear regression via OLS.
 
@@ -186,8 +187,6 @@ class Feols(ResultAccessorMixin):
         Number of independent variables (or features).
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
-    _data : Any
-        Data used in the regression, to be enriched outside of the class.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
@@ -209,8 +208,6 @@ class Feols(ResultAccessorMixin):
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
-    _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
     fixef_estimates : FixedEffectEstimates
         Fixed-effect estimates published by `fixef()`: the coefficient records
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
@@ -219,13 +216,20 @@ class Feols(ResultAccessorMixin):
         Goodness-of-fit measures computed by `_fit_statistics()` and published
         right after get_fit(); ``NaN`` where the estimator defines none.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Absent when the fit was built
+        with `lean=True` or `store_data=False`.
     _model_name_plot: str
         The name of the model used when plotting and summarizing models. Usually identical to
         `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical model names are passed. In this case,
         the _model_name_plot attribute will be modified.
+
+    Notes
+    -----
+    The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_X`,
+    now live in the typed components above. Their old names still work as
+    deprecated aliases or raise an informative `AttributeError`; see
+    [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
     """
 
     # Set in get_fit().
@@ -890,10 +894,14 @@ class Feols(ResultAccessorMixin):
         return vcov_mat
 
     def _clear_attributes(self):
-        """Apply the configured fitted-model retention policy."""
+        """Apply the configured fitted-model retention policy.
+
+        Only instance state is dropped; the class-level descriptors of the
+        deprecated 0.60 attributes stay and read the remaining typed state.
+        """
+        state = vars(self)
         for attr in omitted_attributes(self.options.retention):
-            if hasattr(self, attr):
-                delattr(self, attr)
+            state.pop(attr, None)
 
     def wald_test(
         self,
