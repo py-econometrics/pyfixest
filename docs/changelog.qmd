@@ -26,6 +26,8 @@ with per-call formatting through `docx_style`.
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
 
+The private attributes of 0.60 fitted models, such as `fit._se`, `fit._vcov`, or `fit._X`, keep working while you migrate: most return their 0.60 value, including its square-root weighting, and emit a `PyfixestDeprecationWarning` (a `FutureWarning`) naming the new component; the few whose value cannot be rebuilt raise an `AttributeError` that names it. See [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
+
 ### `within` LSMR Backend via `within-py`
 
 We now use the LSMR demeaner from the `within` package as the default backend, with adaptive preconditioning. Rust MAP remains available through `MapDemeaner()`.
