@@ -1,21 +1,28 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, Literal
+from dataclasses import replace
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
+from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    GlmEstimationOptions,
+    ModelDescription,
+)
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
-from pyfixest.estimation.internals.vcov_ import vcov_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_ import meat_hetero, vcov_iid_glm
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import (
     Feols,
     PredictionErrorOptions,
@@ -49,84 +56,61 @@ class Feglm(Feols):
     ```
     """
 
+    options: GlmEstimationOptions
+    # Iterative IRLS fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        tol: float,
-        maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
+        *,
+        options: GlmEstimationOptions,
         family: GlmFamily,
-        demeaner: AnyDemeaner | None = None,
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
-        separation_check: list[str] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        accelerate: bool = True,
     ) -> None:
+        # `_describe_model()`, called by the base constructor, names the
+        # family's inference distribution.
+        self._family = family
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
+            lookup_preconditioner=lookup_preconditioner,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
-            lookup_preconditioner=lookup_preconditioner,
         )
 
         _glm_input_checks(
-            drop_singletons=drop_singletons,
-            tol=tol,
-            maxiter=maxiter,
+            drop_singletons=options.drop_singletons,
+            tol=options.tol,
+            maxiter=options.maxiter,
         )
-
-        self.maxiter = maxiter
-        self.tol = tol
-        self.convergence = False
-        self.separation_check = separation_check
-        self._accelerate = accelerate
 
         # The inherited slow jackknife refits with the linear/Poisson APIs and
         # cannot yet preserve a generic GLM family's estimation contract.
-        self._support_crv3_inference = False
-        self._support_iid_inference = True
-        self._support_hac_inference = True
-        self._supports_wildboottest = False
-        self._supports_cluster_causal_variance = False
-        self._support_decomposition = False
+        self.capabilities = replace(
+            self.capabilities,
+            crv3_inference=False,
+            hac_inference=True,
+            wildboottest=False,
+            cluster_causal_variance=False,
+            decomposition=False,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
 
-        self.deviance = None
-
-        self._method = "feglm"
-        self._family = family
-        self._inference_dist = family.inference_dist
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Describe a GLM fit and the inference distribution of its family."""
+        return replace(
+            super()._describe_model(**kwargs),
+            method="feglm",
+            inference_dist=self._family.inference_dist,
+        )
 
     def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
@@ -136,27 +120,26 @@ class Feglm(Feols):
         na_separation: list[int] = []
         if (
             model_matrix.fixed_effects is not None
-            and self.separation_check is not None
-            and self.separation_check  # not an empty list
+            and self.options.separation_check is not None
+            and self.options.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
-                fml=self._fml,
+                fml=self.model.formula,
                 data=self._data,
-                demeaner=self._demeaner,
-                methods=self.separation_check,
+                demeaner=self.options.demeaner,
+                methods=self.options.separation_check,
             )
 
         if na_separation:
             self._data.drop(na_separation, axis=0, inplace=True)
-            model_matrix = model_matrix.without_rows(na_separation)
+            model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
-            self.n_separation_na = len(na_separation)
             # possible to have dropped fixed effects level due to separation
-            self._n_fe = np.sum(self._k_fe > 1) if self._has_fixef else 0
+            self._n_fe = int(np.sum(self._k_fe > 1))
 
         return model_matrix
 
@@ -191,41 +174,34 @@ class Feglm(Feols):
             family=self._family,
             demean=_demean,
             coefnames=self._coefnames,
-            collin_tol=self._collin_tol,
-            accelerate=self._accelerate and fixed_effects is not None,
+            collin_tol=self.options.collin_tol,
+            accelerate=self.options.accelerate and fixed_effects is not None,
             offset=offset,
             weights=self.observation_weights.values,
-            solver=self._solver,
-            maxiter=self.maxiter,
-            tol=self.tol,
-            fixef_tol=self._fixef_tol,
+            solver=self.options.solver,
+            maxiter=self.options.maxiter,
+            tol=self.options.tol,
+            fixef_tol=self.options.fixef_tol,
         )
 
-        self._coefnames = fit.coefnames
-        self._collin_vars = fit.collin_vars
-        self._collin_index = fit.collin_index
+        self.collinearity = fit.collinearity
+        self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
+        # The prediction view of the same arrays: eta is the linear predictor
+        # (fixed effects and offset included), mu its inverse-link mean.
+        self.fitted_values = FittedValues(
+            link=working_state.eta, response=working_state.mu
+        )
         design_within = working_state.design_within
         self._X_is_empty = design_within.shape[1] == 0
         self._k = design_within.shape[1]
 
         self._beta_hat = fit.beta
-        weighted_working_residuals = (
-            working_state.working_weights * working_state.working_residuals
-        )
-        # The IRLS score is W_i x_i e_i. ``working_weights`` already includes
-        # any user-supplied observation weight.
-        self._scores = design_within * weighted_working_residuals[:, None]
-        weighted_design = working_state.working_weights[:, None] * design_within
-        self._tZX = design_within.T @ weighted_design
-        self._tZXinv = np.linalg.inv(self._tZX)
-        self._hessian = self._tZX.copy()
+        self.sandwich = fit.sandwich
 
-        self.deviance = fit.deviance
+        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
-        if self.convergence:
-            self._convergence = True
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.
@@ -236,44 +212,44 @@ class Feglm(Feols):
         require_retained(self, "predict", "working_state")
         return self.working_state.design_within
 
-    def _predict_in_sample(self, *, type: str) -> np.ndarray:
-        """Supply cached GLM predictions to predict() and fixef().
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the linear predictor net of the offset for `fixef()`.
 
-        eta includes fixed effects and any offset; mu is the inverse-link
-        response mean. Fixed-effect recovery requests eta, not mu.
+        The fixed effects are recovered from the estimated linear predictor,
+        equation (5.2) in Stammann (2018), http://arxiv.org/abs/1707.01815;
+        the observed response is not used. The linear predictor includes
+        the offset; subtracting it makes `sumFE` the pure fixed-effect
+        contribution, so predict() can add the offset back from newdata
+        without double-counting.
         """
-        return self.working_state.eta if type == "link" else self.working_state.mu
+        eta = self.fitted_values.link
+        if self.options.offset is not None:
+            offset = self.model_matrix.offset
+            assert offset is not None
+            eta = eta - offset.to_numpy().flatten()
+        return eta
 
-    def _vcov_iid(self):
-        return vcov_iid_glm(bread=self._bread)
+    def _vcov_iid(self) -> VcovTerm:
+        return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
 
-    def _vcov_hetero(self):
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
         # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
         # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
-        return vcov_hetero(
-            scores=self._scores,
+        meat = meat_hetero(
+            sandwich=self.sandwich,
             X=self.working_state.design_within,
-            tZX=self._tZX,
             frequency_weights=(
                 observation_weights.reshape((-1, 1))
-                if observation_weights is not None and self._weights_type == "fweights"
+                if observation_weights is not None
+                and self.options.weights_type == "fweights"
                 else None
             ),
             normal_equation_weights=self.working_state.working_weights,
-            vcov_type_detail=self._vcov_type_detail,
-            bread=self._bread,
-            is_iv=self._is_iv,
-            tXZ=self._tXZ,
-            tZZinv=self._tZZinv,
+            vcov_type_detail=cast(HeteroVcovTypeOptions, vcov_type_detail),
         )
-
-    def get_performance(self) -> None:
-        """Reject linear R² measures; only the Gaussian family reports them."""
-        raise NotImplementedError(
-            f"get_performance() is not supported for family='{self._family.name}'; "
-            "only feols() and Gaussian feglm() fits report R² measures."
-        )
+        bread = self.sandwich.bread
+        return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def resid(self, type: str = "response") -> np.ndarray:
         """
@@ -309,12 +285,12 @@ class Feglm(Feols):
         if flist is None:
             return v, X
 
-        effective_demeaner = self._demeaner.with_tol(tol)
+        effective_demeaner = self.options.demeaner.with_tol(tol)
         vX_tilde = self._demean_cache.demean_array(
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
-            na_index=self._na_index,
+            na_index=self.sample_info.dropped_row_index,
             demeaner=effective_demeaner,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
@@ -395,6 +371,9 @@ class Feglm(Feols):
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
         self._family.check_y(self.model_matrix.dependent.to_numpy())
+
+    def _finalize_fit(self) -> None:
+        """Skip the OLS Wald test; GLMs run no Wald test at fit time."""
 
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:

@@ -20,15 +20,9 @@ _STORE_DATA_ATTRIBUTES: tuple[str, ...] = ("_data", "model_matrix")
 _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "_data",
     "model_matrix",
-    "_cluster_df",
-    "_tXZ",
-    "_tZy",
-    "_tZX",
-    "_scores",
-    "_tZZinv",
+    "sandwich",
     "_u_hat",
-    "_Y_hat_link",
-    "_Y_hat_response",
+    "fitted_values",
     "working_state",
     "within_data",
     "observation_weights",
@@ -47,7 +41,7 @@ def omitted_attributes(policy: RetentionPolicy) -> tuple[str, ...]:
 
 def require_retained(model, operation: str, *names: str) -> None:
     """Fail before `operation` touches attributes omitted by the retention policy."""
-    policy = RetentionPolicy(store_data=model._store_data, lean=model._lean)
+    policy = model.options.retention
     omitted = set(omitted_attributes(policy))
     missing = []
     for name in names:

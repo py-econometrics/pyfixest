@@ -7,19 +7,27 @@ and row-sample seams locked here are not observable from those suites.
 
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
+import warnings
+from dataclasses import FrozenInstanceError, astuple
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import EmptyVcovError
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
+from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
+    DroppedRowCounts,
+    EstimationSample,
     ObservationWeights,
+    SandwichComponents,
+    VarianceCovariance,
     WithinIvData,
     WithinLinearData,
 )
@@ -48,6 +56,7 @@ def lifecycle_data() -> pd.DataFrame:
 
     return pd.DataFrame(
         {
+            "row_id": np.arange(n_obs),
             "y": response,
             "x": covariate,
             "x2": second_covariate,
@@ -88,7 +97,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit.observation_weights.values, weights)
     assert fit.observation_weights.weights_type == weights_type
-    assert expected_n == fit._N
+    assert expected_n == fit.sample_info.n_obs
 
     weighted_group_mean = (lifecycle_data["y"] * lifecycle_data["weight"]).groupby(
         lifecycle_data["fe"]
@@ -107,17 +116,25 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     )
     np.testing.assert_allclose(fit._u_hat, residuals)
     np.testing.assert_allclose(fit.resid(), residuals)
+    sandwich = fit.sandwich
+    assert type(sandwich) is SandwichComponents
     np.testing.assert_allclose(
-        fit._scores,
+        sandwich.scores,
         fit.within_data.design * (weights * residuals)[:, None],
     )
+    hessian = fit.within_data.design.T @ (weights[:, None] * fit.within_data.design)
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._hessian,
-        fit.within_data.design.T @ (weights[:, None] * fit.within_data.design),
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
     )
+    for name in ("_scores", "_hessian", "_bread", "_tZX", "_tXZ", "_tZy", "_tZZinv"):
+        assert not hasattr(fit, name), name
 
     with pytest.raises(FrozenInstanceError):
         fit.within_data.response = fit.within_data.design  # type: ignore[misc]
+    with pytest.raises(FrozenInstanceError):
+        sandwich.bread = hessian  # type: ignore[misc]
 
 
 def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
@@ -141,12 +158,24 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     weighted_design = weights[:, None] * within.design
-    weighted_response = weights[:, None] * within.response
-    np.testing.assert_allclose(fit._tZX, within.instruments.T @ weighted_design)
-    np.testing.assert_allclose(fit._tZy, within.instruments.T @ weighted_response)
+    weighted_instruments = weights[:, None] * within.instruments
+    tZX = within.instruments.T @ weighted_design
+    tZZ = within.instruments.T @ weighted_instruments
+    tZZinv = np.linalg.inv(tZZ)
+    sandwich = fit.sandwich
+    assert isinstance(sandwich, SandwichComponents)
+    # The IV Hessian is the 2SLS Hessian, whose inverse is the bread.
+    hessian = tZX.T @ tZZinv @ tZX
+    np.testing.assert_allclose(sandwich.hessian, hessian)
+    # atol: off-diagonal entries of bread @ hessian are rounding noise.
     np.testing.assert_allclose(
-        fit._scores,
-        within.instruments * (weights * fit._u_hat)[:, None],
+        sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
+    )
+    # 2SLS scores are the OLS scores of the first-stage projection X_hat.
+    X_hat = within.instruments @ tZZinv @ tZX
+    np.testing.assert_allclose(
+        sandwich.scores,
+        X_hat * (weights * fit._u_hat)[:, None],
     )
     np.testing.assert_allclose(fit.resid(), fit._u_hat)
 
@@ -181,7 +210,7 @@ def test_formula_data_remains_canonical_after_linear_fit(
         model_matrix.weights,
         lifecycle_data.loc[:, ["weight"]],
     )
-    assert fit._model_spec is model_matrix.model_spec
+    assert fit.model.model_spec is model_matrix.model_spec
 
 
 def test_unweighted_effective_n_remains_integer_for_prediction_errors(
@@ -190,13 +219,13 @@ def test_unweighted_effective_n_remains_integer_for_prediction_errors(
     """An integer physical row count remains usable by prediction allocation."""
     fit = pf.feols("y ~ x", data=lifecycle_data, vcov="iid")
 
-    assert isinstance(fit._N, int)
-    assert isinstance(fit.observation_weights.n_effective, int)
+    assert isinstance(fit.sample_info.n_obs, int)
+    assert fit.sample_info.n_rows == len(lifecycle_data)
     assert fit.predict(se_fit=True).shape == (len(lifecycle_data),)
 
 
 def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
-    """Canonical GLM formula data describes the post-separation sample."""
+    """Canonical GLM formula data describes the post-separation sample_info."""
     data = pd.DataFrame(
         {
             "y": [0, 0, 0, 1, 2, 3],
@@ -221,13 +250,20 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert model_matrix.fixed_effects is not None
     assert model_matrix.fixed_effects.index.equals(fit._data.index)
     # Row 5 is a formula-stage singleton; rows 0 and 1 are separated.
-    assert model_matrix.na_index == frozenset({0, 1, 5})
-    assert len(model_matrix.dependent) == fit._N_rows
-    assert fit.n_separation_na == 2
+    assert model_matrix.dropped_row_index == frozenset({0, 1, 5})
+    assert len(model_matrix.dependent) == fit.sample_info.n_rows
+    assert fit.sample_info.dropped_by_stage == DroppedRowCounts(
+        missing=0, singleton=1, separation=2
+    )
+    assert fit.sample_info.n_rows == model_matrix.n_rows
+    assert fit.sample_info.dropped_row_index == model_matrix.dropped_row_index
+    assert fit.sample_info.dropped_by_stage == model_matrix.dropped_by_stage
 
 
+@pytest.mark.parametrize("stage", ["missing", "separation"])
 def test_model_matrix_without_rows_returns_filtered_copy(
     lifecycle_data: pd.DataFrame,
+    stage: DropStageOptions,
 ) -> None:
     """Estimator-level row filters yield a new ModelMatrix and keep the source."""
     model_matrix = create_model_matrix(
@@ -237,11 +273,11 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     )
     kept_index = model_matrix.dependent.index.drop([0, 5])
 
-    filtered = model_matrix.without_rows([0, 5])
+    filtered = model_matrix.without_rows([0, 5], stage=stage)
 
-    assert model_matrix.without_rows([]) is model_matrix
+    assert model_matrix.without_rows([], stage=stage) is model_matrix
     assert filtered is not model_matrix
-    assert filtered.na_index == model_matrix.na_index | {0, 5}
+    assert filtered.dropped_row_index == model_matrix.dropped_row_index | {0, 5}
     assert filtered.model_spec is model_matrix.model_spec
     for role in ("dependent", "independent", "fixed_effects", "weights"):
         assert getattr(filtered, role).index.equals(kept_index)
@@ -249,6 +285,13 @@ def test_model_matrix_without_rows_returns_filtered_copy(
     assert filtered.instruments is None
     assert filtered.offset is None
     assert len(model_matrix.dependent) == len(lifecycle_data)
+
+    # The source keeps its bookkeeping; the copy counts rows under the given stage.
+    assert model_matrix.dropped_by_stage == DroppedRowCounts()
+    assert model_matrix.n_rows == len(lifecycle_data)
+    assert filtered.dropped_by_stage == DroppedRowCounts(**{stage: 2})
+    assert filtered.dropped_row_index == frozenset({0, 5})
+    assert filtered.n_rows == len(lifecycle_data) - 2
 
 
 def test_multiple_estimation_shares_array_native_demean_cache(
@@ -303,15 +346,32 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         iwls_tol=1e-10,
         **storage,
     )
-    # Gaussian fitting does not yet populate performance statistics.
-    for attribute in ("_rmse", "_r2", "_adj_r2", "_r2_within", "_adj_r2_within"):
-        assert np.isnan(getattr(fit, attribute)), attribute
-    if storage:
-        return
-    fit.get_performance()
+    # The Gaussian fit statistics are completed at fit time and survive every
+    # storage option; the reference fit keeps the arrays they were built from.
+    fitstat = fit.fitstat
+    assert isinstance(fitstat, FitStatistics)
+    assert np.isfinite(fitstat.deviance)
+    assert np.isnan(fitstat.r2_within) is not fit.model.has_fixef
+    reference = pf.feglm(
+        fml,
+        data=lifecycle_data,
+        family="gaussian",
+        weights=weights,
+        weights_type=weights_type,
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+    np.testing.assert_allclose(
+        astuple(fitstat),
+        astuple(reference.fitstat),
+        rtol=0,
+        atol=0,
+        equal_nan=True,
+        err_msg="Storage options changed Gaussian fit statistics",
+    )
     response = lifecycle_data["y"].to_numpy()
-    observation_weights = fit.observation_weights.values
-    residuals = fit.working_state.response_residuals
+    observation_weights = reference.observation_weights.values
+    residuals = reference.working_state.response_residuals
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
@@ -319,9 +379,9 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit._N))
-    np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
-    if fit._has_fixef:
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+    np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
+    if fit.model.has_fixef:
         assert observation_weights is not None
         weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
         group_mean = weighted_y.groupby(lifecycle_data["fe"]).transform("sum")
@@ -330,7 +390,39 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         )
         response_within = response - group_mean.to_numpy()
         ssy_within = np.sum(observation_weights * response_within**2)
-        np.testing.assert_allclose(fit._r2_within, 1 - ssu / ssy_within)
+        np.testing.assert_allclose(fitstat.r2_within, 1 - ssu / ssy_within)
+
+
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs",
+    [
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {}),
+        (pf.quantreg, "y ~ x", {"quantile": 0.5}),
+        (pf.feols, "y ~ 1 | fe", {}),
+        (pf.feols, "y ~ 1 | row_id", {"fixef_rm": "none"}),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {"fixef_rm": "none", "weights": "weight", "store_data": False},
+        ),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {
+                "fixef_rm": "none",
+                "weights": "weight",
+                "weights_type": "fweights",
+                "lean": True,
+            },
+        ),
+    ],
+)
+def test_undefined_fit_statistics_are_nan(
+    lifecycle_data: pd.DataFrame, estimator, formula: str, kwargs: dict
+) -> None:
+    fit = estimator(formula, lifecycle_data, **kwargs)
+    assert all(np.isnan(value) for value in astuple(fit.fitstat))
+    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -381,8 +473,32 @@ def test_published_components_preserve_inputs(
         "_Xbeta",
         "_u_hat_response",
         "_u_hat_working",
+        "_rmse",
+        "_r2",
+        "_adj_r2",
+        "_r2_within",
+        "_adj_r2_within",
+        "deviance",
+        "_loglik",
+        "_loglik_null",
+        "_pseudo_r2",
+        "_pearson_chi2",
+        "_y_hat_null",
+        "_scores",
+        "_hessian",
+        "_bread",
+        "_tZX",
+        "_tXZ",
+        "_tZy",
+        "_tZZinv",
+        "_tZXinv",
     )
     assert not any(hasattr(fit, name) for name in removed)
+    if estimator is pf.quantreg:
+        # Quantile inference follows R quantreg and never reads a sandwich.
+        assert not hasattr(fit, "sandwich")
+    else:
+        assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
     assert input_array.flags.writeable == writeable_before
 
@@ -404,7 +520,9 @@ def test_multi_quantile_children_follow_ols_retention(
         lean=lean,
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
+    assert hasattr(ols, "sandwich") == (not lean)
     for child in fit.to_list():
+        assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
         if lean:
@@ -437,7 +555,7 @@ def test_iv_first_stage_follows_parent_retention(
         store_data=store_data,
         lean=lean,
     )
-    first_stage = fit._model_1st_stage
+    first_stage = fit.first_stage.model
 
     for model in (fit, first_stage):
         assert hasattr(model, "_data") is (store_data and not lean)
@@ -446,11 +564,14 @@ def test_iv_first_stage_follows_parent_retention(
         assert hasattr(model, "observation_weights") is (not lean)
         assert np.isfinite(model.coef()).all()
         assert np.isfinite(model.se()).all()
+        # The sample survives every storage option unchanged.
+        assert model.sample_info.n_rows == len(lifecycle_data)
+        assert model.sample_info.dropped_by_stage == DroppedRowCounts()
 
-    retained_f = fit._f_stat_1st_stage
+    retained_f = fit.first_stage.diagnostics.f_stat
     fit.IV_weakness_test(["f_stat"])
     np.testing.assert_allclose(
-        fit._f_stat_1st_stage,
+        fit.first_stage.diagnostics.f_stat,
         retained_f,
         rtol=1e-12,
         atol=1e-12,
@@ -477,8 +598,8 @@ def test_store_data_false_retains_robust_effective_f(
     fit.eff_F()
 
     np.testing.assert_allclose(
-        fit._eff_F,
-        reference._eff_F,
+        fit.first_stage.diagnostics.eff_f,
+        reference.first_stage.diagnostics.eff_f,
         rtol=1e-12,
         atol=1e-12,
         err_msg="store_data=False changed robust effective-F",
@@ -541,3 +662,148 @@ def test_store_data_false_preserves_no_fe_post_estimation(
             atol=1e-12,
             err_msg=f"store_data=False changed decomposition quantity {name}",
         )
+
+
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs,expected_separation",
+    [
+        (pf.feols, "y ~ x | fe", {}, 0),
+        (pf.feols, "y ~ x | fe", {"weights": "weight", "weights_type": "fweights"}, 0),
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {}, 0),
+        (pf.feols, "y ~ csw(x, x2) | fe", {}, 0),
+        (pf.fepois, "count ~ x | fe", {"separation_check": ["fe"]}, 6),
+        (pf.feglm, "binary ~ x | fe", {"family": "logit"}, 0),
+        (pf.quantreg, "y ~ x", {"quantile": 0.5}, 0),
+    ],
+)
+def test_estimation_sample_counts_dropped_rows_by_stage(
+    lifecycle_data, estimator, formula, kwargs, expected_separation
+):
+    """Every estimator reports its final row sample and the stage of each dropped row."""
+    data = lifecycle_data.assign(
+        count=np.tile([1, 3, 2, 4], 6), binary=np.tile([0, 1], 12)
+    )
+    data.loc[1, "x"] = np.nan  # formula missing-value handling
+    data.loc[1, "fe"] = "solo"  # would be a singleton, but is already missing
+    data.loc[2, "x"] = np.inf  # infinite filter
+    data.loc[[2, 4], "fe"] = "pair"  # row 4 becomes a singleton once 2 is dropped
+    data.loc[3, "fe"] = "solo"  # singleton fixed-effect level
+    data.loc[data["fe"] == "b", "count"] = 0  # level b is separated for fepois
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = estimator(formula, data, **kwargs)
+    models = result.to_list() if isinstance(result, FixestMulti) else [result]
+    uses_fe = "| fe" in formula
+    expected_dropped = DroppedRowCounts(
+        missing=1,
+        infinite=1,
+        singleton=2 * int(uses_fe),
+        separation=expected_separation,
+    )
+    expected_index = data.index.drop([1, 2] + ([3, 4] if uses_fe else []))
+    if expected_separation:
+        expected_index = expected_index.drop(
+            data.index[(data["fe"] == "b") & (data["count"] == 0)]
+        )
+    for model in models:
+        sample_info = model.sample_info
+        assert isinstance(sample_info, EstimationSample)
+        assert sample_info.n_rows == model.model_matrix.n_rows
+        assert sample_info.dropped_row_index == model.model_matrix.dropped_row_index
+        assert sample_info.dropped_by_stage == model.model_matrix.dropped_by_stage
+        assert sample_info.dropped_by_stage == expected_dropped
+        assert sample_info.dropped_by_stage.total == len(sample_info.dropped_row_index)
+        assert sample_info.n_rows == len(data) - expected_dropped.total
+        assert sample_info.n_rows == len(model.resid())
+        assert set(sample_info.dropped_row_index) == set(
+            data.index.difference(expected_index)
+        )
+        if kwargs.get("weights_type") == "fweights":
+            # Singletons are physical rows; the effective count sums weights.
+            assert sample_info.n_obs == data.loc[expected_index, "weight"].sum()
+            assert isinstance(sample_info.n_obs, float)
+        else:
+            assert sample_info.n_obs == sample_info.n_rows
+            assert isinstance(sample_info.n_obs, int)
+        if model.model.is_iv:
+            # The first stage is refit on the retained rows: it owns a sample
+            # with no dropped rows of its own.
+            first_stage = model.first_stage.model.sample_info
+            assert first_stage is not sample_info
+            assert first_stage.dropped_by_stage == DroppedRowCounts()
+            assert first_stage.n_rows == sample_info.n_rows
+    assert len({id(model.sample_info) for model in models}) == len(models)
+
+
+def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
+    """A split selects each child's rows; only formula filters count as dropped."""
+    data = lifecycle_data.copy()
+    data.loc[7, "x"] = np.nan
+    fit = pf.feols("y ~ x", data, split="fe")
+    for model in fit.to_list():
+        level = model.model.sample_split_value
+        population = data.index[data["fe"] == level]
+        sample_info = model.sample_info
+        assert sample_info.n_rows == len(population) - int(level == "b")
+        assert sample_info.dropped_by_stage == DroppedRowCounts(
+            missing=int(level == "b")
+        )
+        # Dropped positions count from zero in the child's input frame.
+        assert sample_info.dropped_row_index == frozenset(
+            np.flatnonzero(population == 7).tolist()
+        )
+
+
+@pytest.mark.parametrize(
+    ("estimator", "formula", "vcov", "vcov_kwargs"),
+    [
+        (pf.feols, "y ~ x + x2 | fe", "HC1", None),
+        (pf.feols, "y ~ x + x2 | fe", {"CRV1": "fe+group"}, None),
+        (
+            pf.feols,
+            "y ~ x | fe",
+            "NW",
+            {"time_id": "period", "panel_id": "unit", "lag": 2},
+        ),
+        (pf.feols, "y ~ x | fe | endog ~ z", {"CRV1": "fe"}, None),
+        (pf.fepois, "count ~ x | fe", {"CRV1": "fe"}, None),
+    ],
+)
+def test_meat_reproduces_the_adjusted_vcov(
+    lifecycle_data, estimator, formula, vcov, vcov_kwargs
+):
+    """The published meat sandwiches back to the published covariance.
+
+    Nothing outside the fitted model reads the meat, so the live-R suites
+    cannot catch a wrong one; this identity is its only check.
+    """
+    data = lifecycle_data.assign(
+        group=np.tile(["g1", "g2", "g3"], 8),
+        period=np.tile(np.arange(6), 4),
+        unit=np.repeat(np.arange(4), 6),
+        count=np.random.default_rng(3).poisson(2.0, size=len(lifecycle_data)),
+    )
+    fit = estimator(formula, data, vcov=vcov, vcov_kwargs=vcov_kwargs)
+    covariance = fit.variance_covariance
+
+    assert isinstance(covariance, VarianceCovariance)
+    bread = fit.sandwich.bread
+    np.testing.assert_allclose(
+        covariance.vcov, bread @ covariance.meat @ bread, rtol=1e-12, atol=1e-14
+    )
+    assert covariance.ssc.shape == (len(covariance.G) or 1,)
+
+
+def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
+    """A fixed-effects-only fit skips vcov() and carries no covariance."""
+    fit = pf.feols("y ~ 1 | fe", lifecycle_data)
+    assert not hasattr(fit, "variance_covariance")
+    with pytest.raises(EmptyVcovError):
+        fit.get_inference()
+
+
+def test_quantreg_rejects_multiway_clustering(lifecycle_data):
+    """Quantile regression declares no multiway support before any state is read."""
+    data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))
+    with pytest.raises(NotImplementedError, match="Multiway clustering"):
+        pf.quantreg("y ~ x", data, vcov={"CRV1": "fe+group"})

@@ -175,12 +175,12 @@ class Formula:
         )
 
     @property
-    def dependent(self) -> formulaic.formula.Formula:
+    def dependent(self) -> formulaic.formula.SimpleFormula:
         """The dependent variable."""
         return self._left_hand_side
 
     @property
-    def exogenous(self) -> formulaic.formula.Formula:
+    def exogenous(self) -> formulaic.formula.SimpleFormula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
@@ -196,7 +196,7 @@ class Formula:
         return exogenous
 
     @property
-    def endogenous(self) -> formulaic.formula.Formula:
+    def endogenous(self) -> formulaic.formula.SimpleFormula:
         """Endogenous variables of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
@@ -205,7 +205,7 @@ class Formula:
         return get_first_multistage_lhs(self._right_hand_side)
 
     @property
-    def instruments(self) -> formulaic.formula.Formula:
+    def instruments(self) -> formulaic.formula.SimpleFormula:
         """Instruments of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
@@ -214,7 +214,7 @@ class Formula:
         return get_first_multistage_rhs(self._right_hand_side)
 
     @property
-    def fixed_effects(self) -> formulaic.formula.Formula:
+    def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
@@ -223,7 +223,7 @@ class Formula:
         )
 
     @property
-    def fixed_effects_wrapped(self) -> formulaic.formula.Formula:
+    def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
             [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],

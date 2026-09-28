@@ -55,8 +55,8 @@ def test_summary():
     etable(
         models=[fit1, fit2],
         custom_stats={
-            "conf_int_lb": [fit1._conf_int[0], fit2._conf_int[0]],
-            "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+            "conf_int_lb": [fit1.coeftable.conf_int[0], fit2.coeftable.conf_int[0]],
+            "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
         },
         coef_fmt="b [conf_int_lb, conf_int_ub]",
     )
