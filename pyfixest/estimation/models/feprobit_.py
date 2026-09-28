@@ -1,12 +1,18 @@
-from collections.abc import Mapping
-from typing import Any, Literal
+from __future__ import annotations
+
+from dataclasses import replace
+from typing import Any
 
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import PROBIT
+from pyfixest.estimation.internals.model_state import (
+    GlmEstimationOptions,
+    ModelDescription,
+)
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -17,56 +23,24 @@ class Feprobit(Feglm):
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
-        lookup_demeaned_data: dict[frozenset[int], pd.DataFrame],
-        tol: float,
-        maxiter: int,
-        solver: Literal[
-            "np.linalg.lstsq",
-            "np.linalg.solve",
-            "scipy.linalg.solve",
-            "scipy.sparse.linalg.lsqr",
-        ],
-        demeaner: AnyDemeaner | None = None,
+        *,
+        options: GlmEstimationOptions,
+        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
         sample_split_var: str | None = None,
         sample_split_value: str | int | None = None,
-        separation_check: list[str] | None = None,
-        context: int | Mapping[str, Any] = 0,
-        accelerate: bool = True,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            tol=tol,
-            maxiter=maxiter,
-            solver=solver,
-            demeaner=demeaner,
             lookup_preconditioner=lookup_preconditioner,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
             sample_split_var=sample_split_var,
             sample_split_value=sample_split_value,
-            separation_check=separation_check,
-            context=context,
-            accelerate=accelerate,
             family=PROBIT,
         )
 
-        self._method = "feglm-probit"
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the probit estimation function."""
+        return replace(super()._describe_model(**kwargs), method="feglm-probit")

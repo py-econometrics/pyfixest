@@ -12,11 +12,24 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
-from tests._torch_test_utils import torch_param
+from tests._feols_test_cases import (
+    FEOLS_FORMULA_F3_CASES,
+    build_feols_data_variants,
+    fixed_effect_interactions_to_legacy,
+    glm_fmls,
+    iv_fmls,
+    ols_fmls,
+    ssc_formula_vcov_dropna_case_ids,
+    ssc_formula_vcov_dropna_cases,
+)
+from tests._feols_test_cases import (
+    convert_f3 as _convert_f3,
+)
 
 fixest = importr("fixest")
 stats = importr("stats")
 broom = importr("broom")
+sandwich = importr("sandwich")
 
 # note: tolerances are lowered below for
 # fepois inference as it is not as precise as feols
@@ -35,106 +48,11 @@ OFFSET_COEF_ATOL = 1e-7
 OFFSET_PRED_RTOL = 1e-5
 OFFSET_PRED_ATOL = 1e-5
 
-ols_fmls = [
-    ("Y~X1"),
-    ("Y~X1+X2"),
-    ("Y~X1|f2"),
-    ("Y~X1|f2+f3"),
-    ("Y ~ X1 + exp(X2)"),
-    ("Y ~ X1 + C(f1)"),
-    ("Y ~ X1 + i(f1, ref = 1)"),
-    ("Y ~ X1 + C(f1)"),
-    ("Y ~ X1 + i(f2, ref = 2.0)"),
-    ("Y ~ X1 + C(f1) + C(f2)"),
-    ("Y ~ X1 + C(f1) | f2"),
-    ("Y ~ X1 + i(f1, ref = 3.0) | f2"),
-    ("Y ~ X1 + C(f1) | f2 + f3"),
-    ("Y ~ X1 + i(f1, ref = 1) | f2 + f3"),
-    ("Y ~ X1 + i(f1) + i(f2)"),
-    ("Y ~ X1 + i(f1, ref = 1) + i(f2, ref = 2)"),
-    # ("Y ~ X1 + C(f1):C(fe2)"),                  # currently does not work as C():C() translation not implemented
-    # ("Y ~ X1 + C(f1):C(fe2) | f3"),             # currently does not work as C():C() translation not implemented
-    ("Y ~ X1 + X2:f1"),
-    ("Y ~ X1 + X2:f1 | f3"),
-    ("Y ~ X1 + X2:f1 | f3 + f1"),
-    # ("log(Y) ~ X1:X2 | f3 + f1"),               # currently, causes big problems for Fepois (takes a long time)
-    # ("log(Y) ~ log(X1):X2 | f3 + f1"),          # currently, causes big problems for Fepois (takes a long time)
-    # ("Y ~  X2 + exp(X1) | f3 + f1"),            # currently, causes big problems for Fepois (takes a long time)
-    ("Y ~ X1 + i(f1,X2)"),
-    ("Y ~ X1 + i(f1,X2) + i(f2, X2)"),
-    ("Y ~ X1 + i(f1,X2, ref =1) + i(f2)"),
-    ("Y ~ X1 + i(f1,X2, ref =1) + i(f2, X1, ref =2)"),
-    ("Y ~ X1 + i(f2,X2)"),
-    ("Y ~ X1 + i(f1,X2) | f2"),
-    ("Y ~ X1 + i(f1,X2) | f2 + f3"),
-    ("Y ~ X1 + i(f1,X2, ref=1.0)"),
-    ("Y ~ X1 + i(f2,X2, ref=2.0)"),
-    ("Y ~ X1 + i(f1,X2, ref=3.0) | f2"),
-    ("Y ~ X1 + i(f1,X2, ref=4.0) | f2 + f3"),
-    # ("Y ~ C(f1):X2"),                          # currently does not work as C():X translation not implemented
-    # ("Y ~ C(f1):C(f2)"),                       # currently does not work
-    ("Y ~ X1 + I(X2 ** 2)"),
-    ("Y ~ X1 + I(X1 ** 2) + I(X2**4)"),
-    ("Y ~ X1*X2"),
-    ("Y ~ X1*X2 | f1+f2"),
-    # ("Y ~ X1/X2"),                             # currently does not work as X1/X2 translation not implemented
-    # ("Y ~ X1/X2 | f1+f2"),                     # currently does not work as X1/X2 translation not implemented
-    ("Y ~ X1 + poly(X2, 2) | f1"),
-]
-
-
-ols_but_not_poisson_fml = [
-    ("log(Y) ~ X1"),
-    ("Y~X1|f2:f3"),
-    ("Y~X1|f1 + f2:f3"),
-    ("Y~X1|f2:f3:f1"),
-]
-
 empty_models = [
     ("Y ~ 1 | f1"),
     ("Y ~ 1 | f1 + f2"),
     ("Y ~ 0 | f1"),
     ("Y ~ 0 | f1 + f2"),
-]
-
-iv_fmls = [
-    # IV starts here
-    ("Y ~ 1 | X1 ~ Z1"),
-    "Y ~  X2 | X1 ~ Z1",
-    "Y ~ X2 + C(f1) | X1 ~ Z1",
-    "Y2 ~ 1 | X1 ~ Z1",
-    "Y2 ~ X2 | X1 ~ Z1",
-    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
-    # "log(Y) ~ 1 | X1 ~ Z1",
-    # "log(Y) ~ X2 | X1 ~ Z1",
-    # "log(Y) ~ X2 + C(f1) | X1 ~ Z1",
-    "Y ~ 1 | f1 | X1 ~ Z1",
-    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
-    "Y ~ 1 | f1:f2 | X1 ~ Z1",
-    "Y ~  X2| f3 | X1 ~ Z1",
-    # tests of overidentified models
-    "Y ~ 1 | X1 ~ Z1 + Z2",
-    "Y ~ X2 | X1 ~ Z1 + Z2",
-    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
-    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
-    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
-]
-
-glm_fmls = [
-    # No fixed effects
-    "Y ~ X1",
-    "Y ~ X1 + X2",
-    "Y ~ X1*X2",
-    # "Y ~ X1 + C(f2)",
-    # "Y ~ X1 + i(f1, ref = 1)",
-    "Y ~ X1 + f1:X2",
-    # With fixed effects
-    "Y ~ X1 | f1",
-    "Y ~ X1 + X2 | f1",
-    "Y ~ X1 | f1 + f2",
-    "Y ~ X1 + X2 | f1 + f2",
-    "Y ~ X1*X2 | f1",
 ]
 
 
@@ -145,11 +63,51 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     )
 
 
+@pytest.fixture(scope="module")
+def data_feols_variants(data_feols):
+    return build_feols_data_variants(data_feols)
+
+
 @pytest.fixture
 def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
     )
+
+
+def _make_frequency_weighted_linear_data():
+    """Return deterministic aggregate linear and IV data (seed 20260901)."""
+    rng = np.random.default_rng(20260901)
+    n_per_group = 12
+    fixed_effect = np.repeat(list("abcd"), n_per_group)
+    fixed_effect_value = np.repeat([-0.8, -0.2, 0.3, 0.9], n_per_group)
+    x = rng.normal(size=4 * n_per_group)
+    z = rng.normal(size=4 * n_per_group)
+    d = (
+        0.9 * z
+        + 0.3 * x
+        + 0.25 * fixed_effect_value
+        + rng.normal(scale=0.35, size=len(x))
+    )
+    y = (
+        1.0
+        + 0.8 * d
+        - 0.5 * x
+        + fixed_effect_value
+        + rng.normal(scale=0.45, size=len(x))
+    )
+
+    data = pd.DataFrame(
+        {
+            "y": y,
+            "x": x,
+            "d": d,
+            "z": z,
+            "fe": fixed_effect,
+            "fweights": rng.integers(1, 5, size=len(x)),
+        }
+    )
+    return data
 
 
 rng = np.random.default_rng(8760985)
@@ -187,7 +145,7 @@ def check_relative_diff(x1, x2, tol, msg=None):
 def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     """Get the variance of a named coefficient from both Python and R models."""
     py_idx = py_model._coefnames.index(coefname)
-    py_vcov = py_model._vcov[py_idx, py_idx]
+    py_vcov = py_model.variance_covariance.vcov[py_idx, py_idx]
     # Get R coefficient names (pandas2ri strips names from auto-converted arrays)
     ro.globalenv[".tmp.model"] = r_model
     r_names = list(ro.r("names(coef(.tmp.model))"))
@@ -196,11 +154,6 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
     r_vcov = np.array(stats.vcov(r_model))[r_idx, r_idx]
     return py_vcov, r_vcov
 
-
-test_counter_feols = 0
-test_counter_fepois = 0
-test_counter_feiv = 0
-test_counter_feglm = 0
 
 # What is being tested in all tests:
 # - pyfixest vs fixest
@@ -214,80 +167,19 @@ test_counter_feglm = 0
 # - G_adj: True
 
 
-ALL_F3 = ["str", "object", "int", "categorical", "float"]
-SINGLE_F3 = ALL_F3[0]
-
-
-BACKEND_F3 = [
-    *[
-        pytest.param(name, pf.MapDemeaner(backend="numba"), t, id=name)
-        for name in ("numba",)
-        for t in ALL_F3
-    ],
-    pytest.param(
-        "within",
-        pf.LsmrDemeaner(preconditioner="additive"),
-        SINGLE_F3,
-        id="within_additive",
-    ),
-    pytest.param(
-        "within_diag",
-        pf.LsmrDemeaner(preconditioner="diagonal"),
-        SINGLE_F3,
-        id="within_diagonal",
-    ),
-    *[
-        pytest.param(name, pf.MapDemeaner(backend=name), SINGLE_F3, id=name)
-        for name in ("rust",)
-    ],
-    torch_param(
-        ("torch", pf.LsmrDemeaner(backend="torch", device="auto"), SINGLE_F3),
-        id="torch",
-    ),
-    torch_param(
-        ("torch_cpu", pf.LsmrDemeaner(backend="torch", device="cpu"), SINGLE_F3),
-        id="torch_cpu",
-    ),
-    torch_param(
-        (
-            "torch_mps",
-            pf.LsmrDemeaner(backend="torch", precision="float32", device="mps"),
-            SINGLE_F3,
-        ),
-        id="torch_mps",
-        require="mps",
-    ),
-    torch_param(
-        (
-            "torch_cuda",
-            pf.LsmrDemeaner(backend="torch", device="cuda"),
-            SINGLE_F3,
-        ),
-        id="torch_cuda",
-        require="cuda",
-    ),
-    torch_param(
-        (
-            "torch_cuda32",
-            pf.LsmrDemeaner(backend="torch", precision="float32", device="cuda"),
-            SINGLE_F3,
-        ),
-        id="torch_cuda32",
-        require="cuda",
-    ),
-]
-
-
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("backend_name,demeaner,f3_type", BACKEND_F3)
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("fml", ols_fmls + ols_but_not_poisson_fml)
+@pytest.mark.parametrize(
+    "fml,f3_type",
+    FEOLS_FORMULA_F3_CASES,
+    ids=lambda value: str(value),
+)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_feols(
-    data_feols,
+    data_feols_variants,
     dropna,
     inference,
     weights,
@@ -295,29 +187,9 @@ def test_single_fit_feols(
     fml,
     k_adj,
     G_adj,
-    backend_name,
-    demeaner,
 ):
-    global test_counter_feols
-    test_counter_feols += 1
-
-    _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_feols, dropna)
-
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
-
-    data = data_feols.copy()
-
-    if dropna:
-        data = data.dropna()
-
-    # long story, but categories need to be strings to be converted to R factors,
-    # this then produces 'nan' values in the pd.DataFrame ...
-    data.where(data != "nan", np.nan, inplace=True)
-
-    # test fixed effects that are not floats, but ints or categoricals, etc
-
-    data = _convert_f3(data, f3_type)
+    data = data_feols_variants[(dropna, f3_type)]
 
     data_r = get_data_r(fml, data)
     r_fml = _c_to_as_factor(fml)
@@ -330,7 +202,6 @@ def test_single_fit_feols(
         vcov=inference,
         weights=weights,
         ssc=ssc_,
-        demeaner=demeaner,
     )
     if weights is not None:
         r_fixest = fixest.feols(
@@ -360,10 +231,10 @@ def test_single_fit_feols(
     py_confint = mod.confint().xs("X1").values
     py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1")
 
-    py_nobs = mod._N
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
-    py_df_k = mod._df_k
-    py_df_t = mod._df_t
+    py_df_k = mod.variance_covariance.df_k
+    py_df_t = mod.variance_covariance.df_t
 
     df_X1 = _get_r_df(r_fixest)
     r_coef = df_X1["estimate"]
@@ -377,24 +248,11 @@ def test_single_fit_feols(
     r_df_k = int(ro.r('attr(r_fixest$cov.scaled, "df.K")')[0])
     r_df_t = int(ro.r('attr(r_fixest$cov.scaled, "df.t")')[0])
 
-    if backend_name in ("torch", "torch_cpu", "torch_cuda"):
-        coef_tol = 1e-08
-        predict_tol = 5e-05
-        resid_tol = 5e-05
-        inference_tol = 1e-06
-        tstat_tol = 1e-05
-    elif backend_name in ("torch_mps", "torch_cuda32"):
-        coef_tol = 5e-06
-        predict_tol = 2e-04
-        resid_tol = 2e-04
-        inference_tol = 1e-05
-        tstat_tol = 1e-05
-    else:
-        coef_tol = 1e-08
-        predict_tol = 1e-06
-        resid_tol = 1e-06
-        inference_tol = 1e-07
-        tstat_tol = 1e-06
+    coef_tol = 1e-08
+    predict_tol = 1e-06
+    resid_tol = 1e-06
+    inference_tol = 1e-07
+    tstat_tol = 1e-06
 
     if inference == "iid" and k_adj and G_adj:
         py_resid = mod.resid()
@@ -415,7 +273,7 @@ def test_single_fit_feols(
             (py_resid)[0:5], (r_resid)[0:5], resid_tol, "py_resid != r_resid"
         )
 
-        if not mod._has_fixef and not mod._has_weights:
+        if not mod.model.has_fixef and not mod.options.has_weights:
             py_predict_all = mod.predict(interval="prediction")
             r_predict_all = pd.DataFrame(
                 stats.predict(r_fixest, interval="prediction")
@@ -447,7 +305,7 @@ def test_single_fit_feols(
                     "py_predict_newdata != r_predict_newdata",
                 )
 
-                if not mod._has_fixef and not mod._has_weights and dropna:
+                if not mod.model.has_fixef and not mod.options.has_weights and dropna:
                     py_predict_all_newdata = mod.predict(
                         newdata=data.iloc[0:100], interval="prediction"
                     )
@@ -490,10 +348,10 @@ def test_single_fit_feols(
     check_absolute_diff(py_tstat, r_tstat, tstat_tol, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, inference_tol, "py_confint != r_confint")
 
-    py_r2 = mod._r2
-    py_r2_within = mod._r2_within
-    py_adj_r2 = mod._adj_r2
-    py_adj_r2_within = mod._adj_r2_within
+    py_r2 = mod.fitstat.r2
+    py_r2_within = mod.fitstat.r2_within
+    py_adj_r2 = mod.fitstat.adj_r2
+    py_adj_r2_within = mod.fitstat.adj_r2_within
     r_r = fixest.r2(r_fixest)
     r_r2 = r_r[1]
     r_adj_r2 = r_r[2]
@@ -552,7 +410,7 @@ def test_single_fit_feols_empty(
             data=data_r,
         )
 
-    py_nobs = mod._N
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
     py_predict = mod.predict()
 
@@ -570,7 +428,6 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize("fml", ols_fmls)
@@ -579,13 +436,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois, dropna, inference, f3_type, fml, k_adj, G_adj, weights, offset
+    data_fepois, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
-    global test_counter_fepois
-    test_counter_fepois += 1
-
     _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_fepois, dropna)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
@@ -597,8 +450,6 @@ def test_single_fit_fepois(
         offset_var = "offset_var"
     else:
         offset_var = None
-    if dropna:
-        data_fepois.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
     data_fepois.where(data_fepois != "nan", np.nan, inplace=True)
@@ -639,16 +490,16 @@ def test_single_fit_fepois(
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_nobs = mod._N
-    py_deviance = mod.deviance
+    py_nobs = mod.sample_info.n_obs
+    py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
-    py_irls_weights = mod._irls_weights.flatten()
-    py_df_k = int(mod._df_k)
-    py_df_t = int(mod._df_t)
+    py_irls_weights = mod.working_state.working_weights.flatten()
+    py_df_k = int(mod.variance_covariance.df_k)
+    py_df_t = int(mod.variance_covariance.df_t)
     py_n_coefs = mod.coef().values.size
-    py_loglik = mod._loglik
-    py_loglik_null = mod._loglik_null
-    py_pseudo_r2 = mod._pseudo_r2
+    py_loglik = mod.fitstat.loglik
+    py_loglik_null = mod.fitstat.loglik_null
+    py_pseudo_r2 = mod.fitstat.pseudo_r2
 
     df_X1 = _get_r_df(r_fixest)
     ro.globalenv["r_fixest"] = r_fixest
@@ -710,6 +561,8 @@ def test_single_fit_fepois(
         check_absolute_diff(
             py_pseudo_r2, r_pseudo_r2, 1e-08, "py_pseudo_r2 != r_pseudo_r2"
         )
+    else:
+        assert np.isnan(py_loglik_null) and np.isnan(py_pseudo_r2)
 
     py_predict_response = mod.predict(type="response")
     py_predict_link = mod.predict(type="link")
@@ -727,6 +580,203 @@ def test_single_fit_fepois(
         1e-06,
         "py_predict_link != r_predict_link",
     )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ x",
+        "y ~ x | fe",
+        "y ~ x | d ~ z",
+        "y ~ x | fe | d ~ z",
+    ],
+)
+def test_frequency_weighted_linear_models_against_fixest(fml):
+    """Compare fweight OLS and IV covariance to R fixest literal expansion."""
+    data = _make_frequency_weighted_linear_data()
+    expanded_data = (
+        data.loc[data.index.repeat(data["fweights"])]
+        .drop(columns="fweights")
+        .reset_index(drop=True)
+    )
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_fit = pf.feols(
+        fml=fml,
+        data=data,
+        weights="fweights",
+        weights_type="fweights",
+        vcov="hetero",
+        ssc=py_ssc,
+    )
+    r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
+
+    ro.globalenv[".fweight_r_fit"] = r_fit
+    r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
+    r_vcov_names = list(ro.r("rownames(vcov(.fweight_r_fit))"))
+    py_coefficient_names = list(py_fit.coef().index)
+    is_iv = "d ~ z" in fml
+    r_name_by_py_name = {
+        "Intercept": "(Intercept)",
+        "d": "fit_d" if is_iv else "d",
+    }
+    r_order = [
+        r_coefficient_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+    r_vcov_order = [
+        r_vcov_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit))[r_order],
+        rtol=0,
+        atol=1e-8,
+        err_msg="Fweight coefficients differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
+        rtol=0,
+        atol=1e-7,
+        err_msg="Fweight covariance differs from the R fixest literal expansion",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("vcov_type", ["HC2", "HC3"])
+def test_fepois_hc2_hc3_against_sandwich(vcov_type):
+    """Poisson HC2/HC3 leverage uses the IRLS-weighted design, as in R sandwich.
+
+    `sandwich::vcovHC()` applies no small-sample adjustment for HC2/HC3, so
+    both pyfixest adjustments are switched off.
+    """
+    data = pf.get_data(N=500, seed=3021, model="Fepois").dropna()
+    fml = "Y ~ X1 + X2"
+    py_fit = pf.fepois(
+        fml,
+        data=data,
+        vcov=vcov_type,
+        ssc=pf.ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-12,
+    )
+    r_glm = stats.glm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.poisson(),
+        control=ro.r("glm.control(epsilon = 1e-14, maxit = 100)"),
+    )
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        np.asarray(sandwich.vcovHC(r_glm, type=vcov_type)),
+        rtol=1e-6,
+        atol=0,
+        err_msg=f"Poisson {vcov_type} covariance differs from R sandwich::vcovHC",
+    )
+
+
+@pytest.mark.against_r_core
+def test_feglm_gaussian_reference_behavior():
+    """Lock in pyfixest's Gaussian-GLM compatibility decision."""
+    data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()
+    fml = "Y ~ X1 + X2"
+    py_ssc = pf.ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
+
+    py_glm = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        vcov="iid",
+        ssc=py_ssc,
+        iwls_tol=1e-10,
+    )
+    py_ols = pf.feols(fml=fml, data=data, vcov="iid", ssc=py_ssc)
+    r_lm = stats.lm(ro.Formula(fml), data=data)
+    r_glm = stats.glm(ro.Formula(fml), data=data, family=stats.gaussian())
+    r_feols = fixest.feols(ro.Formula(fml), data=data, vcov="iid", ssc=r_ssc)
+    r_feglm = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.gaussian(),
+        vcov="iid",
+        ssc=r_ssc,
+    )
+
+    pd.testing.assert_frame_equal(py_glm.tidy(), py_ols.tidy(), rtol=0, atol=1e-10)
+    np.testing.assert_allclose(
+        py_glm.variance_covariance.vcov,
+        py_ols.variance_covariance.vcov,
+        rtol=0,
+        atol=1e-10,
+        err_msg="pyfixest Gaussian GLM and OLS covariance matrices differ",
+    )
+    for attribute in ("rmse", "r2", "adj_r2", "r2_within", "adj_r2_within"):
+        np.testing.assert_allclose(
+            getattr(py_glm.fitstat, attribute),
+            getattr(py_ols.fitstat, attribute),
+            rtol=0,
+            atol=1e-10,
+            err_msg=f"Gaussian GLM and OLS {attribute} differ",
+        )
+    r_lm_residuals = np.asarray(stats.residuals(r_lm))
+    np.testing.assert_allclose(
+        py_glm.fitstat.rmse,
+        np.sqrt(np.mean(r_lm_residuals**2)),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM RMSE differs from base R lm residuals",
+    )
+    np.testing.assert_allclose(
+        py_glm.fitstat.r2,
+        1
+        - np.sum(r_lm_residuals**2)
+        / np.sum((data["Y"].to_numpy() - data["Y"].mean()) ** 2),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Gaussian GLM R-squared differs from base R lm",
+    )
+
+    for r_fit, label in (
+        (r_lm, "base R lm"),
+        (r_glm, "base R glm"),
+        (r_feols, "R fixest::feols"),
+    ):
+        np.testing.assert_allclose(
+            py_glm.coef(),
+            np.asarray(stats.coef(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM coefficients differ from {label}",
+        )
+        np.testing.assert_allclose(
+            py_glm.variance_covariance.vcov,
+            np.asarray(stats.vcov(r_fit)),
+            rtol=0,
+            atol=1e-8,
+            err_msg=f"Gaussian-GLM covariance differs from {label}",
+        )
+        assert py_glm.variance_covariance.df_t == int(stats.df_residual(r_fit)[0]), (
+            f"Gaussian-GLM residual degrees of freedom differ from {label}"
+        )
+
+    np.testing.assert_allclose(
+        py_glm.coef(),
+        np.asarray(stats.coef(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="Gaussian-GLM coefficients differ from R fixest::feglm",
+    )
+    assert not np.allclose(
+        py_glm.variance_covariance.vcov,
+        np.asarray(stats.vcov(r_feglm)),
+        rtol=0,
+        atol=1e-8,
+    ), "expected fixest::feglm covariance divergence was not observed"
 
 
 @pytest.mark.against_r_core
@@ -772,9 +822,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     (loglik, loglik_null, pseudo_r2, pearson_chi2) are not defined for
     logit/probit/gaussian and are therefore skipped.
     """
-    global test_counter_feglm
-    test_counter_feglm += 1
-
     _skip_f3_checks(fml, "str")
 
     ssc_ = ssc(k_adj=True, G_adj=True)
@@ -804,13 +851,22 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     # Gaussian GLM with identity link == OLS; compare against pf.feols directly
     if family == "gaussian":
         ref = pf.feols(fml=py_fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
-        assert (mod._N, int(mod._df_k), int(mod._df_t)) == (
-            ref._N,
-            int(ref._df_k),
-            int(ref._df_t),
+        assert (
+            mod.sample_info.n_obs,
+            int(mod.variance_covariance.df_k),
+            int(mod.variance_covariance.df_t),
+        ) == (
+            ref.sample_info.n_obs,
+            int(ref.variance_covariance.df_k),
+            int(ref.variance_covariance.df_t),
         )
         pd.testing.assert_frame_equal(mod.tidy(), ref.tidy(), atol=1e-10, rtol=0)
-        np.testing.assert_allclose(mod._vcov, ref._vcov, atol=1e-10, rtol=0)
+        np.testing.assert_allclose(
+            mod.variance_covariance.vcov,
+            ref.variance_covariance.vcov,
+            atol=1e-10,
+            rtol=0,
+        )
         return
 
     r_family = {
@@ -838,12 +894,12 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     py_pval = mod.pvalue().xs("X1")
     py_tstat = mod.tstat().xs("X1")
     py_confint = mod.confint().xs("X1").values
-    py_nobs = mod._N
-    py_deviance = mod.deviance
+    py_nobs = mod.sample_info.n_obs
+    py_deviance = mod.fitstat.deviance
     py_resid = mod.resid()
-    py_irls_weights = mod._irls_weights.flatten()
-    py_df_k = int(mod._df_k)
-    py_df_t = int(mod._df_t)
+    py_irls_weights = mod.working_state.working_weights.flatten()
+    py_df_k = int(mod.variance_covariance.df_k)
+    py_df_t = int(mod.variance_covariance.df_t)
     py_n_coefs = mod.coef().values.size
 
     df_X1 = _get_r_df(r_fixest)
@@ -913,7 +969,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("dropna", [False])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
@@ -922,7 +977,6 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
 @pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_iv(
     data_feols,
-    dropna,
     inference,
     weights,
     f3_type,
@@ -930,17 +984,11 @@ def test_single_fit_iv(
     k_adj,
     G_adj,
 ):
-    global test_counter_feiv
-    test_counter_feiv += 1
-
     _skip_f3_checks(fml, f3_type)
-    _skip_dropna(test_counter_feiv, dropna)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data = data_feols.copy()
-    if dropna:
-        data.dropna(inplace=True)
     # long story, but categories need to be strings to be converted to R factors,
     # this then produces 'nan' values in the pd.DataFrame ...
     data.where(data != "nan", np.nan, inplace=True)
@@ -975,7 +1023,7 @@ def test_single_fit_iv(
     py_confint = mod.confint().xs("X1").values
     py_vcov, r_vcov = _get_vcov_diag(mod, r_fixest, "X1", is_iv=True)
 
-    py_nobs = mod._N
+    py_nobs = mod.sample_info.n_obs
     py_resid = mod.resid()
 
     df_X1 = _get_r_df(r_fixest, is_iv=True)
@@ -1095,7 +1143,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare IRLS weights
-        py_irls_weights = fit_py._irls_weights.flatten()
+        py_irls_weights = fit_py.working_state.working_weights.flatten()
         r_irls_weights = fit_r.rx2("irls_weights")
         check_absolute_diff(
             py_irls_weights[0:5],
@@ -1105,7 +1153,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare residuals - working
-        py_resid_working = fit_py._u_hat_working
+        py_resid_working = fit_py.working_state.working_residuals
         r_resid_working = stats.resid(fit_r, type="working")
         check_absolute_diff(
             py_resid_working[10:15],
@@ -1115,7 +1163,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         )
 
         # Compare residuals - response
-        py_resid_response = fit_py._u_hat_response
+        py_resid_response = fit_py.working_state.response_residuals
         r_resid_response = stats.resid(fit_r, type="response")
         check_absolute_diff(
             py_resid_response[10:15],
@@ -1128,7 +1176,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
         if family == "gaussian":
             pytest.skip("Mismatch in scores, but all other tests pass.")
 
-            py_scores = fit_py._scores
+            py_scores = fit_py.sandwich.scores
             r_scores = fit_r.rx2("scores")
             check_absolute_diff(
                 py_scores[0, :],
@@ -1138,7 +1186,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
             )
 
         # Compare deviance
-        py_deviance = fit_py.deviance
+        py_deviance = fit_py.fitstat.deviance
         r_deviance = fit_r.rx2("deviance")
         check_absolute_diff(
             py_deviance,
@@ -1421,7 +1469,7 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
     if True:
         # test vcov's
         np.testing.assert_allclose(
-            fit1._vcov,
+            fit1.variance_covariance.vcov,
             stats.vcov(feols_fit1),
             rtol=1e-04,
             atol=1e-04,
@@ -1548,14 +1596,7 @@ def _c_to_as_factor(py_fml):
     return _fixed_effect_interactions_to_fixest(r_fml)
 
 
-def _fixed_effect_interactions_to_fixest(fml):
-    """Translate PyFixest fixed-effect interactions to R fixest syntax."""
-    parts = fml.split("|")
-    for index, part in enumerate(parts[1:], start=1):
-        if "~" not in part:
-            parts[index] = part.replace(":", "^")
-            break
-    return "|".join(parts)
+_fixed_effect_interactions_to_fixest = fixed_effect_interactions_to_legacy
 
 
 def get_data_r(fml, data):
@@ -1593,7 +1634,7 @@ def get_data_r(fml, data):
 @pytest.mark.skip("Wald tests will be released with pyfixest 0.14.0.")
 def test_wald_test(fml, data):
     fit1 = feols(fml, data)
-    fit1.wald_test()
+    wald = fit1.wald_test()
 
     fit_r = fixest.feols(
         ro.Formula(fml),
@@ -1605,8 +1646,8 @@ def test_wald_test(fml, data):
     wald_stat_r = wald_r[0]
     wald_pval_r = wald_r[1]  # noqa: F841
 
-    np.testing.assert_allclose(fit1._f_statistic, wald_stat_r)
-    # np.testing.assert_allclose(fit1._f_statistic_pvalue, wald_pval_r)
+    np.testing.assert_allclose(wald.f_statistic, wald_stat_r)
+    # np.testing.assert_allclose(wald.pvalue, wald_pval_r)
 
 
 @pytest.mark.against_r_core
@@ -1643,7 +1684,7 @@ def test_singleton_dropping():
     )
 
     # test that number of observations match
-    nobs_py = fit_py._N
+    nobs_py = fit_py.sample_info.n_obs
     nobs_r = stats.nobs(fit_r)
     np.testing.assert_allclose(
         nobs_py,
@@ -1659,34 +1700,29 @@ def test_singleton_dropping():
     # )
 
 
-ssc_fmls = [
-    "Y ~ X1 + X2 + f1",
-    "Y ~ X1 + X2 | f1",
-    "Y ~ X1 + X2 | f2",
-    "Y ~ X1 + X2 | f1 + f2",
-    "Y ~ X1 + X2 | f1 + f2 + f3",
-    "Y ~ X1 + X2 | f1:f2",
-]
+@pytest.fixture(scope="module")
+def ssc_data():
+    data = {}
+    for model, data_model in [("feols", "Feols"), ("fepois", "Fepois")]:
+        base = pf.get_data(model=data_model)
+        data[(model, False)] = base
+        data[(model, True)] = base.dropna()
+    return data
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", ssc_fmls)
-@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize(
+    "fml,dropna,vcov",
+    ssc_formula_vcov_dropna_cases,
+    ids=ssc_formula_vcov_dropna_case_ids,
+)
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", "f1", "f2", "f1+f2"])
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("G_adj", [True, False])
 @pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
 @pytest.mark.parametrize("model", ["feols", "fepois"])
-def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
-    df = pf.get_data(model="Feols") if model == "feols" else pf.get_data(model="Fepois")
-    if dropna:
-        df.dropna(inplace=True)
-
-    if not dropna and vcov in ["f1", "f2", "f1+f2"] and vcov not in fml:
-        pytest.skip(
-            "vcov = f2 requires dropping NAs internally, which is not supported."
-        )
+def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
+    df = ssc_data[(model, dropna)]
 
     r_kwargs = {
         "fml": ro.Formula(_fixed_effect_interactions_to_fixest(fml)),
@@ -1722,10 +1758,10 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     r_df_t = int(ro.r('attr(r_fit$cov.scaled, "df.t")')[0])
     r_df_k = int(ro.r('attr(r_fit$cov.scaled, "df.K")')[0])
 
-    py_df_t = py_fit._df_t
-    py_df_k = py_fit._df_k
+    py_df_t = py_fit.variance_covariance.df_t
+    py_df_k = py_fit.variance_covariance.df_k
 
-    py_nobs = py_fit._N
+    py_nobs = py_fit.sample_info.n_obs
     r_nobs = stats.nobs(r_fit)
 
     # coefficients identical:
@@ -1757,55 +1793,47 @@ def test_ssc(fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
         err_msg=f"df.K do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    # df.t identical:
+    # SEs identical:
     np.testing.assert_allclose(
-        py_df_t,
-        r_df_t,
-        err_msg=f"df.t do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+        py_fit.se(),
+        ro.r("r_fit$coeftable[,2]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # p-values identical:
+    np.testing.assert_allclose(
+        py_fit.pvalue(),
+        ro.r("r_fit$coeftable[,4]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # t-stats identical:
+    np.testing.assert_allclose(
+        py_fit.tstat(),
+        ro.r("r_fit$coeftable[,3]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    if True:
-        # SEs identical:
-        np.testing.assert_allclose(
-            py_fit.se(),
-            ro.r("r_fit$coeftable[,2]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        # p-values identical:
-        np.testing.assert_allclose(
-            py_fit.pvalue(),
-            ro.r("r_fit$coeftable[,4]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        # t-stats identical:
-        np.testing.assert_allclose(
-            py_fit.tstat(),
-            ro.r("r_fit$coeftable[,3]"),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"t-stats do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-
-        # confint identical:
-        np.testing.assert_allclose(
-            py_fit.confint().values,
-            pd.DataFrame(stats.confint(r_fit)).T.values,
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
-        ## vcov identical:
-        np.testing.assert_allclose(
-            py_fit._vcov,
-            stats.vcov(r_fit),
-            rtol=1e-07 if model == "feols" else 1e-06,
-            atol=1e-07 if model == "feols" else 1e-06,
-            err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
-        )
+    # confint identical:
+    np.testing.assert_allclose(
+        py_fit.confint().values,
+        pd.DataFrame(stats.confint(r_fit)).T.values,
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # vcov identical:
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        stats.vcov(r_fit),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
 
 
 @pytest.mark.against_r_core
@@ -1825,24 +1853,7 @@ def test_inf_dropping(fml, weights):
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
-    assert int(data.shape[0] - n_zeros) == fit_py._N
-
-
-def _convert_f3(data, f3_type):
-    """Convert f3 to the desired type."""
-    if f3_type == "categorical":
-        data["f3"] = pd.Categorical(data["f3"])
-    elif f3_type == "int":
-        data["f3"] = data["f3"].astype(float).astype(np.int32)
-    elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
-    elif f3_type == "object":
-        data["f3"] = data["f3"].astype(object)
-    elif f3_type == "float":
-        data["f3"] = data["f3"].astype(float)
-    else:
-        pass
-    return data
+    assert int(data.shape[0] - n_zeros) == fit_py.sample_info.n_obs
 
 
 def _get_r_inference(inference):
@@ -1881,8 +1892,3 @@ def _skip_f3_checks(fml, f3_type):
         pytest.skip(
             "No need to tests for different types of factor variable when not included in formula."
         )
-
-
-def _skip_dropna(test_counter, dropna):
-    if test_counter % 4 != 0 and dropna:
-        pytest.skip(f"Skipping dropna=True for test number {test_counter}")

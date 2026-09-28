@@ -24,9 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.62.2
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
@@ -36,6 +36,8 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} test-py
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+          # Temporarily disable MPS tests on macOS; remove to re-enable.
+          PYTEST_ADDOPTS: ${{ runner.os == 'macOS' && '-k "not mps"' || '' }}
 
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
@@ -46,23 +48,44 @@ jobs:
           flags: core-tests
           files: coverage.xml
 
+  type-check-ty:
+    name: "Type check (ty)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: py312
+
+      - name: Run ty
+        run: pixi run -e py312 ty
+
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        test-task: [test-r-core, test-r-extended, test-r-fixest, test-r-hac]
+        test-task: [test-r-core-other, test-r-extended, test-r-fixest, test-r-hac]
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
-          pixi-version: v0.62.2
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
           environments: py312-r
+
+      - name: Run fast R preflight
+        if: matrix.test-task == 'test-r-fixest'
+        run: pixi run -e py312-r test-r-fixest-fast
 
       - name: Run ${{ matrix.test-task }}
         run: pixi run -e py312-r ${{ matrix.test-task }}
@@ -92,12 +115,16 @@ jobs:
   build-docs:
     name: "Build Docs"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          pixi-version: v0.62.2
+          persist-credentials: false
+
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.76.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
@@ -107,29 +134,8 @@ jobs:
         run: pixi run -e docs docs-render
 
       - name: Save docs artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docs-html
           path: docs/_site
-
-  publish-docs:
-    name: "Publish Docs"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-    needs: ["build-docs", "test-python"]
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Download docs artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: docs-html
-          path: docs/_site
-
-      - name: Publish docs to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_site
+          if-no-files-found: error

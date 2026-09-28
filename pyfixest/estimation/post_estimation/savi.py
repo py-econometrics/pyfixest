@@ -157,25 +157,26 @@ def optimal_mixture_precision(
 
 def _validate_savi_model(model: ResultAccessorMixin) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
-    if model._method != "feols" or model._is_iv:
+    if model.model.method != "feols" or model.model.is_iv:
         raise NotImplementedError(
             "SAVI inference is currently supported only for feols models."
         )
-    if model._has_weights:
+    if model.options.has_weights:
         raise NotImplementedError(
             "SAVI inference does not currently support weighted feols models."
         )
-    if model._has_fixef:
+    if model.model.has_fixef:
         raise NotImplementedError(
             "SAVI inference does not currently support feols models with fixed effects."
         )
-    if model._vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
+    if not hasattr(model, "variance_covariance"):
+        raise EmptyVcovError()
+    vcov_type = model.variance_covariance.spec.vcov_type
+    if vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
-            f"SAVI inference does not support vcov type {model._vcov_type!r}. "
+            f"SAVI inference does not support vcov type {vcov_type!r}. "
             "Supported types are iid, hetero, HC1, HC2, and HC3."
         )
-    if len(model._vcov) == 0:
-        raise EmptyVcovError()
 
 
 def _coefficient_evalues(
@@ -183,10 +184,10 @@ def _coefficient_evalues(
 ) -> pd.Series:
     """Compute coefficient-wise e-values for a validated model."""
     values = _savi_e_value(
-        model._tstat**2,
+        model.coeftable.tstat**2,
         dfn=1,
-        dfd=model._df_t,
-        nobs=model._N,
+        dfd=model.variance_covariance.df_t,
+        nobs=model.sample_info.n_obs,
         mixture_precision=mixture_precision,
     )
     return pd.Series(values, index=model._coefnames, name="e_value")
@@ -231,10 +232,10 @@ def _confint(
     critical_value = _savi_confidence_radius(
         alpha=alpha,
         mixture_precision=mixture_precision,
-        nobs=model._N,
-        dfd=model._df_t,
+        nobs=model.sample_info.n_obs,
+        dfd=model.variance_covariance.df_t,
     )
-    standard_errors = model._se[coef_indices]
+    standard_errors = model.coeftable.se[coef_indices]
     estimates = model._beta_hat[coef_indices]
 
     df = pd.DataFrame(

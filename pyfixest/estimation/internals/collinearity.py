@@ -5,13 +5,14 @@ import warnings
 import numpy as np
 
 from pyfixest.core.collinear import find_collinear_variables
+from pyfixest.estimation.internals.model_state import CollinearityCheck
 
 
 def drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
-) -> tuple[np.ndarray, list[str], list[str], list[bool]]:
+) -> tuple[np.ndarray, CollinearityCheck]:
     """
     Check for multicollinearity in the design matrices X and Z.
 
@@ -28,21 +29,19 @@ def drop_multicollinear_variables(
     -------
     Xd : numpy.ndarray
         The design matrix X after checking for multicollinearity.
-    names : list[str]
-        The names of the coefficients, excluding those identified as collinear.
-    collin_vars : list[str]
-        The collinear variables identified during the check.
-    collin_index : list[bool]
-        Boolean mask over X's input columns: True marks a dropped column.
-        Empty list when no columns were dropped.
+    check : CollinearityCheck
+        The names of the dropped columns, the mask over X's input columns,
+        and the names of the retained columns. The design matrix stays out of
+        the value so that a fitted model can publish the check without keeping
+        the design alive under `lean=True`.
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
     tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
     id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
-    collin_vars = []
-    collin_index = []
+    collin_vars: list[str] = []
+    collin_index = np.zeros(len(names), dtype=bool)
 
     if all_removed:
         raise ValueError(
@@ -78,6 +77,12 @@ def drop_multicollinear_variables(
             )
 
         names_array = np.delete(names_array, id_excl)
-        collin_index = id_excl.tolist()
+        collin_index = np.asarray(id_excl, dtype=bool)
 
-    return X, list(names_array), collin_vars, collin_index
+    check = CollinearityCheck(
+        dropped_coef_names=tuple(collin_vars),
+        mask=tuple(collin_index.tolist()),
+        coefnames=tuple(names_array.tolist()),
+    )
+
+    return X, check

@@ -1,4 +1,7 @@
 import pandas as pd
+import pytest
+from docx import Document as open_document
+from docx.document import Document
 from great_tables import GT
 
 import pyfixest as pf
@@ -55,8 +58,8 @@ def test_summary():
     etable(
         models=[fit1, fit2],
         custom_stats={
-            "conf_int_lb": [fit1._conf_int[0], fit2._conf_int[0]],
-            "conf_int_ub": [fit1._conf_int[1], fit2._conf_int[1]],
+            "conf_int_lb": [fit1.coeftable.conf_int[0], fit2.coeftable.conf_int[0]],
+            "conf_int_ub": [fit1.coeftable.conf_int[1], fit2.coeftable.conf_int[1]],
         },
         coef_fmt="b [conf_int_lb, conf_int_ub]",
     )
@@ -164,6 +167,48 @@ def test_etable_correct_output_type():
 
     typst_table = pf.etable(fit, type="typst")
     assert isinstance(typst_table, str)
+
+    docx_table = pf.etable(fit, type="docx")
+    assert isinstance(docx_table, Document)
+
+
+def test_etable_docx_file_name(tmp_path):
+    """The saved Word table shows etable's displayed cells and notes."""
+    fit = feols("Y ~ X1 + X2 | f1", data=get_data(N=150, seed=42))
+    options = dict(
+        coef_fmt="b:.3f*\n(se:.3f)",
+        labels={"X1": "政策暴露", "X2": "Control"},
+        notes="注: 模拟数据。",
+    )
+    expected = etable(fit, type="df", **options)
+    path = tmp_path / "regression.docx"
+    etable(fit, type="docx", file_name=str(path), **options)
+    reopened = open_document(str(path))
+    assert len(reopened.tables) == 1
+    rows = {row.cells[0].text: row for row in reopened.tables[0].rows}
+    for label in ("政策暴露", "Control"):
+        values = expected.xs(label, level=-1).iloc[0].tolist()
+        assert [cell.text for cell in rows[label].cells[1:]] == values
+    assert reopened.tables[0].rows[-1].cells[0].text == options["notes"]
+
+
+def test_etable_docx_style():
+    """docx_style overrides reach the Word table and its notes."""
+    fit = feols("Y ~ X1 | f1", data=get_data(N=150, seed=42))
+    style = {"font_name": "Arial", "font_size_pt": 12, "notes_font_size_pt": 8}
+    document = etable(fit, type="docx", docx_style=style, notes="Clustered by firm.")
+    table = document.tables[0]
+    run = table.rows[1].cells[1].paragraphs[0].runs[0]
+    assert run.font.name == "Arial"
+    assert run.font.size.pt == 12
+    notes_run = table.rows[-1].cells[0].paragraphs[0].runs[0]
+    assert notes_run.font.size.pt == 8
+
+
+def test_etable_invalid_output_type():
+    """The invalid-format message includes both Word and Typst output."""
+    with pytest.raises(AssertionError, match="'typst' or 'docx'"):
+        etable([], type="invalid")
 
 
 def test_dtable_is_not_public():
