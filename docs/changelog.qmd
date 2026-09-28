@@ -256,6 +256,11 @@ Formula syntax:
   `DeprecationWarning`. A `+` nested inside a transform (`I(Y + Y2) ~ X1`) is a
   single dependent variable and is unaffected.
 
+Plotting:
+
+- The `cat_template` argument of `iplot()` is deprecated. It had no effect, as
+  coefficients created via `i()` are already named `variable::value`; use `labels`.
+
 As previously announced, we removed:
 
 - Removed the deprecated `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`
@@ -324,6 +329,9 @@ We also removed:
   fixest does. Before, two-way clustering such as `vcov={"CRV1": "f1+f2"}` fell
   back to one-way clustering on `f1` in the first stage, silently misstating its
   standard errors and F-statistic, and `vcov="NW"` or `"DK"` raised an error.
+- `coefplot()` and `iplot()` now apply `labels` passed without `cat_template`, including to each
+  variable of an interaction term, and no longer emit one `DeprecationWarning` per coefficient
+  ([#1123](https://github.com/py-econometrics/pyfixest/issues/1123)).
 
 
 

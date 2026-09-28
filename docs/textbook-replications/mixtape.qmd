@@ -120,6 +120,5 @@ pf.iplot(
     coord_flip=False,
     plot_backend="matplotlib",
     title="Event Study Estimate",
-    cat_template="{value}",
 )
 ```
