@@ -53,7 +53,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     for i, model in enumerate(models):
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
         pvalues[i] = model.pvalue().xs(param)
         all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
@@ -299,13 +299,12 @@ def _multcomp_resample(
     for model in models:
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
 
-        if model._is_clustered:
-            # model._G a list of length 3
-            # for oneway clusering: repeated three times
-            G = min(model._G)
+        if model.variance_covariance.spec.is_clustered:
+            # covariance.G has one entry per cluster dimension
+            G = min(model.variance_covariance.G)
             if reps > 2**G:
                 warnings.warn(
                     f"""
@@ -349,28 +348,25 @@ def _multcomp_resample(
                 store_ritest_statistics=True,
             )
 
-            t_stats[i] = model._ritest_sample_stat
-            boot_t_stats[:, i] = model._ritest_statistics
+            stored = model.ritest_statistics
+            t_stats[i] = stored.sample_stat
+            boot_t_stats[:, i] = stored.statistics
 
         if type == "wyoung":
             _df[i] = (
-                model._N - model._k
-                if model._vcov_type in ["iid", "hetero"]
-                else min(model._G) - 1
+                model.sample_info.n_obs - model._k
+                if model.variance_covariance.spec.vcov_type in ["iid", "hetero"]
+                else min(model.variance_covariance.G) - 1
             )
             p_vals[i] = 2 * (1 - t.cdf(np.abs(t_stats[i]), _df[i]))
             boot_p_vals[:, i] = 2 * (1 - t.cdf(np.abs(boot_t_stats[:, i]), _df[i]))
-        elif type == "rwolf":
-            pass
 
     if type == "rwolf":
         pval = _get_rwolf_pval(t_stats, boot_t_stats)
         all_model_stats.loc["RW Pr(>|t|)"] = pval
-    elif type == "wyoung":
+    else:
         pval = _get_wyoung_pval(p_vals, boot_p_vals)
         all_model_stats.loc["WY Pr(>|t|)"] = pval
-    else:
-        raise ValueError("Invalid adjustment procedure specified")
 
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats

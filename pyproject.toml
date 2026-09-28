@@ -162,23 +162,14 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
+[tool.ty.analysis]
+replace-imports-with-any = ["formulaic", "formulaic.**"]
+[tool.ty.src]
+# rpy2 is only available in the optional `r` pixi feature, not the `py312` env
+# ty runs in; this file exists solely to support against-R test fixtures.
+exclude = [
+    "pyfixest/utils/check_r_install.py",
 ]
-ignore_missing_imports = true
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
@@ -210,6 +201,7 @@ polars = ">=1.0.0"
 pyarrow = ">=14.0"
 doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
+ty = ">=0.0.83"
 
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true, extras = ["plots", "numba"] }
@@ -254,6 +246,11 @@ python = "~=3.14.0"
 
 [tool.pixi.feature.torch.dependencies]
 pytorch = "*"
+
+# -- ty feature ---------------------------------------------------------------------------
+
+[tool.pixi.feature.ty.tasks]
+ty = { cmd = "ty check pyfixest", description = "Type-check with ty (blocking CI gate)" }
 
 # -- r feature --------------------------------------------------------------------------
 
@@ -353,7 +350,7 @@ torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" 
 [tool.pixi.environments]
 py310 = ["py310", "torch"]
 py311 = ["py311", "torch"]
-py312 = ["py312", "torch"]
+py312 = ["py312", "torch", "ty"]
 py313 = ["py313", "torch"]
 py314 = ["py314", "torch"]
 py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }

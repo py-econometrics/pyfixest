@@ -155,6 +155,7 @@ quartodoc:
         - did.estimation.did2s
         - did.estimation.lpdid
         - did.saturated_twfe.SaturatedEventStudy
+        - did.saturated_twfe.EventStudyDesign
         - did.visualize.panelview
     - title: Multiple Hypothesis Testing
       desc: |
@@ -236,11 +237,31 @@ quartodoc:
       desc: |
         Data classes and model-matrix components exposed by fitted estimators.
       contents:
+        - estimation.state.EstimationOptions
+        - estimation.state.GlmEstimationOptions
+        - estimation.state.QuantregEstimationOptions
+        - estimation.state.ModelDescription
         - estimation.state.ModelMatrix
         - estimation.state.ObservationWeights
+        - estimation.state.EstimationSample
+        - estimation.state.DroppedRowCounts
         - estimation.state.WithinLinearData
         - estimation.state.WithinIvData
+        - estimation.state.CollinearityCheck
         - estimation.state.GlmWorkingState
+        - estimation.state.FitStatistics
+        - estimation.state.FittedValues
+        - estimation.state.SandwichComponents
+        - estimation.state.VarianceCovariance
+        - estimation.state.WaldTest
+        - estimation.state.FirstStage
+        - estimation.state.FirstStageDiagnostics
+        - estimation.state.VcovSpec
+        - estimation.state.FixedEffectEstimates
+        - estimation.state.FixedEffect
+        - estimation.state.RitestStatistics
+        - estimation.state.CoefficientTable
+        - estimation.state.Capabilities
     - title: Formula Parsing & Model Matrix
       desc: |
         Internal APIs for formula parsing and model matrix construction.
@@ -265,5 +286,8 @@ quartodoc:
       contents:
         - core.detect_singletons.detect_singletons
         - utils.utils.ssc
+        - utils.utils.Ssc
         - utils.utils.get_ssc
+        - utils.utils.DegreesOfFreedomCounts
+        - utils.utils.SmallSampleCorrection
         - estimation.post_estimation.savi.optimal_mixture_precision

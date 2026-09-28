@@ -1,13 +1,13 @@
 ---
 name: pr-handoff
-description: Curates agent-owned pyfixest commits and submits a reviewer-ready draft PR or stack. Use after implementation and required verification stabilize, before the first push or PR creation, and whenever agent-owned commit history needs rewriting.
+description: Prepare pyfixest commits and draft PRs after verification, before pushing or submitting, or when curating agent-owned history.
 ---
 
 # Hand off work for review
 
-The conventions live in `docs/developer/git-and-pr-style.md` under "Branch
-names", "Stacks", "Commits", and "Pull-request opening"; this skill is the
-procedure and its safety gates.
+Read "Branch names", "Stacks", "Commits", "Pull-request opening", and
+[Approval and handoff](../../../docs/developer/git-and-pr-style.md#approval-and-handoff)
+in `docs/developer/git-and-pr-style.md`. This skill applies those policies.
 
 Input: a verified branch and its immediate parent, with the verification
 report from the `change-verification` skill. Output: a draft PR or stack whose
@@ -16,28 +16,18 @@ in exact-head CI when the body says so.
 
 ## 1. Decide whether history needs curation
 
-Inspect `git log <parent>..HEAD` against "Commits". The target is
-a few commits that tell the review story: contracts/helpers/tests,
-implementation/wiring/tests, then exports/docs. WIP, fixup, accidental, and
-formatting-only commits must go. If the log already meets that bar, skip to
-step 4. Otherwise curation is a history rewrite and needs step 2.
+Inspect `git log <parent>..HEAD` against "Commits". Keep coherent commits that
+pair behavior with tests. Curate WIP, fixup, accidental, and unrelated
+formatting commits when present; no fixed commit sequence is required.
+If the log already meets the policy, skip to step 4. Otherwise prepare the
+specific rewrite for approval.
 
 ## 2. Authorize the rewrite
 
-A rewrite is the one irreversible step in this procedure, so it is gated even
-when the user has already asked for a PR. Before any rewrite, report:
-
-- every branch and its exact immediate parent;
-- whether each branch is agent-owned, pushed, or under review;
-- the original tip SHA for every affected branch;
-- dependent branches that will need rebasing;
-- the exact rewrite and stack-rebase commands.
-
-Then ask whether that specific rewrite is approved and end the turn. Proceed
-only with approval given in the current conversation and when the worktree is
-clean, the branch is named and is not `master`, its parent is verified, the
-history is agent-owned, and the tip SHA is recorded. Never rewrite
-contributor-owned history, and never rewrite silently after review starts.
+Prepare the branch inventory and commands required by "Approval and handoff".
+If that specific rewrite is not already approved in the current conversation,
+ask for approval and stop before rewriting. Proceed only when all policy
+preconditions are met.
 
 ## 3. Rewrite one layer
 
@@ -53,9 +43,5 @@ a raw force push.
 
 Choose one PR or a stack by "Stacks", inspect every layer's diff and the
 cumulative diff, and write the body per "Pull-request opening" with the
-verification report included. Submit as a draft.
-Mark a layer ready for review only when its required checks pass or its long
-checks are visibly running in exact-head CI, and do not call it merge-ready
-until those pass.
-
-Stop at handoff. Do not merge, and do not invoke `gh stack merge`.
+verification summary. Submit as a draft and stop at handoff. Apply the
+readiness and human-review requirements in "Approval and handoff"; do not merge.

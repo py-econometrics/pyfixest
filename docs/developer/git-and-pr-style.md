@@ -2,9 +2,8 @@
 
 This document defines the style for presenting pyfixest changes to reviewers.
 Use the [`pr-handoff`](../../.agents/skills/pr-handoff/SKILL.md) skill to
-curate agent-owned commits and prepare the PR. That skill defines the procedure
-and its safety gates; this document defines the branch, commit, and PR
-conventions it applies.
+curate agent-owned commits and prepare the PR. This document owns Git approval
+policy and branch, commit, and PR conventions; the skill applies them.
 
 ## Establish the base
 
@@ -26,6 +25,31 @@ reviewer-visible outcome, not the authoring tool, agent, issue number alone, or
 position in a stack.
 
 Examples: `feat/oriv`, `fix/cluster-df`, `docs/agent-workflow`.
+
+## Approval and handoff
+
+Never commit to `master` or rewrite contributor-owned history. Every history
+rewrite requires explicit user approval for that specific rewrite in the
+current conversation; a request to prepare a PR is not rewrite approval.
+Before asking, report the affected branches and their immediate parents,
+agent ownership, pushed/review status, original tip SHAs, dependent branches,
+and exact rewrite and stack-rebase commands. Proceed only with a clean
+worktree, named branches other than `master`, verified parents, and recorded
+tips. Never rewrite silently after review starts.
+
+Submit agent-authored work as draft PRs. Mark a layer ready for review only
+when required checks pass or required long checks are visibly running in CI
+on that head. Merge readiness follows the testing policy. Agents stop at
+handoff: they never merge their work or invoke `gh stack merge`. A human
+maintainer reviews every PR and every stack layer before merge.
+
+## Change scope
+
+Define the smallest observable outcome that satisfies the request. Include
+adjacent fixes or refactors only when requested, explicitly accepted, or needed
+for that outcome. Discovering a pre-existing defect does not make it a
+prerequisite; assign independent work to a follow-up issue. A new abstraction
+does not itself authorize broader behavior.
 
 ## Stacks
 
@@ -81,7 +105,16 @@ that boilerplate.
 
 GitHub already shows the files, commits, branches, and base SHA; do not repeat
 them as file lists, commit-by-commit narratives, or implementation diaries.
-Mention them only when a non-obvious stack relationship affects review. Group
-successful checks on one line and give detail to failures, deferred checks,
-numerical deviations, and support limits. Human approval is represented by
-GitHub review state, not by an author checkbox.
+Mention them only when a non-obvious stack relationship affects review or
+verification reporting requires them. Follow
+[Verification reporting](testing.md#verification-reporting) for check summaries
+and details of failures or deferrals. Human approval is represented by GitHub
+review state, not by an author checkbox.
+
+## Issues
+
+GitHub issue bodies must contain at most two short sentences unless the user
+explicitly requests more detail: state the concrete problem or proposed change,
+then the desired outcome and any relevant issue/PR link. Omit headings,
+checklists, implementation plans, and background narratives; do not move
+overflow into comments.

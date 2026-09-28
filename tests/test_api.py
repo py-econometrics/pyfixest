@@ -5,6 +5,7 @@ import pytest
 from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
+from pyfixest.estimation.internals.retention import RetentionPolicy
 from pyfixest.utils.utils import get_data
 
 
@@ -109,8 +110,8 @@ def test_map_demeaner_defaults_to_rust():
 
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
-    assert isinstance(fit._demeaner, pf.MapDemeaner)
-    assert fit._demeaner.backend == "rust"
+    assert isinstance(fit.options.demeaner, pf.MapDemeaner)
+    assert fit.options.demeaner.backend == "rust"
 
 
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
@@ -272,17 +273,17 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     assert len({id(model._demean_cache.lookup_preconditioner) for model in models}) == 1
 
     first, second, third = models
-    assert first._na_index == second._na_index
-    assert extra_na_index not in first._na_index
-    assert extra_na_index in third._na_index
+    assert first.sample_info.dropped_row_index == second.sample_info.dropped_row_index
+    assert extra_na_index not in first.sample_info.dropped_row_index
+    assert extra_na_index in third.sample_info.dropped_row_index
 
     assert isinstance(first.preconditioner, pf.Preconditioner)
     assert first.preconditioner is second.preconditioner
     assert isinstance(third.preconditioner, pf.Preconditioner)
     assert third.preconditioner is not first.preconditioner
     assert set(first._demean_cache.lookup_preconditioner) == {
-        first._na_index,
-        third._na_index,
+        first.sample_info.dropped_row_index,
+        third.sample_info.dropped_row_index,
     }
 
 
@@ -321,16 +322,16 @@ def test_feiv_first_stage_reuses_within_preconditioner():
 
     preconditioner = fit.preconditioner
     assert isinstance(preconditioner, pf.Preconditioner)
-    assert isinstance(fit._model_1st_stage._demeaner, pf.LsmrDemeaner)
+    assert isinstance(fit.first_stage.model.options.demeaner, pf.LsmrDemeaner)
     # The 1st-stage demeaner's config stores the 2nd-stage's preconditioner
     # verbatim (identity preserved on assignment).
-    assert fit._model_1st_stage._demeaner.preconditioner is preconditioner
+    assert fit.first_stage.model.options.demeaner.preconditioner is preconditioner
     # The 1st-stage model's preconditioner is what came back from the solve;
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
-    assert isinstance(fit._model_1st_stage.preconditioner, pf.Preconditioner)
-    assert fit._model_1st_stage.preconditioner.variant == preconditioner.variant
-    assert fit._model_1st_stage.preconditioner.nrows == preconditioner.nrows
+    assert isinstance(fit.first_stage.model.preconditioner, pf.Preconditioner)
+    assert fit.first_stage.model.preconditioner.variant == preconditioner.variant
+    assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 
 @pytest.mark.parametrize(
@@ -350,14 +351,30 @@ def test_lean(estimator, kwargs, lean, store_data):
         data=data,
         lean=lean,
         store_data=store_data,
+        vcov={"CRV1": "f1"},
         **kwargs,
     )
 
+    # the storage options survive the cleanup they describe
+    assert fit.options.retention == RetentionPolicy(store_data=store_data, lean=lean)
     assert hasattr(fit, "_data") == (store_data and not lean)
-    assert hasattr(fit, "within_data") == (estimator is pf.feols and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
-    if estimator is not pf.feols:
+    assert hasattr(fit, "fitted_values") == (not lean)
+    if estimator is pf.feols:
+        lean_only_attributes = {
+            "sandwich",
+            "_u_hat",
+            "within_data",
+            "observation_weights",
+        }
+        for attribute in lean_only_attributes:
+            assert hasattr(fit, attribute) is (not lean), attribute
+        if not lean and not store_data:
+            assert np.isfinite(fit.resid()[:3]).all()
+    else:
+        assert not hasattr(fit, "within_data")
         assert hasattr(fit, "working_state") == (not lean)
+        assert hasattr(fit, "sandwich") == (not lean)
 
 
 def test_duckdb_input():
@@ -434,3 +451,27 @@ def test_context_capture(spline_data, method, family, fixed_effects):
             FactorEvaluationError, match="Unable to evaluate factor `_lspline"
         ):
             pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)
+
+
+@pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])
+def test_context_capture_iv_first_stage(spline_data, context):
+    # The first stage is refitted from its own formula, so it needs the
+    # captured context to evaluate a user transform of the instruments.
+    # The bracketed IV syntax needs identifier column names.
+    data = spline_data.rename(columns={"0_X2_1": "X2_1", "1_X2": "X2_2"})
+    explicit_fit = pf.feols("Y ~ 1 + [X1 ~ X2_0 + X2_1 + X2_2] | f1", data=data)
+    context_fit = pf.feols(
+        "Y ~ 1 + [X1 ~ _lspline(X2,[0,1])] | f1", data=data, context=context
+    )
+
+    np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
+    np.testing.assert_allclose(
+        context_fit.first_stage.model.coef(),
+        explicit_fit.first_stage.model.coef(),
+        rtol=1e-12,
+    )
+    np.testing.assert_allclose(
+        context_fit.first_stage.diagnostics.f_stat,
+        explicit_fit.first_stage.diagnostics.f_stat,
+        rtol=1e-12,
+    )

@@ -286,6 +286,63 @@ def test_cluster():
         )
 
 
+@pytest.mark.parametrize("cluster", [None, "cluster"])
+def test_bootstrap_draws_independent_of_nthreads(cluster):
+    "Each replication draws fresh indices, and a seed fixes results for any nthreads."
+    df = pd.read_stata("tests/data/gelbach.dta")
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=df)
+    reps = 20
+
+    gb = {
+        nthreads: fit.decompose(
+            decomp_var="x1", cluster=cluster, reps=reps, seed=42, nthreads=nthreads
+        )
+        for nthreads in [1, 2]
+    }
+
+    for nthreads, decomposition in gb.items():
+        n_unique = len(decomposition._bootstrap_absolute_df.drop_duplicates())
+        assert n_unique == reps, (
+            f"nthreads={nthreads}: only {n_unique} of {reps} bootstrap draws are unique"
+        )
+
+    pd.testing.assert_frame_equal(
+        gb[1]._bootstrap_absolute_df,
+        gb[2]._bootstrap_absolute_df,
+        check_exact=True,
+        obj="bootstrap draws for nthreads=1 vs nthreads=2",
+    )
+
+    # tidy() computes the percentile CIs for the alpha it is given.
+    levels = {alpha: gb[1].tidy(alpha=alpha, panels="levels") for alpha in [0.05, 0.5]}
+    assert (levels[0.5].ci_lower > levels[0.05].ci_lower).all()
+    assert (levels[0.5].ci_upper < levels[0.05].ci_upper).all()
+
+    with pytest.raises(ValueError, match=r"alpha must be in \(0, 1\)"):
+        gb[1].tidy(alpha=1.5)
+
+
+def test_multiway_cluster_raises():
+    "A two-way clustered fit must not silently bootstrap on its first cluster only."
+    df = pd.read_stata("tests/data/gelbach.dta")
+    df["cluster2"] = np.arange(len(df)) % 7
+
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster + cluster2"}
+    )
+    with pytest.raises(ValueError, match="Multiway clustering"):
+        fit.decompose(param="x1", reps=2)
+
+    # an explicit one-way cluster overrides the fit's two-way clustering
+    fit.decompose(param="x1", reps=2, cluster="cluster")
+    fit_oneway = pf.feols("y ~ x1 + x21 + x22 + x23", data=df, vcov={"CRV1": "cluster"})
+    fit_oneway.decompose(param="x1", reps=2)
+    for key, value in fit.GelbachDecompositionResults.results.absolute.items():
+        np.testing.assert_allclose(
+            value, fit_oneway.GelbachDecompositionResults.results.absolute.get(key)
+        )
+
+
 def test_fixef():
     "Test that choosing agg_first = True or False does not change the results."
     df = pd.read_stata("tests/data/gelbach.dta")

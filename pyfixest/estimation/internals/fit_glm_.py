@@ -9,7 +9,11 @@ from pyfixest.errors import NonConvergenceError
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.literals import SolverOptions
-from pyfixest.estimation.internals.model_state import GlmWorkingState
+from pyfixest.estimation.internals.model_state import (
+    CollinearityCheck,
+    GlmWorkingState,
+    SandwichComponents,
+)
 from pyfixest.estimation.internals.solvers import solve_ols
 
 DemeanFn = Callable[
@@ -29,6 +33,9 @@ class GlmFit:
     working_state : GlmWorkingState
         Final within-scale IRLS inputs, weights, fitted values, and residuals.
         Square-root-weighted solver arrays are deliberately not retained.
+    sandwich : SandwichComponents
+        IRLS scores W X * e, the Hessian X' W X, and its inverse, with W the
+        final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
     deviance : float
@@ -37,24 +44,19 @@ class GlmFit:
         Whether the IRLS loop converged within ``maxiter`` iterations.
     n_iter : int
         Number of completed iterations.
-    coefnames : list[str]
-        Coefficient names after the collinearity drop.
-    collin_vars : list[str]
-        Names of variables dropped due to collinearity.
-    collin_index : list[bool]
-        Boolean mask over the input X's columns: True marks a dropped column.
-        Empty when no columns were dropped.
+    collinearity : CollinearityCheck
+        Names and column mask of the regressors dropped by the rank check,
+        together with the coefficient names it retained.
     """
 
     beta: np.ndarray
     working_state: GlmWorkingState
+    sandwich: SandwichComponents
     X: np.ndarray
     deviance: float
     converged: bool
     n_iter: int
-    coefnames: list[str]
-    collin_vars: list[str]
-    collin_index: list[bool]
+    collinearity: CollinearityCheck
 
 
 def _rel_dev_change(deviance: float, deviance_old: float) -> float:
@@ -178,8 +180,11 @@ def fit_glm_irls(
     inner_tol = fixef_tol
     X_eff = X
 
-    collin_vars: list[str] = []
-    collin_index: list[bool] = []
+    collinearity = CollinearityCheck(
+        dropped_coef_names=(),
+        mask=tuple(False for _ in coefnames),
+        coefnames=tuple(coefnames),
+    )
     converged = False
     step_halved_prev = False
 
@@ -232,11 +237,10 @@ def fit_glm_irls(
         )
 
         if r == 0:
-            X_tilde, coefnames, collin_vars, collin_index = (
-                drop_multicollinear_variables(X_tilde, coefnames, collin_tol)
+            X_tilde, collinearity = drop_multicollinear_variables(
+                X_tilde, coefnames, collin_tol
             )
-            if collin_index:
-                X_eff = X_eff[:, ~np.array(collin_index)]
+            X_eff = collinearity.select(X_eff)
 
         design_solver = sqrt_working_weights.flatten()[:, None] * X_tilde
         response_solver = sqrt_working_weights.flatten() * z_tilde
@@ -293,25 +297,31 @@ def fit_glm_irls(
         if not converged:
             _raise_non_convergence(maxiter)
 
-    working_residuals = z_tilde_final - X_tilde_final @ beta_final
+    working_residuals = (z_tilde_final - X_tilde_final @ beta_final).flatten()
+    working_weights = working_weights_final.flatten()
     working_state = GlmWorkingState(
         working_response_within=z_tilde_final,
         design_within=X_tilde_final,
-        working_weights=working_weights_final.flatten(),
+        working_weights=working_weights,
         eta=eta.flatten(),
         mu=mu.flatten(),
         response_residuals=Y_flat - mu.flatten(),
-        working_residuals=working_residuals.flatten(),
+        working_residuals=working_residuals,
+    )
+    hessian = X_tilde_final.T @ (working_weights[:, None] * X_tilde_final)
+    sandwich = SandwichComponents(
+        scores=X_tilde_final * (working_weights * working_residuals)[:, None],
+        hessian=hessian,
+        bread=np.linalg.inv(hessian),
     )
 
     return GlmFit(
         beta=beta_final,
         working_state=working_state,
+        sandwich=sandwich,
         X=X_eff,
         deviance=deviance,
         converged=converged,
         n_iter=r,
-        coefnames=coefnames,
-        collin_vars=collin_vars,
-        collin_index=collin_index,
+        collinearity=collinearity,
     )

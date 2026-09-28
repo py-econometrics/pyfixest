@@ -1,14 +1,72 @@
 import re
 import warnings
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation import feols
+from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
 
 from .did2s import DID
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EventStudyDesign:
+    """Event-study design a fitted event study was estimated on.
+
+    Published as `fit.event_study_design` by
+    [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"`. It is the only record of the design the fitted
+    model retains; the generic fitted-model classes carry no DiD state.
+
+    Parameters
+    ----------
+    yname : str
+        Name of the outcome variable.
+    idname : str
+        Name of the unit identifier variable.
+    tname : str
+        Name of the calendar-period variable.
+    gname : str
+        Name of the variable holding the unit-specific period of initial
+        treatment.
+    att : bool
+        Whether the average treatment effect on the treated was estimated
+        instead of the canonical event study with all leads and lags.
+    cohort_event_times : Mapping[str, Mapping[str, Any]]
+        Cohort-specific event-study curves, keyed by treatment cohort. Each
+        value holds the tidy coefficient table of that cohort (`"est"`) and
+        its event times (`"time"`).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.event_study(
+        pf.get_motherhood_event_study_data(),
+        yname="log_earnings",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator="saturated",
+    )
+    design = fit.event_study_design
+    design.gname, sorted(design.cohort_event_times)
+    ```
+    """
+
+    yname: str
+    idname: str
+    tname: str
+    gname: str
+    att: bool
+    cohort_event_times: Mapping[str, Mapping[str, Any]]
 
 
 class SaturatedEventStudy(DID):
@@ -110,14 +168,23 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object.
+            The fitted Feols model object. It carries the event-study design
+            as `event_study_design`.
         """
-        self.mod, self._res_cohort_eventtime_dict = _saturated_event_study(
+        self.mod, cohort_event_times = _saturated_event_study(
             self._data,
             outcome=self._yname,
             time_id=self._tname,
             unit_id=self._idname,
             cluster=self._cluster,
+        )
+        self.mod.event_study_design = EventStudyDesign(
+            yname=self._yname,
+            idname=self._idname,
+            tname=self._tname,
+            gname=self._gname,
+            att=self._att,
+            cohort_event_times=cohort_event_times,
         )
 
         return self.mod
@@ -138,11 +205,13 @@ class SaturatedEventStudy(DID):
         """Plot DID estimates."""
         import matplotlib.pyplot as plt
 
+        model = self.mod if isinstance(self, SaturatedEventStudy) else self
+
         cmp = plt.get_cmap("Set1")
 
         _, ax = plt.subplots(figsize=(10, 6))
 
-        for cohort, values in self._res_cohort_eventtime_dict.items():
+        for cohort, values in model.event_study_design.cohort_event_times.items():
             time = np.array(values["time"], dtype=float)
             est = values["est"]["Estimate"].astype(float).values
             ci_lower = values["est"]["2.5%"].astype(float).values
@@ -169,7 +238,7 @@ class SaturatedEventStudy(DID):
         """Get summary table."""
         return self.mod.summary()
 
-    def test_treatment_heterogeneity(self) -> pd.Series:
+    def test_treatment_heterogeneity(self) -> WaldTest:
         """
         Test for treatment heterogeneity in the event study design.
 
@@ -215,24 +284,25 @@ class SaturatedEventStudy(DID):
             raise ValueError("weighting must be 'shares'.")
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
+        design = model.event_study_design
 
-        cohort_event_dict = model._res_cohort_eventtime_dict
+        cohort_event_dict = design.cohort_event_times
         cohort_list = list(cohort_event_dict.keys())
         period_set = sorted(
             set(t for x in cohort_list for t in cohort_event_dict[x]["time"].tolist())
         )
 
         coefs = model._beta_hat
-        se = model._se
+        se = model.coeftable.se
         coefnames = model._coefnames
 
         if weighting == "shares":
             weights_df = compute_period_weights(
                 data=model._data,
-                cohort=model._gname,
+                cohort=design.gname,
                 period="rel_time",
                 treatment="is_treated",
-            ).set_index([self._gname, "rel_time"])
+            ).set_index([design.gname, "rel_time"])
 
         treated_periods = list(period_set)
 
@@ -260,7 +330,9 @@ class SaturatedEventStudy(DID):
             if weighting == "variance":
                 R /= np.sum(R)
 
-            res_dict = _compute_lincomb_stats(R=R, coefs=coefs, vcov=model._vcov)
+            res_dict = _compute_lincomb_stats(
+                R=R, coefs=coefs, vcov=model.variance_covariance.vcov
+            )
             df_agg.loc[period] = pd.Series(res_dict)
 
         return df_agg
@@ -374,7 +446,7 @@ def _saturated_event_study(
 
 def _test_treatment_heterogeneity(
     model: Feols,
-) -> pd.Series:
+) -> WaldTest:
     """
     Test for treatment heterogeneity in the event study design.
 
@@ -387,9 +459,10 @@ def _test_treatment_heterogeneity(
 
     Returns
     -------
-    pd.Series
+    WaldTest
 
-            A Series containing the p-value of the test and the test statistic.
+            The chi2 test statistic of the joint null of no heterogeneity and
+            its p-value.
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
@@ -405,8 +478,7 @@ def _test_treatment_heterogeneity(
     for i, idx in enumerate(event_study_coefs):
         R2[i, idx] = 1
 
-    test_result = model.wald_test(R=R2, distribution="chi2")
-    return test_result
+    return model.wald_test(R=R2, distribution="chi2")
 
 
 def compute_period_weights(

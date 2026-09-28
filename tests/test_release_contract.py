@@ -141,11 +141,31 @@ def data_quantreg():
     return data
 
 
+def _covariance_field(mod, name: str):
+    """Read a `VarianceCovariance` field, or its private legacy attribute.
+
+    The pinned release predates `fit.variance_covariance` and stores `_vcov`, `_df_k`,
+    and `_df_t` on the model.
+    """
+    if hasattr(mod, "variance_covariance"):
+        return getattr(mod.variance_covariance, name)
+    return getattr(mod, f"_{name}")
+
+
 def _check_structure(baseline: Baseline, mod) -> None:
     baseline.check_exact("coefnames", list(mod._coefnames))
-    baseline.check_exact("nobs", int(mod._N))
-    baseline.check_exact("df_k", int(mod._df_k))
-    baseline.check_exact("df_t", int(mod._df_t))
+    # The pinned release predates `EstimationSample`; `_N` was its `n_obs`.
+    nobs = mod.sample_info.n_obs if hasattr(mod, "sample_info") else mod._N
+    baseline.check_exact("nobs", int(nobs))
+    baseline.check_exact("df_k", int(_covariance_field(mod, "df_k")))
+    baseline.check_exact("df_t", int(_covariance_field(mod, "df_t")))
+
+
+def _fit_statistic(mod, name: str, legacy: str) -> float:
+    """Read a fit statistic; the pinned release predates `FitStatistics`."""
+    if hasattr(mod, "fitstat"):
+        return getattr(mod.fitstat, name)
+    return getattr(mod, legacy)
 
 
 def _check_fit(baseline: Baseline, mod, *, confint: bool = True) -> None:
@@ -159,7 +179,7 @@ def _check_fit(baseline: Baseline, mod, *, confint: bool = True) -> None:
         baseline.check("confint", mod.confint())
     # se covers the vcov diagonal; one norm keeps the off-diagonal block in
     # scope without recording an O(k^2) matrix per case.
-    vcov = np.asarray(mod._vcov)
+    vcov = np.asarray(_covariance_field(mod, "vcov"))
     baseline.check("vcov_offdiag", np.linalg.norm(vcov - np.diag(np.diag(vcov))))
 
 
@@ -228,6 +248,8 @@ def test_single_fit_feols(
     _check_fit(baseline, mod)
     baseline.check("resid", mod.resid()[0:5])
     baseline.check("predict", mod.predict()[0:5])
+    for name in ("rmse", "r2", "adj_r2", "r2_within", "adj_r2_within"):
+        baseline.check(name, _fit_statistic(mod, name, f"_{name}"))
 
 
 @pytest.mark.parametrize("fml,f3_type", FEOLS_F3_DTYPE_CASES)
@@ -260,7 +282,9 @@ def test_single_fit_fepois(data_fepois, inference, fml, weights, offset, baselin
     )
 
     _check_fit_at_x1(baseline, mod, **FEPOIS_TOLERANCE)
-    baseline.check("deviance", mod.deviance)
+    baseline.check("deviance", _fit_statistic(mod, "deviance", "deviance"))
+    baseline.check("loglik", _fit_statistic(mod, "loglik", "_loglik"))
+    baseline.check("pearson_chi2", _fit_statistic(mod, "pearson_chi2", "_pearson_chi2"))
     baseline.check("resid", mod.resid()[0:5], **FEPOIS_TOLERANCE)
     baseline.check(
         "irls_weights",
@@ -316,7 +340,7 @@ def test_single_fit_feglm(data_fepois, family, inference, fml, baseline):
         iwls_maxiter=100,
     )
 
-    baseline.check("deviance", mod.deviance)
+    baseline.check("deviance", _fit_statistic(mod, "deviance", "deviance"))
 
     # `resid()` returned the IRLS working residual in the pinned release and
     # returns the response residual now, so both are compared through the
