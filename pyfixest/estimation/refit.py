@@ -40,9 +40,9 @@ def refit(
     With `same_sample`, `data` holds the rows of the fit's sample, with potentially
     some columns changed (e.g. for randomization inference, the IV first stage).
     The refit then reuses the fit's preconditioner and drops no singletons, and it
-    raises if `data`'s row do not match the initial fit. Otherwise `data`
+    raises if the rows of `data` do not match the initial fit. Otherwise `data`
     can be any other data (e.g. sample splits for CRV3, causal cluster variance).
-    In this case, preconditioners are rebuild from the new data, from which we drop
+    In this case, preconditioners are rebuilt from the new data, from which we drop
     separated observations etc.
 
     Parameters
@@ -73,8 +73,8 @@ def refit(
     # `run_estimation` resets the index, so compare it before fitting
     if same_sample and not data.index.equals(fit._data.index):
         raise ValueError(
-            "A refit with `same_sample=True` needs indetical rows as the fit's "
-            "sample; here `data` has non-matching index."
+            "`same_sample=True` requires `data` to have the same index as "
+            "the data the model was fit on."
         )
     if same_sample:
         options = replace(

@@ -119,7 +119,7 @@ def test_refit_on_the_fit_sample_keeps_every_row(data, case):
         refit(fit, data=with_missing, vcov=IID).sample_info.n_obs
         == fit.sample_info.n_obs - 1
     )
-    with pytest.raises(ValueError, match="another index"):
+    with pytest.raises(ValueError, match="same index"):
         refit(fit, data=fit._data.iloc[1:], vcov=IID, same_sample=True)
 
 
