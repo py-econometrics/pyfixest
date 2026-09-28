@@ -1145,10 +1145,11 @@ class Feols(ResultAccessorMixin):
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
-        except ImportError:
-            print(
-                "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
+        except ImportError as exc:
+            raise ImportError(
+                "Wild cluster bootstrap requires the `wildboottest` package. "
+                "Install it with `pip install wildboottest`."
+            ) from exc
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
 

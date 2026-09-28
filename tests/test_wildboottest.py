@@ -36,3 +36,21 @@ def test_crv1_equivalence(data, fml):
     ]
 
     np.testing.assert_allclose(tstat, boot_tstat)
+
+
+def test_wildboottest_missing_package_raises_import_error(data, monkeypatch):
+    """Missing wildboottest must raise ImportError, not print then NameError."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def blocked(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "wildboottest" or name.startswith("wildboottest."):
+            raise ImportError("blocked for regression test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
+
+    fit = pf.feols("Y~X1", data=data)
+    with pytest.raises(ImportError, match=r"wildboottest"):
+        fit.wildboottest(param="X1", reps=10)
