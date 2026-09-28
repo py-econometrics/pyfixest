@@ -27,8 +27,8 @@ def _compute_CCV(
     ----------
     fit_fn : Callable[..., Any]
         Refits the model on a subsample with the fitted model's formula and
-        estimation options, such as the model's `_refit` method with `fml`
-        and `vcov` bound. It is called with the keyword argument `data` only.
+        estimation options, such as `refit` with the model and `vcov` bound.
+        It is called with the keyword argument `data` only.
     Y : np.array
         Array with the dependent variable.
     X : np.array

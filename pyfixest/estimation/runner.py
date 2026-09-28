@@ -46,6 +46,8 @@ def _split_plan(config: EstimationConfig) -> tuple[bool, bool, str | None]:
 def run_estimation(
     config: EstimationConfig,
     parsed: ParsedFormula,
+    *,
+    apply_retention: bool,
 ) -> Feols | Fepois | Feiv | FixestMulti:
     """Fit every spec the user's call expands into; unwrap when a single model was asked for.
 
@@ -54,6 +56,11 @@ def run_estimation(
     specs block-by-block (sharing the demean / preconditioner cache within
     each `cache_key` block), and returns either the multi-object or the
     single fitted model.
+
+    With `apply_retention`, each model drops the state its `store_data` and
+    `lean` options omit as soon as it is fitted, so a multiple estimation
+    never holds every model's full state at once. The estimation functions
+    set it; refits leave it off and get complete models.
     """
     data = _prepare_data(config)
     run_full, run_split, splitvar = _split_plan(config)
@@ -95,6 +102,8 @@ def run_estimation(
         )
 
         for fitted_result in FIT._iter_fitted_models():
+            if apply_retention:
+                fitted_result._clear_attributes()
             fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
 
     if parsed.is_multiple_estimation:

@@ -523,8 +523,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         "vcov",
         "inference",
         "finalize",
-        "clear",
-    ]
+    ], "fit_one returns complete models; the estimation functions apply retention"
 
 
 def test_quantreg_multi_prepares_children_in_lifecycle_hook():

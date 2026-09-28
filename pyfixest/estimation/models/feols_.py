@@ -15,10 +15,8 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
-from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -92,6 +90,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -843,57 +842,14 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _refit(
-        self,
-        *,
-        fml: str,
-        data: pd.DataFrame,
-        vcov: VcovSpec,
-        options: EstimationOptions | None = None,
-    ) -> Feols:
-        """Refit this model's estimator on other data.
-
-        `options` defaults to this model's estimation options without its
-        prebuilt preconditioner, which belongs to this model's sample. Callers
-        that deviate from them pass `replace(self.options, ...)`. `data` is
-        never modified.
-        """
-        # lazy loading to avoid circular import
-        from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
-        from pyfixest.estimation.runner import run_estimation
-
-        if options is None:
-            options = replace(
-                self.options,
-                # the preconditioner was built on other data for CRV3 and must be rebuilt
-                # TODO(PYF-19): ritest keeps the sample and could reuse it
-                demeaner=_without_prebuilt_preconditioner(self.options.demeaner),
-            )
-        # the shallow copy below keeps `data` intact without a deep copy
-        options = replace(options, copy_data=False)
-        config = EstimationConfig(
-            method=estimation_method_of(type(self)),
-            # a shallow copy absorbs the runner's in-place index reset; the
-            # model copies (or copy-on-write isolates) the frame before any
-            # other write
-            data=data.copy(deep=False),
-            fml=fml,
-            options=options,
-            vcov=vcov,
-        )
-        fit = run_estimation(config, parse_formula(config))
-        if not isinstance(fit, Feols):
-            raise TypeError(f"A refit must return a single model, not {fit!r}.")
-        return fit
-
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = self._refit(
-                fml=self.model.formula,
+            fit = refit(
+                self,
                 data=data,
                 # inference not needed, iid fastest to compute
                 vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
@@ -1330,7 +1286,6 @@ class Feols(ResultAccessorMixin):
 
         rng = np.random.default_rng(seed)
 
-        fml = self.model.formula
         data = self._data
         Y = self.within_data.response.flatten()
         W = data[treatment].to_numpy()
@@ -1353,8 +1308,8 @@ class Feols(ResultAccessorMixin):
         for _ in range(n_splits):
             vcov_ccv = _compute_CCV(
                 fit_fn=partial(
-                    self._refit,
-                    fml=fml,
+                    refit,
+                    self,
                     # only the coefficients are read; iid is fastest to compute
                     vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
                 ),
@@ -2133,7 +2088,13 @@ class Feols(ResultAccessorMixin):
                 reps=reps,
                 type=type,
                 rng=rng,
-                fit_fn=partial(self._refit, vcov=VcovSpec.from_user_input(vcov_input)),
+                fit_fn=partial(
+                    refit,
+                    self,
+                    vcov=VcovSpec.from_user_input(vcov_input),
+                    # permutations change the treatment, not the rows
+                    same_sample=True,
+                ),
             )
 
         else:
@@ -2304,26 +2265,3 @@ class Feols(ResultAccessorMixin):
         gamma_n_plus_1 = np.linalg.inv(X_n_plus_1.T @ X_n_plus_1) @ X_new.T
         beta_n_plus_1 = self._beta_hat + gamma_n_plus_1 @ epsi_n_plus_1
         return beta_n_plus_1
-
-
-def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
-    """Replace a prebuilt LSMR `Preconditioner` by the name of its variant.
-
-    A prebuilt preconditioner is tied to the fixed-effect design it was built
-    on, so a refit on another sample must build its own. Variants without a
-    public name fall back to ``"auto"``, the `LsmrDemeaner` default.
-    """
-    if not (
-        isinstance(demeaner, LsmrDemeaner)
-        and isinstance(demeaner.preconditioner, Preconditioner)
-    ):
-        return demeaner
-    variant = demeaner.preconditioner.variant.lower()
-    preconditioner: LsmrPreconditioner = (
-        "additive"
-        if variant == "additive"
-        else "diagonal"
-        if variant == "diagonal"
-        else "auto"
-    )
-    return replace(demeaner, preconditioner=preconditioner)

@@ -258,9 +258,11 @@ def fit_one(
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
-    Constructs the model class, runs prepare → fit → vcov → inference,
-    and clears large attributes. `vcov` was parsed at the API boundary;
-    the model rejects an estimator it does not support before fitting.
+    Constructs the model class and runs prepare → fit → vcov → inference.
+    The model keeps all its state; `run_estimation` applies the storage
+    options when its caller asks for it.
+    `vcov` was parsed at the API boundary; the model rejects an estimator it
+    does not support before fitting.
     The two per-cache-block dicts are injected here so they're shared
     across every spec in the block.
 
@@ -294,7 +296,5 @@ def fit_one(
         FIT._vcov_from_spec(vcov)
         FIT.get_inference()
         FIT._finalize_fit()
-    # delete large attributes
-    FIT._clear_attributes()
 
     return FIT

@@ -9,7 +9,6 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -27,6 +26,7 @@ from pyfixest.estimation.internals.model_state import (
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_ssc
 
 
@@ -253,27 +253,13 @@ class Feiv(Feols):
         if self.model.has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self.model.fixef}"
 
-        demeaner = self.options.demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(
-            self.sample_info.dropped_row_index
-        )
-        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
-            demeaner = replace(demeaner, preconditioner=cached_pre)
-
         # As in fixest, the first stage uses the second stage's rows and options.
-        model1 = self._refit(
+        model1 = refit(
+            self,
             fml=fml_first_stage,
             data=self._data,
             vcov=self.variance_covariance.spec,
-            options=replace(
-                self.options,
-                # `_data` is already the second stage's sample; keep every row
-                drop_singletons=False,
-                # within data and residuals are used later in `FirstStage` below
-                # and will be deleted in `Feiv._clear_attributes()`
-                lean=False,
-                demeaner=demeaner,
-            ),
+            same_sample=True,
         )
 
         self.first_stage = FirstStage(
@@ -296,19 +282,11 @@ class Feiv(Feols):
         self._fit_first_stage()
 
     def _clear_attributes(self) -> None:
-        """Apply the parent's retention policy to the retained first stage."""
+        """Apply the retention policy to this model and its first stage."""
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            model = first_stage.model
-            # The first stage is fitted in full because `first_stage` is built
-            # from its within data and residuals; it takes over the parent's
-            # storage options once those values have been read.
-            model.options = replace(
-                model.options,
-                store_data=self.options.store_data,
-                lean=self.options.lean,
-            )
-            model._clear_attributes()
+            # the first stage replays this model's storage options
+            first_stage.model._clear_attributes()
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):

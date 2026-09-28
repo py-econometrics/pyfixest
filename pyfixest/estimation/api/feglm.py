@@ -366,4 +366,4 @@ def feglm(
     if parsed.is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)
