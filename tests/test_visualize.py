@@ -223,6 +223,41 @@ def test_panelview():
     plt.close()
 
 
+@pytest.mark.parametrize("treat_dtype", [bool, int])
+@pytest.mark.parametrize("sort_by_timing", [False, True])
+def test_panelview_unbalanced_treatment(treat_dtype, sort_by_timing):
+    data = pd.DataFrame(
+        {
+            "unit": [1, 1, 2, 2, 2],
+            "time": [1, 3, 1, 2, 3],
+            "treat": [0, 1, 0, 0, 1],
+        }
+    ).astype({"treat": treat_dtype})
+    original = data.copy()
+    ax = panelview(
+        data,
+        unit="unit",
+        time="time",
+        treat="treat",
+        sort_by_timing=sort_by_timing,
+    )
+    try:
+        image = ax.images[0].get_array()
+        np.testing.assert_array_equal(
+            np.ma.getmaskarray(image),
+            [[False, True, False], [False, False, False]],
+            err_msg="Unobserved unit-period cells must remain masked",
+        )
+        np.testing.assert_array_equal(
+            image.compressed(),
+            [0, 1, 0, 0, 1],
+            err_msg="Observed treatment statuses must be preserved",
+        )
+        pd.testing.assert_frame_equal(data, original)
+    finally:
+        plt.close(ax.figure)
+
+
 def test_panelview_raises():
     data = pd.DataFrame(
         {
