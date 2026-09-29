@@ -9,6 +9,16 @@ WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+# Internal dispatch key for the model registry, not a user option; kept here so
+# config.py and plan_.py can share it without an import cycle.
+EstimationMethod = Literal[
+    "feols",
+    "fepois",
+    "feglm-logit",
+    "feglm-probit",
+    "feglm-gaussian",
+    "quantreg",
+]
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",

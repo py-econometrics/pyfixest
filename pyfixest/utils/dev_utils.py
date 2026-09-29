@@ -55,15 +55,15 @@ def _create_rng(seed: int | None = None) -> np.random.Generator:
     Parameters
     ----------
     seed : int, optional
-        The seed of the random number generator. If None, a random seed is chosen.
+        The seed of the random number generator. If None, the generator draws
+        fresh entropy from the operating system; the global NumPy RNG is
+        neither read nor modified.
 
     Returns
     -------
     numpy.random.Generator
         A random number generator.
     """
-    if seed is None:
-        seed = np.random.randint(100_000_000)
     return np.random.default_rng(seed)
 
 

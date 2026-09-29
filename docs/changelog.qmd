@@ -17,6 +17,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Word Regression Tables
+
+`pf.etable()` now supports `type="docx"` to return or save editable Word tables,
+with per-call formatting through `docx_style`.
+
 ### Fitted Model State
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
@@ -25,6 +30,7 @@ Other things:
 
 - `FixestMulti.FixestFormulaDict` is deprecated and emits a `FutureWarning`; read `fit.model.fixest_formula` from the models returned by `to_list()` instead. `FixestMulti` no longer retains the estimation config, the parsed formula, the input data, or the formula context, and its unread `_is_iv` and `_is_multiple_estimation` properties are removed.
 - Removed unused internal helpers: five functions in `pyfixest.utils.dev_utils` (`docstring_from`, `_check_series_or_dataframe`, `_to_list`, `_drop_cols`, `_extract_variable_level`), `pyfixest.utils.utils._check_balanced`, `pyfixest.utils._exceptions.find_stack_level`, and `pyfixest.utils.set_rpy2_path`, which modified R library paths as a side effect of being imported.
+- pyfixest no longer draws from or reseeds the global NumPy random number generator. `get_blw()`, `get_sharkfin()`, and `get_panel_dgp_stagg()` in `pyfixest.utils.dgps` draw from `np.random.default_rng(seed)`, so the data they generate changes, including for `get_sharkfin()`'s default `seed=42`. `get_blw()` and `get_panel_dgp_stagg()` gain a `seed` argument (default `1234`, like the other DGPs), so their output no longer depends on `np.random.seed()`, and `get_sharkfin()` no longer resets the global generator as a side effect. With `seed=None`, `ccv()` and `confint(inference_type="simult")` now draw fresh entropy from the operating system instead of a seed from the global generator, so `np.random.seed()` no longer makes them reproducible; pass `seed` instead. Their results for an explicit `seed` are unchanged.
 - `decompose()` now raises `ValueError` on a fit with multiway clustering instead of silently bootstrapping on the first cluster variable only; pass a single `cluster` to choose the bootstrap dimension.
 - `ccv()`, `ritest()`, `event_study()`, `did2s()`, and `lpdid()` validate their arguments with `ValueError` for invalid values and `TypeError` for wrong types instead of `AssertionError`, which `python -O` skipped. This covers a non-binary `ccv()` treatment, `pk` or `qk` outside [0, 1], a non-positive `ccv()` `n_splits` (previously accepted) or `ritest()` `reps`, and `did2s()` stage formulas that do not start with `~`. `ritest()` now checks `type` and `reps` before it recomputes CRV1 inference on an unclustered fit.
 - Every warning names an explicit category and points at the user's call rather than at pyfixest internals, so a warning raised deep inside `feols()` or `fepois()` reports the calling line in the user's script. The `decompose(param=...)` deprecation is now a `FutureWarning` instead of a `UserWarning`, and non-convergence of the quantile-regression solvers and of the iterative-rectifier separation check is a `RuntimeWarning`; the other previously uncategorized warnings are `UserWarning`s. `wildboottest()` without the optional `wildboottest` package raises an `ImportError` naming the install command instead of printing a message and failing with a `NameError`, and `plot_ritest()` warns instead of printing when it falls back to matplotlib.
@@ -286,7 +292,18 @@ We also removed:
   unchanged.
 - `IV_Diag()` no longer relabels the main model's covariance type when computing
   the effective F statistic.
-- CCV auxiliary fits now retain the original demeaner configuration.
+- `ccv()` now refits the split and cluster samples with every estimation option
+  of the original fit. Before, its auxiliary fits kept only the demeaner, so
+  they ignored `drop_intercept`, `collin_tol`, `solver`, and `context`: with
+  `drop_intercept=True` the split coefficients did not match the design, and a
+  formula using a function from `context` failed to evaluate.
+- `vcov({"CRV3": ...})` and `ritest()` now refit with every estimation option
+  of the original fit. Before, the leave-one-cluster-out and resampled refits
+  dropped every option except the CRV3 weights, so `fepois()` with an `offset`
+  returned a jackknife and randomization distribution without the offset, and
+  refits ignored `fixef_rm`, `drop_intercept`, `collin_tol`, `solver`,
+  `demeaner`, `ssc`, `context`, and the IRLS options. A prebuilt LSMR
+  `Preconditioner` is rebuilt for each refit sample, with the same variant.
 - IR separation checks now use the configured demeaner backend.
 - Fixes `confint()` when `keep` or `drop` requests coefficients in an order
   different from the model order. Previously, intervals could be associated
@@ -307,6 +324,14 @@ We also removed:
   draws and were typically too narrow; a `seed` now gives the same results for
   any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
+- The IV first stage is now fitted on exactly the second stage's rows and with
+  its `ssc`, `drop_intercept`, and `context`. Previously, arguments from the `feols`
+  call would not be propageted, e.g.  dropped singletons always defaulted to `fixef_rm="none"`.
+- The IV first stage now uses the second stage's full covariance estimator, as
+  fixest does. Before, two-way clustering such as `vcov={"CRV1": "f1+f2"}` fell
+  back to one-way clustering on `f1` in the first stage, silently misstating its
+  standard errors and F-statistic, and `vcov="NW"` or `"DK"` raised an error.
+
 
 
 ## PyFixest 0.60.0
