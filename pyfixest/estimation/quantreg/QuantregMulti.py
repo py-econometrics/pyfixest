@@ -186,6 +186,11 @@ class QuantregMulti:
 
         return self.all_quantregs
 
+    def _publish_fit_statistics(self) -> None:
+        "Publish the goodness-of-fit measures of every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._publish_fit_statistics()
+
     def _check_vcov_support(self, spec: VcovSpec) -> None:
         "Reject a covariance estimator the quantile regressions cannot compute."
         for quantreg in self.all_quantregs.values():

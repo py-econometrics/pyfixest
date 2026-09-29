@@ -13,6 +13,7 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -235,6 +236,10 @@ class Feiv(Feols):
         # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a 2SLS fit undefined."""
+        return FitStatistics()
 
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""

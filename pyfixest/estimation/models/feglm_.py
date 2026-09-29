@@ -198,9 +198,19 @@ class Feglm(Feols):
 
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich
-
-        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Compute the deviance of the final IRLS iteration.
+
+        Families with further measures extend this in their subclass.
+        """
+        deviance = self._family.deviance(
+            self.model_matrix.dependent.to_numpy().flatten(),
+            self.working_state.mu,
+            self.observation_weights.values,
+        )
+        return FitStatistics(deviance=deviance)
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.

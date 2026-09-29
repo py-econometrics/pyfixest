@@ -257,7 +257,8 @@ def fit_one(
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
-    Constructs the model class and runs prepare → fit → vcov → inference.
+    Constructs the model class and runs prepare → fit → fit statistics →
+    vcov → inference.
     The model keeps all its state; `run_estimation` applies the storage
     options when its caller asks for it.
     `vcov` was parsed at the API boundary; the model rejects an estimator it
@@ -290,6 +291,7 @@ def fit_one(
     if not FIT._X_is_empty:
         FIT._check_vcov_support(vcov)
     FIT.get_fit()
+    FIT._publish_fit_statistics()
     if not FIT._X_is_empty:
         FIT._vcov_from_spec(vcov)
         FIT.get_inference()
