@@ -210,7 +210,8 @@ class Feols(ResultAccessorMixin):
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
         per-observation fixed-effect contribution `sumFE`.
     fitstat : FitStatistics
-        Goodness-of-fit measures; ``NaN`` where the estimator defines none.
+        Goodness-of-fit measures computed by `_fit_statistics()` and published
+        right after get_fit(); ``NaN`` where the estimator defines none.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
@@ -225,6 +226,8 @@ class Feols(ResultAccessorMixin):
     collinearity: CollinearityCheck
     sandwich: SandwichComponents
     fitted_values: FittedValues
+    # Set from _fit_statistics() right after get_fit().
+    fitstat: FitStatistics
     # Set in vcov().
     variance_covariance: VarianceCovariance
     # Set in wald_test().
@@ -280,9 +283,6 @@ class Feols(ResultAccessorMixin):
         )
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
-
-        # set in get_fit(); IV and quantile fits keep the all-NaN value
-        self.fitstat = FitStatistics()
 
     def _describe_model(
         self,
@@ -520,13 +520,22 @@ class Feols(ResultAccessorMixin):
         # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Compute the goodness-of-fit measures of the fitted model.
+
+        The estimation pipeline publishes the result as `fitstat` right after
+        `get_fit()`, before `lean=True` clears the arrays read here.
+        Subclasses override this hook to compute their own measures; an
+        override returns ``FitStatistics()`` where the estimator defines none.
+        """
         # Empty designs are used only for demeaning and may have no residual
         # degrees of freedom. Leave their fit statistics undefined.
         if self._X_is_empty:
-            return
-        self.fitstat = linear_fit_statistics(
+            return FitStatistics()
+        return linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
-            Y_within=within_data.response,
+            Y_within=self.within_data.response,
             residuals=self._u_hat,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
