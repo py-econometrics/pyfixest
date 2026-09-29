@@ -54,8 +54,9 @@ class Feiv(Feols):
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
     sample_split : SampleSplit or None
-        The `split` or `fsplit` sample `data` holds, or ``None`` for an
-        unsplit estimation.
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------

@@ -200,11 +200,12 @@ class SampleSplit:
     Parameters
     ----------
     var : str
-        Name of the `split` or `fsplit` variable.
+        Name of the `split` or `fsplit` variable by which the estimation
+        sample was split.
     value : str, int, float, or None
-        Value of `var` the model is fitted on, or ``None`` for the full-sample
-        fit of an `fsplit` estimation, which keeps every row where `var` is
-        not missing.
+        Value of `var` the model was fit on. ``None`` for the full-sample
+        fit of an `fsplit` estimation, which keeps every row where `var`
+        is not missing.
     """
 
     var: str
@@ -240,11 +241,9 @@ class ModelDescription:
         Whether a model with instrumental variables was fitted.
     model_name : str
         Key the model is stored under in a multiple-estimation result.
-    sample_split_var : str or None
-        Name of the `split` or `fsplit` variable, ``None`` for an unsplit fit.
-    sample_split_value : str, int, float, or None
-        Value of `sample_split_var` this model was fitted on; ``None`` for an
-        unsplit fit and for the full-sample fit of an `fsplit` estimation.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` for an unsplit fit.
     inference_dist : InferenceDist
         Reference distribution of the coefficient p-values and confidence
         bounds: Student's t for OLS, IV, quantile, and Gaussian GLM fits, the
@@ -277,8 +276,7 @@ class ModelDescription:
     method: str
     is_iv: bool
     model_name: str
-    sample_split_var: str | None
-    sample_split_value: str | int | float | None
+    sample_split: SampleSplit | None
     inference_dist: InferenceDist
     depvar: str = ""
     fixed_effects: tuple[str, ...] = ()

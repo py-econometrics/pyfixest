@@ -368,14 +368,13 @@ def summary(
         if fxst.model.has_fixef:
             depvar_fixef += f", Fixed effects: {fxst.model.fixef}"
         print(depvar_fixef)
-        split_var = fxst.model.sample_split_var
-        split_value = fxst.model.sample_split_value
-        if split_var is None:
+        sample_split = fxst.model.sample_split
+        if sample_split is None:
             # An unsplit fit reports the full sample, with no split variable.
             print("sample: None = all")
         else:
-            sample = "all" if split_value is None else split_value
-            print(f"sample: {split_var} = {sample}")
+            sample = "all" if sample_split.value is None else sample_split.value
+            print(f"sample: {sample_split.var} = {sample}")
         print("Inference: ", fxst.variance_covariance.spec.vcov_type_detail)
         print("Observations: ", fxst.sample_info.n_obs)
         print("")

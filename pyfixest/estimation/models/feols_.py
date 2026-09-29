@@ -141,8 +141,9 @@ class Feols(ResultAccessorMixin):
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
     sample_split : SampleSplit or None
-        The `split` or `fsplit` sample `data` holds, or ``None`` for an
-        unsplit estimation. The model keeps only the rows of that sample.
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
@@ -307,8 +308,7 @@ class Feols(ResultAccessorMixin):
                 else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
                 f"{'all' if sample_split.value is None else sample_split.value})"
             ),
-            sample_split_var=None if sample_split is None else sample_split.var,
-            sample_split_value=None if sample_split is None else sample_split.value,
+            sample_split=sample_split,
             inference_dist=T_DIST,
         )
 

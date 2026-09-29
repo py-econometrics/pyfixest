@@ -351,8 +351,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{lb * 100:.1f}%": conf_int[0],
             f"{ub * 100:.1f}%": conf_int[1],
         }
-        if self.model.sample_split_var is not None:
-            sample = self.model.sample_split_value
+        if self.model.sample_split is not None:
+            sample = self.model.sample_split.value
             data["Sample"] = "all" if sample is None else sample
         return pd.DataFrame(data).set_index("Coefficient")
 
