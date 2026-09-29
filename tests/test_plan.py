@@ -450,6 +450,34 @@ def test_public_feols_matches_legacy_behavior():
     assert abs(fit.coef().iloc[0] - (-0.9240461507764969)) < 1e-10
 
 
+@pytest.mark.parametrize("apply_retention", [False, True])
+def test_fe_encoding_cache_detached_before_retention(apply_retention, monkeypatch):
+    """Both public fits and complete refits release the runner's cache."""
+    import weakref
+
+    from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
+    from pyfixest.estimation.plan_ import parse_formula
+    from pyfixest.estimation.runner import run_estimation
+
+    references = []
+    original = FixedEffectEncodingCache.transform
+
+    def traced(cache, **kwargs):
+        references.append(weakref.ref(cache))
+        return original(cache, **kwargs)
+
+    monkeypatch.setattr(FixedEffectEncodingCache, "transform", traced)
+    config = _config("feols", "Y ~ sw(X1, X2) | csw(f1, f2)", pf.get_data())
+    fits = run_estimation(
+        config, parsed=parse_formula(config), apply_retention=apply_retention
+    ).to_list()
+    assert len(fits) == 4
+    assert all(fit._fixed_effect_encoding_cache is None for fit in fits)
+    assert len(references) == 4
+    assert references[0] is not references[2]
+    assert all(reference() is None for reference in references)
+
+
 def test_fit_one_uses_the_structural_lifecycle_contract():
     """The generic pipeline delegates estimator-specific work through hooks."""
     events: list[str] = []

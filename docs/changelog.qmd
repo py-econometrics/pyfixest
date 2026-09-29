@@ -17,6 +17,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+- Multiple estimation reuses fixed-effect encodings within each sample and FE block, preserving model-specific row filters and prediction state.
+
 ### Word Regression Tables
 
 `pf.etable()` now supports `type="docx"` to return or save editable Word tables,

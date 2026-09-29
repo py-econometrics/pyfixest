@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -70,6 +71,7 @@ class Feglm(Feols):
         family: GlmFamily,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
+        fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
         # `_describe_model()`, called by the base constructor, names the
@@ -81,6 +83,7 @@ class Feglm(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
+            fixed_effect_encoding_cache=fixed_effect_encoding_cache,
             sample_split=sample_split,
         )
 

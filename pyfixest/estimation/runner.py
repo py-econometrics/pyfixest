@@ -7,6 +7,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
@@ -86,17 +87,26 @@ def run_estimation(
     prev_cache_key: Any = _NO_CACHE_KEY
     lookup_demeaned_data: dict[frozenset[int], DemeanedData] = {}
     lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
+    fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None
 
-    for spec in specs:
+    for position, spec in enumerate(specs):
         if spec.cache_key != prev_cache_key:
             lookup_demeaned_data = {}
             lookup_preconditioner = {}
+            fixed_effect_encoding_cache = (
+                FixedEffectEncodingCache()
+                if spec.fixef_key is not None
+                and position + 1 < len(specs)
+                and specs[position + 1].cache_key == spec.cache_key
+                else None
+            )
             prev_cache_key = spec.cache_key
 
         FIT = fit_one(
             spec,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
+            fixed_effect_encoding_cache=fixed_effect_encoding_cache,
             vcov=config.vcov,
         )
 
