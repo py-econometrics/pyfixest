@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.model_state import (
     FittedValues,
     ModelDescription,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
     WithinLinearData,
 )
@@ -77,16 +78,14 @@ class Quantreg(Feols):
         *,
         options: QuantregEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         warnings.warn(
