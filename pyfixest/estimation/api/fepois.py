@@ -131,15 +131,6 @@ def fepois(
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 

@@ -20,6 +20,7 @@ from pyfixest.estimation.internals.model_state import (
     FirstStageDiagnostics,
     FittedValues,
     ModelDescription,
+    SampleSplit,
     WithinIvData,
     WithinLinearData,
 )
@@ -52,10 +53,10 @@ class Feiv(Feols):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
@@ -137,8 +138,7 @@ class Feiv(Feols):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -146,8 +146,7 @@ class Feiv(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         self.capabilities = replace(

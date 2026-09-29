@@ -13,6 +13,7 @@ from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
 from pyfixest.estimation.internals.model_state import (
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -77,8 +78,7 @@ class Fepois(Feglm):
         options: GlmEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -86,8 +86,7 @@ class Fepois(Feglm):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
             family=POISSON,
         )
 
