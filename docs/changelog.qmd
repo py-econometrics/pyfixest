@@ -266,7 +266,9 @@ As previously announced, we removed:
 - Removed the deprecated `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`
   keyword arguments (use the typed `Demeaner` API introduced in 0.60.0).
 - Removed the JAX demeaner backend and JAX solver.
-- Deprecated the SciPy and CuPy demeaner backends.
+- Removed the SciPy and CuPy LSMR demeaner backends. `LsmrDemeaner(backend="cupy")`
+  now raises a `ValueError` naming the allowed backends; use
+  `LsmrDemeaner(backend="torch", device="cuda")` on GPU or `LsmrDemeaner()` on CPU.
 - Deprecated `FeolsCompressed`.
 
 We also removed:
@@ -329,7 +331,9 @@ We also removed:
   fixest does. Before, two-way clustering such as `vcov={"CRV1": "f1+f2"}` fell
   back to one-way clustering on `f1` in the first stage, silently misstating its
   standard errors and F-statistic, and `vcov="NW"` or `"DK"` raised an error.
-
+- `LsmrDemeaner(backend="torch")` now raises an `ImportError` naming the
+  `pyfixest[torch]` extra when PyTorch is not installed, instead of silently
+  demeaning with the Rust MAP backend.
 
 
 ## PyFixest 0.60.0
