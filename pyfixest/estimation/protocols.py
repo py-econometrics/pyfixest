@@ -25,6 +25,10 @@ class FittedModel(Protocol):
         """Estimate the model parameters."""
         ...
 
+    def _publish_fit_statistics(self) -> None:
+        """Publish the goodness-of-fit measures of the fitted model."""
+        ...
+
     def _check_vcov_support(self, spec: VcovSpec) -> None:
         """Reject a covariance estimator the model cannot compute."""
         ...

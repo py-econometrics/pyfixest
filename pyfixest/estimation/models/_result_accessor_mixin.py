@@ -142,7 +142,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     fitstat: "FitStatistics"
     _coefnames: list[str]
     model: "ModelDescription"
-    _k_fe: pd.Series
     _k: int
 
     @property
@@ -269,10 +268,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
             alpha=alpha,
         )
-
-    def _n_fixef_coefficients(self) -> int:
-        """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
 
     def tidy(
         self,

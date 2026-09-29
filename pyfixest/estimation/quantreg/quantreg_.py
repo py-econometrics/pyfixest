@@ -10,6 +10,7 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
@@ -206,6 +207,10 @@ class Quantreg(Feols):
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a quantile fit undefined."""
+        return FitStatistics()
 
     def fit_qreg_fn(
         self,

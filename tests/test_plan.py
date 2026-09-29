@@ -497,6 +497,9 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def get_fit(self):
             self.events.append("fit")
 
+        def _publish_fit_statistics(self):
+            self.events.append("fit statistics")
+
         def _check_vcov_support(self, spec):
             assert spec == iid
             self.events.append("check vcov")
@@ -541,6 +544,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         "validate",
         "check vcov",
         "fit",
+        "fit statistics",
         "vcov",
         "inference",
         "finalize",
