@@ -123,6 +123,10 @@ class Quantreg(Feols):
             sherman_morrison_update=False,
         )
 
+        # One stream per fit: the "pfn" coefficient fit and the "nid"
+        # bandwidth refits draw from the same generator.
+        self._rng = np.random.default_rng(options.seed)
+
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the quantile solver and append the quantile to the model name."""
         description = super()._describe_model(**kwargs)
@@ -175,11 +179,12 @@ class Quantreg(Feols):
         *,
         q: float,
         beta_init: np.ndarray | None = None,
+        rng: np.random.Generator | None = None,
     ) -> QuantregSolution:
         """Solve quantile `q` with the solver and tolerances in `self.options`.
 
-        Each solve seeds a fresh generator from `options.seed`, so a solve
-        does not depend on the solves that ran before it.
+        The "pfn" solver draws from `rng`, by default the fit's own generator
+        seeded from `options.seed`.
         """
         options = self.options
         if options.method == "pfn":
@@ -190,7 +195,7 @@ class Quantreg(Feols):
                 tol=options.quantile_tol,
                 maxiter=options.quantile_maxiter,
                 beta_init=beta_init,
-                rng=np.random.default_rng(options.seed),
+                rng=self._rng if rng is None else rng,
             )
         return self.fit_qreg_fn(
             X=X,

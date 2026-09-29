@@ -78,9 +78,17 @@ class QuantregMulti:
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
 
-        # fit the "central" quantile first
+        # Fit the "central" quantile first, on a stream of its own, so the
+        # child's generator stays fresh for its "nid" bandwidth refits.
         median_quantreg = self.all_quantregs[q_median]
-        median_quantreg._publish_solution(median_quantreg._solve(X=X, Y=Y, q=q_median))
+        median_quantreg._publish_solution(
+            median_quantreg._solve(
+                X=X,
+                Y=Y,
+                q=q_median,
+                rng=np.random.default_rng(median_quantreg.options.seed),
+            )
+        )
 
         def _direction_helper(i, direction):
             if direction == "left":

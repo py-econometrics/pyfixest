@@ -7,6 +7,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
 # Import R packages
 quantreg = importr("quantreg")
@@ -250,6 +251,22 @@ def test_pfn_seed():
         rtol=1e-09,
         atol=1e-09,
     )
+
+
+def test_pfn_fit_and_nid_refits_share_one_stream(monkeypatch):
+    "The 'pfn' fit and its 'nid' bandwidth refits draw from one seeded generator."
+    rngs = []
+    fit_qreg_pfn = Quantreg.fit_qreg_pfn
+
+    def record_rng(self, *args, **kwargs):
+        rngs.append(kwargs["rng"])
+        return fit_qreg_pfn(self, *args, **kwargs)
+
+    monkeypatch.setattr(Quantreg, "fit_qreg_pfn", record_rng)
+    pf.quantreg("Y ~ X1", data=pf.get_data(), method="pfn", vcov="nid", seed=7)
+
+    assert len(rngs) == 3
+    assert all(rng is rngs[0] for rng in rngs)
 
 
 @pytest.mark.against_r_core
