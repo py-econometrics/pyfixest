@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
-from typing import Any, Literal, cast, overload
+from typing import Literal, cast, overload
 
 import formulaic
 import numpy as np
@@ -90,6 +90,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
     _narwhals_to_pandas,
@@ -834,24 +835,17 @@ class Feols(ResultAccessorMixin):
             cluster_col=cluster_col,
         )
 
-    def _refit_estimator(self) -> Callable[..., Any]:
-        "Return the public estimation function used for leave-out and resampled refits."
-        # lazy loading to avoid circular import
-        return import_module("pyfixest.estimation").feols
-
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
-        fit_ = self._refit_estimator()
 
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = fit_(
-                fml=self.model.formula,
+            fit = refit(
+                self,
                 data=data,
-                vcov="iid",
-                weights=self.options.weights,
-                weights_type=self.options.weights_type,
+                # inference not needed, iid fastest to compute
+                vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
             )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
@@ -1285,7 +1279,6 @@ class Feols(ResultAccessorMixin):
 
         rng = np.random.default_rng(seed)
 
-        fml = self.model.formula
         data = self._data
         Y = self.within_data.response.flatten()
         W = data[treatment].to_numpy()
@@ -1307,7 +1300,12 @@ class Feols(ResultAccessorMixin):
         vcov_splits = 0.0
         for _ in range(n_splits):
             vcov_ccv = _compute_CCV(
-                fml=fml,
+                fit_fn=partial(
+                    refit,
+                    self,
+                    # only the coefficients are read; iid is fastest to compute
+                    vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+                ),
                 Y=Y,
                 X=X,
                 W=W,
@@ -1317,7 +1315,6 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
-                demeaner=self.options.demeaner,
             )
             vcov_splits += vcov_ccv
 
@@ -2082,10 +2079,15 @@ class Feols(ResultAccessorMixin):
                 clustervar_arr=clustervar_arr,
                 fml=self.model.formula,
                 reps=reps,
-                vcov=vcov_input,
                 type=type,
                 rng=rng,
-                fit_fn=self._refit_estimator(),
+                fit_fn=partial(
+                    refit,
+                    self,
+                    vcov=VcovSpec.from_user_input(vcov_input),
+                    # permutations change the treatment, not the rows
+                    same_sample=True,
+                ),
             )
 
         else:

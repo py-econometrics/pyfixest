@@ -2,20 +2,17 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from importlib import import_module
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
-from pyfixest.estimation.internals.literals import VcovTypeOptions, WeightsTypeOptions
 from pyfixest.estimation.internals.model_state import (
     CollinearityCheck,
     EstimationOptions,
@@ -30,6 +27,7 @@ from pyfixest.estimation.internals.model_state import (
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_ssc
 
 
@@ -247,45 +245,20 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols
-
         fml_first_stage = self.model.fixest_formula.first_stage
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
         if self.model.has_fixef and fml_first_stage is not None:
             fml_first_stage += f" | {self.model.fixef}"
 
-        # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: dict[str, str] | str
-
-        spec = self.variance_covariance.spec
-        if spec.is_clustered:
-            vcov_detail = {spec.vcov_type_detail: spec.clustervar[0]}
-        else:
-            vcov_detail = spec.vcov_type_detail
-
-        demeaner = self.options.demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(
-            self.sample_info.dropped_row_index
-        )
-        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
-            demeaner = replace(demeaner, preconditioner=cached_pre)
-
-        model1 = fit_(
+        # As in fixest, the first stage uses the second stage's rows and options.
+        model1 = refit(
+            self,
             fml=fml_first_stage,
             data=self._data,
-            vcov=cast("VcovTypeOptions | dict[str, str]", vcov_detail),
-            weights=self.options.weights,
-            weights_type=cast("WeightsTypeOptions", self.options.weights_type),
-            collin_tol=self.options.collin_tol,
-            solver=self.options.solver,
-            demeaner=demeaner,
+            vcov=self.variance_covariance.spec,
+            same_sample=True,
         )
-
-        # Ensure model1 is of type Feols
-        if not isinstance(model1, Feols):
-            raise TypeError("The first stage model must be of type Feols")
 
         self.first_stage = FirstStage(
             coefficients=model1._beta_hat,
@@ -307,19 +280,11 @@ class Feiv(Feols):
         self._fit_first_stage()
 
     def _clear_attributes(self) -> None:
-        """Apply the parent's retention policy to the retained first stage."""
+        """Apply the retention policy to this model and its first stage."""
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            model = first_stage.model
-            # The first stage is fitted in full because `first_stage` is built
-            # from its within data and residuals; it takes over the parent's
-            # storage options once those values have been read.
-            model.options = replace(
-                model.options,
-                store_data=self.options.store_data,
-                lean=self.options.lean,
-            )
-            model._clear_attributes()
+            # the first stage replays this model's storage options
+            first_stage.model._clear_attributes()
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):

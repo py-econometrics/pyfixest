@@ -299,4 +299,4 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)

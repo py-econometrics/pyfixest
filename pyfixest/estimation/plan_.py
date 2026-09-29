@@ -92,6 +92,18 @@ def _resolve_model_class(
     return entry.model_cls
 
 
+def estimation_method_of(model_cls: type) -> EstimationMethod:
+    """Find the method the registry dispatches to `model_cls`.
+
+    Leave-out and resampled refits rerun a fitted model through the
+    pipeline, which dispatches by method rather than by model class.
+    """
+    for method, entry in MODEL_REGISTRY.items():
+        if model_cls in (entry.model_cls, entry.iv_model_cls):
+            return method
+    raise ValueError(f"{model_cls.__name__} is not a registered model class.")
+
+
 @dataclass(frozen=True)
 class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.
@@ -245,9 +257,11 @@ def fit_one(
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
-    Constructs the model class, runs prepare → fit → vcov → inference,
-    and clears large attributes. `vcov` was parsed at the API boundary;
-    the model rejects an estimator it does not support before fitting.
+    Constructs the model class and runs prepare → fit → vcov → inference.
+    The model keeps all its state; `run_estimation` applies the storage
+    options when its caller asks for it.
+    `vcov` was parsed at the API boundary; the model rejects an estimator it
+    does not support before fitting.
     The two per-cache-block dicts are injected here so they're shared
     across every spec in the block.
 
@@ -280,7 +294,5 @@ def fit_one(
         FIT._vcov_from_spec(vcov)
         FIT.get_inference()
         FIT._finalize_fit()
-    # delete large attributes
-    FIT._clear_attributes()
 
     return FIT
