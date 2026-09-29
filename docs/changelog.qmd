@@ -19,7 +19,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Benchmarks
 
-Added a reproducible multiple-estimation benchmark harness covering simple, difficult, and AKM panels, MAP/within backends, and R fixest comparisons.
+Added a reproducible multiple-estimation benchmark harness covering simple, difficult, and AKM panels, within demeaning, and R fixest comparisons.
 
 ### Word Regression Tables
 

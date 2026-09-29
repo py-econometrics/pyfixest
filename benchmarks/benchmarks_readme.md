@@ -2,7 +2,7 @@
 
 For current multiple-estimation comparisons, see the
 [reproducible Python/R harness](modular/MULTIPLE.md), covering simple and
-difficult panels with MAP and within demeaning.
+difficult panels with within demeaning.
 
 All benchmarks follow `fixest`'s benchmarks, which you can find [here](https://github.com/lrberge/fixest/tree/master/_BENCHMARK).
 `PyFixest` benchmarks were run on a Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz, 2304Mhz, 4 Core(s), 8 Logical Processor(s).

@@ -229,16 +229,12 @@ def worker(args):
 
     case = json.loads(args.case.read_text())
     data = pd.read_csv(args.directory / case["data"], float_precision="round_trip")
-    demeaner = (
-        pf.MapDemeaner(backend="rust", fixef_tol=1e-8, fixef_maxiter=10000)
-        if args.backend == "map"
-        else pf.LsmrDemeaner(
-            backend="within",
-            preconditioner="additive",
-            fixef_atol=1e-8,
-            fixef_btol=1e-8,
-            fixef_maxiter=10000,
-        )
+    demeaner = pf.LsmrDemeaner(
+        backend="within",
+        preconditioner="additive",
+        fixef_atol=1e-8,
+        fixef_btol=1e-8,
+        fixef_maxiter=10000,
     )
     kwargs = {
         "data": data,
@@ -496,13 +492,13 @@ def main():
         p.add_argument("--no-store-data", action="store_true")
         if mode == "worker":
             p.add_argument("--case", type=Path, required=True)
-            p.add_argument("--backend", choices=("map", "within"), required=True)
+            p.add_argument("--backend", choices=("within",), required=True)
         else:
             p.add_argument(
                 "--backends",
                 nargs="+",
-                choices=("map", "within", "fixest"),
-                default=["map", "within"],
+                choices=("within", "fixest"),
+                default=["within"],
             )
             p.add_argument("--threads", type=int, default=1)
             p.add_argument("--timeout", type=float, default=300)

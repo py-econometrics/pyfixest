@@ -15,7 +15,7 @@ pixi run -e py312 python benchmarks/modular/benchmark_multiple.py prepare /tmp/m
   --dgps simple difficult --sizes 1000 10000 100000 1000000 \
   --seeds 20260926 20260927 20260928
 pixi run -e py312 python benchmarks/modular/benchmark_multiple.py run /tmp/multi-data \
-  --output /tmp/multi-python --backends map within --reps 5
+  --output /tmp/multi-python --backends within --reps 5
 pixi run -e py312-r python benchmarks/modular/benchmark_multiple.py run /tmp/multi-data \
   --output /tmp/multi-r --backends fixest --reps 5
 pixi run -e py312 python benchmarks/modular/benchmark_multiple.py summarize \
@@ -41,7 +41,7 @@ and connectivity diagnostics. All seeds are explicit and stable across processes
 | Shared controls | 10 | `--controls 1` and `--controls 50` |
 | Sample | clean | `--scenario weights`, `missing`, or `singletons` |
 | Storage | ordinary retained fits | `--lean` or `--no-store-data` |
-| Backend | Rust MAP, within with additive preconditioner | R fixest reference |
+| Backend | within with additive preconditioner | R fixest reference |
 
 `csw` adds regressors cumulatively; `shared` keeps common controls and switches
 one regressor; `lhs` varies outcomes with identical X; `sw` switches disjoint

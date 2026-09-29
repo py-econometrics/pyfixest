@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 
+import pytest
+
 from benchmarks.modular import benchmark_multiple
 from benchmarks.modular.benchmark_multiple import prepare, worker, write_json
 
@@ -34,7 +36,7 @@ def test_multiple_benchmark_saved_cases(tmp_path, monkeypatch):
             argparse.Namespace(
                 case=request,
                 directory=tmp_path,
-                backend="map",
+                backend="within",
                 lean=False,
                 no_store_data=True,
                 profile=False,
@@ -48,3 +50,17 @@ def test_multiple_benchmark_saved_cases(tmp_path, monkeypatch):
         assert len(result["estimates"]) == 3
         assert len(result["times"]["multi"]) == 1
         assert len(result["times"]["separate"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("mode", "flag"), [("run", "--backends"), ("worker", "--backend")]
+)
+def test_multiple_benchmark_rejects_map(monkeypatch, capsys, mode, flag):
+    """Reject retired benchmark workloads before loading data or launching fits."""
+    monkeypatch.setattr(
+        "sys.argv", ["benchmark", mode, "unused", "--output", "unused", flag, "map"]
+    )
+    with pytest.raises(SystemExit) as error:
+        benchmark_multiple.main()
+    assert error.value.code == 2
+    assert "invalid choice: 'map'" in capsys.readouterr().err
