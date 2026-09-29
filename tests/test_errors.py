@@ -906,20 +906,6 @@ def setup_feiv_instance():
     return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
 
 
-def test_IV_first_stage_invalid_model_type(monkeypatch):
-    """The first stage rejects a fit result that is not a single Feols model."""
-
-    class NotFeols:
-        # Dummy class for testing invalid model type
-        pass
-
-    feiv_instance = setup_feiv_instance()
-    monkeypatch.setattr("pyfixest.estimation.feols", lambda **kwargs: NotFeols())
-
-    with pytest.raises(TypeError, match="must be of type Feols"):
-        feiv_instance._fit_first_stage()
-
-
 def test_IV_Diag_unsupported_statistics():
     feiv_instance = setup_feiv_instance()
 

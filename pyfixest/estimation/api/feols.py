@@ -22,6 +22,7 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import EstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
@@ -540,26 +541,30 @@ def feols(
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
 
+    options = EstimationOptions(
+        ssc=ssc,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
+        weights=weights,
+        weights_type=weights_type,
+        offset=None,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=demeaner,
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+    )
     config = EstimationConfig(
         method="feols",
         data=data,
         fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
+        options=options,
         vcov=vcov_spec,
-        ssc=ssc,
-        solver=solver,
-        demeaner=demeaner,
-        collin_tol=collin_tol,
-        context=context,
-        weights=weights,
-        weights_type=weights_type,
         split=split,
         fsplit=fsplit,
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)
