@@ -16,6 +16,7 @@ from pyfixest.estimation.internals.demeaner_options import (
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
+    EstimationMethod,
     FamilyOptions,
     FixedRmOptions,
     SolverOptions,
@@ -23,12 +24,22 @@ from pyfixest.estimation.internals.literals import (
     WeightsTypeOptions,
     _validate_literal_argument,
 )
+from pyfixest.estimation.internals.model_state import GlmEstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import Ssc, capture_context
+
+# Poisson goes through the Fepois model class (a Feglm subclass); the other
+# families dispatch to their dedicated model classes.
+_GLM_METHODS: dict[FamilyOptions, EstimationMethod] = {
+    "poisson": "fepois",
+    "logit": "feglm-logit",
+    "probit": "feglm-probit",
+    "gaussian": "feglm-gaussian",
+}
 
 
 def feglm(
@@ -311,37 +322,37 @@ def feglm(
         separation_check=separation_check,
     )
 
-    # Poisson goes through the Fepois model class (which is a Feglm subclass);
-    # other families dispatch to their dedicated feglm-{family} model class.
-    estimation = "fepois" if family == "poisson" else f"feglm-{family}"
-    config = EstimationConfig(
-        method=estimation,
-        data=data,
-        fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        vcov=vcov_spec,
+    options = GlmEstimationOptions(
         ssc=ssc,
-        solver=solver,
-        demeaner=demeaner,
-        collin_tol=collin_tol,
-        context=context,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
         weights=weights,
         weights_type=weights_type,
+        offset=offset,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=demeaner,
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+        maxiter=iwls_maxiter,
+        tol=iwls_tol,
+        separation_check=separation_check,
+        accelerate=accelerate,
+    )
+    config = EstimationConfig(
+        method=_GLM_METHODS[family],
+        data=data,
+        fml=fml,
+        options=options,
+        vcov=vcov_spec,
         split=split,
         fsplit=fsplit,
-        iwls_tol=iwls_tol,
-        iwls_maxiter=iwls_maxiter,
-        separation_check=separation_check,
-        offset=offset if family == "poisson" else None,
-        accelerate=accelerate,
     )
 
     parsed = parse_formula(config)
     if parsed.is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)

@@ -7,8 +7,9 @@ import pytest
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import _ALL_SAMPLE
-from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
@@ -30,16 +31,33 @@ from pyfixest.estimation.plan_ import (
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
+from pyfixest.utils.utils import Ssc
+
+_SHARED_OPTIONS = dict(
+    ssc=Ssc(),
+    drop_singletons=True,
+    drop_intercept=False,
+    weights=None,
+    weights_type="aweights",
+    offset=None,
+    collin_tol=1e-9,
+    solver="scipy.linalg.solve",
+    demeaner=MapDemeaner(),
+    store_data=True,
+    copy_data=True,
+    lean=False,
+    context={},
+)
 
 
-def _config(method: str, fml: str, data, **overrides) -> EstimationConfig:
-    """Minimal config builder for planner tests."""
+def _config(method: EstimationMethod, fml: str, data, **overrides) -> EstimationConfig:
+    """Minimal config builder for planner tests, with feols options."""
     base = dict(
         method=method,
         data=data,
         fml=fml,
+        options=EstimationOptions(**_SHARED_OPTIONS),
         vcov=VcovSpec.from_user_input("iid"),
-        context={},
     )
     base.update(overrides)
     return EstimationConfig(**base)
@@ -66,29 +84,39 @@ def test_registry_covers_every_supported_method():
         "feglm-probit",
         "feglm-gaussian",
         "quantreg",
-        "quantreg_multi",
     }
     assert set(MODEL_REGISTRY.keys()) == expected
 
 
 @pytest.mark.parametrize(
-    "method,is_iv,expected_cls",
+    "method,is_iv,fits_quantile_process,expected_cls",
     [
-        ("feols", False, Feols),
-        ("feols", True, Feiv),
-        ("fepois", False, Fepois),
-        ("feglm-logit", False, Felogit),
-        ("feglm-gaussian", False, Fegaussian),
-        ("quantreg", False, Quantreg),
+        ("feols", False, False, Feols),
+        ("feols", True, False, Feiv),
+        ("fepois", False, False, Fepois),
+        ("feglm-logit", False, False, Felogit),
+        ("feglm-gaussian", False, False, Fegaussian),
+        ("quantreg", False, False, Quantreg),
+        ("quantreg", False, True, QuantregMulti),
     ],
 )
-def test_resolve_model_class(method, is_iv, expected_cls):
-    assert _resolve_model_class(method, is_iv) is expected_cls
+def test_resolve_model_class(method, is_iv, fits_quantile_process, expected_cls):
+    resolved = _resolve_model_class(
+        method, is_iv=is_iv, fits_quantile_process=fits_quantile_process
+    )
+    assert resolved is expected_cls
 
 
 def test_iv_only_promotes_feols():
     """is_iv=True for any non-feols method falls back to the registry entry."""
-    assert _resolve_model_class("fepois", is_iv=True) is Fepois
+    resolved = _resolve_model_class("fepois", is_iv=True, fits_quantile_process=False)
+    assert resolved is Fepois
+
+
+def test_quantile_process_needs_a_method_that_fits_one():
+    """A method without a quantile-process model class rejects a process."""
+    with pytest.raises(TypeError, match="cannot fit a quantile process"):
+        _resolve_model_class("feols", is_iv=False, fits_quantile_process=True)
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +160,6 @@ def test_single_formula_emits_one_spec():
         splits=[_ALL_SAMPLE],
         is_iv=False,
         splitvar=None,
-        captured_context={},
     )
     assert len(specs) == 1
     assert specs[0].method == "feols"
@@ -151,7 +178,6 @@ def test_csw_emits_one_spec_per_fixef_step():
         splits=[_ALL_SAMPLE],
         is_iv=False,
         splitvar=None,
-        captured_context={},
     )
     # csw(f1, f2) → two fixef keys: "f1" then "f1+f2"
     assert len(specs) == 2
@@ -174,7 +200,6 @@ def test_cache_keys_are_contiguous_blocks():
         splits=[_ALL_SAMPLE],
         is_iv=False,
         splitvar=None,
-        captured_context={},
     )
     seen: list = []
     for spec in specs:
@@ -203,7 +228,6 @@ def test_split_expansion_walks_full_then_each_split_value():
         splits=splits,
         is_iv=False,
         splitvar="f2",
-        captured_context={},
     )
     assert len(specs) == len(splits)
     assert [s.sample_split_value for s in specs] == splits
@@ -222,7 +246,6 @@ def test_iv_formula_resolves_each_spec_to_feiv():
         splits=[_ALL_SAMPLE],
         is_iv=is_iv,
         splitvar=None,
-        captured_context={},
     )
     assert all(s.model_cls is Feiv for s in specs)
 
@@ -231,67 +254,74 @@ def test_iv_formula_resolves_each_spec_to_feiv():
 # Method-specific estimation options
 # ---------------------------------------------------------------------------
 
-_GLM_OVERRIDES = {
+_GLM_KWARGS = {
     "demeaner": MapDemeaner(fixef_tol=1e-3),
     "iwls_tol": 1e-7,
     "iwls_maxiter": 13,
     "separation_check": ["fe"],
     "accelerate": False,
 }
-
-_QUANTREG_OVERRIDES = {
-    "quantile": 0.5,
-    "quantreg_method": "pfn",
-    "quantile_tol": 1e-5,
-    "quantile_maxiter": 7,
-    "seed": 42,
+_GLM_OPTIONS = {
+    "demeaner": MapDemeaner(fixef_tol=1e-3),
+    "tol": 1e-7,
+    "maxiter": 13,
+    "separation_check": ["fe"],
+    "accelerate": False,
 }
 
 
 @pytest.mark.parametrize(
-    "method,overrides,options_cls,expected",
+    "estimate,options_cls,expected",
     [
         # feols: the shared options only, with the configured demeaner
         (
-            "feols",
-            {"demeaner": MapDemeaner(fixef_tol=1e-3)},
+            lambda data: pf.feols(
+                "Y ~ X1 | f1",
+                data,
+                demeaner=MapDemeaner(fixef_tol=1e-3),
+                fixef_rm="none",
+                weights="weights",
+                collin_tol=1e-8,
+            ),
             EstimationOptions,
-            {"demeaner": MapDemeaner(fixef_tol=1e-3), "offset": None},
-        ),
-        # fepois: the IRLS options, the offset, and the user's `accelerate`.
-        (
-            "fepois",
-            {**_GLM_OVERRIDES, "offset": "X2"},
-            GlmEstimationOptions,
             {
                 "demeaner": MapDemeaner(fixef_tol=1e-3),
-                "offset": "X2",
-                "tol": 1e-7,
-                "maxiter": 13,
-                "separation_check": ["fe"],
-                "accelerate": False,
-            },
-        ),
-        # feglm-logit: the IRLS options, including the user's `accelerate`.
-        # `feglm()` rejects an offset for every family but poisson, so the
-        # config of a non-Poisson GLM never carries one.
-        (
-            "feglm-logit",
-            _GLM_OVERRIDES,
-            GlmEstimationOptions,
-            {
-                "demeaner": MapDemeaner(fixef_tol=1e-3),
+                "drop_singletons": False,
+                "weights": "weights",
+                "collin_tol": 1e-8,
                 "offset": None,
-                "tol": 1e-7,
-                "maxiter": 13,
-                "separation_check": ["fe"],
-                "accelerate": False,
             },
+        ),
+        # fepois: the IRLS options, the offset, and the user's `accelerate`
+        (
+            lambda data: pf.fepois(
+                "Y ~ X1 | f1", data.assign(Y=data.Y.abs()), offset="X2", **_GLM_KWARGS
+            ),
+            GlmEstimationOptions,
+            {**_GLM_OPTIONS, "offset": "X2"},
+        ),
+        # feglm-logit: the IRLS options; only Poisson takes an offset
+        (
+            lambda data: pf.feglm(
+                "Y ~ X1 | f1",
+                data.assign(Y=(data.Y > 0).astype(int)),
+                family="logit",
+                **_GLM_KWARGS,
+            ),
+            GlmEstimationOptions,
+            {**_GLM_OPTIONS, "offset": None},
         ),
         # quantreg: the solver options of the quantile fit
         (
-            "quantreg",
-            _QUANTREG_OVERRIDES,
+            lambda data: pf.quantreg(
+                "Y ~ X1",
+                data,
+                quantile=0.5,
+                method="pfn",
+                tol=1e-5,
+                maxiter=7,
+                seed=42,
+            ),
             QuantregEstimationOptions,
             {
                 "quantile": 0.5,
@@ -303,24 +333,15 @@ _QUANTREG_OVERRIDES = {
         ),
     ],
 )
-def test_options_are_built_for_the_method(method, overrides, options_cls, expected):
-    """`expand_specs` builds the options value the model class takes."""
-    data = pf.get_data()
-    cfg = _config(method, "Y ~ X1", data, **overrides)
-    fd = _parse(cfg.fml)
-    specs = expand_specs(
-        config=cfg,
-        formula_dict=fd,
-        data=data,
-        splits=[_ALL_SAMPLE],
-        is_iv=False,
-        splitvar=None,
-        captured_context={},
-    )
-    options = specs[0].model_kwargs["options"]
+def test_estimation_functions_build_the_options_of_the_method(
+    estimate, options_cls, expected
+):
+    """Each estimation function builds the options value its model class takes."""
+    data = pf.get_data().dropna()
+    options = estimate(data).options
     assert type(options) is options_cls
     for name, value in expected.items():
-        assert getattr(options, name) == value, f"{method}: {name}"
+        assert getattr(options, name) == value, name
 
 
 def test_fepois_and_feglm_poisson_honor_accelerate():
@@ -362,32 +383,34 @@ def test_options_object_is_shared_across_multiple_estimation():
         splits=[_ALL_SAMPLE],
         is_iv=False,
         splitvar=None,
-        captured_context={},
     )
     assert len(specs) > 1
-    options = [spec.model_kwargs["options"] for spec in specs]
-    assert all(o is options[0] for o in options)
+    assert all(spec.options is cfg.options for spec in specs)
 
 
-def test_quantile_process_also_gets_the_quantile_list():
-    """`QuantregMulti` is handed the fan-out on top of the shared options."""
+def test_quantile_process_is_handed_to_every_spec():
+    """`QuantregMulti` gets the fan-out on top of the shared options."""
     data = pf.get_data()
-    cfg = _config("quantreg_multi", "Y ~ X1", data, quantile=[0.25, 0.75])
-    fd = _parse(cfg.fml)
+    process = QuantileProcess(quantiles=[0.25, 0.75], multi_method="cfm1")
+    options = QuantregEstimationOptions(
+        **_SHARED_OPTIONS,
+        quantile=0.25,
+        method="fn",
+        quantile_tol=1e-6,
+        quantile_maxiter=None,
+        seed=None,
+    )
+    cfg = _config("quantreg", "Y ~ X1", data, options=options, quantile_process=process)
     specs = expand_specs(
         config=cfg,
-        formula_dict=fd,
+        formula_dict=_parse(cfg.fml),
         data=data,
         splits=[_ALL_SAMPLE],
         is_iv=False,
         splitvar=None,
-        captured_context={},
     )
-    kwargs = specs[0].model_kwargs
-    assert kwargs["quantile"] == [0.25, 0.75]
-    assert kwargs["multi_method"] == "cfm1"
-    # the process itself carries the first requested quantile
-    assert kwargs["options"].quantile == 0.25
+    assert [spec.quantile_process for spec in specs] == [process]
+    assert specs[0].model_cls is QuantregMulti
 
 
 def test_quantile_process_children_get_distinct_quantiles_shared_options():
@@ -395,52 +418,29 @@ def test_quantile_process_children_get_distinct_quantiles_shared_options():
     shares every other option, notably `seed`, so bootstrap-style draws stay
     reproducible across the quantiles fit within one process.
     """
-    data = pf.get_data()
-    cfg = _config(
-        "quantreg_multi",
-        "Y ~ X1",
-        data,
-        quantile=[0.25, 0.5, 0.75],
-        quantreg_method="pfn",
-        seed=7,
+    fits = pf.quantreg(
+        "Y ~ X1", pf.get_data(), quantile=[0.25, 0.5, 0.75], method="pfn", seed=7
     )
-    fd = _parse(cfg.fml)
-    specs = expand_specs(
-        config=cfg,
-        formula_dict=fd,
-        data=data,
-        splits=[_ALL_SAMPLE],
-        is_iv=False,
-        splitvar=None,
-        captured_context={},
-    )
-    model_kwargs = dict(specs[0].model_kwargs)
-    model_kwargs["lookup_demeaned_data"] = {}
-    process = QuantregMulti(**model_kwargs)
-
-    assert sorted(process.all_quantregs) == [0.25, 0.5, 0.75]
-    for q, child in process.all_quantregs.items():
-        assert child.options.quantile == q
+    children = fits.all_fitted_models.values()
+    assert sorted(child.options.quantile for child in children) == [0.25, 0.5, 0.75]
+    for child in children:
         assert child.options.seed == 7
         assert child.options.method == "pfn"
 
 
-def test_cache_dicts_are_not_in_spec_kwargs():
-    """`lookup_demeaned_data` and `lookup_preconditioner` are runner-injected."""
+def test_options_must_match_the_model_class():
+    """A config whose options do not fit the method's model class is rejected."""
     data = pf.get_data()
-    cfg = _config("feols", "Y ~ X1 | f1", data)
-    fd = _parse(cfg.fml)
-    specs = expand_specs(
-        config=cfg,
-        formula_dict=fd,
-        data=data,
-        splits=[_ALL_SAMPLE],
-        is_iv=False,
-        splitvar=None,
-        captured_context={},
-    )
-    assert "lookup_demeaned_data" not in specs[0].model_kwargs
-    assert "lookup_preconditioner" not in specs[0].model_kwargs
+    cfg = _config("fepois", "Y ~ X1", data)
+    with pytest.raises(TypeError, match="GlmEstimationOptions"):
+        expand_specs(
+            config=cfg,
+            formula_dict=_parse(cfg.fml),
+            data=data,
+            splits=[_ALL_SAMPLE],
+            is_iv=False,
+            splitvar=None,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -463,7 +463,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
     class StubModel:
         _X_is_empty = False
 
-        def __init__(self, *, events, **kwargs):
+        def __init__(self, **kwargs):
             self.events = events
 
         def prepare_model_matrix(self):
@@ -502,8 +502,10 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         model_cls=StubModel,
         formula=formula,
         fixef_key=None,
+        data=pf.get_data(),
+        options=EstimationOptions(**_SHARED_OPTIONS),
         sample_split_value=_ALL_SAMPLE,
-        model_kwargs={"events": events},
+        sample_split_var=None,
     )
 
     fit_one(
@@ -521,8 +523,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         "vcov",
         "inference",
         "finalize",
-        "clear",
-    ]
+    ], "fit_one returns complete models; the estimation functions apply retention"
 
 
 def test_quantreg_multi_prepares_children_in_lifecycle_hook():

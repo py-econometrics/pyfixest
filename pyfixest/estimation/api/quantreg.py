@@ -3,25 +3,31 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
 )
-from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.internals.literals import (
+    FixedRmOptions,
     QuantregMethodOptions,
     QuantregMultiOptions,
     SolverOptions,
     VcovTypeOptions,
+    WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import QuantregEstimationOptions
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import Ssc, capture_context
 
 
-def _quantreg_input_checks(quantile: float, tol: float, maxiter: int | None):
+def _quantreg_input_checks(
+    quantile: float | list[float], tol: float, maxiter: int | None
+):
     "Run custom input checks for quantreg."
     if isinstance(quantile, list):
         if not all(isinstance(q, float) for q in quantile):
@@ -48,7 +54,7 @@ def quantreg(
     fml: str,
     data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = "nid",
-    quantile: float = 0.5,
+    quantile: float | list[float] = 0.5,
     method: QuantregMethodOptions = "fn",
     multi_method: QuantregMultiOptions = "cfm1",
     tol: float = 1e-06,
@@ -78,8 +84,9 @@ def quantreg(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    quantile : float
-        The quantile to estimate. Must be between 0 and 1.
+    quantile : float or list[float]
+        The quantile to estimate, or a list of quantiles fitted jointly as a
+        quantile regression process. Each must be between 0 and 1.
 
     method : QuantregMethodOptions, optional
         The method to use for the quantile regression. Currently, only "fn" is supported.
@@ -217,8 +224,10 @@ def quantreg(
     """
     # WLS currently not supported for quantile regression
     weights = None
-    weights_type = "aweights"
+    weights_type: WeightsTypeOptions = "aweights"
     solver: SolverOptions = "np.linalg.solve"
+    # fixed effects are rejected for quantile regression; use the feols default
+    fixef_rm: FixedRmOptions = "singleton"
 
     ssc = _resolve_ssc(ssc)
 
@@ -236,7 +245,7 @@ def quantreg(
         vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
-        fixef_rm="none",  # arbitrary, not supported
+        fixef_rm=fixef_rm,
         collin_tol=collin_tol,
         copy_data=copy_data,
         store_data=store_data,
@@ -249,30 +258,39 @@ def quantreg(
         separation_check=separation_check,
     )
 
-    estimation = "quantreg" if not isinstance(quantile, list) else "quantreg_multi"
-    config = EstimationConfig(
-        method=estimation,
-        data=data,
-        fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        drop_intercept=drop_intercept,
-        vcov=vcov_spec,
+    options = QuantregEstimationOptions(
         ssc=ssc,
-        solver=solver,
-        collin_tol=collin_tol,
-        context=context,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
         weights=weights,
         weights_type=weights_type,
-        split=split,
-        fsplit=fsplit,
-        seed=seed,
-        quantile=quantile,
-        quantreg_method=method,
+        offset=None,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=MapDemeaner(),
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+        # a quantile process carries its first quantile; each child fit
+        # gets its own via `dataclasses.replace`
+        quantile=quantile[0] if isinstance(quantile, list) else quantile,
+        method=method,
         quantile_tol=tol,
         quantile_maxiter=maxiter,
-        quantreg_multi_method=multi_method,
+        seed=seed,
+    )
+    config = EstimationConfig(
+        method="quantreg",
+        data=data,
+        fml=fml,
+        options=options,
+        vcov=vcov_spec,
+        split=split,
+        fsplit=fsplit,
+        quantile_process=QuantileProcess(quantiles=quantile, multi_method=multi_method)
+        if isinstance(quantile, list)
+        else None,
     )
 
     parsed = parse_formula(config)
@@ -281,4 +299,4 @@ def quantreg(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)

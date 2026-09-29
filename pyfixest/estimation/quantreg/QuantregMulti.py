@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 from dataclasses import replace
 
 import numpy as np
@@ -216,10 +215,3 @@ class QuantregMulti:
     def _iter_fitted_models(self) -> tuple[Quantreg, ...]:
         """Yield each fitted quantile to the result container."""
         return tuple(self.all_quantregs.values())
-
-    def _clear_attributes(self) -> None:
-        "Clear all large non-necessary attributes to free memory."
-        for quantreg in self.all_quantregs.values():
-            quantreg._clear_attributes()
-
-        gc.collect()

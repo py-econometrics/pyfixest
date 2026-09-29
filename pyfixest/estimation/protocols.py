@@ -45,9 +45,5 @@ class FittedModel(Protocol):
         """Yield concrete fitted results produced by this pipeline object."""
         ...
 
-    def _clear_attributes(self) -> None:
-        """Clear large state according to storage options."""
-        ...
-
 
 ModelFactory: TypeAlias = Callable[..., FittedModel]
