@@ -226,7 +226,7 @@ class Feols(ResultAccessorMixin):
     collinearity: CollinearityCheck
     sandwich: SandwichComponents
     fitted_values: FittedValues
-    # Set from _fit_statistics() right after get_fit().
+    # Set in _publish_fit_statistics() right after get_fit().
     fitstat: FitStatistics
     # Set in vcov().
     variance_covariance: VarianceCovariance
@@ -521,10 +521,14 @@ class Feols(ResultAccessorMixin):
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
 
+    def _publish_fit_statistics(self) -> None:
+        """Publish `_fit_statistics()` as `fitstat`."""
+        self.fitstat = self._fit_statistics()
+
     def _fit_statistics(self) -> FitStatistics:
         """Compute the goodness-of-fit measures of the fitted model.
 
-        The estimation pipeline publishes the result as `fitstat` right after
+        `_publish_fit_statistics()` stores the result as `fitstat` right after
         `get_fit()`, before `lean=True` clears the arrays read here.
         Subclasses override this hook to compute their own measures; an
         override returns ``FitStatistics()`` where the estimator defines none.

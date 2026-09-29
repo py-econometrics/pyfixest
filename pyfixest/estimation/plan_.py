@@ -291,8 +291,7 @@ def fit_one(
     if not FIT._X_is_empty:
         FIT._check_vcov_support(vcov)
     FIT.get_fit()
-    for fitted_model in FIT._iter_fitted_models():
-        fitted_model.fitstat = fitted_model._fit_statistics()
+    FIT._publish_fit_statistics()
     if not FIT._X_is_empty:
         FIT._vcov_from_spec(vcov)
         FIT.get_inference()
