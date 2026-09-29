@@ -38,7 +38,7 @@ urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 dependencies = [
     "formulaic>=1.2.0,<1.3",
     "joblib>=1.4.2",
-    "maketables>=0.1.0",
+    "maketables>=0.1.4",
     "narwhals>=1.13.3",
     "numpy>=1.25.2",
     "pandas>=1.1.0",
@@ -166,9 +166,8 @@ docstring-code-line-length = 88
 replace-imports-with-any = ["formulaic", "formulaic.**"]
 [tool.ty.src]
 # rpy2 is only available in the optional `r` pixi feature, not the `py312` env
-# ty runs in; these two files exist solely to support against-R test fixtures.
+# ty runs in; this file exists solely to support against-R test fixtures.
 exclude = [
-    "pyfixest/utils/set_rpy2_path.py",
     "pyfixest/utils/check_r_install.py",
 ]
 
