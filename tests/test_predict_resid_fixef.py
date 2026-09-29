@@ -281,7 +281,7 @@ def test_weighted_fixef_is_on_response_scale(data, fml, weights_name, weights_ty
 
     # With two fixed effects the per-level values depend on the normalization
     # of the second effect, so compare levels only for the single-FE model.
-    if fit._n_fe == 1:
+    if fit.fixef_counts.n_fixef == 1:
         fixed_effects_by_level = fixed_effects.set_index(
             fixed_effects["level"].astype(float)
         )["coefficient"].sort_index()

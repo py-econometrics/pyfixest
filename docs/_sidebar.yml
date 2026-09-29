@@ -74,6 +74,7 @@ website:
       - reference/estimation.state.ObservationWeights.qmd
       - reference/estimation.state.EstimationSample.qmd
       - reference/estimation.state.DroppedRowCounts.qmd
+      - reference/estimation.state.FixedEffectCounts.qmd
       - reference/estimation.state.WithinLinearData.qmd
       - reference/estimation.state.WithinIvData.qmd
       - reference/estimation.state.CollinearityCheck.qmd
