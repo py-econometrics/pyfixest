@@ -30,6 +30,7 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import DegreesOfFreedomCounts
 
 
 class Feglm(Feols):
@@ -58,6 +59,7 @@ class Feglm(Feols):
     """
 
     options: GlmEstimationOptions
+    _n_fe_after_separation: int | None = None
     # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
@@ -138,9 +140,18 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe = int(np.sum(self._k_fe > 1))
+            self._n_fe_after_separation = int(
+                np.sum(np.asarray(self.fixef_counts.n_levels_by_fe) > 1)
+            )
 
         return model_matrix
+
+    def _dof_counts(self, **kwargs: Any) -> DegreesOfFreedomCounts:
+        "Count only fixed effects with several levels once separation dropped rows."
+        counts = super()._dof_counts(**kwargs)
+        if self._n_fe_after_separation is None:
+            return counts
+        return replace(counts, n_fe=self._n_fe_after_separation)
 
     def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."

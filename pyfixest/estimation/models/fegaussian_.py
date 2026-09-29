@@ -77,7 +77,7 @@ class Fegaussian(Feglm):
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._n_fixef_coefficients(),
+            k_fe=self.fixef_counts.fixef_dof,
             has_intercept=not self.options.drop_intercept,
             has_fixef=self.model.has_fixef,
             deviance=super()._fit_statistics().deviance,

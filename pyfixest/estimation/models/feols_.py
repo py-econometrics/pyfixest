@@ -46,6 +46,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     EstimationSample,
     FittedValues,
+    FixedEffectCounts,
     ModelDescription,
     ObservationWeights,
     RitestStatistics,
@@ -173,6 +174,9 @@ class Feols(ResultAccessorMixin):
         User-scale weights and their analytic or frequency interpretation.
     sample_info : EstimationSample
         Observation counts and the dropped rows, by position and by stage.
+    fixef_counts : FixedEffectCounts
+        Level counts of the fixed effects in the estimation sample and the
+        counts derived from them for inference.
     sandwich : SandwichComponents
         Weighted scores, Hessian, and bread of the sandwich covariance, set in
         get_fit().
@@ -360,12 +364,16 @@ class Feols(ResultAccessorMixin):
 
         self._coefnames = independent.columns.tolist()
 
-        self._k_fe: pd.Series = (
-            self.model_matrix.fixed_effects.nunique(axis=0)
-            if self.model.has_fixef
-            else pd.Series(dtype=np.int64)
+        fixed_effects = model_matrix.fixed_effects
+        self.fixef_counts = (
+            FixedEffectCounts(
+                n_levels_by_fe=tuple(
+                    int(size) for size in fixed_effects.nunique(axis=0)
+                )
+            )
+            if fixed_effects is not None
+            else FixedEffectCounts()
         )
-        self._n_fe = len(self._k_fe)
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
@@ -544,7 +552,7 @@ class Feols(ResultAccessorMixin):
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._n_fixef_coefficients(),
+            k_fe=self.fixef_counts.fixef_dof,
             has_intercept=not self.options.drop_intercept,
             has_fixef=self.model.has_fixef,
         )
@@ -682,7 +690,7 @@ class Feols(ResultAccessorMixin):
                 ssc=self.options.ssc,
                 fixef=self.model.fixed_effects,
                 fe=self.model_matrix.fixed_effects,
-                k_fe=self._k_fe,
+                n_levels_by_fe=self.fixef_counts.n_levels_by_fe,
             )
             # prep.G may pad the "min" rule to three entries; keep one per dimension
             G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
@@ -750,8 +758,8 @@ class Feols(ResultAccessorMixin):
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=int(self._k_fe.sum()),
-            n_fe=self._n_fe,
+            k_fe=self.fixef_counts.n_levels,
+            n_fe=self.fixef_counts.n_fixef,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
             G=G,
@@ -939,8 +947,6 @@ class Feols(ResultAccessorMixin):
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
-        k_fe = np.sum(self._k_fe.to_numpy())
-
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
 
@@ -948,7 +954,7 @@ class Feols(ResultAccessorMixin):
         if covariance.spec.is_clustered:
             df2: int | float = min(covariance.G) - 1
         else:
-            df2 = self.sample_info.n_obs - self._k - k_fe
+            df2 = self.sample_info.n_obs - self._k - self.fixef_counts.n_levels
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
