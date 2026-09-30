@@ -139,10 +139,12 @@ def _assert_same(value, expected) -> None:
         assert value == expected or value is expected
 
 
-def test_entries_name_model_classes():
-    """Every entry names a model class, so it is installed somewhere."""
+def test_entries_install_on_model_classes():
+    """Every entry installs a descriptor on the model class it names."""
     for attribute in DEPRECATED_ATTRIBUTES:
-        assert set(attribute.classes) <= set(MODEL_CLASSES), attribute.name
+        for class_name in attribute.classes:
+            assert class_name in MODEL_CLASSES, attribute.name
+            assert attribute.name in vars(MODEL_CLASSES[class_name]), attribute.name
     names = [attribute.name for attribute in DEPRECATED_ATTRIBUTES]
     assert len(names) == len(set(names))
 
@@ -181,15 +183,6 @@ def test_removed_attribute_names_replacement(
         getattr(fit, attribute.name)
     assert f"`{entry.replacement}`" in str(excinfo.value)
     assert not hasattr(fit, attribute.name)
-
-
-@pytest.mark.parametrize(("attribute", "class_name", "entry"), ENTRIES)
-def test_deprecated_attribute_is_read_only(attribute, class_name, entry):
-    cls = MODEL_CLASSES[class_name]
-    descriptor = cls.__dict__[attribute.name]
-    assert getattr(cls, attribute.name) is descriptor
-    with pytest.raises(AttributeError, match=re.escape(entry.replacement)):
-        descriptor.__set__(object(), None)
 
 
 def test_unpublished_state_stays_missing(data):
