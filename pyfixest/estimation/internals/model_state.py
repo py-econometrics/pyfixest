@@ -748,10 +748,17 @@ class VcovSpec:
         supports the parsed estimator is checked by the model.
 
         Raises ``TypeError`` for input of the wrong type and ``ValueError`` for
-        unknown or incomplete values. ``vcov_kwargs`` is validated whenever it
-        is given but only read by ``"NW"`` and ``"DK"``.
+        unknown or incomplete values. ``vcov_kwargs`` is only accepted with
+        ``vcov="NW"`` or ``vcov="DK"``; other estimators reject it.
         """
         lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
+
+        is_hac = isinstance(vcov, str) and vcov in ("NW", "DK")
+        if vcov_kwargs is not None and not is_hac:
+            raise ValueError(
+                "vcov_kwargs is only supported with vcov='NW' or vcov='DK'; "
+                f"got vcov={vcov!r}."
+            )
 
         if isinstance(vcov, dict):
             if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:

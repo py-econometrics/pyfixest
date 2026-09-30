@@ -1319,16 +1319,17 @@ def test_errors_vcov_kwargs(vcov_kwargs, match):
 
 
 @pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
-@pytest.mark.parametrize("key", ["time_id", "panel_id"])
-def test_vcov_kwargs_missing_column_ignored_without_hac(estimator, key):
-    """A HAC column that `vcov` does not use is not checked against the data."""
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "HC1", {"CRV1": "f1"}])
+def test_vcov_kwargs_rejected_without_hac(estimator, vcov):
+    """`vcov_kwargs` is rejected unless `vcov` is NW or DK (issue #1697)."""
     data = pf.get_data()
     data["Y"] = data["Y"].abs()
 
-    fit = estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
-    expected = estimator("Y ~ X1", data=data, vcov="iid")
-
-    np.testing.assert_allclose(fit.coeftable.se, expected.coeftable.se)
+    with pytest.raises(
+        ValueError,
+        match=r"vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+    ):
+        estimator("Y ~ X1", data=data, vcov=vcov, vcov_kwargs={"lag": 2})
 
 
 def test_errors_hac():
@@ -1630,9 +1631,22 @@ def test_fixest_multi_rejects_savi_tidy_argument():
             ValueError,
             "'lag' must be a non-negative integer",
         ),
-        # malformed kwargs are rejected even where only HAC would read them
+        # malformed kwargs still fail key validation before the NW/DK gate
         ("iid", {"lags": 2}, ValueError, "vcov_kwargs accepts"),
         ("iid", ["lag"], TypeError, "vcov_kwargs must be a dict"),
+        # valid kwargs are rejected unless vcov is NW or DK
+        (
+            "iid",
+            {"lag": 2},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
+        (
+            "hetero",
+            {"time_id": "f1"},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
     ],
 )
 def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
