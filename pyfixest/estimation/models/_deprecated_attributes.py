@@ -228,11 +228,12 @@ def _cluster_counts(fit: Any) -> list[int]:
     return counts
 
 
-def _sample_split_value(fit: Any) -> Any:
-    """0.60 `_sample_split_value`, which unsplit fits held as a sentinel."""
-    if fit.model.sample_split_var is None:
-        raise AttributeError("this fit is not estimated on a sample split")
-    return fit.model.sample_split_value
+def _sample_split_value(fit: Any) -> str | int | float:
+    """0.60 `_sample_split_value`; unsplit and full-sample fits held a sentinel."""
+    split = fit.model.sample_split
+    if split is None or split.value is None:
+        raise AttributeError("this fit is not estimated on one value of a split")
+    return split.value
 
 
 def _eff_f(fit: Any) -> float:
@@ -331,7 +332,7 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     _row(
         "_sample_split_value",
-        Feols=_alias("fit.model.sample_split_value", _sample_split_value),
+        Feols=_alias("fit.model.sample_split.value", _sample_split_value),
     ),
     # fit.options
     _row(

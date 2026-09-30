@@ -196,10 +196,12 @@ def test_unpublished_state_stays_missing(data):
     """Deprecated names raise `AttributeError` until their state is published."""
     fit = pf.feols("Y ~ X1 | f1", data)
     iv = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
+    full_sample = pf.feols("Y ~ X1", data, fsplit="f2").to_list()[0]
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         for name in ("_alpha", "_sumFE", "_sample_split_value", "_yname"):
             assert not hasattr(fit, name), name
+        assert not hasattr(full_sample, "_sample_split_value")
         with pytest.raises(AttributeError, match=r"IV_Diag\(\)"):
             iv._eff_F  # noqa: B018
     with pytest.raises(AttributeError, match=re.escape("fit.coeftable.se")):
