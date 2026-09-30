@@ -31,6 +31,7 @@ Other things:
 - `FixestMulti.FixestFormulaDict` is deprecated and emits a `FutureWarning`; read `fit.model.fixest_formula` from the models returned by `to_list()` instead. `FixestMulti` no longer retains the estimation config, the parsed formula, the input data, or the formula context, and its unread `_is_iv` and `_is_multiple_estimation` properties are removed.
 - Removed unused internal helpers: five functions in `pyfixest.utils.dev_utils` (`docstring_from`, `_check_series_or_dataframe`, `_to_list`, `_drop_cols`, `_extract_variable_level`), `pyfixest.utils.utils._check_balanced`, `pyfixest.utils._exceptions.find_stack_level`, and `pyfixest.utils.set_rpy2_path`, which modified R library paths as a side effect of being imported.
 - pyfixest no longer draws from or reseeds the global NumPy random number generator. `get_blw()`, `get_sharkfin()`, and `get_panel_dgp_stagg()` in `pyfixest.utils.dgps` draw from `np.random.default_rng(seed)`, so the data they generate changes, including for `get_sharkfin()`'s default `seed=42`. `get_blw()` and `get_panel_dgp_stagg()` gain a `seed` argument (default `1234`, like the other DGPs), so their output no longer depends on `np.random.seed()`, and `get_sharkfin()` no longer resets the global generator as a side effect. With `seed=None`, `ccv()` and `confint(inference_type="simult")` now draw fresh entropy from the operating system instead of a seed from the global generator, so `np.random.seed()` no longer makes them reproducible; pass `seed` instead. Their results for an explicit `seed` are unchanged.
+- The model classes take the sample split as one `sample_split=SampleSplit(var, value)` constructor argument instead of `sample_split_var=` and `sample_split_value=`; an unsplit fit passes `None`. The full-sample fit of an `fsplit` estimation now reports `fit.model.sample_split.value` as `None` instead of a private marker object that printed as `all`; its model name, `tidy()` `Sample` column, and `summary()` still show `all`. `summary()` of a `split` model whose group is the string `"all"` now prints its sample line instead of omitting it.
 - `decompose()` now raises `ValueError` on a fit with multiway clustering instead of silently bootstrapping on the first cluster variable only; pass a single `cluster` to choose the bootstrap dimension.
 - `ccv()`, `ritest()`, `event_study()`, `did2s()`, and `lpdid()` validate their arguments with `ValueError` for invalid values and `TypeError` for wrong types instead of `AssertionError`, which `python -O` skipped. This covers a non-binary `ccv()` treatment, `pk` or `qk` outside [0, 1], a non-positive `ccv()` `n_splits` (previously accepted) or `ritest()` `reps`, and `did2s()` stage formulas that do not start with `~`. `ritest()` now checks `type` and `reps` before it recomputes CRV1 inference on an unclustered fit.
 - Every warning names an explicit category and points at the user's call rather than at pyfixest internals, so a warning raised deep inside `feols()` or `fepois()` reports the calling line in the user's script. The `decompose(param=...)` deprecation is now a `FutureWarning` instead of a `UserWarning`, and non-convergence of the quantile-regression solvers and of the iterative-rectifier separation check is a `RuntimeWarning`; the other previously uncategorized warnings are `UserWarning`s. `wildboottest()` without the optional `wildboottest` package raises an `ImportError` naming the install command instead of printing a message and failing with a `NameError`, and `plot_ritest()` warns instead of printing when it falls back to matplotlib.
@@ -62,6 +63,7 @@ Other things:
 - `did2s()` fits now report `crv3_inference=False`, so `vcov({"CRV3": ...})` raises `VcovTypeNotSupportedError`. Previously it refit each leave-one-cluster-out sample of the second stage with the Poisson estimator, which failed with a misleading error or, for a positive outcome, returned standard errors from Poisson refits that ignored the first-stage estimation.
 - `vcov({"CRV3": ...})` on `event_study()` fits with `estimator="twfe"` or `estimator="saturated"` now refits each leave-one-cluster-out sample with `feols`. Previously it refit with the Poisson estimator, which failed for outcomes with negative values and otherwise silently returned standard errors from Poisson jackknife refits.
 - Fitted models expose `fit.model`, a `ModelDescription` value describing what the model estimates: the `formula` and the parsed `fixest_formula`, the estimator `method` and the `inference_dist` of its coefficient tests, `is_iv`, the `model_name` a multiple estimation stores the fit under, the `sample_split_var` and `sample_split_value` (`None` for an unsplit fit), the dependent variable `depvar`, the absorbed `fixed_effects` (with `has_fixef` and the `+`-joined `fixef`), the `i()` `interacted_covariates`, and the formulaic `model_spec`. It replaces the private attributes `_fml`, `_method`, `_is_iv`, `_model_name`, `_sample_split_var`, `_sample_split_value`, `_inference_dist`, `_depvar`, `_has_fixef`, `_fixef`, `_icovars`, and `_model_spec`, and the public `FixestFormula` attribute of fitted models, and survives `store_data=False` and `lean=True`. `event_study()` and `did2s()` record their estimator (`"twfe"`, `"saturated"`, `"did2s"`) as `fit.model.method`, where they previously overwrote `_method`.
+- Fitted models expose `fit.fixef_counts`, a `FixedEffectCounts` value with the level count of each fixed effect in the estimation sample as `n_levels_by_fe`, and the counts that inference derives from it: `n_fixef`, `n_levels`, and `fixef_dof` (`sum(n_levels_by_fe - 1) + 1`). It replaces the private attributes `_k_fe` and `_n_fe` and the `_n_fixef_coefficients()` method, and survives `store_data=False` and `lean=True`.
 
 ### Contributor Workflow
 
@@ -268,7 +270,9 @@ As previously announced, we removed:
 - Removed the deprecated `demeaner_backend`, `fixef_tol`, and `fixef_maxiter`
   keyword arguments (use the typed `Demeaner` API introduced in 0.60.0).
 - Removed the JAX demeaner backend and JAX solver.
-- Deprecated the SciPy and CuPy demeaner backends.
+- Removed the SciPy and CuPy LSMR demeaner backends. `LsmrDemeaner(backend="cupy")`
+  now raises a `ValueError` naming the allowed backends; use
+  `LsmrDemeaner(backend="torch", device="cuda")` on GPU or `LsmrDemeaner()` on CPU.
 - Deprecated `FeolsCompressed`.
 
 We also removed:
@@ -331,7 +335,9 @@ We also removed:
   fixest does. Before, two-way clustering such as `vcov={"CRV1": "f1+f2"}` fell
   back to one-way clustering on `f1` in the first stage, silently misstating its
   standard errors and F-statistic, and `vcov="NW"` or `"DK"` raised an error.
-
+- `LsmrDemeaner(backend="torch")` now raises an `ImportError` naming the
+  `pyfixest[torch]` extra when PyTorch is not installed, instead of silently
+  demeaning with the Rust MAP backend.
 
 
 ## PyFixest 0.60.0

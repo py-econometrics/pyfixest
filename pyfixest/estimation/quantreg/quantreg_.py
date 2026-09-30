@@ -10,11 +10,13 @@ from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     ModelDescription,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
     WithinLinearData,
 )
@@ -78,16 +80,14 @@ class Quantreg(Feols):
         *,
         options: QuantregEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         warnings.warn(
@@ -209,6 +209,10 @@ class Quantreg(Feols):
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a quantile fit undefined."""
+        return FitStatistics()
 
     def fit_qreg_fn(
         self,

@@ -38,8 +38,6 @@ class GlmFit:
         final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
-    deviance : float
-        Final deviance.
     converged : bool
         Whether the IRLS loop converged within ``maxiter`` iterations.
     n_iter : int
@@ -53,7 +51,6 @@ class GlmFit:
     working_state: GlmWorkingState
     sandwich: SandwichComponents
     X: np.ndarray
-    deviance: float
     converged: bool
     n_iter: int
     collinearity: CollinearityCheck
@@ -320,7 +317,6 @@ def fit_glm_irls(
         working_state=working_state,
         sandwich=sandwich,
         X=X_eff,
-        deviance=deviance,
         converged=converged,
         n_iter=r,
         collinearity=collinearity,

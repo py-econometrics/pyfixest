@@ -617,6 +617,9 @@ def test_feols_warns_for_experimental_torch_demeaner():
         )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:The torch LSMR demeaner backend is experimental:UserWarning"
+)
 @pytest.mark.parametrize("demeaner", MODEL_DEMEANERS)
 def test_demean_model_no_fixed_effects(benchmark, demeaner):
     """Test DemeanCache.demean_yx when there are no fixed effects."""

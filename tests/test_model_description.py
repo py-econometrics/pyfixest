@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 import pyfixest as pf
@@ -54,15 +55,23 @@ def test_iv_glm_and_quantile_descriptions_record_the_fitted_method():
 def test_split_description_names_the_sample():
     data = pf.get_data()
     unsplit = pf.feols("Y ~ X1", data)
-    assert unsplit.model.sample_split_var is None
-    assert unsplit.model.sample_split_value is None
+    assert unsplit.model.sample_split is None
     assert unsplit.model.model_name == "Y ~ 1 + X1"
 
     fits = pf.feols("Y ~ X1", data, fsplit="f1").to_list()
     levels = data["f1"].dropna().drop_duplicates().sort_values().tolist()
-    assert [fit.model.sample_split_value for fit in fits[1:]] == levels
-    for fit in fits:
-        assert fit.model.sample_split_var == "f1"
-        value = fit.model.sample_split_value
-        assert fit.model.model_name == f"Y ~ 1 + X1 (Sample: f1 = {value})"
-    assert repr(fits[0].model.sample_split_value) == "all"
+    assert [fit.model.sample_split.value for fit in fits] == [None, *levels]
+    for fit, label in zip(fits, ["all", *levels], strict=True):
+        assert fit.model.sample_split.var == "f1"
+        assert fit.model.model_name == f"Y ~ 1 + X1 (Sample: f1 = {label})"
+        assert (fit.tidy()["Sample"] == label).all()
+
+
+def test_summary_names_a_split_group_called_all(capsys):
+    data = pf.get_data()
+    data["group"] = np.where(data["f1"] < 10, "all", "rest")
+    group_all, _ = pf.feols("Y ~ X1", data, split="group").to_list()
+    assert group_all.model.sample_split.value == "all"
+
+    group_all.summary()
+    assert "sample: group = all" in capsys.readouterr().out

@@ -142,7 +142,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     fitstat: "FitStatistics"
     _coefnames: list[str]
     model: "ModelDescription"
-    _k_fe: pd.Series
     _k: int
 
     @property
@@ -270,10 +269,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             alpha=alpha,
         )
 
-    def _n_fixef_coefficients(self) -> int:
-        """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
-
     def tidy(
         self,
         alpha: float = 0.05,
@@ -352,11 +347,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{lb * 100:.1f}%": conf_int[0],
             f"{ub * 100:.1f}%": conf_int[1],
         }
-        if (
-            self.model.sample_split_var is not None
-            and (sample := self.model.sample_split_value) is not None
-        ):
-            data["Sample"] = sample
+        if self.model.sample_split is not None:
+            sample = self.model.sample_split.value
+            data["Sample"] = "all" if sample is None else sample
         return pd.DataFrame(data).set_index("Coefficient")
 
     def _normalize_inference_type(
