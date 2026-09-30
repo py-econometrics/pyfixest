@@ -130,13 +130,3 @@ def _estimation_input_checks(
     for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
         if column is not None and column not in data.columns:
             raise ValueError(f"The variable '{column}' is not in the data.")
-
-
-class _AllSampleSentinel:
-    """Sentinel representing the full sample in fsplit mode."""
-
-    def __repr__(self) -> str:
-        return "all"
-
-
-_ALL_SAMPLE = _AllSampleSentinel()

@@ -80,7 +80,6 @@ def run_estimation(
         data=data,
         splits=all_splits,
         is_iv=parsed.is_iv,
-        splitvar=splitvar,
     )
 
     _NO_CACHE_KEY: Any = object()

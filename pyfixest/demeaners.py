@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from importlib import import_module
 from numbers import Integral, Real
+from types import ModuleType
 from typing import ClassVar, Literal, cast, get_args
 
 import numpy as np
@@ -16,7 +17,7 @@ from pyfixest.core.demean import (
 )
 
 MapBackend = Literal["numba", "rust"]
-LsmrBackend = Literal["within", "cupy", "torch"]
+LsmrBackend = Literal["within", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
 LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]
@@ -77,6 +78,17 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
         ) from exc
 
     return cast(Callable[..., tuple[np.ndarray, bool]], demean_nb)
+
+
+def _import_torch() -> ModuleType:
+    try:
+        return import_module("torch")
+    except ImportError as exc:
+        raise ImportError(
+            "The torch LSMR backend requires the optional `torch` extra. "
+            "Install it with `pip install pyfixest[torch]`, or use the default "
+            "`LsmrDemeaner(backend='within')` backend."
+        ) from exc
 
 
 @dataclass(frozen=True, slots=True)
@@ -339,96 +351,105 @@ class LsmrDemeaner(BaseDemeaner):
             setup across subsequent solves on the same design.
         """
         if self.backend == "within":
-            preconditioner: WithinPreconditionerName | Preconditioner
-            if isinstance(self.preconditioner, Preconditioner):
-                preconditioner = self.preconditioner
-            else:
-                preconditioner = cast(
-                    WithinPreconditionerName,
-                    _resolve_preconditioner("within", self.preconditioner),
-                )
-
-            if (
-                cached_preconditioner is not None
-                and isinstance(preconditioner, str)
-                and cached_preconditioner.variant.lower() == preconditioner
-            ):
-                preconditioner = cached_preconditioner
-
-            return demean_within(
+            return self._demean_within(
                 x=x,
-                flist=flist.astype(np.uint32, copy=False),
+                flist=flist,
                 weights=weights,
-                tol=max(self.fixef_atol, self.fixef_btol),
-                maxiter=self.fixef_maxiter,
-                local_size=self.local_size,
-                preconditioner=preconditioner,
+                cached_preconditioner=cached_preconditioner,
             )
+        if self.backend == "torch":
+            return self._demean_torch(x=x, flist=flist, weights=weights)
+        raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
+
+    def _demean_within(
+        self,
+        x: np.ndarray,
+        flist: np.ndarray,
+        weights: np.ndarray | None,
+        cached_preconditioner: Preconditioner | None,
+    ) -> tuple[np.ndarray, bool, Preconditioner | None]:
+        """Demean via the `within` crate, reusing a matching cached preconditioner."""
+        preconditioner: WithinPreconditionerName | Preconditioner
+        if isinstance(self.preconditioner, Preconditioner):
+            preconditioner = self.preconditioner
+        else:
+            preconditioner = cast(
+                WithinPreconditionerName,
+                _resolve_preconditioner("within", self.preconditioner),
+            )
+
+        if (
+            cached_preconditioner is not None
+            and isinstance(preconditioner, str)
+            and cached_preconditioner.variant.lower() == preconditioner
+        ):
+            preconditioner = cached_preconditioner
+
+        return demean_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            tol=max(self.fixef_atol, self.fixef_btol),
+            maxiter=self.fixef_maxiter,
+            local_size=self.local_size,
+            preconditioner=preconditioner,
+        )
+
+    def _demean_torch(
+        self,
+        x: np.ndarray,
+        flist: np.ndarray,
+        weights: np.ndarray | None,
+    ) -> tuple[np.ndarray, bool, Preconditioner | None]:
+        """Demean via PyTorch LSMR with its built-in diagonal preconditioner.
+
+        The third return value is always `None`: no within preconditioner
+        participates in the solve.
+        """
+        # Call the resolver for its UserWarning side effect on incompatible
+        # requests; torch LSMR always uses its diagonal preconditioner.
+        _ = _resolve_preconditioner(
+            "torch", cast(LsmrPreconditioner, self.preconditioner)
+        )
+        torch = _import_torch()
+        torch_demean_module = import_module("pyfixest.estimation.torch.demean_torch_")
 
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
 
-        # Non-within branches never produce a Preconditioner, so their
-        # third return value is always None.
-        if self.backend == "torch":
-            # Torch LSMR always uses its built-in diagonal preconditioner.
-            # Call resolver for its UserWarning side effect on incompatible
-            # requests; the returned value is intentionally unused.
-            _ = _resolve_preconditioner(
-                "torch", cast(LsmrPreconditioner, self.preconditioner)
-            )
-            try:
-                torch = import_module("torch")
-                torch_demean_module = import_module(
-                    "pyfixest.estimation.torch.demean_torch_"
-                )
-            except ImportError:
-                from pyfixest.core.demean import demean as demean_rs
+        dtype = torch.float32 if self.precision == "float32" else torch.float64
+        tol = max(self.fixef_atol, self.fixef_btol)
+        flist_uint64 = flist.astype(np.uint64, copy=False)
 
-                result, success = demean_rs(
-                    x=x,
-                    flist=flist.astype(np.uintp, copy=False),
-                    weights=weights,
-                    tol=max(self.fixef_atol, self.fixef_btol),
-                    maxiter=self.fixef_maxiter,
-                )
-                return result, success, None
-
-            dtype = torch.float32 if self.precision == "float32" else torch.float64
-            tol = max(self.fixef_atol, self.fixef_btol)
-            flist_uint64 = flist.astype(np.uint64, copy=False)
-
-            if self.device == "auto":
-                demean_torch = cast(
-                    Callable[..., tuple[np.ndarray, bool]],
-                    torch_demean_module.demean_torch,
-                )
-                result, success = demean_torch(
-                    x=x,
-                    flist=flist_uint64,
-                    weights=weights,
-                    tol=tol,
-                    maxiter=self.fixef_maxiter,
-                    dtype=dtype,
-                )
-                return result, success, None
-
-            demean_torch_on_device = cast(
+        if self.device == "auto":
+            demean_torch = cast(
                 Callable[..., tuple[np.ndarray, bool]],
-                torch_demean_module._demean_torch_on_device_impl,
+                torch_demean_module.demean_torch,
             )
-            result, success = demean_torch_on_device(
+            result, success = demean_torch(
                 x=x,
                 flist=flist_uint64,
                 weights=weights,
                 tol=tol,
                 maxiter=self.fixef_maxiter,
-                device=torch.device(self.device),
                 dtype=dtype,
             )
             return result, success, None
 
-        raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
+        demean_torch_on_device = cast(
+            Callable[..., tuple[np.ndarray, bool]],
+            torch_demean_module._demean_torch_on_device_impl,
+        )
+        result, success = demean_torch_on_device(
+            x=x,
+            flist=flist_uint64,
+            weights=weights,
+            tol=tol,
+            maxiter=self.fixef_maxiter,
+            device=torch.device(self.device),
+            dtype=dtype,
+        )
+        return result, success, None
 
 
 AnyDemeaner = MapDemeaner | LsmrDemeaner

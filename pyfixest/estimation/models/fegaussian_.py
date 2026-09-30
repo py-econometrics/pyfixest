@@ -9,10 +9,14 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import GAUSSIAN
-from pyfixest.estimation.internals.fit_statistics import linear_fit_statistics
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    linear_fit_statistics,
+)
 from pyfixest.estimation.internals.model_state import (
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
@@ -30,8 +34,7 @@ class Fegaussian(Feglm):
         options: GlmEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ):
         super().__init__(
             FixestFormula=FixestFormula,
@@ -39,8 +42,7 @@ class Fegaussian(Feglm):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
             family=GAUSSIAN,
         )
 
@@ -58,8 +60,8 @@ class Fegaussian(Feglm):
         )
         return VcovTerm(vcov=vcov, meat=None)
 
-    def get_fit(self) -> None:
-        """Fit the Gaussian GLM, then add the linear fit statistics.
+    def _fit_statistics(self) -> FitStatistics:
+        """Add the linear fit statistics to the deviance.
 
         Gaussian fits retain their demeaned response and residuals in
         working_state rather than the linear model's within_data and _u_hat.
@@ -67,17 +69,16 @@ class Fegaussian(Feglm):
         be passed to the same kernel used for OLS. The original response
         comes from model_matrix for the overall R².
         """
-        super().get_fit()
         working_state = self.working_state
-        self.fitstat = linear_fit_statistics(
+        return linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=working_state.working_response_within.reshape((-1, 1)),
             residuals=working_state.response_residuals,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._n_fixef_coefficients(),
+            k_fe=self.fixef_counts.fixef_dof,
             has_intercept=not self.options.drop_intercept,
             has_fixef=self.model.has_fixef,
-            deviance=self.fitstat.deviance,
+            deviance=super()._fit_statistics().deviance,
         )

@@ -761,7 +761,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
-        level = model.model.sample_split_value
+        level = model.model.sample_split.value
         population = data.index[data["fe"] == level]
         sample_info = model.sample_info
         assert sample_info.n_rows == len(population) - int(level == "b")

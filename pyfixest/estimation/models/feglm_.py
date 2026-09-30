@@ -18,6 +18,7 @@ from pyfixest.estimation.internals.model_state import (
     FittedValues,
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.separation import check_for_separation
@@ -29,6 +30,7 @@ from pyfixest.estimation.models.feols_ import (
     PredictionType,
 )
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import DegreesOfFreedomCounts
 
 
 class Feglm(Feols):
@@ -57,6 +59,7 @@ class Feglm(Feols):
     """
 
     options: GlmEstimationOptions
+    _n_fe_after_separation: int | None = None
     # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
@@ -69,8 +72,7 @@ class Feglm(Feols):
         family: GlmFamily,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         # `_describe_model()`, called by the base constructor, names the
         # family's inference distribution.
@@ -81,8 +83,7 @@ class Feglm(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
         _glm_input_checks(
@@ -139,9 +140,18 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe = int(np.sum(self._k_fe > 1))
+            self._n_fe_after_separation = int(
+                np.sum(np.asarray(self.fixef_counts.n_levels_by_fe) > 1)
+            )
 
         return model_matrix
+
+    def _dof_counts(self, **kwargs: Any) -> DegreesOfFreedomCounts:
+        "Count only fixed effects with several levels once separation dropped rows."
+        counts = super()._dof_counts(**kwargs)
+        if self._n_fe_after_separation is None:
+            return counts
+        return replace(counts, n_fe=self._n_fe_after_separation)
 
     def get_fit(self) -> None:
         "Fit the GLM via IRLS and write results onto self.* attributes."
@@ -199,9 +209,19 @@ class Feglm(Feols):
 
         self._beta_hat = fit.beta
         self.sandwich = fit.sandwich
-
-        self.fitstat = FitStatistics(deviance=fit.deviance)
         self.convergence = fit.converged
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Compute the deviance of the final IRLS iteration.
+
+        Families with further measures extend this in their subclass.
+        """
+        deviance = self._family.deviance(
+            self.model_matrix.dependent.to_numpy().flatten(),
+            self.working_state.mu,
+            self.observation_weights.values,
+        )
+        return FitStatistics(deviance=deviance)
 
     def _prediction_design(self) -> np.ndarray:
         """Supply the final IRLS design to the inherited predict() method.

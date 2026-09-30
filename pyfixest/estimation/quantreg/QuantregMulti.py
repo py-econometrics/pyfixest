@@ -12,6 +12,7 @@ from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
@@ -31,8 +32,7 @@ class QuantregMulti:
         quantile: list[float],
         multi_method: QuantregMultiOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ):
         # `options.quantile` is the first requested quantile; each child fit
         # carries its own quantile and shares every other option.
@@ -44,8 +44,7 @@ class QuantregMulti:
                 data=data,
                 options=replace(options, quantile=q),
                 lookup_demeaned_data=lookup_demeaned_data,
-                sample_split_var=sample_split_var,
-                sample_split_value=sample_split_value,
+                sample_split=sample_split,
             )
             for q in self.quantiles
         }
@@ -186,6 +185,11 @@ class QuantregMulti:
             quantreg.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, data=data)
 
         return self.all_quantregs
+
+    def _publish_fit_statistics(self) -> None:
+        "Publish the goodness-of-fit measures of every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._publish_fit_statistics()
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
         "Reject a covariance estimator the quantile regressions cannot compute."
