@@ -23,7 +23,7 @@ from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
 )
-from pyfixest.utils.dev_utils import _select_coefnames_and_indices
+from pyfixest.utils.dev_utils import _find_stack_level, _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -332,6 +332,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             warnings.warn(
                 "Empty variance-covariance matrix detected",
                 UserWarning,
+                stacklevel=_find_stack_level(),
             )
             # Fixed-effects-only model: no coefficients, so no inference rows.
             se = tstat = pvalue = np.empty(0)

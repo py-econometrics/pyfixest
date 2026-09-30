@@ -32,6 +32,7 @@ from pyfixest.estimation.quantreg.vcov_ import (
     vcov_iid_qreg,
     vcov_nid_qreg,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 class Quantreg(Feols):
@@ -95,6 +96,7 @@ class Quantreg(Feols):
            But mostly, we expect the API to remain unchanged.
            """,
             FutureWarning,
+            stacklevel=_find_stack_level(),
         )
 
         self.capabilities = replace(
@@ -261,7 +263,9 @@ class Quantreg(Feols):
 
         if not has_converged:
             warnings.warn(
-                f"The Frisch-Newton Interior Point solver has not converged after {it} iterations."
+                f"The Frisch-Newton Interior Point solver has not converged after {it} iterations.",
+                RuntimeWarning,
+                stacklevel=_find_stack_level(),
             )
 
         return fn_res
@@ -366,7 +370,11 @@ class Quantreg(Feols):
                     has_converged = True
                     break
                 elif n_bad > 0.1 * M:
-                    warnings.warn("Too many bad fixups. Doubling m.")
+                    warnings.warn(
+                        "Too many bad fixups. Doubling m.",
+                        RuntimeWarning,
+                        stacklevel=_find_stack_level(),
+                    )
                     n_init = min(N, 2 * n_init)
                     M = int(np.ceil(m * n_init))
                     n_bad_fixups += 1
@@ -379,7 +387,9 @@ class Quantreg(Feols):
 
         if not has_converged:
             warnings.warn(
-                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups."
+                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups.",
+                RuntimeWarning,
+                stacklevel=_find_stack_level(),
             )
 
         return fn_res

@@ -7,6 +7,7 @@ from pyfixest.demeaners import (
     LsmrDemeaner,
     MapDemeaner,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def _resolve_demeaner(demeaner: AnyDemeaner | None) -> AnyDemeaner:
@@ -22,5 +23,5 @@ def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:
                 "Behavior and performance may change in future releases."
             ),
             UserWarning,
-            stacklevel=3,
+            stacklevel=_find_stack_level(),
         )

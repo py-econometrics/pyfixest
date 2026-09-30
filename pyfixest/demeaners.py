@@ -15,6 +15,7 @@ from pyfixest.core.demean import (
     WithinPreconditionerName,
     demean_within,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 MapBackend = Literal["numba", "rust"]
 LsmrBackend = Literal["within", "torch"]
@@ -45,7 +46,7 @@ def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner)
             f"LSMR backend; falling back to {default!r}."
         ),
         UserWarning,
-        stacklevel=3,
+        stacklevel=_find_stack_level(),
     )
     return default
 

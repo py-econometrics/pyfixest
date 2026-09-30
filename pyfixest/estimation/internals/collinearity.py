@@ -6,6 +6,7 @@ import numpy as np
 
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.estimation.internals.model_state import CollinearityCheck
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def drop_multicollinear_variables(
@@ -65,7 +66,9 @@ def drop_multicollinear_variables(
             f"""
             {len(collin_vars)} variables dropped due to multicollinearity.
             The following variables are dropped: {formatted_collinear_vars}.
-            """
+            """,
+            UserWarning,
+            stacklevel=_find_stack_level(),
         )
 
         X = np.delete(X, id_excl, axis=1)
