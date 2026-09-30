@@ -16,12 +16,9 @@ def _find_stack_level() -> int:
     """
     Return the `stacklevel` that attributes a warning to the caller of pyfixest.
 
-    Use as `warnings.warn(message, category, stacklevel=_find_stack_level())`.
-    The call stack is walked outward from the frame that issues the warning,
-    and the returned level points just past the outermost pyfixest frame. A
-    warning therefore names the user's call site however deep inside pyfixest
-    it is raised, including pyfixest code called back by a third-party library
-    such as a formulaic transform. Adapted from pandas' `find_stack_level`.
+    Follows the approach of pandas' `find_stack_level`
+    (https://github.com/pandas-dev/pandas/blob/v3.0.1/pandas/util/_exceptions.py#L37-L63),
+    but attributes the warning to the frame past the outermost pyfixest frame.
 
     Returns
     -------
