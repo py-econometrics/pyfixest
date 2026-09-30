@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import PyfixestDeprecationWarning
 
 
 @pytest.fixture(scope="module")
@@ -28,7 +29,7 @@ def data():
 def test_ssc_backward_compatibility_feols(data, k_adj, k_fixef, G_adj, G_df):
     ssc_new = pf.ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df)
 
-    with pytest.warns(DeprecationWarning) as rec:
+    with pytest.warns(PyfixestDeprecationWarning) as rec:
         ssc_old = pf.ssc(adj=k_adj, fixef_k=k_fixef, cluster_adj=G_adj, cluster_df=G_df)
 
     assert len(rec) == 4

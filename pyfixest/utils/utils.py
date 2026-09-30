@@ -10,6 +10,7 @@ import pandas as pd
 from formulaic import Formula
 from formulaic.utils.context import capture_context as _capture_context
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.utils.dev_utils import _create_rng
 
 if TYPE_CHECKING:
@@ -241,7 +242,7 @@ def ssc(
         if old_name in kwargs:
             warnings.warn(
                 f"The '{old_name}' argument is deprecated. Use '{new_name}' instead.",
-                DeprecationWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=2,
             )
             # Update parameter values if new name not already provided
