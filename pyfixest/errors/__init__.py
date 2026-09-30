@@ -6,6 +6,7 @@ from __future__ import annotations
 class PyfixestError(Exception):
     """
     Base class of the exceptions defined in `pyfixest.errors`.
+
     Examples
     --------
     ```{python}

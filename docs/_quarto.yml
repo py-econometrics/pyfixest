@@ -283,7 +283,7 @@ quartodoc:
         - core.demean.Preconditioner
     - title: Errors
       desc: |
-        Exception classes defined by PyFixest. 
+        Exception classes defined by PyFixest.
       contents:
         - errors.PyfixestError
         - errors.FormulaSyntaxError
