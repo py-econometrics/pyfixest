@@ -1,4 +1,3 @@
-import warnings
 from functools import partial
 
 import numpy as np
@@ -7,7 +6,6 @@ import pytest
 from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
-import pyfixest.errors as errors
 from pyfixest.errors import (
     DepvarIsNotNumericError,
     EndogVarsAsCovarsError,
@@ -15,7 +13,6 @@ from pyfixest.errors import (
     InstrumentsAsCovarsError,
     MissingModelDataError,
     NanInClusterVarError,
-    PyfixestError,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
@@ -240,42 +237,6 @@ def test_depvar_numeric():
     assert isinstance(excinfo.value, TypeError)
 
 
-def test_error_classes_share_base_class():
-    for name in errors.__all__:
-        assert issubclass(getattr(errors, name), PyfixestError)
-    # Classes that used to be built-in exceptions keep those bases.
-    assert issubclass(DepvarIsNotNumericError, TypeError)
-    assert issubclass(MissingModelDataError, RuntimeError)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        exec("from pyfixest.errors import *", {})
-    with pytest.raises(AttributeError, match="NotAnError"):
-        errors.NotAnError  # noqa: B018
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "CovariateInteractionError",
-        "DuplicateKeyError",
-        "EmptyDesignMatrixError",
-        "FeatureDeprecationError",
-        "FixedEffectInteractionError",
-        "MatrixNotFullRankError",
-        "UnsupportedMultipleEstimationSyntax",
-    ],
-)
-def test_unused_error_classes_are_deprecated(name):
-    assert name not in errors.__all__
-    with pytest.warns(FutureWarning, match=f"errors.{name}` is deprecated"):
-        error = getattr(pf.errors, name)
-    assert error.__name__ == name
-    assert issubclass(error, PyfixestError)
-    with pytest.warns(FutureWarning, match=f"errors.{name}` is deprecated"):
-        exec(f"from pyfixest.errors import {name}", {})
-
-
 @pytest.mark.parametrize(
     "fml,categorical_endogenous,error_message",
     [
@@ -314,8 +275,10 @@ def test_iv_errors():
     data = get_data()
 
     # under determined
-    with pytest.raises(FormulaSyntaxError):
+    with pytest.raises(FormulaSyntaxError) as excinfo:
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
+    # Invalid-input errors are also ValueErrors, like pyfixest's other ones.
+    assert isinstance(excinfo.value, ValueError)
     with pytest.raises(UnderDeterminedIVError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
     # instrument specified as covariate
