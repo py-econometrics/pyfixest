@@ -22,6 +22,9 @@ Code written against PyFixest 0.60 keeps working while you migrate:
 - A few 0.60 values cannot be rebuilt exactly. Their names are **removed**:
   reading them raises an `AttributeError` that explains why and names the
   replacement.
+- `fit._u_hat` is not covered yet. On weighted OLS and IV fits it returns,
+  without a warning, the unweighted residuals that `fit.resid()` returns,
+  where 0.60 multiplied them by the square root of the weights.
 
 ```{python}
 import warnings
@@ -56,8 +59,9 @@ With pytest, add `"error::pyfixest.errors.PyfixestDeprecationWarning"` to the
 
 ## Values that differ from the new components
 
-An alias returns the 0.60 value, which is not always the value of its
-replacement:
+The deprecated names return what PyFixest 0.60 returned. For the names below,
+that value differs from the new field named in the warning and in the "Use
+instead" column, for example `fit._X` versus `fit.within_data.design`:
 
 - **Weighted arrays.** PyFixest 0.60 stored the arrays of weighted OLS and IV
   fits multiplied by the square root of the weights (`_Y`, `_X`, `_Z`,
