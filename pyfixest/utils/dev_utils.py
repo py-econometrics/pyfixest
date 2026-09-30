@@ -32,7 +32,13 @@ def _find_stack_level() -> int:
         frame = frame.f_back if frame is not None else None
         level = 1
         while frame is not None:
-            if frame.f_code.co_filename.startswith(_PACKAGE_DIR):
+            filename = frame.f_code.co_filename
+            # `warnings.warn` skips import-machinery frames when it counts
+            # `stacklevel`, so they must not count here either.
+            if "importlib" in filename and "_bootstrap" in filename:
+                frame = frame.f_back
+                continue
+            if filename.startswith(_PACKAGE_DIR):
                 outermost_level = level
             frame = frame.f_back
             level += 1
