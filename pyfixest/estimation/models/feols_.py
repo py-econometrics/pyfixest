@@ -5,7 +5,7 @@ import warnings
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
-from typing import Literal, cast, overload
+from typing import Any, Literal, cast, overload
 
 import formulaic
 import numpy as np
@@ -37,6 +37,8 @@ from pyfixest.estimation.internals.literals import (
     PredictionErrorOptions,
     PredictionType,
     WaldDistributionOptions,
+    WeightingBootstrapDistribution,
+    WeightingBootstrapEstimator,
     WeightsTypeOptions,
     _validate_literal_argument,
 )
@@ -72,6 +74,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     ClusterSmallSampleCorrection,
     VcovTerm,
     combine_terms,
+    factorize_cluster_data,
     get_ssc_cluster,
     prepare_cluster_state,
 )
@@ -91,6 +94,11 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.post_estimation.weighting_bootstrap import (
+    WeightingBootstrapInput,
+    _run_weighting_bootstrap,
+    _validate_weighting_bootstrap_inputs,
+)
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -285,6 +293,7 @@ class Feols(ResultAccessorMixin):
             fixed_effect_recovery=True,
             randomization_inference=True,
             sherman_morrison_update=True,
+            weighting_bootstrap=True,
         )
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
@@ -981,6 +990,34 @@ class Feols(ResultAccessorMixin):
 
         return self.wald
 
+    def _resolve_weighting_bootstrap_cluster(self, cluster: str | None) -> str | None:
+        """Resolve one sampling-unit column for a weighting bootstrap.
+
+        An explicit `cluster` argument takes precedence; otherwise falls back
+        to the model's own `clustervar` set at estimation time. Returns None
+        for the heteroskedasticity-robust case (no cluster variable at all).
+        Weighting bootstraps support one-way clustering.
+        """
+        if cluster is not None and not isinstance(cluster, str):
+            raise TypeError("`cluster` must be a column name or `None`.")
+        if cluster is not None:
+            cluster_var = cluster
+        elif self.variance_covariance.spec.is_clustered:
+            stored_clusters = self.variance_covariance.spec.clustervar
+            if len(stored_clusters) > 1:
+                raise NotImplementedError(
+                    "Multiway clustering is not supported for this bootstrap "
+                    "method; pass a single `cluster` column explicitly."
+                )
+            cluster_var = stored_clusters[0]
+        else:
+            return None
+
+        if cluster_var not in self._data.columns:
+            raise ValueError(f"Cluster variable '{cluster_var}' not found in the data.")
+
+        return cluster_var
+
     def wildboottest(
         self,
         reps: int,
@@ -1199,6 +1236,285 @@ class Feols(ResultAccessorMixin):
             return res_df, boot.t_boot
         else:
             return res_df
+
+    def bootstrap_bayesian(
+        self,
+        reps: int,
+        *,
+        dirichlet_alpha: float = 1.0,
+        cluster: str | None = None,
+        level: float = 0.95,
+        seed: int | None = None,
+        return_draws: bool = False,
+    ) -> pd.DataFrame | tuple[pd.DataFrame, np.ndarray]:
+        """Compute Rubin Bayesian-bootstrap posterior summaries.
+
+        Dirichlet observation weights generate posterior coefficient draws. With a
+        cluster variable, one weight is drawn per cluster; this requires many
+        independent clusters and is not a few-cluster correction. Original analytic
+        weights are preserved, while frequency weights are unsupported. IV results
+        assume strong identification in every estimable draw. Gaussian, Poisson,
+        logit, and probit GLMs are supported. Quantile regression, offsets, and models
+        fit with `lean=True` or `store_data=False` are unsupported.
+        Summaries include the posterior mean, posterior SD, and an equal-tail
+        credible interval.
+
+        See the [standard-errors guide](/tutorials/standard-errors.qmd) for a
+        comparison with analytic and wild-bootstrap inference.
+
+        Fitted-model small-sample corrections and wild-bootstrap `k_adj` or `G_adj`
+        settings do not modify these raw posterior coefficient draws. Each requested
+        replicate is sampled once. A replicate that cannot be estimated is returned
+        as ``NaN`` and omitted from the summaries.
+
+        Parameters
+        ----------
+        reps : int
+            Number of requested posterior draws. Must be at least 2.
+        dirichlet_alpha : float, optional
+            Finite positive common Dirichlet concentration.
+            `dirichlet_alpha=1` gives Rubin's standard Bayesian bootstrap.
+            Defaults to 1.0.
+        cluster : str | None, optional
+            Stored data column defining independent sampling units. If `None`, use
+            the model's one-way covariance cluster when present, otherwise weight
+            observations independently. At least two clusters are required.
+        level : float, optional
+            Equal-tail credible-interval level, strictly between zero and one.
+            Defaults to 0.95.
+        seed : int | None, optional
+            Random seed for reproducibility. Defaults to None.
+        return_draws : bool, optional
+            If True, also return the `(reps, k)` posterior draw matrix. Defaults to
+            False.
+
+        Returns
+        -------
+        pd.DataFrame
+            Posterior summaries with `Original estimate`, `Posterior mean`,
+            `Posterior SD`, `CI lower`, `CI upper`, and `interval` columns.
+        tuple[pd.DataFrame, np.ndarray]
+            The summaries and requested posterior draws when `return_draws=True`.
+            Undefined draws are ``NaN``.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data(N=200, seed=1)
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+        fit.bootstrap_bayesian(reps=49, dirichlet_alpha=1.0, seed=42)
+        ```
+        """
+        return self._weighting_bootstrap(
+            reps=reps,
+            weight_distribution="dirichlet",
+            dirichlet_alpha=dirichlet_alpha,
+            cluster=cluster,
+            level=level,
+            seed=seed,
+            return_draws=return_draws,
+        )
+
+    def bootstrap_pairs(
+        self,
+        reps: int,
+        *,
+        cluster: str | None = None,
+        level: float = 0.95,
+        seed: int | None = None,
+        return_draws: bool = False,
+    ) -> pd.DataFrame | tuple[pd.DataFrame, np.ndarray]:
+        """Compute pairs-bootstrap percentile inference.
+
+        Multinomial counts reweight fixed rowwise model matrices. With a cluster
+        variable, clusters rather than rows are sampled. Cluster inference requires
+        many independent clusters and is not a few-cluster correction. Original
+        analytic weights are preserved, while frequency weights are unsupported. IV
+        results assume strong identification in every estimable draw. Gaussian,
+        Poisson, logit, and probit GLMs are supported. Quantile regression, offsets,
+        and models fit with `lean=True` or `store_data=False` are unsupported.
+
+        The reported p-value uses an unstudentized centered test of `H0: beta = 0`
+        with finite-replication correction. Fitted-model small-sample corrections and
+        wild-bootstrap `k_adj` or `G_adj` settings do not modify these raw coefficient
+        draws. Each requested replicate is sampled once. A replicate that cannot be
+        estimated is returned as ``NaN`` and omitted from the summaries.
+
+        See the [standard-errors guide](/tutorials/standard-errors.qmd) for a
+        comparison with analytic and wild-bootstrap inference.
+
+        Parameters
+        ----------
+        reps : int
+            Number of requested bootstrap draws. Must be at least 2.
+        cluster : str | None, optional
+            Stored data column defining independent sampling units. If `None`, use
+            the model's one-way covariance cluster when present, otherwise sample
+            rows independently. At least two clusters are required.
+        level : float, optional
+            Percentile confidence-interval level, strictly between zero and one.
+            Defaults to 0.95.
+        seed : int | None, optional
+            Random seed for reproducibility. Defaults to None.
+        return_draws : bool, optional
+            If True, also return the `(reps, k)` bootstrap draw matrix. Defaults to
+            False.
+
+        Returns
+        -------
+        pd.DataFrame
+            Percentile inference with `Estimate`, `CI lower`, `CI upper`,
+            `Bootstrap SE`, `P-value`, and `interval` columns.
+        tuple[pd.DataFrame, np.ndarray]
+            The inference table and requested draws when `return_draws=True`.
+            Undefined draws are ``NaN``.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data(N=200, seed=1)
+        fit = pf.feols("Y ~ X1 + X2 | f1", data)
+        fit.bootstrap_pairs(reps=49, seed=42)
+        ```
+        """
+        return self._weighting_bootstrap(
+            reps=reps,
+            weight_distribution="multinomial",
+            dirichlet_alpha=1.0,
+            cluster=cluster,
+            level=level,
+            seed=seed,
+            return_draws=return_draws,
+        )
+
+    def _weighting_bootstrap(
+        self,
+        *,
+        reps: int,
+        weight_distribution: WeightingBootstrapDistribution,
+        dirichlet_alpha: float,
+        cluster: str | None,
+        level: float,
+        seed: int | None,
+        return_draws: bool,
+    ) -> pd.DataFrame | tuple[pd.DataFrame, np.ndarray]:
+        """Validate model state and delegate weighting-bootstrap computation."""
+        _validate_weighting_bootstrap_inputs(
+            reps=reps,
+            weight_distribution=weight_distribution,
+            dirichlet_alpha=dirichlet_alpha,
+            level=level,
+        )
+        bootstrap_name = (
+            "bootstrap_bayesian"
+            if weight_distribution == "dirichlet"
+            else "bootstrap_pairs"
+        )
+        self._validate_weighting_bootstrap_support(bootstrap_name=bootstrap_name)
+        cluster_var = self._resolve_weighting_bootstrap_cluster(cluster)
+        inputs = self._build_weighting_bootstrap_input()
+        cluster_codes: np.ndarray | None = None
+        if cluster_var is not None:
+            cluster_values = self._data[cluster_var].to_numpy()
+            if cluster_values.size != inputs.Y.shape[0]:
+                raise ValueError(
+                    "The cluster variable must have one value per estimation row."
+                )
+            if pd.isna(cluster_values).any():
+                raise ValueError(
+                    "The cluster variable must not contain missing values."
+                )
+            cluster_codes = factorize_cluster_data(cluster_values)[:, 0]
+            if np.unique(cluster_codes).size < 2:
+                raise ValueError(
+                    "The weighting bootstrap requires at least two clusters."
+                )
+        result = _run_weighting_bootstrap(
+            inputs=inputs,
+            reps=reps,
+            weight_distribution=weight_distribution,
+            dirichlet_alpha=dirichlet_alpha,
+            level=level,
+            seed=seed,
+            cluster_codes=cluster_codes,
+        )
+        if return_draws:
+            return result.inference, result.draws
+        return result.inference
+
+    def _validate_weighting_bootstrap_support(self, *, bootstrap_name: str) -> None:
+        """Reject fitted-result types without defined weighting-bootstrap semantics."""
+        self._require_capability(
+            capability="weighting_bootstrap", method=bootstrap_name
+        )
+        if self.options.weights_type == "fweights":
+            raise NotImplementedError(
+                f"`{bootstrap_name}` does not support `fweights`; expanded-sample "
+                "multinomial and aggregated-Dirichlet semantics are not implemented."
+            )
+        if self.options.offset is not None:
+            raise NotImplementedError(
+                f"`{bootstrap_name}` is not supported for models fit with an offset."
+            )
+        require_retained(self, bootstrap_name, "_data")
+
+    def _build_weighting_bootstrap_input(self) -> WeightingBootstrapInput:
+        """Materialize compact bootstrap arrays lazily from stored estimation data."""
+        formula_context = FORMULAIC_TRANSFORMS | {**self.options.context}
+        model_spec = self.model.model_spec
+        assert model_spec is not None, (
+            "weighting bootstraps run after the model matrix is built"
+        )
+        dependent, independent = model_spec[_ModelMatrixKey.main].get_model_matrix(
+            self._data,
+            output="pandas",
+            context=formula_context,
+        )
+        fixed_effects = (
+            model_spec[_ModelMatrixKey.fixed_effects].get_model_matrix(
+                self._data,
+                output="pandas",
+                context=formula_context,
+            )
+            if self.model.has_fixef
+            else None
+        )
+        user_weights = (
+            self._data[self.options.weights].to_numpy().reshape(-1)
+            if self.options.weights is not None
+            else np.ones(len(dependent))
+        )
+        instrument_array = self._weighting_bootstrap_instruments(formula_context)
+        estimator: WeightingBootstrapEstimator = (
+            "iv" if self.model.is_iv else "glm" if hasattr(self, "_family") else "ols"
+        )
+        return WeightingBootstrapInput(
+            Y=dependent.to_numpy(),
+            X=independent.loc[:, self._coefnames].to_numpy(),
+            Z=instrument_array,
+            fe=fixed_effects.to_numpy() if fixed_effects is not None else None,
+            user_weights=user_weights,
+            beta_hat=self._beta_hat,
+            coefnames=tuple(self._coefnames),
+            estimator=estimator,
+            solver=self.options.solver,
+            demeaner=self.options.demeaner,
+            family=getattr(self, "_family", None),
+            collin_tol=self.options.collin_tol,
+            maxiter=getattr(self.options, "maxiter", 25),
+            tol=getattr(self.options, "tol", 1e-8),
+            fixef_tol=self.options.fixef_tol,
+        )
+
+    def _weighting_bootstrap_instruments(
+        self, formula_context: dict[str, Any]
+    ) -> np.ndarray | None:
+        """Return the rowwise instrument matrix for bootstrap draws; none for OLS."""
+        return None
 
     def ccv(
         self,
