@@ -197,8 +197,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.evalue()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _evalue
+        from pyfixest.estimation.post_estimation.savi import (
+            _evalue,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="evalue")
         return _evalue(model=self, mixture_precision=mixture_precision)
 
     def pvalue_savi(
@@ -225,8 +229,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.pvalue_savi()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+        from pyfixest.estimation.post_estimation.savi import (
+            _pvalue_savi,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="pvalue_savi")
         return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
@@ -473,8 +481,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
-            from pyfixest.estimation.post_estimation.savi import _confint
+            from pyfixest.estimation.post_estimation.savi import (
+                _confint,
+                _validate_savi_model,
+            )
 
+            _validate_savi_model(model=self, method="confint")
             return _confint(
                 model=self,
                 alpha=alpha,

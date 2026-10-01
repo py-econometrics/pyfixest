@@ -176,8 +176,12 @@ def _validate_savi_model(*, model: Feols, method: str) -> None:
         )
 
 
-def _coefficient_evalues(model: Feols, mixture_precision: float) -> pd.Series:
-    """Compute coefficient-wise e-values for a validated model."""
+def _evalue(
+    model: Feols,
+    mixture_precision: float = 1.0,
+) -> pd.Series:
+    """Compute coefficient-wise SAVI e-values for a validated model."""
+    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
     values = _savi_e_value(
         model.coeftable.tstat**2,
         dfn=1,
@@ -188,24 +192,12 @@ def _coefficient_evalues(model: Feols, mixture_precision: float) -> pd.Series:
     return pd.Series(values, index=model._coefnames, name="e_value")
 
 
-def _evalue(
-    model: Feols,
-    mixture_precision: float = 1.0,
-) -> pd.Series:
-    """Compute coefficient-wise SAVI e-values."""
-    _validate_savi_model(model=model, method="evalue")
-    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-    return _coefficient_evalues(model, mixture_precision)
-
-
 def _pvalue_savi(
     model: Feols,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
-    """Compute coefficient-wise SAVI sequential p-values."""
-    _validate_savi_model(model=model, method="pvalue_savi")
-    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-    e_values = _coefficient_evalues(model, mixture_precision)
+    """Compute coefficient-wise SAVI sequential p-values for a validated model."""
+    e_values = _evalue(model=model, mixture_precision=mixture_precision)
     values = np.minimum(1.0, 1.0 / e_values.to_numpy())
     return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
@@ -218,8 +210,7 @@ def _confint(
     drop: list | str | None = None,
     exact_match: bool | None = False,
 ) -> pd.DataFrame:
-    """Compute coefficient-wise SAVI confidence sequences."""
-    _validate_savi_model(model=model, method="confint")
+    """Compute coefficient-wise SAVI confidence sequences for a validated model."""
     alpha = _validate_alpha(alpha)
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
 
