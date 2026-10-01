@@ -4,6 +4,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.did.estimation import did2s, event_study
+from pyfixest.errors import VcovTypeNotSupportedError
 
 
 @pytest.fixture
@@ -78,6 +79,25 @@ def test_event_study_did2s(data):
     assert np.allclose(
         event_study_did2s.confint().values, fit_did2s.confint().values
     ), "DID2S confidence intervals are not the same."
+
+    for fit in (event_study_did2s, fit_did2s):
+        covariance = fit.variance_covariance
+        inference = fit.tidy().copy()
+        for vcov in (
+            {"CRV1": "state"},
+            {"CRV1": "unit"},
+            {"CRV3": "state"},
+            "hetero",
+            "iid",
+        ):
+            with pytest.raises(
+                VcovTypeNotSupportedError,
+                match=r"vcov\(\) is not supported for 'did2s' fits: "
+                r"fit.capabilities.covariance_update is False\.",
+            ):
+                fit.vcov(vcov)
+            assert fit.variance_covariance is covariance
+            pd.testing.assert_frame_equal(fit.tidy(), inference)
 
 
 # ---------------------------------------------------------------------------------
