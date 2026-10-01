@@ -70,11 +70,11 @@ class Quantreg(Feols):
     Attributes
     ----------
     solution : QuantregSolution
-        Result of the interior point solve: the coefficients, the convergence
-        flag, the iteration count, and the final primal and dual iterates.
-        With `multi_method="cfm2"`, only the central quantile is solved and
-        the remaining quantiles are updated by a single Newton step, so they
-        carry no solution. Dropped by `lean=True`.
+        Output of the interior point solver: coefficients, convergence flag,
+        number of iterations, and final primal and dual iterates. With
+        `multi_method="cfm2"`, the solver runs only for the central quantile;
+        the other quantiles get a single Newton step and have no solution.
+        Dropped by `lean=True`.
     """
 
     # Set in get_fit().
