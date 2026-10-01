@@ -10,7 +10,6 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
-    FittedValues,
     QuantregEstimationOptions,
     SampleSplit,
     VcovSpec,
@@ -78,24 +77,18 @@ class QuantregMulti:
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
-        rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]].options.seed)
 
-        # fit first quantile regression using "pfn"
-
-        fit_kwargs = {
-            "X": X,
-            "Y": Y,
-            "q": q_median,  # first eval at the "central" quantile
-        }
-
-        if self.options.method == "pfn":
-            fit_kwargs["rng"] = rng
-        median_quantreg = self.all_quantregs[q[q_median_idx]]
-        median_quantreg.solution = median_quantreg._fit(**fit_kwargs)
-        beta_hat = median_quantreg.solution.beta
-
-        median_quantreg._beta_hat = beta_hat
-        median_quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+        # Fit the "central" quantile first, on a stream of its own, so the
+        # child's generator stays fresh for its "nid" bandwidth refits.
+        median_quantreg = self.all_quantregs[q_median]
+        median_quantreg._publish_solution(
+            median_quantreg._solve(
+                X=X,
+                Y=Y,
+                q=q_median,
+                rng=np.random.default_rng(median_quantreg.options.seed),
+            )
+        )
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -116,12 +109,11 @@ class QuantregMulti:
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
                 quantreg = self.all_quantregs[q[i]]
-                quantreg.solution = quantreg.fit_qreg_pfn(
-                    X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
+                quantreg._publish_solution(
+                    quantreg.fit_qreg_pfn(
+                        X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
+                    )
                 )
-                beta_hat = quantreg.solution.beta
-                quantreg._beta_hat = beta_hat
-                quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -145,11 +137,7 @@ class QuantregMulti:
                 M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
-                self.all_quantregs[q[i]]._beta_hat = beta_new
-                self.all_quantregs[q[i]]._u_hat = (
-                    self.all_quantregs[q[i]].within_data.response.flatten()
-                    - self.all_quantregs[q[i]].within_data.design @ beta_new
-                )
+                self.all_quantregs[q[i]]._publish_coefficients(beta_new)
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm2_fun(i, "left")
@@ -161,14 +149,6 @@ class QuantregMulti:
             raise ValueError(
                 f"Multi method needs to be of type 'cfm1' or 'cfm2' but is {self.multi_method}."
             )
-
-        for quantreg in self.all_quantregs.values():
-            # The response minus the residual carries the fixed-effect
-            # contribution, which `design @ beta_hat` alone would omit.
-            fitted = (
-                quantreg.model_matrix.dependent.to_numpy().flatten() - quantreg.resid()
-            )
-            quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
         # sort self.all_quantregs by q
         self.all_quantregs = dict(

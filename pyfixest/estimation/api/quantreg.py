@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, get_args
 
 from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.api.utils import (
@@ -26,9 +26,13 @@ from pyfixest.utils.utils import Ssc, capture_context
 
 
 def _quantreg_input_checks(
-    quantile: float | list[float], tol: float, maxiter: int | None
+    quantile: float | list[float], method: str, tol: float, maxiter: int | None
 ):
     "Run custom input checks for quantreg."
+    methods = get_args(QuantregMethodOptions)
+    if method not in methods:
+        raise ValueError(f"`method` must be one of {{{', '.join(methods)}}}")
+
     if isinstance(quantile, list):
         if not all(isinstance(q, float) for q in quantile):
             raise ValueError("quantile must be a list of floats")
@@ -237,7 +241,7 @@ def quantreg(
         vcov = "hetero"
     vcov_spec = _resolve_vcov(vcov, None)
 
-    _quantreg_input_checks(quantile, tol, maxiter)
+    _quantreg_input_checks(quantile=quantile, method=method, tol=tol, maxiter=maxiter)
 
     _estimation_input_checks(
         fml=fml,

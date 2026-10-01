@@ -1,7 +1,5 @@
 import warnings
-from collections.abc import Callable
 from dataclasses import replace
-from functools import partial
 from typing import Any, cast
 
 import numpy as np
@@ -125,32 +123,9 @@ class Quantreg(Feols):
             sherman_morrison_update=False,
         )
 
-        quantile = options.quantile
-        method = options.method
-
-        self._method_map: dict[str, Callable[..., QuantregSolution]] = {
-            "fn": partial(
-                self.fit_qreg_fn,
-                q=quantile,
-                tol=options.quantile_tol,
-                maxiter=options.quantile_maxiter,
-                beta_init=None,
-            ),
-            "pfn": partial(
-                self.fit_qreg_pfn,
-                q=quantile,
-                rng=np.random.default_rng(options.seed),
-                tol=options.quantile_tol,
-                maxiter=options.quantile_maxiter,
-                beta_init=None,
-            ),
-        }
-
-        try:
-            self._fit = self._method_map[method]
-        except KeyError as exc:
-            valid = ", ".join(self._method_map)
-            raise ValueError(f"`method` must be one of {{{valid}}}") from exc
+        # One stream per fit: the "pfn" coefficient fit and the "nid"
+        # bandwidth refits draw from the same generator.
+        self._rng = np.random.default_rng(options.seed)
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the quantile solver and append the quantile to the model name."""
@@ -189,18 +164,59 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        self.solution = self._fit(
-            X=self.within_data.design, Y=self.within_data.response
+        self._publish_solution(
+            self._solve(
+                X=self.within_data.design,
+                Y=self.within_data.response,
+                q=self.options.quantile,
+            )
         )
-        self._beta_hat = self.solution.beta
 
-        fitted = self.within_data.design @ self._beta_hat
+    def _solve(
+        self,
+        X: np.ndarray,
+        Y: np.ndarray,
+        *,
+        q: float,
+        beta_init: np.ndarray | None = None,
+        rng: np.random.Generator | None = None,
+    ) -> QuantregSolution:
+        """Solve quantile `q` with the solver and tolerances in `self.options`.
+
+        The "pfn" solver draws from `rng`, by default the fit's own generator
+        seeded from `options.seed`.
+        """
+        options = self.options
+        if options.method == "pfn":
+            return self.fit_qreg_pfn(
+                X=X,
+                Y=Y,
+                q=q,
+                tol=options.quantile_tol,
+                maxiter=options.quantile_maxiter,
+                beta_init=beta_init,
+                rng=self._rng if rng is None else rng,
+            )
+        return self.fit_qreg_fn(
+            X=X,
+            Y=Y,
+            q=q,
+            tol=options.quantile_tol,
+            maxiter=options.quantile_maxiter,
+            beta_init=beta_init,
+        )
+
+    def _publish_solution(self, solution: QuantregSolution) -> None:
+        """Publish an interior point solution and the coefficients it holds."""
+        self.solution = solution
+        self._publish_coefficients(solution.beta)
+
+    def _publish_coefficients(self, beta_hat: np.ndarray) -> None:
+        """Publish coefficients with the fitted values and residuals they imply."""
+        self._beta_hat = beta_hat
+        fitted = self.within_data.design @ beta_hat
         self.fitted_values = FittedValues(link=fitted, response=fitted)
-
-        self._u_hat = (
-            self.within_data.response.flatten()
-            - self.within_data.design @ self._beta_hat
-        )
+        self._u_hat = self.within_data.response.flatten() - fitted
 
     def _fit_statistics(self) -> FitStatistics:
         """Leave the goodness-of-fit measures of a quantile fit undefined."""
@@ -405,7 +421,7 @@ class Quantreg(Feols):
             q=self.options.quantile,
             N=self.sample_info.n_rows,
             method=cast(QuantregMethodOptions, self.model.method),
-            fit=self._fit,
+            fit=self._solve,
         )
         return VcovTerm(vcov=vcov, meat=None)
 
