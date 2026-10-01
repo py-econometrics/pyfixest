@@ -275,6 +275,7 @@ class Feols(ResultAccessorMixin):
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
         self.capabilities = Capabilities(
+            covariance_update=True,
             crv3_inference=True,
             hac_inference=True,
             multiway_clustering=True,
@@ -617,6 +618,11 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        self._require_capability(
+            capability="covariance_update",
+            method="vcov",
+            exception_type=VcovTypeNotSupportedError,
+        )
         spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
         self._check_vcov_support(spec)
         return self._vcov_from_spec(spec, data=data)
@@ -1443,14 +1449,20 @@ class Feols(ResultAccessorMixin):
 
         return Y, X, xnames
 
-    def _require_capability(self, *, capability: str, method: str) -> None:
+    def _require_capability(
+        self,
+        *,
+        capability: str,
+        method: str,
+        exception_type: type[Exception] = NotImplementedError,
+    ) -> None:
         """Reject a post-estimation method the model class does not support."""
         if getattr(self.capabilities, capability):
             return
         estimator = f"'{self.model.method}' fits"
         if self.model.is_iv:
             estimator += " with instruments"
-        raise NotImplementedError(
+        raise exception_type(
             f"{method}() is not supported for {estimator}: "
             f"fit.capabilities.{capability} is False."
         )

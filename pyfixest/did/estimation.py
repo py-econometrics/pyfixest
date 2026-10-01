@@ -47,6 +47,8 @@ def event_study(
         Unit-specific time of initial treatment.
     cluster: Optional[str]
         The name of the cluster variable. If None, defaults to idname.
+        With ``estimator="did2s"``, inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
     xfml : str
         The formula for the covariates.
     estimator : str
@@ -228,6 +230,8 @@ def did2s(
         The name of the treatment variable.
     cluster : str
         The name of the cluster variable.
+        Inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
 
     Returns
     -------
@@ -336,6 +340,9 @@ def _mark_as_did2s(fit: Feols) -> None:
     fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
         fit.capabilities,
+        covariance_update=False,
+        hac_inference=False,
+        multiway_clustering=False,
         wildboottest=False,
         cluster_causal_variance=False,
         decomposition=False,

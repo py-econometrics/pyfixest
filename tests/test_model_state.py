@@ -143,10 +143,11 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
     "model,enabled",
     [
         ("feols", _ALL_CAPABILITIES),
-        ("feols-iv", {"hac_inference", "multiway_clustering"}),
+        ("feols-iv", {"covariance_update", "hac_inference", "multiway_clustering"}),
         (
             "fepois",
             {
+                "covariance_update",
                 "crv3_inference",
                 "hac_inference",
                 "multiway_clustering",
@@ -158,20 +159,15 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
         (
             "feglm-logit",
             {
+                "covariance_update",
                 "hac_inference",
                 "multiway_clustering",
                 "prediction",
                 "fixed_effect_recovery",
             },
         ),
-        ("quantreg", {"prediction"}),
-        (
-            "did2s",
-            {
-                "hac_inference",
-                "multiway_clustering",
-            },
-        ),
+        ("quantreg", {"covariance_update", "prediction"}),
+        ("did2s", set()),
         (
             "twfe",
             _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},

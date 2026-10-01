@@ -1050,6 +1050,9 @@ class Capabilities:
 
     Parameters
     ----------
+    covariance_update : bool
+        Whether post-estimation ``vcov()`` updates are available. ``did2s()``
+        fits require refitting with the desired cluster variable instead.
     crv3_inference : bool
         Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
         on leave-one-cluster-out samples, so it is restricted to estimators
@@ -1095,6 +1098,7 @@ class Capabilities:
     ```
     """
 
+    covariance_update: bool
     crv3_inference: bool
     hac_inference: bool
     multiway_clustering: bool
