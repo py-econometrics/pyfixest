@@ -257,6 +257,7 @@ quartodoc:
         - estimation.state.WaldTest
         - estimation.state.FirstStage
         - estimation.state.FirstStageDiagnostics
+        - estimation.state.QuantregSolution
         - estimation.state.VcovSpec
         - estimation.state.FixedEffectEstimates
         - estimation.state.FixedEffect

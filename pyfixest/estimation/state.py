@@ -30,6 +30,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffect,
     FixedEffectEstimates,
 )
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 __all__ = [
     "Capabilities",
@@ -51,6 +52,7 @@ __all__ = [
     "ModelMatrix",
     "ObservationWeights",
     "QuantregEstimationOptions",
+    "QuantregSolution",
     "RitestStatistics",
     "SandwichComponents",
     "VarianceCovariance",
