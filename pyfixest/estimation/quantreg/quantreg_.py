@@ -2,7 +2,7 @@ import warnings
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     FittedValues,
     ModelDescription,
     QuantregEstimationOptions,
@@ -83,6 +84,20 @@ class Quantreg(Feols):
     # Quantile loss fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=False,
+        multiway_clustering=False,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+    )
+
     # Set in get_fit().
     solution: QuantregSolution
 
@@ -110,19 +125,6 @@ class Quantreg(Feols):
            """,
             FutureWarning,
             stacklevel=_find_stack_level(),
-        )
-
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            hac_inference=False,
-            multiway_clustering=False,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            fixed_effect_recovery=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
         )
 
         quantile = options.quantile

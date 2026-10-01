@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     CollinearityCheck,
     EstimationOptions,
     FirstStage,
@@ -130,6 +131,20 @@ class Feiv(Feols):
     # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+    )
+
     # Constructor and methods implementation...
     def __init__(
         self,
@@ -148,18 +163,6 @@ class Feiv(Feols):
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
             sample_split=sample_split,
-        )
-
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            prediction=False,
-            fixed_effect_recovery=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
         )
 
     def _publish_model_matrix(self, model_matrix):

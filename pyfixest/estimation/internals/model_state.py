@@ -1044,9 +1044,9 @@ class WaldTest:
 class Capabilities:
     """Inference and post-estimation features a fitted model supports.
 
-    Each model class publishes one value in its constructor, so a method can
-    reject an unsupported estimator before it reads any estimation state
-    rather than reinterpreting another estimator's arrays.
+    Each model class declares one value, so a method can reject an
+    unsupported estimator before it reads any estimation state rather than
+    reinterpreting another estimator's arrays.
 
     Parameters
     ----------

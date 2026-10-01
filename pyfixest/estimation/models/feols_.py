@@ -5,7 +5,7 @@ import warnings
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
-from typing import Literal, cast, overload
+from typing import ClassVar, Literal, cast, overload
 
 import formulaic
 import numpy as np
@@ -246,6 +246,22 @@ class Feols(ResultAccessorMixin):
     # the fast ritest algorithm apply. Subclasses with other fits override it.
     _closed_form_ols: bool = True
 
+    # Features this model class supports; __init__ copies them to
+    # `capabilities`. Each subclass declares its own value in full.
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=True,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=True,
+        cluster_causal_variance=True,
+        decomposition=True,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=True,
+        sherman_morrison_update=True,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -274,19 +290,7 @@ class Feols(ResultAccessorMixin):
         self._data = data.copy() if options.copy_data else data
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
-        self.capabilities = Capabilities(
-            covariance_update=True,
-            crv3_inference=True,
-            hac_inference=True,
-            multiway_clustering=True,
-            wildboottest=True,
-            cluster_causal_variance=True,
-            decomposition=True,
-            prediction=True,
-            fixed_effect_recovery=True,
-            randomization_inference=True,
-            sherman_morrison_update=True,
-        )
+        self.capabilities = self._declared_capabilities
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
 
