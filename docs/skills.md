@@ -110,10 +110,10 @@ Model objects support:
 - `.wald_test(R, q)` — Linear hypothesis testing
 - `.update(X_new, y_new)` — Online coefficient update (Sherman-Morrison)
 - `.evalue()` / `.pvalue_savi()` — Anytime-valid (SAVI) e-values and sequential p-values
-- `.first_stage()` — First-stage results (IV only)
+- `.first_stage` — First-stage model, coefficients, and F-statistics (IV only)
 - `.IV_Diag()` — IV diagnostic tests (IV only)
 
-For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
+For IV models, show first and second stage together: `pf.etable([fit.first_stage.model, fit])`.
 
 ## DiD / Causal Inference
 

@@ -12,6 +12,7 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
+from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.utils.check_r_install import check_r_install
 
 # Core Packages
@@ -234,7 +235,7 @@ def test_did2s_wildboottest_ccv_unsupported(data):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Wild cluster bootstrap is not supported for the DID2S estimator\.",
+        match=r"Wild cluster bootstrap is only supported for unweighted OLS models",
     ):
         fit.wildboottest(param="treat", reps=99, seed=1)
 
@@ -244,6 +245,47 @@ def test_did2s_wildboottest_ccv_unsupported(data):
         r"of type 'did2s'\.",
     ):
         fit.ccv(treatment="treat", cluster="state")
+
+
+def test_did2s_crv3_unsupported(data):
+    "CRV3 would jackknife only the second stage and ignore the first-stage estimation."
+    fit = did2s_pyfixest(
+        data,
+        yname="dep_var",
+        first_stage="~ 0 | state + year",
+        second_stage="~ treat",
+        treatment="treat",
+        cluster="state",
+    )
+
+    assert fit.capabilities.crv3_inference is False
+
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"CRV3 inference is not for models of type 'did2s'\.",
+    ):
+        fit.vcov({"CRV3": "state"})
+
+
+@pytest.mark.parametrize("estimator", ["twfe", "saturated"])
+def test_event_study_crv3_refits_with_feols(data, estimator):
+    "CRV3 on an event study must refit the linear model, not the Poisson estimator."
+    fit = event_study(
+        data=data,
+        yname="dep_var",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator=estimator,
+        cluster="state",
+    )
+    fit.vcov({"CRV3": "state"})
+
+    expected = pf.feols(fit.model.formula, data=fit._data, vcov={"CRV3": "state"})
+
+    np.testing.assert_allclose(
+        fit.se().to_numpy(), expected.se().to_numpy(), rtol=1e-12, atol=0
+    )
 
 
 def test_lpdid():

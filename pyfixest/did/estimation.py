@@ -60,6 +60,10 @@ def event_study(
     -------
     object
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        With `estimator = "saturated"`, the fit additionally carries its
+        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
+        `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`,
+        `iplot()`, and `test_treatment_heterogeneity()` methods.
 
     Examples
     --------
@@ -96,15 +100,26 @@ def event_study(
     fit_twfe_saturated.iplot_aggregate()
     ```
     """
-    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
-    assert isinstance(yname, str), "yname must be a string"
-    assert isinstance(idname, str), "idname must be a string"
-    assert isinstance(tname, str), "tname must be a string"
-    assert isinstance(gname, str), "gname must be a string"
-    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
-    assert isinstance(estimator, str), "estimator must be a string"
-    assert isinstance(att, bool), "att must be a boolean"
-    assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be a pandas DataFrame.")
+    for name, value in (
+        ("yname", yname),
+        ("idname", idname),
+        ("tname", tname),
+        ("gname", gname),
+    ):
+        if not isinstance(value, str):
+            raise TypeError(f"{name} must be a string.")
+    if not (isinstance(xfml, str) or xfml is None):
+        raise TypeError("xfml must be a string or None.")
+    if not isinstance(estimator, str):
+        raise TypeError(
+            "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
+        )
+    if not isinstance(att, bool):
+        raise TypeError("att must be a boolean.")
+    if not (isinstance(cluster, str) or cluster is None):
+        raise TypeError("cluster must be a string or None.")
 
     cluster = idname if cluster is None else cluster
 
@@ -139,14 +154,15 @@ def event_study(
             cluster=cluster,
         )
         fit = twfe.estimate()
-        fit._yname = twfe._yname
-        fit._gname = twfe._gname
-        fit._tname = twfe._tname
-        fit._idname = twfe._idname
-        fit._att = twfe._att
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
-        fit._method = "twfe"
+        fit.model = replace(fit.model, method="twfe")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -162,20 +178,20 @@ def event_study(
         fit = saturated.estimate()
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
-        fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
-        fit._yname = saturated._yname
-        fit._gname = saturated._gname
-        fit._tname = saturated._tname
-        fit._idname = saturated._idname
-        fit._att = saturated._att
-
-        fit._method = "saturated"
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
-        fit.test_treatment_heterogeneity = (
-            saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        fit.model = replace(fit.model, method="saturated")
+        # ritest() and update() have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
         )
-        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))
-        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
+        test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
+            fit, type(fit)
+        )
+        fit.test_treatment_heterogeneity = test_treatment_heterogeneity  # type: ignore
+        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
+        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
 
     else:
         raise NotImplementedError("Estimator not supported")
@@ -268,8 +284,10 @@ def did2s(
     """
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
-    assert first_stage[0] == "~", "First stage must start with ~"
-    assert second_stage[0] == "~", "Second stage must start with ~"
+    if not first_stage.startswith("~"):
+        raise ValueError(f"first_stage must start with '~', got '{first_stage}'.")
+    if not second_stage.startswith("~"):
+        raise ValueError(f"second_stage must start with '~', got '{second_stage}'.")
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):
@@ -314,14 +332,18 @@ def did2s(
 
 
 def _mark_as_did2s(fit: Feols) -> None:
-    """Record that a fit came from the DID2S estimator.
-
-    The two-step GMM covariance does not resample from an estimated model in
-    the way ``wildboottest()`` and ``ccv()`` require, so both are disabled.
-    """
-    fit._method = "did2s"
+    """Record that a fit came from the DID2S estimator."""
+    fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
-        fit.capabilities, wildboottest=False, cluster_causal_variance=False
+        fit.capabilities,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        crv3_inference=False,
     )
 
 

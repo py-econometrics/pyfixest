@@ -4,12 +4,15 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.utils import (
+    _estimation_input_checks,
+    _resolve_ssc,
+    _resolve_vcov,
+)
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -18,21 +21,21 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import EstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.plan_ import parse_formula
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def feols(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
@@ -146,15 +149,6 @@ def feols(
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
-
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
 
     use_compression: bool
         .. deprecated::
@@ -371,16 +365,16 @@ def feols(
 
     ```{python}
     fit_iv.IV_Diag()
-    print("First-stage F-statistic:", round(fit_iv._f_stat_1st_stage, 3))
-    print("Effective F-statistic:", round(fit_iv._eff_F, 3))
+    diagnostics = fit_iv.first_stage.diagnostics
+    print("First-stage F-statistic:", round(diagnostics.f_stat, 3))
+    print("Effective F-statistic:", round(diagnostics.eff_f, 3))
     ```
 
     You can also access the first-stage regression as a `Feols` object via
-    `_model_1st_stage` and display both stages with `etable()`:
+    `first_stage.model` and display both stages with `etable()`:
 
     ```{python}
-    first_stage = fit_iv._model_1st_stage
-    pf.etable([first_stage, fit_iv])
+    pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.
@@ -501,12 +495,11 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-    if ssc is None:
-        ssc = ssc_func()
+    ssc = _resolve_ssc(ssc)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
 
     if not isinstance(use_compression, bool):
         raise TypeError("The function argument `use_compression` must be of type bool.")
@@ -514,8 +507,7 @@ def feols(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -538,27 +530,30 @@ def feols(
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
 
+    options = EstimationOptions(
+        ssc=ssc,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
+        weights=weights,
+        weights_type=weights_type,
+        offset=None,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=demeaner,
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+    )
     config = EstimationConfig(
         method="feols",
         data=data,
         fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        ssc_dict=ssc,
-        solver=solver,
-        demeaner=demeaner,
-        collin_tol=collin_tol,
-        context=context,
-        weights=weights,
-        weights_type=weights_type,
+        options=options,
+        vcov=vcov_spec,
         split=split,
         fsplit=fsplit,
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)

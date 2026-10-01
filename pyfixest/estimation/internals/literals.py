@@ -1,13 +1,24 @@
 from typing import Any, Literal, get_args
 
 PredictionType = Literal["response", "link"]
-VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "nid"]
+VcovTypeOptions = Literal["iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid"]
+VcovFamilyOptions = Literal["iid", "hetero", "HAC", "CRV", "nid"]
 HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 HacVcovTypeOptions = Literal["NW", "DK"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
 DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
+# Internal dispatch key for the model registry, not a user option; kept here so
+# config.py and plan_.py can share it without an import cycle.
+EstimationMethod = Literal[
+    "feols",
+    "fepois",
+    "feglm-logit",
+    "feglm-probit",
+    "feglm-gaussian",
+    "quantreg",
+]
 SolverOptions = Literal[
     "np.linalg.lstsq",
     "np.linalg.solve",
@@ -17,6 +28,7 @@ SolverOptions = Literal[
 PredictionErrorOptions = Literal["prediction"]
 QuantregMethodOptions = Literal["fn", "pfn"]
 QuantregMultiOptions = Literal["cfm1", "cfm2"]
+WaldDistributionOptions = Literal["F", "chi2"]
 InferenceType = Literal["regular", "simult", "savi"]
 
 
@@ -51,3 +63,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
 
     if arg not in valid_types:
         raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+
+
+KFixefOptions = Literal["none", "full", "nonnested"]
+GDfOptions = Literal["min", "conventional"]

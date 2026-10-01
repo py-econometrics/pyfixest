@@ -20,8 +20,8 @@ def test_multicol_overdetermined_iv():
         vcov={"CRV1": "f1"},
     )
 
-    assert fit._collin_vars == ["f1"]
-    assert fit._collin_vars_z == ["f1"]
+    assert fit.collinearity.dropped_coef_names == ("f1",)
+    assert fit.collinearity_instruments.dropped_coef_names == ("f1",)
 
     np.testing.assert_allclose(
         fit._beta_hat, np.array([-0.174227, -0.993607], dtype=float), rtol=1e-5
@@ -440,8 +440,8 @@ def test_fixef_interacted_labels():
     fit = feols("Y ~ X1 | g:h", data=df)
     coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert fit._fml == "Y ~ X1 | g:h"
-    assert fit._fixef == "g:h"
+    assert fit.model.formula == "Y ~ X1 | g:h"
+    assert fit.model.fixef == "g:h"
     assert coefficients["variable"].unique().tolist() == ["g:h"]
     levels = set(coefficients["level"])
     assert all("," in level for level in levels)

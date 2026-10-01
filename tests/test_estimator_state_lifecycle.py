@@ -8,7 +8,7 @@ and row-sample seams locked here are not observable from those suites.
 from __future__ import annotations
 
 import warnings
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, astuple
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import (
     DroppedRowCounts,
@@ -30,6 +31,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.internals.retention import omitted_attributes
 from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 
@@ -56,6 +58,7 @@ def lifecycle_data() -> pd.DataFrame:
 
     return pd.DataFrame(
         {
+            "row_id": np.arange(n_obs),
             "y": response,
             "x": covariate,
             "x2": second_covariate,
@@ -209,7 +212,7 @@ def test_formula_data_remains_canonical_after_linear_fit(
         model_matrix.weights,
         lifecycle_data.loc[:, ["weight"]],
     )
-    assert fit._model_spec is model_matrix.model_spec
+    assert fit.model.model_spec is model_matrix.model_spec
 
 
 def test_unweighted_effective_n_remains_integer_for_prediction_errors(
@@ -345,15 +348,32 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         iwls_tol=1e-10,
         **storage,
     )
-    # Gaussian fitting does not yet populate performance statistics.
-    for attribute in ("_rmse", "_r2", "_adj_r2", "_r2_within", "_adj_r2_within"):
-        assert np.isnan(getattr(fit, attribute)), attribute
-    if storage:
-        return
-    fit.get_performance()
+    # The Gaussian fit statistics are completed at fit time and survive every
+    # storage option; the reference fit keeps the arrays they were built from.
+    fitstat = fit.fitstat
+    assert isinstance(fitstat, FitStatistics)
+    assert np.isfinite(fitstat.deviance)
+    assert np.isnan(fitstat.r2_within) is not fit.model.has_fixef
+    reference = pf.feglm(
+        fml,
+        data=lifecycle_data,
+        family="gaussian",
+        weights=weights,
+        weights_type=weights_type,
+        vcov="iid",
+        iwls_tol=1e-10,
+    )
+    np.testing.assert_allclose(
+        astuple(fitstat),
+        astuple(reference.fitstat),
+        rtol=0,
+        atol=0,
+        equal_nan=True,
+        err_msg="Storage options changed Gaussian fit statistics",
+    )
     response = lifecycle_data["y"].to_numpy()
-    observation_weights = fit.observation_weights.values
-    residuals = fit.working_state.response_residuals
+    observation_weights = reference.observation_weights.values
+    residuals = reference.working_state.response_residuals
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
@@ -361,9 +381,9 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fit._rmse, np.sqrt(ssu / fit.sample_info.n_obs))
-    np.testing.assert_allclose(fit._r2, 1 - ssu / ssy)
-    if fit._has_fixef:
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+    np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
+    if fit.model.has_fixef:
         assert observation_weights is not None
         weighted_y = lifecycle_data["weight"] * lifecycle_data["y"]
         group_mean = weighted_y.groupby(lifecycle_data["fe"]).transform("sum")
@@ -372,7 +392,39 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
         )
         response_within = response - group_mean.to_numpy()
         ssy_within = np.sum(observation_weights * response_within**2)
-        np.testing.assert_allclose(fit._r2_within, 1 - ssu / ssy_within)
+        np.testing.assert_allclose(fitstat.r2_within, 1 - ssu / ssy_within)
+
+
+@pytest.mark.parametrize(
+    "estimator,formula,kwargs",
+    [
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {}),
+        (pf.quantreg, "y ~ x", {"quantile": 0.5}),
+        (pf.feols, "y ~ 1 | fe", {}),
+        (pf.feols, "y ~ 1 | row_id", {"fixef_rm": "none"}),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {"fixef_rm": "none", "weights": "weight", "store_data": False},
+        ),
+        (
+            pf.feols,
+            "y ~ 1 | row_id",
+            {
+                "fixef_rm": "none",
+                "weights": "weight",
+                "weights_type": "fweights",
+                "lean": True,
+            },
+        ),
+    ],
+)
+def test_undefined_fit_statistics_are_nan(
+    lifecycle_data: pd.DataFrame, estimator, formula: str, kwargs: dict
+) -> None:
+    fit = estimator(formula, lifecycle_data, **kwargs)
+    assert all(np.isnan(value) for value in astuple(fit.fitstat))
+    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -423,6 +475,17 @@ def test_published_components_preserve_inputs(
         "_Xbeta",
         "_u_hat_response",
         "_u_hat_working",
+        "_rmse",
+        "_r2",
+        "_adj_r2",
+        "_r2_within",
+        "_adj_r2_within",
+        "deviance",
+        "_loglik",
+        "_loglik_null",
+        "_pseudo_r2",
+        "_pearson_chi2",
+        "_y_hat_null",
         "_scores",
         "_hessian",
         "_bread",
@@ -473,7 +536,9 @@ def test_multi_quantile_children_follow_ols_retention(
     # Newton step, so only that child carries an interior point solution.
     solved = {0.5} if multi_method == "cfm2" else {0.25, 0.5, 0.75}
     for child in fit.to_list():
-        assert hasattr(child, "solution") is (child._quantile in solved and not lean)
+        assert hasattr(child, "solution") is (
+            child.options.quantile in solved and not lean
+        )
         assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
@@ -507,7 +572,7 @@ def test_iv_first_stage_follows_parent_retention(
         store_data=store_data,
         lean=lean,
     )
-    first_stage = fit._model_1st_stage
+    first_stage = fit.first_stage.model
 
     for model in (fit, first_stage):
         assert hasattr(model, "_data") is (store_data and not lean)
@@ -520,10 +585,10 @@ def test_iv_first_stage_follows_parent_retention(
         assert model.sample_info.n_rows == len(lifecycle_data)
         assert model.sample_info.dropped_by_stage == DroppedRowCounts()
 
-    retained_f = fit._f_stat_1st_stage
+    retained_f = fit.first_stage.diagnostics.f_stat
     fit.IV_weakness_test(["f_stat"])
     np.testing.assert_allclose(
-        fit._f_stat_1st_stage,
+        fit.first_stage.diagnostics.f_stat,
         retained_f,
         rtol=1e-12,
         atol=1e-12,
@@ -550,23 +615,42 @@ def test_store_data_false_retains_robust_effective_f(
     fit.eff_F()
 
     np.testing.assert_allclose(
-        fit._eff_F,
-        reference._eff_F,
+        fit.first_stage.diagnostics.eff_f,
+        reference.first_stage.diagnostics.eff_f,
         rtol=1e-12,
         atol=1e-12,
         err_msg="store_data=False changed robust effective-F",
     )
 
 
-@pytest.mark.parametrize(
-    "estimator,kwargs",
-    [
-        (pf.feols, {}),
-        (pf.fepois, {}),
-        (pf.feglm, {"family": "gaussian"}),
-        (pf.quantreg, {}),
-    ],
-)
+_ESTIMATION_FUNCTIONS = [
+    (pf.feols, {}),
+    (pf.fepois, {}),
+    (pf.feglm, {"family": "gaussian"}),
+    (pf.quantreg, {}),
+]
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
+def test_estimation_functions_apply_lean(
+    lifecycle_data: pd.DataFrame, estimator, kwargs
+) -> None:
+    """Each estimation function applies `lean` to every model it returns."""
+    data = lifecycle_data.assign(y_count=np.tile([1, 2, 3, 4], 6))
+    outcome = "y_count" if estimator is pf.fepois else "y"
+    single = estimator(f"{outcome} ~ x", data, lean=True, **kwargs)
+    multiple = estimator(f"{outcome} ~ sw(x, x2)", data, lean=True, **kwargs)
+
+    for fit in [single, *multiple.to_list()]:
+        retained = [
+            name
+            for name in omitted_attributes(fit.options.retention)
+            if hasattr(fit, name)
+        ]
+        assert not retained, f"lean=True retained {retained}"
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
 def test_lean_prediction_on_new_data_without_fixed_effects(
     lifecycle_data: pd.DataFrame, estimator, kwargs
 ) -> None:
@@ -677,10 +761,10 @@ def test_estimation_sample_counts_dropped_rows_by_stage(
         else:
             assert sample_info.n_obs == sample_info.n_rows
             assert isinstance(sample_info.n_obs, int)
-        if model._is_iv:
+        if model.model.is_iv:
             # The first stage is refit on the retained rows: it owns a sample
             # with no dropped rows of its own.
-            first_stage = model._model_1st_stage.sample_info
+            first_stage = model.first_stage.model.sample_info
             assert first_stage is not sample_info
             assert first_stage.dropped_by_stage == DroppedRowCounts()
             assert first_stage.n_rows == sample_info.n_rows
@@ -693,7 +777,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
-        level = model._sample_split_value
+        level = model.model.sample_split.value
         population = data.index[data["fe"] == level]
         sample_info = model.sample_info
         assert sample_info.n_rows == len(population) - int(level == "b")

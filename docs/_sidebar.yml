@@ -13,6 +13,7 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.saturated_twfe.SaturatedEventStudy.qmd
+      - reference/did.saturated_twfe.EventStudyDesign.qmd
       - reference/did.visualize.panelview.qmd
       section: Difference-in-Differences
     - contents:
@@ -65,16 +66,26 @@ website:
       - reference/utils.dgps.get_motherhood_event_study_data.qmd
       section: Data Sets
     - contents:
+      - reference/estimation.state.EstimationOptions.qmd
+      - reference/estimation.state.GlmEstimationOptions.qmd
+      - reference/estimation.state.QuantregEstimationOptions.qmd
+      - reference/estimation.state.ModelDescription.qmd
       - reference/estimation.state.ModelMatrix.qmd
       - reference/estimation.state.ObservationWeights.qmd
       - reference/estimation.state.EstimationSample.qmd
       - reference/estimation.state.DroppedRowCounts.qmd
+      - reference/estimation.state.FixedEffectCounts.qmd
       - reference/estimation.state.WithinLinearData.qmd
       - reference/estimation.state.WithinIvData.qmd
+      - reference/estimation.state.CollinearityCheck.qmd
       - reference/estimation.state.GlmWorkingState.qmd
+      - reference/estimation.state.FitStatistics.qmd
       - reference/estimation.state.FittedValues.qmd
       - reference/estimation.state.SandwichComponents.qmd
       - reference/estimation.state.VarianceCovariance.qmd
+      - reference/estimation.state.WaldTest.qmd
+      - reference/estimation.state.FirstStage.qmd
+      - reference/estimation.state.FirstStageDiagnostics.qmd
       - reference/estimation.state.QuantregSolution.qmd
       - reference/estimation.state.VcovSpec.qmd
       - reference/estimation.state.FixedEffectEstimates.qmd
@@ -98,7 +109,10 @@ website:
     - contents:
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
+      - reference/utils.utils.Ssc.qmd
       - reference/utils.utils.get_ssc.qmd
+      - reference/utils.utils.DegreesOfFreedomCounts.qmd
+      - reference/utils.utils.SmallSampleCorrection.qmd
       - reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd
       section: Misc / Utilities
     id: reference

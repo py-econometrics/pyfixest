@@ -1,23 +1,20 @@
 from __future__ import annotations
 
-import gc
-import inspect
-from collections.abc import Mapping
-from typing import Any
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.literals import (
-    QuantregMethodOptions,
-    QuantregMultiOptions,
-    SolverOptions,
+from pyfixest.estimation.internals.literals import QuantregMultiOptions
+from pyfixest.estimation.internals.model_state import (
+    FittedValues,
+    QuantregEstimationOptions,
+    SampleSplit,
+    VcovSpec,
 )
-from pyfixest.estimation.internals.model_state import FittedValues
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 from pyfixest.utils.dev_utils import DataFrameType
@@ -30,46 +27,28 @@ class QuantregMulti:
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
+        *,
+        options: QuantregEstimationOptions,
         quantile: list[float],
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        multi_method: QuantregMultiOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
-        method: QuantregMethodOptions = "fn",
-        multi_method: QuantregMultiOptions = "cfm1",
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: int | None = None,
-        seed: int | None = None,
+        sample_split: SampleSplit | None = None,
     ):
-        frame = inspect.currentframe()
-        if frame is None:
-            raise ValueError("The current frame is None.")
-        args, _, _, values = inspect.getargvalues(frame)
-        args_dict = {
-            arg: values[arg]
-            for arg in args
-            if arg not in ("self", "quantile", "multi_method")
-        }
-
-        # initiate a list of Quantreg objects
+        # `options.quantile` is the first requested quantile; each child fit
+        # carries its own quantile and shares every other option.
+        self.options = options
         self.quantiles = quantile
         self.all_quantregs = {
-            q: Quantreg(**args_dict, quantile=q) for q in self.quantiles
+            q: Quantreg(
+                FixestFormula=FixestFormula,
+                data=data,
+                options=replace(options, quantile=q),
+                lookup_demeaned_data=lookup_demeaned_data,
+                sample_split=sample_split,
+            )
+            for q in self.quantiles
         }
-        self.method = method
         self.multi_method = multi_method
-        self._is_iv = False
 
     def prepare_model_matrix(self) -> None:
         """Prepare the model inputs for every requested quantile."""
@@ -99,7 +78,7 @@ class QuantregMulti:
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
         hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
-        rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]]._seed)
+        rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]].options.seed)
 
         # fit first quantile regression using "pfn"
 
@@ -109,7 +88,7 @@ class QuantregMulti:
             "q": q_median,  # first eval at the "central" quantile
         }
 
-        if self.method == "pfn":
+        if self.options.method == "pfn":
             fit_kwargs["rng"] = rng
         median_quantreg = self.all_quantregs[q[q_median_idx]]
         median_quantreg.solution = median_quantreg._fit(**fit_kwargs)
@@ -209,6 +188,23 @@ class QuantregMulti:
 
         return self.all_quantregs
 
+    def _publish_fit_statistics(self) -> None:
+        "Publish the goodness-of-fit measures of every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._publish_fit_statistics()
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        "Reject a covariance estimator the quantile regressions cannot compute."
+        for quantreg in self.all_quantregs.values():
+            quantreg._check_vcov_support(spec)
+
+    def _vcov_from_spec(self, spec: VcovSpec) -> dict[float, Quantreg]:
+        "Compute the covariance of a parsed `spec` for every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._vcov_from_spec(spec)
+
+        return self.all_quantregs
+
     def get_inference(self) -> dict[float, Quantreg]:
         "Compute inference for all models of the quantile regression process."
         for quantreg in self.all_quantregs.values():
@@ -225,10 +221,3 @@ class QuantregMulti:
     def _iter_fitted_models(self) -> tuple[Quantreg, ...]:
         """Yield each fitted quantile to the result container."""
         return tuple(self.all_quantregs.values())
-
-    def _clear_attributes(self) -> None:
-        "Clear all large non-necessary attributes to free memory."
-        for quantreg in self.all_quantregs.values():
-            quantreg._clear_attributes()
-
-        gc.collect()

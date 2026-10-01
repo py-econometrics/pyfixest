@@ -1,16 +1,300 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, get_args
 
 import numpy as np
 from numpy.typing import NDArray
 
-from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.internals.literals import WeightsTypeOptions
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
+from pyfixest.estimation.internals.literals import (
+    QuantregMethodOptions,
+    SolverOptions,
+    VcovFamilyOptions,
+    VcovTypeOptions,
+    WaldDistributionOptions,
+    WeightsTypeOptions,
+)
+from pyfixest.estimation.internals.retention import RetentionPolicy
+from pyfixest.utils.utils import Ssc
 
-_VCOV_STRINGS = ("iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK", "nid")
+if TYPE_CHECKING:
+    from pyfixest.estimation.formula.model_matrix import _ModelSpecMapping
+    from pyfixest.estimation.formula.parse import Formula
+    from pyfixest.estimation.internals.families import InferenceDist
+    from pyfixest.estimation.models.feols_ import Feols
+_VCOV_STRINGS: tuple[str, ...] = get_args(VcovTypeOptions)
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EstimationOptions:
+    """Estimation options a fitted model was built with.
+
+    Every model class publishes one value in its constructor as
+    ``fit.options``, so the options a result was produced with can be read
+    back from the result itself. GLM and quantile fits publish the
+    estimator-specific extensions below. The value survives
+    ``store_data=False`` and ``lean=True``, which it describes through
+    `retention`.
+
+    Parameters
+    ----------
+    ssc : Ssc
+        Small-sample correction options, as built by
+        [ssc()](/reference/utils.utils.ssc.qmd).
+    drop_singletons : bool
+        Whether singleton fixed-effect levels were dropped
+        (``fixef_rm="singleton"``).
+    drop_intercept : bool
+        Whether the intercept was removed from the design.
+    weights : str or None
+        Name of the observation-weight column, or ``None`` for an unweighted
+        fit.
+    weights_type : {"aweights", "fweights"} or None
+        Interpretation of `weights`: analytic or frequency weights.
+    offset : str or None
+        Name of the offset column of a GLM fit, or ``None``.
+    collin_tol : float
+        Tolerance of the rank check that drops collinear columns.
+    solver : str
+        Linear solver used for the least-squares steps.
+    demeaner : MapDemeaner or LsmrDemeaner
+        Resolved fixed-effect demeaner configuration.
+    store_data : bool
+        Whether the estimation data and formula state were retained.
+    copy_data : bool
+        Whether the estimation data was copied before the fit, the documented
+        exception to never mutating user input.
+    lean : bool
+        Whether the large fit products were dropped after estimation.
+    context : Mapping[str, Any]
+        Variables made available to formulaic when materializing the model
+        matrix, as captured by `capture_context`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(), weights="weights")
+    fit.options.weights, fit.options.weights_type, fit.options.demeaner
+    ```
+    """
+
+    ssc: Ssc
+    drop_singletons: bool
+    drop_intercept: bool
+    weights: str | None
+    weights_type: WeightsTypeOptions | None
+    offset: str | None
+    collin_tol: float
+    solver: SolverOptions
+    demeaner: AnyDemeaner
+    store_data: bool
+    copy_data: bool
+    lean: bool
+    context: Mapping[str, Any]
+
+    @property
+    def has_weights(self) -> bool:
+        """Whether the fit used user-supplied observation weights."""
+        return self.weights is not None
+
+    @property
+    def fixef_tol(self) -> float:
+        """Stopping tolerance of the demeaning algorithm.
+
+        LSMR takes two tolerances; the backends that expose only one collapse
+        them to their maximum, as `LsmrDemeaner` documents.
+        """
+        demeaner = self.demeaner
+        if isinstance(demeaner, LsmrDemeaner):
+            return max(demeaner.fixef_atol, demeaner.fixef_btol)
+        return demeaner.fixef_tol
+
+    @property
+    def retention(self) -> RetentionPolicy:
+        """Storage policy the fitted model was cleaned up under."""
+        return RetentionPolicy(store_data=self.store_data, lean=self.lean)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class GlmEstimationOptions(EstimationOptions):
+    """Estimation options of a GLM fit, including the IRLS options.
+
+    Published as ``fit.options`` by `feglm()` and `fepois()` fits. The family
+    itself is not an option and is not carried here.
+
+    Parameters
+    ----------
+    maxiter : int
+        Maximum number of IRLS iterations.
+    tol : float
+        Convergence tolerance of the IRLS iteration.
+    separation_check : list[str] or None
+        Separation-detection methods run before estimation, or ``None`` when
+        the check was skipped.
+    accelerate : bool
+        Whether the accelerated demeaning path of Stammann (2018) was used.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois"))
+    fit.options.maxiter, fit.options.tol
+    ```
+    """
+
+    maxiter: int
+    tol: float
+    separation_check: list[str] | None
+    accelerate: bool
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class QuantregEstimationOptions(EstimationOptions):
+    """Estimation options of a quantile-regression fit.
+
+    Published as ``fit.options`` by `quantreg()` fits.
+
+    Parameters
+    ----------
+    quantile : float
+        The quantile of the conditional distribution that was fitted.
+    method : {"fn", "pfn"}
+        Frisch-Newton interior point solver, with or without preprocessing.
+    quantile_tol : float
+        Convergence tolerance of the interior point solver.
+    quantile_maxiter : int or None
+        Maximum number of solver iterations; ``None`` defers to the solver's
+        sample-size-dependent default.
+    seed : int or None
+        Seed of the subsampling draws of the ``"pfn"`` method.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.25)
+    fit.options.quantile, fit.options.method
+    ```
+    """
+
+    quantile: float
+    method: QuantregMethodOptions
+    quantile_tol: float
+    quantile_maxiter: int | None
+    seed: int | None
+
+
+@dataclass(frozen=True)
+class SampleSplit:
+    """The sample one model of a `split` or `fsplit` estimation is fitted on.
+
+    Parameters
+    ----------
+    var : str
+        Name of the `split` or `fsplit` variable by which the estimation
+        sample was split.
+    value : str, int, float, or None
+        Value of `var` the model was fit on. ``None`` for the full-sample
+        fit of an `fsplit` estimation, which keeps every row where `var`
+        is not missing.
+    """
+
+    var: str
+    value: str | int | float | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ModelDescription:
+    """What a fitted model estimates: its formula, estimator, and design names.
+
+    Every fitted model publishes one value as ``fit.model``. The formula-time
+    fields are known when the model object is built. The matrix-time fields
+    (`depvar`, `fixed_effects`, `interacted_covariates`, and `model_spec`) are
+    only known once the model matrix exists, and are empty (``""``, ``()``,
+    and ``None``) until the description is republished with them. The value
+    survives ``store_data=False`` and ``lean=True``.
+
+    Parameters
+    ----------
+    formula : str
+        The formula the model was fitted from.
+    fixest_formula : Formula
+        The parsed formula, with its stages, fixed effects, and instruments.
+    method : str
+        Name of the estimator: the estimation function that fitted the model
+        (``"feols"``, ``"fepois"``, ``"feglm-logit"``, ``"quantreg_fn"``, and
+        so on), or the DiD estimator for fits returned by `event_study()`
+        (``"twfe"``, ``"saturated"``) and `did2s()` (``"did2s"``), which
+        republish the description of their underlying `feols()` fit with it.
+        `summary()` labels the estimation with it, and refits such as the
+        CRV3 jackknife dispatch on it.
+    is_iv : bool
+        Whether a model with instrumental variables was fitted.
+    model_name : str
+        Key the model is stored under in a multiple-estimation result.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` for an unsplit fit.
+    inference_dist : InferenceDist
+        Reference distribution of the coefficient p-values and confidence
+        bounds: Student's t for OLS, IV, quantile, and Gaussian GLM fits, the
+        normal distribution for the other GLM families.
+    depvar : str
+        Name of the dependent-variable column of the model matrix.
+    fixed_effects : tuple[str, ...]
+        Names of the absorbed fixed effects in formula order, as fixest's
+        `fixef_vars`; empty when the model has none.
+    interacted_covariates : tuple[str, ...]
+        Names of the coefficients generated by the `i()` interaction syntax,
+        which `iplot()` plots; empty when the formula has no `i()` term.
+    model_spec : Mapping[str, formulaic.ModelSpec] or None
+        Formulaic specification of each model-matrix stage, which `predict()`
+        and `fixef()` materialize `newdata` with. It is left out of the repr
+        because it prints the full encoder state of every stage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + i(f2) | f1", pf.get_data())
+    fit.model.method, fit.model.depvar, fit.model.fixed_effects
+    ```
+    """
+
+    formula: str
+    fixest_formula: Formula
+    method: str
+    is_iv: bool
+    model_name: str
+    sample_split: SampleSplit | None
+    inference_dist: InferenceDist
+    depvar: str = ""
+    fixed_effects: tuple[str, ...] = ()
+    interacted_covariates: tuple[str, ...] = ()
+    model_spec: _ModelSpecMapping | None = field(default=None, repr=False)
+
+    @property
+    def has_fixef(self) -> bool:
+        """Whether the model absorbs fixed effects."""
+        return bool(self.fixed_effects)
+
+    @property
+    def fixef(self) -> str:
+        """The fixed effects in the ``+``-joined spelling of the formula.
+
+        Empty when the model has none.
+        """
+        return "+".join(self.fixed_effects)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -147,6 +431,92 @@ class EstimationSample:
             raise ValueError(
                 "Dropped-row counts must sum to the size of the dropped row index."
             )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FixedEffectCounts:
+    """Level counts of the absorbed fixed effects in the estimation sample.
+
+    Parameters
+    ----------
+    n_levels_by_fe : tuple[int, ...]
+        Number of levels of each fixed effect after sample filtering, in the
+        order of `ModelDescription.fixed_effects`. A fixed effect left with a
+        single level, e.g. by the GLM separation check, still counts.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+    counts = fit.fixef_counts
+    counts.n_levels_by_fe, counts.n_fixef, counts.n_levels, counts.fixef_dof
+    ```
+    """
+
+    n_levels_by_fe: tuple[int, ...] = ()
+
+    @property
+    def n_fixef(self) -> int:
+        """Number of fixed effects; ``Y ~ X | f1 + f2`` has two."""
+        return len(self.n_levels_by_fe)
+
+    @property
+    def n_levels(self) -> int:
+        """Levels summed over all fixed effects, ``sum(n_levels_by_fe)``."""
+        return sum(self.n_levels_by_fe)
+
+    @property
+    def fixef_dof(self) -> int:
+        """Degrees of freedom consumed by the fixed effects, ``sum(n_levels_by_fe - 1) + 1``."""
+        return self.n_levels - self.n_fixef + 1 if self.n_levels_by_fe else 0
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CollinearityCheck:
+    """Outcome of one rank check that removes collinear design columns.
+
+    Parameters
+    ----------
+    dropped_coef_names : tuple[str, ...]
+        Names of the columns removed, in input order. Empty when the design
+        had full rank.
+    mask : tuple[bool, ...]
+        One entry per checked column, ``True`` where the column was dropped.
+    coefnames : tuple[str, ...]
+        Names of the retained columns, in input order.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 + f1 | f1", data)
+    fit.collinearity.dropped_coef_names, fit.collinearity.coefnames
+    ```
+    """
+
+    dropped_coef_names: tuple[str, ...]
+    mask: tuple[bool, ...]
+    coefnames: tuple[str, ...]
+
+    @property
+    def any_dropped(self) -> bool:
+        """Whether the check removed at least one column."""
+        return bool(self.dropped_coef_names)
+
+    def select(self, columns: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return `columns` without the columns this check dropped.
+
+        The argument must have one column per entry of ``mask``, in the same
+        order as the checked matrix. Returns the input unchanged when the
+        design had full rank.
+        """
+        if not self.any_dropped:
+            return columns
+        return np.delete(columns, np.asarray(self.mask), axis=1)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -353,7 +723,7 @@ class VcovSpec:
     ```
     """
 
-    vcov_type: str
+    vcov_type: VcovFamilyOptions
     vcov_type_detail: str
     clustervar: tuple[str, ...] = ()
     lag: int | None = None
@@ -369,17 +739,27 @@ class VcovSpec:
     def from_user_input(
         cls,
         vcov: str | dict[str, str],
-        vcov_kwargs: dict[str, str | int] | None = None,
-        *,
-        has_fixef: bool,
-        is_iv: bool,
+        vcov_kwargs: Mapping[str, str | int] | None = None,
     ) -> VcovSpec:
         """Parse and validate the ``vcov`` and ``vcov_kwargs`` arguments.
 
-        Raises ``TypeError`` for input of the wrong type, ``ValueError`` for
-        unknown or incomplete values, and ``VcovTypeNotSupportedError`` for
-        HC2/HC3 with fixed effects or IV.
+        The check is syntactic, so the estimation functions run it before
+        fitting and ``vcov()`` runs it on each call. Whether a fitted model
+        supports the parsed estimator is checked by the model.
+
+        Raises ``TypeError`` for input of the wrong type and ``ValueError`` for
+        unknown or incomplete values. ``vcov_kwargs`` is only accepted with
+        ``vcov="NW"`` or ``vcov="DK"``; other estimators reject it.
         """
+        lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
+
+        is_hac = isinstance(vcov, str) and vcov in ("NW", "DK")
+        if vcov_kwargs is not None and not is_hac:
+            raise ValueError(
+                "vcov_kwargs is only supported with vcov='NW' or vcov='DK'; "
+                f"got vcov={vcov!r}."
+            )
+
         if isinstance(vcov, dict):
             if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:
                 raise ValueError(
@@ -409,44 +789,56 @@ class VcovSpec:
         if vcov not in _VCOV_STRINGS:
             raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
 
-        if vcov in ("HC2", "HC3"):
-            if has_fixef:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
-                )
-            if is_iv:
-                raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
-                )
-
         if vcov in ("NW", "DK"):
-            kw = vcov_kwargs or {}
-            unknown = set(kw) - set(_VCOV_KWARGS_KEYS)
-            if unknown:
-                raise ValueError(
-                    f"vcov_kwargs accepts the keys {_VCOV_KWARGS_KEYS}; got {sorted(unknown)}."
-                )
-            time_id = kw.get("time_id")
-            if not isinstance(time_id, str):
+            if time_id is None:
                 raise ValueError("Missing required 'time_id' for NW/DK vcov")
-            panel_id = kw.get("panel_id")
             if vcov == "DK" and panel_id is None:
                 raise ValueError("Missing required 'panel_id' for DK vcov")
-            lag = kw.get("lag")
-            if lag is not None and (
-                not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
-            ):
-                raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
-                lag=kw.get("lag"),  # type: ignore[arg-type]
+                lag=lag,
                 time_id=time_id,
-                panel_id=panel_id,  # type: ignore[arg-type]
+                panel_id=panel_id,
             )
 
-        vcov_type = {"iid": "iid", "nid": "nid"}.get(vcov, "hetero")
+        vcov_type: VcovFamilyOptions = (
+            "iid" if vcov == "iid" else "nid" if vcov == "nid" else "hetero"
+        )
         return cls(vcov_type=vcov_type, vcov_type_detail=vcov)
+
+
+def _parse_vcov_kwargs(
+    vcov_kwargs: Mapping[str, str | int] | None,
+) -> tuple[int | None, str | None, str | None]:
+    """Validate ``vcov_kwargs`` and return its ``(lag, time_id, panel_id)``."""
+    if vcov_kwargs is None:
+        return None, None, None
+    if not isinstance(vcov_kwargs, Mapping):
+        raise TypeError(
+            f"vcov_kwargs must be a dict with keys {_VCOV_KWARGS_KEYS}; got {type(vcov_kwargs).__name__}."
+        )
+    unknown = set(vcov_kwargs) - set(_VCOV_KWARGS_KEYS)
+    if unknown:
+        raise ValueError(
+            f"vcov_kwargs accepts the keys {_VCOV_KWARGS_KEYS}; got {sorted(unknown)}."
+        )
+    lag = vcov_kwargs.get("lag")
+    if "lag" in vcov_kwargs and (
+        not isinstance(lag, int) or isinstance(lag, bool) or lag < 0
+    ):
+        raise ValueError(f"'lag' must be a non-negative integer; got {lag!r}.")
+    time_id = vcov_kwargs.get("time_id")
+    if "time_id" in vcov_kwargs and not isinstance(time_id, str):
+        raise ValueError(f"'time_id' must be a column name; got {time_id!r}.")
+    panel_id = vcov_kwargs.get("panel_id")
+    if "panel_id" in vcov_kwargs and not isinstance(panel_id, str):
+        raise ValueError(f"'panel_id' must be a column name; got {panel_id!r}.")
+    return (
+        lag if isinstance(lag, int) else None,
+        time_id if isinstance(time_id, str) else None,
+        panel_id if isinstance(panel_id, str) else None,
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -505,6 +897,150 @@ class VarianceCovariance:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStageDiagnostics:
+    """Instrument-strength diagnostics of a 2SLS first stage.
+
+    Parameters
+    ----------
+    f_stat : float
+        Wald F statistic of the joint null that every excluded instrument has
+        a zero first-stage coefficient. It inherits the first stage's
+        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        whenever the second stage is.
+    p_value : float
+        P-value of `f_stat`.
+    eff_f : float or None
+        Effective F statistic of
+        [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
+        computed against a heteroskedasticity-robust first stage. ``None``
+        until `IV_Diag()` or `eff_F()` computes it.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.diagnostics
+    ```
+    """
+
+    f_stat: float
+    p_value: float
+    eff_f: float | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FirstStage:
+    """First-stage regression retained by a fitted 2SLS model.
+
+    The first stage regresses the endogenous regressor on the exogenous
+    regressors and the excluded instruments, on the second stage's retained
+    rows and with its fixed effects, weights, covariance estimator, and
+    small-sample correction.
+
+    Parameters
+    ----------
+    coefficients : NDArray[np.float64]
+        First-stage coefficients pi_hat, one per first-stage regressor.
+    fitted_values : NDArray[np.float64]
+        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+    residuals : NDArray[np.float64]
+        First-stage residuals v_hat, shape (n_rows,).
+    model : Feols
+        The fitted first-stage model. It follows the second stage's
+        `store_data` and `lean` policy, so it drops the same state.
+    instruments : tuple[str, ...]
+        Names of the excluded instruments, in first-stage design order.
+    diagnostics : FirstStageDiagnostics
+        Instrument-strength statistics of that first stage.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit.first_stage.instruments
+    ```
+
+    ```{python}
+    fit.first_stage.model.tidy()
+    ```
+    """
+
+    coefficients: NDArray[np.float64]
+    fitted_values: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    model: Feols
+    instruments: tuple[str, ...]
+    diagnostics: FirstStageDiagnostics
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WaldTest:
+    """Wald test of a linear hypothesis R @ beta = q.
+
+    Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
+    of the reference distribution actually used, `df1` and `df2` are its
+    degrees of freedom, and `vcov_type` names the covariance estimator the
+    quadratic form was built with.
+
+    Parameters
+    ----------
+    stat : float
+        Test statistic under `distribution`: the F-scaled `f_statistic` for
+        ``"F"``, the unscaled `wald_statistic` for ``"chi2"``.
+    pvalue : float
+        P-value of `stat` under `distribution`.
+    df1 : int
+        Numerator degrees of freedom, the number of restrictions in R.
+    df2 : int or float
+        Denominator degrees of freedom: the number of clusters minus one
+        under clustered inference, otherwise the number of observations minus
+        the number of estimated coefficients and fixed effects.
+    distribution : {"F", "chi2"}
+        Reference distribution. ``"F"`` is only used for the joint null that
+        every coefficient is zero; any other restriction falls back to
+        ``"chi2"``.
+    vcov_type : str
+        Covariance estimator the test was computed with, as
+        `VarianceCovariance.vcov_type_detail`.
+    wald_statistic : float
+        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+    f_statistic : float
+        F-scaled statistic W / `df1`, available under either distribution.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data(), vcov={"CRV1": "f1"})
+    fit.wald
+    ```
+
+    `feols()` fits run the joint test on all coefficients automatically; other
+    estimators publish `fit.wald` once `wald_test()` is called.
+
+    ```{python}
+    import numpy as np
+
+    fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
+    ```
+    """
+
+    stat: float
+    pvalue: float
+    df1: int
+    df2: int | float
+    distribution: WaldDistributionOptions
+    vcov_type: str
+    wald_statistic: float
+    f_statistic: float
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Capabilities:
     """Inference and post-estimation features a fitted model supports.
 
@@ -529,6 +1065,22 @@ class Capabilities:
         Whether ``ccv()``, the causal cluster variance estimator, is available.
     decomposition : bool
         Whether ``decompose()``, the Gelbach decomposition, is available.
+    prediction : bool
+        Whether ``predict()`` is available. IV and ``did2s()`` fits do not
+        support it.
+    fixed_effect_recovery : bool
+        Whether the model class can recover fixed-effect estimates through
+        ``fixef()``. IV, ``quantreg()``, and ``did2s()`` fits do not support
+        it. ``fixef()`` additionally requires the fit to have fixed effects.
+    randomization_inference : bool
+        Whether ``ritest()``, randomization inference, is available. Only
+        ``feols()`` fits without instruments and ``fepois()`` fits support
+        it; ``did2s()`` and ``event_study()`` fits do not.
+    sherman_morrison_update : bool
+        Whether ``update()`` can append observations to the fit through a
+        Sherman-Morrison update of the OLS coefficients. Only ``feols()``
+        fits without instruments support it; ``did2s()`` and
+        ``event_study()`` fits do not.
 
     Examples
     --------
@@ -549,6 +1101,10 @@ class Capabilities:
     wildboottest: bool
     cluster_causal_variance: bool
     decomposition: bool
+    prediction: bool
+    fixed_effect_recovery: bool
+    randomization_inference: bool
+    sherman_morrison_update: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

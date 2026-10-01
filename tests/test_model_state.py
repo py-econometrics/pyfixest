@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, fields, replace
 
 import numpy as np
 import pandas as pd
@@ -8,12 +8,14 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     DroppedRowCounts,
     EstimationSample,
     ObservationWeights,
     WithinIvData,
     WithinLinearData,
 )
+from tests._capability_fits import capability_fit
 
 
 def test_observation_weights_unweighted_fast_path() -> None:
@@ -132,3 +134,55 @@ def test_within_iv_data_requires_instrument_roles() -> None:
     assert isinstance(reduced, WithinIvData)
     assert reduced.instruments is state.instruments
     assert reduced.design.shape == (3, 1)
+
+
+_ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
+
+
+@pytest.mark.parametrize(
+    "model,enabled",
+    [
+        ("feols", _ALL_CAPABILITIES),
+        ("feols-iv", {"hac_inference", "multiway_clustering"}),
+        (
+            "fepois",
+            {
+                "crv3_inference",
+                "hac_inference",
+                "multiway_clustering",
+                "prediction",
+                "fixed_effect_recovery",
+                "randomization_inference",
+            },
+        ),
+        (
+            "feglm-logit",
+            {
+                "hac_inference",
+                "multiway_clustering",
+                "prediction",
+                "fixed_effect_recovery",
+            },
+        ),
+        ("quantreg", {"prediction"}),
+        (
+            "did2s",
+            {
+                "hac_inference",
+                "multiway_clustering",
+            },
+        ),
+        (
+            "twfe",
+            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+        ),
+        (
+            "saturated",
+            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+        ),
+    ],
+)
+def test_capabilities_by_model_class(model: str, enabled: set[str]) -> None:
+    """Each model class declares exactly the listed capabilities."""
+    expected = Capabilities(**{name: name in enabled for name in _ALL_CAPABILITIES})
+    assert capability_fit(model).capabilities == expected
