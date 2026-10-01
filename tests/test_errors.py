@@ -1680,7 +1680,10 @@ def unsupported_savi_vcov(request):
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
-    with pytest.raises(NotImplementedError, match="supported only for feols"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"fit\.capabilities\.anytime_valid_inference is False",
+    ):
         unsupported_savi_model.evalue()
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import HeteroVcovTypeOptions
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     FittedValues,
     GlmEstimationOptions,
     ModelDescription,
@@ -63,6 +64,23 @@ class Feglm(Feols):
     # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
+    # No CRV3: the inherited slow jackknife refits with the linear/Poisson
+    # APIs and cannot yet preserve a generic GLM family's estimation contract.
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -90,19 +108,6 @@ class Feglm(Feols):
             drop_singletons=options.drop_singletons,
             tol=options.tol,
             maxiter=options.maxiter,
-        )
-
-        # The inherited slow jackknife refits with the linear/Poisson APIs and
-        # cannot yet preserve a generic GLM family's estimation contract.
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            hac_inference=True,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:

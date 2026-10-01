@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 
 import pandas as pd
 
@@ -14,6 +14,7 @@ from pyfixest.estimation.internals.fit_statistics import (
     poisson_fit_statistics,
 )
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     GlmEstimationOptions,
     ModelDescription,
     SampleSplit,
@@ -73,6 +74,21 @@ class Fepois(Feglm):
     ```
     """
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=True,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=True,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -91,15 +107,6 @@ class Fepois(Feglm):
             lookup_preconditioner=lookup_preconditioner,
             sample_split=sample_split,
             family=POISSON,
-        )
-
-        # Poisson-specific overrides on top of the Feglm-set defaults.
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=True,
-            cluster_causal_variance=False,
-            decomposition=False,
-            randomization_inference=True,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
