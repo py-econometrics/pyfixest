@@ -170,11 +170,21 @@ _ALL_CAPABILITIES = frozenset(field.name for field in fields(Capabilities))
         ("did2s", set()),
         (
             "twfe",
-            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+            _ALL_CAPABILITIES
+            - {
+                "randomization_inference",
+                "sherman_morrison_update",
+                "anytime_valid_inference",
+            },
         ),
         (
             "saturated",
-            _ALL_CAPABILITIES - {"randomization_inference", "sherman_morrison_update"},
+            _ALL_CAPABILITIES
+            - {
+                "randomization_inference",
+                "sherman_morrison_update",
+                "anytime_valid_inference",
+            },
         ),
     ],
 )

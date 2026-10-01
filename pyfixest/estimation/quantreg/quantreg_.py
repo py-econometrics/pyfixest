@@ -96,6 +96,7 @@ class Quantreg(Feols):
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,
+        anytime_valid_inference=False,
     )
 
     # Set in get_fit().

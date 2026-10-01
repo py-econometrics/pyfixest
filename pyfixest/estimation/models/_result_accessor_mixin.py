@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         VarianceCovariance,
         WithinLinearData,
     )
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
@@ -160,7 +161,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return self.variance_covariance.vcov
 
     def evalue(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI e-values.
@@ -201,7 +202,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return _evalue(model=self, mixture_precision=mixture_precision)
 
     def pvalue_savi(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI sequential p-values.
@@ -374,7 +375,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return inference_type
 
     def confint(
-        self,
+        self: "Feols",
         alpha: float = 0.05,
         keep: list | str | None = None,
         drop: list | str | None = None,

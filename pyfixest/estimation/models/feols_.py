@@ -260,6 +260,7 @@ class Feols(ResultAccessorMixin):
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=True,
+        anytime_valid_inference=True,
     )
 
     def __init__(

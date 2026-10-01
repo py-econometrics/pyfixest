@@ -28,7 +28,7 @@ from pyfixest.errors import EmptyVcovError
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+    from pyfixest.estimation.models.feols_ import Feols
 
 SAVI_REFERENCE = (
     "Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor "
@@ -155,12 +155,9 @@ def optimal_mixture_precision(
     return float(result.x)
 
 
-def _validate_savi_model(model: ResultAccessorMixin) -> None:
+def _validate_savi_model(*, model: Feols, method: str) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
-    if model.model.method != "feols" or model.model.is_iv:
-        raise NotImplementedError(
-            "SAVI inference is currently supported only for feols models."
-        )
+    model._require_capability(capability="anytime_valid_inference", method=method)
     if model.options.has_weights:
         raise NotImplementedError(
             "SAVI inference does not currently support weighted feols models."
@@ -179,9 +176,7 @@ def _validate_savi_model(model: ResultAccessorMixin) -> None:
         )
 
 
-def _coefficient_evalues(
-    model: ResultAccessorMixin, mixture_precision: float
-) -> pd.Series:
+def _coefficient_evalues(model: Feols, mixture_precision: float) -> pd.Series:
     """Compute coefficient-wise e-values for a validated model."""
     values = _savi_e_value(
         model.coeftable.tstat**2,
@@ -194,27 +189,29 @@ def _coefficient_evalues(
 
 
 def _evalue(
-    model: ResultAccessorMixin,
+    model: Feols,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
     """Compute coefficient-wise SAVI e-values."""
-    _validate_savi_model(model)
+    _validate_savi_model(model=model, method="evalue")
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
     return _coefficient_evalues(model, mixture_precision)
 
 
 def _pvalue_savi(
-    model: ResultAccessorMixin,
+    model: Feols,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
     """Compute coefficient-wise SAVI sequential p-values."""
-    e_values = _evalue(model=model, mixture_precision=mixture_precision)
+    _validate_savi_model(model=model, method="pvalue_savi")
+    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
+    e_values = _coefficient_evalues(model, mixture_precision)
     values = np.minimum(1.0, 1.0 / e_values.to_numpy())
     return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
 
 def _confint(
-    model: ResultAccessorMixin,
+    model: Feols,
     alpha: float = 0.05,
     mixture_precision: float = 1.0,
     keep: list | str | None = None,
@@ -222,7 +219,7 @@ def _confint(
     exact_match: bool | None = False,
 ) -> pd.DataFrame:
     """Compute coefficient-wise SAVI confidence sequences."""
-    _validate_savi_model(model)
+    _validate_savi_model(model=model, method="confint")
     alpha = _validate_alpha(alpha)
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
 

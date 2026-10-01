@@ -143,6 +143,7 @@ class Feiv(Feols):
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,
+        anytime_valid_inference=False,
     )
 
     # Constructor and methods implementation...

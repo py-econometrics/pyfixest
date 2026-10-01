@@ -1084,6 +1084,13 @@ class Capabilities:
         Sherman-Morrison update of the OLS coefficients. Only ``feols()``
         fits without instruments support it; ``did2s()`` and
         ``event_study()`` fits do not.
+    anytime_valid_inference : bool
+        Whether ``evalue()``, ``pvalue_savi()``, and
+        ``confint(inference_type="savi")``, safe anytime-valid inference, are
+        available. Only ``feols()`` fits without instruments support it;
+        ``did2s()`` and ``event_study()`` fits do not. SAVI additionally
+        requires no weights, no fixed effects, and an iid or
+        heteroskedasticity-robust covariance.
 
     Examples
     --------
@@ -1109,6 +1116,7 @@ class Capabilities:
     fixed_effect_recovery: bool
     randomization_inference: bool
     sherman_morrison_update: bool
+    anytime_valid_inference: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
