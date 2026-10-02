@@ -62,12 +62,9 @@ class Case:
 
 def _ols_cases() -> list[Case]:
     return [
-        Case(
-            f"ols-k{k}-{fe_id}-{vcov_id}", "feols", f"y ~ {_covariates(k)} | {fe}", vcov
-        )
+        Case(f"ols-k{k}-{fe_id}-iid", "feols", f"y ~ {_covariates(k)} | {fe}", "iid")
         for k in (1, 5, 10)
         for fe_id, fe in (("fe2", FE2), ("fe3", FE3))
-        for vcov_id, vcov in (("iid", "iid"), ("crv1", CRV1))
     ]
 
 
@@ -87,6 +84,8 @@ def _poisson_cases() -> list[Case]:
 
 CASES = [
     *_ols_cases(),
+    # The one clustered case: the vcov step is a small share of every fit.
+    Case("ols-k5-fe3-crv1", "feols", f"y ~ {_covariates(5)} | {FE3}", CRV1),
     *_poisson_cases(),
     Case(
         "logit-k5-fe2-iid",
@@ -95,27 +94,14 @@ CASES = [
         "iid",
         {"family": "logit"},
     ),
-    Case(
-        "logit-k5-fe2-crv1",
-        "feglm",
-        f"binary_y ~ {_covariates(5)} | {FE2}",
-        CRV1,
-        {"family": "logit"},
-    ),
     Case("iv-fe2-iid", "feols", f"y ~ x2 + x3 + [x1 ~ z1] | {FE2}", "iid"),
-    Case("iv-fe3-crv1", "feols", f"y ~ x2 + x3 + [x1 ~ z1] | {FE3}", CRV1),
+    Case("iv-fe3-iid", "feols", f"y ~ x2 + x3 + [x1 ~ z1] | {FE3}", "iid"),
     Case(
-        "wls-k5-fe2-crv1",
+        "wls-k5-fe2-iid",
         "feols",
         f"y ~ {_covariates(5)} | {FE2}",
-        CRV1,
+        "iid",
         {"weights": "weights"},
-    ),
-    Case(
-        "ols-k5-fe3-twoway",
-        "feols",
-        f"y ~ {_covariates(5)} | {FE3}",
-        {"CRV1": "indiv_id + firm_id"},
     ),
     Case(
         "overhead-ols-k5-fe2-iid",

@@ -95,7 +95,7 @@ pixi run -e lint prek run ruff-check --files <changed files>
 # Whole-package type check (ty has no changed-file mode)
 pixi run ty
 
-# Estimation benchmarks (opt-in, single-threaded, about 10 minutes per run)
+# Estimation benchmarks (opt-in, single-threaded, about 2 minutes per run)
 pixi run -e py312 bench-estimation --benchmark-save=base       # on the merge-base
 pixi run -e py312 bench-estimation --benchmark-compare         # on the branch
 
