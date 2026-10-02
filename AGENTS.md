@@ -39,6 +39,9 @@ at `docs/skills.md` serves users, not this contributor workflow.
 - Use `pixi run` for all Python, pytest, lint, docs, and R commands. Bare tools
   may miss dependencies or the compiled extension. Find commands and check
   selection in the testing policy; use `pixi task list` to discover tasks.
+- Run the opt-in `bench-estimation` benchmarks before and after changes to
+  demeaning, IRLS, solvers, vcov, model-matrix construction, or Rust kernels;
+  see [estimation benchmarks](docs/developer/testing.md#estimation-benchmarks).
 - Use econometric names such as `scores`, `meat`, `bread`, `u_hat`, and
   `clustid`; cite the method's paper in the implementing function.
 - Use `from __future__ import annotations`, PEP 604 unions, keyword arguments
