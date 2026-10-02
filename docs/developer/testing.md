@@ -12,6 +12,8 @@ may not have the compiled extension or the right optional dependencies.
 - [Commands](#commands): the `pixi run` tasks for each stage
 - [Selection matrix](#selection-matrix): which checks each kind of change
   requires
+- [Estimation benchmarks](#estimation-benchmarks): when and how to time a
+  performance-relevant change
 - [Verification reporting](#verification-reporting): concise evidence and status
 - [Release contract](#release-contract): regression checks and declared differences
 - [External numerical references](#external-numerical-references): reference
@@ -93,6 +95,10 @@ pixi run -e lint prek run ruff-check --files <changed files>
 # Whole-package type check (ty has no changed-file mode)
 pixi run ty
 
+# Estimation benchmarks (opt-in, single-threaded, about 10 minutes per run)
+pixi run -e py312 bench-estimation --benchmark-save=base       # on the merge-base
+pixi run -e py312 bench-estimation --benchmark-compare         # on the branch
+
 # Documentation (costly; run only when the selection matrix calls for it)
 pixi run docs-build
 pixi run docs-render
@@ -121,6 +127,7 @@ This matrix is authoritative for which checks a change requires.
 | Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
 | Optional backend | targeted dependency-present and dependency-absent paths | backend/platform CI |
 | Performance-sensitive loop | correctness tests and before/after benchmark | relevant benchmark environment |
+| Demeaning, IRLS, solvers, vcov, model-matrix construction, or Rust kernels | correctness tests | [estimation benchmarks](#estimation-benchmarks) on merge-base and branch |
 | Dependency or workflow | targeted environment/config validation | affected CI workflow |
 
 Unknown or cross-cutting paths receive the PR baseline rather than silently
@@ -132,6 +139,23 @@ it is not a general Markdown validator. Do not run it for changes limited to
 workflow metadata. For rendered prose under `docs/`, prefer an affected-page
 render. Reserve the full `docs-render` task for changes that can affect the site
 broadly.
+
+## Estimation benchmarks
+
+`benchmarks/test_estimation.py` times single-model OLS, Poisson, logit, and IV
+fits on the simple and difficult `base_dgp` panels with the `within` LSMR
+demeaner under the additive and the diagonal preconditioner. Run it when a
+change can move estimation wall time: save a run on the merge-base, then run
+the branch with `--benchmark-compare` to compare against the latest saved run.
+Saved runs live in `.benchmarks/` under the working directory, so pass the same
+`--benchmark-storage` when the two runs use different worktrees.
+
+Run both sides on an otherwise idle machine; wall times of the millisecond OLS
+cases move by 20% between identical runs under load. Rerun any case whose
+median is more than 15% slower on both sides (`-k <case id>`) before reporting
+it, and explain a confirmed slowdown in the PR. Report the median ratio of the
+affected case groups. The suite is opt-in and never runs in CI; it measures
+speed and never establishes numerical agreement.
 
 ## Verification reporting
 
