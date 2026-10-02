@@ -13,6 +13,8 @@ def drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
+    *,
+    weights: np.ndarray | None = None,
 ) -> tuple[np.ndarray, CollinearityCheck]:
     """
     Check for multicollinearity in the design matrices X and Z.
@@ -25,6 +27,9 @@ def drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
+    weights : np.ndarray or None
+        Observation weights, or the current IRLS working weights. The rank
+        check uses X' W X; X itself remains in its original units.
 
     Returns
     -------
@@ -38,7 +43,8 @@ def drop_multicollinear_variables(
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
-    tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
+    design_solver = X if weights is None else X * np.sqrt(weights.reshape(-1, 1))
+    tXX = np.ascontiguousarray(design_solver.T @ design_solver, dtype=np.float64)
     id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
     collin_vars: list[str] = []

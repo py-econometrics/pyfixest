@@ -648,6 +648,113 @@ def test_frequency_weighted_linear_models_against_fixest(fml):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("estimator", ["ols", "iv", "gaussian", "poisson"])
+@pytest.mark.parametrize("with_fe", [False, True])
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+@pytest.mark.parametrize("weight_scale", [1, 100])
+def test_weighted_collinearity_against_fixest(
+    estimator, with_fe, weights_type, weight_scale
+):
+    """Weights move Cholesky pivots across the same absolute fixest tolerance."""
+    rng = np.random.default_rng(4201)
+    n = 80
+    x = np.tile([-1.0, 1.0, -1.0, 1.0], n // 4)
+    perturbation = np.tile([-1.0, -1.0, 1.0, 1.0], n // 4)
+    z = rng.normal(size=n)
+    d = z + rng.normal(scale=0.2, size=n)
+    data = pd.DataFrame(
+        {
+            "y": 2 + x + 0.2 * d + rng.normal(scale=0.2, size=n),
+            "x": x,
+            "x2": x + 0.01 * perturbation,
+            "d": d,
+            "z": z,
+            "z2": 1e-6 * rng.normal(size=n),
+            "fe": np.repeat(np.arange(8), 10),
+            "w": weight_scale * np.tile([1, 2], n // 2),
+        }
+    )
+    if estimator == "poisson":
+        data["y"] = rng.poisson(np.exp(0.5 + 0.2 * x)) + 1
+    fml = ("y ~ x" if estimator == "iv" else "y ~ x + x2") + (
+        " | fe" if with_fe else ""
+    )
+    if estimator == "iv":
+        fml += " | d ~ z + z2"
+    py_fml = (
+        ("y ~ x + [d ~ z + z2]" + (" | fe" if with_fe else ""))
+        if estimator == "iv"
+        else fml
+    )
+    kwargs = dict(
+        fml=py_fml,
+        data=data,
+        weights="w",
+        weights_type=weights_type,
+        collin_tol=1e-9 if estimator == "iv" else 0.1,
+        vcov="hetero",
+    )
+    if estimator == "gaussian":
+        py_fit = pf.feglm(**kwargs, family="gaussian")
+    elif estimator == "poisson":
+        py_fit = pf.fepois(**kwargs, iwls_tol=1e-12)
+    else:
+        py_fit = pf.feols(**kwargs)
+
+    # fixest weights are analytic; literal expansion gives the fweight oracle.
+    r_data = data
+    r_kwargs = {"weights": ro.Formula("~w")}
+    if weights_type == "fweights":
+        r_data = data.loc[data.index.repeat(data["w"])].reset_index(drop=True)
+        r_kwargs = {}
+    r_estimator = fixest.fepois if estimator == "poisson" else fixest.feols
+    if estimator == "poisson":
+        r_kwargs["glm_tol"] = 1e-12
+    r_fit = r_estimator(
+        ro.Formula(fml),
+        data=r_data,
+        collin_tol=kwargs["collin_tol"],
+        vcov="hetero",
+        **r_kwargs,
+    )
+    r_coef = r_fit.rx2("coefficients")
+    ro.globalenv[".weighted_collinearity_fit"] = r_fit
+    r_names = list(ro.r("names(coef(.weighted_collinearity_fit))"))
+    name_map = {"Intercept": "(Intercept)", "d": "fit_d"}
+    py_names = [name_map.get(name, name) for name in py_fit.coef().index]
+    assert set(py_names) == set(r_names)
+    if estimator == "iv":
+        assert ("z2" in py_fit.collinearity_instruments.dropped_coef_names) == (
+            weight_scale == 1
+        )
+        r_dropped = ro.r(
+            "'z2' %in% .weighted_collinearity_fit$iv_first_stage$d$collin.var"
+        )
+        assert bool(r_dropped[0]) == (weight_scale == 1)
+    else:
+        assert ("x2" in py_fit.collinearity.dropped_coef_names) == (weight_scale == 1)
+    order = [r_names.index(name) for name in py_names]
+    # The OLS/GLM design has condition number about 200. Cholesky accumulation
+    # amplifies roundoff; Poisson's final working weights additionally lag the
+    # coefficient update by one IRLS step, even at the tighter stopping tolerance.
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(r_coef)[order],
+        rtol=1e-7,
+        atol=1e-8,
+        err_msg="Weighted collinearity coefficients vs fixest",
+    )
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(order, order)],
+        rtol=1e-5 if estimator == "poisson" else 1e-6,
+        atol=1e-7,
+        err_msg="Weighted collinearity covariance vs fixest",
+    )
+    assert py_fit.sample_info.n_obs == len(r_data)
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("vcov_type", ["HC2", "HC3"])
 def test_fepois_hc2_hc3_against_sandwich(vcov_type):
     """Poisson HC2/HC3 leverage uses the IRLS-weighted design, as in R sandwich.

@@ -235,7 +235,7 @@ def fit_glm_irls(
 
         if r == 0:
             X_tilde, collinearity = drop_multicollinear_variables(
-                X_tilde, coefnames, collin_tol
+                X_tilde, coefnames, collin_tol, weights=working_weights
             )
             X_eff = collinearity.select(X_eff)
 

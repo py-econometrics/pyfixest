@@ -457,7 +457,7 @@ class Feols(ResultAccessorMixin):
     def _drop_multicollinear_within_data(
         self, within_data: WithinLinearData
     ) -> WithinLinearData:
-        """Return within data after the established unweighted rank check."""
+        """Return within data after the observation-weighted rank check."""
         design = within_data.design
         if design.shape[1] == 0:
             # Fixed-effects-only model: nothing to check, but the attribute is
@@ -473,6 +473,7 @@ class Feols(ResultAccessorMixin):
             design,
             self._coefnames,
             self.options.collin_tol,
+            weights=self.observation_weights.values,
         )
         self.collinearity = collinearity
         self._coefnames = list(collinearity.coefnames)

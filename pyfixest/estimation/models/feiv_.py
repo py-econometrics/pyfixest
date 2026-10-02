@@ -213,6 +213,7 @@ class Feiv(Feols):
             within_data.instruments,
             self._coefnames_z,
             self.options.collin_tol,
+            weights=self.observation_weights.values,
         )
         self.collinearity_instruments = collinearity
         self._coefnames_z = list(collinearity.coefnames)
