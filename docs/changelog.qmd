@@ -70,6 +70,8 @@ Other things:
 
 ### Contributor Workflow
 
+- A new opt-in `bench-estimation` task times OLS, Poisson, logit, and IV fits
+  with the LSMR demeaner, for before/after comparisons of performance changes.
 - Repository-local skills and developer guides now define architecture,
   numerical validation, change verification, history curation, review, and PR
   preparation for contributors and coding agents.
