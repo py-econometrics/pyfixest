@@ -19,7 +19,7 @@
 
 use ndarray::{Array1, Array2, ArrayView2};
 use numpy::IntoPyArray;
-use numpy::{PyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use thiserror::Error;
@@ -52,6 +52,8 @@ enum CollinearityError {
 ///     Number of columns flagged as collinear
 /// all_collinear : bool
 ///     `True` if all columns are collinear.
+/// r : Array2<f64>
+///     Upper factor in input-column coordinates, before removing excluded rows/columns.
 ///
 /// * `x` - Input matrix (must be square, typically X'X in a regression model, where X is the N x k design matrix)
 /// * `tol` - Tolerance for detecting collinearity (smaller values require closer to exact linear dependence)
@@ -66,7 +68,7 @@ enum CollinearityError {
 fn find_collinear_variables_impl(
     x: ArrayView2<f64>,
     tol: f64,
-) -> Result<(Array1<bool>, usize, bool), CollinearityError> {
+) -> Result<(Array1<bool>, usize, bool, Array2<f64>), CollinearityError> {
     // Validate tolerance
     if tol <= 0.0 {
         return Err(CollinearityError::InvalidTolerance { value: tol });
@@ -95,7 +97,7 @@ fn find_collinear_variables_impl(
             n_excl += 1;
             if n_excl == k {
                 let arr = Array1::from_vec(id_excl);
-                return Ok((arr, n_excl, true));
+                return Ok((arr, n_excl, true, r));
             }
             continue;
         }
@@ -114,7 +116,7 @@ fn find_collinear_variables_impl(
     }
 
     let arr = Array1::from_vec(id_excl);
-    Ok((arr, n_excl, false))
+    Ok((arr, n_excl, false, r))
 }
 
 /// Detect collinear (linearly dependent) columns in a square matrix.
@@ -156,10 +158,35 @@ pub fn _find_collinear_variables_rs(
     let x = x.as_array();
     // Call the implementation and convert any errors to Python ValueError
     match find_collinear_variables_impl(x, tol) {
-        Ok((arr, n_excl, flag)) => Ok((arr.into_pyarray(py).to_owned().into(), n_excl, flag)),
+        Ok((arr, n_excl, flag, _)) => Ok((arr.into_pyarray(py).to_owned().into(), n_excl, flag)),
         Err(err) => {
             // Convert Rust errors to Python ValueError
             Err(PyValueError::new_err(err.to_string()))
         }
     }
+}
+
+/// Return the rank check and upper Cholesky factor of the retained Gram matrix.
+/// Rows and columns of the factor follow the retained input-column order.
+#[pyfunction]
+#[pyo3(signature = (x, tol=1e-10))]
+pub fn _collinear_cholesky_rs(
+    py: Python,
+    x: PyReadonlyArray2<f64>,
+    tol: f64,
+) -> PyResult<(Py<PyArray1<bool>>, usize, bool, Py<PyArray2<f64>>)> {
+    let (mask, n_excl, all_removed, r) = find_collinear_variables_impl(x.as_array(), tol)
+        .map_err(|err| PyValueError::new_err(err.to_string()))?;
+    let retained = if n_excl == 0 {
+        r
+    } else {
+        let keep: Vec<usize> = (0..mask.len()).filter(|&i| !mask[i]).collect();
+        Array2::from_shape_fn((keep.len(), keep.len()), |(i, j)| r[(keep[i], keep[j])])
+    };
+    Ok((
+        mask.into_pyarray(py).to_owned().into(),
+        n_excl,
+        all_removed,
+        retained.into_pyarray(py).to_owned().into(),
+    ))
 }

@@ -27,6 +27,7 @@ from pyfixest.estimation.internals.model_state import (
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.solvers import GramFactorization
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.refit import refit
@@ -205,11 +206,11 @@ class Feiv(Feols):
 
     def _drop_multicollinear_within_data(
         self, within_data: WithinLinearData
-    ) -> WithinLinearData:
+    ) -> tuple[WithinLinearData, GramFactorization | None]:
         """Drop collinear columns from the second-stage design and the instruments."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
+        within_data, _ = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
-        instruments, collinearity = drop_multicollinear_variables(
+        instruments, collinearity, _ = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
             self.options.collin_tol,
@@ -217,11 +218,12 @@ class Feiv(Feols):
         )
         self.collinearity_instruments = collinearity
         self._coefnames_z = list(collinearity.coefnames)
-        return replace(within_data, instruments=instruments)
+        # Neither rank-check factor represents the projected second-stage design.
+        return replace(within_data, instruments=instruments), None
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_within_data(self._demean())
+        within_data, _ = self._drop_multicollinear_within_data(self._demean())
         # Narrow the base return type so `within_data.instruments` type-checks.
         assert isinstance(within_data, WithinIvData)
         self._set_within_data(within_data)

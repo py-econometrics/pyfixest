@@ -16,14 +16,16 @@
 # docs/THIRD_PARTY_PERMISSIONS.md
 # ----------------------------------------------------------------------
 
+from __future__ import annotations
+
 import numba as nb
 import numpy as np
 
 
 @nb.njit(parallel=False)
-def _find_collinear_variables_nb(
+def _collinear_cholesky_nb(
     X: np.ndarray, tol: float = 1e-10
-) -> tuple[np.ndarray, int, bool]:
+) -> tuple[np.ndarray, int, bool, np.ndarray]:
     """
     Detect multicollinear variables.
 
@@ -43,12 +45,12 @@ def _find_collinear_variables_nb(
         variable.
     - n_excl (int): The number of collinear variables.
     - all_removed (bool): True if all variables are identified as collinear.
+    - R (numpy.ndarray): Upper Cholesky factor in retained-column order.
     """
     K = X.shape[1]
     R = np.zeros((K, K))
     id_excl = np.zeros(K, dtype=np.int32)
     n_excl = 0
-    min_norm = X[0, 0]
 
     for j in range(K):
         R_jj = X[j, j]
@@ -63,12 +65,9 @@ def _find_collinear_variables_nb(
 
             if n_excl == K:
                 all_removed = True
-                return id_excl.astype(np.bool_), n_excl, all_removed
+                return id_excl.astype(np.bool_), n_excl, all_removed, R[:0, :0]
 
             continue
-
-        if min_norm > R_jj:
-            min_norm = R_jj
 
         R_jj = np.sqrt(R_jj)
         R[j, j] = R_jj
@@ -81,4 +80,14 @@ def _find_collinear_variables_nb(
                 value -= R[k, i] * R[k, j]
             R[j, i] = value / R_jj
 
-    return id_excl.astype(np.bool_), n_excl, False
+    mask = id_excl.astype(np.bool_)
+    return mask, n_excl, False, R[~mask][:, ~mask]
+
+
+@nb.njit(parallel=False)
+def _find_collinear_variables_nb(
+    X: np.ndarray, tol: float = 1e-10
+) -> tuple[np.ndarray, int, bool]:
+    """Return the legacy rank-check result without the factor."""
+    mask, n_excl, all_removed, _ = _collinear_cholesky_nb(X, tol)
+    return mask, n_excl, all_removed

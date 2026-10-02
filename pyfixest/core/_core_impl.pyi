@@ -15,6 +15,10 @@ class Preconditioner:
     def __reduce__(self) -> tuple: ...
 
 def _find_collinear_variables_rs(x: NDArray[np.float64], tol: float = 1e-10): ...
+def _collinear_cholesky_rs(
+    x: NDArray[np.float64],
+    tol: float = 1e-10,
+) -> tuple[NDArray[np.bool_], int, bool, NDArray[np.float64]]: ...
 def _crv1_meat_loop_rs(
     scores: NDArray[np.float64],
     clustid: NDArray[np.uint64],

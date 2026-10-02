@@ -61,6 +61,7 @@ from pyfixest.estimation.internals.retention import (
     omitted_attributes,
     require_retained,
 )
+from pyfixest.estimation.internals.solvers import GramFactorization
 from pyfixest.estimation.internals.vcov_ import (
     meat_crv1,
     meat_hac,
@@ -456,8 +457,8 @@ class Feols(ResultAccessorMixin):
 
     def _drop_multicollinear_within_data(
         self, within_data: WithinLinearData
-    ) -> WithinLinearData:
-        """Return within data after the observation-weighted rank check."""
+    ) -> tuple[WithinLinearData, GramFactorization | None]:
+        """Return selected within data and its fit-local weighted factorization."""
         design = within_data.design
         if design.shape[1] == 0:
             # Fixed-effects-only model: nothing to check, but the attribute is
@@ -467,9 +468,9 @@ class Feols(ResultAccessorMixin):
                 mask=tuple(False for _ in self._coefnames),
                 coefnames=tuple(self._coefnames),
             )
-            return within_data
+            return within_data, None
 
-        design, collinearity = drop_multicollinear_variables(
+        design, collinearity, factorization = drop_multicollinear_variables(
             design,
             self._coefnames,
             self.options.collin_tol,
@@ -478,7 +479,7 @@ class Feols(ResultAccessorMixin):
         self.collinearity = collinearity
         self._coefnames = list(collinearity.coefnames)
 
-        return replace(within_data, design=design)
+        return replace(within_data, design=design), factorization
 
     def _set_within_data(self, within_data: WithinLinearData) -> None:
         """Publish canonical within data after column selection."""
@@ -512,7 +513,9 @@ class Feols(ResultAccessorMixin):
         -------
         None
         """
-        within_data = self._drop_multicollinear_within_data(self._demean())
+        within_data, _factorization = self._drop_multicollinear_within_data(
+            self._demean()
+        )
         self._set_within_data(within_data)
 
         if self._X_is_empty:

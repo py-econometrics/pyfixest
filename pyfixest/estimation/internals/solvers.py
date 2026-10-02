@@ -1,10 +1,34 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import solve
 from scipy.sparse.linalg import lsqr
 
 from pyfixest.estimation.internals.literals import (
     SolverOptions,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class GramFactorization:
+    """Fit-local weighted cross-product and its upper Cholesky factor.
+
+    Both arrays have shape (k, k) in retained coefficient order, with
+    ``upper.T @ upper == gram`` up to roundoff. The Gram matrix is X' W X
+    on the exact row sample and within design used in the rank check.
+    Arrays are owned by this value and made read-only; the value must not be
+    reused after changing rows, columns, weights, or the FE projection.
+    """
+
+    gram: NDArray[np.float64]
+    upper: NDArray[np.float64]
+
+    def __post_init__(self) -> None:
+        self.gram.setflags(write=False)
+        self.upper.setflags(write=False)
 
 
 def solve_ols(

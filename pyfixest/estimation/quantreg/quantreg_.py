@@ -176,7 +176,8 @@ class Quantreg(Feols):
         Quantile models do not support fixed effects, so within_data holds
         the original response and regressor arrays without demeaning.
         """
-        self._set_within_data(self._drop_multicollinear_within_data(self.within_data))
+        within_data, _ = self._drop_multicollinear_within_data(self.within_data)
+        self._set_within_data(within_data)
 
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
