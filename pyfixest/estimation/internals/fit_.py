@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from scipy.linalg import cho_solve
 
 from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.model_state import SandwichComponents
-from pyfixest.estimation.internals.solvers import solve_ols
+from pyfixest.estimation.internals.solvers import GramFactorization, solve_ols
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +58,7 @@ def fit_ols(
     *,
     weights: np.ndarray | None = None,
     solver: SolverOptions = "np.linalg.solve",
+    factorization: GramFactorization | None = None,
 ) -> OlsFit:
     """Fit OLS/WLS while keeping inputs and residuals in response scale.
 
@@ -72,6 +74,10 @@ def fit_ols(
         this function.
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
+    factorization : GramFactorization or None
+        Rank-check result for this exact X and weights, in retained-column
+        order. Reuses the Gram matrix and its factor for the covariance bread;
+        the positive-definite SciPy coefficient solver also reuses the factor.
     """
     if weights is None:
         X_solver = X
@@ -83,9 +89,15 @@ def fit_ols(
         X_solver = X * sqrt_weights
         Y_solver = Y * sqrt_weights
 
-    hessian = X_solver.T @ X_solver
+    hessian = X_solver.T @ X_solver if factorization is None else factorization.gram
+    cholesky = None if factorization is None else factorization.upper
     tXy = X_solver.T @ Y_solver
-    beta = solve_ols(hessian, tXy, solver)
+    beta = solve_ols(tZX=hessian, tZY=tXy, solver=solver, cholesky=cholesky)
+    bread = (
+        np.linalg.inv(hessian)
+        if cholesky is None
+        else cho_solve((cholesky, False), np.eye(hessian.shape[0]))
+    )
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
         scores = X * residuals[:, None]
@@ -94,9 +106,7 @@ def fit_ols(
     return OlsFit(
         beta=beta,
         residuals=residuals,
-        sandwich=SandwichComponents(
-            scores=scores, hessian=hessian, bread=np.linalg.inv(hessian)
-        ),
+        sandwich=SandwichComponents(scores=scores, hessian=hessian, bread=bread),
     )
 
 

@@ -513,7 +513,7 @@ class Feols(ResultAccessorMixin):
         -------
         None
         """
-        within_data, _factorization = self._drop_multicollinear_within_data(
+        within_data, factorization = self._drop_multicollinear_within_data(
             self._demean()
         )
         self._set_within_data(within_data)
@@ -529,6 +529,7 @@ class Feols(ResultAccessorMixin):
                 Y=within_data.response,
                 weights=self.observation_weights.values,
                 solver=self.options.solver,
+                factorization=factorization,
             )
 
             self._beta_hat = fit.beta

@@ -967,7 +967,24 @@ def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
             int(ref.variance_covariance.df_k),
             int(ref.variance_covariance.df_t),
         )
-        pd.testing.assert_frame_equal(mod.tidy(), ref.tidy(), atol=1e-10, rtol=0)
+        glm_tidy, ols_tidy = mod.tidy(), ref.tidy()
+        pd.testing.assert_frame_equal(
+            glm_tidy.drop(columns="t value"),
+            ols_tidy.drop(columns="t value"),
+            atol=1e-10,
+            rtol=0,
+        )
+        # OLS reuses the rank-check Cholesky while IRLS still inverts its final
+        # Hessian separately. For the interaction design (Gram condition ~3900),
+        # a 3.3e-14 SE difference becomes a 1.6e-10 difference in a t near 20.
+        # Keep coefficient/SE tolerances unchanged and scale only this ratio.
+        np.testing.assert_allclose(
+            glm_tidy["t value"],
+            ols_tidy["t value"],
+            atol=1e-10,
+            rtol=1e-11,
+            err_msg="Gaussian GLM vs OLS t statistics",
+        )
         np.testing.assert_allclose(
             mod.variance_covariance.vcov,
             ref.variance_covariance.vcov,

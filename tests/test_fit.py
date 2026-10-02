@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.fit_ import fit_iv, fit_ols
 
 # The numerical contract of `fit_ols` / `fit_iv` is pinned externally, by the
@@ -55,9 +56,11 @@ def iv_arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     [None, np.array([0.5, 1.0, 1.5, 2.0, 3.0])],
     ids=("unweighted", "weighted"),
 )
+@pytest.mark.parametrize("factorized", [False, True])
 def test_fit_ols_does_not_mutate_inputs(
     ols_arrays: tuple[np.ndarray, np.ndarray],
     weights: np.ndarray | None,
+    factorized: bool,
 ) -> None:
     X, Y = ols_arrays
     X_before = X.copy()
@@ -68,7 +71,18 @@ def test_fit_ols_does_not_mutate_inputs(
     if weights is not None:
         weights.setflags(write=False)
 
-    fit = fit_ols(X=X, Y=Y, weights=weights)
+    factorization = None
+    if factorized:
+        _, _, factorization = drop_multicollinear_variables(
+            X=X, names=["intercept", "x"], collin_tol=1e-9, weights=weights
+        )
+    fit = fit_ols(
+        X=X,
+        Y=Y,
+        weights=weights,
+        solver="scipy.linalg.solve",
+        factorization=factorization,
+    )
 
     assert np.all(np.isfinite(fit.beta))
     np.testing.assert_array_equal(X, X_before, err_msg="fit_ols mutated X")

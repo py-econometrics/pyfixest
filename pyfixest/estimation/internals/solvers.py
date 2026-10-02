@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.linalg import solve
+from scipy.linalg import cho_solve, solve
 from scipy.sparse.linalg import lsqr
 
 from pyfixest.estimation.internals.literals import (
@@ -35,6 +35,8 @@ def solve_ols(
     tZX: np.ndarray,
     tZY: np.ndarray,
     solver: SolverOptions = "np.linalg.solve",
+    *,
+    cholesky: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Solve the normal equations tZX @ beta = tZY with the specified solver.
@@ -46,6 +48,9 @@ def solve_ols(
     sides solved at once, as in the first stage of 2SLS.
     solver (str): The solver to use. Supported solvers are "np.linalg.lstsq",
     "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
+    cholesky (array-like or None): Previously computed upper factor of tZX.
+        The positive-definite SciPy solver reuses it when supplied. Explicit
+        alternative solver choices still use their selected algorithm.
 
     Returns
     -------
@@ -61,7 +66,11 @@ def solve_ols(
     elif solver == "np.linalg.solve":
         beta = np.linalg.solve(tZX, tZY)
     elif solver == "scipy.linalg.solve":
-        beta = solve(tZX, tZY, assume_a="pos")
+        beta = (
+            solve(tZX, tZY, assume_a="pos")
+            if cholesky is None
+            else cho_solve((cholesky, False), tZY)
+        )
     elif solver == "scipy.sparse.linalg.lsqr":
         # lsqr accepts one right-hand side at a time.
         rhs_columns = np.reshape(tZY, (tZY.shape[0], -1)).T
