@@ -569,6 +569,7 @@ class TestVaryingSlopeParsing:
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
             ("f1[z**2]", [("f1", True, ("z ** 2",))]),
             ("f1[I(z**2)]", [("f1", True, ("I(z ** 2)",))]),
+            ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
             ("f1[z1 + z2]", [("f1", True, ("z1 + z2",))]),
             ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
             ("f1[z1 * z2]", [("f1", True, ("z1 * z2",))]),
