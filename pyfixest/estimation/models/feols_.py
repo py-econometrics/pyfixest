@@ -1791,6 +1791,7 @@ class Feols(ResultAccessorMixin):
             alpha=alpha,
             # Fixed-effect contribution per observation, in the units of Y.
             sumFE=D.dot(alpha),
+            lsqr_tol=(atol, btol),
         )
 
         return fixed_effects_to_frame(self.fixef_estimates.coefficients)
@@ -1829,6 +1830,10 @@ class Feols(ResultAccessorMixin):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            The fixed effects are cached after they are first computed. Passing an
+            `atol` or `btol` below the cached one recomputes them at the tighter
+            tolerance; a looser one reuses the cached values rather than degrading
+            them.
         type:
             The type of prediction to be made. Can be either 'link' or 'response'.
              Defaults to 'link'. 'link' and 'response' lead
@@ -1924,6 +1929,11 @@ class Feols(ResultAccessorMixin):
                 if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
+                else:
+                    cached_atol, cached_btol = self.fixef_estimates.lsqr_tol
+                    if atol < cached_atol or btol < cached_btol:
+                        require_retained(self, "predict", "_data")
+                        self.fixef(min(atol, cached_atol), min(btol, cached_btol))
                 fe_hat = predict_fixed_effects(
                     model_matrix=fe_mm.loc[valid_idx],
                     coefficients=self.fixef_estimates.coefficients,

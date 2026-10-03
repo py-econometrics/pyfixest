@@ -83,6 +83,9 @@ class FixedEffectEstimates:
         Fixed-effect contribution of each observation, shape (n_rows,), in
         the units of the dependent variable. For GLMs it is on the scale of
         the linear predictor and excludes the offset. Named as in `fixest`.
+    lsqr_tol : tuple[float, float]
+        The `(atol, btol)` pair `lsqr()` solved at. `predict()` recomputes
+        the estimates when asked for a tighter tolerance.
 
     Examples
     --------
@@ -102,6 +105,7 @@ class FixedEffectEstimates:
     coefficients: Mapping[str, FixedEffect]
     alpha: NDArray[np.float64]
     sumFE: NDArray[np.float64]
+    lsqr_tol: tuple[float, float]
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
