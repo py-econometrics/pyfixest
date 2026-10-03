@@ -7,11 +7,13 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import re
 import warnings
 
 import formulaic
 import numpy as np
 import pytest
+from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
@@ -656,20 +658,57 @@ class TestVaryingSlopeParsing:
         ] == [("f1", True), ("f2", False)]
 
     @pytest.mark.parametrize(
-        "fixed_effects",
+        "fixed_effects,reason,example",
         [
-            "f1[[]]",
-            "f1[z][z2]",
-            "f1[z]:f2",
-            "f1:f2[z]:f3",
-            "f1[z1]:f2[z2]",
+            ("f1[[]]", "must specify at least one slope", "f1[[z]]"),
+            ("f1[()]", "must specify at least one slope", "f1[z]"),
+            ("f1[z][z2]", "nested varying-slope subscripts", "f1[z1, z2]"),
+            ("f1[z]:f2", "only supported on the final factor", "f1:f2[z]"),
+            ("f1:f2[z]:f3", "only supported on the final factor", "f1:f2[z]"),
+            (
+                "f1[z1]:f2[z2]",
+                "cannot specify more than one varying-slope expression",
+                "f1:f2[z1, z2]",
+            ),
         ],
     )
-    def test_invalid_varying_slope_terms(self, fixed_effects):
+    def test_invalid_varying_slope_terms(self, fixed_effects, reason, example):
         parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
 
-        with pytest.raises(FormulaSyntaxError):
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=rf"`{re.escape(fixed_effects)}`.*{reason}.*`{re.escape(example)}`",
+        ):
             _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "expression,parsed_terms",
+        [("f1 + f2", "f1 + f2"), ("f1 - f1", "")],
+    )
+    def test_varying_slope_level_requires_one_term(self, expression, parsed_terms):
+        parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=(
+                rf"`{re.escape(expression)}`: expected exactly one formula term, "
+                rf"but parsed `{re.escape(parsed_terms)}`.*`f1\[z\] \+ f2\[z\]`"
+            ),
+        ):
+            _ = parsed.fixed_effect_specifications
+
+    def test_invalid_python_factor_reports_expression_and_syntax(self):
+        # Formulaic rejects malformed Python before a Formula can expose this
+        # guard, so exercise it with a directly constructed fixed-effect term.
+        term = Term([Factor("f1[", eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Could not parse fixed-effect expression `f1\[`.*Expected a valid Python expression.*`f1\[z\]`",
+        ) as exc_info:
+            FixedEffectSpecification.from_term(term)
+
+        assert isinstance(exc_info.value.__cause__, SyntaxError)
 
 
 class TestValidation:
