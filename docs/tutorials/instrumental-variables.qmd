@@ -130,7 +130,7 @@ ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
-We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
+We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover. See the [`get_ivf_data` API reference](../reference/utils.dgps.get_ivf_data.qmd) for the full data-generating process.
 
 ### Naive OLS
 
