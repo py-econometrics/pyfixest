@@ -68,7 +68,6 @@ class FixedEffectSpecification:
         # A fixed-effect term can have multiple factors if it represents interactions
         # For example f1:f2[z] has two factors: `(f1, f2[z])`
 
-
         varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
         for position, factor in enumerate(term.factors):
             factor_expression = _factor_ast(factor)
@@ -80,16 +79,18 @@ class FixedEffectSpecification:
 
         if not varying_slope_expressions:
             return cls(levels=term, intercept=True)
-        elif len(varying_slope_expressions) != 1:
+        if len(varying_slope_expressions) != 1:
             # Reject expressions of the form `f1[z1]:f2[z2]`
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: cannot specify more than one "
                 "varying-slope expression in a single term. For slopes on interacted "
                 "levels, use one bracket pair, for example `f1:f2[z1, z2]`."
             )
-        elif varying_slope_expressions[0][1] != len(term.factors) - 1:
-            # Varying slope syntax must be attached to last factor in term
-            # For example, accept `f1:f2[z]` but reject `f1[z]:f2`
+
+        expression, slope_factor_position = varying_slope_expressions[0]
+        last_factor_position = len(term.factors) - 1
+        # Accept `f1:f2[z]`, but reject `f1[z]:f2`.
+        if slope_factor_position != last_factor_position:
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: varying-slope syntax is only "
                 "supported on the final factor of a fixed-effect interaction, "
@@ -97,8 +98,6 @@ class FixedEffectSpecification:
             )
         # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
         # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
-        # First, get the factor with varying slopes (e.g., `f2[z]` in `f1:f2[z]`)
-        expression = varying_slope_expressions[0][0]
         fixed_effect_level = expression.value  # `f2`
         fixed_effect_slopes = expression.slice  # `z`
         if isinstance(fixed_effect_level, ast.Subscript):
