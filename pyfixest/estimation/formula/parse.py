@@ -287,11 +287,6 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         string=formula[parenthesis_open:parenthesis_closed],
         separator=",",
     )
-    if len(arguments) < 2 and kind is not _MultipleEstimationType.mvsw:
-        raise FormulaSyntaxError(
-            f"'{kind.name}(...)' requires at least 2 arguments, got {len(arguments)}. "
-            f"Check for extra parentheses, e.g. sw((a, b)) should be sw(a, b)."
-        )
     if kind is _MultipleEstimationType.mvsw:
         # Multiverse stepwise: all combinations of arguments
         arguments = [
