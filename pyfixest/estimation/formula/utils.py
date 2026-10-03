@@ -97,6 +97,34 @@ class _MultipleEstimationType(Enum):
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
     rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
 )
+_MULTIPLE_ESTIMATION_CALL = re.compile(
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})$"
+)
+_SUPPORTED_IV_SYNTAX = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
+
+
+def _encloses_formula_syntax(string: str, position: int) -> bool:
+    """
+    Whether the bracket opening at *position* encloses formula syntax.
+
+    Grouping parentheses, multiple-estimation calls such as ``sw(...)``, and
+    standalone ``[...]`` blocks contain formula syntax. Braces, function calls
+    such as ``I(...)``, subscripts, and varying slopes such as ``f1[x]``
+    contain Python expressions, whose operators must stay untouched.
+    """
+    bracket = string[position]
+    if bracket == "{":
+        return False
+    prefix = string[:position].rstrip()
+    attached = bool(prefix) and (prefix[-1].isalnum() or prefix[-1] in "_.)]}`'\"")
+    if bracket == "(" and attached:
+        return _MULTIPLE_ESTIMATION_CALL.search(string[:position]) is not None
+    return not attached
+
+
+def _in_formula_syntax(string: str, brackets: tuple[int, ...]) -> bool:
+    """Whether every enclosing bracket keeps a character in formula syntax."""
+    return all(_encloses_formula_syntax(string, opening) for opening in brackets)
 
 
 def _preprocess(formula: str) -> str:
@@ -107,22 +135,21 @@ def _preprocess(formula: str) -> str:
 
 
 def _preprocess_fixed_effect_interactions(formula: str) -> str:
-    """Translate legacy FE interactions, including inside stepwise calls."""
+    """Translate legacy FE interactions, including inside stepwise calls.
+
+    ``^`` becomes ``:`` at the top level of the fixed-effects part and inside
+    grouping parentheses and multiple-estimation calls, which the expansion
+    turns into grouping parentheses. Python expressions, quoted names, and
+    varying-slope expressions keep their ``^``.
+    """
     parts = _str_split_by_sep(formula, separator="|")
     if len(parts) < 2:
         return formula
 
     fixed_effects = parts[1]
-    stepwise_openings = {
-        match.end() - 1
-        for match in re.finditer(
-            rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\(",
-            fixed_effects,
-        )
-    }
     characters = list(fixed_effects)
     for position, char, brackets in _iter_formula_characters(fixed_effects):
-        if char == "^" and all(opening in stepwise_openings for opening in brackets):
+        if char == "^" and _in_formula_syntax(fixed_effects, brackets):
             characters[position] = ":"
     normalized = "".join(characters)
     if normalized == fixed_effects:
@@ -141,56 +168,74 @@ def _preprocess_fixed_effect_interactions(formula: str) -> str:
     return formula
 
 
-def _preprocess_fixest_instrumental_variable(formula: str) -> str:
-    """Convert fixest-style instrumental variable syntax to formulaic.
-    Y ~ X1 | X2 ~ Z2 will be converted to Y ~ X1 + [X2 ~ Z2].
+def _validate_formula_parts(formula: str) -> list[str]:
     """
+    Split *formula* on top-level ``|`` and validate its multipart structure.
+
+    Supported spellings are ``Y ~ X1 + [X2 ~ Z1] | f1`` and the deprecated
+    ``Y ~ X1 | f1 | X2 ~ Z1``. Validation runs before any deprecation rewrite
+    so that misplaced IV blocks cannot turn fixed effects into covariates.
+    """
+    for _position, char, brackets in _iter_formula_characters(formula):
+        if char == "|" and brackets and _in_formula_syntax(formula, brackets):
+            raise FormulaSyntaxError(
+                "`|` separates formula parts and cannot appear inside "
+                f"parentheses, brackets, or multiple-estimation calls in `{formula}`. "
+                + _SUPPORTED_IV_SYNTAX
+            )
     parts = _str_split_by_sep(formula, separator="|")
-    supported_syntax = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
-    # Validate before any deprecation rewrite can move FE terms into covariates.
     for part in parts[1:]:
-        iv_openings: set[int] = set()
-        for position, char, brackets in _iter_formula_characters(part):
-            if char == "[":
-                prefix = part[:position].rstrip()
-                # A standalone bracket starts an IV block; subscripts and
-                # varying slopes attach to the preceding factor instead.
-                if not prefix or prefix[-1] in "+-*/:(,[~|":
-                    iv_openings.add(position)
-            if char == "~" and any(opening in iv_openings for opening in brackets):
+        for _position, char, brackets in _iter_formula_characters(part):
+            if char == "~" and brackets and _in_formula_syntax(part, brackets):
                 raise FormulaSyntaxError(
-                    "A bracketed IV block cannot appear in the fixed-effects part. "
-                    + supported_syntax
+                    "An instrumental-variable block can only appear among the "
+                    "covariates or as the last part after the fixed effects, "
+                    f"not in `{part}`. " + _SUPPORTED_IV_SYNTAX
                 )
-    instrumental_variables = [
+    iv_parts = [
         index
         for index, part in enumerate(parts[1:], start=1)
         if len(_str_split_by_sep(part, separator="~")) > 1
     ]
-    if len(instrumental_variables) > 1:
+    if len(iv_parts) > 1:
         raise FormulaSyntaxError(
             "Only one instrumental variable block is supported. "
             "Use a single `[endogenous ~ instruments]` block."
         )
-    if len(parts) > 3 or (len(parts) == 3 and not instrumental_variables):
-        raise FormulaSyntaxError("Invalid formula parts. " + supported_syntax)
-    if instrumental_variables:
-        if instrumental_variables[0] != len(parts) - 1:
-            raise FormulaSyntaxError("The IV part must come last. " + supported_syntax)
-        iv = parts[-1]
-        iv_sides = _str_split_by_sep(iv, separator="~")
-        if len(iv_sides) != 2 or not all(iv_sides):
-            raise FormulaSyntaxError("Invalid IV part. " + supported_syntax)
-        formula_old = formula
-        formula = f"{parts[0]} + [{iv}]"
-        if len(parts) == 3:
-            formula = f"{formula} | {parts[1]}"
-        warnings.warn(
-            "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
-            f"Instead of `{formula_old}` use `{formula}`",
-            DeprecationWarning,
-            stacklevel=_find_stack_level(),
+    if len(parts) > 3 or (len(parts) == 3 and not iv_parts):
+        raise FormulaSyntaxError(
+            f"Invalid formula parts in `{formula}`. " + _SUPPORTED_IV_SYNTAX
         )
+    if iv_parts:
+        if iv_parts[0] != len(parts) - 1:
+            raise FormulaSyntaxError(
+                "The IV part must come last. " + _SUPPORTED_IV_SYNTAX
+            )
+        iv_sides = _str_split_by_sep(parts[-1], separator="~")
+        if len(iv_sides) != 2 or not all(iv_sides):
+            raise FormulaSyntaxError(
+                f"Invalid IV part `{parts[-1]}`. " + _SUPPORTED_IV_SYNTAX
+            )
+    return parts
+
+
+def _preprocess_fixest_instrumental_variable(formula: str) -> str:
+    """Convert fixest-style instrumental variable syntax to formulaic.
+    Y ~ X1 | X2 ~ Z2 will be converted to Y ~ X1 + [X2 ~ Z2].
+    """
+    parts = _validate_formula_parts(formula)
+    if len(parts) == 1 or len(_str_split_by_sep(parts[-1], separator="~")) == 1:
+        return formula
+    formula_old = formula
+    formula = f"{parts[0]} + [{parts[-1]}]"
+    if len(parts) == 3:
+        formula = f"{formula} | {parts[1]}"
+    warnings.warn(
+        "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
+        f"Instead of `{formula_old}` use `{formula}`",
+        DeprecationWarning,
+        stacklevel=_find_stack_level(),
+    )
     return formula
 
 

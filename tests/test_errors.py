@@ -1,5 +1,6 @@
 import re
 import sys
+import warnings
 from functools import partial
 
 import numpy as np
@@ -304,6 +305,29 @@ def test_iv_errors():
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 | f1 + [X2 ~ Z1]",
+        "Y ~ X1 | sw(f1, [X2 ~ Z1])",
+        "Y ~ X1 | (X2 ~ Z1)",
+        "Y ~ X1 | X2 ~ Z1 | f1",
+        "Y ~ X1 | f1 | X2 ~ Z1 | f2",
+        "Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]",
+        "Y ~ X1 | f1 | f2",
+    ],
+)
+def test_misplaced_iv_syntax_errors(estimator, fml):
+    # The data lacks every formula variable, so the error must come from
+    # formula validation before any rewrite, materialization, or estimation.
+    data = pd.DataFrame({"unused": [1.0, 2.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(FormulaSyntaxError, match=r"Y ~ X1 \| f1 \| X2 ~ Z1"):
+            estimator(fml=fml, data=data)
 
 
 @pytest.mark.skip("Not yet implemented.")

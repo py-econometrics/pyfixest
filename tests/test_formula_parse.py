@@ -34,6 +34,10 @@ from pyfixest.estimation.formula.utils import (
 # =============================================================================
 
 
+def _as_fit_list(fit):
+    return fit.to_list() if hasattr(fit, "to_list") else [fit]
+
+
 @pytest.fixture(scope="module")
 def test_data():
     """Generate test data for compatibility tests."""
@@ -630,10 +634,12 @@ class TestFixedEffectInteractions:
             fits = pf.feols(formula, data=test_data).to_list()
         assert sum(issubclass(w.category, DeprecationWarning) for w in caught) == 1
         assert len(fits) == len(expected)
-        for fit, fe in zip(fits, expected, strict=True):
+        canonical_fits = pf.feols(canonical, data=test_data).to_list()
+        for fit, canonical_fit, fe in zip(fits, canonical_fits, expected, strict=True):
             separate = pf.feols(f"Y ~ X1 | {fe}", data=test_data)
-            np.testing.assert_allclose(fit.coef(), separate.coef(), rtol=1e-10)
-            np.testing.assert_allclose(fit.se(), separate.se(), rtol=1e-10)
+            for reference in (canonical_fit, separate):
+                np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-10)
+                np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-10)
 
     def test_stepwise_rewrite_preserves_python_and_quoted_carets(self):
         formula = "Y ~ X1 | sw(I(f1^2), `f^2`, f1^f2) + csw(f2^f3)"
@@ -641,6 +647,65 @@ class TestFixedEffectInteractions:
             translated = _preprocess_fixed_effect_interactions(formula)
         assert len(caught) == 1
         assert translated == ("Y ~ X1 | sw(I(f1^2), `f^2`, f1:f2) + csw(f2:f3)")
+
+    @pytest.mark.parametrize(
+        "formula,expected",
+        [
+            ("Y ~ X1 | sw(f1[z^2], f2^f3)", "Y ~ X1 | sw(f1[z^2], f2:f3)"),
+            ("Y ~ X1 | csw(f1[[z^2]], f2^f3)", "Y ~ X1 | csw(f1[[z^2]], f2:f3)"),
+            ("Y ~ X1 | sw0({f1 ^ f2}, f2^f3)", "Y ~ X1 | sw0({f1 ^ f2}, f2:f3)"),
+            ("Y ~ X1 | mvsw(C(f1^f2), f2^f3)", "Y ~ X1 | mvsw(C(f1^f2), f2:f3)"),
+        ],
+    )
+    def test_stepwise_rewrite_preserves_slope_and_call_carets(self, formula, expected):
+        with pytest.warns(DeprecationWarning) as caught:
+            translated = _preprocess_fixed_effect_interactions(formula)
+        assert len(caught) == 1
+        assert translated == expected
+
+    @pytest.mark.parametrize(
+        "formula,canonical",
+        [
+            ("Y ~ X1 | (f1^f2)", "Y ~ X1 | (f1:f2)"),
+            ("Y ~ X1 | f3 + (f1^f2)", "Y ~ X1 | f3 + (f1:f2)"),
+            ("Y ~ X1 | sw((f1^f2), f3)", "Y ~ X1 | sw((f1:f2), f3)"),
+            ("Y ~ X1 | csw0(f3, (f1^f2))", "Y ~ X1 | csw0(f3, (f1:f2))"),
+        ],
+    )
+    def test_legacy_grouped_interactions(self, formula, canonical, test_data):
+        # Grouping parentheses are FE syntax, including the ones that stepwise
+        # expansion adds, so their `^` is a legacy interaction, not a power.
+        with pytest.warns(DeprecationWarning, match=re.escape(canonical)) as caught:
+            parsed = Formula.parse(formula)
+        assert len(caught) == 1
+        assert [f.formula for f in parsed] == [
+            f.formula for f in Formula.parse(canonical)
+        ]
+        with pytest.warns(DeprecationWarning, match="fixed-effect interactions"):
+            fits = _as_fit_list(pf.feols(formula, data=test_data))
+        canonical_fits = _as_fit_list(pf.feols(canonical, data=test_data))
+        for fit, reference in zip(fits, canonical_fits, strict=True):
+            np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-10)
+            np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-10)
+
+    def test_legacy_stepwise_interactions_with_legacy_iv(self, test_data):
+        formula = "Y ~ X1 | sw(f1^f2, f3) | X2 ~ Z1"
+        canonical = "Y ~ X1 + [X2 ~ Z1] | sw(f1:f2, f3)"
+        with pytest.warns(DeprecationWarning) as caught:
+            parsed = Formula.parse(formula)
+        assert {str(w.message).split(" is deprecated")[0] for w in caught} == {
+            "The fixest-style syntax for instrumental variable regressions",
+            "The `^` operator for fixed-effect interactions",
+        }
+        assert [f.formula for f in parsed] == [
+            f.formula for f in Formula.parse(canonical)
+        ]
+        with pytest.warns(DeprecationWarning):
+            fits = pf.feols(formula, data=test_data).to_list()
+        canonical_fits = pf.feols(canonical, data=test_data).to_list()
+        for fit, reference in zip(fits, canonical_fits, strict=True):
+            np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-10)
+            np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-10)
 
 
 class TestFormulaBoundaries:
@@ -668,13 +733,35 @@ class TestFormulaBoundaries:
             "Y ~ X1 | f1 + [X2 ~ Z1] | X3 ~ Z2",
             "Y ~ X1 | X2 ~ Z1 | f1",
             "Y ~ X1 | f1 | X2 ~ Z1 ~ Z2",
+            "Y ~ X1 | (X2 ~ Z1)",
+            "Y ~ X1 | f1 + sw(f2, (X2 ~ Z1))",
+            "Y ~ X1 | f1 | [X2 ~ Z1]",
+            "Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]",
         ],
     )
     def test_invalid_iv_boundaries_rejected_before_rewriting(self, formula, test_data):
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
             with pytest.raises(FormulaSyntaxError, match=r"Use `Y ~ X1 \+ \[X2 ~ Z1\]"):
+                Formula.parse(formula)
+            with pytest.raises(FormulaSyntaxError, match=r"Use `Y ~ X1 \+ \[X2 ~ Z1\]"):
                 pf.feols(formula, data=test_data)
+
+    @pytest.mark.parametrize(
+        "formula,fixed_effects",
+        [
+            ("Y ~ X1 + [X2 ~ Z1] | f1", ["f1"]),
+            ("Y ~ X1 + [X2 ~ Z1 + Z2] | sw(f1, f2:f3)", ["f1", "f2:f3"]),
+            ("Y ~ X1 + [X2 ~ Z1] | f1 + f2[X1]", ["f1 + f2[X1]"]),
+        ],
+    )
+    def test_bracketed_iv_syntax_is_preserved(self, formula, fixed_effects):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            assert _preprocess(formula) == formula
+            parsed = Formula.parse(formula)
+        assert all(f.is_instrumental_variable for f in parsed)
+        assert [str(f.fixed_effects) for f in parsed] == fixed_effects
 
     @pytest.mark.parametrize("fixed_effects", ["", "f1 | "])
     def test_legacy_iv_with_literal_separator(self, fixed_effects, test_data):
@@ -713,8 +800,15 @@ class TestFormulaBoundaries:
         parsed = Formula.parse("Y ~ sw(`X)`, `X,2`)")
         assert [str(f.exogenous) for f in parsed] == ["1 + X)", "1 + X,2"]
 
-    def test_python_subscripts_are_not_iv_blocks(self):
-        formula = "Y ~ X1 | I(values[mask & ~other])"
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 | I(values[mask & ~other])",
+            "Y ~ X1 | {lookup(f1, [~mask])}",
+            "Y ~ X1 | f1 + C(f2, levels=[~flag])",
+        ],
+    )
+    def test_python_brackets_are_not_iv_blocks(self, formula):
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
             assert _preprocess(formula) == formula
