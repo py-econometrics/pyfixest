@@ -18,6 +18,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
 )
@@ -142,6 +143,8 @@ class Feols(ResultAccessorMixin):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
+    fixed_effect_encoding_cache : FixedEffectEncodingCache or None
+        Internal full-split encoding cache, detached after matrix preparation.
     sample_split : SampleSplit or None
         The variable and value by which the estimation sample was split.
         ``None`` if the model was fit on the entire input data set (minus
@@ -271,6 +274,7 @@ class Feols(ResultAccessorMixin):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
+        fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
         self.options = options
@@ -289,6 +293,7 @@ class Feols(ResultAccessorMixin):
         data = data.reset_index(drop=True)
 
         self._data = data.copy() if options.copy_data else data
+        self._fixed_effect_encoding_cache = fixed_effect_encoding_cache
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
         self.capabilities = self._declared_capabilities
@@ -325,15 +330,20 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
-        model_matrix = model_matrix_fixest.create_model_matrix(
-            formula=self.model.fixest_formula,
-            data=self._data,
-            drop_singletons=self.options.drop_singletons,
-            drop_intercept=self.options.drop_intercept,
-            weights=self.options.weights,
-            offset=self.options.offset,
-            context=self.options.context,
-        )
+        try:
+            model_matrix = model_matrix_fixest.create_model_matrix(
+                formula=self.model.fixest_formula,
+                data=self._data,
+                drop_singletons=self.options.drop_singletons,
+                drop_intercept=self.options.drop_intercept,
+                weights=self.options.weights,
+                offset=self.options.offset,
+                context=self.options.context,
+                fixed_effect_encoding_cache=self._fixed_effect_encoding_cache,
+            )
+        finally:
+            # Results and refits retain only their own formula/prediction state.
+            self._fixed_effect_encoding_cache = None
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it

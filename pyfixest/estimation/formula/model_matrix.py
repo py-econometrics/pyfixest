@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from typing import Any, Final, TypeAlias, cast
 
@@ -15,6 +16,7 @@ from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
@@ -404,6 +406,7 @@ def create_model_matrix(
     drop_intercept: bool = False,
     ensure_full_rank: bool = True,
     context: int | Mapping[str, Any] = 0,
+    fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None,
 ) -> ModelMatrix:
     """
     Create a ModelMatrix from a formula and data.
@@ -442,6 +445,9 @@ def create_model_matrix(
         Additional context variables for formulaic during model matrix creation.
         Can be an integer (stack frame depth) or a dictionary of variables to
         make available in the formula environment (e.g., custom transformations).
+    fixed_effect_encoding_cache : FixedEffectEncodingCache or None, default=None
+        Internal runner cache for unchanged full-split inputs. Each model
+        applies its own row filters and retains its own prediction mapping.
 
     Returns
     -------
@@ -468,13 +474,29 @@ def create_model_matrix(
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
     )
-    model_matrix = formula_formulaic.get_model_matrix(
-        data=data,
-        ensure_full_rank=ensure_full_rank,
-        na_action="drop",
-        output="pandas",
-        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
+    formula_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
+    original_transform = FORMULAIC_TRANSFORMS["__fixed_effect__"]
+    # User overrides and prediction with fitted state keep their original path.
+    use_cache = (
+        fixed_effect_encoding_cache is not None
+        and formula.is_fixed_effects
+        and formula_context["__fixed_effect__"] is original_transform
     )
+    transform_context = (
+        fixed_effect_encoding_cache.transform(data=data, original=original_transform)
+        if use_cache and fixed_effect_encoding_cache is not None
+        else nullcontext(original_transform)
+    )
+    with transform_context as transform:
+        if use_cache:
+            formula_context["__fixed_effect__"] = transform
+        model_matrix = formula_formulaic.get_model_matrix(
+            data=data,
+            ensure_full_rank=ensure_full_rank,
+            na_action="drop",
+            output="pandas",
+            context=formula_context,
+        )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
         n_observations=n_observations,

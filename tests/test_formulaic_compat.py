@@ -1,5 +1,7 @@
 """Smoke tests for formulaic internals relied on by pyfixest."""
 
+from __future__ import annotations
+
 from types import SimpleNamespace
 
 import formulaic
@@ -259,3 +261,144 @@ def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> N
 
     assert np.isnan(pred[0])
     assert np.all(np.isfinite(pred[1:]))
+
+
+@pytest.mark.parametrize("dtype", [None, "category", "Int64", "string"])
+def test_fe_encoding_cache_samples_and_prediction(data, monkeypatch, dtype):
+    """Reuse full-input codes, but isolate samples and prediction mappings."""
+    from functools import wraps
+
+    from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
+    from pyfixest.estimation.formula.model_matrix import create_model_matrix
+    from pyfixest.estimation.formula.parse import Formula
+    from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+        FIXED_EFFECT_ENCODING,
+    )
+
+    data.loc[0, "f1"] = 999  # singleton, even when another model loses rows
+    data.loc[1, "f2"] = np.nan
+    data.loc[2:5, "X2"] = np.nan
+    if dtype:
+        data["f1"] = data.f1.astype(dtype)
+        data["f2"] = data.f2.astype(dtype)
+    original = FORMULAIC_TRANSFORMS["__fixed_effect__"]
+    calls = []
+
+    @wraps(original)
+    def counted(*args, **kwargs):
+        calls.append(tuple(arg.name for arg in args))
+        return original(*args, **kwargs)
+
+    monkeypatch.setitem(FORMULAIC_TRANSFORMS, "__fixed_effect__", counted)
+    cache = FixedEffectEncodingCache()
+    matrices = []
+    for formula in Formula.parse("Y ~ csw(X1, X2) | f1 + f1:f2"):
+        matrices.append(
+            create_model_matrix(
+                formula=formula,
+                data=data.copy(),
+                drop_singletons=True,
+                fixed_effect_encoding_cache=cache,
+            )
+        )
+    assert len(calls) == 2  # Two FE terms, each encoded only once.
+    assert matrices[0].n_rows > matrices[1].n_rows
+    for matrix, formula in zip(
+        matrices, Formula.parse("Y ~ csw(X1, X2) | f1 + f1:f2"), strict=True
+    ):
+        uncached = create_model_matrix(
+            formula=formula, data=data.copy(), drop_singletons=True
+        )
+        pd.testing.assert_frame_equal(matrix.fixed_effects, uncached.fixed_effects)
+        pd.testing.assert_frame_equal(matrix.independent, uncached.independent)
+        assert matrix.dropped_row_index == uncached.dropped_row_index
+
+    # Materialize retained FE specs on reordered rows and an unseen level.
+    newdata = data.iloc[[8, 7, 6]].copy()
+    if dtype == "category":
+        newdata["f1"] = newdata.f1.cat.add_categories([1001])
+    newdata.iloc[0, newdata.columns.get_loc("f1")] = (
+        "1001" if dtype == "string" else 1001
+    )
+    first_spec = matrices[0].model_spec["fe"]
+    second_spec = matrices[1].model_spec["fe"]
+    first_prediction = first_spec.get_model_matrix(
+        newdata, context=FORMULAIC_TRANSFORMS
+    )
+    second_prediction = second_spec.get_model_matrix(
+        newdata, context=FORMULAIC_TRANSFORMS
+    )
+    pd.testing.assert_frame_equal(first_prediction, second_prediction)
+    saved_cache = {
+        key: entry[1][FIXED_EFFECT_ENCODING].copy(deep=True)
+        for key, entry in cache._entries.items()
+    }
+    for key in first_spec.transform_state:
+        state_a = first_spec.transform_state[key][FIXED_EFFECT_ENCODING]
+        state_b = second_spec.transform_state[key][FIXED_EFFECT_ENCODING]
+        assert state_a is not state_b
+        saved = state_b.copy(deep=True)
+        state_a.iloc[0, -1] = -100
+        pd.testing.assert_frame_equal(state_b, saved)
+    for key, saved in saved_cache.items():
+        pd.testing.assert_frame_equal(
+            cache._entries[key][1][FIXED_EFFECT_ENCODING], saved
+        )
+
+
+def test_fe_encoding_cache_expression_fallback_and_lifetime(data):
+    """Evaluated arrays must not collide with a direct column's cache key."""
+    import gc
+    import weakref
+
+    from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
+
+    original = FORMULAIC_TRANSFORMS["__fixed_effect__"]
+    cache = FixedEffectEncodingCache()
+    reference = weakref.ref(cache)
+    with cache.transform(data=data, original=original) as transform:
+        transform(data.f1, _state={})
+        assert len(cache._entries) == 1
+        for value in (
+            data.f1 + 1,
+            data.f1.iloc[::-1].reset_index(drop=True),
+            data.f1.astype("Int64"),
+        ):
+            actual = transform(value, _state={})
+            expected = original(value, _state={})
+            pd.testing.assert_series_equal(actual, expected)
+        assert len(cache._entries) == 1
+    del cache
+    gc.collect()
+    assert reference() is None
+    pd.testing.assert_series_equal(
+        transform(data.f1 + 2, _state={}), original(data.f1 + 2, _state={})
+    )
+
+
+def test_fe_encoding_cache_respects_context_override(data):
+    """A user transform is evaluated independently, even for direct FE columns."""
+    from functools import wraps
+
+    from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
+    from pyfixest.estimation.formula.model_matrix import create_model_matrix
+    from pyfixest.estimation.formula.parse import Formula
+
+    original = FORMULAIC_TRANSFORMS["__fixed_effect__"]
+    calls = []
+
+    @wraps(original)
+    def custom(*args, **kwargs):
+        calls.append(args[0].name)
+        return original(*args, **kwargs)
+
+    cache = FixedEffectEncodingCache()
+    for formula in Formula.parse("Y ~ csw(X1, X2) | f1"):
+        create_model_matrix(
+            formula=formula,
+            data=data.copy(),
+            context={"__fixed_effect__": custom},
+            fixed_effect_encoding_cache=cache,
+        )
+    assert calls == ["f1", "f1"]
+    assert cache._entries == {}

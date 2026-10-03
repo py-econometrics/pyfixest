@@ -9,6 +9,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -55,6 +56,8 @@ class Feiv(Feols):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
+    fixed_effect_encoding_cache : FixedEffectEncodingCache or None
+        Internal full-split encoding cache, detached after matrix preparation.
     sample_split : SampleSplit or None
         The variable and value by which the estimation sample was split.
         ``None`` if the model was fit on the entire input data set (minus
@@ -155,6 +158,7 @@ class Feiv(Feols):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
+        fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
@@ -163,6 +167,7 @@ class Feiv(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
+            fixed_effect_encoding_cache=fixed_effect_encoding_cache,
             sample_split=sample_split,
         )
 

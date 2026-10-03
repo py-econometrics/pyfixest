@@ -8,6 +8,7 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
+from pyfixest.estimation.formula.fe_encoding_cache import FixedEffectEncodingCache
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -46,6 +47,8 @@ class ModelEntry:
         The model class to use instead when the call fits a quantile process.
     accepts_preconditioner
         Whether the model can reuse the runner's shared preconditioner cache.
+    accepts_fe_encoding_cache
+        Whether its formula preparation can reuse fixed-effect encodings.
     """
 
     model_cls: ModelFactory
@@ -55,6 +58,7 @@ class ModelEntry:
     # Quantile regression does not absorb fixed effects, so it neither
     # demeans nor shares the runner's preconditioner cache.
     accepts_preconditioner: bool = True
+    accepts_fe_encoding_cache: bool = True
 
 
 MODEL_REGISTRY: dict[EstimationMethod, ModelEntry] = {
@@ -68,6 +72,7 @@ MODEL_REGISTRY: dict[EstimationMethod, ModelEntry] = {
         options_cls=QuantregEstimationOptions,
         quantile_process_model_cls=QuantregMulti,
         accepts_preconditioner=False,
+        accepts_fe_encoding_cache=False,
     ),
 }
 
@@ -254,6 +259,7 @@ def fit_one(
     lookup_demeaned_data: dict[frozenset[int], DemeanedData],
     lookup_preconditioner: dict[frozenset[int], Preconditioner],
     vcov: VcovSpec,
+    fixed_effect_encoding_cache: FixedEffectEncodingCache | None = None,
 ) -> FittedModel:
     """Run the full fit pipeline for one model spec.
 
@@ -278,6 +284,8 @@ def fit_one(
     }
     if entry.accepts_preconditioner:
         model_kwargs["lookup_preconditioner"] = lookup_preconditioner
+    if entry.accepts_fe_encoding_cache:
+        model_kwargs["fixed_effect_encoding_cache"] = fixed_effect_encoding_cache
     if spec.quantile_process is not None:
         # the fan-out itself is not an option of any single fit
         model_kwargs["quantile"] = spec.quantile_process.quantiles

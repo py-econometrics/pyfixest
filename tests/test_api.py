@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -316,10 +318,11 @@ def test_feiv_first_stage_reuses_within_preconditioner():
 )
 @pytest.mark.parametrize("lean", [False, True])
 @pytest.mark.parametrize("store_data", [False, True])
-def test_lean(estimator, kwargs, lean, store_data):
+@pytest.mark.parametrize("multiple", [False, True])
+def test_lean(estimator, kwargs, lean, store_data, multiple):
     data = pf.get_data(model="Fepois")
-    fit = estimator(
-        "Y ~ X1 + X2 | f1",
+    result = estimator(
+        "Y ~ sw(X1, X2) | f1" if multiple else "Y ~ X1 + X2 | f1",
         data=data,
         lean=lean,
         store_data=store_data,
@@ -327,26 +330,29 @@ def test_lean(estimator, kwargs, lean, store_data):
         **kwargs,
     )
 
-    # the storage options survive the cleanup they describe
-    assert fit.options.retention == RetentionPolicy(store_data=store_data, lean=lean)
-    assert hasattr(fit, "_data") == (store_data and not lean)
-    assert hasattr(fit, "model_matrix") == (store_data and not lean)
-    assert hasattr(fit, "fitted_values") == (not lean)
-    if estimator is pf.feols:
-        lean_only_attributes = {
-            "sandwich",
-            "_u_hat",
-            "within_data",
-            "observation_weights",
-        }
-        for attribute in lean_only_attributes:
-            assert hasattr(fit, attribute) is (not lean), attribute
-        if not lean and not store_data:
-            assert np.isfinite(fit.resid()[:3]).all()
-    else:
-        assert not hasattr(fit, "within_data")
-        assert hasattr(fit, "working_state") == (not lean)
-        assert hasattr(fit, "sandwich") == (not lean)
+    for fit in result.to_list() if multiple else [result]:
+        # the storage options survive the cleanup they describe
+        assert fit.options.retention == RetentionPolicy(
+            store_data=store_data, lean=lean
+        )
+        assert hasattr(fit, "_data") == (store_data and not lean)
+        assert hasattr(fit, "model_matrix") == (store_data and not lean)
+        assert hasattr(fit, "fitted_values") == (not lean)
+        if estimator is pf.feols:
+            lean_only_attributes = {
+                "sandwich",
+                "_u_hat",
+                "within_data",
+                "observation_weights",
+            }
+            for attribute in lean_only_attributes:
+                assert hasattr(fit, attribute) is (not lean), attribute
+            if not lean and not store_data:
+                assert np.isfinite(fit.resid()[:3]).all()
+        else:
+            assert not hasattr(fit, "within_data")
+            assert hasattr(fit, "working_state") == (not lean)
+            assert hasattr(fit, "sandwich") == (not lean)
 
 
 def test_duckdb_input():
@@ -447,3 +453,102 @@ def test_context_capture_iv_first_stage(spline_data, context):
         explicit_fit.first_stage.diagnostics.f_stat,
         rtol=1e-12,
     )
+
+
+@pytest.mark.parametrize(
+    "method", ["feols", "iv", "fepois", "gaussian", "logit", "probit"]
+)
+@pytest.mark.parametrize("fsplit", [None, "group"])
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+def test_fe_encoding_cache_runner_scope(method, fsplit, weights_type, monkeypatch):
+    """All absorbing estimators reuse encodings within, never across, splits."""
+    from functools import wraps
+
+    from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
+
+    rng = np.random.default_rng(1124)
+    n = 400
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=n),
+            "x1": rng.normal(size=n),
+            "x2": rng.normal(size=n),
+            "z": rng.normal(size=n),
+            "f1": rng.integers(0, 5, size=n),
+            "f2": rng.integers(0, 3, size=n),
+            "group": np.repeat([0, 1], n // 2),
+            "w": rng.integers(1, 4, n),
+        }
+    )
+    if method == "fepois":
+        data["y"] = rng.poisson(2, n)
+    elif method in {"logit", "probit"}:
+        data["y"] = rng.binomial(1, 0.5, n)
+    data.loc[[1, 201], "x2"] = np.nan
+    original_data = data.copy(deep=True)
+    formula = "y ~ csw(x1, x2) | f1 + f2"
+    if method == "iv":
+        data["endog"] = data.z + rng.normal(size=n)
+        original_data = data.copy(deep=True)
+        formula = "y ~ csw(x1, x2) + [endog ~ z] | f1 + f2"
+    estimator = (
+        pf.feols
+        if method in {"feols", "iv"}
+        else pf.fepois
+        if method == "fepois"
+        else pf.feglm
+    )
+    kwargs = {"weights": "w", "weights_type": weights_type, "vcov": "iid"}
+    if method in {"gaussian", "logit", "probit"}:
+        kwargs["family"] = method
+    calls = []
+    original = FORMULAIC_TRANSFORMS["__fixed_effect__"]
+
+    @wraps(original)
+    def counted(*args, **kwargs):
+        calls.append(tuple(arg.name for arg in args))
+        return original(*args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setitem(FORMULAIC_TRANSFORMS, "__fixed_effect__", counted)
+        models = estimator(formula, data=data, fsplit=fsplit, **kwargs).to_list()
+    # IV diagnostics refit each first stage independently (two extra FE terms per model).
+    expected_per_split = 6 if method == "iv" else 2
+    assert len(calls) == expected_per_split * (1 if fsplit is None else 3)
+    pd.testing.assert_frame_equal(data, original_data)
+    for model in models:
+        split_value = (
+            model.model.sample_split.value
+            if model.model.sample_split is not None
+            else None
+        )
+        sample = (
+            data if split_value not in (0, 1) else data.loc[data.group == split_value]
+        )
+        single = estimator(model.model.formula, data=sample, **kwargs)
+        assert model.sample_info == single.sample_info
+        assert model.coef().index.equals(single.coef().index)
+        # Identical FE codes; iterative demeaning can differ at its stopping tolerance.
+        np.testing.assert_allclose(
+            model.coef(),
+            single.coef(),
+            rtol=1e-9,
+            atol=1e-10,
+            err_msg="cached coefficients",
+        )
+        np.testing.assert_allclose(
+            model.variance_covariance.vcov,
+            single.variance_covariance.vcov,
+            rtol=1e-9,
+            atol=1e-10,
+            err_msg="cached covariance",
+        )
+        assert model._fixed_effect_encoding_cache is None
+        if method == "feols":
+            np.testing.assert_allclose(
+                model.predict(newdata=sample.iloc[10:15]),
+                single.predict(newdata=sample.iloc[10:15]),
+                rtol=1e-8,
+                atol=1e-8,
+                err_msg="cached FE prediction",
+            )
