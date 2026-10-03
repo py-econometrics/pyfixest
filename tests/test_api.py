@@ -387,15 +387,23 @@ def spline_data():
 
 
 @pytest.mark.parametrize(
-    "method,family",
+    "method,family,fixed_effects",
     [
-        ("feols", None),
-        ("feglm", "logit"),
-        ("feglm", "probit"),
-        ("feglm", "gaussian"),
+        *[
+            (method, family, fixed_effects)
+            for method, family in [
+                ("feols", None),
+                ("feglm", "logit"),
+                ("feglm", "probit"),
+                ("feglm", "gaussian"),
+                ("fepois", None),
+            ]
+            for fixed_effects in ["", " | f1 + f2"]
+        ],
+        # quantreg rejects fixed effects
+        ("quantreg", None, ""),
     ],
 )
-@pytest.mark.parametrize("fixed_effects", ["", " | f1 + f2"])
 def test_context_capture(spline_data, method, family, fixed_effects):
     method_kwargs = {"data": spline_data}
     if family:
@@ -423,6 +431,13 @@ def test_context_capture(spline_data, method, family, fixed_effects):
             FactorEvaluationError, match="Unable to evaluate factor `_lspline"
         ):
             pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)
+
+
+def test_fepois_context_excludes_wrapper_scope(spline_data):
+    # `fepois` delegates to `feglm`; `context=0` must capture the caller's
+    # scope, not `fepois`'s own arguments.
+    with pytest.raises(FactorEvaluationError, match="name 'iwls_tol' is not defined"):
+        pf.fepois("Y ~ I(X1 * iwls_tol)", data=spline_data, context=0)
 
 
 @pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])
