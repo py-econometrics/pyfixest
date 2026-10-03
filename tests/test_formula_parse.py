@@ -691,17 +691,28 @@ class TestVaryingSlopeParsing:
             _ = parsed.fixed_effect_specifications
 
     @pytest.mark.parametrize(
-        "expression,parsed_terms",
-        [("f1 + f2", "f1 + f2"), ("f1 - f1", "")],
+        "expression",
+        [
+            "f1 + f2",
+            "f1 - f1",
+            "f1 - f2",
+            "f1 ** 2",
+            "f1 * f2",
+            "f1 / 2",
+            "f1 // 2",
+            "f1 % 2",
+            "+f1",
+            "-f1",
+        ],
     )
-    def test_varying_slope_level_requires_one_term(self, expression, parsed_terms):
+    def test_varying_slope_level_rejects_arithmetic(self, expression):
         parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
 
         with pytest.raises(
             FormulaSyntaxError,
             match=(
-                rf"`{re.escape(expression)}`: expected exactly one formula term, "
-                rf"but parsed `{re.escape(parsed_terms)}`.*`f1\[z\] \+ f2\[z\]`"
+                rf"unsupported fixed-effect level expression `{re.escape(expression)}`.*"
+                r"Arithmetic.*grouping column.*`group\[z\]`"
             ),
         ):
             _ = parsed.fixed_effect_specifications

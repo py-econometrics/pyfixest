@@ -108,6 +108,15 @@ class FixedEffectSpecification:
                 "for example `f1[z1, z2]` (with fixed-effect intercepts) or "
                 "`f1[[z1, z2]]` (without fixed-effect intercepts)."
             )
+        # Formula operators can silently change a Python level expression:
+        # reparsing `f1 - f2` as a formula would leave only `f1`.
+        if isinstance(fixed_effect_level, (ast.BinOp, ast.UnaryOp)):
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: unsupported fixed-effect "
+                f"level expression `{ast.unparse(fixed_effect_level)}`. Arithmetic "
+                "is not supported directly in varying-slope fixed-effect levels. "
+                "Create a grouping column first, for example `group[z]`."
+            )
 
         if isinstance(fixed_effect_slopes, ast.List):
             # Varying slopes without fixed effect: f1[[z1, z2]]
