@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+from rpy2.rinterface_lib.embedded import RRuntimeError
 
 # rpy2 imports
 from rpy2.robjects.packages import importr
@@ -1047,6 +1048,67 @@ def test_single_fit_iv(
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "formula,explicit",
+    [
+        ("Y ~ csw(X1, X2):Z1", ["Y ~ X1:Z1", "Y ~ X1:Z1 + X2:Z1"]),
+        (
+            "Y ~ csw0(X1, X2):Z1",
+            ["Y ~ Z1", "Y ~ X1:Z1", "Y ~ X1:Z1 + X2:Z1"],
+        ),
+        (
+            "Y ~ csw0(1 + X1, X2):Z1",
+            ["Y ~ Z1", "Y ~ Z1 + X1:Z1", "Y ~ Z1 + X1:Z1 + X2:Z1"],
+        ),
+        (
+            "Y ~ csw(X1, X2)*Z1",
+            ["Y ~ X1*Z1", "Y ~ X1 + X2 + Z1 + X1:Z1 + X2:Z1"],
+        ),
+        (
+            "Y ~ X1 + X2 + Z1 - csw(X1, X2)",
+            ["Y ~ X2 + Z1", "Y ~ Z1"],
+        ),
+        (
+            "Y ~ X1 | csw(f1, f2):f3",
+            ["Y ~ X1 | f1^f3", "Y ~ X1 | f1^f3 + f2^f3"],
+        ),
+    ],
+)
+def test_grouped_stepwise_extension(data_feols, formula, explicit):
+    """Extend fixest 0.14.0 shorthand while matching explicit model estimates."""
+    if formula == "Y ~ csw(X1, X2):Z1":
+        with pytest.raises(RRuntimeError, match="cannot combine stepwise functions"):
+            fixest.feols(ro.Formula(formula), data=data_feols)
+
+    models = pf.feols(formula, data=data_feols).to_list()
+    for model, reference in zip(models, explicit, strict=True):
+        r_model = fixest.feols(ro.Formula(reference), data=data_feols)
+        ro.globalenv[".stepwise.model"] = r_model
+        names = list(ro.r("names(coef(.stepwise.model))"))
+        names = ["Intercept" if name == "(Intercept)" else name for name in names]
+        # R can label X2:Z1 as Z1:X2; align the equivalent interaction names.
+        names = [
+            name if name in model.coef().index else ":".join(reversed(name.split(":")))
+            for name in names
+        ]
+        assert set(model.coef().index) == set(names)
+        np.testing.assert_allclose(
+            model.coef().loc[names],
+            np.array(r_model.rx2("coefficients")),
+            rtol=rtol,
+            atol=atol,
+            err_msg="Grouped stepwise coefficients differ",
+        )
+        np.testing.assert_allclose(
+            model.se().loc[names],
+            np.array(r_model.rx2("se")),
+            rtol=rtol,
+            atol=atol,
+            err_msg="Grouped stepwise standard errors differ",
+        )
 
 
 @pytest.mark.against_r_core

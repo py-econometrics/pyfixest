@@ -313,7 +313,8 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         arguments = ["1", *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
-        formula.replace(multiple_estimation_call, argument) for argument in arguments
+        formula.replace(multiple_estimation_call, f"({argument})")
+        for argument in arguments
     ]
 
 
