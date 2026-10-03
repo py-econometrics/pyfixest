@@ -565,6 +565,8 @@ class TestVaryingSlopeParsing:
             ("f1:f2", [("f1:f2", True, ())]),
             ("f1[z]", [("f1", True, ("z",))]),
             ("f1[z1, z2]", [("f1", True, ("z1", "z2"))]),
+            ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
+            ("f1[[z]]", [("f1", False, ("z",))]),
             ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
             ("f1:f2[z]", [("f1:f2", True, ("z",))]),
             ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
@@ -585,6 +587,13 @@ class TestVaryingSlopeParsing:
             ("f1[z1**2, z2 + 1]", [("f1", True, ("z1 ** 2", "z2 + 1"))]),
             ("f1[[z1**2, z2 + 1]]", [("f1", False, ("z1 ** 2", "z2 + 1"))]),
             ("f1:f2[z**2]", [("f1:f2", True, ("z ** 2",))]),
+            ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z // 2]", [("f1", True, ("z // 2",))]),
+            ("f1[z % 2]", [("f1", True, ("z % 2",))]),
+            (
+                'f1[transform(z, mode="scale", center=True)]',
+                [("f1", True, ("transform(z, mode='scale', center=True)",))],
+            ),
         ],
     )
     def test_fixed_effect_specs(self, fixed_effects, expected):
@@ -695,6 +704,60 @@ class TestVaryingSlopeParsing:
                 rf"but parsed `{re.escape(parsed_terms)}`.*`f1\[z\] \+ f2\[z\]`"
             ),
         ):
+            _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        [
+            "f1[z1:z2]",
+            "f1[:]",
+            "f1[::2]",
+            "f1[z, z1:z2]",
+            "f1[0]",
+            'f1["z"]',
+            "f1[[0]]",
+            "f1[z, 0]",
+            'f1[[z, "z"]]',
+            "f1[True]",
+            "f1[None]",
+            "f1[...]",
+            "f1[-1]",
+            "f1[1 + 2]",
+            "f1[z[0]]",
+            "f1[[[z]]]",
+            "f1[[(z1, z2)]]",
+            "f1[{z}]",
+            "f1[{'z': z}]",
+            "f1[[x for x in z]]",
+            "f1[(x for x in z)]",
+            "f1[z if flag else z2]",
+            "f1[z > 0]",
+            "f1[z and z2]",
+            "f1[z & z2]",
+            "f1[~z]",
+            "f1[(z := z2)]",
+            "f1[(lambda x: x)(z)]",
+            "f1[log(z[0])]",
+            "f1[log(*z)]",
+            "f1[transform(z, **options)]",
+        ],
+    )
+    def test_unsupported_slope_expressions(self, fixed_effects):
+        # Exercise the complete Python grammar directly: the legacy IV
+        # preprocessor treats `~` in a formula as an IV separator.
+        term = Term([Factor(fixed_effects, eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Invalid fixed-effect term.*unsupported slope expression.*Slopes must be.*`f1\[z\]`",
+        ):
+            FixedEffectSpecification.from_term(term)
+
+    @pytest.mark.parametrize("slope", ["X1:X2", "0", '"X1"'])
+    def test_unsupported_slopes_in_formula(self, slope):
+        parsed = Formula.parse(f"Y ~ X1 | f1[{slope}]")[0]
+
+        with pytest.raises(FormulaSyntaxError, match="unsupported slope expression"):
             _ = parsed.fixed_effect_specifications
 
     def test_invalid_python_factor_reports_expression_and_syntax(self):

@@ -67,6 +67,8 @@ class FixedEffectSpecification:
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
         # A fixed-effect term can have multiple factors if it represents interactions
         # For example f1:f2[z] has two factors: `(f1, f2[z])`
+
+
         varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
         for position, factor in enumerate(term.factors):
             factor_expression = _factor_ast(factor)
@@ -126,6 +128,15 @@ class FixedEffectSpecification:
                 "specify at least one slope, for example `f1[z]` or `f1[[z]]`. "
                 "For an ordinary fixed effect without slopes, use `f1`."
             )
+        for node in slope_nodes:
+            if not _is_slope_expression(node):
+                raise FormulaSyntaxError(
+                    f"Invalid fixed-effect term `{term}`: unsupported slope "
+                    f"expression `{ast.unparse(node)}`. Slopes must be column "
+                    "names, arithmetic expressions, or transform calls, for "
+                    "example `f1[z]`, `f1[z**2]`, or `f1[[np.log(z)]]`. "
+                    "Separate multiple slopes with commas."
+                )
         return cls(
             levels=Term(term.factors[:-1] + _term_from_ast(fixed_effect_level).factors),
             intercept=intercept,
@@ -133,6 +144,45 @@ class FixedEffectSpecification:
                 _term_from_ast(node, preserve_arithmetic=True) for node in slope_nodes
             ),
         )
+
+
+def _is_slope_expression(node: ast.AST) -> bool:
+    """Accept names, dotted names, calls, and arithmetic as slope expressions.
+
+    Scalar literals are allowed inside expressions (such as `z / 2` or
+    transform keyword arguments), but a slope must reference a name. Only
+    `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-` are supported.
+    Containers, indexing, slices, comparisons, comprehensions, and argument
+    unpacking are excluded, including when nested inside a transform.
+    """
+    supported_nodes = (
+        ast.Name,
+        ast.Attribute,
+        ast.Call,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Constant,
+        ast.keyword,
+        ast.Load,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.FloorDiv,
+        ast.Mod,
+        ast.Pow,
+        ast.UAdd,
+        ast.USub,
+    )
+    nodes = tuple(ast.walk(node))
+    return (
+        not isinstance(node, ast.Constant)
+        and any(isinstance(child, ast.Name) for child in nodes)
+        and all(isinstance(child, supported_nodes) for child in nodes)
+        and all(
+            child.arg is not None for child in nodes if isinstance(child, ast.keyword)
+        )
+    )
 
 
 def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term:
@@ -161,6 +211,7 @@ def _factor_ast(factor: Factor) -> ast.expr | None:
     """Return the AST for a Python-evaluated Formulaic factor."""
     # Factor must encoded as Python expression by formulaic
     # (because `f1[z]` is Python syntax)
+
     if not is_python_expression(factor):
         return None
     try:
