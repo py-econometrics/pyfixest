@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import itertools
 from collections.abc import Iterator
@@ -61,7 +63,7 @@ class FixedEffectSpecification:
     slopes: tuple[Term, ...] = ()
 
     @classmethod
-    def from_term(cls, term: Term) -> "FixedEffectSpecification":
+    def from_term(cls, term: Term) -> FixedEffectSpecification:
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
         # A fixed-effect term can have multiple factors if it represents interactions
         # For example f1:f2[z] has two factors: `(f1, f2[z])`
@@ -119,14 +121,23 @@ class FixedEffectSpecification:
         return cls(
             levels=Term(term.factors[:-1] + _term_from_ast(fixed_effect_level).factors),
             intercept=intercept,
-            slopes=tuple(_term_from_ast(node) for node in slope_nodes),
+            slopes=tuple(
+                _term_from_ast(node, preserve_arithmetic=True) for node in slope_nodes
+            ),
         )
 
 
-def _term_from_ast(node: ast.expr) -> Term:
+def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term:
     """Parse one extracted Python expression as one Formulaic term."""
     expression = ast.unparse(node)
-    formula = formulaic.Formula(expression, _parser=_PARSER_NO_INTERCEPT)
+    # Slopes are evaluated expressions: formula operators would silently turn
+    # `z**2` into `z`, for example. Keep bare names as ordinary column lookups.
+    formula_expression = (
+        "{" + expression + "}"
+        if preserve_arithmetic and not isinstance(node, ast.Name)
+        else expression
+    )
+    formula = formulaic.Formula(formula_expression, _parser=_PARSER_NO_INTERCEPT)
     if not isinstance(formula, formulaic.formula.SimpleFormula) or len(formula) != 1:
         raise FormulaSyntaxError(
             f"`{expression}` is not valid here. Each fixed-effect level and slope "
@@ -368,7 +379,7 @@ class Formula:
         return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
 
     @classmethod
-    def parse(cls, formula: str) -> list["Formula"]:
+    def parse(cls, formula: str) -> list[Formula]:
         """
         Parse fixest-style formula. In case of multiple estimation syntax,
         returns a list of multiple regression formulas.
@@ -380,7 +391,7 @@ class Formula:
         ]
 
     @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list["Formula"]]:
+    def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:
         """Group parsed formulas into dictionary keyed by fixed effects."""
         formulas = cls.parse(formula)
         result: dict[str | None, list[Formula]] = {}
