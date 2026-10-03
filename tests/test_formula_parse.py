@@ -46,6 +46,12 @@ class TestMultipleEstimationExpansion:
             # No multiple estimation
             ("Y ~ X1", ["Y ~ X1"]),
             ("Y ~ X1 + X2", ["Y ~ X1 + X2"]),
+            ("Y ~ sw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ csw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ sw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ csw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ X1 | sw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            ("Y ~ X1 | csw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
             (
                 "Y ~ csw(X1, X2):Z1",
                 ["Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
@@ -635,7 +641,9 @@ class TestValidation:
     )
     def test_extra_parens_in_multiple_estimation(self, formula):
         """sw((a, b)) should error — extra parens swallow the separator."""
-        with pytest.raises(FormulaSyntaxError, match="at least 2 arguments"):
+        with pytest.raises(
+            formulaic.errors.FormulaSyntaxError, match="Unknown operator ','"
+        ):
             Formula.parse(formula)
 
 
@@ -648,6 +656,12 @@ class TestValidation:
     "formula,expected_n_models",
     [
         ("Y ~ X1", 1),
+        ("Y ~ sw(X1)", 1),
+        ("Y ~ csw(X1)", 1),
+        ("Y ~ sw0(X1)", 2),
+        ("Y ~ csw0(X1)", 2),
+        ("Y ~ X1 | sw0(f1)", 2),
+        ("Y ~ X1 | csw0(f1)", 2),
         ("Y ~ csw(X1, X2):Z1", 2),
         ("Y ~ csw0(X1, X2):Z1", 3),
         ("Y ~ csw0(1 + X1, X2):Z1", 3),
