@@ -107,6 +107,19 @@ website:
       - reference/core.demean.Preconditioner.qmd
       section: Demeaning
     - contents:
+      - reference/errors.PyfixestError.qmd
+      - reference/errors.FormulaSyntaxError.qmd
+      - reference/errors.EndogVarsAsCovarsError.qmd
+      - reference/errors.InstrumentsAsCovarsError.qmd
+      - reference/errors.UnderDeterminedIVError.qmd
+      - reference/errors.DepvarIsNotNumericError.qmd
+      - reference/errors.VcovTypeNotSupportedError.qmd
+      - reference/errors.NanInClusterVarError.qmd
+      - reference/errors.NonConvergenceError.qmd
+      - reference/errors.EmptyVcovError.qmd
+      - reference/errors.MissingModelDataError.qmd
+      section: Errors
+    - contents:
       - reference/core.detect_singletons.detect_singletons.qmd
       - reference/utils.utils.ssc.qmd
       - reference/utils.utils.Ssc.qmd

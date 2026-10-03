@@ -14,6 +14,7 @@ from formulaic.parser import DefaultFormulaParser
 from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
+from pyfixest.errors import DepvarIsNotNumericError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
@@ -160,7 +161,7 @@ class ModelMatrix:
 
     def _process(self, drop_singletons: bool = False) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
-            raise TypeError("The dependent variable must be numeric.")
+            raise DepvarIsNotNumericError("The dependent variable must be numeric.")
         elif (
             self._dependent_column_names is None
             or len(self._dependent_column_names) != 1

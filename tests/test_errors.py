@@ -9,6 +9,7 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
+    DepvarIsNotNumericError,
     EndogVarsAsCovarsError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
@@ -232,8 +233,10 @@ def test_depvar_numeric():
     data["Y"] = data["Y"].astype("str")
     data["Y"] = pd.Categorical(data["Y"])
 
-    with pytest.raises(TypeError):
+    with pytest.raises(DepvarIsNotNumericError, match="must be numeric") as excinfo:
         feols(fml="Y ~ X1", data=data)
+    # Callers catching the previously raised built-in keep working.
+    assert isinstance(excinfo.value, TypeError)
 
 
 @pytest.mark.parametrize(
@@ -274,8 +277,10 @@ def test_iv_errors():
     data = get_data()
 
     # under determined
-    with pytest.raises(FormulaSyntaxError):
+    with pytest.raises(FormulaSyntaxError) as excinfo:
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
+    # Invalid-input errors are also ValueErrors, like pyfixest's other ones.
+    assert isinstance(excinfo.value, ValueError)
     with pytest.raises(UnderDeterminedIVError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
     # instrument specified as covariate

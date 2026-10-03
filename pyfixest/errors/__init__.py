@@ -1,87 +1,80 @@
-class FixedEffectInteractionError(Exception):  # noqa: D101
-    pass
+"""Exception classes raised by pyfixest."""
+
+from __future__ import annotations
 
 
-class CovariateInteractionError(Exception):  # noqa: D101
-    pass
+class PyfixestError(Exception):
+    """
+    Base class of the exceptions defined in `pyfixest.errors`.
+
+    Examples
+    --------
+    ```{python}
+    import pandas as pd
+    import pyfixest as pf
+    from pyfixest.errors import PyfixestError
+
+    data = pf.get_data()
+    data["Y"] = pd.Categorical(data["Y"].astype(str))
+
+    try:
+        pf.feols("Y ~ X1", data=data)
+    except PyfixestError as error:
+        print(f"{type(error).__name__}: {error}")
+    ```
+    """
 
 
-class DuplicateKeyError(Exception):  # noqa: D101
-    pass
+class FormulaSyntaxError(PyfixestError, ValueError):
+    """The formula is not valid fixest formula syntax."""
 
 
-class EndogVarsAsCovarsError(Exception):  # noqa: D101
-    pass
+class EndogVarsAsCovarsError(PyfixestError, ValueError):
+    """An endogenous variable also appears as a covariate."""
 
 
-class InstrumentsAsCovarsError(Exception):  # noqa: D101
-    pass
+class InstrumentsAsCovarsError(PyfixestError, ValueError):
+    """An instrument also appears as a covariate."""
 
 
-class UnderDeterminedIVError(Exception):  # noqa: D101
-    pass
+class UnderDeterminedIVError(PyfixestError, ValueError):
+    """The IV model has fewer instruments than endogenous variables."""
 
 
-class UnsupportedMultipleEstimationSyntax(Exception):  # noqa: D101
-    pass
+class DepvarIsNotNumericError(PyfixestError, TypeError):
+    """The dependent variable is not numeric."""
 
 
-class VcovTypeNotSupportedError(Exception):  # noqa: D101
-    pass
+class VcovTypeNotSupportedError(PyfixestError):
+    """The model does not support the requested variance-covariance estimator."""
 
 
-class NanInClusterVarError(Exception):  # noqa: D101
-    pass
+class NanInClusterVarError(PyfixestError, ValueError):
+    """A cluster variable contains missing values."""
 
 
-class DepvarIsNotNumericError(Exception):  # noqa: D101
-    pass
+class NonConvergenceError(PyfixestError):
+    """An iterative estimation algorithm did not converge."""
 
 
-class NonConvergenceError(Exception):  # noqa: D101
-    pass
+class EmptyVcovError(PyfixestError):
+    """The model has no variance-covariance matrix, e.g. because it has no coefficients."""
 
 
-class MatrixNotFullRankError(Exception):  # noqa: D101
-    pass
-
-
-class EmptyDesignMatrixError(Exception):  # noqa: D101
-    pass
-
-
-class FeatureDeprecationError(Exception):  # noqa: D101
-    pass
-
-
-class EmptyVcovError(Exception):  # noqa: D101
-    pass
-
-
-class MissingModelDataError(RuntimeError):
+class MissingModelDataError(PyfixestError, RuntimeError):
     """Required model state was removed by fitted-model storage options."""
 
 
-class FormulaSyntaxError(Exception):  # noqa: D101
-    pass
-
-
 __all__ = [
-    "CovariateInteractionError",
     "DepvarIsNotNumericError",
-    "DuplicateKeyError",
-    "EmptyDesignMatrixError",
     "EmptyVcovError",
     "EndogVarsAsCovarsError",
-    "FeatureDeprecationError",
-    "FixedEffectInteractionError",
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
-    "MatrixNotFullRankError",
     "MissingModelDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
+    "PyfixestError",
     "UnderDeterminedIVError",
-    "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",
 ]
