@@ -63,6 +63,14 @@ class TestMultipleEstimationExpansion:
                 ["Y ~ (X1)*Z1", "Y ~ (X1 + X2)*Z1"],
             ),
             (
+                "Y ~ f3*sw(X1, X2)",
+                ["Y ~ f3*(X1)", "Y ~ f3*(X2)"],
+            ),
+            (
+                "Y ~ Z1*csw(X1, X2)",
+                ["Y ~ Z1*(X1)", "Y ~ Z1*(X1 + X2)"],
+            ),
+            (
                 "Y ~ X1 + X2 + Z1 - csw(X1, X2)",
                 ["Y ~ X1 + X2 + Z1 - (X1)", "Y ~ X1 + X2 + Z1 - (X1 + X2)"],
             ),
@@ -640,6 +648,14 @@ class TestValidation:
     "formula,expected_n_models",
     [
         ("Y ~ X1", 1),
+        ("Y ~ csw(X1, X2):Z1", 2),
+        ("Y ~ csw0(X1, X2):Z1", 3),
+        ("Y ~ csw0(1 + X1, X2):Z1", 3),
+        ("Y ~ csw(X1, X2)*Z1", 2),
+        ("Y ~ f3*sw(X1, X2)", 2),
+        ("Y ~ Z1*csw(X1, X2)", 2),
+        ("Y ~ X1 + X2 + Z1 - csw(X1, X2)", 2),
+        ("Y ~ X1 | csw(f1, f2):f3", 2),
         ("Y ~ sw(X1, X2)", 2),
         ("Y ~ csw(X1, X2)", 2),
         ("Y ~ sw0(X1, X2)", 3),
