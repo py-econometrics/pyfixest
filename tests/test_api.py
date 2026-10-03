@@ -440,6 +440,30 @@ def test_fepois_context_excludes_wrapper_scope(spline_data):
         pf.fepois("Y ~ I(X1 * iwls_tol)", data=spline_data, context=0)
 
 
+def test_fepois_context_matches_feglm_poisson(spline_data):
+    # A transform local to the caller resolves through `fepois` as through
+    # `feglm(family="poisson")`, for `context=0` and for a positive offset.
+    def _local_double(x):
+        return 2 * x
+
+    def _fit_one_frame_down(estimator, **kwargs):
+        return estimator(
+            "Y ~ _local_double(X1) | f1", data=spline_data, context=1, **kwargs
+        )
+
+    reference = pf.feglm(
+        "Y ~ _local_double(X1) | f1", data=spline_data, family="poisson", context=0
+    )
+    fits = [
+        pf.fepois("Y ~ _local_double(X1) | f1", data=spline_data, context=0),
+        _fit_one_frame_down(pf.fepois),
+        _fit_one_frame_down(pf.feglm, family="poisson"),
+    ]
+    for fit in fits:
+        np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-12)
+        np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-12)
+
+
 @pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])
 def test_context_capture_iv_first_stage(spline_data, context):
     # The first stage is refitted from its own formula, so it needs the

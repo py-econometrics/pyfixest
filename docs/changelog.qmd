@@ -344,6 +344,12 @@ We also removed:
 - `LsmrDemeaner(backend="torch")` now raises an `ImportError` naming the
   `pyfixest[torch]` extra when PyTorch is not installed, instead of silently
   demeaning with the Rust MAP backend.
+- `fepois()` with an integer `context` now captures the variables and functions
+  of the caller's frame, as `feols()` and `feglm()` do. Before, it resolved the
+  frame offset inside its own call to `feglm()`, so `context=0` failed to find
+  a transform defined by the user and instead exposed `fepois()`'s own
+  arguments, such as `iwls_tol`, to the formula
+  ([#1656](https://github.com/py-econometrics/pyfixest/issues/1656)).
 
 
 ## PyFixest 0.60.0
