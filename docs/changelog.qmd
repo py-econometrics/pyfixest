@@ -1,8 +1,8 @@
 ---
+title: Changelog
+description: "Release notes for every PyFixest version, covering new features, behavior changes, deprecations, and bug fixes."
 freeze: auto
 ---
-
-# Changelog
 
 ```{python}
 import pyfixest as pf
@@ -344,6 +344,11 @@ We also removed:
 - `LsmrDemeaner(backend="torch")` now raises an `ImportError` naming the
   `pyfixest[torch]` extra when PyTorch is not installed, instead of silently
   demeaning with the Rust MAP backend.
+
+### Documentation
+
+- Every documentation page now carries a title, which names it in `llms.txt`,
+  and a one-sentence description, which the listing pages and page metadata use.
 
 
 ## PyFixest 0.60.0
