@@ -11,6 +11,7 @@ from scipy.stats import norm
 from pyfixest.estimation import feols
 from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.utils.dev_utils import _find_stack_level
 
 from .did2s import DID
 
@@ -158,7 +159,9 @@ class SaturatedEventStudy(DID):
 
         if display_warning:
             warnings.warn(
-                "The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter."
+                "The SaturatedEventStudyClass is currently in beta. Please report any issues you may encounter.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
 
     def estimate(self) -> Feols:

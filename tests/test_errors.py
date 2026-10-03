@@ -1,3 +1,5 @@
+import re
+import sys
 from functools import partial
 
 import numpy as np
@@ -561,7 +563,7 @@ def test_errors_ccv():
 
     # error when D is not binary
     fit = feols("Y ~ X1", data=data, vcov={"CRV1": "f1"})
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="must be binary with values 0 and 1"):
         fit.ccv(treatment="X1", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when fixed effects in estimation
@@ -609,6 +611,37 @@ def test_errors_ccv():
         NotImplementedError, match=r"not supported for models of type 'feols'"
     ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
+
+
+def _clustered_fit(data):
+    data = data.dropna().copy()
+    data["cluster"] = data["f1"] % 3
+    return feols("Y ~ X1", data=data, vcov={"CRV1": "cluster"})
+
+
+def _binary_treatment_fit(data):
+    data = data.dropna().copy()
+    data["D"] = np.random.default_rng(929).integers(0, 2, len(data)).astype(float)
+    return feols("Y ~ D", data=data)
+
+
+@pytest.mark.parametrize(
+    "kwargs,error,match",
+    [
+        ({"treatment": 1}, TypeError, "treatment must be a string"),
+        ({"cluster": 1}, TypeError, "cluster must be a string or None"),
+        ({"seed": 1.5}, TypeError, "seed must be an integer or None"),
+        ({"n_splits": 2.0}, TypeError, "n_splits must be an integer"),
+        ({"n_splits": 0}, ValueError, "n_splits must be a positive integer"),
+        ({"pk": "a"}, TypeError, "pk must be a number"),
+        ({"pk": 1.5}, ValueError, "pk must be between 0 and 1"),
+        ({"qk": -0.1}, ValueError, "qk must be between 0 and 1"),
+    ],
+)
+def test_ccv_argument_validation(data, kwargs, error, match):
+    fit = _binary_treatment_fit(data)
+    with pytest.raises(error, match=match):
+        fit.ccv(**{"treatment": "D", "cluster": "f1", "seed": 1, **kwargs})
 
 
 def test_weighted_update_is_explicitly_unsupported():
@@ -765,8 +798,11 @@ def test_ritest_error(data):
     ):
         fit.ritest(resampvar="X1", reps=1000, type="a")
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError, match="reps must be an integer"):
         fit.ritest(resampvar="X1", reps=100.4)
+
+    with pytest.raises(ValueError, match="reps must be a positive integer"):
+        fit.ritest(resampvar="X1", reps=0)
 
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
@@ -789,6 +825,140 @@ def test_ritest_error(data):
         fit = pf.feols("Y ~ X1", data=data)
         fit.ritest(resampvar="X1", reps=100)
         fit.plot_ritest()
+
+
+def test_optional_dependency_fallbacks(data, monkeypatch):
+    """Missing optional plotting and bootstrap packages warn or raise, not print."""
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+    fit = pf.feols("Y ~ X1", data=data.dropna())
+
+    monkeypatch.setitem(sys.modules, "lets_plot", None)
+    fit.ritest(resampvar="X1", reps=20, store_ritest_statistics=True)
+    with pytest.warns(UserWarning, match="lets-plot is not installed") as record:
+        fit.plot_ritest()
+    assert record[0].filename == __file__
+
+    monkeypatch.setitem(sys.modules, "wildboottest.wildboottest", None)
+    with pytest.raises(ImportError, match="pip install wildboottest"):
+        fit.wildboottest(param="X1", reps=999, seed=1)
+
+
+@pytest.mark.parametrize(
+    "trigger,category,match",
+    [
+        (
+            lambda d: feols("Y ~ X1 + X2", data=d).wald_test(
+                R=np.array([[1, -1, 0]]), q=np.array([0.0])
+            ),
+            UserWarning,
+            "Distribution changed to chi2",
+        ),
+        (
+            lambda d: _binary_treatment_fit(d).ccv(
+                treatment="D", cluster="f1", n_splits=2, seed=1
+            ),
+            UserWarning,
+            "The initial model was not clustered",
+        ),
+        (
+            lambda d: _binary_treatment_fit(d).ritest(
+                resampvar="D", cluster="f1", reps=10
+            ),
+            UserWarning,
+            "The initial model was not clustered",
+        ),
+        (
+            lambda d: _clustered_fit(d).wildboottest(param="X1", reps=999, seed=1),
+            UserWarning,
+            "setting full_enumeration to True",
+        ),
+        (
+            lambda d: rwolf([_clustered_fit(d)], param="X1", reps=999, seed=1),
+            UserWarning,
+            "setting full_enumeration to True",
+        ),
+        (
+            lambda d: feols("Y ~ X1 + I(2 * X1)", data=d),
+            UserWarning,
+            "dropped due to multicollinearity",
+        ),
+        (
+            lambda d: fepois("Y ~ X1 + I(2 * X1)", data=get_data(model="Fepois")),
+            UserWarning,
+            "dropped due to multicollinearity",
+        ),
+        (
+            lambda d: feols("log(Y) ~ X1", data=d),
+            UserWarning,
+            "rows with infinite values detected",
+        ),
+        (
+            lambda d: fepois(
+                "Y ~ X | f",
+                data=pd.DataFrame(
+                    {
+                        "Y": [0, 0, 0, 1, 2, 3, 0, 4, 1, 2],
+                        "X": [1, 2, 3, 4, 5, 6, 7, 8, 3, 1],
+                        "f": [0, 0, 0, 1, 1, 1, 2, 2, 2, 1],
+                    }
+                ),
+            ),
+            UserWarning,
+            "observations removed because of separation",
+        ),
+        (
+            lambda d: feols("Y + Y2 ~ X1", data=d),
+            DeprecationWarning,
+            "Specifiying multiple dependent variables",
+        ),
+        (
+            lambda d: pf.quantreg("Y ~ X1", data=d.dropna(), quantile=0.5),
+            FutureWarning,
+            "Quantile Regression implementation is experimental",
+        ),
+        (
+            lambda d: feols("Y ~ X1 + X2", data=d.dropna()).decompose(
+                param="X1", only_coef=True
+            ),
+            FutureWarning,
+            "The 'param' argument is deprecated",
+        ),
+        (
+            lambda d: feols("Y ~ 1 | f1", data=d.dropna()).tidy(),
+            UserWarning,
+            "Empty variance-covariance matrix detected",
+        ),
+        (
+            lambda d: pf.coefplot(
+                [feols("Y ~ X1", data=d)],
+                labels={"not_a_coef": "label"},
+                plot_backend="matplotlib",
+            ),
+            UserWarning,
+            "The label key 'not_a_coef' is not in the covariate names",
+        ),
+        (
+            lambda d: pf.coefplot(
+                [feols("Y ~ X1", data=d)],
+                rename_models={"not_a_model": "label"},
+                plot_backend="matplotlib",
+            ),
+            UserWarning,
+            "model names specified in rename_models are not found",
+        ),
+    ],
+)
+def test_warnings_category_and_call_site(data, trigger, category, match):
+    """Warnings carry an explicit category and name the caller's line."""
+    with pytest.warns(category, match=match) as record:
+        trigger(data)
+    matched = [
+        w
+        for w in record
+        if issubclass(w.category, category) and re.search(match, str(w.message))
+    ]
+    assert matched
+    assert {w.filename for w in matched} == {__file__}
 
 
 @pytest.mark.parametrize("estimator", ["feglm", "quantreg"])
@@ -1084,7 +1254,7 @@ def test_gelbach_errors():
         fit.decompose(param="x1", decomp_var="x1")
 
     with pytest.warns(
-        UserWarning,
+        FutureWarning,
         match=r"The 'param' argument is deprecated. Please use 'decomp_var' instead.",
     ):
         fit.decompose(param="x1")
@@ -1319,16 +1489,17 @@ def test_errors_vcov_kwargs(vcov_kwargs, match):
 
 
 @pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
-@pytest.mark.parametrize("key", ["time_id", "panel_id"])
-def test_vcov_kwargs_missing_column_ignored_without_hac(estimator, key):
-    """A HAC column that `vcov` does not use is not checked against the data."""
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "HC1", {"CRV1": "f1"}])
+def test_vcov_kwargs_rejected_without_hac(estimator, vcov):
+    """`vcov_kwargs` is rejected unless `vcov` is NW or DK (issue #1697)."""
     data = pf.get_data()
     data["Y"] = data["Y"].abs()
 
-    fit = estimator("Y ~ X1", data=data, vcov="iid", vcov_kwargs={key: "nope"})
-    expected = estimator("Y ~ X1", data=data, vcov="iid")
-
-    np.testing.assert_allclose(fit.coeftable.se, expected.coeftable.se)
+    with pytest.raises(
+        ValueError,
+        match=r"vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+    ):
+        estimator("Y ~ X1", data=data, vcov=vcov, vcov_kwargs={"lag": 2})
 
 
 def test_errors_hac():
@@ -1509,7 +1680,10 @@ def unsupported_savi_vcov(request):
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
-    with pytest.raises(NotImplementedError, match="supported only for feols"):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"fit\.capabilities\.anytime_valid_inference is False",
+    ):
         unsupported_savi_model.evalue()
 
 
@@ -1630,9 +1804,22 @@ def test_fixest_multi_rejects_savi_tidy_argument():
             ValueError,
             "'lag' must be a non-negative integer",
         ),
-        # malformed kwargs are rejected even where only HAC would read them
+        # malformed kwargs still fail key validation before the NW/DK gate
         ("iid", {"lags": 2}, ValueError, "vcov_kwargs accepts"),
         ("iid", ["lag"], TypeError, "vcov_kwargs must be a dict"),
+        # valid kwargs are rejected unless vcov is NW or DK
+        (
+            "iid",
+            {"lag": 2},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
+        (
+            "hetero",
+            {"time_id": "f1"},
+            ValueError,
+            "vcov_kwargs is only supported with vcov='NW' or vcov='DK'",
+        ),
     ],
 )
 def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):

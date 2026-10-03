@@ -20,7 +20,6 @@ from pyfixest.estimation.internals.retention import RetentionPolicy
 from pyfixest.utils.utils import Ssc
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.api.utils import _AllSampleSentinel
     from pyfixest.estimation.formula.model_matrix import _ModelSpecMapping
     from pyfixest.estimation.formula.parse import Formula
     from pyfixest.estimation.internals.families import InferenceDist
@@ -194,6 +193,25 @@ class QuantregEstimationOptions(EstimationOptions):
     seed: int | None
 
 
+@dataclass(frozen=True)
+class SampleSplit:
+    """The sample one model of a `split` or `fsplit` estimation is fitted on.
+
+    Parameters
+    ----------
+    var : str
+        Name of the `split` or `fsplit` variable by which the estimation
+        sample was split.
+    value : str, int, float, or None
+        Value of `var` the model was fit on. ``None`` for the full-sample
+        fit of an `fsplit` estimation, which keeps every row where `var`
+        is not missing.
+    """
+
+    var: str
+    value: str | int | float | None
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelDescription:
     """What a fitted model estimates: its formula, estimator, and design names.
@@ -223,12 +241,9 @@ class ModelDescription:
         Whether a model with instrumental variables was fitted.
     model_name : str
         Key the model is stored under in a multiple-estimation result.
-    sample_split_var : str or None
-        Name of the `split` or `fsplit` variable, ``None`` for an unsplit fit.
-    sample_split_value : str, int, float, the full-sample marker, or None
-        Value of `sample_split_var` this model was fitted on; ``None`` for an
-        unsplit fit. The full-sample fit of an `fsplit` estimation carries a
-        marker that prints as ``all``.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` for an unsplit fit.
     inference_dist : InferenceDist
         Reference distribution of the coefficient p-values and confidence
         bounds: Student's t for OLS, IV, quantile, and Gaussian GLM fits, the
@@ -261,8 +276,7 @@ class ModelDescription:
     method: str
     is_iv: bool
     model_name: str
-    sample_split_var: str | None
-    sample_split_value: str | int | float | _AllSampleSentinel | None
+    sample_split: SampleSplit | None
     inference_dist: InferenceDist
     depvar: str = ""
     fixed_effects: tuple[str, ...] = ()
@@ -417,6 +431,46 @@ class EstimationSample:
             raise ValueError(
                 "Dropped-row counts must sum to the size of the dropped row index."
             )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FixedEffectCounts:
+    """Level counts of the absorbed fixed effects in the estimation sample.
+
+    Parameters
+    ----------
+    n_levels_by_fe : tuple[int, ...]
+        Number of levels of each fixed effect after sample filtering, in the
+        order of `ModelDescription.fixed_effects`. A fixed effect left with a
+        single level, e.g. by the GLM separation check, still counts.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1 + f2", pf.get_data())
+    counts = fit.fixef_counts
+    counts.n_levels_by_fe, counts.n_fixef, counts.n_levels, counts.fixef_dof
+    ```
+    """
+
+    n_levels_by_fe: tuple[int, ...] = ()
+
+    @property
+    def n_fixef(self) -> int:
+        """Number of fixed effects; ``Y ~ X | f1 + f2`` has two."""
+        return len(self.n_levels_by_fe)
+
+    @property
+    def n_levels(self) -> int:
+        """Levels summed over all fixed effects, ``sum(n_levels_by_fe)``."""
+        return sum(self.n_levels_by_fe)
+
+    @property
+    def fixef_dof(self) -> int:
+        """Degrees of freedom consumed by the fixed effects, ``sum(n_levels_by_fe - 1) + 1``."""
+        return self.n_levels - self.n_fixef + 1 if self.n_levels_by_fe else 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -694,10 +748,17 @@ class VcovSpec:
         supports the parsed estimator is checked by the model.
 
         Raises ``TypeError`` for input of the wrong type and ``ValueError`` for
-        unknown or incomplete values. ``vcov_kwargs`` is validated whenever it
-        is given but only read by ``"NW"`` and ``"DK"``.
+        unknown or incomplete values. ``vcov_kwargs`` is only accepted with
+        ``vcov="NW"`` or ``vcov="DK"``; other estimators reject it.
         """
         lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
+
+        is_hac = isinstance(vcov, str) and vcov in ("NW", "DK")
+        if vcov_kwargs is not None and not is_hac:
+            raise ValueError(
+                "vcov_kwargs is only supported with vcov='NW' or vcov='DK'; "
+                f"got vcov={vcov!r}."
+            )
 
         if isinstance(vcov, dict):
             if len(vcov) != 1 or next(iter(vcov)) not in _VCOV_CLUSTER_KEYS:
@@ -983,12 +1044,15 @@ class WaldTest:
 class Capabilities:
     """Inference and post-estimation features a fitted model supports.
 
-    Each model class publishes one value in its constructor, so a method can
-    reject an unsupported estimator before it reads any estimation state
-    rather than reinterpreting another estimator's arrays.
+    Each model class declares one value, so a method can reject an
+    unsupported estimator before it reads any estimation state rather than
+    reinterpreting another estimator's arrays.
 
     Parameters
     ----------
+    covariance_update : bool
+        Whether post-estimation ``vcov()`` updates are available. ``did2s()``
+        fits require refitting with the desired cluster variable instead.
     crv3_inference : bool
         Whether ``vcov()`` accepts ``"CRV3"``. The jackknife refits the model
         on leave-one-cluster-out samples, so it is restricted to estimators
@@ -1020,6 +1084,13 @@ class Capabilities:
         Sherman-Morrison update of the OLS coefficients. Only ``feols()``
         fits without instruments support it; ``did2s()`` and
         ``event_study()`` fits do not.
+    anytime_valid_inference : bool
+        Whether ``evalue()``, ``pvalue_savi()``, and
+        ``confint(inference_type="savi")``, safe anytime-valid inference, are
+        available. Only ``feols()`` fits without instruments support it;
+        ``did2s()`` and ``event_study()`` fits do not. SAVI additionally
+        requires no weights, no fixed effects, and an iid or
+        heteroskedasticity-robust covariance.
 
     Examples
     --------
@@ -1034,6 +1105,7 @@ class Capabilities:
     ```
     """
 
+    covariance_update: bool
     crv3_inference: bool
     hac_inference: bool
     multiway_clustering: bool
@@ -1044,6 +1116,7 @@ class Capabilities:
     fixed_effect_recovery: bool
     randomization_inference: bool
     sherman_morrison_update: bool
+    anytime_valid_inference: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

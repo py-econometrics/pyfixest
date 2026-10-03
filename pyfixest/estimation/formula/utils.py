@@ -5,6 +5,7 @@ from enum import Enum
 import pandas as pd
 
 from pyfixest.errors import FormulaSyntaxError
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
@@ -106,7 +107,7 @@ def _preprocess_fixed_effect_interactions(formula: str) -> str:
         "throw an error in a future version. "
         f"Instead of `{formula_old}` use `{formula}`",
         DeprecationWarning,
-        stacklevel=2,
+        stacklevel=_find_stack_level(),
     )
     return formula
 
@@ -133,7 +134,7 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
             "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
     return formula
 
@@ -155,6 +156,6 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
             "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
     return formula

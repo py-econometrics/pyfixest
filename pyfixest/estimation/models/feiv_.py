@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -13,13 +13,16 @@ from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     CollinearityCheck,
     EstimationOptions,
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
     ModelDescription,
+    SampleSplit,
     WithinIvData,
     WithinLinearData,
 )
@@ -52,10 +55,10 @@ class Feiv(Feols):
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
@@ -128,6 +131,21 @@ class Feiv(Feols):
     # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
     # Constructor and methods implementation...
     def __init__(
         self,
@@ -137,8 +155,7 @@ class Feiv(Feols):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -146,20 +163,7 @@ class Feiv(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-        )
-
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-            prediction=False,
-            fixed_effect_recovery=False,
-            randomization_inference=False,
-            sherman_morrison_update=False,
+            sample_split=sample_split,
         )
 
     def _publish_model_matrix(self, model_matrix):
@@ -236,6 +240,10 @@ class Feiv(Feols):
         # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a 2SLS fit undefined."""
+        return FitStatistics()
 
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""

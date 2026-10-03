@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import Any
+from typing import Any, ClassVar
 
 import pandas as pd
 
@@ -9,10 +9,15 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
-from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    poisson_fit_statistics,
+)
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     GlmEstimationOptions,
     ModelDescription,
+    SampleSplit,
 )
 from pyfixest.estimation.models.feglm_ import Feglm
 
@@ -69,6 +74,21 @@ class Fepois(Feglm):
     ```
     """
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=True,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=True,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -77,8 +97,7 @@ class Fepois(Feglm):
         options: GlmEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -86,36 +105,21 @@ class Fepois(Feglm):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
             family=POISSON,
-        )
-
-        # Poisson-specific overrides on top of the Feglm-set defaults.
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=True,
-            cluster_causal_variance=False,
-            decomposition=False,
-            randomization_inference=True,
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the Poisson estimation function."""
         return replace(super()._describe_model(**kwargs), method="fepois")
 
-    def get_fit(self) -> None:
-        "Fit via Feglm IRLS, then add the Poisson likelihood measures."
-        super().get_fit()
-        y_orig = self.model_matrix.dependent.to_numpy().flatten()
+    def _fit_statistics(self) -> FitStatistics:
+        "Add the Poisson likelihood measures to the deviance."
         # ``None`` is the allocation-free unweighted path shared with the rest
         # of the estimation core; no vector of ones is materialised.
-        observation_weights = self.observation_weights.values
-        self.fitstat = poisson_fit_statistics(
-            y=y_orig,
+        return poisson_fit_statistics(
+            y=self.model_matrix.dependent.to_numpy().flatten(),
             mu=self.working_state.mu,
-            weights=observation_weights,
-            deviance=self._family.deviance(
-                y_orig, self.working_state.mu, observation_weights
-            ),
+            weights=self.observation_weights.values,
+            deviance=super()._fit_statistics().deviance,
         )

@@ -1,3 +1,5 @@
+import inspect
+import os
 import re
 
 import narwhals.stable.v1 as nw
@@ -6,6 +8,43 @@ import pandas as pd
 from narwhals.typing import IntoDataFrame
 
 DataFrameType = IntoDataFrame
+
+_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os.sep
+
+
+def _find_stack_level() -> int:
+    """
+    Return the `stacklevel` that attributes a warning to the caller of pyfixest.
+
+    Follows the approach of pandas' `find_stack_level`
+    (https://github.com/pandas-dev/pandas/blob/v3.0.1/pandas/util/_exceptions.py#L37-L63),
+    but attributes the warning to the frame past the outermost pyfixest frame.
+
+    Returns
+    -------
+    int
+        The `stacklevel` argument for `warnings.warn`.
+    """
+    frame = inspect.currentframe()
+    outermost_level = 1
+    try:
+        # Level 1 is the function that calls `warnings.warn`.
+        frame = frame.f_back if frame is not None else None
+        level = 1
+        while frame is not None:
+            filename = frame.f_code.co_filename
+            # `warnings.warn` skips import-machinery frames when it counts
+            # `stacklevel`, so they must not count here either.
+            if "importlib" in filename and "_bootstrap" in filename:
+                frame = frame.f_back
+                continue
+            if filename.startswith(_PACKAGE_DIR):
+                outermost_level = level
+            frame = frame.f_back
+            level += 1
+    finally:
+        del frame
+    return outermost_level + 1
 
 
 def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:

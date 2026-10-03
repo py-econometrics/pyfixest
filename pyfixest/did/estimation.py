@@ -47,6 +47,8 @@ def event_study(
         Unit-specific time of initial treatment.
     cluster: Optional[str]
         The name of the cluster variable. If None, defaults to idname.
+        With ``estimator="did2s"``, inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
     xfml : str
         The formula for the covariates.
     estimator : str
@@ -100,15 +102,26 @@ def event_study(
     fit_twfe_saturated.iplot_aggregate()
     ```
     """
-    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
-    assert isinstance(yname, str), "yname must be a string"
-    assert isinstance(idname, str), "idname must be a string"
-    assert isinstance(tname, str), "tname must be a string"
-    assert isinstance(gname, str), "gname must be a string"
-    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
-    assert isinstance(estimator, str), "estimator must be a string"
-    assert isinstance(att, bool), "att must be a boolean"
-    assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be a pandas DataFrame.")
+    for name, value in (
+        ("yname", yname),
+        ("idname", idname),
+        ("tname", tname),
+        ("gname", gname),
+    ):
+        if not isinstance(value, str):
+            raise TypeError(f"{name} must be a string.")
+    if not (isinstance(xfml, str) or xfml is None):
+        raise TypeError("xfml must be a string or None.")
+    if not isinstance(estimator, str):
+        raise TypeError(
+            "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
+        )
+    if not isinstance(att, bool):
+        raise TypeError("att must be a boolean.")
+    if not (isinstance(cluster, str) or cluster is None):
+        raise TypeError("cluster must be a string or None.")
 
     cluster = idname if cluster is None else cluster
 
@@ -146,11 +159,12 @@ def event_study(
 
         vcov = fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
-        # ritest() and update() have not supported event-study fits.
+        # ritest(), update(), and SAVI have not supported event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            anytime_valid_inference=False,
         )
 
     elif estimator == "saturated":
@@ -168,11 +182,12 @@ def event_study(
         vcov = fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
-        # ritest() and update() have not supported event-study fits.
+        # ritest(), update(), and SAVI have not supported event-study fits.
         fit.capabilities = replace(
             fit.capabilities,
             randomization_inference=False,
             sherman_morrison_update=False,
+            anytime_valid_inference=False,
         )
         fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
         test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
@@ -217,6 +232,8 @@ def did2s(
         The name of the treatment variable.
     cluster : str
         The name of the cluster variable.
+        Inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
 
     Returns
     -------
@@ -273,8 +290,10 @@ def did2s(
     """
     first_stage = first_stage.replace(" ", "")
     second_stage = second_stage.replace(" ", "")
-    assert first_stage[0] == "~", "First stage must start with ~"
-    assert second_stage[0] == "~", "Second stage must start with ~"
+    if not first_stage.startswith("~"):
+        raise ValueError(f"first_stage must start with '~', got '{first_stage}'.")
+    if not second_stage.startswith("~"):
+        raise ValueError(f"second_stage must start with '~', got '{second_stage}'.")
 
     # assert that there is no 0, -1 or - 1 in the second stage formula
     if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):
@@ -323,6 +342,9 @@ def _mark_as_did2s(fit: Feols) -> None:
     fit.model = replace(fit.model, method="did2s")
     fit.capabilities = replace(
         fit.capabilities,
+        covariance_update=False,
+        hac_inference=False,
+        multiway_clustering=False,
         wildboottest=False,
         cluster_causal_variance=False,
         decomposition=False,
@@ -331,6 +353,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         randomization_inference=False,
         sherman_morrison_update=False,
         crv3_inference=False,
+        anytime_valid_inference=False,
     )
 
 

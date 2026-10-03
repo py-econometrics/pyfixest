@@ -127,41 +127,13 @@ def _run_with_deprecated_kwargs(estimator_name, **kwargs):
 _DEPRECATION_ESTIMATORS = ["feols", "fepois", "feglm"]
 
 
-def test_demeaner_backend_cupy_emits_deprecation_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
-        _warn_if_deprecated_demeaner_backend(pf.LsmrDemeaner(backend="cupy"))
-    assert any("torch', device='cuda" in str(r.message) for r in rec)
-    assert any("default within backend" in str(r.message) for r in rec)
-
-
-def test_demeaner_backend_cupy_cuda_emits_gpu_replacement_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(DeprecationWarning, match=r"`cupy` LSMR demeaner backend") as rec:
-        _warn_if_deprecated_demeaner_backend(
-            pf.LsmrDemeaner(backend="cupy", device="cuda")
-        )
-    assert any("torch', device='cuda" in str(r.message) for r in rec)
-
-
-def test_demeaner_backend_scipy_emits_deprecation_warning():
-    from pyfixest.estimation.internals.demeaner_options import (
-        _warn_if_deprecated_demeaner_backend,
-    )
-
-    with pytest.warns(
-        DeprecationWarning, match=r"`scipy` LSMR demeaner backend"
-    ) as rec:
-        _warn_if_deprecated_demeaner_backend(
-            pf.LsmrDemeaner(backend="cupy", device="cpu")
-        )
-    assert any("default within backend" in str(r.message) for r in rec)
+@pytest.mark.parametrize("removed_backend", ["cupy", "scipy"])
+def test_lsmr_demeaner_rejects_removed_backends(removed_backend):
+    """Removed LSMR backends fail at construction and name the allowed values."""
+    with pytest.raises(
+        ValueError, match=r"`backend` must be one of \('within', 'torch'\)"
+    ):
+        pf.LsmrDemeaner(backend=removed_backend)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

@@ -19,11 +19,12 @@ if TYPE_CHECKING:
         VarianceCovariance,
         WithinLinearData,
     )
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
 )
-from pyfixest.utils.dev_utils import _select_coefnames_and_indices
+from pyfixest.utils.dev_utils import _find_stack_level, _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -142,7 +143,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     fitstat: "FitStatistics"
     _coefnames: list[str]
     model: "ModelDescription"
-    _k_fe: pd.Series
     _k: int
 
     @property
@@ -161,7 +161,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return self.variance_covariance.vcov
 
     def evalue(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI e-values.
@@ -197,12 +197,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.evalue()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _evalue
+        from pyfixest.estimation.post_estimation.savi import (
+            _evalue,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="evalue")
         return _evalue(model=self, mixture_precision=mixture_precision)
 
     def pvalue_savi(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI sequential p-values.
@@ -225,8 +229,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.pvalue_savi()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+        from pyfixest.estimation.post_estimation.savi import (
+            _pvalue_savi,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="pvalue_savi")
         return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
@@ -269,10 +277,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
             alpha=alpha,
         )
-
-    def _n_fixef_coefficients(self) -> int:
-        """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self.model.has_fixef else 0
 
     def tidy(
         self,
@@ -337,6 +341,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             warnings.warn(
                 "Empty variance-covariance matrix detected",
                 UserWarning,
+                stacklevel=_find_stack_level(),
             )
             # Fixed-effects-only model: no coefficients, so no inference rows.
             se = tstat = pvalue = np.empty(0)
@@ -351,11 +356,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{lb * 100:.1f}%": conf_int[0],
             f"{ub * 100:.1f}%": conf_int[1],
         }
-        if (
-            self.model.sample_split_var is not None
-            and (sample := self.model.sample_split_value) is not None
-        ):
-            data["Sample"] = sample
+        if self.model.sample_split is not None:
+            sample = self.model.sample_split.value
+            data["Sample"] = "all" if sample is None else sample
         return pd.DataFrame(data).set_index("Coefficient")
 
     def _normalize_inference_type(
@@ -380,7 +383,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return inference_type
 
     def confint(
-        self,
+        self: "Feols",
         alpha: float = 0.05,
         keep: list | str | None = None,
         drop: list | str | None = None,
@@ -478,8 +481,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
-            from pyfixest.estimation.post_estimation.savi import _confint
+            from pyfixest.estimation.post_estimation.savi import (
+                _confint,
+                _validate_savi_model,
+            )
 
+            _validate_savi_model(model=self, method="confint")
             return _confint(
                 model=self,
                 alpha=alpha,
