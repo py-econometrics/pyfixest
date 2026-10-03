@@ -98,6 +98,7 @@ class FixedEffectSpecification:
             )
         # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
         # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
+
         fixed_effect_level = expression.value  # `f2`
         fixed_effect_slopes = expression.slice  # `z`
         if isinstance(fixed_effect_level, ast.Subscript):
@@ -107,6 +108,7 @@ class FixedEffectSpecification:
                 "for example `f1[z1, z2]` (with fixed-effect intercepts) or "
                 "`f1[[z1, z2]]` (without fixed-effect intercepts)."
             )
+
         if isinstance(fixed_effect_slopes, ast.List):
             # Varying slopes without fixed effect: f1[[z1, z2]]
             intercept = False
@@ -149,34 +151,39 @@ def _is_slope_expression(node: ast.AST) -> bool:
     """Accept names, dotted names, calls, and arithmetic as slope expressions.
 
     Scalar literals are allowed inside expressions (such as `z / 2` or
-    transform keyword arguments), but a slope must reference a name. Only
+    transform keyword arguments), but an expression must contain a name.
+    This is a syntactic check, not proof of dependence on a data column:
+    names in expressions such as `np.pi` and `transform()` also qualify. Only
     `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-` are supported.
     Containers, indexing, slices, comparisons, comprehensions, and argument
     unpacking are excluded, including when nested inside a transform.
+
+    Supported examples include `z`, `-z`, `z**2`, `(z1 + z2) / 2`,
+    `np.log(z)`, and `transform(z, mode="scale", center=True)`. Unsupported
+    examples include `0`, `"z"`, `z[0]`, `z > 0`, and `[x for x in z]`.
     """
     supported_nodes = (
-        ast.Name,
-        ast.Attribute,
-        ast.Call,
-        ast.BinOp,
-        ast.UnaryOp,
-        ast.Constant,
-        ast.keyword,
-        ast.Load,
-        ast.Add,
-        ast.Sub,
-        ast.Mult,
-        ast.Div,
-        ast.FloorDiv,
-        ast.Mod,
-        ast.Pow,
-        ast.UAdd,
-        ast.USub,
+        ast.Name,  # z
+        ast.Attribute,  # np.log
+        ast.Call,  # np.log(z)
+        ast.BinOp,  # z + 1, z**2
+        ast.UnaryOp,  # -z, +z
+        ast.Constant,  # 2 in z / 2; True in center=True
+        ast.keyword,  # center=True
+        ast.Load,  # variable-read context added by the AST
+        ast.Add,  # +
+        ast.Sub,  # -
+        ast.Mult,  # *
+        ast.Div,  # /
+        ast.FloorDiv,  # //
+        ast.Mod,  # %
+        ast.Pow,  # **
+        ast.UAdd,  # unary +
+        ast.USub,  # unary -
     )
     nodes = tuple(ast.walk(node))
     return (
-        not isinstance(node, ast.Constant)
-        and any(isinstance(child, ast.Name) for child in nodes)
+        any(isinstance(child, ast.Name) for child in nodes)
         and all(isinstance(child, supported_nodes) for child in nodes)
         and all(
             child.arg is not None for child in nodes if isinstance(child, ast.keyword)
