@@ -81,14 +81,17 @@ class FixedEffectSpecification:
         elif len(varying_slope_expressions) != 1:
             # Reject expressions of the form `f1[z1]:f2[z2]`
             raise FormulaSyntaxError(
-                "Cannot specify more than one varying-slope expression in a single fixed-effect term."
+                f"Invalid fixed-effect term `{term}`: cannot specify more than one "
+                "varying-slope expression in a single term. For slopes on interacted "
+                "levels, use one bracket pair, for example `f1:f2[z1, z2]`."
             )
         elif varying_slope_expressions[0][1] != len(term.factors) - 1:
             # Varying slope syntax must be attached to last factor in term
             # For example, accept `f1:f2[z]` but reject `f1[z]:f2`
             raise FormulaSyntaxError(
-                "Varying-slope syntax is only supported on the final factor "
-                "of a fixed-effect interaction."
+                f"Invalid fixed-effect term `{term}`: varying-slope syntax is only "
+                "supported on the final factor of a fixed-effect interaction, "
+                "for example `f1:f2[z]`."
             )
         # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
         # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
@@ -98,7 +101,10 @@ class FixedEffectSpecification:
         fixed_effect_slopes = expression.slice  # `z`
         if isinstance(fixed_effect_level, ast.Subscript):
             raise FormulaSyntaxError(
-                "Nested varying-slope subscripts are not supported."
+                f"Invalid fixed-effect term `{term}`: nested varying-slope "
+                "subscripts are not supported. Separate slopes with commas, "
+                "for example `f1[z1, z2]` (with fixed-effect intercepts) or "
+                "`f1[[z1, z2]]` (without fixed-effect intercepts)."
             )
         if isinstance(fixed_effect_slopes, ast.List):
             # Varying slopes without fixed effect: f1[[z1, z2]]
@@ -114,9 +120,11 @@ class FixedEffectSpecification:
             )
 
         if not slope_nodes:
-            # Guard against `f1[]` or `f1[[]]`
+            # Guard against empty slope lists such as `f1[[]]`.
             raise FormulaSyntaxError(
-                "A varying-slope term must specify at least one slope."
+                f"Invalid fixed-effect term `{term}`: a varying-slope term must "
+                "specify at least one slope, for example `f1[z]` or `f1[[z]]`. "
+                "For an ordinary fixed effect without slopes, use `f1`."
             )
         return cls(
             levels=Term(term.factors[:-1] + _term_from_ast(fixed_effect_level).factors),
@@ -140,9 +148,11 @@ def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term
     formula = formulaic.Formula(formula_expression, _parser=_PARSER_NO_INTERCEPT)
     if not isinstance(formula, formulaic.formula.SimpleFormula) or len(formula) != 1:
         raise FormulaSyntaxError(
-            f"`{expression}` is not valid here. Each fixed-effect level and slope "
-            "must resolve to exactly one formula term. To specify multiple slopes, "
-            "separate them with commas, for example `f1[z1, z2]`."
+            f"Invalid fixed-effect expression `{expression}`: expected exactly "
+            f"one formula term, but parsed `{formula}`. Specify separate fixed "
+            "effects with `+`, for example `f1[z] + f2[z]`. To specify multiple "
+            "slopes for one fixed effect, separate them with commas, "
+            "for example `f1[z1, z2]`."
         )
     return formula[0]
 
@@ -157,7 +167,9 @@ def _factor_ast(factor: Factor) -> ast.expr | None:
         return ast.parse(factor.expr, mode="eval").body
     except SyntaxError as exception:
         raise FormulaSyntaxError(
-            f"Could not parse fixed-effect expression: {factor.expr}"
+            f"Could not parse fixed-effect expression `{factor.expr}`: "
+            f"{exception.msg}. Expected a valid Python expression, "
+            "for example `f1[z]` or `f1[[z1, z2]]` for varying slopes."
         ) from exception
 
 
