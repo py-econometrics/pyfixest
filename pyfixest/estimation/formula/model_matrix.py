@@ -424,7 +424,7 @@ def create_model_matrix(
         Column name in data to use as observation weights. Weights must be
         non-negative numeric values. If None, no weighting is applied.
     offset : str or None, default=None
-        Formulaic expression that evaluates to one numeric offset column. The
+        Arithmetic expression that evaluates to one numeric offset column. The
         offset is added to the linear predictor with a fixed coefficient of 1.
         Rows with missing offset values are dropped together with missing rows
         in the rest of the formula.
@@ -518,7 +518,10 @@ def _get_formulaic_formula(
         data[weights] = _get_weights(data, weights)
         formula_kwargs.update({_ModelMatrixKey.weights: f"`{weights}` - 1"})
     if offset is not None:
-        formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
+        # An offset is one arithmetic expression, not a model formula:
+        # formula operators would turn x**2 into x and x + z into two columns.
+        # Retain this specification so prediction reevaluates the same expression.
+        formula_kwargs[_ModelMatrixKey.offset] = f"I({offset}) - 1"
     formula_formulaic = formulaic.Formula(
         formula_kwargs,
         _parser=DefaultFormulaParser(

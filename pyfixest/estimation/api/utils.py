@@ -1,13 +1,32 @@
 from __future__ import annotations
 
+import ast
 from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
+from formulaic.utils.code import sanitize_variable_names
 
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import Ssc
+
+
+def _validate_offset_expression(offset: str | None) -> None:
+    """Reject XOR in offsets without rejecting carets in quoted column names."""
+    if offset is None:
+        return
+    expression = sanitize_variable_names(offset, env={}, aliases={})
+    try:
+        nodes = ast.walk(ast.parse(expression, mode="eval"))
+    except SyntaxError:
+        # Let Formulaic report malformed expressions during materialization.
+        return
+    if any(isinstance(node, ast.BitXor) for node in nodes):
+        raise ValueError(
+            "The offset uses `^`, which is not supported. "
+            "Use `**` for exponentiation, e.g. offset='x**2'."
+        )
 
 
 def _resolve_ssc(ssc: Ssc | Mapping[str, Any] | None) -> Ssc:

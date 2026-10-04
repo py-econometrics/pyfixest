@@ -8,6 +8,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _validate_offset_expression,
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -133,10 +134,12 @@ def feglm(
         weights) or "fweights" (frequency weights). Defaults to "aweights".
 
     offset : str | None, optional
-        Default is None. Formulaic expression that evaluates to one numeric
+        Default is None. Arithmetic expression that evaluates to one numeric
         offset column on the link scale. Only supported with
         `family='poisson'`. For exposure adjustments, use an expression such as
-        `offset="log(population)"`.
+        `offset="log(population)"`. Use Python arithmetic, including `**` for
+        exponentiation; `^` is rejected. The expression is reevaluated on
+        `newdata` during prediction. See `fepois()` for further details.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -293,6 +296,7 @@ def feglm(
         raise ValueError(
             "The `offset` argument is only supported with `family='poisson'`."
         )
+    _validate_offset_expression(offset=offset)
 
     if separation_check is None:
         separation_check = ["fe"]

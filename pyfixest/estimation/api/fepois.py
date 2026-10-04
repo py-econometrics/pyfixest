@@ -90,10 +90,24 @@ def fepois(
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     offset : str | None, optional
-        Default is None. Formulaic expression that evaluates to one numeric
-        column in `data`. The offset is added to the linear predictor with its
-        coefficient fixed at 1. This is useful for modeling rates when exposure
-        differs across observations, e.g. `offset="log(population)"`.
+        Default is None. Column name or arithmetic expression evaluated using
+        `data` and `context`, yielding one numeric value per observation.
+        The offset is added to the linear predictor with its coefficient fixed
+        at 1. This is useful for modeling rates when exposure differs across
+        observations, e.g. `offset="log(population)"`.
+
+        Operators have Python arithmetic meanings, rather than model-formula
+        meanings: `offset="x**2"` squares `x`, `offset="2*x"` doubles it,
+        `offset="-x"` negates it, and `offset="x + z"` adds the two columns.
+        `I(x**2)` is also accepted, but `I()` is not required. Use `**` for
+        exponentiation; R's `^` syntax raises `ValueError` because Python uses
+        it for bitwise XOR. Backticks can quote column names.
+
+        Rows with missing evaluated offsets are dropped together with other
+        missing model values during fitting. `predict(newdata=...)` reevaluates
+        the same expression using `newdata` and includes it in both link and
+        response predictions; missing evaluated offsets in `newdata` raise
+        `ValueError`.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.
@@ -231,6 +245,14 @@ def fepois(
         offset="log(population)",
     )
     fit_rate.tidy()
+    ```
+
+    Arithmetic offsets need no `I()` wrapper. Prediction evaluates the
+    expression again on the supplied data:
+
+    ```{python}
+    fit_offset = pf.fepois("Y ~ X1", data=data, offset="0.5 * (X2 / 10)**2")
+    fit_offset.predict(newdata=data.dropna().head(), type="response")
     ```
 
     Multiple-estimation and sample-splitting features also work as in `feols()`:
