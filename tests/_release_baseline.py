@@ -27,7 +27,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from tests._feols_test_cases import fixed_effect_interactions_to_legacy
+from tests._feols_test_cases import (
+    fixed_effect_interactions_to_legacy,
+    iv_formula_to_legacy,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_MANIFEST = ROOT / "tests" / "snapshots" / "release" / "pixi.toml"
@@ -167,7 +170,11 @@ class Baseline:
 
     def fml(self, fml: str) -> str:
         """Spell a formula the way the pyfixest doing the fitting understands it."""
-        return fixed_effect_interactions_to_legacy(fml) if self._recording else fml
+        return (
+            fixed_effect_interactions_to_legacy(iv_formula_to_legacy(fml))
+            if self._recording
+            else fml
+        )
 
     def check(
         self,

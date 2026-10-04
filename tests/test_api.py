@@ -287,7 +287,7 @@ def test_preconditioner_rejected_on_non_within_backend(backend):
 def test_feiv_first_stage_reuses_within_preconditioner():
     data = pf.get_data()
     fit = pf.feols(
-        "Y ~ 1 | f1 + f2 | X1 ~ Z1",
+        "Y ~ 1 + [X1 ~ Z1] | f1 + f2",
         data=data,
         demeaner=pf.LsmrDemeaner(backend="within"),
     )

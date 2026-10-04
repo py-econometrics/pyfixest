@@ -920,7 +920,7 @@ class FirstStageDiagnostics:
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.first_stage.diagnostics
     ```
     """
@@ -960,7 +960,7 @@ class FirstStage:
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.first_stage.instruments
     ```
 

@@ -42,6 +42,10 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+_IV_SYNTAX: Final[str] = (
+    "Use `Y ~ X1 + [X2 ~ Z1] | f1` (omit `| f1` without fixed effects). "
+    "Legacy fixest IV syntax is no longer supported."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -282,7 +286,13 @@ class Formula:
             raise FormulaSyntaxError(
                 f"Formula can have at most {self._max_parts} parts separated by '|'. "
                 f"Received {len(self._formula.rhs)}:\n"
-                f"{self._formula}"
+                f"{self._formula}\n{_IV_SYNTAX}"
+            )
+        if isinstance(self._formula.rhs, tuple) and not isinstance(
+            self._formula.rhs[1], formulaic.formula.SimpleFormula
+        ):
+            raise FormulaSyntaxError(
+                "The fixed-effects part cannot contain an IV block. " + _IV_SYNTAX
             )
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
         # expression evaluated from two columns.
@@ -463,10 +473,17 @@ class Formula:
         returns a list of multiple regression formulas.
         """
         formula = _preprocess(formula)
-        return [
-            Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
-            for formulaic_compliant in _expand_all_multiple_estimation(formula)
-        ]
+        try:
+            return [
+                Formula(
+                    _formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER)
+                )
+                for formulaic_compliant in _expand_all_multiple_estimation(formula)
+            ]
+        except formulaic.errors.FormulaSyntaxError as error:
+            if "Operator `~`" not in str(error):
+                raise
+            raise FormulaSyntaxError(f"{error}\n{_IV_SYNTAX}") from error
 
     @classmethod
     def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:

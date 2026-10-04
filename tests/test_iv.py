@@ -142,7 +142,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         vcov_detail = "hetero"
     """
     fit_iv = feols(
-        "y ~ 1 + c1 + c2 | d ~ z", data=data, vcov=adj_vcov, weights=weight_detail_py
+        "y ~ 1 + c1 + c2 + [d ~ z]", data=data, vcov=adj_vcov, weights=weight_detail_py
     )
     F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
     fit_iv.IV_Diag()
@@ -313,7 +313,7 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
         vcov_detail = None
 
     fit_iv = feols(
-        "Y ~ 1 | f1 | X1 ~ Z1 ", vcov=vcov_detail, data=data, weights=weight_detail
+        "Y ~ 1 + [X1 ~ Z1] | f1", vcov=vcov_detail, data=data, weights=weight_detail
     )
     fit_ols = feols("X1 ~  Z1 | f1", vcov=vcov_detail, data=data, weights=weight_detail)
 
