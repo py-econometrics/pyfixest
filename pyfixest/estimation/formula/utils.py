@@ -136,7 +136,6 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     ``Y ~ X1 | f1 | X2 ~ Z2`` becomes ``Y ~ X1 + [X2 ~ Z2] | f1``.
     Bracketed IV blocks belong only in the first formula part.
     """
-
     main_part, *fixef_iv_parts = _str_split_by_sep(formula, separator="|")
     supported = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
     # Bracketed IV in the first part is already in Formulaic syntax.
