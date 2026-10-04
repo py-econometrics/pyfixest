@@ -400,12 +400,17 @@ def test_poisson_offset_errors():
 
     # offset expression must evaluate to one column
     with pytest.raises(ValueError, match="exactly one column"):
-        pf.fepois("Y ~ X1", data=data, offset="X1 + X2")
+        pf.fepois("Y ~ X1", data=data, offset="np.column_stack((X1, X2))")
+
+    # Reject XOR for both floating-point and integer columns, also inside I().
+    for offset in ["X2^2", "f1^2", "I(X2^2)"]:
+        with pytest.raises(ValueError, match=r"Use `\*\*` for exponentiation"):
+            pf.fepois("Y ~ X1", data=data, offset=offset)
 
     # predict(newdata=...) with offset variable missing in newdata
     data = data.copy()
     data["off"] = np.log(np.random.default_rng(0).uniform(0.5, 3.0, len(data)))
-    mod = pf.fepois("Y ~ X1", data=data, offset="off")
+    mod = pf.fepois("Y ~ X1", data=data, offset="2*off")
     with pytest.raises(FactorEvaluationError, match="off"):
         mod.predict(newdata=data.drop(columns=["off"]))
 

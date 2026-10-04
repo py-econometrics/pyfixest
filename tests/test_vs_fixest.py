@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -781,31 +783,88 @@ def test_feglm_gaussian_reference_behavior():
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
-def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
-    """Compare transformed-offset estimation and prediction with fixest."""
+@pytest.mark.parametrize("weights_type", [None, "aweights", "fweights"])
+@pytest.mark.parametrize(
+    "offset,offset_r",
+    [
+        ("x", "x"),
+        ("x**2", "x^2"),
+        ("I(x**2)", "I(x^2)"),
+        ("2*x", "2*x"),
+        ("-x", "-x"),
+        ("x + z", "x + z"),
+        ("log(exposure)", "log(exposure)"),
+        # The quoted column is an alias of x; test it against that numeric
+        # offset rather than fixest's preprocessing of a caret in a name.
+        ("`x^2`", "x"),
+    ],
+)
+def test_fepois_transformed_offset_against_fixest(
+    data_fepois, fml, weights_type, offset, offset_r
+):
+    """Compare arithmetic offsets and prediction with fixest (0.14.0)."""
     data = data_fepois.dropna().copy()
-    data["exposure"] = np.random.default_rng(20260810).uniform(0.5, 3.0, len(data))
-
-    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)")
-    fit_r = fixest.fepois(
-        ro.Formula(fml), data=data, offset=ro.Formula("~log(exposure)")
+    rng = np.random.default_rng(20260810)
+    data["exposure"] = rng.uniform(0.5, 3.0, len(data))
+    data["x"] = data["X2"] / 10
+    data["z"] = data["Z2"] / 10
+    data["x^2"] = data["x"]
+    data["offset_weights"] = rng.integers(1, 4, len(data))
+    data.loc[data.index[10], ["x", "x^2", "exposure"]] = np.nan
+    kwargs = (
+        {"weights": "offset_weights", "weights_type": weights_type}
+        if weights_type is not None
+        else {}
+    )
+    kwargs_r = (
+        {"weights": ro.Formula("~offset_weights")} if weights_type is not None else {}
     )
 
+    fit = pf.fepois(
+        fml=fml, data=data, offset=offset, iwls_tol=1e-10, iwls_maxiter=100, **kwargs
+    )
+    fit_r = fixest.fepois(
+        ro.Formula(fml),
+        data=data,
+        offset=ro.Formula("~" + offset_r),
+        glm_tol=1e-10,
+        glm_iter=100,
+        **kwargs_r,
+    )
+
+    coef_r = fit_r.rx2("coefficients")
+    coef_names_r = ro.r("function(fit) names(coef(fit))")(fit_r)
+    expected = pd.Series(
+        np.asarray(coef_r),
+        index=["Intercept" if name == "(Intercept)" else name for name in coef_names_r],
+    )
+    assert set(fit.coef().index) == set(expected.index)
+    assert fit.sample_info.n_rows == int(stats.nobs(fit_r)[0])
+    assert fit.convergence
     np.testing.assert_allclose(
         fit.coef().to_numpy(),
-        fit_r.rx2("coefficients"),
+        expected.loc[fit.coef().index].to_numpy(),
         rtol=OFFSET_COEF_RTOL,
         atol=OFFSET_COEF_ATOL,
+        err_msg=f"Poisson coefficients with offset={offset!r} differ from fixest",
     )
 
-    newdata = data.iloc[:5]
+    newdata = data.iloc[:5].copy()
+    newdata[["x", "z", "x^2", "exposure"]] *= 1.5
     for prediction_type in ["link", "response"]:
+        np.testing.assert_allclose(
+            fit.predict(type=prediction_type)[:5],
+            stats.predict(fit_r, type=prediction_type)[:5],
+            rtol=OFFSET_PRED_RTOL,
+            atol=OFFSET_PRED_ATOL,
+            err_msg=f"In-sample {prediction_type} predictions differ from fixest",
+        )
         np.testing.assert_allclose(
             fit.predict(newdata=newdata, type=prediction_type),
             stats.predict(fit_r, newdata=newdata, type=prediction_type),
             rtol=OFFSET_PRED_RTOL,
             atol=OFFSET_PRED_ATOL,
-            equal_nan=True,
+            err_msg=f"New-data {prediction_type} predictions differ from fixest",
         )
 
 
