@@ -134,12 +134,13 @@ def feglm(
         weights) or "fweights" (frequency weights). Defaults to "aweights".
 
     offset : str | None, optional
-        Default is None. Arithmetic expression that evaluates to one numeric
+        Default is None. Single Formulaic factor that evaluates to one numeric
         offset column on the link scale. Only supported with
         `family='poisson'`. For exposure adjustments, use an expression such as
-        `offset="log(population)"`. Use Python arithmetic, including `**` for
-        exponentiation; `^` is rejected. The expression is reevaluated on
-        `newdata` during prediction. See `fepois()` for further details.
+        `offset="log(population)"`. Wrap arithmetic in `I()`, e.g.
+        `offset="I(x**2)"`; bare formula operators are rejected. The expression
+        is reevaluated on `newdata` during prediction. See `fepois()` for further
+        details.
 
     ssc : str
         A ssc object specifying the small sample correction for inference.

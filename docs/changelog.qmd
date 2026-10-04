@@ -28,7 +28,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
-- Poisson offsets now evaluate arithmetic consistently in fitting and prediction: `x**2`, `2*x`, `-x`, and `x + z` work without `I()`. Use `**` for powers; `^` raises a clear error. See [#1764](https://github.com/py-econometrics/pyfixest/issues/1764).
+- Poisson offsets now require explicit Formulaic transforms for arithmetic, such as `I(x**2)` or `I(x + z)`, consistently in fitting and prediction. Bare formula operators raise a clear error before they can silently change the offset. This intentionally differs from `fixest`; see [#1764](https://github.com/py-econometrics/pyfixest/issues/1764).
 - `weights=` accepts column names containing spaces or formula operators, such as `my w`, `w-x`, and `w+1`. See [#1815](https://github.com/py-econometrics/pyfixest/issues/1815).
 - Iterative-rectifier separation checks now preserve the user's formula context in auxiliary refits, so custom transforms work with `separation_check=["ir"]`. See [#1799](https://github.com/py-econometrics/pyfixest/issues/1799).
 - The `log()` formula transform accepts nullable pandas columns (`Float64`, `Int64`) that contain `pd.NA`. Before, `Y ~ log(X)` on such a column raised `FactorEvaluationError`; it now drops the missing rows together with the non-positive ones and matches `Y ~ np.log(X)`. See [#1807](https://github.com/py-econometrics/pyfixest/issues/1807).

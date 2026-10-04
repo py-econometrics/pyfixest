@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import ast
 from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
-from formulaic.utils.code import sanitize_variable_names
+from formulaic.parser.algos import tokenize
+from formulaic.parser.types import Token
 
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
@@ -13,19 +13,16 @@ from pyfixest.utils.utils import Ssc
 
 
 def _validate_offset_expression(offset: str | None) -> None:
-    """Reject XOR in offsets without rejecting carets in quoted column names."""
+    """Require a single Formulaic factor before formula operators simplify it."""
     if offset is None:
         return
-    expression = sanitize_variable_names(offset, env={}, aliases={})
-    try:
-        nodes = ast.walk(ast.parse(expression, mode="eval"))
-    except SyntaxError:
-        # Let Formulaic report malformed expressions during materialization.
-        return
-    if any(isinstance(node, ast.BitXor) for node in nodes):
+    # Tokenization keeps function calls and quoted names intact, so operators
+    # inside explicit transforms retain Formulaic's Python expression semantics.
+    if any(token.kind is Token.Kind.OPERATOR for token in tokenize(offset)):
         raise ValueError(
-            "The offset uses `^`, which is not supported. "
-            "Use `**` for exponentiation, e.g. offset='x**2'."
+            "The `offset` argument must be a column name or a single Formulaic "
+            "transform. Wrap arithmetic in `I()`, e.g. offset='I(x**2)' or "
+            "offset='I(x + z)'. Use `**` for Python exponentiation inside `I()`."
         )
 
 

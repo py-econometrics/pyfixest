@@ -90,18 +90,21 @@ def fepois(
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     offset : str | None, optional
-        Default is None. Column name or arithmetic expression evaluated using
-        `data` and `context`, yielding one numeric value per observation.
+        Default is None. Column name or single Formulaic transform evaluated
+        using `data` and `context`, yielding one numeric value per observation.
         The offset is added to the linear predictor with its coefficient fixed
         at 1. This is useful for modeling rates when exposure differs across
         observations, e.g. `offset="log(population)"`.
 
-        Operators have Python arithmetic meanings, rather than model-formula
-        meanings: `offset="x**2"` squares `x`, `offset="2*x"` doubles it,
-        `offset="-x"` negates it, and `offset="x + z"` adds the two columns.
-        `I(x**2)` is also accepted, but `I()` is not required. Use `**` for
-        exponentiation; R's `^` syntax raises `ValueError` because Python uses
-        it for bitwise XOR. Backticks can quote column names.
+        As in covariate formulas, wrap arithmetic in `I()`:
+        `offset="I(x**2)"` squares `x`, `offset="I(2*x)"` doubles it,
+        `offset="I(-x)"` negates it, and `offset="I(x + z)"` adds the columns.
+        Bare formula operators, such as `offset="x**2"` or `offset="x + z"`,
+        raise `ValueError` before Formulaic can expand or simplify them.
+        This intentionally differs from `fixest`, which accepts arithmetic
+        directly in offset formulas. Inside transforms, expressions follow
+        Python semantics: use `**` for powers; `^` means bitwise XOR.
+        Backticks can quote column names.
 
         Rows with missing evaluated offsets are dropped together with other
         missing model values during fitting. `predict(newdata=...)` reevaluates
@@ -247,11 +250,11 @@ def fepois(
     fit_rate.tidy()
     ```
 
-    Arithmetic offsets need no `I()` wrapper. Prediction evaluates the
+    Wrap arithmetic offsets in `I()`. Prediction evaluates the
     expression again on the supplied data:
 
     ```{python}
-    fit_offset = pf.fepois("Y ~ X1", data=data, offset="0.5 * (X2 / 10)**2")
+    fit_offset = pf.fepois("Y ~ X1", data=data, offset="I(0.5 * (X2 / 10)**2)")
     fit_offset.predict(newdata=data.dropna().head(), type="response")
     ```
 

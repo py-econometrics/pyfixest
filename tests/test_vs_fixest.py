@@ -788,11 +788,12 @@ def test_feglm_gaussian_reference_behavior():
     "offset,offset_r",
     [
         ("x", "x"),
-        ("x**2", "x^2"),
         ("I(x**2)", "I(x^2)"),
-        ("2*x", "2*x"),
-        ("-x", "-x"),
-        ("x + z", "x + z"),
+        ("I(2*x)", "2*x"),
+        ("I(-x)", "-x"),
+        ("I(x + z)", "x + z"),
+        # Explicit transforms use Python XOR, as in covariate formulas.
+        ("I(offset_weights^2)", "xor_offset"),
         ("log(exposure)", "log(exposure)"),
         # The quoted column is an alias of x; test it against that numeric
         # offset rather than fixest's preprocessing of a caret in a name.
@@ -802,7 +803,7 @@ def test_feglm_gaussian_reference_behavior():
 def test_fepois_transformed_offset_against_fixest(
     data_fepois, fml, weights_type, offset, offset_r
 ):
-    """Compare arithmetic offsets and prediction with fixest (0.14.0)."""
+    """Compare explicit offset transforms and prediction with fixest (0.14.0)."""
     data = data_fepois.dropna().copy()
     rng = np.random.default_rng(20260810)
     data["exposure"] = rng.uniform(0.5, 3.0, len(data))
@@ -810,6 +811,7 @@ def test_fepois_transformed_offset_against_fixest(
     data["z"] = data["Z2"] / 10
     data["x^2"] = data["x"]
     data["offset_weights"] = rng.integers(1, 4, len(data))
+    data["xor_offset"] = data["offset_weights"] ^ 2
     data.loc[data.index[10], ["x", "x^2", "exposure"]] = np.nan
     kwargs = (
         {"weights": "offset_weights", "weights_type": weights_type}
