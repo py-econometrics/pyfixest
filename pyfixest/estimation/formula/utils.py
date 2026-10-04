@@ -82,7 +82,8 @@ class _MultipleEstimationType(Enum):
 
 
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
-    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\s*\(.+\)",
+    flags=re.DOTALL,
 )
 
 
