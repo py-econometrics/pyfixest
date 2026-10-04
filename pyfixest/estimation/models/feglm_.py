@@ -137,6 +137,7 @@ class Feglm(Feols):
                 data=self._data,
                 demeaner=self.options.demeaner,
                 methods=self.options.separation_check,
+                context=self.options.context,
             )
 
         if na_separation:
