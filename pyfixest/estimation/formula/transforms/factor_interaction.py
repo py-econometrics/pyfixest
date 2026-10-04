@@ -77,6 +77,18 @@ def factor_interaction(
         i(cyl, ref=4)     -> cyl::6, cyl::8
         i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+
+    Two parametrizations differ from R fixest; the fitted model is the same:
+
+    - String levels are sorted by code point, so uppercase sorts before
+      lowercase, while fixest follows R's collation locale. With mixed-case
+      levels, the default reference can differ; pass `ref=` to pin it.
+    - `i(a)*X` follows formulaic's `C(a)*X` convention: `X` is the slope of
+      the reference level, and the interactions are differences from it.
+      fixest instead uses the slope of the last level. Write
+      `i(a) + i(a, X)` for one slope per level, or
+      `i(a) + X + i(a, X, ref=<last level>)` to reproduce fixest's
+      coefficients.
     """
     # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
