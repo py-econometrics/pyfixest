@@ -106,25 +106,28 @@ def test_against_fixest(fml):
     fit_r = fixest.fepois(ro.Formula(fml), data=data, vcov=vcov, glm_tol=iwls_tol)
 
     np.testing.assert_allclose(
-        fit_r.rx2("irls_weights").reshape(-1, 1), fit._weights, atol=1e-08, rtol=1e-07
+        fit_r.rx2("irls_weights"),
+        fit.working_state.working_weights,
+        atol=1e-08,
+        rtol=1e-07,
     )
     np.testing.assert_allclose(
         fit_r.rx2("linear.predictors").reshape(-1, 1),
-        fit._Xbeta,
+        fit.working_state.eta.reshape(-1, 1),
         atol=1e-08,
         rtol=1e-07,
     )
     np.testing.assert_allclose(
         fit_r.rx2("scores").reshape(-1, 1),
-        fit._scores.reshape(-1, 1),
+        fit.sandwich.scores.reshape(-1, 1),
         atol=1e-08,
         rtol=1e-07,
     )
 
     np.testing.assert_allclose(
-        fit_r.rx2("hessian"), fit._hessian, atol=1e-08, rtol=1e-07
+        fit_r.rx2("hessian"), fit.sandwich.hessian, atol=1e-08, rtol=1e-07
     )
 
     np.testing.assert_allclose(
-        fit_r.rx2("deviance"), fit.deviance, atol=1e-08, rtol=1e-07
+        fit_r.rx2("deviance"), fit.fitstat.deviance, atol=1e-08, rtol=1e-07
     )

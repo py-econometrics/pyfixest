@@ -1,3 +1,5 @@
+import inspect
+import os
 import re
 
 import narwhals.stable.v1 as nw
@@ -7,8 +9,45 @@ from narwhals.typing import IntoDataFrame
 
 DataFrameType = IntoDataFrame
 
+_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + os.sep
 
-def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:  # type: ignore
+
+def _find_stack_level() -> int:
+    """
+    Return the `stacklevel` that attributes a warning to the caller of pyfixest.
+
+    Follows the approach of pandas' `find_stack_level`
+    (https://github.com/pandas-dev/pandas/blob/v3.0.1/pandas/util/_exceptions.py#L37-L63),
+    but attributes the warning to the frame past the outermost pyfixest frame.
+
+    Returns
+    -------
+    int
+        The `stacklevel` argument for `warnings.warn`.
+    """
+    frame = inspect.currentframe()
+    outermost_level = 1
+    try:
+        # Level 1 is the function that calls `warnings.warn`.
+        frame = frame.f_back if frame is not None else None
+        level = 1
+        while frame is not None:
+            filename = frame.f_code.co_filename
+            # `warnings.warn` skips import-machinery frames when it counts
+            # `stacklevel`, so they must not count here either.
+            if "importlib" in filename and "_bootstrap" in filename:
+                frame = frame.f_back
+                continue
+            if filename.startswith(_PACKAGE_DIR):
+                outermost_level = level
+            frame = frame.f_back
+            level += 1
+    finally:
+        del frame
+    return outermost_level + 1
+
+
+def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:
     return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
 
 
@@ -19,15 +58,15 @@ def _create_rng(seed: int | None = None) -> np.random.Generator:
     Parameters
     ----------
     seed : int, optional
-        The seed of the random number generator. If None, a random seed is chosen.
+        The seed of the random number generator. If None, the generator draws
+        fresh entropy from the operating system; the global NumPy RNG is
+        neither read nor modified.
 
     Returns
     -------
     numpy.random.Generator
         A random number generator.
     """
-    if seed is None:
-        seed = np.random.randint(100_000_000)
     return np.random.default_rng(seed)
 
 
@@ -128,75 +167,3 @@ def _select_coefnames_and_indices(
     if not indices:
         raise ValueError("No coefficients match the keep/drop patterns.")
     return selected, indices
-
-
-def docstring_from(func, custom_doc=""):
-    """Copy the docstring of another function."""
-
-    def decorator(target_func):
-        target_func.__doc__ = custom_doc + "\n\n" + func.__doc__
-        return target_func
-
-    return decorator
-
-
-def _check_series_or_dataframe(x: pd.Series | pd.DataFrame):
-    if not isinstance(x, (pd.Series, pd.DataFrame)):
-        raise TypeError("Input must be a pandas Series or DataFrame")
-    else:
-        return x
-
-
-def _to_list(x):
-    if x is not None and not isinstance(x, list):
-        return [x]
-    return x
-
-
-def _drop_cols(_data: pd.DataFrame, na_index: np.ndarray):
-    """
-    Drop columns from data based on the indices in na_index.
-
-    Parameters
-    ----------
-    _data : pd.DataFrame
-        The input DataFrame.
-    na_index : np.ndarray
-        An array of indices to drop.
-
-    Returns
-    -------
-    pd.DataFrame
-        The input DataFrame with NAs dropped.
-    """
-    if na_index.size > 0:
-        all_indices = np.arange(_data.shape[0])
-        max_index = all_indices.max() + 1
-        keep = np.ones(max_index, dtype=bool)
-        keep[na_index] = False
-        return _data[keep]
-    else:
-        return _data
-
-
-def _extract_variable_level(fe_string: str) -> tuple[str, str]:
-    """
-    Extract the variable and level from a given string.
-
-    Parameters
-    ----------
-    fe_string: str
-        The string encapsulating the fixed effect factor variable and level.
-
-    Returns
-    -------
-    tuple
-        A tuple containing the extracted variable and level for the fixed
-        effect.
-    """
-    pattern = re.compile(r"^C\((?P<variable>.+?)\)\[(?:T\.)?(?P<value>.+?)\]$")
-    match = re.search(pattern, fe_string)
-    if not match:
-        raise ValueError(f"Cannot parse: {fe_string}")
-
-    return match.group("variable"), match.group("value")

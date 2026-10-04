@@ -20,13 +20,15 @@ def test_multicol_overdetermined_iv():
         vcov={"CRV1": "f1"},
     )
 
-    assert fit._collin_vars == ["f1"]
-    assert fit._collin_vars_z == ["f1"]
+    assert fit.collinearity.dropped_coef_names == ("f1",)
+    assert fit.collinearity_instruments.dropped_coef_names == ("f1",)
 
     np.testing.assert_allclose(
         fit._beta_hat, np.array([-0.174227, -0.993607], dtype=float), rtol=1e-5
     )
-    np.testing.assert_allclose(fit._se, np.array([0.018416, 0.104009]), rtol=1e-5)
+    np.testing.assert_allclose(
+        fit.coeftable.se, np.array([0.018416, 0.104009]), rtol=1e-5
+    )
 
 
 def test_polars_input():
@@ -87,34 +89,6 @@ def test_coef_update():
     )
 
     np.testing.assert_allclose(updated_coefs, full_coefs)
-
-
-def test_coef_update_inplace():
-    rng = np.random.default_rng(1234)
-    data = get_data().dropna(subset=["Y", "X1", "X2"])
-    data_subsample = data.sample(frac=0.3, random_state=1234)
-    m = feols("Y ~ X1 + X2", data=data_subsample)
-    new_points_id = rng.choice(
-        data.index.difference(data_subsample.index), 5, replace=False
-    )
-    X_new, y_new = (
-        np.c_[
-            data.loc[new_points_id][
-                ["X1", "X2"]
-            ].values  # only pass columns; let `update` add the intercept
-        ],
-        data.loc[new_points_id]["Y"].values,
-    )
-    m.update(X_new, y_new, inplace=True)
-    full_coefs = (
-        feols(
-            "Y ~ X1 + X2",
-            data=data.loc[data_subsample.index.append(pd.Index(new_points_id))],
-        )
-        .coef()
-        .values
-    )
-    np.testing.assert_allclose(m.coef().values, full_coefs)
 
 
 def test_rename_categoricals():
@@ -237,7 +211,7 @@ def test_predict_newdata_i_transform(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit._N
+    assert pred_full.shape[0] == fit.sample_info.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 
@@ -258,7 +232,7 @@ def test_predict_newdata_poly_transform(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit._N
+    assert pred_full.shape[0] == fit.sample_info.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 
@@ -278,7 +252,7 @@ def test_predict_newdata_fe_interaction(fml):
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
-    assert pred_full.shape[0] == fit._N
+    assert pred_full.shape[0] == fit.sample_info.n_obs
     assert pred_new.shape[0] == len(newdata)
 
 
@@ -466,8 +440,8 @@ def test_fixef_interacted_labels():
     fit = feols("Y ~ X1 | g:h", data=df)
     coefficients = fit.fixef(atol=1e-12, btol=1e-12)
 
-    assert fit._fml == "Y ~ X1 | g:h"
-    assert fit._fixef == "g:h"
+    assert fit.model.formula == "Y ~ X1 | g:h"
+    assert fit.model.fixef == "g:h"
     assert coefficients["variable"].unique().tolist() == ["g:h"]
     levels = set(coefficients["level"])
     assert all("," in level for level in levels)

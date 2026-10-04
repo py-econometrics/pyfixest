@@ -8,12 +8,11 @@ from typing import Any, cast
 import formulaic
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from formulaic import ModelSpec
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Term
 from numpy._typing import NDArray
-from scipy.sparse import spmatrix
+from scipy.sparse import csc_matrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -21,6 +20,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FIXED_EFFECT_ENCODING,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
@@ -61,6 +61,50 @@ class FixedEffect:
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
+class FixedEffectEstimates:
+    """Fixed-effect estimates recovered by `fixef()`.
+
+    `fixef()` solves the least-squares problem in `alpha` under treatment
+    coding, which drops a reference level of the second and every further
+    fixed effect. With more than one fixed effect the individual levels are
+    therefore identified only up to that normalization, while `sumFE` and
+    contrasts within one fixed effect are invariant to it.
+
+    Parameters
+    ----------
+    coefficients : Mapping[str, FixedEffect]
+        Coefficient records keyed by encoded fixed-effect name, for example
+        `__fixed_effect__(f1)`. `fixef()` returns their tidy frame.
+    alpha : NDArray[np.float64]
+        Solution of the least-squares problem in the dummy-coded fixed
+        effects, shape (n_fixed_effect_coefficients,), ordered as the columns
+        of the contrast-coded fixed-effect matrix.
+    sumFE : NDArray[np.float64]
+        Fixed-effect contribution of each observation, shape (n_rows,), in
+        the units of the dependent variable. For GLMs it is on the scale of
+        the linear predictor and excludes the offset. Named as in `fixest`.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit.fixef().head()
+    ```
+
+    ```{python}
+    estimates = fit.fixef_estimates
+    estimates.sumFE[:5]
+    ```
+    """
+
+    coefficients: Mapping[str, FixedEffect]
+    alpha: NDArray[np.float64]
+    sumFE: NDArray[np.float64]
+
+
+@dataclass(kw_only=True, frozen=True, slots=True)
 class FixedEffectCoefficientPositions:
     """
     Fixed-effect codes and their positions in the complete coefficient vector.
@@ -88,14 +132,14 @@ class FixedEffectContrastCoding:
 
     Attributes
     ----------
-    matrix : spmatrix
+    matrix : csc_matrix
         Sparse one-hot encoded fixed-effect matrix used to estimate coefficients.
     coefficient_positions : Mapping[str, FixedEffectCoefficientPositions]
         Observed and retained codes with their positions in the complete
         coefficient vector, keyed by fixed effect.
     """
 
-    matrix: spmatrix
+    matrix: csc_matrix
     coefficient_positions: Mapping[str, FixedEffectCoefficientPositions]
 
 
@@ -223,7 +267,7 @@ def warn_on_unseen_fixed_effect_levels(
                 f"`{':'.join(source_columns)}`: {missing.iloc[:20]}\n"
                 "Predictions for affected observations will be NaN",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
 
 
@@ -322,6 +366,6 @@ def contrast_code_fixed_effects(
         )
 
     return FixedEffectContrastCoding(
-        matrix=cast(scipy.sparse.spmatrix, matrix),
+        matrix=cast(csc_matrix, matrix),
         coefficient_positions=coefficient_positions,
     )

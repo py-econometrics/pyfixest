@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 from scipy.stats import norm
 
@@ -35,33 +36,144 @@ fml_list = [
 fml_ols_vs_gaussian = ["Y ~ X1", "Y ~ X1 + C(f1)", "Y ~ X1 * X2"]
 
 
+@pytest.mark.parametrize("family", ["gaussian", "logit", "probit", "poisson"])
+def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
+    """Retain formula inputs and observation weights beside final IWLS state."""
+    rng = np.random.default_rng(918273)
+    n_groups = 12
+    group_size = 15
+    n_obs = n_groups * group_size
+    fixed_effect = np.repeat(np.arange(n_groups), group_size)
+    covariate = rng.normal(size=n_obs)
+    linear_predictor = -0.2 + 0.7 * covariate + 0.05 * fixed_effect
+
+    if family == "gaussian":
+        response = linear_predictor + rng.normal(scale=0.5, size=n_obs)
+    elif family == "poisson":
+        # Strict positivity prevents a group from being removed for separation.
+        response = rng.poisson(np.exp(linear_predictor)) + 1
+    else:
+        probability = 1 / (1 + np.exp(-linear_predictor))
+        response = rng.binomial(1, probability)
+
+    observation_weights = np.linspace(0.5, 2.0, n_obs)
+    data = pd.DataFrame(
+        {
+            "y": response,
+            "x": covariate,
+            "fe": fixed_effect,
+            "weight": observation_weights,
+        }
+    )
+    fit = pf.feglm(
+        "y ~ x | fe",
+        data=data,
+        family=family,
+        weights="weight",
+        vcov="hetero",
+        separation_check=[],
+        iwls_tol=1e-10,
+    )
+
+    assert isinstance(fit.model_matrix.dependent, pd.DataFrame)
+    assert isinstance(fit.model_matrix.independent, pd.DataFrame)
+    assert isinstance(fit.model_matrix.fixed_effects, pd.DataFrame)
+    np.testing.assert_allclose(fit.observation_weights.values, observation_weights)
+
+    working = fit.working_state
+    assert not hasattr(working, "sqrt_working_weights")
+    assert not hasattr(working, "design_solver")
+    assert not hasattr(working, "response_solver")
+
+    np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
+    np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
+    np.testing.assert_allclose(
+        fit.sandwich.scores,
+        working.design_within
+        * (working.working_weights * working.working_residuals)[:, None],
+    )
+    expected_hessian = working.design_within.T @ (
+        working.working_weights[:, None] * working.design_within
+    )
+    np.testing.assert_allclose(fit.sandwich.hessian, expected_hessian)
+
+    for group in np.unique(fixed_effect):
+        group_rows = fixed_effect == group
+        group_weights = working.working_weights[group_rows]
+        np.testing.assert_allclose(
+            group_weights @ working.design_within[group_rows],
+            0,
+            atol=1e-8,
+        )
+        np.testing.assert_allclose(
+            group_weights @ working.working_response_within[group_rows],
+            0,
+            atol=1e-8,
+        )
+
+    if family == "gaussian":
+        np.testing.assert_allclose(working.working_weights, observation_weights)
+    else:
+        assert not np.allclose(working.working_weights, observation_weights)
+
+
 @pytest.mark.parametrize("fml", fml_ols_vs_gaussian)
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "f1"}])
 @pytest.mark.parametrize("dropna", [True])
-def test_ols_vs_gaussian_glm(fml, inference, dropna):
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     data = pf.get_data()
     if dropna:
         data = data.dropna()
 
-    fit_ols = pf.feols(fml=fml, data=data, vcov=inference)
-    fit_gaussian = pf.feglm(fml=fml, data=data, family="gaussian", vcov=inference)
+    fit_ols = pf.feols(fml=fml, data=data, vcov=inference, weights=weights)
+    fit_gaussian = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        vcov=inference,
+        weights=weights,
+    )
 
     check_absolute_diff(
         fit_ols.coef().xs("X1"), fit_gaussian.coef().xs("X1"), tol=1e-10
     )
-    check_absolute_diff(fit_ols._weights[0:5], fit_gaussian._weights[0:5], tol=1e-10)
-    check_absolute_diff(fit_ols._u_hat[0:5], fit_gaussian._u_hat[0:5], tol=1e-10)
-    check_absolute_diff(fit_ols._scores[0, :], fit_gaussian._scores[0, :], tol=1e-10)
+    if weights is None:
+        assert fit_ols.observation_weights.values is None
+        assert fit_gaussian.observation_weights.values is None
+    else:
+        check_absolute_diff(
+            fit_ols.observation_weights.values[0:5],
+            fit_gaussian.observation_weights.values[0:5],
+            tol=1e-10,
+        )
+    check_absolute_diff(
+        fit_ols._u_hat[0:5],
+        fit_gaussian.working_state.working_residuals[0:5],
+        tol=1e-10,
+    )
+    check_absolute_diff(
+        fit_ols.sandwich.scores[0, :], fit_gaussian.sandwich.scores[0, :], tol=1e-10
+    )
 
     if inference == "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
-        scaling_factor = fit_ols._vcov[0, 0] / fit_gaussian._vcov[0, 0]
+        scaling_factor = (
+            fit_ols.variance_covariance.vcov[0, 0]
+            / fit_gaussian.variance_covariance.vcov[0, 0]
+        )
         # Check that all elements follow the same scaling
         check_absolute_diff(
-            fit_ols._vcov, scaling_factor * fit_gaussian._vcov, tol=1e-10
+            fit_ols.variance_covariance.vcov,
+            scaling_factor * fit_gaussian.variance_covariance.vcov,
+            tol=1e-10,
         )
     else:
-        check_absolute_diff(fit_ols._vcov, fit_gaussian._vcov, tol=1e-10)
+        check_absolute_diff(
+            fit_ols.variance_covariance.vcov,
+            fit_gaussian.variance_covariance.vcov,
+            tol=1e-10,
+        )
 
 
 @pytest.mark.parametrize("fml", fml_list)
@@ -184,6 +296,8 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
 
     assert step_calls == 2
     assert demean_calls == 3
+    assert X.flags.writeable
+    assert Y.flags.writeable
 
 
 def test_glm_raises_after_iwls_maxiter_without_convergence():

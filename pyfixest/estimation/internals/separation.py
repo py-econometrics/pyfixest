@@ -4,12 +4,16 @@ import re
 import warnings
 from functools import partial
 from importlib import import_module
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.utils.dev_utils import _find_stack_level
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 
 
 def check_for_separation(
@@ -71,7 +75,9 @@ def check_for_separation(
 
     if separation_na:
         warnings.warn(
-            f"{len(separation_na)!s} observations removed because of separation."
+            f"{len(separation_na)!s} observations removed because of separation.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
         )
 
     return list(separation_na)
@@ -238,7 +244,9 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
+        fitted = cast(
+            "Feols", feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
+        )
         tmp["Uhat"] = pd.Series(
             data=fitted.predict(), index=fitted._data.index, name="Uhat"
         )
@@ -259,7 +267,9 @@ def _check_for_separation_ir(
         separation_na = set(dependent[Uhat > 0].index)
     else:
         warnings.warn(
-            "iterative rectivier separation check: maximum number of iterations reached before convergence"
+            "iterative rectivier separation check: maximum number of iterations reached before convergence",
+            RuntimeWarning,
+            stacklevel=_find_stack_level(),
         )
 
     return separation_na

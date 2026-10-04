@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+from pyfixest.utils.dev_utils import _find_stack_level
+
 
 def log(array: np.ndarray) -> np.ndarray:
     """
@@ -23,6 +25,8 @@ def log(array: np.ndarray) -> np.ndarray:
     if not valid.all():
         warnings.warn(
             f"{np.sum(~valid)} rows with infinite values detected. These rows are dropped from the model.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
         )
     np.log(array, out=result, where=valid)
     return result

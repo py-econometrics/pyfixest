@@ -1,9 +1,16 @@
-from importlib import import_module
+from __future__ import annotations
+
+import warnings
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 from scipy.stats import norm
 from tqdm import tqdm
+
+from pyfixest.utils.dev_utils import _find_stack_level
 
 # Numba is an optional dependency. The fast randomization-inference path uses it;
 # the slow path does not. We import lazily so the module loads cleanly even when
@@ -33,9 +40,8 @@ def _get_ritest_stats_slow(
     fml: str,
     type: str,
     reps: int,
-    model: str,
+    fit_fn: Callable[..., Any],
     rng: np.random.Generator,
-    vcov: str | dict[str, str],
     clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
@@ -56,12 +62,13 @@ def _get_ritest_stats_slow(
         If 'randomization-t', the statistic is the t-statistic.
     reps : int
         The number of repetitions.
-    model : str
-        The model to estimate. Must be one of 'feols' or 'fepois'.
+    fit_fn : Callable[..., Any]
+        Refits the model on each resampled data set with the fitted model's
+        estimation options and the covariance estimator of the test statistic,
+        such as `refit` with the model and `vcov` bound. It is called with
+        the keyword arguments `fml` and `data` only.
     rng : np.random.Generator
         The random number generator.
-    vcov : str or dict[str, str]
-        The type of covarianc estimator. See `feols` or `fepois` for details.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -72,11 +79,10 @@ def _get_ritest_stats_slow(
         `type` is 'randomization-c', otherwise t-statistics are returned.
 
     """
-    data_resampled = data.copy()
+    # the resampled column goes into a shallow copy, so `data` keeps its
+    # columns; `fit_fn` must not modify its input
+    data_resampled = data.copy(deep=False)
     fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
-
-    fixest_module = import_module("pyfixest.estimation")
-    fit_ = getattr(fixest_module, model)
 
     resampvar_arr = data_resampled[resampvar].to_numpy()
 
@@ -92,7 +98,7 @@ def _get_ritest_stats_slow(
 
         data_resampled[f"{resampvar}_resampled"] = D_treat
 
-        fixest_fit = fit_(fml_update, data=data_resampled, vcov=vcov)
+        fixest_fit = fit_fn(fml=fml_update, data=data_resampled)
         if type == "randomization-c":
             ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
         else:
@@ -147,7 +153,7 @@ def _get_ritest_stats_fast(
         The test statistics. For this algorithm, regression coefficients are
         returned.
     """
-    if nb is None:
+    if nb is None or demean is None:
         raise ImportError(_NUMBA_RITEST_ERROR)
 
     X_demean = X
@@ -185,6 +191,7 @@ def _get_ritest_stats_fast(
         fval=fval,
         weights=weights,
         rng=rng,
+        demean_fn=demean,
     )
 
 
@@ -196,6 +203,7 @@ def _run_ri(
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
+    demean_fn: Callable[..., Any],
     clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
@@ -216,6 +224,8 @@ def _run_ri(
     X_demean2 : np.ndarray
         The demeaned design matrix.
     Y_demean : np.ndarray
+    demean_fn : Callable
+        The numba-backed `demean` function, validated as importable by the caller.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
@@ -238,7 +248,7 @@ def _run_ri(
             iterations=1,
         )
 
-        D2_demean = demean(D2, fval, weights)[0] if fval is not None else D2
+        D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
         ri_coefs[i] = lstsq_numba(
             np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
@@ -371,7 +381,7 @@ def _get_ritest_pvalue(
 
 
 def _plot_ritest_pvalue(
-    sample_stat: np.ndarray, ri_stats: np.ndarray, plot_backend: str
+    sample_stat: float, ri_stats: NDArray[np.float64], plot_backend: str
 ):
     """Plot the permutation distribution of the test statistic."""
     df = pd.DataFrame({"ri_stats": ri_stats})
@@ -394,7 +404,11 @@ def _plot_ritest_pvalue(
                 ylab,
             )
         except ImportError:
-            print("lets-plot is not installed. Falling back to matplotlib.")
+            warnings.warn(
+                "lets-plot is not installed. Falling back to matplotlib.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
             plot_backend = "matplotlib"
         else:
             LetsPlot.setup_html()

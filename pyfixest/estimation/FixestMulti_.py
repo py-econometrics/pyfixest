@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import functools
+import warnings
 from collections.abc import Mapping
-from importlib import import_module
-from typing import Any
 
 import pandas as pd
 
-from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.estimation.plan_ import ParsedFormula
 
 
 class FixestMulti(TidyColumnAccessors):
@@ -46,63 +43,55 @@ class FixestMulti(TidyColumnAccessors):
     """
 
     def __init__(
-        self,
-        *,
-        config: EstimationConfig,
-        parsed: ParsedFormula,
-        data: pd.DataFrame,
-        context: Mapping[str, Any],
+        self, *, formula_dict: Mapping[str | None, list[FixestFormula]]
     ) -> None:
         """.
 
         Parameters
         ----------
-        config : EstimationConfig
-            Immutable record of every option the public API requested.
-        parsed : ParsedFormula
-            Result of `plan_.parse_formula(config)`.
-        data : pandas.DataFrame
-            The input data after narwhals→pandas conversion, optional copy,
-            and index reset.
-        context : Mapping[str, Any]
-            Captured evaluation scope (from `capture_context`).
+        formula_dict : Mapping[str | None, list[FixestFormula]]
+            The parsed formulas keyed by fixed-effects spec, kept only for the
+            deprecated `FixestFormulaDict` attribute.
         """
-        self._config = config
-        self._parsed = parsed
-        self._data = data
-        self._context = context
+        self._formula_dict = formula_dict
 
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
-        # set functions inherited from other modules
-        _module = import_module("pyfixest.report")
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.coefplot.__doc__ = _tmp.__doc__
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.iplot.__doc__ = _tmp.__doc__
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.summary.__doc__ = _tmp.__doc__
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=self.all_fitted_models.values())
-        self.etable.__doc__ = _tmp.__doc__
-
     @property
-    def _is_iv(self) -> bool:
-        """Whether the call expanded into an IV model."""
-        return self._parsed.is_iv
+    def FixestFormulaDict(self) -> Mapping[str | None, list[FixestFormula]]:
+        """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
+        warnings.warn(
+            "`FixestFormulaDict` is deprecated and will be removed in a future "
+            "release. Use `fit.model.fixest_formula` on the models returned by "
+            "`to_list()` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._formula_dict
 
-    @property
-    def _is_multiple_estimation(self) -> bool:
-        """Whether the call expanded into more than one model."""
-        return self._parsed.is_multiple_estimation
+    def summary(self, **kwargs):
+        """Print a summary of all models. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        from pyfixest.report import summary
 
-    @property
-    def FixestFormulaDict(self):
-        """Parsed formula dict keyed by fixed-effects spec."""
-        return self._parsed.formula_dict
+        return summary(models=self, **kwargs)
+
+    def etable(self, **kwargs):
+        """Create a regression table of all models. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        from pyfixest.report import etable
+
+        return etable(models=self, **kwargs)
+
+    def coefplot(self, **kwargs):
+        """Plot the coefficients of all models. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        from pyfixest.report import coefplot
+
+        return coefplot(models=self, **kwargs)
+
+    def iplot(self, **kwargs):
+        """Plot the `i()` interaction coefficients of all models. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        from pyfixest.report import iplot
+
+        return iplot(models=self, **kwargs)
 
     def to_list(self) -> list[Feols | Fepois | Feiv]:
         """
@@ -169,7 +158,7 @@ class FixestMulti(TidyColumnAccessors):
         for x in list(self.all_fitted_models.keys()):
             fxst = self.all_fitted_models[x]
             df = fxst.tidy().reset_index()
-            df["fml"] = fxst._fml
+            df["fml"] = fxst.model.formula
             res.append(df)
 
         res_df = pd.concat(res, axis=0)
@@ -213,9 +202,8 @@ class FixestMulti(TidyColumnAccessors):
             Default is None.
         cluster : Union[str, None], optional
             The name of the cluster variable. Default is None. If None, uses
-            the `self._clustervar` attribute as the cluster variable. If the
-            `self._clustervar` attribute is None, a heteroskedasticity-robust
-            wild bootstrap is run.
+            each model's cluster variables. If a model is not clustered, a
+            heteroskedasticity-robust wild bootstrap is run.
         weights_type : str, optional
             The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
             or 'normal'. Default is 'rademacher'.
