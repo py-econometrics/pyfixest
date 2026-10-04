@@ -45,8 +45,7 @@ fit_squared_fe = pf.feols("Y ~ X1 + I(X1**2) | f1", data=data)
 
 Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
-translating R's `I(X1^2)`. For fixed-effect interactions behind `|`, use `:`
-as described in the [formula syntax tutorial](../tutorials/formula-syntax.qmd#fixed-effects-syntax).
+translating R's `I(X1^2)`.
 
 ## Setup
 
