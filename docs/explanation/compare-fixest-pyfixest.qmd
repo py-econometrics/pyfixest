@@ -9,6 +9,44 @@ toc-location: left
 
 This vignette compares estimation results from `fixest` with `pyfixest` via the `rpy2` package.
 
+## Intentional formula differences
+
+### Covariate powers
+
+For covariates, PyFixest prioritizes
+[Formulaic's formula conventions](https://matthew.wardrop.casa/formulaic/latest/guides/grammar/)
+over `fixest`'s arithmetic-power convention. Outside a Python expression such
+as `I(...)`, both `^` and `**` expand interactions up to the specified order:
+
+| Covariate formula | PyFixest interpretation |
+|---|---|
+| `Y ~ X1 + X1^2` | `Y ~ X1`; no squared term is added |
+| `Y ~ X1 + X1**2` | `Y ~ X1`; no squared term is added |
+| `Y ~ (X1 + X2)^2` | `Y ~ X1 + X2 + X1:X2` |
+| `Y ~ (X1 + X2)**2` | `Y ~ X1 + X2 + X1:X2` |
+
+In particular, a single-factor power such as `X1^2` reduces to `X1` under
+these formula rules. It does **not** square the values of `X1`, and adding it
+alongside `X1` has no effect. This also applies when the model has fixed effects.
+In contrast, `fixest` 0.14.0 interprets covariate `X1^2` as the arithmetic
+transformation `I(X1^2)`, and `(X1 + X2)^2` as `I((X1 + X2)^2)`.
+This is an intentional syntax difference; see
+[#1765](https://github.com/py-econometrics/pyfixest/issues/1765).
+
+To include an arithmetic square in PyFixest, use `I(X1**2)`:
+
+```python
+import pyfixest as pf
+
+data = pf.get_data()
+fit_squared = pf.feols("Y ~ X1 + I(X1**2)", data=data)
+fit_squared_fe = pf.feols("Y ~ X1 + I(X1**2) | f1", data=data)
+```
+
+Inside `I(...)`, expressions follow Python arithmetic: `**`
+means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
+translating R's `I(X1^2)`.
+
 ## Setup
 
 
