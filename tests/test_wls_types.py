@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from operator import attrgetter
 
 import numpy as np
@@ -255,6 +257,19 @@ def test_fweights_glm_sample_sizes_after_separation():
         fit_expanded.variance_covariance.vcov,
         atol=1e-10,
     )
+
+
+@pytest.mark.parametrize("weights_name", ["my w", "w-x", "w+1"])
+def test_weights_column_names_are_literal(weights_name):
+    data = pf.get_data()
+    data[weights_name] = data["weights"]
+
+    reference = pf.feols("Y ~ X1", data=data, weights="weights")
+    fit = pf.feols("Y ~ X1", data=data, weights=weights_name)
+
+    # Renaming the same weight values must leave results exactly unchanged.
+    pd.testing.assert_series_equal(fit.coef(), reference.coef(), check_exact=True)
+    pd.testing.assert_series_equal(fit.se(), reference.se(), check_exact=True)
 
 
 def test_aweights():

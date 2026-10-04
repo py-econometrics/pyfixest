@@ -516,7 +516,7 @@ def _get_formulaic_formula(
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)
-        formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+        formula_kwargs.update({_ModelMatrixKey.weights: f"`{weights}` - 1"})
     if offset is not None:
         formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
     formula_formulaic = formulaic.Formula(
