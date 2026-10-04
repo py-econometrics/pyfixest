@@ -152,11 +152,18 @@ def test_iplot(
 
 
 @pytest.mark.extended
-def test_iplot_error(data):
-    with pytest.raises(ValueError):
-        fit4 = feols(fml="Y ~ X1", data=data, vcov="iid")
-        fit4.iplot()
-        iplot(fit4)
+@pytest.mark.parametrize("preceding_model", [False, True])
+def test_iplot_error(data, preceding_model):
+    fit = feols(fml="Y ~ X1", data=data, vcov="iid")
+    models = [feols(fml="Y ~ i(f2)", data=data), fit] if preceding_model else [fit]
+    with pytest.raises(
+        ValueError, match=f"Model {len(models)} cannot be plotted"
+    ) as exc:
+        iplot(models)
+    assert str(exc.value) == (
+        f"Model {len(models)} cannot be plotted with `iplot` because it does not "
+        f"use the `i` syntax: {fit.model.formula!r}"
+    )
 
 
 @pytest.mark.extended
@@ -164,7 +171,7 @@ def test_iplot_rejects_double_colon_column_without_i(data):
     """A '::' in a column name must not be mistaken for i() syntax."""
     renamed = data.rename(columns={"X1": "a::b"})
     fit = feols(fml="Y ~ Q('a::b') + X2", data=renamed, vcov="iid")
-    with pytest.raises(ValueError, match="did not have ivars"):
+    with pytest.raises(ValueError, match="does not use the `i` syntax"):
         fit.iplot()
 
 

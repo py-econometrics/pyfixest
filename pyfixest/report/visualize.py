@@ -204,8 +204,8 @@ def iplot(
     for x, fxst in enumerate(list(models)):
         if not fxst.model.interacted_covariates:
             raise ValueError(
-                f"The {x} th estimated model did not have ivars / 'i()' model syntax."
-                "In consequence, the '.iplot()' method is not supported."
+                f"Model {x + 1} cannot be plotted with `iplot` because it does not "
+                f"use the `i` syntax: {fxst.model.formula!r}"
             )
         all_icovars += fxst.model.interacted_covariates
 

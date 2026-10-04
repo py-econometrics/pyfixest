@@ -170,7 +170,7 @@ def test_i_term_columns(data: pd.DataFrame, fml: str, expected: list[str]) -> No
     columns = i_term_columns(fit.model.model_spec["second_stage"].rhs)
 
     assert columns == expected
-    assert set(columns) <= set(fit._coefnames)
+    assert set(columns).issubset(fit._coefnames)
 
 
 def test_i_term_columns_ignores_double_colon_names(data: pd.DataFrame) -> None:
