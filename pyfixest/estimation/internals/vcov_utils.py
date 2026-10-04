@@ -18,7 +18,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -83,14 +83,14 @@ class ClusterPrep:
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: pd.DataFrame,
     clustervar: list[str],
     ssc: Ssc,
-    fixef: str | None,
+    fixef: tuple[str, ...],
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    n_levels_by_fe: tuple[int, ...],
 ) -> ClusterPrep:
-    "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
+    """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
@@ -104,18 +104,19 @@ def prepare_cluster_state(
 
     k_fe_nested = 0
     n_fe_fully_nested = 0
-    if fixef is not None and ssc.k_fixef == "nonnested":
+    if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-            all_fixef_array=np.array(fixef.split("+"), dtype=str),
+            all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
             cluster_data=cluster_arr_int.astype(np.uintp),
             fe_data=fe.to_numpy().astype(np.uintp)
             if isinstance(fe, pd.DataFrame)
             else fe.astype(np.uintp),
         )
-        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+        if n_fe_fully_nested > 0:
+            k_fe_nested = int(np.sum(np.asarray(n_levels_by_fe)[k_fe_nested_flag]))
 
     return ClusterPrep(
         cluster_df=cluster_df,
@@ -215,28 +216,6 @@ def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int
         G = [min(G)] * len(G)
 
     return G
-
-
-def _get_vcov_type(
-    vcov: str | dict[str, str] | None,
-) -> str | dict[str, str]:
-    """
-    Pass the specified vcov type.
-
-    Passes the specified vcov type. If no vcov type specified, always defaults
-    to "iid" inference, regardless of whether fixed effects are included in the model.
-
-    Parameters
-    ----------
-    vcov : Union[str, dict[str, str], None]
-        The specified vcov type.
-
-    Returns
-    -------
-    str
-        vcov_type (str) : The specified vcov type, or "iid" by default.
-    """
-    return vcov if vcov is not None else "iid"
 
 
 def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):

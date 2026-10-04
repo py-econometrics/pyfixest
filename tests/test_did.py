@@ -234,7 +234,7 @@ def test_did2s_wildboottest_ccv_unsupported(data):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"Wild cluster bootstrap is not supported for the DID2S estimator\.",
+        match=r"Wild cluster bootstrap is only supported for unweighted OLS models",
     ):
         fit.wildboottest(param="treat", reps=99, seed=1)
 
@@ -244,6 +244,27 @@ def test_did2s_wildboottest_ccv_unsupported(data):
         r"of type 'did2s'\.",
     ):
         fit.ccv(treatment="treat", cluster="state")
+
+
+@pytest.mark.parametrize("estimator", ["twfe", "saturated"])
+def test_event_study_crv3_refits_with_feols(data, estimator):
+    "CRV3 on an event study must refit the linear model, not the Poisson estimator."
+    fit = event_study(
+        data=data,
+        yname="dep_var",
+        idname="unit",
+        tname="year",
+        gname="g",
+        estimator=estimator,
+        cluster="state",
+    )
+    fit.vcov({"CRV3": "state"})
+
+    expected = pf.feols(fit.model.formula, data=fit._data, vcov={"CRV3": "state"})
+
+    np.testing.assert_allclose(
+        fit.se().to_numpy(), expected.se().to_numpy(), rtol=1e-12, atol=0
+    )
 
 
 def test_lpdid():

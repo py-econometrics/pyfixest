@@ -9,6 +9,7 @@ from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.report.utils import _post_processing_input_checks
+from pyfixest.utils.dev_utils import _find_stack_level
 
 ModelInputType = FixestMulti | list[Feols | Fepois | Feiv]
 
@@ -53,7 +54,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     for i, model in enumerate(models):
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
         pvalues[i] = model.pvalue().xs(param)
         all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
@@ -299,7 +300,7 @@ def _multcomp_resample(
     for model in models:
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model._fml}."
+                f"Parameter '{param}' not found in the model {model.model.formula}."
             )
 
         if model.variance_covariance.spec.is_clustered:
@@ -310,7 +311,9 @@ def _multcomp_resample(
                     f"""
                               2^(the number of clusters) < the number of boot iterations for at least one model,
                               setting full_enumeration to True and reps = {2**G}.
-                              """
+                              """,
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
                 full_enumeration = True
 
@@ -360,17 +363,13 @@ def _multcomp_resample(
             )
             p_vals[i] = 2 * (1 - t.cdf(np.abs(t_stats[i]), _df[i]))
             boot_p_vals[:, i] = 2 * (1 - t.cdf(np.abs(boot_t_stats[:, i]), _df[i]))
-        elif type == "rwolf":
-            pass
 
     if type == "rwolf":
         pval = _get_rwolf_pval(t_stats, boot_t_stats)
         all_model_stats.loc["RW Pr(>|t|)"] = pval
-    elif type == "wyoung":
+    else:
         pval = _get_wyoung_pval(p_vals, boot_p_vals)
         all_model_stats.loc["WY Pr(>|t|)"] = pval
-    else:
-        raise ValueError("Invalid adjustment procedure specified")
 
     all_model_stats.columns = pd.Index([f"est{i}" for i, _ in enumerate(models)])
     return all_model_stats

@@ -1,6 +1,4 @@
-import functools
 import warnings
-from importlib import import_module
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -12,20 +10,21 @@ from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
     from pyfixest.estimation.formula.model_matrix import ModelMatrix
-    from pyfixest.estimation.internals.families import InferenceDist
     from pyfixest.estimation.internals.fit_statistics import FitStatistics
     from pyfixest.estimation.internals.model_state import (
         EstimationOptions,
         EstimationSample,
+        ModelDescription,
         ObservationWeights,
         VarianceCovariance,
         WithinLinearData,
     )
+    from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.internals.literals import (
     InferenceType,
     _validate_literal_argument,
 )
-from pyfixest.utils.dev_utils import _select_coefnames_and_indices
+from pyfixest.utils.dev_utils import _find_stack_level, _select_coefnames_and_indices
 from pyfixest.utils.utils import simultaneous_crit_val
 
 
@@ -143,35 +142,26 @@ class ResultAccessorMixin(TidyColumnAccessors):
     within_data: "WithinLinearData"
     fitstat: "FitStatistics"
     _coefnames: list[str]
-    _method: str
-    _has_fixef: bool
-    _is_iv: bool
-    _k_fe: pd.Series
+    model: "ModelDescription"
     _k: int
-    _inference_dist: "InferenceDist"
 
-    def _bind_report_methods(self):
-        """Bind summary, coefplot, iplot, and etable from pyfixest.report as instance methods."""
-        _module = import_module("pyfixest.report")
+    @property
+    def _fml(self) -> str:
+        """Formula string. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.formula` instead."""
+        return self.model.formula
 
-        _tmp = _module.summary
-        self.summary = functools.partial(_tmp, models=[self])
-        self.summary.__doc__ = _tmp.__doc__
+    @property
+    def _method(self) -> str:
+        """Estimator name. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.method` instead."""
+        return self.model.method
 
-        _tmp = _module.coefplot
-        self.coefplot = functools.partial(_tmp, models=[self])
-        self.coefplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.iplot
-        self.iplot = functools.partial(_tmp, models=[self])
-        self.iplot.__doc__ = _tmp.__doc__
-
-        _tmp = _module.etable
-        self.etable = functools.partial(_tmp, models=[self])
-        self.etable.__doc__ = _tmp.__doc__
+    @property
+    def _vcov(self) -> np.ndarray:
+        """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
+        return self.variance_covariance.vcov
 
     def evalue(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI e-values.
@@ -207,12 +197,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.evalue()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _evalue
+        from pyfixest.estimation.post_estimation.savi import (
+            _evalue,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="evalue")
         return _evalue(model=self, mixture_precision=mixture_precision)
 
     def pvalue_savi(
-        self,
+        self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
         """Compute coefficient-wise SAVI sequential p-values.
@@ -235,8 +229,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.pvalue_savi()
         ```
         """
-        from pyfixest.estimation.post_estimation.savi import _pvalue_savi
+        from pyfixest.estimation.post_estimation.savi import (
+            _pvalue_savi,
+            _validate_savi_model,
+        )
 
+        _validate_savi_model(model=self, method="pvalue_savi")
         return _pvalue_savi(model=self, mixture_precision=mixture_precision)
 
     def get_inference(self, alpha: float = 0.05) -> None:
@@ -263,7 +261,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if not hasattr(self, "variance_covariance"):
             raise EmptyVcovError()
         covariance = self.variance_covariance
-        dist = self._inference_dist
+        dist = self.model.inference_dist
 
         beta_hat = self._beta_hat
         se = np.sqrt(np.diagonal(covariance.vcov))
@@ -279,10 +277,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int=np.array([beta_hat - z_se, beta_hat + z_se]),
             alpha=alpha,
         )
-
-    def _n_fixef_coefficients(self) -> int:
-        """Return the number of fixed-effect coefficients, zero without fixed effects."""
-        return int(np.sum(self._k_fe - 1) + 1) if self._has_fixef else 0
 
     def tidy(
         self,
@@ -347,6 +341,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             warnings.warn(
                 "Empty variance-covariance matrix detected",
                 UserWarning,
+                stacklevel=_find_stack_level(),
             )
             # Fixed-effects-only model: no coefficients, so no inference rows.
             se = tstat = pvalue = np.empty(0)
@@ -361,11 +356,9 @@ class ResultAccessorMixin(TidyColumnAccessors):
             f"{lb * 100:.1f}%": conf_int[0],
             f"{ub * 100:.1f}%": conf_int[1],
         }
-        if (
-            getattr(self, "_sample_split_var", None) is not None
-            and (sample := getattr(self, "_sample_split_value", None)) is not None
-        ):
-            data["Sample"] = sample
+        if self.model.sample_split is not None:
+            sample = self.model.sample_split.value
+            data["Sample"] = "all" if sample is None else sample
         return pd.DataFrame(data).set_index("Coefficient")
 
     def _normalize_inference_type(
@@ -390,7 +383,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         return inference_type
 
     def confint(
-        self,
+        self: "Feols",
         alpha: float = 0.05,
         keep: list | str | None = None,
         drop: list | str | None = None,
@@ -488,8 +481,12 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
-            from pyfixest.estimation.post_estimation.savi import _confint
+            from pyfixest.estimation.post_estimation.savi import (
+                _confint,
+                _validate_savi_model,
+            )
 
+            _validate_savi_model(model=self, method="confint")
             return _confint(
                 model=self,
                 alpha=alpha,
@@ -505,7 +502,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
 
         se = self.coeftable.se
         if inference_type == "regular":
-            crit_val = self._inference_dist.crit_val(
+            crit_val = self.model.inference_dist.crit_val(
                 alpha, self.variance_covariance.df_t
             )
         else:

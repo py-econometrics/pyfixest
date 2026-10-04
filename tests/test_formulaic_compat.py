@@ -40,11 +40,11 @@ def data() -> pd.DataFrame:
 def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     """IV formulas parse to StructuredFormula with .deps[0].lhs/.rhs."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
-    rhs = fit.FixestFormula._right_hand_side
+    rhs = fit.model.fixest_formula._right_hand_side
 
     import formulaic.formula
 
-    assert fit._is_iv
+    assert fit.model.is_iv
     assert isinstance(rhs, formulaic.formula.StructuredFormula)
     assert len(rhs.deps) == 1
     assert [str(v) for v in rhs.deps[0].lhs.required_variables] == ["X2"]
@@ -66,7 +66,7 @@ def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     """The _hat suffix from formulaic MULTISTAGE is filtered from exogenous."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
 
-    exog_vars = {str(v) for v in fit.FixestFormula.exogenous.required_variables}
+    exog_vars = {str(v) for v in fit.model.fixest_formula.exogenous.required_variables}
 
     assert "X1" in exog_vars
     assert "X2" not in exog_vars
@@ -77,11 +77,11 @@ def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) ->
     """Formulaic names generated terms after the endogenous term, not its variables."""
     fit = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
 
-    exog_terms = {str(term) for term in fit.FixestFormula.exogenous}
+    exog_terms = {str(term) for term in fit.model.fixest_formula.exogenous}
 
     # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
     assert exog_terms == {"1", "X1"}
-    assert fit.FixestFormula.second_stage == "Y ~ 1 + X1 + np.exp(X2)"
+    assert fit.model.fixest_formula.second_stage == "Y ~ 1 + X1 + np.exp(X2)"
     assert "np.exp(X2)" in fit.coef().index
 
 
@@ -131,7 +131,7 @@ def test_encoder_state_tuple_shape(data: pd.DataFrame) -> None:
 
     from formulaic.parser.types import Factor
 
-    rhs_spec = fit._model_spec["second_stage"].rhs
+    rhs_spec = fit.model.model_spec["second_stage"].rhs
     for value in rhs_spec.encoder_state.values():
         assert isinstance(value, tuple)
         assert len(value) == 2
@@ -156,7 +156,7 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
     """i() stores contrast state under __contrasts_<var>__."""
     fit = pf.feols("Y ~ X1 + i(f1, X2)", data=data)
 
-    rhs_spec = fit._model_spec["second_stage"].rhs
+    rhs_spec = fit.model.model_spec["second_stage"].rhs
     i_state = None
     for factor_expr, value in rhs_spec.encoder_state.items():
         if factor_expr.startswith("i("):
@@ -172,7 +172,7 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     """FE transform_state stores __fixed_effect_encoding__ DataFrame."""
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
-    fe_spec = fit._model_spec["fe"]
+    fe_spec = fit.model.model_spec["fe"]
     fe_state = fe_spec.transform_state["__fixed_effect__(f1)"]
     enc_df = fe_state["__fixed_effect_encoding__"]
 
@@ -185,7 +185,7 @@ def test_materializer_cache_contains_evaluated_factor_values(
 ) -> None:
     """The materializer cache stores evaluated rather than source values."""
     fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
-    rhs_spec = fit._model_spec["second_stage"].rhs
+    rhs_spec = fit.model.model_spec["second_stage"].rhs
     context = FORMULAIC_TRANSFORMS | {**fit.options.context}
 
     materializer = rhs_spec.get_materializer(data, context=context)
@@ -201,7 +201,7 @@ def test_materializer_cache_contains_evaluated_factor_values(
 def test_evaluated_factor_cache_guard_raises_loudly(data: pd.DataFrame) -> None:
     """A missing evaluated factor must fail before unseen levels are skipped."""
     fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
-    rhs_spec = fit._model_spec["second_stage"].rhs
+    rhs_spec = fit.model.model_spec["second_stage"].rhs
 
     with pytest.raises(FormulaicCompatibilityError, match="evaluated factor"):
         rows_with_unseen_contrast_levels(rhs_spec, data, {})

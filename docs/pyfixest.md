@@ -119,7 +119,7 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 `PyFixest` also supports multiple estimation syntax:
 
 ```python
-fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
+fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
 fit.etable()
 ```
 
