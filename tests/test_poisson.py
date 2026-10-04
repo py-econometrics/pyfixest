@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import contextlib
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -92,6 +95,72 @@ def test_separation():
         # if no separation, no warning is raised
         if data.separated.sum() == 0:
             assert len(record) == 0
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "example,missing_rows",
+    [
+        ("reproduction", [0, 1, 2, 3, 4]),
+        ("reproduction", [150]),
+        ("reproduction", [0, 8, 32, 70, 121, 169, 230, 299]),
+        ("ppmlhdfe", [4]),
+    ],
+)
+def test_ir_separation_after_missing_rows(example, missing_rows):
+    """IR separation preserves row identity after formula-level filtering."""
+    if example == "ppmlhdfe":
+        data = pd.read_csv(
+            Path(__file__).parent / "data/ppmlhdfe_separation_examples/01.csv"
+        )
+        fml = "y ~ x1 + x2 | id1 + id2"
+        regressor = "x1"
+    else:
+        rng = np.random.default_rng(3)
+        n = 300
+        data = pd.DataFrame({"f1": rng.integers(0, 10, n), "X1": rng.normal(size=n)})
+        data["D"] = (rng.uniform(size=n) < 0.1).astype(float)
+        data["Y"] = rng.poisson(np.exp(0.5 + 0.3 * data["X1"]))
+        data.loc[data["D"] == 1, "Y"] = 0
+        data["separated"] = data["D"]
+        fml = "Y ~ X1 + D | f1"
+        regressor = "X1"
+
+    data.loc[missing_rows, regressor] = np.nan
+    complete = data.dropna()
+    retained = complete.loc[complete["separated"] == 0]
+    n_separated = int(complete["separated"].sum())
+    fits = []
+    for sample in (data, complete.reset_index(drop=True)):
+        with pytest.warns(
+            UserWarning,
+            match=rf"{n_separated} observations removed because of separation\.",
+        ):
+            fits.append(
+                pf.fepois(fml, data=sample, separation_check=["ir"], iwls_tol=1e-12)
+            )
+    fit, prefiltered = fits
+    assert fit.sample_info.n_rows == prefiltered.sample_info.n_rows == len(retained)
+    assert fit.sample_info.dropped_by_stage.separation == n_separated
+    assert prefiltered.sample_info.dropped_by_stage.separation == n_separated
+    pd.testing.assert_index_equal(fit.model_matrix.dependent.index, retained.index)
+    pd.testing.assert_series_equal(fit.coef(), prefiltered.coef())
+
+    # fixest does not implement IR; compare its fit on the known nonseparated
+    # sample (the ppmlhdfe fixture records the externally identified rows).
+    fit_r = fixest.fepois(ro.Formula(fml), data=retained, glm_tol=1e-12)
+    coef_r = ro.r["coef"](fit_r)
+    coef_names = ro.r("function(fit) names(coef(fit))")(fit_r)
+    expected = pd.Series(np.asarray(coef_r), index=list(coef_names))
+    assert set(fit.coef().index) == set(expected.index)
+    # Allow small differences from IRLS stopping and fixed-effect projection.
+    np.testing.assert_allclose(
+        fit.coef(),
+        expected.loc[fit.coef().index],
+        rtol=1e-7,
+        atol=1e-7,
+        err_msg="Poisson coefficients after IR separation differ from fixest",
+    )
 
 
 @pytest.mark.against_r_core

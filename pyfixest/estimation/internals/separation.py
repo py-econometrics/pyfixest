@@ -261,9 +261,8 @@ def _check_for_separation_ir(
                 context=context,
             ),
         )
-        tmp["Uhat"] = pd.Series(
-            data=fitted.predict(), index=fitted._data.index, name="Uhat"
-        )
+        # The inner fit resets its index; predictions retain tmp's row order.
+        tmp["Uhat"] = fitted.predict()
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
