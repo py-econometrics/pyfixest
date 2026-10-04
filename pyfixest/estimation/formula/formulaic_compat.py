@@ -165,17 +165,7 @@ def rows_with_unseen_contrast_levels(
 
 
 def i_term_columns(rhs_spec: ModelSpec) -> list[str]:
-    """
-    Return the model-matrix columns produced by terms that call ``i()``.
-
-    Mirrors fixest's ``model_matrix_info`` registry, which ``iplot`` consults to
-    select ``i()`` coefficients. Every ``i()`` encode stores contrast state under
-    pyfixest's ``__contrasts_<var>__`` key, so a factor is an ``i()`` call
-    exactly when its encoder state carries such a key. A term contributes its
-    columns when any of its factors is such a call, which also covers
-    ``i(f):x`` style interactions. Column names are never inspected, so user
-    columns containing ``::`` are not misclassified.
-    """
+    """Return the model-matrix columns produced by terms that call ``i()``."""
     i_factor_exprs = {
         factor_expr
         for factor_expr, value in rhs_spec.encoder_state.items()
