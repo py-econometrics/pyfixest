@@ -136,34 +136,49 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     ``Y ~ X1 | f1 | X2 ~ Z2`` becomes ``Y ~ X1 + [X2 ~ Z2] | f1``.
     Bracketed IV blocks belong only in the first formula part.
     """
-    parts = _str_split_by_sep(formula, separator="|")
+
+    main_part, *potential_iv_parts = _str_split_by_sep(formula, separator="|")
     supported = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
-    iv_parts = [
-        index for index, part in enumerate(parts[1:], 1) if _count_formula_tildes(part)
-    ]
-    if len(iv_parts) > 1:
-        raise FormulaSyntaxError(
-            "Only one instrumental variable block is supported. "
-            "Use a single `[endogenous ~ instruments]` block."
-        )
-    if not iv_parts:
+    # Bracketed IV in the first part is already in Formulaic syntax.
+    # Only later parts need legacy-IV conversion or misplaced-IV validation.
+    iv_tilde_counts = [_count_formula_tildes(part) for part in potential_iv_parts]
+    if not any(iv_tilde_counts):
         return formula
 
-    iv_index = iv_parts[0]
-    iv_sides = _str_split_by_sep(parts[iv_index], separator="~")
-    if (
-        len(parts) > 3
-        or iv_index != len(parts) - 1
-        or len(iv_sides) != 2
-        or not all(iv_sides)
-        or _count_formula_tildes(parts[iv_index]) != 1
-    ):
-        raise FormulaSyntaxError("Misplaced or malformed IV part. " + supported)
+    iv_part = potential_iv_parts[-1]
+    iv_sides = _str_split_by_sep(iv_part, separator="~")
+    too_many_formula_parts = len(potential_iv_parts) > 2
+    iv_before_final_part = any(iv_tilde_counts[:-1])
+    iv_lacks_single_tilde = iv_tilde_counts[-1] != 1
+    iv_lacks_two_top_level_sides = len(iv_sides) != 2
+    iv_has_empty_side = not all(iv_sides)
+
+    if too_many_formula_parts:
+        reason = (
+            "Legacy IV syntax allows only the main formula, optional fixed effects, "
+            "and one IV part."
+        )
+    elif iv_before_final_part:
+        reason = "The legacy IV part must come last, after any fixed effects."
+    elif iv_lacks_single_tilde:
+        reason = "The IV part must contain exactly one formula-level `~`."
+    elif iv_lacks_two_top_level_sides:
+        reason = (
+            "The legacy IV separator `~` must be outside brackets. "
+            "Bracketed IV syntax belongs before `|`, alongside the covariates."
+        )
+    elif iv_has_empty_side:
+        reason = "Specify endogenous variables before `~` and instruments after it."
+    else:
+        reason = None
+
+    if reason is not None:
+        raise FormulaSyntaxError(reason + " " + supported)
 
     formula_old = formula
-    formula = f"{parts[0]} + [{parts[-1]}]"
-    if len(parts) == 3:
-        formula = f"{formula} | {parts[1]}"
+    formula = f"{main_part} + [{iv_part}]"
+    if len(potential_iv_parts) == 2:
+        formula = f"{formula} | {potential_iv_parts[0]}"
     warnings.warn(
         "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
         f"Instead of `{formula_old}` use `{formula}`",
