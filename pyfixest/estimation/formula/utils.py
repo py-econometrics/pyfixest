@@ -81,8 +81,11 @@ class _MultipleEstimationType(Enum):
     mvsw = "multiverse stepwise"
 
 
+# Matches an operator call such as `csw(X1, X2)`, also when a space precedes the
+# parenthesis (`csw (X1, X2)`) or the arguments span lines, as fixest allows.
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
-    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\s*\(.+\)",
+    flags=re.DOTALL,
 )
 
 

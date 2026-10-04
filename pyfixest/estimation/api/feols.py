@@ -320,6 +320,23 @@ def feols(
     pf.etable(fit)
     ```
 
+    As in `fixest`, the arguments of a multiple estimation operator may span
+    several lines, for example in a triple-quoted string with one argument per
+    line, and a space may separate the operator from its parenthesis, as in
+    `csw (X1, X2)`:
+
+    ```{python}
+    fml = '''
+    Y ~ csw (
+        X1,
+        X2
+    )
+    | f1
+    '''
+    fit = pf.feols(fml, data)
+    pf.etable(fit)
+    ```
+
     In general, using muliple estimation syntax can improve the estimation time
     as covariates that are demeaned in one model and are used in another model do
     not need to be demeaned again: `feols()` implements a caching mechanism that
