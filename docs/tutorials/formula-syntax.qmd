@@ -150,7 +150,7 @@ For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `cs
 
 ### Multiple dependent variables
 
-Wrap several dependent variables in `sw()`: `"sw(Y1, Y2) ~ X1"` fits one model per dependent variable.
+You can wrap several dependent variables in `sw()`, e.g. via `"sw(Y1, Y2) ~ X1"`, to fit one model per dependent variable.
 
 ```{python}
 fit_multi_dep = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
@@ -371,9 +371,10 @@ pf.etable(fit_fsplit)
 
 ## Deprecated spellings
 
-Three spellings inherited from R's `fixest` still parse, but each one emits a
-`DeprecationWarning` and will raise an error in a future release. If you are
-translating `fixest` code, replace them as follows:
+We are deprecating multiple `fixest`-style syntax features with `PyFixest` 0.70.0. Our stated goal is to 
+"mimic fixest syntax as much as Python allows". Most of the changes below stem from the fact that our 
+model matrix engine `formulaic` supports the novel syntax better / easier, which leads to cleaner and 
+less buggy code. 
 
 | Deprecated | Use instead |
 |---|---|
