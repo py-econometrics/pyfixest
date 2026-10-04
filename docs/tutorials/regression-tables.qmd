@@ -60,7 +60,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6])
 You can also estimate and display multiple regressions with one line of code using the (py)fixest stepwise notation:
 
 ```{python}
-pf.etable(pf.feols("Y+Y2~csw(X1,X2,X1:X2)", data=data))
+pf.etable(pf.feols("sw(Y, Y2) ~ csw(X1, X2, X1:X2)", data=data))
 ```
 
 ## Keep and drop variables

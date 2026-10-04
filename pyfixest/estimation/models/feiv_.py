@@ -135,13 +135,13 @@ class Feiv(Feols):
     Examples
     --------
     `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
-    when the formula includes an IV part, i.e.
-    `depvar ~ exog | fe | endog ~ instrument`.
+    when the formula includes an instrument block, i.e.
+    `depvar ~ exog + [endog ~ instruments] | fe`.
 
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.tidy()
     ```
 
@@ -402,7 +402,7 @@ class Feiv(Feols):
             fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
 
             # Fit IV model
-            fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+            fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
                      vcov=vcov_detail,
                      weights="weights")
             fit_iv.first_stage()

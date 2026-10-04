@@ -47,7 +47,7 @@ def get_ivf_data(N=2000, seed=1234):
     pf.etable(
         [
             pf.feols("earnings ~ num_children", data),
-            pf.feols("earnings ~ 1 | num_children ~ ivf_success", data),
+            pf.feols("earnings ~ 1 + [num_children ~ ivf_success]", data),
         ]
     )
     ```
@@ -128,7 +128,7 @@ def get_bartik_data(N=300, seed=1234):
     pf.etable(
         [
             pf.feols("wages ~ immigration + log_population", data),
-            pf.feols("wages ~ log_population | immigration ~ bartik_instrument", data),
+            pf.feols("wages ~ log_population + [immigration ~ bartik_instrument]", data),
         ]
     )
     ```
@@ -209,7 +209,7 @@ def get_encouragement_data(N=4000, seed=1234):
 
     # instrument take-up with the randomized encouragement, LATE is 2.0
     fit = pf.feols(
-        "revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data
+        "revenue ~ 1 + [adopted_feature ~ assigned_treatment] | user_type", data
     )
     fit.summary()
     ```
