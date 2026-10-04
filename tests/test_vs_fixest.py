@@ -1440,96 +1440,9 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
         )
 
 
-@pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")]
-)
-@pytest.mark.parametrize("k_adj", [True, False])
-@pytest.mark.parametrize("k_fixef", ["none", "full", "nonnested"])
-@pytest.mark.parametrize("G_adj", [True, False])
-@pytest.mark.parametrize("G_df", ["min", "conventional"])
-def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
-    data = data.dropna()
-
-    fit1 = feols(
-        "Y ~ X1 + X2 ",
-        data=data,
-        vcov={"CRV1": "f1 +f2"},
-        ssc=ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df),
-    )
-
-    feols_fit1 = fixest.feols(
-        ro.Formula("Y ~ X1 + X2"),
-        data=data,
-        cluster=ro.Formula("~f1+f2"),
-        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
-    )
-
-    # check that coefs match
-    np.testing.assert_allclose(
-        fit1.coef(),
-        stats.coef(feols_fit1),
-        rtol=1e-08,
-        atol=1e-08,
-        err_msg=f"CRV1-coef: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
-    )
-
-    if True:
-        # test vcov's
-        np.testing.assert_allclose(
-            fit1.variance_covariance.vcov,
-            stats.vcov(feols_fit1),
-            rtol=1e-04,
-            atol=1e-04,
-            err_msg=f"CRV1-vcov: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
-        )
-
-    if True:
-        # now test se's
-        np.testing.assert_allclose(
-            fit1.se(),
-            fixest.se(feols_fit1),
-            rtol=1e-04,
-            atol=1e-04,
-            err_msg=f"CRV1-se: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
-        )
-
-    if True:
-        # now test pvalues
-        np.testing.assert_allclose(
-            fit1.pvalue(),
-            fixest.pvalue(feols_fit1),
-            rtol=1e-04,
-            atol=1e-04,
-            err_msg=f"CRV1-pvalue: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
-        )
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("G_df", ["min", "conventional"])
-@pytest.mark.parametrize(
-    "model,fml,weights_type,n_clusters,k_fixef,adjust",
-    [
-        ("feols", "y ~ x", None, 3, "nonnested", True),
-        ("feols", "y ~ x", None, 4, "nonnested", False),
-        ("feols", "y ~ x | c1", "aweights", 3, "nonnested", True),
-        ("feols", "y ~ x | c1", "fweights", 4, "full", True),
-        ("feols", "y ~ x | fe", None, 3, "none", True),
-        ("feols", "y ~ x | fe", None, 4, "nonnested", True),
-        ("feols", "y ~ x | d ~ z", None, 3, "nonnested", True),
-        ("feols", "y ~ x | c1 | d ~ z", "aweights", 4, "nonnested", True),
-        ("feols", "y ~ x | c1 | d ~ z", "fweights", 3, "nonnested", True),
-        ("fepois", "count ~ x | c1", "aweights", 3, "nonnested", True),
-        ("fepois", "count ~ x | c1", "fweights", 4, "nonnested", True),
-        ("logit", "binary ~ x | c1", None, 3, "nonnested", True),
-        ("probit", "binary ~ x", None, 4, "nonnested", True),
-        ("gaussian", "y ~ x | c1", None, 3, "nonnested", True),
-    ],
-)
-def test_multiway_clustering_against_fixest(
-    G_df, model, fml, weights_type, n_clusters, k_fixef, adjust
-):
-    """Compare all CRV1 terms and inference, including weighted/IV/GLM paths."""
+@pytest.fixture(scope="module")
+def multiway_cluster_data():
+    """Seeded outcomes and crossed clusters shared by the live-R comparisons."""
     rng = np.random.default_rng(20260922)
     n = 1200
     data = pd.DataFrame(
@@ -1548,6 +1461,153 @@ def test_multiway_clustering_against_fixest(
     data["count"] = rng.poisson(np.exp(eta))
     data["binary"] = rng.binomial(1, 1 / (1 + np.exp(-eta)))
     data["w"] = rng.integers(1, 4, size=n)
+    return data
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml",
+    [
+        pytest.param("y ~ x", id="no-fe"),
+        pytest.param("y ~ x | c1", id="nested-fe"),
+        pytest.param("y ~ x | fe", id="nonnested-fe"),
+        pytest.param("y ~ x | c1 + fe", id="mixed-fe"),
+    ],
+)
+@pytest.mark.parametrize("n_clusters", [1, 2, 3])
+@pytest.mark.parametrize("weights_type", [None, "aweights"])
+@pytest.mark.parametrize("k_adj", [False, True])
+@pytest.mark.parametrize("G_adj", [False, True])
+@pytest.mark.parametrize("k_fixef", ["none", "full", "nonnested"])
+@pytest.mark.parametrize("G_df", ["min", "conventional"])
+def test_multiway_clustering_against_fixest(
+    multiway_cluster_data, fml, n_clusters, weights_type, k_adj, G_adj, k_fixef, G_df
+):
+    """Cross OLS FE/nesting cases, cluster counts, weights, and SSC options.
+
+    Nesting is determined by the formula: c1 is always a cluster dimension,
+    whereas fe is independently generated. Keep the Cartesian matrix explicit,
+    including equivalent SSC settings for one-way clustering and no-FE fits.
+    """
+    _assert_multiway_clustering_against_fixest(
+        data=multiway_cluster_data,
+        model="feols",
+        fml=fml,
+        n_clusters=n_clusters,
+        weights_type=weights_type,
+        k_adj=k_adj,
+        G_adj=G_adj,
+        k_fixef=k_fixef,
+        G_df=G_df,
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("G_df", ["min", "conventional"])
+@pytest.mark.parametrize(
+    "model,fml,r_fml,weights_type,n_clusters,ambiguous_labels",
+    [
+        pytest.param(
+            "feols",
+            "y ~ x + [d ~ z] | c1",
+            "y ~ x | c1 | d ~ z",
+            "aweights",
+            3,
+            False,
+            id="iv",
+        ),
+        pytest.param(
+            "fepois",
+            "count ~ x | c1",
+            None,
+            "aweights",
+            3,
+            False,
+            id="poisson",
+        ),
+        pytest.param(
+            "logit",
+            "binary ~ x | c1",
+            None,
+            None,
+            3,
+            False,
+            id="binomial-glm",
+        ),
+        pytest.param(
+            "feols",
+            "y ~ x | c1 + fe",
+            None,
+            None,
+            4,
+            False,
+            id="fourway",
+        ),
+        pytest.param(
+            "feols",
+            "y ~ x | c1",
+            None,
+            "fweights",
+            3,
+            False,
+            id="frequency-weights",
+        ),
+        pytest.param(
+            "feols",
+            "y ~ x",
+            None,
+            None,
+            3,
+            True,
+            id="ambiguous-labels",
+        ),
+    ],
+)
+def test_multiway_clustering_integration_against_fixest(
+    multiway_cluster_data,
+    G_df,
+    model,
+    fml,
+    r_fml,
+    weights_type,
+    n_clusters,
+    ambiguous_labels,
+):
+    """Check estimator-specific inputs and edge cases outside the OLS matrix."""
+    data = multiway_cluster_data.copy()
+    if ambiguous_labels:
+        # ("a-b", "c") and ("a", "b-c") both become "a-b-c" if joined with "-".
+        # Their intersections must stay distinct and match R fixest inference.
+        data["c1"] = data.c1.map(lambda g: {0: "a-b", 1: "a"}.get(g, f"c1-{g}"))
+        data["c2"] = data.c2.map(lambda g: {0: "c", 1: "b-c"}.get(g, f"c2-{g}"))
+    _assert_multiway_clustering_against_fixest(
+        data=data,
+        model=model,
+        fml=fml,
+        r_fml=r_fml,
+        n_clusters=n_clusters,
+        weights_type=weights_type,
+        k_adj=True,
+        G_adj=True,
+        k_fixef="nonnested",
+        G_df=G_df,
+    )
+
+
+def _assert_multiway_clustering_against_fixest(
+    *,
+    data,
+    model,
+    fml,
+    n_clusters,
+    weights_type,
+    k_adj,
+    G_adj,
+    k_fixef,
+    G_df,
+    r_fml=None,
+):
+    """Compare named estimates, covariance, inference, and counts with fixest."""
     cluster = "+".join(f"c{i}" for i in range(1, n_clusters + 1))
     kwargs = (
         {} if weights_type is None else {"weights": "w", "weights_type": weights_type}
@@ -1573,15 +1633,15 @@ def test_multiway_clustering_against_fixest(
         fml,
         data,
         vcov={"CRV1": cluster},
-        ssc=ssc(k_adj=adjust, G_adj=adjust, k_fixef=k_fixef, G_df=G_df),
+        ssc=ssc(k_adj=k_adj, G_adj=G_adj, k_fixef=k_fixef, G_df=G_df),
         **kwargs,
     )
     r_fit = r_estimator(
-        ro.Formula(fml),
+        ro.Formula(fml if r_fml is None else r_fml),
         data=r_data,
         # fixest 0.14.0 needs an explicit fourway type for four-variable formulas.
         vcov=ro.Formula(("fourway" if n_clusters == 4 else "cluster") + "~" + cluster),
-        ssc=fixest.ssc(adjust, k_fixef, False, adjust, G_df, "min"),
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
         **r_kwargs,
     )
     ro.globalenv["multiway_fit"] = r_fit
