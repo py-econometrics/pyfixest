@@ -603,6 +603,44 @@ class TestFixedEffectInteractions:
         assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
 
 
+class TestInstrumentalVariableBoundaries:
+    @pytest.mark.parametrize(
+        "formula, canonical",
+        [
+            ("Y ~ X1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 | f1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1] | f1"),
+            (
+                "Y ~ X1 | f1 | X2 ~ {(Z1 > 0) | (Z2 > 0)}",
+                "Y ~ X1 + [X2 ~ {(Z1 > 0) | (Z2 > 0)}] | f1",
+            ),
+        ],
+    )
+    def test_legacy_iv_preserves_formula_roles(self, formula, canonical):
+        with pytest.warns(DeprecationWarning, match="fixest-style") as caught:
+            parsed = Formula.parse(formula)[0]
+        assert len(caught) == 1
+        reference = Formula.parse(canonical)[0]
+        assert parsed.formula == reference.formula
+        assert parsed.is_fixed_effects == reference.is_fixed_effects
+        assert parsed.is_instrumental_variable
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [X2 ~ Z1] | f1",
+            "Y ~ X1 + [X2 ~ Z1] | f1 + f2[X1]",
+            "Y ~ X1 | f1[X2]",
+            "Y ~ X1 | I(f1 & ~f2)",
+        ],
+    )
+    def test_valid_brackets_and_python_tilde_preserved(self, formula):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse(formula)[0]
+        assert parsed.is_fixed_effects
+        assert parsed.is_instrumental_variable == ("[X2 ~ Z1]" in formula)
+
+
 class TestVaryingSlopeParsing:
     """Tests for fixed-effect specs shaped like `within.Effect` terms."""
 

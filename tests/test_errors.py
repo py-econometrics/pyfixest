@@ -1,5 +1,6 @@
 import re
 import sys
+import warnings
 from functools import partial
 
 import numpy as np
@@ -304,6 +305,34 @@ def test_iv_errors():
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+@pytest.mark.parametrize(
+    "fml, reason",
+    [
+        ("Y ~ X1 | f1 + [X2 ~ Z1]", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | sw(f1, [X2 ~ Z1])", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | f1 | [X2 ~ Z1]", "Bracketed IV syntax belongs before"),
+        ("Y ~ X1 | X2 ~ Z1 | f1", "The legacy IV part must come last"),
+        ("Y ~ X1 | X2 ~ Z1 | X3 ~ Z2", "The legacy IV part must come last"),
+        ("Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]", "exactly one formula-level"),
+        ("Y ~ X1 | f1 | X2 ~ Z1 ~ Z2", "exactly one formula-level"),
+        ("Y ~ X1 | f1 | f2 | X2 ~ Z1", "Legacy IV syntax allows only"),
+        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous variables"),
+        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous variables"),
+    ],
+)
+def test_misplaced_iv_syntax_errors(estimator, fml, reason):
+    # Missing formula columns ensure validation precedes materialization.
+    data = pd.DataFrame({"unused": [1.0, 2.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(FormulaSyntaxError, match=reason) as caught:
+            estimator(fml=fml, data=data)
+    assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
+        caught.value
+    )
 
 
 @pytest.mark.skip("Not yet implemented.")
