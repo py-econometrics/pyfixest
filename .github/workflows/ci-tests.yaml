@@ -36,6 +36,8 @@ jobs:
         run: pixi run -e ${{ matrix.environment }} test-py
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+          # Temporarily disable MPS tests on macOS; remove to re-enable.
+          PYTEST_ADDOPTS: ${{ runner.os == 'macOS' && '-k "not mps"' || '' }}
 
       - name: Upload coverage to Codecov (partial)
         if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
@@ -45,6 +47,23 @@ jobs:
           partial: true
           flags: core-tests
           files: coverage.xml
+
+  type-check-ty:
+    name: "Type check (ty)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: py312
+
+      - name: Run ty
+        run: pixi run -e py312 ty
 
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"

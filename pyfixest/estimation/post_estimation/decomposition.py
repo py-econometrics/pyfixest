@@ -1,15 +1,17 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
+from scipy.sparse import csc_matrix, diags, hstack, vstack
 from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
+
+from pyfixest.utils.dev_utils import _find_stack_level
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -190,7 +192,7 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            self.unique_clusters = cast(np.ndarray, self.cluster_df.unique())
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
                 for cluster in self.unique_clusters
@@ -208,7 +210,9 @@ class GelbachDecomposition:
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
-                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs)."
+                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs).",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
 
         self._check_covariates()
@@ -268,7 +272,7 @@ class GelbachDecomposition:
 
     def fit(
         self,
-        X: spmatrix,
+        X: csc_matrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
@@ -357,9 +361,8 @@ class GelbachDecomposition:
 
             return bootstrap_results
 
-    def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
-        "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
-        self.alpha = alpha
+    def bootstrap(self, rng: np.random.Generator, B: int = 1_000):
+        """Draw bootstrap replications for Total, Mediated and Direct Effects."""
         self.B = B
 
         # convert to csr for easier vstacking
@@ -367,7 +370,7 @@ class GelbachDecomposition:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            delayed(self._bootstrap)(rng=child_rng) for child_rng in tqdm(rng.spawn(B))
         )
 
         # unpack
@@ -376,15 +379,6 @@ class GelbachDecomposition:
             self._bootstrap_relative_explained_df,
             self._bootstrap_relative_direct_df,
         ) = self._unpack_bootstrap_results(_bootstrapped)
-
-        # compute ci
-        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
-        self._relative_explained_ci = self._compute_ci(
-            self._bootstrap_relative_explained_df, alpha
-        )
-        self._relative_direct_ci = self._compute_ci(
-            self._bootstrap_relative_direct_df, alpha
-        )
 
     def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
         """Compute confidence intervals from bootstrap DataFrame.
@@ -453,10 +447,10 @@ class GelbachDecomposition:
 
     def compute_gelbach(
         self,
-        X1: spmatrix,
-        X2: spmatrix,
+        X1: csc_matrix,
+        X2: csc_matrix,
         Y: np.ndarray,
-        X: spmatrix,
+        X: csc_matrix,
         agg_first: bool | None,
     ) -> tuple[
         np.ndarray,
@@ -552,7 +546,9 @@ class GelbachDecomposition:
         ----------
         alpha : float, optional
             The significance level for the confidence intervals, by default 0.05.
-            Computes a 95% confidence interval when alpha = 0.05.
+            Computes a 95% percentile bootstrap confidence interval when
+            alpha = 0.05. Ignored when the decomposition was fit with
+            `only_coef=True`.
         panels : str, optional
             Which panels to include. One of 'all', 'levels', 'share_explained',
             'share_full', by default "all". Also accepts full names for backward compatibility.
@@ -567,13 +563,25 @@ class GelbachDecomposition:
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+            if not 0 < alpha < 1:
+                raise ValueError(f"alpha must be in (0, 1). Got {alpha}.")
+            absolute_df = pd.concat(
+                [absolute_df, self._compute_ci(self._bootstrap_absolute_df, alpha)],
+                axis=1,
+            )
             relative_explained_df = pd.concat(
-                [relative_explained_df, self._relative_explained_ci],
+                [
+                    relative_explained_df,
+                    self._compute_ci(self._bootstrap_relative_explained_df, alpha),
+                ],
                 axis=1,
             )
             relative_direct_df = pd.concat(
-                [relative_direct_df, self._relative_direct_ci], axis=1
+                [
+                    relative_direct_df,
+                    self._compute_ci(self._bootstrap_relative_direct_df, alpha),
+                ],
+                axis=1,
             )
 
         absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))

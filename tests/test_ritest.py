@@ -48,10 +48,10 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     kwargs2["rng"] = rng2
 
     res1 = fit.ritest(**kwargs1)
-    ritest_stats1 = fit._ritest_statistics.copy()
+    ritest_stats1 = fit.ritest_statistics.statistics.copy()
 
     res2 = fit.ritest(**kwargs2)
-    ritest_stats2 = fit._ritest_statistics.copy()
+    ritest_stats2 = fit.ritest_statistics.statistics.copy()
 
     assert np.allclose(res1.Estimate, res2.Estimate, atol=1e-8, rtol=1e-8)
     assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-8, rtol=1e-8)
@@ -90,7 +90,7 @@ def test_randomization_t_vs_c(fml, resampvar, cluster):
 
     # just weak test that both are somewhat close
     assert (
-        np.abs(fit1._ritest_pvalue - fit2._ritest_pvalue) < 0.03
+        np.abs(fit1.ritest_statistics.pvalue - fit2.ritest_statistics.pvalue) < 0.03
         if cluster is None
         else 0.06
     ), (
@@ -168,8 +168,10 @@ def test_fepois_ritest():
     fit = pf.fepois("Y ~ X1*f3", data=data)
     fit.ritest(resampvar="f3", reps=2000, store_ritest_statistics=True)
 
-    assert fit._ritest_statistics is not None
-    assert np.allclose(fit.pvalue().xs("f3"), fit._ritest_pvalue, rtol=0.01, atol=0.01)
+    assert fit.ritest_statistics.statistics is not None
+    assert np.allclose(
+        fit.pvalue().xs("f3"), fit.ritest_statistics.pvalue, rtol=0.01, atol=0.01
+    )
 
 
 @pytest.fixture

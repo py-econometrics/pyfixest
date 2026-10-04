@@ -1,23 +1,31 @@
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
+from dataclasses import replace
 from functools import partial
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 
-from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.literals import (
-    QuantregMethodOptions,
-    SolverOptions,
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
+from pyfixest.estimation.internals.literals import QuantregMethodOptions
+from pyfixest.estimation.internals.model_state import (
+    Capabilities,
+    FittedValues,
+    ModelDescription,
+    QuantregEstimationOptions,
+    SampleSplit,
+    VcovSpec,
+    WithinLinearData,
 )
-from pyfixest.estimation.internals.model_state import WithinLinearData
 from pyfixest.estimation.internals.retention import require_retained
+from pyfixest.estimation.internals.vcov_utils import VcovTerm
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.quantreg.frisch_newton_ip import (
+    QuantregSolution,
     frisch_newton_solver,
 )
 from pyfixest.estimation.quantreg.vcov_ import (
@@ -26,6 +34,7 @@ from pyfixest.estimation.quantreg.vcov_ import (
     vcov_iid_qreg,
     vcov_nid_qreg,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 class Quantreg(Feols):
@@ -60,51 +69,54 @@ class Quantreg(Feols):
 
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
+
+    Attributes
+    ----------
+    solution : QuantregSolution
+        Output of the interior point solver: coefficients, convergence flag,
+        number of iterations, and final primal and dual iterates. With
+        `multi_method="cfm2"`, the solver runs only for the central quantile;
+        the other quantiles get a single Newton step and have no solution.
+        Dropped by `lean=True`.
     """
+
+    options: QuantregEstimationOptions
+    # Quantile loss fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
+
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=False,
+        multiway_clustering=False,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
+    # Set in get_fit().
+    solution: QuantregSolution
 
     def __init__(
         self,
         FixestFormula: FixestFormula,
         data: pd.DataFrame,
-        ssc_dict: dict[str, str | bool],
-        drop_singletons: bool,
-        drop_intercept: bool,
-        weights: str | None,
-        weights_type: str | None,
-        collin_tol: float,
+        *,
+        options: QuantregEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        solver: SolverOptions = "np.linalg.solve",
-        demeaner: AnyDemeaner | None = None,
-        store_data: bool = True,
-        copy_data: bool = True,
-        lean: bool = False,
-        context: int | Mapping[str, Any] = 0,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
-        quantile: float = 0.5,
-        method: QuantregMethodOptions = "fn",
-        quantile_tol: float = 1e-06,
-        quantile_maxiter: int | None = None,
-        seed: int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
-            ssc_dict=ssc_dict,
-            drop_singletons=drop_singletons,
-            drop_intercept=drop_intercept,
-            weights=weights,
-            weights_type=weights_type,
-            collin_tol=collin_tol,
+            options=options,
             lookup_demeaned_data=lookup_demeaned_data,
-            solver=solver,
-            store_data=store_data,
-            copy_data=copy_data,
-            lean=lean,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
-            context=context,
-            demeaner=demeaner,
+            sample_split=sample_split,
         )
 
         warnings.warn(
@@ -113,63 +125,26 @@ class Quantreg(Feols):
            But mostly, we expect the API to remain unchanged.
            """,
             FutureWarning,
+            stacklevel=_find_stack_level(),
         )
 
-        self._supports_wildboottest = False
-        self._support_crv3_inference = False
-        self._supports_cluster_causal_variance = False
-        self._support_hac_inference = False
-        self._support_decomposition = False
+        quantile = options.quantile
+        method = options.method
 
-        self._quantile = quantile
-        self._method = f"quantreg_{method}"
-        self._quantile_tol = quantile_tol
-        self._quantile_maxiter = quantile_maxiter
-
-        self._model_name = (
-            FixestFormula.formula
-            if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
-        )
-        # update with quantile name
-        self._model_name = f"{self._model_name} (q = {quantile})"
-        self._model_name_plot = self._model_name
-
-        self._seed = seed
-
-        # later set in fit method, consant for different quantiles q -> can be reused
-        self._chol = None
-        self._P = None
-
-        self._method_map: dict[
-            str,
-            Callable[
-                ...,
-                tuple[
-                    np.ndarray,
-                    bool,
-                    int,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                    np.ndarray,
-                ],
-            ],
-        ] = {
+        self._method_map: dict[str, Callable[..., QuantregSolution]] = {
             "fn": partial(
                 self.fit_qreg_fn,
-                q=self._quantile,
-                tol=self._quantile_tol,
-                maxiter=self._quantile_maxiter,
+                q=quantile,
+                tol=options.quantile_tol,
+                maxiter=options.quantile_maxiter,
                 beta_init=None,
             ),
             "pfn": partial(
                 self.fit_qreg_pfn,
-                q=self._quantile,
-                rng=np.random.default_rng(self._seed),
-                tol=self._quantile_tol,
-                maxiter=self._quantile_maxiter,
+                q=quantile,
+                rng=np.random.default_rng(options.seed),
+                tol=options.quantile_tol,
+                maxiter=options.quantile_maxiter,
                 beta_init=None,
             ),
         }
@@ -179,6 +154,15 @@ class Quantreg(Feols):
         except KeyError as exc:
             valid = ", ".join(self._method_map)
             raise ValueError(f"`method` must be one of {{{valid}}}") from exc
+
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the quantile solver and append the quantile to the model name."""
+        description = super()._describe_model(**kwargs)
+        return replace(
+            description,
+            method=f"quantreg_{self.options.method}",
+            model_name=f"{description.model_name} (q = {self.options.quantile})",
+        )
 
     def to_array(self):
         "Publish quantile-regression arrays from the formula state."
@@ -208,26 +192,22 @@ class Quantreg(Feols):
         self.to_array()
         self.drop_multicol_vars()
 
-        res = self._fit(X=self.within_data.design, Y=self.within_data.response)
+        self.solution = self._fit(
+            X=self.within_data.design, Y=self.within_data.response
+        )
+        self._beta_hat = self.solution.beta
 
-        self._beta_hat = res[0]
-        self._has_converged = res[1]
-        self._it = res[2]
-        self._x_final = res[3]
-        self._s_final = res[4]
-        self._z_final = res[5]
-        self._w_final = res[6]
-        self._y_final = res[7]
-
-        self._Y_hat_link = self.within_data.design @ self._beta_hat
-        self._Y_hat_response = self._Y_hat_link
+        fitted = self.within_data.design @ self._beta_hat
+        self.fitted_values = FittedValues(link=fitted, response=fitted)
 
         self._u_hat = (
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
-        self._hessian = self.within_data.design.T @ self.within_data.design
-        self._bread = np.linalg.inv(self._hessian)
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a quantile fit undefined."""
+        return FitStatistics()
 
     def fit_qreg_fn(
         self,
@@ -237,16 +217,7 @@ class Quantreg(Feols):
         tol: float | None = None,
         maxiter: int | None = None,
         beta_init: np.ndarray | None = None,
-    ) -> tuple[
-        np.ndarray,
-        bool,
-        int,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-    ]:
+    ) -> QuantregSolution:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver."""
         N, _ = X.shape
         if tol is None:
@@ -255,14 +226,11 @@ class Quantreg(Feols):
             maxiter = N
 
         # compute cholesky once outside of FN loop
-        # if self._chol is None or self._P is None:
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
         _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
-        # if self._chol is None or self._P is None:
-        #    raise ValueError("...")
 
-        fn_res = frisch_newton_solver(
+        solution = frisch_newton_solver(
             A=X.T,
             b=(1 - q) * X.T @ np.ones(N),
             c=-Y,
@@ -276,15 +244,14 @@ class Quantreg(Feols):
             P=cast(np.ndarray, _P),
         )
 
-        has_converged = fn_res[1]
-        it = fn_res[2]
-
-        if not has_converged:
+        if not solution.has_converged:
             warnings.warn(
-                f"The Frisch-Newton Interior Point solver has not converged after {it} iterations."
+                f"The Frisch-Newton Interior Point solver has not converged after {solution.iterations} iterations.",
+                RuntimeWarning,
+                stacklevel=_find_stack_level(),
             )
 
-        return fn_res
+        return solution
 
     def fit_qreg_pfn(
         self,
@@ -297,16 +264,7 @@ class Quantreg(Feols):
         beta_init: np.ndarray | None = None,
         rng: np.random.Generator | None = None,
         eta: float | None = None,
-    ) -> tuple[
-        np.ndarray,
-        bool,
-        int,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-    ]:
+    ) -> QuantregSolution:
         """Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing."""
         N, k = X.shape
         if tol is None:
@@ -339,7 +297,7 @@ class Quantreg(Feols):
                 idx_init = rng.choice(N, size=n_init, replace=False)
                 beta_hat_init = self.fit_qreg_fn(
                     X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
-                )[0]
+                ).beta
 
             else:
                 beta_hat_init = beta_init
@@ -372,8 +330,8 @@ class Quantreg(Feols):
                     Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
 
                 # solve the modified problem
-                fn_res = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
-                beta_hat = fn_res[0]
+                solution = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
+                beta_hat = solution.beta
 
                 r = Y.flatten() - X @ beta_hat
 
@@ -386,7 +344,11 @@ class Quantreg(Feols):
                     has_converged = True
                     break
                 elif n_bad > 0.1 * M:
-                    warnings.warn("Too many bad fixups. Doubling m.")
+                    warnings.warn(
+                        "Too many bad fixups. Doubling m.",
+                        RuntimeWarning,
+                        stacklevel=_find_stack_level(),
+                    )
                     n_init = min(N, 2 * n_init)
                     M = int(np.ceil(m * n_init))
                     n_bad_fixups += 1
@@ -399,30 +361,39 @@ class Quantreg(Feols):
 
         if not has_converged:
             warnings.warn(
-                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups."
+                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups.",
+                RuntimeWarning,
+                stacklevel=_find_stack_level(),
             )
 
-        return fn_res
+        return solution
 
-    def _vcov_iid(self):
-        return vcov_iid_qreg(
+    def _vcov_iid(self) -> VcovTerm:
+        vcov = vcov_iid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
-            q=self._quantile,
-            N=self._N_rows,
+            q=self.options.quantile,
+            N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_hetero(self):
-        return vcov_hetero_qreg(
+    def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
+        vcov = vcov_hetero_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             u_hat=self._u_hat,
-            q=self._quantile,
-            N=self._N_rows,
+            q=self.options.quantile,
+            N=self.sample_info.n_rows,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_nid(self) -> np.ndarray:
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        """Accept ``"nid"``, which only quantile regression supports."""
+        if spec.vcov_type != "nid":
+            super()._check_vcov_support(spec)
+
+    def _vcov_nid(self) -> VcovTerm:
         """
         Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth
         as developed in Hendricks and Koenker (1991).
@@ -430,42 +401,37 @@ class Quantreg(Feols):
         'nid' stands for 'non-iid'.
         For details, see page 80 in Koenker's "Quantile Regression" (2005) book.
         """
-        return vcov_nid_qreg(
+        vcov = vcov_nid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
             beta_hat=self._beta_hat,
-            q=self._quantile,
-            N=self._N_rows,
-            method=cast(QuantregMethodOptions, self._method),
+            q=self.options.quantile,
+            N=self.sample_info.n_rows,
+            method=cast(QuantregMethodOptions, self.model.method),
             fit=self._fit,
         )
+        return VcovTerm(vcov=vcov, meat=None)
 
-    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray):
+    def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray) -> VcovTerm:
         """
         Implement cluster robust variance estimator for quantile regression following
-        Parente and Santos Silva, 2016.
+        Parente and Santos Silva, 2016. Multiway clustering is rejected by
+        ``vcov()`` through ``capabilities.multiway_clustering``.
         """
-        if len(self._clustervar) > 1:
-            raise NotImplementedError(
-                "Multiway clustering is not (yet) supported for quantile regression."
-            )
-
-        return vcov_crv1_qreg(
+        vcov = vcov_crv1_qreg(
             X=self.within_data.design,
             u_hat=self._u_hat,
-            q=self._quantile,
+            q=self.options.quantile,
             clustid=clustid,
             cluster_col=cluster_col,
         )
+        return VcovTerm(vcov=vcov, meat=None)
+
+    def _finalize_fit(self) -> None:
+        """Skip the OLS Wald test; quantile regression runs none at fit time."""
 
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
         require_retained(self, "objective_value", "_u_hat")
-        return np.sum(np.abs(self._u_hat) * (self._quantile - (self._u_hat < 0)))
-
-    def get_performance(self) -> None:
-        "Reject linear R² measures; quantile regression has no such diagnostics yet."
-        raise NotImplementedError(
-            "get_performance() is not supported for quantreg() fits."
-        )
+        return np.sum(np.abs(self._u_hat) * (self.options.quantile - (self._u_hat < 0)))

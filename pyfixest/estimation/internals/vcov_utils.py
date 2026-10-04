@@ -1,4 +1,6 @@
-from collections.abc import Callable
+from __future__ import annotations
+
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -15,8 +17,44 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
-from pyfixest.utils.utils import get_ssc
+from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VcovTerm:
+    """One unadjusted covariance term and, for sandwich estimators, its meat.
+
+    Attributes
+    ----------
+    vcov : np.ndarray
+        Unadjusted covariance, shape (k, k). Equals ``bread @ meat @ bread``
+        when ``meat`` is present.
+    meat : np.ndarray or None
+        Unadjusted meat, shape (k, k); ``None`` for estimators without a
+        sandwich form (iid, jackknife CRV3, quantile regression).
+    """
+
+    vcov: np.ndarray
+    meat: np.ndarray | None
+
+
+def combine_terms(terms: Sequence[VcovTerm], ssc: np.ndarray) -> VcovTerm:
+    """Sum the small-sample-adjusted terms, ``Σ ssc_x * term_x``.
+
+    The meat is combined the same way when every term carries one, so the
+    adjusted ``vcov`` stays ``bread @ meat @ bread``.
+    """
+    k = terms[0].vcov.shape[0]
+    vcov = np.zeros((k, k))
+    meat: np.ndarray | None = (
+        None if any(term.meat is None for term in terms) else np.zeros((k, k))
+    )
+    for factor, term in zip(ssc, terms, strict=True):
+        vcov += factor * term.vcov
+        if meat is not None and term.meat is not None:
+            meat += factor * term.meat
+    return VcovTerm(vcov=vcov, meat=meat)
 
 
 @dataclass
@@ -25,21 +63,32 @@ class ClusterPrep:
 
     cluster_df: pd.DataFrame
     cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
-    G: list[int]  # cluster counts per column, post ssc_dict["G_df"] adjustment
+    G: list[int]  # cluster counts per column, post ssc["G_df"] adjustment
     k_fe_nested: int
     n_fe_fully_nested: int
+
+    @property
+    def n_dimensions(self) -> int:
+        "Number of cluster dimensions: one, or three for two-way clustering."
+        return self.cluster_df.shape[1]
+
+    def dimensions(self) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+        "Yield ``(clustid, cluster_col)`` for each cluster dimension."
+        for x in range(self.n_dimensions):
+            cluster_col = self.cluster_arr_int[:, x]
+            yield np.unique(cluster_col), cluster_col
 
 
 def prepare_cluster_state(
     *,
-    data: DataFrameType,
+    data: pd.DataFrame,
     clustervar: list[str],
-    ssc_dict: dict,
-    fixef: str | None,
+    ssc: Ssc,
+    fixef: tuple[str, ...],
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series,
+    n_levels_by_fe: tuple[int, ...],
 ) -> ClusterPrep:
-    "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
+    """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
@@ -48,7 +97,7 @@ def prepare_cluster_state(
             clustervar=clustervar, cluster_df=cluster_df
         )
 
-    G = _count_G_for_ssc_correction(cluster_df=cluster_df, ssc_dict=ssc_dict)
+    G = _count_G_for_ssc_correction(cluster_df=cluster_df, G_df=ssc.G_df)
 
     cluster_arr_int = np.column_stack(
         [pd.factorize(cluster_df[col])[0] for col in cluster_df.columns]
@@ -56,18 +105,19 @@ def prepare_cluster_state(
 
     k_fe_nested = 0
     n_fe_fully_nested = 0
-    if fixef is not None and ssc_dict["k_fixef"] == "nonnested":
+    if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
-            all_fixef_array=np.array(fixef.split("+"), dtype=str),
+            all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
             cluster_data=cluster_arr_int.astype(np.uintp),
             fe_data=fe.to_numpy().astype(np.uintp)
             if isinstance(fe, pd.DataFrame)
             else fe.astype(np.uintp),
         )
-        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+        if n_fe_fully_nested > 0:
+            k_fe_nested = int(np.sum(np.asarray(n_levels_by_fe)[k_fe_nested_flag]))
 
     return ClusterPrep(
         cluster_df=cluster_df,
@@ -78,51 +128,55 @@ def prepare_cluster_state(
     )
 
 
-def run_crv_loop(
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ClusterSmallSampleCorrection:
+    """Result of ``get_ssc_cluster()``.
+
+    Attributes
+    ----------
+    adj : np.ndarray
+        Small-sample factor per cluster dimension. The two-way interaction
+        dimension carries the negative sign of the Cameron-Gelbach-Miller
+        combination.
+    df_k : int
+        Parameters counted by the ``k_adj`` adjustment.
+    df_t : int
+        Degrees of freedom of the t reference distribution: the smallest
+        ``G - 1`` over the dimensions.
+    """
+
+    adj: np.ndarray
+    df_k: int
+    df_t: int
+
+
+def get_ssc_cluster(
     *,
     prep: ClusterPrep,
-    k: int,
-    make_ssc_kwargs: Callable[..., dict],
-    cluster_vcov: Callable[[np.ndarray, np.ndarray], np.ndarray],
-) -> tuple[np.ndarray, np.ndarray, int, int]:
-    "Accumulate per-cluster CRV vcov, ssc weights, df_k, and df_t."
-    vcov_sign_list = [1, 1, -1]
-    n_clusters = prep.cluster_df.shape[1]
-
-    vcov = np.zeros((k, k))
-    ssc_arr: np.ndarray | None = None
-    df_t_full = np.zeros(n_clusters)
+    ssc_options: Ssc,
+    dof_counts: Callable[..., DegreesOfFreedomCounts],
+) -> ClusterSmallSampleCorrection:
+    "Small-sample factors per cluster dimension, ``df_k``, and ``df_t``."
+    vcov_sign_list = (1, 1, -1)
+    ssc_arr = np.zeros(prep.n_dimensions)
+    df_t_full = np.zeros(prep.n_dimensions)
     df_k = 0
-
-    for x in range(n_clusters):
-        cluster_col = prep.cluster_arr_int[:, x]
-        clustid = np.unique(cluster_col)
-
-        ssc, df_k, df_t = get_ssc(
-            **make_ssc_kwargs(
-                vcov_type="CRV",
+    for x in range(prep.n_dimensions):
+        correction = get_ssc(
+            ssc_options,
+            dof_counts(
                 G=prep.G[x],
-                vcov_sign=vcov_sign_list[x],
                 k_fe_nested=prep.k_fe_nested,
                 n_fe_fully_nested=prep.n_fe_fully_nested,
-            )
+            ),
+            vcov_type="CRV",
         )
-        ssc_arr = np.array([ssc]) if ssc_arr is None else np.append(ssc_arr, ssc)
-        df_t_full[x] = df_t
-        vcov += ssc_arr[x] * cluster_vcov(clustid, cluster_col)
-
-    assert ssc_arr is not None  # n_clusters >= 1 in the CRV branch
-    return vcov, ssc_arr, df_k, int(np.min(df_t_full))
-
-
-def _compute_bread(
-    _is_iv: bool,
-    _tXZ: np.ndarray,
-    _tZZinv: np.ndarray,
-    _tZX: np.ndarray,
-    _hessian: np.ndarray,
-):
-    return np.linalg.inv(_tXZ @ _tZZinv @ _tZX) if _is_iv else np.linalg.inv(_hessian)
+        ssc_arr[x] = correction.adj * vcov_sign_list[x]
+        df_k = correction.df_k
+        df_t_full[x] = correction.df_t
+    return ClusterSmallSampleCorrection(
+        adj=ssc_arr, df_k=df_k, df_t=int(np.min(df_t_full))
+    )
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
@@ -155,39 +209,15 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
         )
 
 
-def _count_G_for_ssc_correction(
-    cluster_df: pd.DataFrame, ssc_dict: dict[str, str | bool]
-):
+def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int]:
     G = []
     for col in cluster_df.columns:
         G.append(cluster_df[col].nunique())
 
-    if ssc_dict["G_df"] == "min":
+    if G_df == "min":
         G = [min(G)] * 3
 
     return G
-
-
-def _get_vcov_type(
-    vcov: str | dict[str, str] | None,
-) -> str | dict[str, str]:
-    """
-    Pass the specified vcov type.
-
-    Passes the specified vcov type. If no vcov type specified, always defaults
-    to "iid" inference, regardless of whether fixed effects are included in the model.
-
-    Parameters
-    ----------
-    vcov : Union[str, dict[str, str], None]
-        The specified vcov type.
-
-    Returns
-    -------
-    str
-        vcov_type (str) : The specified vcov type, or "iid" by default.
-    """
-    return vcov if vcov is not None else "iid"
 
 
 def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):

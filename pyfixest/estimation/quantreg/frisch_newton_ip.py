@@ -1,5 +1,57 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import lapack, solve_triangular
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class QuantregSolution:
+    """Solution of the Frisch-Newton interior point solver.
+
+    Fields follow the notation of Portnoy and Koenker (1997), [Statistical
+    Science](https://doi.org/10.1214/ss/1030037960).
+
+    Parameters
+    ----------
+    beta : NDArray[np.float64]
+        Coefficient estimates, shape (n_coefficients,); the negated ``y``.
+    has_converged : bool
+        Whether the duality gap fell below the tolerance within the iteration
+        budget.
+    iterations : int
+        Index of the final interior point iteration, counted from zero.
+    x : NDArray[np.float64]
+        Primal variable, shape (n_solver_rows,).
+    s : NDArray[np.float64]
+        Primal slack of the upper bound, ``u - x``, shape (n_solver_rows,).
+    z : NDArray[np.float64]
+        Dual variable of ``x >= 0``, shape (n_solver_rows,).
+    w : NDArray[np.float64]
+        Dual variable of ``x <= u``, shape (n_solver_rows,).
+    y : NDArray[np.float64]
+        Dual variable of ``A x = b``, shape (n_coefficients,).
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.5)
+    fit.solution.has_converged, fit.solution.iterations
+    ```
+    """
+
+    beta: NDArray[np.float64]
+    has_converged: bool
+    iterations: int
+    x: NDArray[np.float64]
+    s: NDArray[np.float64]
+    z: NDArray[np.float64]
+    w: NDArray[np.float64]
+    y: NDArray[np.float64]
 
 
 def _duality_gap(x, z, s, w):
@@ -30,7 +82,9 @@ def _solve_ADAt(
     K = W @ W.T
 
     u_buf = u.copy()
-    lapack.dposv(K, u_buf, lower=1, overwrite_a=True, overwrite_b=True)
+    lapack.dposv(  # ty: ignore[unresolved-attribute]
+        K, u_buf, lower=1, overwrite_a=True, overwrite_b=True
+    )
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
     # S = np.linalg.cholesky(K)
@@ -77,9 +131,7 @@ def frisch_newton_solver(
     P: np.ndarray,
     backoff: float = 0.9995,
     beta_init: np.ndarray | None = None,
-) -> tuple[
-    np.ndarray, bool, int, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
-]:
+) -> QuantregSolution:
     """
     Solve
         min_x  c^T x
@@ -213,4 +265,13 @@ def frisch_newton_solver(
         # update
         mu_curr = _duality_gap(x=x, z=z, s=s, w=w)
 
-    return -y, has_converged, _it, x, s, z, w, y
+    return QuantregSolution(
+        beta=-y,
+        has_converged=has_converged,
+        iterations=_it,
+        x=x,
+        s=s,
+        z=z,
+        w=w,
+        y=y,
+    )

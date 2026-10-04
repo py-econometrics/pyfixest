@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import math
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
-from pyfixest.estimation.formula.formulaic_compat import i_term_columns
-from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -204,13 +202,12 @@ def iplot(
         rename_models = {}
 
     for x, fxst in enumerate(list(models)):
-        icovars = i_term_columns(fxst._model_spec[_ModelMatrixKey.main].rhs)
-        if not icovars:
+        if not fxst.model.interacted_covariates:
             raise ValueError(
                 f"The {x} th estimated model did not have ivars / 'i()' model syntax."
                 "In consequence, the '.iplot()' method is not supported."
             )
-        all_icovars += icovars
+        all_icovars += fxst.model.interacted_covariates
 
         df_model = _get_model_df(
             fxst=fxst, alpha=alpha, joint=joint, seed=seed, rename_models=rename_models
@@ -479,7 +476,7 @@ def qplot(
             )
 
         df = model.tidy()
-        df["quantile"] = model._quantile
+        df["quantile"] = model.options.quantile
         df["model"] = model._model_name_plot
 
         df_all = pd.concat([df_all, df], axis=0)
@@ -699,13 +696,13 @@ def _coefplot_matplotlib(
     if ax is None:
         f, ax = plt.subplots(figsize=figsize, **fig_kwargs)
     else:
-        f = ax.get_figure()
+        f = cast(plt.Figure, ax.get_figure())
 
     # Check if we have multiple models
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
-    colors = plt.cm.jet(np.linspace(0, 1, len(models)))
+    colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
     # Calculate the positions for dodging

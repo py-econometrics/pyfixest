@@ -88,14 +88,14 @@ def test_glm_keeps_formula_observation_and_working_domains_distinct(family):
     np.testing.assert_allclose(fit.resid("response"), working.response_residuals)
     np.testing.assert_allclose(fit.resid("working"), working.working_residuals)
     np.testing.assert_allclose(
-        fit._scores,
+        fit.sandwich.scores,
         working.design_within
         * (working.working_weights * working.working_residuals)[:, None],
     )
     expected_hessian = working.design_within.T @ (
         working.working_weights[:, None] * working.design_within
     )
-    np.testing.assert_allclose(fit._hessian, expected_hessian)
+    np.testing.assert_allclose(fit.sandwich.hessian, expected_hessian)
 
     for group in np.unique(fixed_effect):
         group_rows = fixed_effect == group
@@ -152,17 +152,28 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
         fit_gaussian.working_state.working_residuals[0:5],
         tol=1e-10,
     )
-    check_absolute_diff(fit_ols._scores[0, :], fit_gaussian._scores[0, :], tol=1e-10)
+    check_absolute_diff(
+        fit_ols.sandwich.scores[0, :], fit_gaussian.sandwich.scores[0, :], tol=1e-10
+    )
 
     if inference == "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
-        scaling_factor = fit_ols._vcov[0, 0] / fit_gaussian._vcov[0, 0]
+        scaling_factor = (
+            fit_ols.variance_covariance.vcov[0, 0]
+            / fit_gaussian.variance_covariance.vcov[0, 0]
+        )
         # Check that all elements follow the same scaling
         check_absolute_diff(
-            fit_ols._vcov, scaling_factor * fit_gaussian._vcov, tol=1e-10
+            fit_ols.variance_covariance.vcov,
+            scaling_factor * fit_gaussian.variance_covariance.vcov,
+            tol=1e-10,
         )
     else:
-        check_absolute_diff(fit_ols._vcov, fit_gaussian._vcov, tol=1e-10)
+        check_absolute_diff(
+            fit_ols.variance_covariance.vcov,
+            fit_gaussian.variance_covariance.vcov,
+            tol=1e-10,
+        )
 
 
 @pytest.mark.parametrize("fml", fml_list)

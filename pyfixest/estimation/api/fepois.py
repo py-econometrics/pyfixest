@@ -15,17 +15,18 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.utils import Ssc
 
 
 def fepois(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
     weights_type: WeightsTypeOptions = "aweights",
     offset: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     iwls_tol: float = 1e-08,
     iwls_maxiter: int = 25,
@@ -40,6 +41,7 @@ def fepois(
     context: int | Mapping[str, Any] | None = None,
     split: str | None = None,
     fsplit: str | None = None,
+    accelerate: bool = True,
 ) -> Feols | Fepois | FixestMulti:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -129,15 +131,6 @@ def fepois(
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -179,6 +172,10 @@ def fepois(
 
     fsplit: Optional[str]
         This argument is the same as split but also includes the full sample as the first estimation.
+
+    accelerate: Optional[bool]
+        Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
+        tolerance). Produces numerically identical results faster, so we recommend to always set it to True.
 
     Returns
     -------
@@ -272,4 +269,5 @@ def fepois(
         context=context,
         split=split,
         fsplit=fsplit,
+        accelerate=accelerate,
     )

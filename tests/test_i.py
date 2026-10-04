@@ -495,6 +495,6 @@ def test_null_handling_nobs(df_with_nulls):
     ro.r("rm(fit_tmp)")
 
     # Compare number of observations
-    assert r_nobs == fit_py._N, (
-        f"Number of observations mismatch: py={fit_py._N}, r={r_nobs}"
+    assert r_nobs == fit_py.sample_info.n_obs, (
+        f"Number of observations mismatch: py={fit_py.sample_info.n_obs}, r={r_nobs}"
     )
