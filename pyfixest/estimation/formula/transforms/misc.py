@@ -2,18 +2,20 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from pyfixest.utils.dev_utils import _find_stack_level
 
 
-def log(array: np.ndarray) -> np.ndarray:
+def log(array: ArrayLike) -> np.ndarray:
     """
     Compute the natural logarithm of an array, replacing non-finite values with NaN.
 
     Parameters
     ----------
-    array : np.ndarray
-        Input array for which to compute the logarithm.
+    array : ArrayLike
+        Input array for which to compute the logarithm. Missing values of
+        nullable pandas dtypes (`pd.NA`) are treated as NaN.
 
     Returns
     -------
