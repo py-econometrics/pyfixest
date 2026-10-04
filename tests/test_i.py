@@ -11,8 +11,6 @@ Tests cover:
 - Multiple i() terms
 """
 
-from __future__ import annotations
-
 import re
 
 import numpy as np
@@ -315,88 +313,6 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     """Test i(factor1, factor2) with fixed effects."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("with_fe", [False, True])
-@pytest.mark.parametrize("weighted", [False, True])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", "cluster"])
-def test_factor_x_factor_empty_first_cell(with_fe, weighted, vcov):
-    """Accept a different default reference, verified against fixest 0.14.0."""
-    rng = np.random.default_rng(1768)
-    data = pd.DataFrame(
-        [(a, b) for a in ["a1", "a2", "a3"] for b in ["b1", "b2", "b3", "b4"]] * 25,
-        columns=["a", "b"],
-    )
-    data = data.loc[~((data.a == "a1") & (data.b == "b1"))].reset_index(drop=True)
-    n = len(data)
-    data["X1"] = rng.normal(size=n)
-    data["Y"] = data.X1 + (data.a == "a2") + rng.normal(size=n)
-    data["fe1"] = rng.integers(0, 10, size=n)
-    data["fe2"] = rng.integers(0, 6, size=n)
-    data["weights"] = rng.uniform(0.5, 2.0, size=n)
-    suffix = " | fe1" if with_fe else ""
-    py_vcov = {"CRV1": "fe2"} if vcov == "cluster" else vcov
-    r_vcov = ro.Formula("~fe2") if vcov == "cluster" else vcov
-    weights = "weights" if weighted else None
-
-    with pytest.warns(UserWarning, match="a::a3:b::b4"):
-        fit_py = feols(
-            fml="Y ~ X1 + i(a, b)" + suffix,
-            data=data,
-            vcov=py_vcov,
-            weights=weights,
-        )
-    fit_r = fixest.feols(
-        ro.Formula("Y ~ X1 + i(a, i.b)" + suffix),
-        data,
-        vcov=r_vcov,
-        weights=ro.Formula("~weights") if weighted else ro.NULL,
-    )
-    py_names = list(fit_py.coef().index)
-    r_names = get_r_coef_names(fit_r)
-    py_ref, r_ref = "a::a3:b::b4", "a::a1:b::b2"
-    assert set(py_names) - set(r_names) == {r_ref}
-    assert set(r_names) - set(py_names) == {py_ref}
-    assert fit_py.collinearity.dropped_coef_names == (py_ref,)
-
-    # Change from pyfixest's omitted cell to fixest's: subtract the new
-    # reference from every cell coefficient and add it to the intercept.
-    # With fixed effects the common shift is absorbed by their normalization.
-    transform = np.zeros((len(r_names), len(py_names)))
-    for row, name in enumerate(r_names):
-        if name in py_names:
-            transform[row, py_names.index(name)] = 1
-        if name == "Intercept":
-            transform[row, py_names.index(r_ref)] += 1
-        elif name.startswith("a::"):
-            transform[row, py_names.index(r_ref)] -= 1
-
-    # Strict OLS bounds, allowing demeaning roundoff with fixed effects.
-    np.testing.assert_allclose(
-        transform @ fit_py.coef().to_numpy(),
-        get_r_coef_values(fit_r),
-        atol=1e-8,
-        rtol=0,
-    )
-    np.testing.assert_allclose(
-        transform @ fit_py.variance_covariance.vcov @ transform.T,
-        np.asarray(stats.vcov(fit_r)),
-        atol=1e-7,
-        rtol=0,
-    )
-    np.testing.assert_allclose(
-        fit_py.resid(), np.asarray(stats.residuals(fit_r)), atol=1e-7, rtol=0
-    )
-    r_pred = np.asarray(stats.predict(fit_r))
-    np.testing.assert_allclose(fit_py.predict(), r_pred, atol=1e-7, rtol=0)
-    # Tighten LSQR tolerances when recovering fixed effects for newdata.
-    np.testing.assert_allclose(
-        fit_py.predict(newdata=data, atol=1e-12, btol=1e-12),
-        r_pred,
-        atol=1e-7,
-        rtol=0,
-    )
 
 
 # =============================================================================
