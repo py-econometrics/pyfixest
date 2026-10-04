@@ -378,8 +378,8 @@ less buggy code.
 
 | Deprecated | Use instead |
 |---|---|
-| `Y ~ X1 \| f1^f2` | `Y ~ X1 \| f1:f2` |
-| `Y ~ X1 \| f1 \| X2 ~ Z1` | `Y ~ X1 + [X2 ~ Z1] \| f1` |
+| `Y ~ X1 | f1^f2` | `Y ~ X1 | f1:f2` |
+| `Y ~ X1 | f1 | X2 ~ Z1` | `Y ~ X1 + [X2 ~ Z1] | f1` |
 | `Y + Y2 ~ X1` | `sw(Y, Y2) ~ X1` |
 
 The instrument block moves onto the right-hand side, so an IV model without
