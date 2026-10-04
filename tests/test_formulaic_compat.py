@@ -7,6 +7,7 @@ import formulaic.formula
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import DataMismatchWarning
 
 import pyfixest as pf
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -18,8 +19,6 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
-
-FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
 
 @pytest.fixture
@@ -207,18 +206,24 @@ def test_evaluated_factor_cache_guard_raises_loudly(data: pd.DataFrame) -> None:
         rows_with_unseen_contrast_levels(rhs_spec, data, {})
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=f"Formulaic issue #271 remains unresolved: {FORMULAIC_271}",
-)
-def test_formulaic_271_unseen_levels_respect_na_action() -> None:
-    """Unseen levels must not become all-zero rows after `na_action` runs."""
+@pytest.mark.parametrize("na_action", ["raise", "drop"])
+def test_unseen_levels_encode_as_reference_rows(na_action: str) -> None:
+    """Formulaic encodes unseen levels as all-zero rows and ignores `na_action`.
+
+    Formulaic PR 272 (fixing issue 271, merged but unreleased) encodes them as
+    NaN rows instead. When this fails after a formulaic upgrade, revisit
+    `rows_with_unseen_contrast_levels` and `C(x, levels=...)` fits (#1773).
+    """
     train = pd.DataFrame({"y": [1, 2, 3], "x": ["a", "b", "a"]})
     newdata = pd.DataFrame({"x": ["a", "z", "b"]})
     rhs_spec = formulaic.Formula("y ~ C(x)").get_model_matrix(train).model_spec.rhs
 
-    with pytest.raises(ValueError):
-        rhs_spec.get_model_matrix(newdata, na_action="raise")
+    with pytest.warns(DataMismatchWarning):
+        mm = rhs_spec.get_model_matrix(newdata, na_action=na_action)
+
+    assert list(mm.columns) == ["Intercept", "C(x)[T.b]"]
+    assert list(mm.index) == [0, 1, 2]
+    np.testing.assert_array_equal(mm.to_numpy(), [[1, 0], [1, 0], [1, 1]])
 
 
 @pytest.mark.parametrize(
