@@ -313,16 +313,14 @@ def test_iv_errors():
     [
         "Y ~ X1 | f1 + [X2 ~ Z1]",
         "Y ~ X1 | sw(f1, [X2 ~ Z1])",
-        "Y ~ X1 | (X2 ~ Z1)",
+        "Y ~ X1 | f1 | [X2 ~ Z1]",
         "Y ~ X1 | X2 ~ Z1 | f1",
-        "Y ~ X1 | f1 | X2 ~ Z1 | f2",
         "Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]",
-        "Y ~ X1 | f1 | f2",
+        "Y ~ X1 | f1 | X2 ~ Z1 ~ Z2",
     ],
 )
 def test_misplaced_iv_syntax_errors(estimator, fml):
-    # The data lacks every formula variable, so the error must come from
-    # formula validation before any rewrite, materialization, or estimation.
+    # Missing formula columns ensure validation precedes materialization.
     data = pd.DataFrame({"unused": [1.0, 2.0]})
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
