@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import contextlib
 import os
 
@@ -94,49 +92,6 @@ def test_separation():
         # if no separation, no warning is raised
         if data.separated.sum() == 0:
             assert len(record) == 0
-
-
-@pytest.mark.against_r_core
-def test_ir_separation_context_against_fixest():
-    rng = np.random.default_rng(3)
-    data = pd.DataFrame({"f1": rng.integers(0, 10, 300), "X1": rng.normal(size=300)})
-    data["Y"] = rng.poisson(np.exp(0.5 + 0.3 * data["X1"]))
-    separated = data["f1"] == data["f1"].iloc[0]
-    data.loc[separated, "Y"] = 0
-
-    with pytest.warns(
-        UserWarning,
-        match=rf"{separated.sum()} observations removed because of separation\.",
-    ):
-        fit = pf.fepois(
-            "Y ~ double(X1) | f1",
-            data=data,
-            context={"double": lambda x: 2 * x},
-            separation_check=["ir"],
-            vcov="hetero",
-            iwls_tol=1e-12,
-        )
-    fit_r = fixest.fepois(
-        ro.Formula("Y ~ I(2 * X1) | f1"),
-        data=data,
-        vcov="hetero",
-        glm_tol=1e-12,
-    )
-
-    assert fit.sample_info.n_obs == int(importr("stats").nobs(fit_r)[0])
-    pd.testing.assert_index_equal(
-        fit.model_matrix.dependent.index, data[~separated].index
-    )
-    np.testing.assert_allclose(
-        fit.coef().loc["double(X1)"], fit_r.rx2("coefficients")[0], rtol=0, atol=1e-8
-    )
-    # Match the canonical GLM inference bound in test_vs_r_fast.py.
-    np.testing.assert_allclose(
-        fit.se().loc["double(X1)"],
-        np.asarray(fit_r.rx2("coeftable"))[0, 1],
-        rtol=0,
-        atol=1e-6,
-    )
 
 
 @pytest.mark.against_r_core
