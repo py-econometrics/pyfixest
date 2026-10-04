@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -387,10 +389,10 @@ def spline_data():
 
 
 @pytest.mark.parametrize(
-    "method,family,fixed_effects",
+    "method,family,fixed_effects,separation_check",
     [
         *[
-            (method, family, fixed_effects)
+            (method, family, fixed_effects, None)
             for method, family in [
                 ("feols", None),
                 ("feglm", "logit"),
@@ -401,13 +403,17 @@ def spline_data():
             for fixed_effects in ["", " | f1 + f2"]
         ],
         # quantreg rejects fixed effects
-        ("quantreg", None, ""),
+        ("quantreg", None, "", None),
+        pytest.param("fepois", None, " | f1 + f2", ["ir"], id="fepois-ir"),
+        pytest.param("feglm", "poisson", " | f1 + f2", ["ir"], id="feglm-poisson-ir"),
     ],
 )
-def test_context_capture(spline_data, method, family, fixed_effects):
+def test_context_capture(spline_data, method, family, fixed_effects, separation_check):
     method_kwargs = {"data": spline_data}
     if family:
         method_kwargs["family"] = family
+    if separation_check is not None:
+        method_kwargs["separation_check"] = separation_check
 
     explicit_fit = getattr(pf, method)(
         f"Y ~ X2_0 + 0_X2_1 + 1_X2{fixed_effects}", **method_kwargs
@@ -424,6 +430,11 @@ def test_context_capture(spline_data, method, family, fixed_effects):
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
         np.testing.assert_allclose(context_fit.se(), explicit_fit.se(), rtol=1e-12)
+        assert context_fit.sample_info.n_obs == explicit_fit.sample_info.n_obs
+        np.testing.assert_array_equal(
+            context_fit.sample_info.dropped_row_index,
+            explicit_fit.sample_info.dropped_row_index,
+        )
 
     # FactorEvaluationError for `feols` when context is not set
     if method == "feols":
