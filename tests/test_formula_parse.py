@@ -7,15 +7,21 @@ This module contains:
 - Part 3: Edge case tests
 """
 
+import re
 import warnings
 
 import formulaic
 import numpy as np
 import pytest
+from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
 from pyfixest.errors import FormulaSyntaxError
-from pyfixest.estimation.formula.parse import Formula, _expand_all_multiple_estimation
+from pyfixest.estimation.formula.parse import (
+    FixedEffectSpecification,
+    Formula,
+    _expand_all_multiple_estimation,
+)
 from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
     _preprocess_fixed_effect_interactions,
@@ -46,225 +52,273 @@ class TestMultipleEstimationExpansion:
             # No multiple estimation
             ("Y ~ X1", ["Y ~ X1"]),
             ("Y ~ X1 + X2", ["Y ~ X1 + X2"]),
+            ("Y ~ sw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ csw(X1)", ["Y ~ (X1)"]),
+            ("Y ~ sw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ csw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ X1 | sw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            ("Y ~ X1 | csw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            (
+                "Y ~ csw(X1, X2):Z1",
+                ["Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw0(X1, X2):Z1",
+                ["Y ~ (1):Z1", "Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw0(1 + X1, X2):Z1",
+                ["Y ~ (1):Z1", "Y ~ (1 + X1):Z1", "Y ~ (1 + X1 + X2):Z1"],
+            ),
+            (
+                "Y ~ csw(X1, X2)*Z1",
+                ["Y ~ (X1)*Z1", "Y ~ (X1 + X2)*Z1"],
+            ),
+            (
+                "Y ~ f3*sw(X1, X2)",
+                ["Y ~ f3*(X1)", "Y ~ f3*(X2)"],
+            ),
+            (
+                "Y ~ Z1*csw(X1, X2)",
+                ["Y ~ Z1*(X1)", "Y ~ Z1*(X1 + X2)"],
+            ),
+            (
+                "Y ~ X1 + X2 + Z1 - csw(X1, X2)",
+                ["Y ~ X1 + X2 + Z1 - (X1)", "Y ~ X1 + X2 + Z1 - (X1 + X2)"],
+            ),
+            (
+                "Y ~ X1 | csw(f1, f2):f3",
+                ["Y ~ X1 | (f1):f3", "Y ~ X1 | (f1 + f2):f3"],
+            ),
             # sw() cases
-            ("Y ~ sw(X1, X2)", ["Y ~ X1", "Y ~ X2"]),
-            ("Y ~ A + sw(X1, X2)", ["Y ~ A + X1", "Y ~ A + X2"]),
-            ("Y ~ sw(X1, X2, X3)", ["Y ~ X1", "Y ~ X2", "Y ~ X3"]),
+            ("Y ~ sw(X1, X2)", ["Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ A + sw(X1, X2)", ["Y ~ A + (X1)", "Y ~ A + (X2)"]),
+            ("Y ~ sw(X1, X2, X3)", ["Y ~ (X1)", "Y ~ (X2)", "Y ~ (X3)"]),
             # csw() cases
-            ("Y ~ csw(X1, X2)", ["Y ~ X1", "Y ~ X1 + X2"]),
+            ("Y ~ csw(X1, X2)", ["Y ~ (X1)", "Y ~ (X1 + X2)"]),
             (
                 "Y ~ A + csw(X1, X2, X3)",
                 [
-                    "Y ~ A + X1",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # sw0() cases
-            ("Y ~ sw0(X1, X2)", ["Y ~ 1", "Y ~ X1", "Y ~ X2"]),
-            ("Y ~ A + sw0(X1, X2)", ["Y ~ A + 1", "Y ~ A + X1", "Y ~ A + X2"]),
+            ("Y ~ sw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ A + sw0(X1, X2)", ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)"]),
             # csw0() cases
-            ("Y ~ csw0(X1, X2)", ["Y ~ 1", "Y ~ X1", "Y ~ X1 + X2"]),
+            ("Y ~ csw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X1 + X2)"]),
             (
                 "Y ~ A + csw0(X1, X2, X3)",
                 [
-                    "Y ~ A + 1",
-                    "Y ~ A + X1",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (1)",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # mvsw() cases - all combinations of arguments, with zero step
             (
                 "Y ~ mvsw(X1, X2)",
-                ["Y ~ 1", "Y ~ X1", "Y ~ X2", "Y ~ X1 + X2"],
+                ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)", "Y ~ (X1 + X2)"],
             ),
             (
                 "Y ~ mvsw(X1, X2, X3)",
                 [
-                    "Y ~ 1",
-                    "Y ~ X1",
-                    "Y ~ X2",
-                    "Y ~ X3",
-                    "Y ~ X1 + X2",
-                    "Y ~ X1 + X3",
-                    "Y ~ X2 + X3",
-                    "Y ~ X1 + X2 + X3",
+                    "Y ~ (1)",
+                    "Y ~ (X1)",
+                    "Y ~ (X2)",
+                    "Y ~ (X3)",
+                    "Y ~ (X1 + X2)",
+                    "Y ~ (X1 + X3)",
+                    "Y ~ (X2 + X3)",
+                    "Y ~ (X1 + X2 + X3)",
                 ],
             ),
             (
                 "Y ~ A + mvsw(X1, X2)",
-                ["Y ~ A + 1", "Y ~ A + X1", "Y ~ A + X2", "Y ~ A + X1 + X2"],
+                ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)", "Y ~ A + (X1 + X2)"],
             ),
             (
                 "Y ~ A + mvsw(X1, X2, X3)",
                 [
-                    "Y ~ A + 1",
-                    "Y ~ A + X1",
-                    "Y ~ A + X2",
-                    "Y ~ A + X3",
-                    "Y ~ A + X1 + X2",
-                    "Y ~ A + X1 + X3",
-                    "Y ~ A + X2 + X3",
-                    "Y ~ A + X1 + X2 + X3",
+                    "Y ~ A + (1)",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X2)",
+                    "Y ~ A + (X3)",
+                    "Y ~ A + (X1 + X2)",
+                    "Y ~ A + (X1 + X3)",
+                    "Y ~ A + (X2 + X3)",
+                    "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
             # mvsw() with single argument
-            ("Y ~ mvsw(X1)", ["Y ~ 1", "Y ~ X1"]),
+            ("Y ~ mvsw(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
             # mvsw() with fixed effects
             (
                 "Y ~ mvsw(X1, X2) | f1",
-                ["Y ~ 1 | f1", "Y ~ X1 | f1", "Y ~ X2 | f1", "Y ~ X1 + X2 | f1"],
+                [
+                    "Y ~ (1) | f1",
+                    "Y ~ (X1) | f1",
+                    "Y ~ (X2) | f1",
+                    "Y ~ (X1 + X2) | f1",
+                ],
             ),
             # mvsw() in fixed effects
             (
                 "Y ~ X1 | mvsw(f1, f2)",
-                ["Y ~ X1 | 1", "Y ~ X1 | f1", "Y ~ X1 | f2", "Y ~ X1 | f1 + f2"],
+                [
+                    "Y ~ X1 | (1)",
+                    "Y ~ X1 | (f1)",
+                    "Y ~ X1 | (f2)",
+                    "Y ~ X1 | (f1 + f2)",
+                ],
             ),
             # Multiple estimation with sums of variables
-            ("Y ~ sw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1+f2"]),
-            ("Y ~ csw0(f1, f1+f2)", ["Y ~ 1", "Y ~ f1", "Y ~ f1 + f1+f2"]),
+            ("Y ~ sw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1+f2)"]),
+            ("Y ~ csw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1 + f1+f2)"]),
             # Fixed effects with multiple estimation
-            ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | f1", "Y ~ X1 | f2"]),
+            ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f2)"]),
             # Two operators in the same formula part
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4)",
                 [
-                    "Y ~ X1 + X3",
-                    "Y ~ X1 + X3 + X4",
-                    "Y ~ X2 + X3",
-                    "Y ~ X2 + X3 + X4",
+                    "Y ~ (X1) + (X3)",
+                    "Y ~ (X1) + (X3 + X4)",
+                    "Y ~ (X2) + (X3)",
+                    "Y ~ (X2) + (X3 + X4)",
                 ],
             ),
             # Three operators in the same formula part
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4) + sw0(X5, X6)",
                 [
-                    "Y ~ X1 + X3 + 1",
-                    "Y ~ X1 + X3 + X5",
-                    "Y ~ X1 + X3 + X6",
-                    "Y ~ X1 + X3 + X4 + 1",
-                    "Y ~ X1 + X3 + X4 + X5",
-                    "Y ~ X1 + X3 + X4 + X6",
-                    "Y ~ X2 + X3 + 1",
-                    "Y ~ X2 + X3 + X5",
-                    "Y ~ X2 + X3 + X6",
-                    "Y ~ X2 + X3 + X4 + 1",
-                    "Y ~ X2 + X3 + X4 + X5",
-                    "Y ~ X2 + X3 + X4 + X6",
+                    "Y ~ (X1) + (X3) + (1)",
+                    "Y ~ (X1) + (X3) + (X5)",
+                    "Y ~ (X1) + (X3) + (X6)",
+                    "Y ~ (X1) + (X3 + X4) + (1)",
+                    "Y ~ (X1) + (X3 + X4) + (X5)",
+                    "Y ~ (X1) + (X3 + X4) + (X6)",
+                    "Y ~ (X2) + (X3) + (1)",
+                    "Y ~ (X2) + (X3) + (X5)",
+                    "Y ~ (X2) + (X3) + (X6)",
+                    "Y ~ (X2) + (X3 + X4) + (1)",
+                    "Y ~ (X2) + (X3 + X4) + (X5)",
+                    "Y ~ (X2) + (X3 + X4) + (X6)",
                 ],
             ),
             # Multiple estimation in covariates and fixed effects
             (
                 "Y ~ sw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
                 ],
             ),
             (
                 "Y ~ csw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
             # Multiple estimation in dependent vars, covariates, and fixed effects
             (
                 "sw(Y1, Y2) ~ sw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f2",
-                    "Y1 ~ X2 | f1",
-                    "Y1 ~ X2 | f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f2",
-                    "Y2 ~ X2 | f1",
-                    "Y2 ~ X2 | f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f2)",
+                    "(Y1) ~ (X2) | (f1)",
+                    "(Y1) ~ (X2) | (f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f2)",
+                    "(Y2) ~ (X2) | (f1)",
+                    "(Y2) ~ (X2) | (f2)",
                 ],
             ),
             # Multiple dep vars with sw in covariates and csw in fixed effects
             (
                 "sw(Y1, Y2) ~ sw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f1 + f2",
-                    "Y1 ~ X2 | f1",
-                    "Y1 ~ X2 | f1 + f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f1 + f2",
-                    "Y2 ~ X2 | f1",
-                    "Y2 ~ X2 | f1 + f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f1 + f2)",
+                    "(Y1) ~ (X2) | (f1)",
+                    "(Y1) ~ (X2) | (f1 + f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f1 + f2)",
+                    "(Y2) ~ (X2) | (f1)",
+                    "(Y2) ~ (X2) | (f1 + f2)",
                 ],
             ),
             # sw0 in covariates + sw in fixed effects
             (
                 "Y ~ sw0(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
                 ],
             ),
             # csw in covariates + csw0 in fixed effects
             (
                 "Y ~ csw(X1, X2) | csw0(f1, f2)",
                 [
-                    "Y ~ X1 | 1",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X1 + X2 | 1",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (X1) | (1)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (1)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
             # sw(dep vars) + csw(covariates) + sw(fixed effects)
             (
                 "sw(Y1, Y2) ~ csw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y1 ~ X1 | f1",
-                    "Y1 ~ X1 | f2",
-                    "Y1 ~ X1 + X2 | f1",
-                    "Y1 ~ X1 + X2 | f2",
-                    "Y2 ~ X1 | f1",
-                    "Y2 ~ X1 | f2",
-                    "Y2 ~ X1 + X2 | f1",
-                    "Y2 ~ X1 + X2 | f2",
+                    "(Y1) ~ (X1) | (f1)",
+                    "(Y1) ~ (X1) | (f2)",
+                    "(Y1) ~ (X1 + X2) | (f1)",
+                    "(Y1) ~ (X1 + X2) | (f2)",
+                    "(Y2) ~ (X1) | (f1)",
+                    "(Y2) ~ (X1) | (f2)",
+                    "(Y2) ~ (X1 + X2) | (f1)",
+                    "(Y2) ~ (X1 + X2) | (f2)",
                 ],
             ),
             # mvsw in covariates + sw in fixed effects
             (
                 "Y ~ mvsw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f2)",
                 ],
             ),
             # mvsw in covariates + csw in fixed effects
             (
                 "Y ~ mvsw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y ~ 1 | f1",
-                    "Y ~ 1 | f1 + f2",
-                    "Y ~ X1 | f1",
-                    "Y ~ X1 | f1 + f2",
-                    "Y ~ X2 | f1",
-                    "Y ~ X2 | f1 + f2",
-                    "Y ~ X1 + X2 | f1",
-                    "Y ~ X1 + X2 | f1 + f2",
+                    "Y ~ (1) | (f1)",
+                    "Y ~ (1) | (f1 + f2)",
+                    "Y ~ (X1) | (f1)",
+                    "Y ~ (X1) | (f1 + f2)",
+                    "Y ~ (X2) | (f1)",
+                    "Y ~ (X2) | (f1 + f2)",
+                    "Y ~ (X1 + X2) | (f1)",
+                    "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
             ),
         ],
@@ -308,7 +362,7 @@ class TestParenthesisPair:
     def test_expansion_with_leading_nested_group(self):
         """sw() arguments wrapped in parentheses expand correctly end to end."""
         result = list(_expand_all_multiple_estimation("Y ~ sw((X1+X2), X3)"))
-        assert result == ["Y ~ (X1+X2)", "Y ~ X3"]
+        assert result == ["Y ~ ((X1+X2))", "Y ~ (X3)"]
 
 
 class TestFormulaParse:
@@ -549,6 +603,274 @@ class TestFixedEffectInteractions:
         assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
 
 
+class TestInstrumentalVariableBoundaries:
+    @pytest.mark.parametrize(
+        "formula, canonical",
+        [
+            ("Y ~ X1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 | f1 | X2 ~ Z1", "Y ~ X1 + [X2 ~ Z1] | f1"),
+            (
+                "Y ~ X1 | f1 | X2 ~ {(Z1 > 0) | (Z2 > 0)}",
+                "Y ~ X1 + [X2 ~ {(Z1 > 0) | (Z2 > 0)}] | f1",
+            ),
+        ],
+    )
+    def test_legacy_iv_preserves_formula_roles(self, formula, canonical):
+        with pytest.warns(DeprecationWarning, match="fixest-style") as caught:
+            parsed = Formula.parse(formula)[0]
+        assert len(caught) == 1
+        reference = Formula.parse(canonical)[0]
+        assert parsed.formula == reference.formula
+        assert parsed.is_fixed_effects == reference.is_fixed_effects
+        assert parsed.is_instrumental_variable
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [X2 ~ Z1] | f1",
+            "Y ~ X1 + [X2 ~ Z1] | f1 + f2[X1]",
+            "Y ~ X1 | f1[X2]",
+            "Y ~ X1 | I(f1 & ~f2)",
+        ],
+    )
+    def test_valid_brackets_and_python_tilde_preserved(self, formula):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse(formula)[0]
+        assert parsed.is_fixed_effects
+        assert parsed.is_instrumental_variable == ("[X2 ~ Z1]" in formula)
+
+
+class TestVaryingSlopeParsing:
+    """Tests for fixed-effect specs shaped like `within.Effect` terms."""
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1", [("f1", True, ())]),
+            ("f1:f2", [("f1:f2", True, ())]),
+            ("f1[z]", [("f1", True, ("z",))]),
+            ("f1[z1, z2]", [("f1", True, ("z1", "z2"))]),
+            ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
+            ("f1[[z]]", [("f1", False, ("z",))]),
+            ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
+            ("f1:f2[z]", [("f1:f2", True, ("z",))]),
+            ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
+            ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
+            ("f1[z**2]", [("f1", True, ("z ** 2",))]),
+            ("f1[I(z**2)]", [("f1", True, ("I(z ** 2)",))]),
+            ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
+            ("f1[z1 + z2]", [("f1", True, ("z1 + z2",))]),
+            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
+            ("f1[z1 * z2]", [("f1", True, ("z1 * z2",))]),
+            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
+            ("f1[-z]", [("f1", True, ("-z",))]),
+            ("f1[z + 1]", [("f1", True, ("z + 1",))]),
+            ("f1[z - 1]", [("f1", True, ("z - 1",))]),
+            ("f1[z + z]", [("f1", True, ("z + z",))]),
+            ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
+            ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
+            ("f1[z1**2, z2 + 1]", [("f1", True, ("z1 ** 2", "z2 + 1"))]),
+            ("f1[[z1**2, z2 + 1]]", [("f1", False, ("z1 ** 2", "z2 + 1"))]),
+            ("f1:f2[z**2]", [("f1:f2", True, ("z ** 2",))]),
+            ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z // 2]", [("f1", True, ("z // 2",))]),
+            ("f1[z % 2]", [("f1", True, ("z % 2",))]),
+            (
+                'f1[transform(z, mode="scale", center=True)]',
+                [("f1", True, ("transform(z, mode='scale', center=True)",))],
+            ),
+        ],
+    )
+    def test_fixed_effect_specs(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert all(
+            isinstance(spec, FixedEffectSpecification)
+            for spec in parsed.fixed_effect_specifications
+        )
+        assert [
+            (
+                str(spec.levels),
+                spec.intercept,
+                tuple(str(slope) for slope in spec.slopes),
+            )
+            for spec in parsed.fixed_effect_specifications
+        ] == expected
+
+    def test_no_fixed_effects_have_no_specs(self):
+        parsed = Formula.parse("Y ~ X1")[0]
+
+        assert parsed.fixed_effect_specifications == ()
+
+    def test_distinct_terms_with_shared_levels_remain_distinct(self):
+        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for spec in parsed.fixed_effect_specifications
+        ] == [
+            ("f1", True, ()),
+            ("f1", False, ("z",)),
+        ]
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        ["f1 + f1", "f1[[z]] + f1[[z]]"],
+    )
+    def test_formulaic_deduplicates_identical_terms(self, fixed_effects):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert len(parsed.fixed_effect_specifications) == 1
+
+    def test_effect_and_slope_order_follow_formulaic(self):
+        parsed = Formula.parse("Y ~ X1 | f2[z2, z1] + f1[[z3]]")[0]
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for spec in parsed.fixed_effect_specifications
+        ] == [
+            ("f2", True, ("z2", "z1")),
+            ("f1", False, ("z3",)),
+        ]
+
+    def test_formulaic_transform_is_preserved_as_a_slope_term(self):
+        parsed = Formula.parse("Y ~ X1 | f1[log(z)]")[0]
+
+        assert tuple(map(str, parsed.fixed_effect_specifications[0].slopes)) == (
+            "log(z)",
+        )
+
+    def test_stepwise_varying_slopes(self):
+        parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
+
+        assert [
+            (
+                str(model.fixed_effect_specifications[0].levels),
+                model.fixed_effect_specifications[0].intercept,
+            )
+            for model in parsed
+        ] == [("f1", True), ("f2", False)]
+
+    @pytest.mark.parametrize(
+        "fixed_effects,reason,example",
+        [
+            ("f1[[]]", "must specify at least one slope", "f1[[z]]"),
+            ("f1[()]", "must specify at least one slope", "f1[z]"),
+            ("f1[z][z2]", "nested varying-slope subscripts", "f1[z1, z2]"),
+            ("f1[z]:f2", "only supported on the final factor", "f1:f2[z]"),
+            ("f1:f2[z]:f3", "only supported on the final factor", "f1:f2[z]"),
+            (
+                "f1[z1]:f2[z2]",
+                "cannot specify more than one varying-slope expression",
+                "f1:f2[z1, z2]",
+            ),
+        ],
+    )
+    def test_invalid_varying_slope_terms(self, fixed_effects, reason, example):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=rf"`{re.escape(fixed_effects)}`.*{reason}.*`{re.escape(example)}`",
+        ):
+            _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            "f1 + f2",
+            "f1 - f1",
+            "f1 - f2",
+            "f1 ** 2",
+            "f1 * f2",
+            "f1 / 2",
+            "f1 // 2",
+            "f1 % 2",
+            "+f1",
+            "-f1",
+        ],
+    )
+    def test_varying_slope_level_rejects_arithmetic(self, expression):
+        parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=(
+                rf"unsupported fixed-effect level expression `{re.escape(expression)}`.*"
+                r"Arithmetic.*grouping column.*`group\[z\]`"
+            ),
+        ):
+            _ = parsed.fixed_effect_specifications
+
+    @pytest.mark.parametrize(
+        "fixed_effects",
+        [
+            "f1[z1:z2]",
+            "f1[:]",
+            "f1[::2]",
+            "f1[z, z1:z2]",
+            "f1[0]",
+            'f1["z"]',
+            "f1[[0]]",
+            "f1[z, 0]",
+            'f1[[z, "z"]]',
+            "f1[True]",
+            "f1[None]",
+            "f1[...]",
+            "f1[-1]",
+            "f1[1 + 2]",
+            "f1[z[0]]",
+            "f1[[[z]]]",
+            "f1[[(z1, z2)]]",
+            "f1[{z}]",
+            "f1[{'z': z}]",
+            "f1[[x for x in z]]",
+            "f1[(x for x in z)]",
+            "f1[z if flag else z2]",
+            "f1[z > 0]",
+            "f1[z and z2]",
+            "f1[z & z2]",
+            "f1[~z]",
+            "f1[(z := z2)]",
+            "f1[(lambda x: x)(z)]",
+            "f1[log(z[0])]",
+            "f1[log(*z)]",
+            "f1[transform(z, **options)]",
+        ],
+    )
+    def test_unsupported_slope_expressions(self, fixed_effects):
+        # Exercise the complete Python grammar directly: the legacy IV
+        # preprocessor treats `~` in a formula as an IV separator.
+        term = Term([Factor(fixed_effects, eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Invalid fixed-effect term.*unsupported slope expression.*Slopes must be.*`f1\[z\]`",
+        ):
+            FixedEffectSpecification.from_term(term)
+
+    @pytest.mark.parametrize("slope", ["X1:X2", "0", '"X1"'])
+    def test_unsupported_slopes_in_formula(self, slope):
+        parsed = Formula.parse(f"Y ~ X1 | f1[{slope}]")[0]
+
+        with pytest.raises(FormulaSyntaxError, match="unsupported slope expression"):
+            _ = parsed.fixed_effect_specifications
+
+    def test_invalid_python_factor_reports_expression_and_syntax(self):
+        # Formulaic rejects malformed Python before a Formula can expose this
+        # guard, so exercise it with a directly constructed fixed-effect term.
+        term = Term([Factor("f1[", eval_method=Factor.EvalMethod.PYTHON)])
+
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"Could not parse fixed-effect expression `f1\[`.*Expected a valid Python expression.*`f1\[z\]`",
+        ) as exc_info:
+            FixedEffectSpecification.from_term(term)
+
+        assert isinstance(exc_info.value.__cause__, SyntaxError)
+
+
 class TestValidation:
     """Tests for formula validation / error handling."""
 
@@ -593,7 +915,9 @@ class TestValidation:
     )
     def test_extra_parens_in_multiple_estimation(self, formula):
         """sw((a, b)) should error — extra parens swallow the separator."""
-        with pytest.raises(FormulaSyntaxError, match="at least 2 arguments"):
+        with pytest.raises(
+            formulaic.errors.FormulaSyntaxError, match="Unknown operator ','"
+        ):
             Formula.parse(formula)
 
 
@@ -606,6 +930,20 @@ class TestValidation:
     "formula,expected_n_models",
     [
         ("Y ~ X1", 1),
+        ("Y ~ sw(X1)", 1),
+        ("Y ~ csw(X1)", 1),
+        ("Y ~ sw0(X1)", 2),
+        ("Y ~ csw0(X1)", 2),
+        ("Y ~ X1 | sw0(f1)", 2),
+        ("Y ~ X1 | csw0(f1)", 2),
+        ("Y ~ csw(X1, X2):Z1", 2),
+        ("Y ~ csw0(X1, X2):Z1", 3),
+        ("Y ~ csw0(1 + X1, X2):Z1", 3),
+        ("Y ~ csw(X1, X2)*Z1", 2),
+        ("Y ~ f3*sw(X1, X2)", 2),
+        ("Y ~ Z1*csw(X1, X2)", 2),
+        ("Y ~ X1 + X2 + Z1 - csw(X1, X2)", 2),
+        ("Y ~ X1 | csw(f1, f2):f3", 2),
         ("Y ~ sw(X1, X2)", 2),
         ("Y ~ csw(X1, X2)", 2),
         ("Y ~ sw0(X1, X2)", 3),

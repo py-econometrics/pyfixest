@@ -387,15 +387,23 @@ def spline_data():
 
 
 @pytest.mark.parametrize(
-    "method,family",
+    "method,family,fixed_effects",
     [
-        ("feols", None),
-        ("feglm", "logit"),
-        ("feglm", "probit"),
-        ("feglm", "gaussian"),
+        *[
+            (method, family, fixed_effects)
+            for method, family in [
+                ("feols", None),
+                ("feglm", "logit"),
+                ("feglm", "probit"),
+                ("feglm", "gaussian"),
+                ("fepois", None),
+            ]
+            for fixed_effects in ["", " | f1 + f2"]
+        ],
+        # quantreg rejects fixed effects
+        ("quantreg", None, ""),
     ],
 )
-@pytest.mark.parametrize("fixed_effects", ["", " | f1 + f2"])
 def test_context_capture(spline_data, method, family, fixed_effects):
     method_kwargs = {"data": spline_data}
     if family:
@@ -423,6 +431,37 @@ def test_context_capture(spline_data, method, family, fixed_effects):
             FactorEvaluationError, match="Unable to evaluate factor `_lspline"
         ):
             pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)
+
+
+def test_fepois_context_excludes_wrapper_scope(spline_data):
+    # `fepois` delegates to `feglm`; `context=0` must capture the caller's
+    # scope, not `fepois`'s own arguments.
+    with pytest.raises(FactorEvaluationError, match="name 'iwls_tol' is not defined"):
+        pf.fepois("Y ~ I(X1 * iwls_tol)", data=spline_data, context=0)
+
+
+def test_fepois_context_matches_feglm_poisson(spline_data):
+    # A transform local to the caller resolves through `fepois` as through
+    # `feglm(family="poisson")`, for `context=0` and for a positive offset.
+    def _local_double(x):
+        return 2 * x
+
+    def _fit_one_frame_down(estimator, **kwargs):
+        return estimator(
+            "Y ~ _local_double(X1) | f1", data=spline_data, context=1, **kwargs
+        )
+
+    reference = pf.feglm(
+        "Y ~ _local_double(X1) | f1", data=spline_data, family="poisson", context=0
+    )
+    fits = [
+        pf.fepois("Y ~ _local_double(X1) | f1", data=spline_data, context=0),
+        _fit_one_frame_down(pf.fepois),
+        _fit_one_frame_down(pf.feglm, family="poisson"),
+    ]
+    for fit in fits:
+        np.testing.assert_allclose(fit.coef(), reference.coef(), rtol=1e-12)
+        np.testing.assert_allclose(fit.se(), reference.se(), rtol=1e-12)
 
 
 @pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])

@@ -1224,6 +1224,12 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
 @pytest.mark.parametrize(
     "fml_multi",
     [
+        ("Y ~ sw(X1)"),
+        ("Y ~ csw(X1)"),
+        ("Y ~ sw0(X1)"),
+        ("Y ~ csw0(X1)"),
+        ("Y ~ X1 | sw0(f1)"),
+        ("Y ~ X1 | csw0(f1)"),
         ("Y~ sw(X1, X2)"),
         ("Y~ sw(X1, X2) |f1 "),
         ("Y~ csw(X1, X2)"),
@@ -1309,7 +1315,6 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 
     try:
         pyfixest = feols(fml=fml_multi, data=data)
-        assert isinstance(pyfixest, FixestMulti)
     except ValueError as e:
         if "is not of type 'O' or 'category'" in str(e):
             data["f1"] = pd.Categorical(data.f1.astype(str))
@@ -1326,10 +1331,14 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
     )
 
-    n_models = len(pyfixest.all_fitted_models)
+    models = pyfixest.to_list() if isinstance(pyfixest, FixestMulti) else [pyfixest]
+    r_models = (
+        [r_fixest.rx2(x + 1) for x in range(len(r_fixest))]
+        if "fixest_multi" in r_fixest.rclass
+        else [r_fixest]
+    )
 
-    for x in range(n_models):
-        mod = pyfixest.fetch_model(x)
+    for mod, fixest_object in zip(models, r_models, strict=True):
         py_coef = mod.coef().values
         py_se = mod.se().values
 
@@ -1337,7 +1346,6 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
         if len(py_coef) == 0:
             continue
 
-        fixest_object = r_fixest.rx2(x + 1)
         fixest_coef = np.atleast_1d(np.array(fixest_object.rx2("coefficients")))
         fixest_se = np.atleast_1d(np.array(fixest_object.rx2("se")))
 
