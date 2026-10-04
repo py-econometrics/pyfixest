@@ -1,61 +1,46 @@
 ---
 name: implementation-strategy
-description: Classifies and places a pyfixest change before implementation and records its support matrix, external reference, and invariance intent. Use before any estimator, public API, inference, formula, post-estimation, or shared-core work, including refactors that must not change results.
+description: Plan estimator, API behavior, inference, formula, post-estimation, and shared-core changes in pyfixest. Includes invariant refactors; excludes prose-only edits.
 ---
 
 # Choose the implementation strategy
 
-Architecture policy lives in `docs/developer/architecture.md` and test policy
-in `docs/developer/testing.md`; this skill is the procedure that applies them
-before code exists, so that the code never chooses policy implicitly. Read
-"Stable core", "Estimator add-ons", and "Result and numerical boundaries" in
-`architecture.md`, "External numerical references" in `testing.md`, and the
-nearest in-repo implementation and its tests first. Read the estimator-state
-sections of `architecture.md` only for shared-core or estimator-state work.
-
-Input: the task. Output: the strategy below, presented in the plan and carried,
-in its durable parts, into the PR body's opening paragraph.
-
-## Classify the change
-
-Choose exactly one primary placement:
-
-- **Estimator add-on:** standalone API or domain module composing stable
-  primitives. This is the default for a new estimator.
-- **Post-estimation:** standalone numerical module with thin fitted-model
-  wrappers.
-- **Shared primitive:** generic internal operation with a current shared
-  consumer.
-- **Backend kernel:** measured, non-vectorizable hot loop with a readable
-  reference implementation where feasible.
-- **Core change:** modification to formula planning, model matrices, generic
-  fit orchestration, inference contracts, or result interfaces.
-
-Expanding the stable core to accommodate one estimator needs maintainer design
-approval before implementation.
-
-## Record the strategy
-
-Record the requested observable outcome, explicitly accepted supporting
-changes, behavior to preserve, and deferred adjacent concerns. Apply the
+Input: the requested change. Output: a short plan of material decisions,
+updated only when the scope or design changes. Apply the
 [change-scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
 
-1. the primary classification and target module;
-2. the nearest in-repo precedent;
-3. public API and result-object impact;
-4. reused primitives and any proposed shared primitive;
-5. behavior for `aweights`, `fweights`, fixed effects, IV, multiple
-   estimation, `lean`, `store_data`, and relevant backends;
-6. explicit unsupported paths and their errors;
-7. the external numerical reference and permanent-test location, chosen by
-   the preference order under "External numerical references" in
-   `testing.md`;
-8. documentation, exports, and changelog wiring;
-9. whether results are intended to be invariant. If yes, the release contract
-   is the edit-loop gate and any failure is a regression (see "Release
-   contract" in `testing.md`). If no, list the
-   quantities and estimators expected to move; each becomes a `reason`ed
-   declaration in `tests/test_release_contract.py`.
+## Placement and precedent
 
-Resolve an unsettled support matrix or external reference before
-implementation rather than while writing the code.
+Find the nearest implementation and its tests. Choose the primary placement:
+estimator add-on, post-estimation module, shared primitive, backend kernel, or
+shared-core change. Use the
+[extension seams](../../../docs/developer/architecture.md#repository-map-and-extension-seams)
+and read the applicable architecture sections:
+
+- New estimators: "Estimator add-ons" and "Result and numerical boundaries".
+- Shared-core changes: "Stable core", including its design-approval boundary.
+- Estimator-state changes: "Formula-state and lifecycle boundaries" and
+  "Implemented array and weight domains".
+- New or changed public entries: "Public documentation".
+
+## Decisions before implementation
+
+Record only applicable decisions; link existing contracts that remain unchanged.
+
+- Target module, precedent, reused primitives, and public API/result impact.
+- For estimator or inference behavior: supported weights, FE, IV, multiple
+  estimation, retained-data modes, and backends, plus explicit unsupported
+  errors, under "Result and numerical boundaries". New estimators need a
+  complete support matrix; existing features need the affected paths reviewed.
+- For new estimators or numerical changes: the permanent external reference
+  and test location, selected through
+  [External numerical references](../../../docs/developer/testing.md#external-numerical-references).
+  Resolve missing support or reference decisions before implementing that path.
+- For changes that can affect numerical results: whether results must remain
+  invariant or which quantities and estimators may change. Apply
+  [Release contract](../../../docs/developer/testing.md#release-contract);
+  intentional differences from its baseline require explicit reasons.
+- Applicable exports, documentation, compatibility-ledger, and changelog work.
+
+Carry only decisions that matter to reviewers into the PR; do not reproduce
+this checklist or an unchanged support matrix.

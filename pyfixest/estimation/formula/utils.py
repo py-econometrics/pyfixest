@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import re
 import warnings
 from enum import Enum
 
 import pandas as pd
+from formulaic.parser.algos import tokenize
+from formulaic.parser.types import Token
 
 from pyfixest.errors import FormulaSyntaxError
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
@@ -76,8 +81,11 @@ class _MultipleEstimationType(Enum):
     mvsw = "multiverse stepwise"
 
 
+# Matches an operator call such as `csw(X1, X2)`, also when a space precedes the
+# parenthesis (`csw (X1, X2)`) or the arguments span lines, as fixest allows.
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
-    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\(.+\)"
+    rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\s*\(.+\)",
+    flags=re.DOTALL,
 )
 
 
@@ -106,35 +114,80 @@ def _preprocess_fixed_effect_interactions(formula: str) -> str:
         "throw an error in a future version. "
         f"Instead of `{formula_old}` use `{formula}`",
         DeprecationWarning,
-        stacklevel=2,
+        stacklevel=_find_stack_level(),
     )
     return formula
 
 
+def _count_formula_tildes(part: str) -> int:
+    """Count formula ``~`` operators, excluding Python expressions and names."""
+    count = 0
+    for token in tokenize(part):
+        if token.kind is Token.Kind.OPERATOR:
+            count += token.token.count("~")
+        elif token.kind is Token.Kind.PYTHON and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(
+            token.token
+        ):
+            start, end = _get_position_of_first_parenthesis_pair(token.token)
+            count += _count_formula_tildes(token.token[start:end])
+    return count
+
+
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:
-    """Convert fixest-style instrumental variable syntax to formulaic.
-    Y ~ X1 | X2 ~ Z2 will be converted to Y ~ X1 + [X2 ~ Z2].
+    """Convert legacy IV syntax after rejecting misplaced IV blocks.
+
+    ``Y ~ X1 | f1 | X2 ~ Z2`` becomes ``Y ~ X1 + [X2 ~ Z2] | f1``.
+    Bracketed IV blocks belong only in the first formula part.
     """
-    parts = re.split(r"\s*\|\s*", formula)
-    main = parts.pop(0)
-    instrumental_variables = [part for part in parts if "~" in part]
-    if len(instrumental_variables) > 1:
-        raise FormulaSyntaxError(
-            "Only one instrumental variable block is supported. "
-            "Use a single `[endogenous ~ instruments]` block."
+    main_part, *fixef_iv_parts = _str_split_by_sep(formula, separator="|")
+    supported = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
+    # Bracketed IV in the first part is already in Formulaic syntax.
+    # Only later parts need legacy-IV conversion or misplaced-IV validation.
+    iv_tilde_counts = [_count_formula_tildes(part) for part in fixef_iv_parts]
+    if not any(iv_tilde_counts):
+        return formula
+
+    iv_part = fixef_iv_parts[-1]
+    iv_sides = _str_split_by_sep(iv_part, separator="~")
+    too_many_formula_parts = len(fixef_iv_parts) > 2
+    iv_before_final_part = any(iv_tilde_counts[:-1])
+    iv_lacks_single_tilde = iv_tilde_counts[-1] != 1
+    iv_lacks_two_top_level_sides = len(iv_sides) != 2
+    iv_has_empty_side = not all(iv_sides)
+
+    if too_many_formula_parts:
+        reason = (
+            "Legacy IV syntax allows only the main formula, optional fixed effects, "
+            "and one IV part."
         )
-    elif instrumental_variables:
-        parts = [part for part in parts if part not in instrumental_variables]
-        formula_old = formula
-        formula = f"{main} + {' + '.join(f'[{iv}]' for iv in instrumental_variables)}"
-        if parts:
-            formula = f"{formula} | {' | '.join(parts)}"
-        warnings.warn(
-            "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
-            f"Instead of `{formula_old}` use `{formula}`",
-            DeprecationWarning,
-            stacklevel=2,
+    elif iv_before_final_part:
+        reason = "The legacy IV part must come last, after any fixed effects."
+    elif iv_lacks_single_tilde:
+        reason = "The IV part must contain exactly one formula-level `~`."
+    elif iv_lacks_two_top_level_sides:
+        reason = (
+            "The legacy IV separator `~` must be outside brackets. "
+            "Bracketed IV syntax belongs before `|`, alongside the covariates."
         )
+    elif iv_has_empty_side:
+        reason = "Specify endogenous variables before `~` and instruments after it."
+    else:
+        reason = None
+
+    if reason is not None:
+        raise FormulaSyntaxError(reason + " " + supported)
+
+    formula_old = formula
+    formula = f"{main_part} + [{iv_part}]"
+    if len(fixef_iv_parts) == 2:
+        fixed_effects_part = fixef_iv_parts[0]
+        formula = f"{formula} | {fixed_effects_part}"
+    warnings.warn(
+        "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
+        f"Instead of `{formula_old}` use `{formula}`",
+        DeprecationWarning,
+        stacklevel=_find_stack_level(),
+    )
     return formula
 
 
@@ -155,6 +208,6 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
             "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
             f"Instead of `{formula_old}` use `{formula}`",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
     return formula

@@ -38,7 +38,7 @@ urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 dependencies = [
     "formulaic>=1.2.0,<1.3",
     "joblib>=1.4.2",
-    "maketables>=0.1.0",
+    "maketables>=0.1.4",
     "narwhals>=1.13.3",
     "numpy>=1.25.2",
     "pandas>=1.1.0",
@@ -93,7 +93,6 @@ markers = [
     "against_r_extended: mark test to be part of the test suite that depends on other R modules",
     "fast_r: marks tests in the fast R comparison suite",
     "extended: mark test to be part of the extended test suite",
-    "plots: marks all tests for plotting functionality, tests only triggered when using tag in github issue",
     "hac: marks all tests for HAC SEs"
 ]
 
@@ -162,23 +161,14 @@ convention = "numpy"
 docstring-code-format = true
 docstring-code-line-length = 88
 
-[tool.mypy]
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*",
-    "scipy.*",
-    "numba.*",
-    "lets_plot.*",
-    "formulaic.*",
-    "wildboottest.*",
-    "tabulate.*",
-    "joblib.*",
-    "narwhals.*",
-    "tqdm.*",
+[tool.ty.analysis]
+replace-imports-with-any = ["formulaic", "formulaic.**"]
+[tool.ty.src]
+# rpy2 is only available in the optional `r` pixi feature, not the `py312` env
+# ty runs in; this file exists solely to support against-R test fixtures.
+exclude = [
+    "pyfixest/utils/check_r_install.py",
 ]
-ignore_missing_imports = true
 
 # --------------------------------------------------------------------------------------
 # pixi configuration
@@ -210,6 +200,7 @@ polars = ">=1.0.0"
 pyarrow = ">=14.0"
 doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
+ty = ">=0.0.83"
 
 [tool.pixi.pypi-dependencies]
 pyfixest = { path = ".", editable = true, extras = ["plots", "numba"] }
@@ -224,9 +215,10 @@ MPLCONFIGDIR = "$PIXI_PROJECT_ROOT/.pixi/matplotlib"
 _record-release-baseline = { cmd = "pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record", description = "Record this platform's pyfixest release baseline if it is missing or stale" }
 test-release-contract = { cmd = "pytest -q tests/test_release_contract.py --no-cov -n auto", depends-on = ["_setup", "_record-release-baseline"], description = "Compare public estimator results with the pinned pyfixest release" }
 roll-release-baseline = { cmd = "python scripts/roll_release_baseline.py", description = "Pin the release contract to a newer pyfixest release, relock, and re-record" }
-test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or plots or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, plots, or HAC)" }
+test-py = { cmd = 'pytest tests -n auto -m "not (extended or against_r_core or against_r_extended or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Quick Python tests (no R, extended, or HAC)" }
 test-py-extended = { cmd = 'pytest tests -n auto -m "extended" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Extended Python tests" }
 test-py-nojit = { cmd = 'pytest tests/test_ses.py tests/test_demean.py tests/test_collinearity.py tests/test_count_fixef_fully_nested.py -n auto --cov=pyfixest --cov-report=xml:coverage-nojit.xml', env = { NUMBA_DISABLE_JIT = "1" }, depends-on = ["_setup"], description = "Run numba-heavy tests with NUMBA_DISABLE_JIT=1 so codecov sees numba code paths (weekly extended suite)" }
+bench-estimation = { cmd = "pytest benchmarks/test_estimation.py --benchmark-only --no-cov", env = { RAYON_NUM_THREADS = "1", OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1" }, depends-on = ["_setup"], description = "Single-threaded wall-clock benchmarks for OLS, Poisson, logit, and IV fits with the LSMR demeaner (opt-in, ~2 min)" }
 render-notebooks = { cmd = "python scripts/run_notebooks.py", description = "Run all notebooks" }
 
 [tool.pixi.tasks._setup]
@@ -254,6 +246,11 @@ python = "~=3.14.0"
 
 [tool.pixi.feature.torch.dependencies]
 pytorch = "*"
+
+# -- ty feature ---------------------------------------------------------------------------
+
+[tool.pixi.feature.ty.tasks]
+ty = { cmd = "ty check pyfixest", description = "Type-check with ty (blocking CI gate)" }
 
 # -- r feature --------------------------------------------------------------------------
 
@@ -353,7 +350,7 @@ torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" 
 [tool.pixi.environments]
 py310 = ["py310", "torch"]
 py311 = ["py311", "torch"]
-py312 = ["py312", "torch"]
+py312 = ["py312", "torch", "ty"]
 py313 = ["py313", "torch"]
 py314 = ["py314", "torch"]
 py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }

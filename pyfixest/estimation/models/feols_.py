@@ -3,29 +3,29 @@ from __future__ import annotations
 import re
 import warnings
 from dataclasses import replace
+from functools import partial
 from importlib import import_module
-from typing import Any, Literal, cast
+from typing import ClassVar, Literal, cast, overload
 
 import formulaic
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix, diags, spmatrix
+from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
-from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
-from pyfixest.estimation.internals.families import T_DIST, InferenceDist
+from pyfixest.estimation.internals.families import T_DIST
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.fit_statistics import (
     FitStatistics,
@@ -46,8 +46,11 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     EstimationSample,
     FittedValues,
+    FixedEffectCounts,
+    ModelDescription,
     ObservationWeights,
     RitestStatistics,
+    SampleSplit,
     SandwichComponents,
     VarianceCovariance,
     VcovSpec,
@@ -88,8 +91,10 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
+    _find_stack_level,
     _narwhals_to_pandas,
 )
 from pyfixest.utils.utils import (
@@ -100,6 +105,18 @@ from pyfixest.utils.utils import (
 
 decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
+
+
+def _fixed_effect_names(
+    model_matrix: ModelMatrix, fixest_formula: FixestFormula
+) -> tuple[str, ...]:
+    """Name the absorbed fixed effects in the order the formula writes them.
+
+    Empty when the materialized model matrix carries no fixed-effect block.
+    """
+    if model_matrix.fixed_effects is None:
+        return ()
+    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
 
 
 class Feols(ResultAccessorMixin):
@@ -119,24 +136,24 @@ class Feols(ResultAccessorMixin):
     data : pd.DataFrame
         Estimation data, already converted to pandas and reindexed.
     options : EstimationOptions
-        Every estimation option the fit is built with, assembled from the
-        `EstimationConfig` by the estimation planner.
+        Every estimation option the fit is built with, as built by the
+        estimation function.
     lookup_demeaned_data : dict[frozenset[int], DemeanedData]
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int | float]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
-    _method : str
-        Specifies the method used for regression, set to "feols".
-    _is_iv : bool
-        Indicates whether instrumental variables are used, initialized as False.
-
+    model : ModelDescription
+        What the model estimates: its formula, the estimation function and its
+        inference distribution, the sample split, the dependent variable, the
+        absorbed fixed effects, the `i()` interaction coefficients, and the
+        formulaic model specification.
     model_matrix : ModelMatrix
         Model frames containing the response, regressors, and other model inputs.
     within_data : WithinLinearData
@@ -158,6 +175,9 @@ class Feols(ResultAccessorMixin):
         User-scale weights and their analytic or frequency interpretation.
     sample_info : EstimationSample
         Observation counts and the dropped rows, by position and by stage.
+    fixef_counts : FixedEffectCounts
+        Level counts of the fixed effects in the estimation sample and the
+        counts derived from them for inference.
     sandwich : SandwichComponents
         Weighted scores, Hessian, and bread of the sandwich covariance, set in
         get_fit().
@@ -167,14 +187,6 @@ class Feols(ResultAccessorMixin):
         Inference and post-estimation features this model class supports.
     _data : Any
         Data used in the regression, to be enriched outside of the class.
-    _fml : Any
-        Formula used in the regression, to be enriched outside of the class.
-    _has_fixef : bool
-        Indicates whether fixed effects are used.
-    _fixef : Any
-        Fixed effects used in the regression.
-    _icovars : Any
-        Internal covariates, to be enriched outside of the class.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
@@ -203,38 +215,24 @@ class Feols(ResultAccessorMixin):
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
         per-observation fixed-effect contribution `sumFE`.
     fitstat : FitStatistics
-        Goodness-of-fit measures; ``NaN`` where the estimator defines none.
+        Goodness-of-fit measures computed by `_fit_statistics()` and published
+        right after get_fit(); ``NaN`` where the estimator defines none.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
         `store_data = False`.
-    _model_name: str
-        The name of the model. Usually just the formula string. If split estimation is used,
-        the model name will include the split variable and value.
     _model_name_plot: str
         The name of the model used when plotting and summarizing models. Usually identical to
-        `_model_name`. This might be different when pf.summary() or pf.coefplot() are called
-        and models with identical _model_name attributes are passed. In this case,
+        `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        and models with identical model names are passed. In this case,
         the _model_name_plot attribute will be modified.
-
-    # special for did
-    _res_cohort_eventtime_dict: Optional[dict[str, Any]]
-    _yname: Optional[str]
-    _gname: Optional[str]
-    _tname: Optional[str]
-    _idname: Optional[str]
-    _att: Optional[Any]
-    test_treatment_heterogeneity: Callable[..., Any]
-    aggregate: Callable[..., Any]
-    iplot_aggregate: Callable[..., Any]
-
     """
 
-    # Set in prepare_model_matrix().
-    _icovars: list[str] | None
     # Set in get_fit().
     collinearity: CollinearityCheck
     sandwich: SandwichComponents
     fitted_values: FittedValues
+    # Set in _publish_fit_statistics() right after get_fit().
+    fitstat: FitStatistics
     # Set in vcov().
     variance_covariance: VarianceCovariance
     # Set in wald_test().
@@ -244,6 +242,27 @@ class Feols(ResultAccessorMixin):
     # Set in fixef().
     fixef_estimates: FixedEffectEstimates
 
+    # The fit is a single least-squares solve, so the fast CRV3 jackknife and
+    # the fast ritest algorithm apply. Subclasses with other fits override it.
+    _closed_form_ols: bool = True
+
+    # Features this model class supports; __init__ copies them to
+    # `capabilities`. Each subclass declares its own value in full.
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=True,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=True,
+        cluster_causal_variance=True,
+        decomposition=True,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=True,
+        sherman_morrison_update=True,
+        anytime_valid_inference=True,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -252,84 +271,62 @@ class Feols(ResultAccessorMixin):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | float | _AllSampleSentinel | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
-        self._sample_split_value = sample_split_value
-        self._sample_split_var = sample_split_var
-        self._model_name = (
-            FixestFormula.formula
-            if self._sample_split_var is None
-            else f"{FixestFormula.formula} (Sample: {self._sample_split_var} = {self._sample_split_value})"
+        self.options = options
+        self.model = self._describe_model(
+            fixest_formula=FixestFormula, sample_split=sample_split
         )
-        self._model_name_plot = self._model_name
-        self._method = "feols"
-        self._is_iv = False
-        self._inference_dist: InferenceDist = T_DIST
-        self.FixestFormula = FixestFormula
+        self._model_name_plot = self.model.model_name
 
-        if self._sample_split_var is None:
+        if sample_split is None:
             pass
-        elif self._sample_split_value is _ALL_SAMPLE:
-            data = data.loc[data[sample_split_var].notnull()]
+        elif sample_split.value is None:
+            data = data.loc[data[sample_split.var].notnull()]
         else:
-            data = data.loc[data[self._sample_split_var] == sample_split_value]
+            data = data.loc[data[sample_split.var] == sample_split.value]
 
         data = data.reset_index(drop=True)
 
-        self.options = options
         self._data = data.copy() if options.copy_data else data
         self._demean_cache = DemeanCache(lookup_demeaned_data, lookup_preconditioner)
 
-        self.capabilities = Capabilities(
-            crv3_inference=True,
-            hac_inference=True,
-            multiway_clustering=True,
-            wildboottest=True,
-            cluster_causal_variance=True,
-            decomposition=True,
-        )
+        self.capabilities = self._declared_capabilities
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
 
-        # attributes that have to be enriched outside of the class -
-        # not really optimal code change later
-        self._fml = FixestFormula.formula
-        self._has_fixef = False
-        self._fixef = (
-            str(FixestFormula.fixed_effects).replace(" ", "")
-            if FixestFormula.is_fixed_effects
-            else None
+    def _describe_model(
+        self,
+        *,
+        fixest_formula: FixestFormula,
+        sample_split: SampleSplit | None,
+    ) -> ModelDescription:
+        """Describe the model this class fits, before its model matrix exists.
+
+        Subclasses override this to name their estimation function and its
+        inference distribution. The matrix-time fields stay empty until
+        `_publish_model_matrix()` republishes the description with them. An
+        unsplit fit publishes ``None`` as its split variable and value.
+        """
+        return ModelDescription(
+            formula=fixest_formula.formula,
+            fixest_formula=fixest_formula,
+            method="feols",
+            is_iv=False,
+            model_name=(
+                fixest_formula.formula
+                if sample_split is None
+                else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
+                f"{'all' if sample_split.value is None else sample_split.value})"
+            ),
+            sample_split=sample_split,
+            inference_dist=T_DIST,
         )
-
-        # set in get_fit(); IV and quantile fits keep the all-NaN value
-        self.fitstat = FitStatistics()
-
-        # special for did
-        self._res_cohort_eventtime_dict: dict[str, Any] | None = None
-        self._yname: str | None = None
-        self._gname: str | None = None
-        self._tname: str | None = None
-        self._idname: str | None = None
-        self._att: bool | None = None
-
-        # set functions inherited from other modules
-        self._bind_report_methods()
-
-        # DiD methods - assign placeholder functions
-        def _not_implemented_did(*args, **kwargs):
-            raise NotImplementedError(
-                "This method is only available for DiD models, not for vanilla 'feols'."
-            )
-
-        self.test_treatment_heterogeneity = _not_implemented_did
-        self.aggregate = _not_implemented_did
-        self.iplot_aggregate = _not_implemented_did
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
         model_matrix = model_matrix_fixest.create_model_matrix(
-            formula=self.FixestFormula,
+            formula=self.model.fixest_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
             drop_intercept=self.options.drop_intercept,
@@ -357,46 +354,47 @@ class Feols(ResultAccessorMixin):
             if not independent.empty
             else None
         )
-        self._icovars = (
-            independent.columns[is_icovar].tolist()
-            if is_icovar is not None and is_icovar.any()
-            else None
+        self.model = replace(
+            self.model,
+            depvar=model_matrix.dependent.columns[0],
+            fixed_effects=_fixed_effect_names(
+                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
+            ),
+            interacted_covariates=(
+                tuple(independent.columns[is_icovar])
+                if is_icovar is not None and is_icovar.any()
+                else ()
+            ),
+            model_spec=model_matrix.model_spec,
         )
         self._X_is_empty = independent.shape[1] == 0
-        self._model_spec = model_matrix.model_spec
 
         self._coefnames = independent.columns.tolist()
-        self._coefnames_z = (
-            model_matrix.instruments.columns.tolist()
-            if model_matrix.instruments is not None
-            else None
-        )
-        self._depvar = model_matrix.dependent.columns[0]
 
-        self._has_fixef = self.model_matrix.fixed_effects is not None
-        self._fixef = (
-            str(self.FixestFormula.fixed_effects).replace(" ", "")
-            if self.FixestFormula.is_fixed_effects
-            else None
+        fixed_effects = model_matrix.fixed_effects
+        self.fixef_counts = (
+            FixedEffectCounts(
+                n_levels_by_fe=tuple(
+                    int(size) for size in fixed_effects.nunique(axis=0)
+                )
+            )
+            if fixed_effects is not None
+            else FixedEffectCounts()
         )
-
-        self._k_fe = (
-            self.model_matrix.fixed_effects.nunique(axis=0) if self._has_fixef else None
-        )
-        self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
         n_rows = model_matrix.n_rows
         # Frequency weights count repeated observations; other fits count rows.
+        if weights.weights_type == "fweights":
+            assert weights.values is not None
+            n_obs: int | float = float(weights.values.sum())
+        else:
+            n_obs = n_rows
         self.sample_info = EstimationSample(
             dropped_row_index=model_matrix.dropped_row_index,
             n_rows=n_rows,
-            n_obs=(
-                float(weights.values.sum())
-                if weights.weights_type == "fweights"
-                else n_rows
-            ),
+            n_obs=n_obs,
             dropped_by_stage=model_matrix.dropped_by_stage,
         )
 
@@ -496,6 +494,15 @@ class Feols(ResultAccessorMixin):
         require_retained(self, "predict", "within_data")
         return self.within_data.design
 
+    def _fixef_dependent(self) -> np.ndarray:
+        """Return the dependent variable of the fixed-effect regression in `fixef()`.
+
+        `fixef()` regresses this variable minus `X @ beta_hat` on the fixed
+        effects. Linear models use the observed `Y` of the estimation sample;
+        the GLM override uses the linear predictor net of the offset.
+        """
+        return self.model_matrix.dependent.to_numpy().flatten().astype(np.float64)
+
     def get_fit(self) -> None:
         """
         Fit an OLS model.
@@ -528,26 +535,38 @@ class Feols(ResultAccessorMixin):
         # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
+
+    def _publish_fit_statistics(self) -> None:
+        """Publish `_fit_statistics()` as `fitstat`."""
+        self.fitstat = self._fit_statistics()
+
+    def _fit_statistics(self) -> FitStatistics:
+        """Compute the goodness-of-fit measures of the fitted model.
+
+        `_publish_fit_statistics()` stores the result as `fitstat` right after
+        `get_fit()`, before `lean=True` clears the arrays read here.
+        Subclasses override this hook to compute their own measures; an
+        override returns ``FitStatistics()`` where the estimator defines none.
+        """
         # Empty designs are used only for demeaning and may have no residual
         # degrees of freedom. Leave their fit statistics undefined.
         if self._X_is_empty:
-            return
-        self.fitstat = linear_fit_statistics(
+            return FitStatistics()
+        return linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
-            Y_within=within_data.response,
+            Y_within=self.within_data.response,
             residuals=self._u_hat,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=self._n_fixef_coefficients(),
+            k_fe=self.fixef_counts.fixef_dof,
             has_intercept=not self.options.drop_intercept,
-            has_fixef=self._has_fixef,
+            has_fixef=self.model.has_fixef,
         )
 
     def _finalize_fit(self) -> None:
-        """Compute OLS-only post-fit statistics."""
-        if self._method == "feols" and not self._is_iv:
-            self.wald_test()
+        """Run the OLS Wald test that all coefficients are zero."""
+        self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
         """Yield this fitted result to the result container."""
@@ -604,8 +623,62 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        self._require_capability(
+            capability="covariance_update",
+            method="vcov",
+            exception_type=VcovTypeNotSupportedError,
+        )
+        spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        self._check_vcov_support(spec)
+        return self._vcov_from_spec(spec, data=data)
+
+    def _check_vcov_support(self, spec: VcovSpec) -> None:
+        """Reject a covariance estimator this model cannot compute.
+
+        Reads only the model description, options, and capabilities, so the
+        estimation pipeline runs it before fitting.
+        """
+        if spec.vcov_type_detail in ("HC2", "HC3"):
+            if self.model.has_fixef:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                )
+            if self.model.is_iv:
+                raise VcovTypeNotSupportedError(
+                    "HC2 and HC3 inference types are not supported for IV regressions."
+                )
+        if spec.vcov_type == "CRV":
+            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
+                raise NotImplementedError(
+                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
+                )
+            if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
+                raise VcovTypeNotSupportedError(
+                    f"CRV3 inference is not for models of type '{self.model.method}'."
+                )
+        if spec.vcov_type == "HAC":
+            if not self.capabilities.hac_inference:
+                raise NotImplementedError(
+                    "HAC inference is not supported for this model type."
+                )
+            if self.options.has_weights and self.options.weights_type == "fweights":
+                raise NotImplementedError(
+                    "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
+                )
+        if spec.vcov_type == "nid":
+            raise NotImplementedError(
+                "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+            )
+
+    def _vcov_from_spec(
+        self, spec: VcovSpec, data: DataFrameType | None = None
+    ) -> Feols:
+        """Compute and publish the covariance of a parsed, supported `spec`.
+
+        `vcov()` parses and checks the user's input first; the estimation
+        pipeline passes the spec it parsed before fitting.
+        """
         require_retained(self, "vcov", "_data")
-        # Assuming `data` is the DataFrame in question
 
         data_to_check = data if data is not None else self._data
         try:
@@ -615,9 +688,6 @@ class Feols(ResultAccessorMixin):
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
 
-        spec = VcovSpec.from_user_input(
-            vcov, vcov_kwargs, has_fixef=self._has_fixef, is_iv=self._is_iv
-        )
         vcov_type = spec.vcov_type
 
         # Every estimator follows the same three steps: small-sample factors,
@@ -626,17 +696,13 @@ class Feols(ResultAccessorMixin):
         df_t: int | float
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
-            if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
-                raise NotImplementedError(
-                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
-                )
             prep = prepare_cluster_state(
-                data=data if data is not None else self._data,
+                data=data_to_check,
                 clustervar=list(spec.clustervar),
                 ssc=self.options.ssc,
-                fixef=self._fixef,
+                fixef=self.model.fixed_effects,
                 fe=self.model_matrix.fixed_effects,
-                k_fe=self._k_fe,
+                n_levels_by_fe=self.fixef_counts.n_levels_by_fe,
             )
             G = tuple(int(g) for g in prep.G)
             correction = get_ssc_cluster(
@@ -668,6 +734,8 @@ class Feols(ResultAccessorMixin):
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
+            else:
+                raise ValueError(f"Unknown vcov type {vcov_type!r}.")
             correction = get_ssc(
                 self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
@@ -701,8 +769,8 @@ class Feols(ResultAccessorMixin):
         return DegreesOfFreedomCounts(
             N=self.sample_info.n_obs,
             k=self._k,
-            k_fe=int(self._k_fe.sum()) if self._has_fixef else 0,
-            n_fe=self._n_fe,
+            k_fe=self.fixef_counts.n_levels,
+            n_fe=self.fixef_counts.n_fixef,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
             G=G,
@@ -719,11 +787,7 @@ class Feols(ResultAccessorMixin):
         if vcov_type_detail == "CRV1":
             return self._vcov_crv1(clustid=clustid, cluster_col=cluster_col)
 
-        if not self.capabilities.crv3_inference:
-            raise VcovTypeNotSupportedError(
-                f"CRV3 inference is not for models of type '{self._method}'."
-            )
-        use_fast = not self._has_fixef and self._method == "feols" and not self._is_iv
+        use_fast = self._closed_form_ols and not self.model.has_fixef
         crv3 = self._vcov_crv3_fast if use_fast else self._vcov_crv3_slow
         return VcovTerm(vcov=crv3(clustid=clustid, cluster_col=cluster_col), meat=None)
 
@@ -756,17 +820,6 @@ class Feols(ResultAccessorMixin):
     def _vcov_hac(self, spec: VcovSpec) -> VcovTerm:
         _data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
-
-        if not self.capabilities.hac_inference:
-            raise NotImplementedError(
-                "HAC inference is not supported for this model type."
-            )
-
-        # fweights not supported
-        if self.options.has_weights and self.options.weights_type == "fweights":
-            raise NotImplementedError(
-                "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
-            )
 
         # some data checks on input pandas df
         # time needs to be numeric or date else we cannot sort by time
@@ -817,19 +870,14 @@ class Feols(ResultAccessorMixin):
     def _vcov_crv3_slow(self, clustid, cluster_col) -> np.ndarray:
         beta_jack = np.zeros((len(clustid), self._k))
 
-        # lazy loading to avoid circular import
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols if self._method == "feols" else fixest_module.fepois
-
         for ixg, g in enumerate(clustid):
             # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
-            fit = fit_(
-                fml=self._fml,
+            fit = refit(
+                self,
                 data=data,
-                vcov="iid",
-                weights=self.options.weights,
-                weights_type=self.options.weights_type,
+                # inference not needed, iid fastest to compute
+                vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
             )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
@@ -910,8 +958,6 @@ class Feols(ResultAccessorMixin):
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
-        k_fe = np.sum(self._k_fe.to_numpy()) if self._has_fixef else 0
-
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
 
@@ -919,7 +965,7 @@ class Feols(ResultAccessorMixin):
         if covariance.spec.is_clustered:
             df2: int | float = min(covariance.G) - 1
         else:
-            df2 = self.sample_info.n_obs - self._k - k_fe
+            df2 = self.sample_info.n_obs - self._k - self.fixef_counts.n_levels
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
@@ -927,7 +973,9 @@ class Feols(ResultAccessorMixin):
             not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
         ):
             warnings.warn(
-                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector."
+                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             distribution = "chi2"
 
@@ -948,13 +996,13 @@ class Feols(ResultAccessorMixin):
         reps: int,
         cluster: str | None = None,
         param: str | None = None,
-        weights_type: str | None = "rademacher",
-        impose_null: bool | None = True,
-        bootstrap_type: str | None = "11",
+        weights_type: str = "rademacher",
+        impose_null: bool = True,
+        bootstrap_type: str = "11",
         seed: int | None = None,
-        k_adj: bool | None = True,
-        G_adj: bool | None = True,
-        parallel: bool | None = False,
+        k_adj: bool = True,
+        G_adj: bool = True,
+        parallel: bool = False,
         return_bootstrapped_t_stats=False,
     ):
         """
@@ -1040,20 +1088,13 @@ class Feols(ResultAccessorMixin):
             )
 
         if not self.capabilities.wildboottest:
-            if self._is_iv:
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for IV estimation."
-                )
-            if self._method == "did2s":
-                raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for the DID2S estimator."
-                )
             if self.options.has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
                 )
             raise NotImplementedError(
-                "Wild cluster bootstrap is only supported for unweighted OLS models."
+                "Wild cluster bootstrap is only supported for unweighted OLS models; "
+                "it is not available for IV, GLM, quantile regression, or DID2S fits."
             )
 
         cluster_list = []
@@ -1073,7 +1114,7 @@ class Feols(ResultAccessorMixin):
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
-        if self._has_fixef or not run_heteroskedastic:
+        if self.model.has_fixef or not run_heteroskedastic:
             require_retained(self, "wildboottest", "_data")
         else:
             require_retained(self, "wildboottest", "within_data")
@@ -1085,15 +1126,11 @@ class Feols(ResultAccessorMixin):
 
         try:
             from wildboottest.wildboottest import WildboottestCL, WildboottestHC
-        except ImportError:
-            print(
-                "Module 'wildboottest' not found. Please install 'wildboottest', e.g. via `PyPi`."
-            )
-
-        if self._method == "fepois":
-            raise NotImplementedError(
-                "Wild cluster bootstrap is not supported for Poisson regression."
-            )
+        except ImportError as exc:
+            raise ImportError(
+                "wildboottest() requires the optional `wildboottest` package. "
+                "Install it with `pip install wildboottest`."
+            ) from exc
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
 
@@ -1113,6 +1150,7 @@ class Feols(ResultAccessorMixin):
             boot.get_tstat()
             boot.get_pvalue(pval_type="two-tailed")
             full_enumeration_warn = False
+            ssc_value = boot.small_sample_correction
 
         else:
             inference = f"CRV({cluster_list[0]})"
@@ -1144,8 +1182,11 @@ class Feols(ResultAccessorMixin):
 
             if full_enumeration_warn:
                 warnings.warn(
-                    "2^G < the number of boot iterations, setting full_enumeration to True."
+                    "2^G < the number of boot iterations, setting full_enumeration to True.",
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
+            ssc_value = boot.ssc
 
         if np.isscalar(boot.t_stat):
             boot.t_stat = np.asarray(boot.t_stat)
@@ -1159,7 +1200,7 @@ class Feols(ResultAccessorMixin):
             "bootstrap_type": bootstrap_type,
             "inference": inference,
             "impose_null": impose_null,
-            "ssc": boot.small_sample_correction if run_heteroskedastic else boot.ssc,
+            "ssc": ssc_value,
         }
 
         res_df = pd.Series(res)
@@ -1222,18 +1263,25 @@ class Feols(ResultAccessorMixin):
         if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
                 "The causal cluster variance estimator is not supported for models "
-                f"of type '{self._method}'."
+                f"of type '{self.model.method}'."
             )
-        assert isinstance(treatment, str), "treatment must be a string."
-        assert isinstance(cluster, str) or cluster is None, (
-            "cluster must be a string or None."
-        )
-        assert isinstance(seed, int) or seed is None, "seed must be an integer or None."
-        assert isinstance(n_splits, int), "n_splits must be an integer."
-        assert isinstance(pk, (int, float)) and 0 <= pk <= 1
-        assert isinstance(qk, (int, float)) and 0 <= qk <= 1
+        if not isinstance(treatment, str):
+            raise TypeError("treatment must be a string.")
+        if not (isinstance(cluster, str) or cluster is None):
+            raise TypeError("cluster must be a string or None.")
+        if not (isinstance(seed, int) or seed is None):
+            raise TypeError("seed must be an integer or None.")
+        if not isinstance(n_splits, int):
+            raise TypeError("n_splits must be an integer.")
+        if n_splits < 1:
+            raise ValueError(f"n_splits must be a positive integer, got {n_splits}.")
+        for name, share in (("pk", pk), ("qk", qk)):
+            if not isinstance(share, (int, float)):
+                raise TypeError(f"{name} must be a number.")
+            if not 0 <= share <= 1:
+                raise ValueError(f"{name} must be between 0 and 1, got {share}.")
 
-        if self._has_fixef:
+        if self.model.has_fixef:
             raise NotImplementedError(
                 "The causal cluster variance estimator is currently not supported for models with fixed effects."
             )
@@ -1267,26 +1315,26 @@ class Feols(ResultAccessorMixin):
 
         if not self.variance_covariance.spec.is_clustered:
             warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             self.vcov({"CRV1": cluster})
 
-        if seed is None:
-            seed = np.random.randint(1, 100_000_000)
         rng = np.random.default_rng(seed)
 
-        fml = self._fml
         data = self._data
         Y = self.within_data.response.flatten()
         W = data[treatment].to_numpy()
-        assert np.all(np.isin(W, [0, 1])), (
-            "Treatment variable must be binary with values 0 and 1"
-        )
+        if not np.all(np.isin(W, [0, 1])):
+            raise ValueError(
+                f"Treatment variable '{treatment}' must be binary with values 0 and 1."
+            )
         X = self.within_data.design
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = np.array(self.coef().xs(treatment))
+        tau_full = float(self.coef().xs(treatment))  # type: ignore[arg-type]
 
         N = self.sample_info.n_obs
         G = len(unique_clusters)
@@ -1297,7 +1345,12 @@ class Feols(ResultAccessorMixin):
         vcov_splits = 0.0
         for _ in range(n_splits):
             vcov_ccv = _compute_CCV(
-                fml=fml,
+                fit_fn=partial(
+                    refit,
+                    self,
+                    # only the coefficients are read; iid is fastest to compute
+                    vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+                ),
                 Y=Y,
                 X=X,
                 W=W,
@@ -1307,7 +1360,6 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
-                demeaner=self.options.demeaner,
             )
             vcov_splits += vcov_ccv
 
@@ -1345,9 +1397,19 @@ class Feols(ResultAccessorMixin):
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
 
+    @overload
     def _model_matrix_one_hot(
-        self, output="numpy"
-    ) -> tuple[np.ndarray, np.ndarray | spmatrix, list[str]]:
+        self, output: Literal["numpy"] = ...
+    ) -> tuple[np.ndarray, np.ndarray, list[str]]: ...
+
+    @overload
+    def _model_matrix_one_hot(
+        self, output: Literal["sparse"]
+    ) -> tuple[np.ndarray, csc_matrix, list[str]]: ...
+
+    def _model_matrix_one_hot(
+        self, output: Literal["numpy", "sparse"] = "numpy"
+    ) -> tuple[np.ndarray, np.ndarray | csc_matrix, list[str]]:
         """
         Transform a model matrix with fixed effects into a one-hot encoded matrix.
 
@@ -1363,8 +1425,8 @@ class Feols(ResultAccessorMixin):
         Tuple[np.ndarray, np.ndarray, list[str]]
             A tuple with the dependent variable, the model matrix, and the column names.
         """
-        if self._has_fixef:
-            fml_linear, fixef = self._fml.split("|")
+        if self.model.has_fixef:
+            fml_linear, fixef = self.model.formula.split("|")
             fixef_vars = fixef.split("+")
             fixef_vars_C = [f"C({x})" for x in fixef_vars]
             fixef_fml = "+".join(fixef_vars_C)
@@ -1390,6 +1452,24 @@ class Feols(ResultAccessorMixin):
         X = csc_matrix(X) if output == "sparse" else X
 
         return Y, X, xnames
+
+    def _require_capability(
+        self,
+        *,
+        capability: str,
+        method: str,
+        exception_type: type[Exception] = NotImplementedError,
+    ) -> None:
+        """Reject a post-estimation method the model class does not support."""
+        if getattr(self.capabilities, capability):
+            return
+        estimator = f"'{self.model.method}' fits"
+        if self.model.is_iv:
+            estimator += " with instruments"
+        raise exception_type(
+            f"{method}() is not supported for {estimator}: "
+            f"fit.capabilities.{capability} is False."
+        )
 
     def decompose(
         self,
@@ -1435,8 +1515,10 @@ class Feols(ResultAccessorMixin):
             The type of decomposition method to use. Defaults to "gelbach", which
             currently is the only supported option.
         cluster: Optional
-            The name of the cluster variable. If None, uses the cluster variable
-            from the model fit. Defaults to None.
+            The name of the cluster variable for the bootstrap. If None, uses the
+            cluster variable from the model fit. Only one-way clustering is
+            supported; a fit with multiway clustering raises ``ValueError`` unless
+            a single cluster variable is passed here. Defaults to None.
         combine_covariates: Optional.
             A dictionary that specifies which covariates to combine into groups.
             See the example for how to use this argument. Defaults to None.
@@ -1492,11 +1574,7 @@ class Feols(ResultAccessorMixin):
         res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
         """
-        if not self.capabilities.decomposition:
-            raise NotImplementedError(
-                "Decomposition is currently only supported for regression models "
-                "estimated via feols()."
-            )
+        self._require_capability(capability="decomposition", method="decompose")
 
         has_param = param is not None
         has_decomp = decomp_var is not None
@@ -1512,7 +1590,8 @@ class Feols(ResultAccessorMixin):
         if has_param:
             warnings.warn(
                 "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
-                UserWarning,
+                FutureWarning,
+                stacklevel=_find_stack_level(),
             )
             decomp_var = param
 
@@ -1526,14 +1605,14 @@ class Feols(ResultAccessorMixin):
             type=type,
             has_weights=self.options.has_weights,
             weights_type=self.options.weights_type,
-            is_iv=self._is_iv,
-            method=self._method,
+            is_iv=self.model.is_iv,
+            method=self.model.method,
             only_coef=only_coef,
         )
 
         require_retained(self, "decompose", "within_data", "observation_weights")
         if (
-            self._has_fixef
+            self.model.has_fixef
             or cluster is not None
             or self.variance_covariance.spec.is_clustered
         ):
@@ -1552,9 +1631,14 @@ class Feols(ResultAccessorMixin):
         if cluster is not None:
             cluster_df = self._data[cluster]
         elif self.variance_covariance.spec.is_clustered:
-            cluster_df = self._data[self.variance_covariance.spec.clustervar[0]]
-        else:
-            cluster_df = None
+            clustervar = self.variance_covariance.spec.clustervar
+            if len(clustervar) > 1:
+                raise ValueError(
+                    "Multiway clustering is currently not supported with the Gelbach "
+                    "decomposition bootstrap. Pass a single cluster variable via "
+                    "`cluster` instead."
+                )
+            cluster_df = self._data[clustervar[0]]
 
         Y, X, xnames = self._model_matrix_one_hot(output="sparse")
 
@@ -1570,7 +1654,7 @@ class Feols(ResultAccessorMixin):
             decomp_var=cast(str, decomp_var),
             x1_vars=x1_vars,
             coefnames=xnames,
-            depvarname=self._depvar,
+            depvarname=self.model.depvar,
             cluster_df=cluster_df,
             nthreads=nthreads_int,
             combine_covariates=combine_covariates,
@@ -1597,6 +1681,30 @@ class Feols(ResultAccessorMixin):
         self.GelbachDecompositionResults = med
 
         return med
+
+    def summary(self, **kwargs):
+        """Print a summary of this model. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        from pyfixest.report import summary
+
+        return summary(models=self, **kwargs)
+
+    def etable(self, **kwargs):
+        """Create a regression table. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        from pyfixest.report import etable
+
+        return etable(models=self, **kwargs)
+
+    def coefplot(self, **kwargs):
+        """Plot the coefficients. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        from pyfixest.report import coefplot
+
+        return coefplot(models=self, **kwargs)
+
+    def iplot(self, **kwargs):
+        """Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        from pyfixest.report import iplot
+
+        return iplot(models=self, **kwargs)
 
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
         """
@@ -1633,51 +1741,33 @@ class Feols(ResultAccessorMixin):
         fixed_effects.head()
         ```
         """
-        if not self._has_fixef:
+        if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
 
-        if self._is_iv:
-            raise NotImplementedError(
-                "The fixef() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
-        require_retained(self, "fixef", "_data")
+        require_retained(self, "fixef", "_data", "model_matrix")
 
-        Y, X = self._model_spec[_ModelMatrixKey.main].get_model_matrix(
-            self._data,
-            output="pandas",
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-        )
-        Y = Y.to_numpy().flatten().astype(np.float64)
-        if self._X_is_empty:
-            uhat = Y.flatten()
-        else:
-            # drop intercept, potentially multicollinear vars
-            X = X[self._coefnames].to_numpy()
-            if self._method == "fepois" or self._method.startswith("feglm"):
-                # determine residuals from estimated linear predictor
-                # equation (5.2) in Stammann (2018) http://arxiv.org/abs/1707.01815
-                Y = self.fitted_values.link
-                # The linear predictor includes the offset; subtract it so
-                # that sumFE represents the pure FE contribution and predict()
-                # can add the offset back from newdata without double-counting.
-                if self.options.offset is not None:
-                    offset = self.model_matrix.offset
-                    assert offset is not None
-                    Y = Y - offset.to_numpy().flatten()
-            uhat = (Y - X @ self._beta_hat).flatten()
+        model_spec = self.model.model_spec
+        assert model_spec is not None, "fixef() runs after the model matrix is built"
+        fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+
+        # flatten() copies: the weighting below scales uhat in place and must
+        # not touch the fitted values the GLM hook may return.
+        uhat = self._fixef_dependent().flatten()
+        if not self._X_is_empty:
+            # model_matrix keeps the columns the collinearity check dropped;
+            # _coefnames names the estimated ones.
+            X = self.model_matrix.independent[self._coefnames].to_numpy()
+            uhat = uhat - X @ self._beta_hat
         # one-hot encoding of fixed effects (treatment coding: reference level
         # dropped for the second and subsequent FEs via ensure_full_rank=True).
         contrast_coding = contrast_code_fixed_effects(
-            fixed_effects=self.FixestFormula.fixed_effects_wrapped,
-            fixed_effect_names=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].column_names,
+            fixed_effects=self.model.fixest_formula.fixed_effects_wrapped,
+            fixed_effect_names=fe_spec.column_names,
             data=self._data,
             context=FORMULAIC_TRANSFORMS | {**self.options.context},
-            transform_state=self._model_spec[
-                _ModelMatrixKey.fixed_effects
-            ].transform_state,
+            transform_state=fe_spec.transform_state,
         )
         D = contrast_coding.matrix
         D_w = D
@@ -1695,9 +1785,7 @@ class Feols(ResultAccessorMixin):
             coefficients=build_fixed_effects(
                 fixed_effect_coefficients=alpha,
                 contrast_coding=contrast_coding,
-                transform_state=self._model_spec[
-                    _ModelMatrixKey.fixed_effects
-                ].transform_state,
+                transform_state=fe_spec.transform_state,
             ),
             alpha=alpha,
             # Fixed-effect contribution per observation, in the units of Y.
@@ -1779,13 +1867,10 @@ class Feols(ResultAccessorMixin):
         fit.predict(newdata=data.head())
         ```
         """
-        if self._is_iv:
-            raise NotImplementedError(
-                "The predict() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
-            if self._has_fixef:
+            if self.model.has_fixef:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with fixed effects."
                 )
@@ -1812,7 +1897,11 @@ class Feols(ResultAccessorMixin):
             # Use na_action="drop" on each sub-spec separately because dependent variable
             # may not be available in newdata, then intersect indices so a NaN in *any* variable
             # (covariate or FE) marks the whole row as NaN in the output.
-            rhs_spec = self._model_spec[_ModelMatrixKey.main].rhs
+            model_spec = self.model.model_spec
+            assert model_spec is not None, (
+                "predict() runs after the model matrix is built"
+            )
+            rhs_spec = model_spec[_ModelMatrixKey.main].rhs
             X_mm, unseen = materialize_model_spec_with_unseen_mask(
                 rhs_spec, newdata, context
             )
@@ -1821,8 +1910,8 @@ class Feols(ResultAccessorMixin):
             # be silently encoded as the reference level -> drop them to NaN instead,
             # matching how unseen fixed-effect levels are handled below.
             valid_idx = valid_idx[~unseen[valid_idx]]
-            if self._has_fixef:
-                fe_spec = self._model_spec[_ModelMatrixKey.fixed_effects]
+            if self.model.has_fixef:
+                fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
                 check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
@@ -1842,13 +1931,13 @@ class Feols(ResultAccessorMixin):
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
             y_hat = np.full(n_observations, np.nan)
             y_hat[valid_idx] = X_coef @ self._beta_hat
-            if self._has_fixef:
+            if self.model.has_fixef:
                 y_hat[valid_idx] += fe_hat
             # Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
             if self.options.offset is not None:
-                offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
+                offset_mm = model_spec[_ModelMatrixKey.offset].get_model_matrix(
                     newdata,
                     context=context,
                     na_action="drop",
@@ -1861,9 +1950,6 @@ class Feols(ResultAccessorMixin):
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
-
-            if type == "response" and self._method == "fepois":
-                y_hat = np.exp(y_hat)
 
         if se_fit or interval == "prediction":
             prediction_df = _compute_prediction_error(
@@ -1968,14 +2054,7 @@ class Feols(ResultAccessorMixin):
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
-        if self._is_iv:
-            raise NotImplementedError(
-                "Randomization Inference is not supported for IV models."
-            )
-        if self._method not in {"feols", "fepois"}:
-            raise NotImplementedError(
-                "Randomization Inference is only supported for OLS and Poisson models."
-            )
+        self._require_capability(capability="randomization_inference", method="ritest")
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
@@ -2005,10 +2084,20 @@ class Feols(ResultAccessorMixin):
             """
             )
 
+        if type not in ["randomization-t", "randomization-c"]:
+            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+
+        if isinstance(reps, bool) or not isinstance(reps, int):
+            raise TypeError("reps must be an integer.")
+        if reps < 1:
+            raise ValueError(f"reps must be a positive integer, got {reps}.")
+
         # update vcov if cluster provided but not in model
         if cluster is not None and not self.variance_covariance.spec.is_clustered:
             warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object."
+                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
             self.vcov({"CRV1": cluster})
 
@@ -2018,18 +2107,13 @@ class Feols(ResultAccessorMixin):
         sample_tstat = np.array(self.tstat().xs(resampvar_))
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
-        if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
-
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
 
         if choose_algorithm == "auto":
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
-        assert isinstance(reps, int) and reps > 0, "reps must be a positive integer."
-
-        if choose_algorithm == "slow" or self._method == "fepois":
+        if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]
             if cluster is not None:
                 vcov_input = {"CRV1": cluster}
@@ -2037,7 +2121,7 @@ class Feols(ResultAccessorMixin):
                 # "iid" for models without controls, else HC1
                 vcov_input = (
                     "hetero"
-                    if (self._has_fixef and len(self._coefnames) > 1)
+                    if (self.model.has_fixef and len(self._coefnames) > 1)
                     or len(self._coefnames) > 2
                     else "iid"
                 )
@@ -2050,12 +2134,17 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
-                fml=self._fml,
+                fml=self.model.formula,
                 reps=reps,
-                vcov=vcov_input,
                 type=type,
                 rng=rng,
-                model=self._method,
+                fit_fn=partial(
+                    refit,
+                    self,
+                    vcov=VcovSpec.from_user_input(vcov_input),
+                    # permutations change the treatment, not the rows
+                    same_sample=True,
+                ),
             )
 
         else:
@@ -2065,7 +2154,9 @@ class Feols(ResultAccessorMixin):
                 else self.observation_weights.values
             )
             fval_df = (
-                self._data[self._fixef.split("+")] if self._fixef is not None else None
+                self._data[list(self.model.fixed_effects)]
+                if self.model.has_fixef
+                else None
             )
             D = self._data[resampvar_].to_numpy()
 
@@ -2201,18 +2292,11 @@ class Feols(ResultAccessorMixin):
         fit.update(X_new, y_new)
         ```
         """
-        if self._has_fixef:
+        if self.model.has_fixef:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with fixed effects."
             )
-        if self._method != "feols":
-            raise NotImplementedError(
-                "The update() method is currently only supported for OLS models."
-            )
-        if self._is_iv:
-            raise NotImplementedError(
-                "The update() method is currently not supported for IV models."
-            )
+        self._require_capability(capability="sherman_morrison_update", method="update")
         if self.options.has_weights:
             raise NotImplementedError(
                 "The update() method is currently not supported for models with weights."

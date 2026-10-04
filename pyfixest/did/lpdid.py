@@ -49,7 +49,7 @@ class LPDID(DID):
         idname: str,
         tname: str,
         gname: str,
-        xfml: str,
+        xfml: str | None,
         att: bool,
         cluster: str,
         vcov: VcovTypeOptions | dict[str, str] | None = None,
@@ -70,7 +70,8 @@ class LPDID(DID):
             att=att,
             cluster=cluster,
         )
-        assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
+        if not (isinstance(xfml, str) or xfml is None):
+            raise TypeError("xfml must be a string or None.")
 
         data = data.copy()
         data.sort_values([idname, tname], inplace=True)

@@ -122,6 +122,16 @@ This installs prek as a git hook so checks run automatically on each commit.
 pixi run lint
 ```
 
+### Type checking
+
+We use [ty](https://github.com/astral-sh/ty) to type-check `pyfixest`. It runs
+as a blocking CI check but is not one of the `prek`/pre-commit hooks, so run it
+directly before pushing:
+
+```{.bash .code-copy}
+pixi run ty
+```
+
 ### Building the documentation
 
 ```{.bash .code-copy}

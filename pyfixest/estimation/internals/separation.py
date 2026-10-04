@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Mapping
 from functools import partial
 from importlib import import_module
-from typing import Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.utils.dev_utils import _find_stack_level
+
+if TYPE_CHECKING:
+    from pyfixest.estimation.models.feols_ import Feols
 
 
 def check_for_separation(
@@ -20,6 +25,7 @@ def check_for_separation(
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
     methods: list[str] | None = None,
+    context: Mapping[str, Any] | None = None,
 ) -> list[int]:
     """
     Check for separation.
@@ -44,6 +50,8 @@ def check_for_separation(
     methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
+    context : Mapping[str, Any], optional
+        Captured formula context forwarded to iterative-rectifier refits.
 
     Returns
     -------
@@ -52,7 +60,7 @@ def check_for_separation(
     """
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
-        "ir": partial(_check_for_separation_ir, demeaner=demeaner),
+        "ir": partial(_check_for_separation_ir, demeaner=demeaner, context=context),
     }
     if methods is None:
         methods = list(valid_methods)
@@ -71,7 +79,9 @@ def check_for_separation(
 
     if separation_na:
         warnings.warn(
-            f"{len(separation_na)!s} observations removed because of separation."
+            f"{len(separation_na)!s} observations removed because of separation.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
         )
 
     return list(separation_na)
@@ -168,6 +178,7 @@ def _check_for_separation_ir(
     demeaner: AnyDemeaner,
     tol: float = 1e-4,
     maxiter: int = 100,
+    context: Mapping[str, Any] | None = None,
 ) -> set[int]:
     """
     Check for separation using the "iterative rectifier" algorithm
@@ -191,6 +202,8 @@ def _check_for_separation_ir(
         Tolerance to detect separated observation. Defaults to 1e-4.
     maxiter : int
         Maximum number of iterations. Defaults to 100.
+    context : Mapping[str, Any], optional
+        Captured formula context used to evaluate the auxiliary formula.
 
     Returns
     -------
@@ -238,10 +251,18 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = feols(fml_separation, data=tmp, weights="omega", demeaner=demeaner)
-        tmp["Uhat"] = pd.Series(
-            data=fitted.predict(), index=fitted._data.index, name="Uhat"
+        fitted = cast(
+            "Feols",
+            feols(
+                fml=fml_separation,
+                data=tmp,
+                weights="omega",
+                demeaner=demeaner,
+                context=context,
+            ),
         )
+        # The inner fit resets its index; predictions retain tmp's row order.
+        tmp["Uhat"] = fitted.predict()
         Uhat = tmp["Uhat"]
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
@@ -259,7 +280,9 @@ def _check_for_separation_ir(
         separation_na = set(dependent[Uhat > 0].index)
     else:
         warnings.warn(
-            "iterative rectivier separation check: maximum number of iterations reached before convergence"
+            "iterative rectivier separation check: maximum number of iterations reached before convergence",
+            RuntimeWarning,
+            stacklevel=_find_stack_level(),
         )
 
     return separation_na

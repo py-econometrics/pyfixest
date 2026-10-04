@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any, ClassVar
 
-import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.families import POISSON
-from pyfixest.estimation.internals.fit_statistics import poisson_fit_statistics
-from pyfixest.estimation.internals.model_state import GlmEstimationOptions
-from pyfixest.estimation.models.feglm_ import Feglm
-from pyfixest.estimation.models.feols_ import (
-    PredictionErrorOptions,
-    PredictionType,
+from pyfixest.estimation.internals.fit_statistics import (
+    FitStatistics,
+    poisson_fit_statistics,
 )
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.estimation.internals.model_state import (
+    Capabilities,
+    GlmEstimationOptions,
+    ModelDescription,
+    SampleSplit,
+)
+from pyfixest.estimation.models.feglm_ import Feglm
 
 
 class Fepois(Feglm):
@@ -71,6 +74,21 @@ class Fepois(Feglm):
     ```
     """
 
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=True,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=True,
+        fixed_effect_recovery=True,
+        randomization_inference=True,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
+
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -79,8 +97,7 @@ class Fepois(Feglm):
         options: GlmEstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -88,99 +105,21 @@ class Fepois(Feglm):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
             family=POISSON,
         )
 
-        # Poisson-specific overrides on top of the Feglm-set defaults.
-        self._method = "fepois"
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=True,
-            cluster_causal_variance=False,
-            decomposition=False,
-        )
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Name the Poisson estimation function."""
+        return replace(super()._describe_model(**kwargs), method="fepois")
 
-    def get_fit(self) -> None:
-        "Fit via Feglm IRLS, then add the Poisson likelihood measures."
-        super().get_fit()
-        y_orig = self.model_matrix.dependent.to_numpy().flatten()
+    def _fit_statistics(self) -> FitStatistics:
+        "Add the Poisson likelihood measures to the deviance."
         # ``None`` is the allocation-free unweighted path shared with the rest
         # of the estimation core; no vector of ones is materialised.
-        observation_weights = self.observation_weights.values
-        self.fitstat = poisson_fit_statistics(
-            y=y_orig,
+        return poisson_fit_statistics(
+            y=self.model_matrix.dependent.to_numpy().flatten(),
             mu=self.working_state.mu,
-            weights=observation_weights,
-            deviance=self._family.deviance(
-                y_orig, self.working_state.mu, observation_weights
-            ),
+            weights=self.observation_weights.values,
+            deviance=super()._fit_statistics().deviance,
         )
-
-    def predict(
-        self,
-        newdata: DataFrameType | None = None,
-        atol: float = 1e-6,
-        btol: float = 1e-6,
-        type: PredictionType = "link",
-        se_fit: bool | None = False,
-        interval: PredictionErrorOptions | None = None,
-        alpha: float = 0.05,
-    ) -> np.ndarray | pd.DataFrame:
-        """
-        Return predicted values from regression model.
-
-        Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations
-        will be set to NaN.
-
-        Parameters
-        ----------
-        newdata : Union[None, pd.DataFrame], optional
-            A pd.DataFrame with the new data, to be used for prediction.
-            If None (default), uses the data used for fitting the model.
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        type : str, optional
-            The type of prediction to be computed.
-            Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the response variable,
-            i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
-            i.e., the linear predictor X @ beta.
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
-        interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
-        alpha: float, optional
-            The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if interval = "prediction" is not None.
-
-        Returns
-        -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
-        """
-        if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for Poisson regression."
-            )
-
-        return super().predict(newdata=newdata, type=type, atol=atol, btol=btol)

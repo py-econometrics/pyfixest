@@ -12,8 +12,10 @@ from pyfixest.estimation.internals.model_state import (
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
+    FixedEffectCounts,
     GlmEstimationOptions,
     GlmWorkingState,
+    ModelDescription,
     ObservationWeights,
     QuantregEstimationOptions,
     RitestStatistics,
@@ -28,6 +30,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffect,
     FixedEffectEstimates,
 )
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 __all__ = [
     "Capabilities",
@@ -41,12 +44,15 @@ __all__ = [
     "FitStatistics",
     "FittedValues",
     "FixedEffect",
+    "FixedEffectCounts",
     "FixedEffectEstimates",
     "GlmEstimationOptions",
     "GlmWorkingState",
+    "ModelDescription",
     "ModelMatrix",
     "ObservationWeights",
     "QuantregEstimationOptions",
+    "QuantregSolution",
     "RitestStatistics",
     "SandwichComponents",
     "VarianceCovariance",

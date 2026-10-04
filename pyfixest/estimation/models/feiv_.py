@@ -2,30 +2,34 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import replace
-from importlib import import_module
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
+    Capabilities,
     CollinearityCheck,
     EstimationOptions,
     FirstStage,
     FirstStageDiagnostics,
     FittedValues,
+    ModelDescription,
+    SampleSplit,
     WithinIvData,
     WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_ssc
 
 
@@ -45,16 +49,16 @@ class Feiv(Feols):
     data : pd.DataFrame
         Estimation data, already converted to pandas and reindexed.
     options : EstimationOptions
-        Every estimation option the fit is built with, assembled from the
-        `EstimationConfig` by the estimation planner.
+        Every estimation option the fit is built with, as built by the
+        estimation function.
     lookup_demeaned_data : dict[frozenset[int], DemeanedData]
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
-    sample_split_var : Optional[str]
-        Name of the sample-split variable, or ``None`` for the full sample.
-    sample_split_value : Optional[str | int]
-        Value of `sample_split_var` this model is fitted on.
+    sample_split : SampleSplit or None
+        The variable and value by which the estimation sample was split.
+        ``None`` if the model was fit on the entire input data set (minus
+        dropping of missings etc). For all model classes.
 
     Attributes
     ----------
@@ -64,13 +68,11 @@ class Feiv(Feols):
         Type of the weights variable defined in Feiv class.
         Either "aweights" for analytic weights or "fweights"
         for frequency weights.
-    _coefnames_z : list
+    _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
         Names and column mask of the instruments dropped by the rank check,
         set in get_fit().
-    _is_iv : bool
-        Indicator if instrumental variables are used.
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
@@ -101,13 +103,13 @@ class Feiv(Feols):
     Examples
     --------
     `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
-    when the formula includes an IV part, i.e.
-    `depvar ~ exog | fe | endog ~ instrument`.
+    when the formula includes an instrument block, i.e.
+    `depvar ~ exog + [endog ~ instruments] | fe`.
 
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.tidy()
     ```
 
@@ -126,6 +128,23 @@ class Feiv(Feols):
     first_stage: FirstStage
     # Set in get_fit().
     collinearity_instruments: CollinearityCheck
+    # Two-stage fit: no single least-squares solve to shortcut.
+    _closed_form_ols = False
+
+    _declared_capabilities: ClassVar[Capabilities] = Capabilities(
+        covariance_update=True,
+        crv3_inference=False,
+        hac_inference=True,
+        multiway_clustering=True,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        anytime_valid_inference=False,
+    )
 
     # Constructor and methods implementation...
     def __init__(
@@ -136,8 +155,7 @@ class Feiv(Feols):
         options: EstimationOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(
             FixestFormula=FixestFormula,
@@ -145,18 +163,17 @@ class Feiv(Feols):
             options=options,
             lookup_demeaned_data=lookup_demeaned_data,
             lookup_preconditioner=lookup_preconditioner,
-            sample_split_var=sample_split_var,
-            sample_split_value=sample_split_value,
+            sample_split=sample_split,
         )
 
-        self._is_iv = True
-        self.capabilities = replace(
-            self.capabilities,
-            crv3_inference=False,
-            wildboottest=False,
-            cluster_causal_variance=False,
-            decomposition=False,
-        )
+    def _publish_model_matrix(self, model_matrix):
+        """Publish the base model-matrix state plus the instrument names."""
+        super()._publish_model_matrix(model_matrix)
+        self._coefnames_z: list[str] = model_matrix.instruments.columns.tolist()
+
+    def _describe_model(self, **kwargs: Any) -> ModelDescription:
+        """Describe the second stage of an instrumental-variable fit."""
+        return replace(super()._describe_model(**kwargs), is_iv=True)
 
     def _demean(self) -> WithinIvData:
         """Return second-stage and full instrument arrays on within scale."""
@@ -192,7 +209,6 @@ class Feiv(Feols):
         """Drop collinear columns from the second-stage design and the instruments."""
         within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
-        assert self._coefnames_z is not None
         instruments, collinearity = drop_multicollinear_variables(
             within_data.instruments,
             self._coefnames_z,
@@ -225,6 +241,10 @@ class Feiv(Feols):
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
 
+    def _fit_statistics(self) -> FitStatistics:
+        """Leave the goodness-of-fit measures of a 2SLS fit undefined."""
+        return FitStatistics()
+
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""
         require_retained(self, "_fit_first_stage", "_data")
@@ -235,46 +255,20 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        fixest_module = import_module("pyfixest.estimation")
-        fit_ = fixest_module.feols
-
-        fml_first_stage = self.FixestFormula.first_stage
+        fml_first_stage = self.model.fixest_formula.first_stage
         # Append fixed effects manually since fml_first_stage doesn't include them
         # (see Formula.fml_first_stage docstring for explanation)
-        if self._has_fixef and fml_first_stage is not None:
-            fml_first_stage += f" | {self._fixef}"
+        if self.model.has_fixef and fml_first_stage is not None:
+            fml_first_stage += f" | {self.model.fixef}"
 
-        # Type hint to reflect that vcov_detail can be either a dict or a str
-        vcov_detail: dict[str, str] | str
-
-        spec = self.variance_covariance.spec
-        if spec.is_clustered:
-            vcov_detail = {spec.vcov_type_detail: spec.clustervar[0]}
-        else:
-            vcov_detail = spec.vcov_type_detail
-
-        demeaner = self.options.demeaner
-        cached_pre = self._demean_cache.lookup_preconditioner.get(
-            self.sample_info.dropped_row_index
-        )
-        if isinstance(demeaner, LsmrDemeaner) and cached_pre is not None:
-            demeaner = replace(demeaner, preconditioner=cached_pre)
-
-        # Do first stage regression
-        model1 = fit_(
+        # As in fixest, the first stage uses the second stage's rows and options.
+        model1 = refit(
+            self,
             fml=fml_first_stage,
             data=self._data,
-            vcov=vcov_detail,
-            weights=self.options.weights,
-            weights_type=self.options.weights_type,
-            collin_tol=self.options.collin_tol,
-            solver=self.options.solver,
-            demeaner=demeaner,
+            vcov=self.variance_covariance.spec,
+            same_sample=True,
         )
-
-        # Ensure model1 is of type Feols
-        if not isinstance(model1, Feols):
-            raise TypeError("The first stage model must be of type Feols")
 
         self.first_stage = FirstStage(
             coefficients=model1._beta_hat,
@@ -296,19 +290,11 @@ class Feiv(Feols):
         self._fit_first_stage()
 
     def _clear_attributes(self) -> None:
-        """Apply the parent's retention policy to the retained first stage."""
+        """Apply the retention policy to this model and its first stage."""
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            model = first_stage.model
-            # The first stage is fitted in full because `first_stage` is built
-            # from its within data and residuals; it takes over the parent's
-            # storage options once those values have been read.
-            model.options = replace(
-                model.options,
-                store_data=self.options.store_data,
-                lean=self.options.lean,
-            )
-            model._clear_attributes()
+            # the first stage replays this model's storage options
+            first_stage.model._clear_attributes()
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):
@@ -378,7 +364,7 @@ class Feiv(Feols):
             fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
 
             # Fit IV model
-            fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+            fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
                      vcov=vcov_detail,
                      weights="weights")
             F_stat_pf = fit_iv.first_stage.diagnostics.f_stat

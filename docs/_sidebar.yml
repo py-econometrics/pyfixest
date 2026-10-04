@@ -13,6 +13,7 @@ website:
       - reference/did.estimation.did2s.qmd
       - reference/did.estimation.lpdid.qmd
       - reference/did.saturated_twfe.SaturatedEventStudy.qmd
+      - reference/did.saturated_twfe.EventStudyDesign.qmd
       - reference/did.visualize.panelview.qmd
       section: Difference-in-Differences
     - contents:
@@ -68,10 +69,12 @@ website:
       - reference/estimation.state.EstimationOptions.qmd
       - reference/estimation.state.GlmEstimationOptions.qmd
       - reference/estimation.state.QuantregEstimationOptions.qmd
+      - reference/estimation.state.ModelDescription.qmd
       - reference/estimation.state.ModelMatrix.qmd
       - reference/estimation.state.ObservationWeights.qmd
       - reference/estimation.state.EstimationSample.qmd
       - reference/estimation.state.DroppedRowCounts.qmd
+      - reference/estimation.state.FixedEffectCounts.qmd
       - reference/estimation.state.WithinLinearData.qmd
       - reference/estimation.state.WithinIvData.qmd
       - reference/estimation.state.CollinearityCheck.qmd
@@ -83,6 +86,7 @@ website:
       - reference/estimation.state.WaldTest.qmd
       - reference/estimation.state.FirstStage.qmd
       - reference/estimation.state.FirstStageDiagnostics.qmd
+      - reference/estimation.state.QuantregSolution.qmd
       - reference/estimation.state.VcovSpec.qmd
       - reference/estimation.state.FixedEffectEstimates.qmd
       - reference/estimation.state.FixedEffect.qmd
