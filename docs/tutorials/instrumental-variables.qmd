@@ -99,8 +99,12 @@ digraph IV2 {
 In `PyFixest`, the IV syntax is:
 
 ```
-Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument
+Y ~ exogenous_controls + [endogenous ~ instrument] | fixed_effects
 ```
+
+Omit `| fixed_effects` for models without fixed effects. The deprecated spelling
+`Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument` is no longer
+supported; move the IV part into brackets among the covariates.
 
 ::: {.callout-note}
 ## Fixed Effects with IV
@@ -163,7 +167,7 @@ $$\hat{\beta}_{\text{Wald}} = \frac{\bar{Y}_{Z=1} - \bar{Y}_{Z=0}}{\bar{T}_{Z=1}
 In `PyFixest`, we can fit the IV model using the formula interface:
 
 ```{python}
-fit_iv = pf.feols("earnings ~ 1 | num_children ~ ivf_success", data=ivf_df)
+fit_iv = pf.feols("earnings ~ 1 + [num_children ~ ivf_success]", data=ivf_df)
 
 pf.etable([
     fit_ols,
@@ -241,7 +245,7 @@ fit_itt = pf.feols("revenue ~ assigned_treatment | user_type", data=ab_df)
 fit_fs = pf.feols("adopted_feature ~ assigned_treatment | user_type", data=ab_df)
 
 # IV / LATE
-fit_late = pf.feols("revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data=ab_df)
+fit_late = pf.feols("revenue ~ 1 + [adopted_feature ~ assigned_treatment] | user_type", data=ab_df)
 ```
 
 ### Compare All Three
@@ -314,7 +318,7 @@ fit_ols_b = pf.feols("wages ~ immigration + log_population", data=bartik_df)
 
 # IV: using the Bartik instrument
 fit_iv_b = pf.feols(
-    "wages ~ log_population | immigration ~ bartik_instrument",
+    "wages ~ log_population + [immigration ~ bartik_instrument]",
     data=bartik_df,
 )
 ```

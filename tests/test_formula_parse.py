@@ -425,7 +425,7 @@ class TestFormulaParse:
         assert str(f.fixed_effects) == "f1"
 
     # def test_parse_iv(self):
-    #     result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
+    #     result = Formula.parse("Y ~ X1 + [Z1 ~ W1] | f1")
     #     assert len(result) == 1
     #     f = result[0]
     #     assert f.second_stage == "Y ~ X1 + Z1"
@@ -802,8 +802,8 @@ class TestVaryingSlopeParsing:
         ],
     )
     def test_unsupported_slope_expressions(self, fixed_effects):
-        # Exercise the complete Python grammar directly: the legacy IV
-        # preprocessor treats `~` in a formula as an IV separator.
+        # Exercise the complete Python grammar directly, including expressions
+        # that Formulaic requires to be enclosed in braces.
         term = Term([Factor(fixed_effects, eval_method=Factor.EvalMethod.PYTHON)])
 
         with pytest.raises(
@@ -848,7 +848,7 @@ class TestValidation:
 
     def test_too_many_tildes_in_part(self):
         """Check maximum number of tildes is not exceeded."""
-        with pytest.raises(formulaic.errors.FormulaSyntaxError):
+        with pytest.raises(FormulaSyntaxError):
             Formula.parse("Y ~ X1 ~ X2 ~ X3")
 
     def test_three_parts_without_iv(self):
@@ -939,9 +939,9 @@ def test_explicit_no_fe_coefficients_match(test_data):
 
 
 def test_explicit_no_fe_iv_coefficients_match(test_data):
-    """Verify Y ~ 1 | 1 | Y2 ~ X1 produces same coefficients as Y ~ 1 | Y2 ~ X1."""
-    fit_implicit = pf.feols("Y ~ 1 | Y2 ~ X1", data=test_data)
-    fit_explicit = pf.feols("Y ~ 1 | 1 | Y2 ~ X1", data=test_data)
+    """An explicit empty FE part preserves the bracketed IV model."""
+    fit_implicit = pf.feols("Y ~ 1 + [Y2 ~ X1]", data=test_data)
+    fit_explicit = pf.feols("Y ~ 1 + [Y2 ~ X1] | 1", data=test_data)
 
     assert np.allclose(fit_implicit.coef().values, fit_explicit.coef().values)
     assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
@@ -1016,20 +1016,39 @@ class TestEdgeCases:
 
     def test_iv_endogenous_in_second_stage(self):
         """Endogenous variable should be added to second_stage covariates."""
-        result = Formula.parse("Y ~ X1 | Z1 ~ W1")
+        result = Formula.parse("Y ~ X1 + [Z1 ~ W1]")
         f = result[0]
         assert "Z1" in f.second_stage
         # assert f.first_stage == "Z1 ~ W1"
 
+    @pytest.mark.parametrize(
+        "formula,expected_fixed_effects",
+        [
+            ("Y ~ X1 + [X2 ~ I((Z1 > 0) | (Z2 > 0))]", [None]),
+            ("Y ~ X1 + [X2 ~ {(Z1 > 0) | (Z2 > 0)}] | f1", ["f1"]),
+            ("Y ~ X1 + [X2 ~ I(~(Z1 > 0))] | sw(f1, f2)", ["f1", "f2"]),
+            ("Y ~ X1 + [X2 ~ Z1] | f1 + f2[X1]", ["f1 + f2[X1]"]),
+        ],
+    )
+    def test_bracketed_iv_expression_boundaries(self, formula, expected_fixed_effects):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            parsed = Formula.parse(formula)
+        assert all(model.is_instrumental_variable for model in parsed)
+        assert [
+            str(model.fixed_effects) if model.is_fixed_effects else None
+            for model in parsed
+        ] == expected_fixed_effects
+
     def test_iv_transformed_endogenous_in_second_stage(self):
         """A transformed endogenous variable survives the _hat term filtering."""
-        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        f = Formula.parse("Y ~ X1 + [log(Z1) ~ W1]")[0]
         assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
         assert f.first_stage.startswith("log(Z1) ~")
 
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
-        result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
+        result = Formula.parse("Y ~ X1 + [Z1 ~ W1] | f1")
         f = result[0]
         assert "Z1" in f.second_stage
         assert str(f.fixed_effects) == "f1"
@@ -1050,9 +1069,9 @@ class TestEdgeCases:
         assert not f_implicit.is_fixed_effects
 
     def test_explicit_no_fe_with_iv(self):
-        """Y ~ 1 | 0 | Z1 ~ X1 and Y ~ 1 | Z1 ~ X1 should be equivalent."""
-        result_explicit = Formula.parse_to_dict("Y ~ 1 | 0 | Z1 ~ X1")
-        result_implicit = Formula.parse_to_dict("Y ~ 1 | Z1 ~ X1")
+        """An explicit zero FE part preserves the bracketed IV model."""
+        result_explicit = Formula.parse_to_dict("Y ~ 1 + [Z1 ~ X1] | 0")
+        result_implicit = Formula.parse_to_dict("Y ~ 1 + [Z1 ~ X1]")
 
         assert list(result_explicit.keys()) == [None]
         assert list(result_implicit.keys()) == [None]

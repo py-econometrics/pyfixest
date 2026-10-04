@@ -19,7 +19,7 @@ def capability_fit(model: str, *, fixed_effects: bool = True, **kwargs):
     if model == "feols":
         return pf.feols(f"Y ~ X1{fe}", data, **kwargs)
     if model == "feols-iv":
-        return pf.feols(f"Y ~ 1{fe} | X1 ~ Z1", data, **kwargs)
+        return pf.feols(f"Y ~ 1 + [X1 ~ Z1]{fe}", data, **kwargs)
     if model == "fepois":
         return pf.fepois(f"Y ~ X1{fe}", pf.get_data(model="Fepois"), **kwargs)
     if model in {"feglm-gaussian", "feglm-logit", "feglm-probit"}:

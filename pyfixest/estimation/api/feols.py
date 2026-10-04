@@ -61,9 +61,10 @@ def feols(
     Parameters
     ----------
     fml : str
-        A three-sided formula string using fixest formula syntax.
-        Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
-        fixed effects, and instruments. Special syntax includes stepwise regressions,
+        A formula string, optionally followed by fixed effects after "|".
+        IV syntax: "Y ~ X2 + [X1 ~ Z1] | FE1 + FE2"; omit the fixed-effects
+        part when unused. Legacy fixest IV syntax is no longer supported.
+        Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables,
         interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
 
@@ -334,12 +335,13 @@ def feols(
     pf.etable(fit)
     ```
 
-    Besides OLS, `feols()` also supports IV estimation via three-part formulas.
+    Besides OLS, `feols()` supports IV estimation via a bracketed
+    `[endogenous ~ instruments]` block among the covariates.
     IV models return an instance of the [Feiv](/reference/estimation.models.feiv_.Feiv.qmd)
     class (which inherits from [Feols](/reference/estimation.models.feols_.Feols.qmd)).
 
     ```{python}
-    fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data)
+    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
     type(fit_iv)
     ```
 
@@ -348,7 +350,7 @@ def feols(
     simply omit the fixed effects part of the formula:
 
     ```{python}
-    fit_iv2 = pf.feols("Y ~ X2 | X1 ~ Z1", data)
+    fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
     fit_iv2.tidy()
     ```
 

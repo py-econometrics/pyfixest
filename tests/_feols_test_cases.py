@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pandas as pd
 
@@ -63,23 +65,36 @@ ols_but_not_poisson_fml = (
 
 
 iv_fmls = (
-    "Y ~ 1 | X1 ~ Z1",
-    "Y ~  X2 | X1 ~ Z1",
-    "Y ~ X2 + C(f1) | X1 ~ Z1",
-    "Y2 ~ 1 | X1 ~ Z1",
-    "Y2 ~ X2 | X1 ~ Z1",
-    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
-    "Y ~ 1 | f1 | X1 ~ Z1",
-    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
-    "Y ~ 1 | f1:f2 | X1 ~ Z1",
-    "Y ~  X2| f3 | X1 ~ Z1",
-    "Y ~ 1 | X1 ~ Z1 + Z2",
-    "Y ~ X2 | X1 ~ Z1 + Z2",
-    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
-    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
-    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
-    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
+    "Y ~ 1 + [X1 ~ Z1]",
+    "Y ~  X2 + [X1 ~ Z1]",
+    "Y ~ X2 + C(f1) + [X1 ~ Z1]",
+    "Y2 ~ 1 + [X1 ~ Z1]",
+    "Y2 ~ X2 + [X1 ~ Z1]",
+    "Y2 ~ X2 + C(f1) + [X1 ~ Z1]",
+    "Y ~ 1 + [X1 ~ Z1] | f1",
+    "Y ~ 1 + [X1 ~ Z1] | f1 + f3",
+    "Y ~ 1 + [X1 ~ Z1] | f1:f2",
+    "Y ~  X2 + [X1 ~ Z1] | f3",
+    "Y ~ 1 + [X1 ~ Z1 + Z2]",
+    "Y ~ X2 + [X1 ~ Z1 + Z2]",
+    "Y ~ X2 + C(f3) + [X1 ~ Z1 + Z2]",
+    "Y ~ 1 + [X1 ~ Z1 + Z2] | f1",
+    "Y2 ~ 1 + [X1 ~ Z1 + Z2] | f1 + f3",
+    "Y2 ~  X2 + [X1 ~ Z1 + Z2] | f2",
 )
+
+
+def iv_formula_to_legacy(formula: str) -> str:
+    """Spell simple IV reference cases for R fixest and pyfixest 0.60.0.
+
+    The reference matrix has one IV block without nested brackets. Keep this
+    translation in tests; the public API accepts only bracketed IVs.
+    """
+    block = re.search(r"\s*\+\s*\[([^\[\]]*~[^\[\]]*)\]", formula)
+    if block is None:
+        return formula
+    second_stage = (formula[: block.start()] + formula[block.end() :]).strip()
+    return f"{second_stage} | {block.group(1).strip()}"
 
 
 glm_fmls = (

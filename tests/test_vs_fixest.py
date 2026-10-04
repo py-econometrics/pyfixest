@@ -18,6 +18,7 @@ from tests._feols_test_cases import (
     fixed_effect_interactions_to_legacy,
     glm_fmls,
     iv_fmls,
+    iv_formula_to_legacy,
     ols_fmls,
     ssc_formula_vcov_dropna_case_ids,
     ssc_formula_vcov_dropna_cases,
@@ -588,8 +589,8 @@ def test_single_fit_fepois(
     [
         "y ~ x",
         "y ~ x | fe",
-        "y ~ x | d ~ z",
-        "y ~ x | fe | d ~ z",
+        "y ~ x + [d ~ z]",
+        "y ~ x + [d ~ z] | fe",
     ],
 )
 def test_frequency_weighted_linear_models_against_fixest(fml):
@@ -611,7 +612,12 @@ def test_frequency_weighted_linear_models_against_fixest(fml):
         vcov="hetero",
         ssc=py_ssc,
     )
-    r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
+    r_fit = fixest.feols(
+        ro.Formula(iv_formula_to_legacy(fml)),
+        data=expanded_data,
+        vcov="hetero",
+        ssc=r_ssc,
+    )
 
     ro.globalenv[".fweight_r_fit"] = r_fit
     r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
@@ -984,6 +990,7 @@ def test_single_fit_iv(
     k_adj,
     G_adj,
 ):
+    """Bracketed Python IVs match native IV formulas in R fixest 0.14.0."""
     _skip_f3_checks(fml, f3_type)
 
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
@@ -1369,7 +1376,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize(
     "fml_multi",
-    ["Y ~ X1", "Y ~ X1 | f2", "Y ~ sw(X1, X2)", "Y ~ 1 | X1 ~ Z1"],
+    ["Y ~ X1", "Y ~ X1 | f2", "Y ~ sw(X1, X2)", "Y ~ 1 + [X1 ~ Z1]"],
 )
 @pytest.mark.parametrize("split", [None, "f1"])
 @pytest.mark.parametrize("fsplit", [None, "f1"])
@@ -1573,7 +1580,7 @@ def _py_fml_to_r_fml(py_fml):
     syntax converter,
     i.e. 'Y1 + X2 ~ X' -> 'c(Y1, Y2) ~ X'
     """
-    py_fml = _fixed_effect_interactions_to_fixest(py_fml)
+    py_fml = _fixed_effect_interactions_to_fixest(iv_formula_to_legacy(py_fml))
     py_fml = py_fml.replace(" ", "").replace("C(", "as.factor(")
 
     fml2 = py_fml.split("|")
@@ -1601,7 +1608,7 @@ def _c_to_as_factor(py_fml):
     # Use re.sub() to perform the replacement
     r_fml = re.sub(pattern, replacement, py_fml)
 
-    return _fixed_effect_interactions_to_fixest(r_fml)
+    return _fixed_effect_interactions_to_fixest(iv_formula_to_legacy(r_fml))
 
 
 _fixed_effect_interactions_to_fixest = fixed_effect_interactions_to_legacy
@@ -1846,7 +1853,7 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml", ["log(Y) ~ X1", "log(Y) ~ X1 | f1", "log(Y) ~ 1 | X1 ~ Z1"]
+    "fml", ["log(Y) ~ X1", "log(Y) ~ X1 | f1", "log(Y) ~ 1 + [X1 ~ Z1]"]
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_inf_dropping(fml, weights):

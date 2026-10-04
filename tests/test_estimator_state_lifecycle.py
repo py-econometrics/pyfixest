@@ -801,7 +801,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
             "NW",
             {"time_id": "period", "panel_id": "unit", "lag": 2},
         ),
-        (pf.feols, "y ~ x | fe | endog ~ z", {"CRV1": "fe"}, None),
+        (pf.feols, "y ~ x + [endog ~ z] | fe", {"CRV1": "fe"}, None),
         (pf.fepois, "count ~ x | fe", {"CRV1": "fe"}, None),
     ],
 )

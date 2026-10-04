@@ -1,5 +1,6 @@
 import re
 import sys
+import warnings
 from functools import partial
 
 import numpy as np
@@ -275,15 +276,15 @@ def test_iv_errors():
 
     # under determined
     with pytest.raises(FormulaSyntaxError):
-        feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
+        feols(fml="Y ~ X1 + [Z1 + Z2 ~ X2]", data=data)
     with pytest.raises(UnderDeterminedIVError):
-        feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
+        feols(fml="Y ~ X1 + [Z1 ~ 1]", data=data)
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
-        feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
+        feols(fml="Y ~ X1 + [Z1  ~ X1 + X2]", data=data)
     # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
-        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
+        feols(fml="Y ~ Z1 + [Z1  ~ X1]", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -295,15 +296,39 @@ def test_iv_errors():
     #    fixest.feols('Y ~ X1 | Z1 + Z2 ~ X2 + X3 ')
     # CRV3 inference
     with pytest.raises(VcovTypeNotSupportedError):
-        feols(fml="Y ~ 1 | Z1 ~ X1 ", vcov={"CRV3": "group_id"}, data=data)
+        feols(fml="Y ~ 1 + [Z1 ~ X1]", vcov={"CRV3": "group_id"}, data=data)
     # wild bootstrap
     with pytest.raises(NotImplementedError):
-        feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
+        feols(fml="Y ~ 1 + [Z1 ~ X1]", data=data).wildboottest(param="Z1", reps=999)
     # unsupported HC vcov
     with pytest.raises(VcovTypeNotSupportedError):
-        feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
+        feols(fml="Y  ~ 1 + [Z1 ~ X1]", vcov="HC2", data=data)
     with pytest.raises(VcovTypeNotSupportedError):
-        feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
+        feols(fml="Y  ~ 1 + [Z1 ~ X1]", vcov="HC3", data=data)
+
+
+@pytest.mark.parametrize("estimator", [feols, fepois])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 | X2 ~ Z1",
+        "Y ~ X1 | f1 | X2 ~ Z1",
+        "Y ~ X1 | X2 ~ Z1 | f1",
+        "Y ~ X1 | f1 + [X2 ~ Z1]",
+        "Y ~ X1 | sw(f1, [X2 ~ Z1])",
+        "Y ~ X1 | (X2 ~ Z1)",
+        "Y ~ X1 | f1 | [X2 ~ Z1]",
+    ],
+)
+def test_unsupported_iv_syntax(estimator, fml):
+    # No formula columns: rejection must precede materialization and fitting.
+    data = pd.DataFrame({"unused": [1.0, 2.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(
+            FormulaSyntaxError, match=r"Use `Y ~ X1 \+ \[X2 ~ Z1\] \| f1`"
+        ):
+            estimator(fml=fml, data=data)
 
 
 @pytest.mark.skip("Not yet implemented.")
@@ -353,7 +378,7 @@ def test_poisson_errors():
     data = pf.get_data(model="Fepois")
     # iv not supported
     with pytest.raises(NotImplementedError):
-        pf.fepois("Y ~ 1 | X1 ~ Z1", data=data)
+        pf.fepois("Y ~ 1 + [X1 ~ Z1]", data=data)
 
 
 def test_poisson_offset_errors():
@@ -606,7 +631,7 @@ def test_errors_ccv():
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
-    fit = feols("Y ~ 1 | D ~ Z1", data=data)
+    fit = feols("Y ~ 1 + [D ~ Z1]", data=data)
     with pytest.raises(
         NotImplementedError, match=r"not supported for models of type 'feols'"
     ):
@@ -807,7 +832,7 @@ def test_ritest_error(data):
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
 
-    fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    fit_iv = pf.feols("Y ~ 1 + [X1 ~ Z1]", data=data)
     with pytest.raises(NotImplementedError, match=r"randomization_inference is False"):
         fit_iv.ritest(resampvar="X1", reps=100)
 
@@ -1031,7 +1056,7 @@ def setup_feiv_instance():
     # Setup necessary data for Feiv
 
     data = pf.get_data()
-    return pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
+    return pf.feols("Y ~ 1 + [X1 ~ Z1]", data=data)
 
 
 def test_IV_Diag_unsupported_statistics():
@@ -1227,7 +1252,7 @@ def test_gelbach_errors():
         med.results.to_dict(relative_to="bogus")
 
     with pytest.raises(NotImplementedError):
-        pf.feols("y ~ 1 | x1 ~ x21", data=data).decompose(
+        pf.feols("y ~ 1 + [x1 ~ x21]", data=data).decompose(
             param="x1", combine_covariates={"g1": ["x21"]}
         )
 
@@ -1635,7 +1660,7 @@ def unsupported_savi_model(request):
         return fepois("Y ~ X1 + X2", pf.get_data(model="Fepois"))
     if request.param == "quantreg":
         return pf.quantreg("Y ~ X1 + X2", data=pf.get_data(), quantile=0.5)
-    return feols("Y ~ 1 | X1 ~ Z1", data=pf.get_data())
+    return feols("Y ~ 1 + [X1 ~ Z1]", data=pf.get_data())
 
 
 @pytest.fixture(scope="module", params=["fixef", "aweights", "fweights"])

@@ -233,7 +233,7 @@ def test_split_expansion_walks_full_then_each_split_value():
 
 def test_iv_formula_resolves_each_spec_to_feiv():
     data = pf.get_data()
-    cfg = _config("feols", "Y ~ X2 | f1 | X1 ~ Z1", data)
+    cfg = _config("feols", "Y ~ X2 + [X1 ~ Z1] | f1", data)
     fd = _parse(cfg.fml)
     is_iv = _is_iv(fd)
     assert is_iv

@@ -22,12 +22,12 @@ This page provides a ready-to-use skill file for analytics projects that use PyF
 
 ## Formula Syntax
 
-Formulas follow fixest syntax and are split into 1–3 parts by `|`:
+Formulas use covariates followed by optional fixed effects after `|`:
 
 - One-part: `"Y ~ X1 + X2"` (no fixed effects, no IV)
 - Two-part: `"Y ~ X1 + X2 | FE1 + FE2"` (fixed effects)
-- Two-part IV: `"Y ~ X1 + X2 | X_endog ~ Z1 + Z2"` (IV without fixed effects)
-- Three-part IV: `"Y ~ X1 + X2 | FE1 + FE2 | X_endog ~ Z1 + Z2"` (IV with fixed effects)
+- IV without fixed effects: `"Y ~ X1 + X2 + [X_endog ~ Z1 + Z2]"`
+- IV with fixed effects: `"Y ~ X1 + X2 + [X_endog ~ Z1 + Z2] | FE1 + FE2"`
 
 IV behavior:
 - The IV part must be `endogenous ~ instruments`.

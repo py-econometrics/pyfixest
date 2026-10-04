@@ -14,7 +14,7 @@ from pyfixest.utils.utils import capture_context, get_data, ssc
 def test_multicol_overdetermined_iv():
     data = get_data()
     fit = feols(
-        fml="Y ~ X2 +  f1| f1 | X1 ~ Z1 + Z2",
+        fml="Y ~ X2 +  f1 + [X1 ~ Z1 + Z2] | f1",
         data=data,
         ssc=ssc(k_adj=False),
         vcov={"CRV1": "f1"},

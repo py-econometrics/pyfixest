@@ -77,18 +77,23 @@ For details on fixed effects regression, take a look at the [OLS with Fixed Effe
 
 ## Instrumental Variables (IV) Syntax
 
-For IV estimation, `PyFixest` uses a three-part formula syntax:
+For IV estimation, put `[endogenous ~ instruments]` among the covariates,
+then add fixed effects after `|` when needed:
 
 ```python
-"Y ~ exogenous_controls | fixed_effects | endogenous ~ instruments"
+"Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects"
 ```
 
 Here is a minimal example with fixed effects:
 
 ```{python}
-fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data=data)
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 fit_iv.summary()
 ```
+
+The deprecated R `fixest` spelling `Y ~ X2 | f1 + f2 | X1 ~ Z1` now raises
+`FormulaSyntaxError`. Move the IV part into brackets before the fixed effects;
+without fixed effects, use `Y ~ X2 + [X1 ~ Z1]`.
 
 For details on IV estimation, take a look at the
 [Instrumental Variables](instrumental-variables.qmd) vignette.

@@ -24,7 +24,7 @@ def test_summary():
     fit2 = fepois("Y ~ X1 + X2 + f2 | f1", data=df2, vcov={"CRV1": "f1+f2"})
     fit3 = feols("Y ~ X1", data=df1)
     fit4 = feols("Y ~ X1", data=df1, weights="weights")
-    fit5 = feols("Y ~ 1 | Z1 ~ X1", data=df1)
+    fit5 = feols("Y ~ 1 + [Z1 ~ X1]", data=df1)
 
     fit_qreg = pf.quantreg("Y ~ X1", data=df1, vcov="nid")
 
@@ -41,7 +41,7 @@ def test_summary():
     etable([fit3])
     etable([fit1, fit2, fit3])
 
-    fit_iv = feols("Y ~ X2 | f1 | X1 ~ Z1", data=df1)
+    fit_iv = feols("Y ~ X2 + [X1 ~ Z1] | f1", data=df1)
     etable([fit_iv, fit1])
 
     fit_multi = feols("Y + Y2 ~ X1 + X2 | f1", data=df1)
