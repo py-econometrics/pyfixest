@@ -1029,9 +1029,9 @@ class TestEdgeCases:
     @pytest.mark.parametrize(
         "formula,expected_second_stage",
         [
-            ("I(Y + Y2) ~ X1", "I(Y + Y2) ~ 1 + X1"),
-            ("I(Y + Y2 + Y3) ~ X1", "I(Y + Y2 + Y3) ~ 1 + X1"),
-            ("log(Y + Y2) ~ X1", "log(Y + Y2) ~ 1 + X1"),
+            ("I(Y + Y2) ~ X1", "{I(Y + Y2)} ~ 1 + X1"),
+            ("I(Y + Y2 + Y3) ~ X1", "{I(Y + Y2 + Y3)} ~ 1 + X1"),
+            ("log(Y + Y2) ~ X1", "{log(Y + Y2)} ~ 1 + X1"),
         ],
     )
     def test_transformed_dependent_with_plus(self, formula, expected_second_stage):
@@ -1062,8 +1062,8 @@ class TestEdgeCases:
     def test_iv_transformed_endogenous_in_second_stage(self):
         """A transformed endogenous variable survives the _hat term filtering."""
         f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
-        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
-        assert f.first_stage.startswith("log(Z1) ~")
+        assert f.second_stage == "Y ~ 1 + X1 + {log(Z1)}"
+        assert f.first_stage.startswith("{log(Z1)} ~")
 
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
@@ -1109,6 +1109,17 @@ class TestEdgeCases:
             "Y ~ X1 + X2",
             "Y ~ X1 | f1",
             "Y ~ X1 | f1 + f2",
+            "Y ~ {X1 * X2}",
+            "Y ~ X1 + {X1 ** 2}",
+            "`my outcome` ~ `my var` + X1",
+            'Y ~ Q("my var") + I(X1 ** 2)',
+            'Y ~ C(f1, contr.treatment(base="a"))',
+            "Y ~ X1 - 1",
+            "Y ~ 0 + i(f1)",
+            "Y ~ 0 | f1",
+            "Y ~ X1 | `my fe` + firm.id",
+            "Y ~ {X1 ** 2} + [`my endog` ~ {Z1 * Z2}] | `a:b`",
+            "Y ~ 0 + X1 + [X2 ~ Z1]",
         ]
         for fml in formulas:
             result = Formula.parse(fml)

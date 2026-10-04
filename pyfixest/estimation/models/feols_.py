@@ -116,7 +116,10 @@ def _fixed_effect_names(
     """
     if model_matrix.fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(
+        ":".join(factor.expr for factor in term.factors)
+        for term in fixest_formula.fixed_effects
+    )
 
 
 class Feols(ResultAccessorMixin):

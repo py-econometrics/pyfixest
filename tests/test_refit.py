@@ -79,16 +79,17 @@ def case(request):
     return CASES[request.param]
 
 
-def test_refit_replays_options(data, case):
+@pytest.mark.parametrize("fml", [FML, "Y ~ log1p_abs(X1) + X2 - 1"])
+def test_refit_replays_options(data, case, fml):
     "A refit on a subsample equals a public fit with the same options on it."
     estimator, options = case
-    fit = estimator(FML, data=data, **options)
+    fit = estimator(fml, data=data, **options)
     subsample = data[data[CLUSTER] != data[CLUSTER].iloc[0]]
 
     refitted = refit(fit, data=subsample, vcov=IID)
 
     assert refitted.options == replace(fit.options, copy_data=False)
-    expected = estimator(FML, data=subsample, **options)
+    expected = estimator(fml, data=subsample, **options)
     np.testing.assert_allclose(
         refitted.coef().to_numpy(),
         expected.coef().to_numpy(),

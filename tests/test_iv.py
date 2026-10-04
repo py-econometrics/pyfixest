@@ -213,6 +213,12 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         # fixest has no `drop_intercept`; `-1` removes the intercept from both
         # stages.
         ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", True),
+        ("Y ~ -1 + X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", False),
+        (
+            "Y ~ 0 + i(category) + [X1 ~ Z1 + Z2] | f1",
+            "Y ~ 0 + i(category) | f1 | X1 ~ Z1 + Z2",
+            False,
+        ),
     ],
 )
 def test_first_stage_vs_fixest(
@@ -223,6 +229,10 @@ def test_first_stage_vs_fixest(
     # data keep missing values and add a complete singleton row, which
     # `fixef_rm="none"` keeps in both stages.
     data = get_data()
+    # A small, independent factor tests reference coding without saturating
+    # the cluster design; string levels have the same spelling in Python/R.
+    rng = np.random.default_rng(20261004)
+    data["category"] = rng.choice(["a", "b", "c"], size=len(data))
     complete_row = data[["Y", "X1", "X2", "Z1", "Z2", "f1"]].notna().all(axis=1)
     data.loc[complete_row.idxmax(), "f1"] = 999
     # a balanced panel of 50 units over 20 years for the HAC estimators
@@ -254,6 +264,8 @@ def test_first_stage_vs_fixest(
     )
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model
+
+    assert fit.first_stage.instruments == ("Z1", "Z2")
 
     n_obs_r = int(stats.nobs(fit_r)[0])
     assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"

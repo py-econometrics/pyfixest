@@ -37,9 +37,17 @@ def data() -> pd.DataFrame:
     )
 
 
-def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 + [X2 ~ Z1]",
+        "Y ~ 0 + i(f2) + [X2 ~ Z1] | f1",
+        "Y ~ 0 + C(f2) + [X2 ~ Z1] | f1",
+    ],
+)
+def test_multistage_iv_parse_structure(data: pd.DataFrame, fml: str) -> None:
     """IV formulas parse to StructuredFormula with .deps[0].lhs/.rhs."""
-    fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
+    fit = pf.feols(fml, data=data)
     rhs = fit.model.fixest_formula._right_hand_side
 
     import formulaic.formula
@@ -49,6 +57,9 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert len(rhs.deps) == 1
     assert [str(v) for v in rhs.deps[0].lhs.required_variables] == ["X2"]
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
+    # Categorical controls must retain the same reference across IV stages,
+    # so no control indicator is mistaken for an excluded instrument.
+    assert fit.first_stage.instruments == ("Z1",)
 
 
 @pytest.mark.parametrize(
@@ -81,7 +92,7 @@ def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) ->
 
     # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
     assert exog_terms == {"1", "X1"}
-    assert fit.model.fixest_formula.second_stage == "Y ~ 1 + X1 + np.exp(X2)"
+    assert fit.model.fixest_formula.second_stage == "Y ~ 1 + X1 + {np.exp(X2)}"
     assert "np.exp(X2)" in fit.coef().index
 
 

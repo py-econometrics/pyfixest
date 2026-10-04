@@ -9,7 +9,7 @@ import formulaic
 import formulaic.formula
 import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor
+from formulaic.parser.types import Factor, Term
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -28,6 +28,20 @@ class FormulaicCompatibilityError(RuntimeError):
 def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
     """Yield formula terms excluding Formulaic's intercept term."""
     return (term for term in formula if term != "1")
+
+
+def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[str]:
+    """Keep LOOKUP names literal; Formulaic's accessor parses them as Python."""
+    variables: set[str] = set()
+    for term in formula:
+        for factor in term.factors:
+            if factor.eval_method is Factor.EvalMethod.LOOKUP:
+                variables.add(factor.expr)
+            else:
+                variables.update(
+                    formulaic.formula.SimpleFormula([Term([factor])]).required_variables
+                )
+    return variables
 
 
 def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:

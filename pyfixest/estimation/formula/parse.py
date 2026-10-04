@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import ast
 import itertools
-from collections.abc import Iterator
+import keyword
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Final
 
@@ -21,6 +22,7 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_python_expression,
@@ -42,6 +44,28 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+
+
+def _serialize_factor(factor: Factor, *, python: bool = False) -> str:
+    """Render factor semantics rather than Formulaic's display-only repr."""
+    if factor.eval_method is Factor.EvalMethod.LOOKUP:
+        if not factor.expr.isidentifier() or keyword.iskeyword(factor.expr):
+            return f"Q({factor.expr!r})" if python else f"`{factor.expr}`"
+        return factor.expr
+    if is_python_expression(factor) and not python:
+        return "{" + factor.expr + "}"
+    return factor.expr
+
+
+def serialize_terms(terms: Iterable[Term]) -> str:
+    """Return parseable formula syntax, preserving factor evaluation methods."""
+    return (
+        " + ".join(
+            ":".join(_serialize_factor(factor=factor) for factor in term.factors)
+            for term in terms
+        )
+        or "0"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -316,16 +340,16 @@ class Formula:
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
-        endogenous_are_covariates = self.endogenous.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        endogenous_are_covariates = formula_required_variables(
+            formula=self.endogenous
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if endogenous_are_covariates:
             raise EndogVarsAsCovarsError(
                 f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
             )
-        instruments_are_covariates = self.instruments.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        instruments_are_covariates = formula_required_variables(
+            formula=self.instruments
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if instruments_are_covariates:
             raise InstrumentsAsCovarsError(
                 f"Instruments specified as covariates: {instruments_are_covariates}"
@@ -341,12 +365,22 @@ class Formula:
     @property
     def formula(self) -> str:
         """The string representation of the formula."""
-        formula = f"{self.dependent} ~ {self.exogenous}"
+        rhs = serialize_terms(terms=self.exogenous)
+        if not self._has_intercept and rhs != "0":
+            rhs = f"0 + {rhs}"
+        formula = f"{serialize_terms(terms=self.dependent)} ~ {rhs}"
         if self.is_instrumental_variable:
-            formula = f"{formula} + [{self.endogenous} ~ {self.instruments}]"
+            formula += f" + [{serialize_terms(terms=self.endogenous)} ~ {serialize_terms(terms=self.instruments)}]"
         if self.is_fixed_effects:
-            formula = f"{formula} | {self.fixed_effects}"
+            formula += f" | {serialize_terms(terms=self.fixed_effects)}"
         return formula
+
+    @property
+    def _has_intercept(self) -> bool:
+        rhs = self._right_hand_side
+        return any(
+            term == "1" for term in (rhs.root if self.is_instrumental_variable else rhs)
+        )
 
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:
@@ -437,7 +471,15 @@ class Formula:
     def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
+            [
+                "__fixed_effect__("
+                + ", ".join(
+                    _serialize_factor(factor=factor, python=True)
+                    for factor in term.factors
+                )
+                + ")"
+                for term in self.fixed_effects
+            ],
             _parser=_PARSER_NO_INTERCEPT,
         )
 
@@ -447,14 +489,29 @@ class Formula:
         right_hand_side = list(self.exogenous)
         if self.is_instrumental_variable:
             right_hand_side += list(self.endogenous)
-        return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
+        rhs = serialize_terms(terms=formulaic.formula.SimpleFormula(right_hand_side))
+        if not self._has_intercept and not self.is_fixed_effects and rhs != "0":
+            rhs = f"0 + {rhs}"
+        return f"{serialize_terms(terms=self.dependent)} ~ {rhs}"
 
     @property
     def first_stage(self) -> str:
         """The first stage formula of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
+        terms = formulaic.formula.SimpleFormula(
+            [
+                term
+                for term in itertools.chain(self.instruments, self.exogenous)
+                if self._has_intercept or term != "1"
+            ]
+        )
+        rhs = serialize_terms(terms=terms)
+        # As in second_stage, FEs need an implicit intercept for categorical
+        # reference coding. ModelMatrix removes the constant after encoding.
+        if not self._has_intercept and not self.is_fixed_effects and rhs != "0":
+            rhs = f"0 + {rhs}"
+        return f"{serialize_terms(terms=self.endogenous)} ~ {rhs}"
 
     @classmethod
     def parse(cls, formula: str) -> list[Formula]:
@@ -475,7 +532,7 @@ class Formula:
         result: dict[str | None, list[Formula]] = {}
         for parsed_formula in formulas:
             fixed_effects = (
-                str(parsed_formula.fixed_effects)
+                serialize_terms(terms=parsed_formula.fixed_effects)
                 if parsed_formula.is_fixed_effects
                 else None
             )

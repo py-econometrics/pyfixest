@@ -56,6 +56,152 @@ empty_models = [
 ]
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
+        ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
+        ("`my outcome` ~ `my var` + X2", "`my outcome` ~ `my var` + X2", {}),
+        ("Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
+        ("Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
+        # fixest rewrites ':' even inside quoted FE names; the alias f1
+        # carries exactly the same levels and gives a usable external oracle.
+        ("Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
+        (
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
+            # fixest also drops instrument backticks when rebuilding its
+            # first stage; compare the identical original columns in R.
+            "Y ~ X2 | `my fe` | X1 ~ Z1",
+            {"X1": "my endog"},
+        ),
+        (
+            "Y ~ 1 + [{X1 + X2} ~ Z1]",
+            "Y ~ 1 | I(X1 + X2) ~ Z1",
+            {"I(X1 + X2)": "X1 + X2"},
+        ),
+        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+        ("Y ~ 0 + X2 + [X1 ~ Z1 + Z2]", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", {}),
+        ("Y ~ X1 - 1", "Y ~ X1 - 1", {}),
+    ],
+)
+def test_reconstructed_formula_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """Reconstruction preserves evaluated expressions, quoted names, and intercepts."""
+    data = data_feols.assign(
+        **{
+            "my outcome": data_feols.Y,
+            "my var": data_feols.X1,
+            "my endog": data_feols.X1,
+            "my instrument": data_feols.Z1,
+            "my fe": data_feols.f1,
+            "firm.id": data_feols.f1,
+            "a:b": data_feols.f1,
+        }
+    )
+    fit = pf.feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
+    coef_r = stats.coef(fit_r)
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept")
+            .removeprefix("fit_")
+            .replace("`", "")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances: direct solves agree closely;
+    # FE projection and derived inference allow slightly more rounding error.
+    np.testing.assert_allclose(
+        fit.coef()[names], coef_r, rtol=0, atol=1e-8, err_msg="coefficients != fixest"
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+    replay = pf.feols(fit.model.formula, data=data, vcov="iid")
+    np.testing.assert_allclose(
+        replay.coef()[names],
+        fit.coef()[names],
+        rtol=0,
+        atol=1e-12,
+        err_msg="reconstructed formula changed coefficients",
+    )
+    if not fit.model.is_iv:
+        if fit.model.has_fixef:
+            # Tighten the sparse FE-recovery solve so prediction error tests
+            # formula reconstruction rather than lsqr's default stopping error.
+            fit.fixef(atol=1e-12, btol=1e-12)
+        newdata = data.dropna().iloc[:5]
+        np.testing.assert_allclose(
+            fit.predict(newdata=newdata),
+            stats.predict(fit_r, newdata=newdata),
+            rtol=0,
+            atol=1e-6,
+            err_msg="predictions != fixest",
+        )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("is_iv", [False, True])
+@pytest.mark.parametrize("expression", ["{f1 + f2}", "I(f1 + f2)", "Q('my fe')"])
+def test_fixed_effect_expression_identity_against_fixest(data_feols, expression, is_iv):
+    """Expression FEs stay distinct from additive FEs in caches, names and refits."""
+    data = data_feols.assign(fe_sum=data_feols.f1 + data_feols.f2)
+    data["my fe"] = data.fe_sum
+    rhs = "X2 + [X1 ~ Z1]" if is_iv else "X2"
+    multi = pf.feols(
+        f"Y ~ {rhs} | sw({expression}, f1 + f2)",
+        data=data,
+        vcov={"CRV1": "f1"},
+        fixef_rm="none",
+    )
+    models = multi.to_list()
+    assert len(models) == 2, "distinct FE specifications lost a model"
+    assert models[0].model.fixed_effects == (expression.strip("{}"),)
+    assert models[1].model.fixed_effects == ("f1", "f2")
+
+    for model, fixed_effects in zip(models, ["fe_sum", "f1 + f2"], strict=True):
+        formula_r = f"Y ~ X2 | {fixed_effects}"
+        if is_iv:
+            formula_r += " | X1 ~ Z1"
+            assert model.first_stage.instruments == ("Z1",)
+        fit_r = fixest.feols(
+            ro.Formula(formula_r),
+            data=data,
+            vcov=ro.Formula("~f1"),
+            fixef_rm="none",
+        )
+        names = [
+            name.removeprefix("fit_")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        ]
+        assert set(model.coef().index) == set(names), "coefficient names != fixest"
+        assert model.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+        # Use the same tolerances as the reconstruction comparisons above:
+        # FE projection and clustered inference allow slightly more rounding.
+        np.testing.assert_allclose(
+            model.coef()[names],
+            stats.coef(fit_r),
+            rtol=0,
+            atol=1e-8,
+            err_msg="FE expression coefficients != fixest",
+        )
+        np.testing.assert_allclose(
+            model.se()[names],
+            fixest.se(fit_r),
+            rtol=0,
+            atol=1e-7,
+            err_msg="FE expression clustered standard errors != fixest",
+        )
+
+
 @pytest.fixture(scope="module")
 def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     return pf.get_data(
