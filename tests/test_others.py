@@ -64,6 +64,23 @@ def test_integer_XY():
     np.testing.assert_allclose(fit1.coef().xs("X"), fit2.coef().xs("X"))
 
 
+@pytest.mark.parametrize("dtype", ["Float64", "Int64"])
+def test_log_nullable_dtype(dtype):
+    # log() drops pd.NA rows like non-positive ones (#1807).
+    data = get_data().dropna()
+    data["X3"] = pd.array(np.arange(1, len(data) + 1), dtype=dtype)
+    data.loc[data.index[:4], "X3"] = [pd.NA, pd.NA, 0, -1]
+    x3 = data["X3"].to_numpy(dtype="float64", na_value=np.nan)
+    data["log_X3"] = np.log(np.where(x3 > 0, x3, np.nan))
+
+    with pytest.warns(UserWarning, match="4 rows with infinite values detected"):
+        fit = feols("Y ~ log(X3)", data=data)
+    expected = feols("Y ~ log_X3", data=data)
+
+    np.testing.assert_allclose(fit.coef().to_numpy(), expected.coef().to_numpy())
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs
+
+
 def test_coef_update():
     rng = np.random.default_rng(1234)
     data = get_data().dropna(subset=["Y", "X1", "X2"])

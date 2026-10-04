@@ -28,6 +28,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- The `log()` formula transform accepts nullable pandas columns (`Float64`, `Int64`) that contain `pd.NA`. Before, `Y ~ log(X)` on such a column raised `FactorEvaluationError`; it now drops the missing rows together with the non-positive ones and matches `Y ~ np.log(X)`. See [#1807](https://github.com/py-econometrics/pyfixest/issues/1807).
 - Reject misplaced IV blocks and IV-before-FE ordering before rewriting legacy formulas, preventing fixed effects from becoming covariates. Legacy IV formulas also preserve `|` inside expressions. See [#1766](https://github.com/py-econometrics/pyfixest/issues/1766).
 - `sw`, `csw`, `sw0`, and `csw0` now accept a single argument, matching R `fixest`, including `| sw0(fe)` for models with and without a fixed effect.
 - Stepwise formula expansions preserve grouping under `:`, `*`, and `-`, so `csw(X1, X2):Z1` interacts both cumulative terms with `Z1`.
