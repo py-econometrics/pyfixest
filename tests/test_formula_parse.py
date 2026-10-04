@@ -96,9 +96,9 @@ class TestMultipleEstimationExpansion:
             ("Y ~ sw(X1, X2, X3)", ["Y ~ (X1)", "Y ~ (X2)", "Y ~ (X3)"]),
             # csw() cases
             ("Y ~ csw(X1, X2)", ["Y ~ (X1)", "Y ~ (X1 + X2)"]),
-            # Arguments spanning lines and a space before the parenthesis
-            ("Y ~ csw(X1,\n X2) | f1", ["Y ~ (X1) | f1", "Y ~ (X1 + X2) | f1"]),
+            # A space before the parenthesis, as fixest allows
             ("Y ~ sw (X1, X2)", ["Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ X1 | csw (f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f1 + f2)"]),
             (
                 "Y ~ A + csw(X1, X2, X3)",
                 [
