@@ -61,10 +61,11 @@ def feols(
     Parameters
     ----------
     fml : str
-        A three-sided formula string using fixest formula syntax.
-        Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
-        fixed effects, and instruments. Special syntax includes stepwise regressions,
-        cumulative stepwise regression, multiple dependent variables,
+        A formula string using fixest formula syntax.
+        Syntax: "Y ~ X1 + X2 + [X_endog ~ Z1] | FE1 + FE2". "|" separates the model
+        from the fixed effects; instruments go into a "[endogenous ~ instruments]"
+        block on the right-hand side. Special syntax includes stepwise regressions,
+        cumulative stepwise regression, multiple dependent variables via sw(),
         interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
 
     data : DataFrameType
@@ -308,14 +309,14 @@ def feols(
     with `Y2` as the dependent variable.
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | f1 + f2", data)
     pf.etable(fit)
     ```
 
     It is possible to combine different multiple estimation operators:
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
     pf.etable(fit)
     ```
 
@@ -334,21 +335,22 @@ def feols(
     pf.etable(fit)
     ```
 
-    Besides OLS, `feols()` also supports IV estimation via three-part formulas.
+    Besides OLS, `feols()` also supports IV estimation via an instrument block
+    `[endogenous ~ instruments]` on the right-hand side of the formula.
     IV models return an instance of the [Feiv](/reference/estimation.models.feiv_.Feiv.qmd)
     class (which inherits from [Feols](/reference/estimation.models.feols_.Feols.qmd)).
 
     ```{python}
-    fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data)
+    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
     type(fit_iv)
     ```
 
     Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
     are the fixed effects, as before. To estimate IV models without fixed effects,
-    simply omit the fixed effects part of the formula:
+    simply omit the fixed effects:
 
     ```{python}
-    fit_iv2 = pf.feols("Y ~ X2 | X1 ~ Z1", data)
+    fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
     fit_iv2.tidy()
     ```
 

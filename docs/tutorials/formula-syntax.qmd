@@ -67,7 +67,9 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
 
-We can interact two fixed effects via the `:` operator.
+We can interact two fixed effects via the `:` operator. If you are coming from
+`fixest`, note that its `^` operator is deprecated here: see
+[Deprecated spellings](#deprecated-spellings).
 
 ```{python}
 fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
@@ -77,7 +79,10 @@ For details on fixed effects regression, take a look at the [OLS with Fixed Effe
 
 ## Instrumental Variables (IV) Syntax
 
-For IV estimation, PyFixest 0.70 uses Formulaic's bracketed multistage syntax:
+For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
+The endogenous variable and its instruments go
+in a square-bracket block on the right-hand side. Fixed effects stay behind the
+`|`, exactly as in a model without instruments:
 
 ```python
 "Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects"
@@ -147,14 +152,14 @@ fit_bin.summary()
 
 Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
 
-For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. In addition, it is possible to specify multiple dependent variables.
+For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 
 ### Multiple dependent variables
 
-Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
+You can wrap several dependent variables in `sw()`, e.g. via `"sw(Y1, Y2) ~ X1"`, to fit one model per dependent variable.
 
 ```{python}
-fit_multi_dep = pf.feols("Y + Y2 ~ X1 + X2", data=data)
+fit_multi_dep = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
 pf.etable(fit_multi_dep)
 ```
 
@@ -369,6 +374,23 @@ pf.etable(fit_split)
 fit_fsplit = pf.feols("Y ~ X1 + X2 | f1", data=data, fsplit="f2")
 pf.etable(fit_fsplit)
 ```
+
+## Deprecated spellings
+
+We are deprecating multiple `fixest`-style syntax features with `PyFixest` 0.70.0. Our stated goal is to
+"mimic fixest syntax as much as Python allows". Most of the changes below stem from the fact that our
+model matrix engine `formulaic` supports the novel syntax better / easier, which leads to cleaner and
+less buggy code.
+
+| Deprecated | Use instead |
+|---|---|
+| `Y ~ X1 | f1^f2` | `Y ~ X1 | f1:f2` |
+| `Y ~ X1 | f1 | X2 ~ Z1` | `Y ~ X1 + [X2 ~ Z1] | f1` |
+| `Y + Y2 ~ X1` | `sw(Y, Y2) ~ X1` |
+
+The instrument block moves onto the right-hand side, so an IV model without
+fixed effects reads `Y ~ X1 + [X2 ~ Z1]`. The `|` separator is now reserved
+for fixed effects.
 
 ## Where to Go Next
 

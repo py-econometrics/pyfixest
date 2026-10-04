@@ -285,6 +285,15 @@ We also removed:
 
 - Removed `pf.dtable()`; use `maketables.DTable()` directly instead.
 
+### Documentation
+
+- The tutorials, the README, and the `feols()`, `Feiv`, and DGP docstrings now
+  use the current formula spellings throughout: `[endog ~ instruments]` for
+  instrumental variables, `f1:f2` for interacted fixed effects, and
+  `sw(Y, Y2)` for multiple dependent variables. The formula syntax tutorial
+  gains a "Deprecated spellings" section that maps each deprecated `fixest`
+  form to its replacement.
+
 ### Bug Fixes
 
 - Fitted models and non-plotting DiD and reporting paths no longer import
