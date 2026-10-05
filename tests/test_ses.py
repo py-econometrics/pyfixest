@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
@@ -253,3 +255,119 @@ def test_hac_rejects_fweights(vcov):
         weights="weights",
         weights_type="aweights",
     )
+
+
+@pytest.mark.parametrize("vcov_type", ["CRV1", "CRV3"])
+@pytest.mark.parametrize("scale", [1.0, 1e-4])
+def test_vcov_fix_updates_inference(indefinite_cluster_data, vcov_type, scale):
+    """Repair after combination, including material and sub-threshold changes."""
+    import warnings
+
+    data = indefinite_cluster_data.assign(y=indefinite_cluster_data.y * scale)
+    vcov = {vcov_type: "c1+c2+c3+c4"}
+    fit = feols("y ~ x + z", data, vcov=vcov)
+    raw = fit.variance_covariance
+    assert np.linalg.eigvalsh(raw.vcov).min() < 0
+    coefficients = fit.coef().copy()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        assert fit.vcov(vcov, vcov_fix=True) is fit
+    fixed = fit.variance_covariance
+    repair_warnings = [w for w in caught if "not positive definite" in str(w.message)]
+    assert len(repair_warnings) == (scale == 1.0)
+    assert all(w.category is UserWarning for w in repair_warnings)
+    assert fixed.spec.vcov_fix
+    assert np.linalg.eigvalsh(fixed.vcov).min() >= -1e-15
+    assert np.isfinite(fit.tidy().to_numpy()).all()
+    np.testing.assert_array_equal(
+        fit.coef(), coefficients, err_msg="unchanged coefficients"
+    )
+    if raw.meat is not None:
+        np.testing.assert_array_equal(fixed.meat, raw.meat, err_msg="raw sandwich meat")
+    assert (fixed.df_k, fixed.df_t, fixed.G) == (raw.df_k, raw.df_t, raw.G)
+    # A later call with the default False must restore the uncorrected result.
+    fit.vcov(vcov)
+    np.testing.assert_array_equal(
+        fit.variance_covariance.vcov, raw.vcov, err_msg="opt-in repair"
+    )
+
+
+@pytest.mark.parametrize("retention", [{}, {"lean": True}, {"store_data": False}])
+@pytest.mark.parametrize("demeaner", ["numba", "within"])
+def test_vcov_fix_multiple_estimation(indefinite_cluster_data, retention, demeaner):
+    """Each result is repaired before cleanup; both FE backends reach the seam."""
+    import pyfixest as pf
+    from pyfixest.errors import MissingModelDataError
+
+    backend = (
+        pf.demeaners.MapDemeaner()
+        if demeaner == "numba"
+        else pf.demeaners.LsmrDemeaner()
+    )
+    vcov = {"CRV1": "c1+c2+c3"}
+    with pytest.warns(UserWarning, match="not positive definite.*fixed"):
+        fits = feols(
+            "y ~ x + sw(z, d) | c1",
+            indefinite_cluster_data,
+            vcov=vcov,
+            vcov_fix=True,
+            demeaner=backend,
+            **retention,
+        )
+    for fit in fits.to_list():
+        assert fit.variance_covariance.spec.vcov_fix
+        assert np.isfinite(fit.tidy().to_numpy()).all()
+    if retention:
+        with pytest.raises(MissingModelDataError, match="vcov"):
+            fits.vcov(vcov, vcov_fix=True)
+    else:
+        fits.vcov(vcov)
+        with pytest.warns(UserWarning, match="not positive definite.*fixed"):
+            assert fits.vcov(vcov, vcov_fix=True) is fits
+
+
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "c1"}, {"CRV1": "c1+c2"}])
+def test_vcov_fix_leaves_valid_covariance_unchanged(indefinite_cluster_data, vcov):
+    """PD multiway estimates and other covariance types keep their exact values."""
+    import warnings
+
+    fit = feols("y ~ x + z", indefinite_cluster_data, vcov=vcov)
+    expected = fit.variance_covariance.vcov.copy()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fit.vcov(vcov, vcov_fix=True)
+    assert not caught
+    np.testing.assert_array_equal(
+        fit.variance_covariance.vcov, expected, err_msg="unchanged covariance"
+    )
+
+
+@pytest.mark.parametrize(
+    "eigenvalue,expect_warning",
+    [
+        (1.0, False),
+        (0.0, False),
+        (-1e-9, False),
+        (-(1e-8 - 1e-16), False),
+        (-1e-8, True),
+        (-2e-8, True),
+    ],
+)
+def test_vcov_fix_eigenvalue_floor_and_warning(eigenvalue, expect_warning):
+    """Diagonal matrices isolate the absolute threshold and fixest's floor."""
+    import warnings
+
+    from pyfixest.estimation.internals.vcov_utils import repair_cluster_vcov
+
+    vcov = np.diag([1.0, eigenvalue])
+    before = vcov.copy()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fixed = repair_cluster_vcov(vcov=vcov)
+    expected = np.diag([1.0, max(eigenvalue, 1e-16)])
+    np.testing.assert_array_equal(fixed, expected, err_msg="fixest eigenvalue floor")
+    np.testing.assert_array_equal(vcov, before, err_msg="input covariance unchanged")
+    assert len(caught) == int(expect_warning)
+    if caught:
+        assert caught[0].category is UserWarning
+        assert "not positive definite" in str(caught[0].message)

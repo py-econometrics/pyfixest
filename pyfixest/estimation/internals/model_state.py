@@ -713,6 +713,9 @@ class VcovSpec:
     panel_id : str or None
         Panel variable of HAC inference; ``None`` unless HAC.
 
+    vcov_fix : bool
+        Whether to repair non-positive-definite multiway clustered covariance.
+
     Examples
     --------
     ```{python}
@@ -729,6 +732,7 @@ class VcovSpec:
     lag: int | None = None
     time_id: str | None = None
     panel_id: str | None = None
+    vcov_fix: bool = False
 
     @property
     def is_clustered(self) -> bool:
@@ -740,6 +744,8 @@ class VcovSpec:
         cls,
         vcov: str | dict[str, str],
         vcov_kwargs: Mapping[str, str | int] | None = None,
+        *,
+        vcov_fix: bool = False,
     ) -> VcovSpec:
         """Parse and validate the ``vcov`` and ``vcov_kwargs`` arguments.
 
@@ -751,6 +757,8 @@ class VcovSpec:
         unknown or incomplete values. ``vcov_kwargs`` is only accepted with
         ``vcov="NW"`` or ``vcov="DK"``; other estimators reject it.
         """
+        if not isinstance(vcov_fix, bool):
+            raise ValueError("vcov_fix must be one of True or False.")  # noqa: TRY004
         lag, time_id, panel_id = _parse_vcov_kwargs(vcov_kwargs)
 
         is_hac = isinstance(vcov, str) and vcov in ("NW", "DK")
@@ -776,7 +784,12 @@ class VcovSpec:
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "
                     "Add the interacted variable as a column of the data and cluster on that column."
                 )
-            return cls(vcov_type="CRV", vcov_type_detail=detail, clustervar=clustervar)
+            return cls(
+                vcov_type="CRV",
+                vcov_type_detail=detail,
+                clustervar=clustervar,
+                vcov_fix=vcov_fix,
+            )
 
         if not isinstance(vcov, str):
             raise TypeError(
@@ -796,12 +809,13 @@ class VcovSpec:
                 lag=lag,
                 time_id=time_id,
                 panel_id=panel_id,
+                vcov_fix=vcov_fix,
             )
 
         vcov_type: VcovFamilyOptions = (
             "iid" if vcov == "iid" else "nid" if vcov == "nid" else "hetero"
         )
-        return cls(vcov_type=vcov_type, vcov_type_detail=vcov)
+        return cls(vcov_type=vcov_type, vcov_type_detail=vcov, vcov_fix=vcov_fix)
 
 
 def _parse_vcov_kwargs(
@@ -848,7 +862,8 @@ class VarianceCovariance:
         n_coefficients).
     meat : NDArray[np.float64] or None
         Adjusted meat of the sandwich, shape (n_coefficients,
-        n_coefficients), so that ``vcov == bread @ meat @ bread`` with the
+        n_coefficients), before any eigenvalue correction. Without correction,
+        ``vcov == bread @ meat @ bread`` with the
         bread of ``fit.sandwich``. For multiway clustering the per-dimension
         meats enter with their signs and adjustment factors. ``None`` where
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.

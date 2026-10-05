@@ -84,6 +84,35 @@ effects. CRV3 uses the same multi-way combination for OLS and Poisson fits;
 quantile regression supports only one cluster variable. You can also update a
 fitted model's variance-covariance with `fit.vcov({"CRV1": "f1 + f2 + group_id"})`.
 
+Multi-way covariance estimates can be non-positive-definite in finite samples.
+Set `vcov_fix=True` in `feols()`, `fepois()`, `feglm()`, or a fitted model's
+`vcov()` call to apply the eigenvalue correction of
+[Cameron, Gelbach & Miller (2011)](https://doi.org/10.1198/jbes.2010.07136):
+
+```{python}
+import pyfixest as pf
+
+fit_fixed = pf.feols(
+    "Y ~ X1 + X2 | f1", data=pf.get_data(),
+    vcov={"CRV1": "f1 + f2"}, vcov_fix=True,
+)
+fit_fixed.tidy()
+# Also available after fitting (and on multiple-estimation results):
+fit_fixed.vcov({"CRV1": "f1 + f2"}, vcov_fix=True)
+```
+
+When any eigenvalue is nonpositive, the correction floors eigenvalues at
+`1e-16`, matching R fixest. Standard errors, tests, and confidence intervals
+then use the repaired matrix. A warning is emitted only if an absolute
+matrix-entry change exceeds `1e-8`. The raw sandwich meat remains available
+in `fit.variance_covariance.meat` before eigenvalue correction.
+
+Pyfixest defaults to `vcov_fix=False` to preserve existing results, whereas
+R fixest 0.14.0 defaults to repair. This option applies to multi-way CRV1 and
+CRV3 only and has no effect on other covariance types. It does not add support
+for covariance types a model otherwise rejects. For `lean=True` or
+`store_data=False`, request repair at estimation time, before data are removed.
+
 ## 5. Which Level Should You Cluster On?
 
 Core principle: cluster at the level where shocks or treatment assignment induce dependence.

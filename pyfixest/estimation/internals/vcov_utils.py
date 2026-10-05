@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import combinations
@@ -56,6 +57,29 @@ def combine_terms(terms: Sequence[VcovTerm], ssc: np.ndarray) -> VcovTerm:
         if meat is not None and term.meat is not None:
             meat += factor * term.meat
     return VcovTerm(vcov=vcov, meat=meat)
+
+
+def repair_cluster_vcov(*, vcov: np.ndarray) -> np.ndarray:
+    """Repair a non-positive-definite clustered covariance, shape (k, k).
+
+    Apply the eigenvalue correction of Cameron, Gelbach & Miller (2011),
+    *Robust Inference with Multiway Clustering*, doi:10.1198/jbes.2010.07136.
+    Like R fixest, floor eigenvalues at 1e-16 when any is nonpositive and
+    warn only when an absolute matrix-entry change exceeds 1e-8. The input
+    is not mutated; positive-definite matrices are returned unchanged.
+    """
+    eigenvalues, eigenvectors = np.linalg.eigh(vcov)
+    if np.all(eigenvalues > 0):
+        return vcov
+    repaired = (eigenvectors * np.maximum(eigenvalues, 1e-16)) @ eigenvectors.T
+    if np.any(np.abs(repaired - vcov) > 1e-8):
+        warnings.warn(
+            "The VCOV matrix is not positive definite and was fixed by "
+            "eigenvalue correction (vcov_fix=True).",
+            UserWarning,
+            stacklevel=3,
+        )
+    return repaired
 
 
 @dataclass

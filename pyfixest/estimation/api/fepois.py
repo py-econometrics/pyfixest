@@ -42,6 +42,7 @@ def fepois(
     split: str | None = None,
     fsplit: str | None = None,
     accelerate: bool = True,
+    vcov_fix: bool = False,
 ) -> Feols | Fepois | FixestMulti:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -70,6 +71,11 @@ def fepois(
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
         For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
         pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
+    vcov_fix : bool, optional
+        Repair non-positive-definite multiway clustered covariance matrices.
+        Defaults to False. Warns only if a matrix entry changes by more than
+        1e-8. Has no effect on other covariance types.
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
@@ -254,6 +260,7 @@ def fepois(
         family="poisson",
         vcov=vcov,
         vcov_kwargs=vcov_kwargs,
+        vcov_fix=vcov_fix,
         weights=weights,
         weights_type=weights_type,
         offset=offset,

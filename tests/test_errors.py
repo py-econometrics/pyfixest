@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import sys
 import warnings
@@ -1900,3 +1902,16 @@ def test_estimation_rejects_malformed_ssc():
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
     assert legacy.options.ssc == pf.ssc(k_adj=False)
+
+
+@pytest.mark.parametrize("vcov_fix", [None, 0, 1, "True"])
+@pytest.mark.parametrize(
+    "estimator", [pf.feols, pf.fepois, partial(pf.feglm, family="gaussian")]
+)
+def test_vcov_fix_requires_bool(vcov_fix, estimator):
+    data = get_data(model="Fepois")
+    with pytest.raises(ValueError, match="vcov_fix must be one of True or False"):
+        estimator("Y ~ X1", data, vcov_fix=vcov_fix)
+    fit = pf.feols("Y ~ X1", data)
+    with pytest.raises(ValueError, match="vcov_fix must be one of True or False"):
+        fit.vcov({"CRV1": "f1+f2"}, vcov_fix=vcov_fix)
