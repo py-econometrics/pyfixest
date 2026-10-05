@@ -44,6 +44,16 @@ _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
 )
 
 
+def _wrap_fixed_effect(term: Term) -> Term:
+    """Encode one FE term's factors together in a single stateful call."""
+    arguments = ", ".join(factor.expr for factor in term.factors)
+    encoder = Factor(
+        f"__fixed_effect__({arguments})",
+        eval_method=Factor.EvalMethod.PYTHON,
+    )
+    return Term([encoder])
+
+
 @dataclass(frozen=True, slots=True)
 class FixedEffectSpecification:
     """Specification for materialization of fixed effect term.
@@ -436,15 +446,9 @@ class Formula:
     @property
     def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
-        wrapped_terms = []
-        for term in self.fixed_effects:
-            arguments = ", ".join(factor.expr for factor in term.factors)
-            encoder = Factor(
-                f"__fixed_effect__({arguments})",
-                eval_method=Factor.EvalMethod.PYTHON,
-            )
-            wrapped_terms.append(Term([encoder]))
-        return formulaic.formula.SimpleFormula(wrapped_terms)
+        return formulaic.formula.SimpleFormula(
+            _wrap_fixed_effect(term=term) for term in self.fixed_effects
+        )
 
     @property
     def second_stage(self) -> formulaic.formula.StructuredFormula:
