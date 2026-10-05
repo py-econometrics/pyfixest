@@ -697,8 +697,7 @@ class Feols(ResultAccessorMixin):
                 fe=self.model_matrix.fixed_effects,
                 n_levels_by_fe=self.fixef_counts.n_levels_by_fe,
             )
-            # prep.G may pad the "min" rule to three entries; keep one per dimension
-            G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
+            G = tuple(int(g) for g in prep.G)
             correction = get_ssc_cluster(
                 prep=prep, ssc_options=self.options.ssc, dof_counts=self._dof_counts
             )
