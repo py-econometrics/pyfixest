@@ -19,6 +19,7 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
+    i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
@@ -347,13 +348,7 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         independent = model_matrix.independent
-        is_icovar = (
-            independent.columns.str.contains(r"^.+::.+$")
-            if not independent.empty
-            else None
-        )
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
@@ -361,9 +356,7 @@ class Feols(ResultAccessorMixin):
                 model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
             ),
             interacted_covariates=(
-                tuple(independent.columns[is_icovar])
-                if is_icovar is not None and is_icovar.any()
-                else ()
+                tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
             model_spec=model_matrix.model_spec,
         )
