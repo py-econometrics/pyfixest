@@ -91,7 +91,6 @@ def prepare_cluster_state(
     n_levels_by_fe: tuple[int, ...],
 ) -> ClusterPrep:
     """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
-
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
