@@ -65,7 +65,7 @@ class ClusterPrep:
     cluster_df: pd.DataFrame
     cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
     G: list[int]  # cluster counts per column, post ssc["G_df"] adjustment
-    signs: list[int]  # inclusion-exclusion sign per column
+    vcov_signs: list[int]  # inclusion-exclusion sign per column
     k_fe_nested: int
     n_fe_fully_nested: int
 
@@ -91,10 +91,11 @@ def prepare_cluster_state(
     n_levels_by_fe: tuple[int, ...],
 ) -> ClusterPrep:
     """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
+
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
-    cluster_df, signs = _prepare_multiway_clustering(cluster_df=cluster_df)
+    cluster_df, vcov_signs = _prepare_multiway_clustering(cluster_df=cluster_df)
 
     G = _count_G_for_ssc_correction(cluster_df=cluster_df, G_df=ssc.G_df)
 
@@ -122,7 +123,7 @@ def prepare_cluster_state(
         cluster_df=cluster_df,
         cluster_arr_int=cluster_arr_int,
         G=G,
-        signs=signs,
+        vcov_signs=vcov_signs,
         k_fe_nested=k_fe_nested,
         n_fe_fully_nested=n_fe_fully_nested,
     )
@@ -169,7 +170,7 @@ def get_ssc_cluster(
             ),
             vcov_type="CRV",
         )
-        ssc_arr[x] = correction.adj * prep.signs[x]
+        ssc_arr[x] = correction.adj * prep.vcov_signs[x]
         df_k = correction.df_k
         df_t_full[x] = correction.df_t
     return ClusterSmallSampleCorrection(
@@ -314,11 +315,11 @@ def _prepare_multiway_clustering(
     Factorize tuples so labels containing separators cannot collide.
     """
     clustervar = list(cluster_df.columns)
-    signs = [1] * len(clustervar)
+    vcov_signs = [1] * len(clustervar)
     for size in range(2, len(clustervar) + 1):
         for columns in combinations(clustervar, size):
             cluster_df["+".join(columns)] = pd.factorize(
                 pd.MultiIndex.from_frame(cluster_df[list(columns)])
             )[0]
-            signs.append((-1) ** (size + 1))
-    return cluster_df, signs
+            vcov_signs.append((-1) ** (size + 1))
+    return cluster_df, vcov_signs
