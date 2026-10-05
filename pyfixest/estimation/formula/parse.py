@@ -46,6 +46,24 @@ _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
 )
 
 
+def _serialize_factor(factor: Factor) -> str:
+    """Render a factor without changing its lookup or evaluation semantics."""
+    if factor.eval_method is Factor.EvalMethod.LOOKUP:
+        if not factor.expr.isidentifier() or keyword.iskeyword(factor.expr):
+            return f"`{factor.expr}`"
+    elif factor.eval_method is Factor.EvalMethod.PYTHON:
+        return "{" + factor.expr + "}"
+    return factor.expr
+
+
+def _serialize_terms(terms: Iterable[Term]) -> str:
+    """Render terms in their existing order, preserving factor semantics."""
+    return " + ".join(
+        ":".join(_serialize_factor(factor=factor) for factor in term.factors)
+        for term in terms
+    )
+
+
 def _fixed_effect_argument(factor: Factor) -> str:
     """Render a Python argument for the FE encoder, resolving quoted lookups there.
 
@@ -382,11 +400,17 @@ class Formula:
     @property
     def formula(self) -> str:
         """The string representation of the formula."""
-        formula = f"{self.dependent} ~ {self.exogenous}"
+        formula = (
+            f"{_serialize_terms(terms=self.dependent)} ~ "
+            f"{_serialize_terms(terms=self.exogenous)}"
+        )
         if self.is_instrumental_variable:
-            formula = f"{formula} + [{self.endogenous} ~ {self.instruments}]"
+            formula = (
+                f"{formula} + [{_serialize_terms(terms=self.endogenous)} ~ "
+                f"{_serialize_terms(terms=self.instruments)}]"
+            )
         if self.is_fixed_effects:
-            formula = f"{formula} | {self.fixed_effects}"
+            formula = f"{formula} | {_serialize_terms(terms=self.fixed_effects)}"
         return formula
 
     @property

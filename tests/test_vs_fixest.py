@@ -69,43 +69,7 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     [
         ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
         ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
-        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
-    ],
-)
-def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
-    """Arithmetic factors retain their meaning through matrix construction."""
-    fit = pf.feols(fml, data=data_feols, vcov="iid")
-    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
-    names = [
-        renamed_terms.get(name, name)
-        for name in (
-            name.replace("(Intercept)", "Intercept").removeprefix("fit_")
-            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
-        )
-    ]
-    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
-    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
-    # Match the canonical linear-model tolerances for direct solves and inference.
-    np.testing.assert_allclose(
-        fit.coef()[names],
-        stats.coef(fit_r),
-        rtol=0,
-        atol=1e-8,
-        err_msg="coefficients != fixest",
-    )
-    np.testing.assert_allclose(
-        fit.se()[names],
-        fixest.se(fit_r),
-        rtol=0,
-        atol=1e-7,
-        err_msg="standard errors != fixest",
-    )
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "fml, fml_r, renamed_terms",
-    [
+        ("`my outcome` ~ `my var` + X2", "`my outcome` ~ `my var` + X2", {}),
         ("Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
         ("Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
         # fixest rewrites ':' even inside quoted FE names; the alias f1
@@ -119,10 +83,16 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
             "Y ~ X2 | `my fe` | X1 ~ Z1",
             {"X1": "my endog"},
         ),
+        (
+            "Y ~ 1 + [{X1 + X2} ~ Z1]",
+            "Y ~ 1 | I(X1 + X2) ~ Z1",
+            {"I(X1 + X2)": "X1 + X2"},
+        ),
+        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
     ],
 )
-def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_terms):
-    """#1735: quoted fixed-effect and IV names match fixest."""
+def test_reconstructed_formula_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """Reconstruction preserves evaluated expressions, quoted names, and intercepts."""
     data = data_feols.assign(
         **{
             "my outcome": data_feols.Y,
@@ -160,6 +130,27 @@ def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_ter
         atol=1e-7,
         err_msg="standard errors != fixest",
     )
+    replay = pf.feols(fit.model.formula, data=data, vcov="iid")
+    np.testing.assert_allclose(
+        replay.coef()[names],
+        fit.coef()[names],
+        rtol=0,
+        atol=1e-12,
+        err_msg="reconstructed formula changed coefficients",
+    )
+    if not fit.model.is_iv:
+        if fit.model.has_fixef:
+            # Tighten the sparse FE-recovery solve so prediction error tests
+            # formula reconstruction rather than lsqr's default stopping error.
+            fit.fixef(atol=1e-12, btol=1e-12)
+        newdata = data.dropna().iloc[:5]
+        np.testing.assert_allclose(
+            fit.predict(newdata=newdata),
+            stats.predict(fit_r, newdata=newdata),
+            rtol=0,
+            atol=1e-6,
+            err_msg="predictions != fixest",
+        )
 
 
 @pytest.fixture(scope="module")

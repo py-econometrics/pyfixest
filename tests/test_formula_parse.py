@@ -1142,6 +1142,13 @@ class TestEdgeCases:
             "Y ~ X1 + X2",
             "Y ~ X1 | f1",
             "Y ~ X1 | f1 + f2",
+            "Y ~ {X1 * X2}",
+            "Y ~ X1 + {X1 ** 2}",
+            "`my outcome` ~ `my var` + X1",
+            'Y ~ Q("my var") + I(X1 ** 2)',
+            'Y ~ C(f1, contr.treatment(base="a"))',
+            "Y ~ X1 | `my fe` + firm.id",
+            "Y ~ {X1 ** 2} + [`my endog` ~ {Z1 * Z2}] | `a:b`",
         ]
         for fml in formulas:
             result = Formula.parse(fml)
