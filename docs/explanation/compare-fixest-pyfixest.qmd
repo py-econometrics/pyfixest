@@ -47,6 +47,23 @@ Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
 translating R's `I(X1^2)`.
 
+## Covariance eigenvalue correction
+
+PyFixest currently does not apply eigenvalue corrections to covariance matrices.
+Multiway clustering can produce an indefinite covariance estimate in finite
+samples because the estimator subtracts cluster-intersection terms. In contrast,
+`fixest` 0.14.0 repairs matrices with nonpositive eigenvalues by default
+(`vcov_fix = TRUE`), flooring their eigenvalues at `1e-16` and warning when the
+correction changes the matrix materially. See the
+[`fixest` covariance documentation](https://lrberge.github.io/fixest/reference/vcov_cluster.html).
+
+This is an unresolved compatibility gap: standard errors, p-values, and
+confidence intervals can differ even when coefficient estimates agree. Negative
+diagonal entries produce `NaN` standard errors in PyFixest; positive diagonal
+entries alone do not ensure valid variances for linear combinations or joint
+Wald tests. Setting `vcov_fix = FALSE` in R allows comparisons of uncorrected
+covariance estimates, but does not resolve these inference problems.
+
 ## Setup
 
 

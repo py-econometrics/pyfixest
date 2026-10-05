@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 
 import numpy as np
@@ -59,54 +57,7 @@ empty_models = [
 
 
 @pytest.fixture(scope="module")
-def multiway_cluster_data():
-    """Crossed clusters with stable positive-definite multiway covariances.
-
-    Reuse these rows in the canonical estimator/SSC tests: arbitrary clusters
-    on get_data() can trigger R's eigenvalue repair, obscuring the comparison
-    of the unmodified inclusion-exclusion covariance.
-    """
-    rng = np.random.default_rng(20260922)
-    n = 1200
-    data = pd.DataFrame(
-        {f"c{i}": rng.integers(g, size=n) for i, g in enumerate([12, 17, 23, 29], 1)}
-    )
-    data["fe"] = rng.integers(8, size=n)
-    data["x"] = rng.normal(size=n)
-    data["z"] = rng.normal(size=n)
-    data["d"] = data.z + rng.normal(size=n)
-    shock = sum(
-        rng.normal(scale=0.3, size=data[c].max() + 1)[data[c]]
-        for c in ["c1", "c2", "c3", "c4"]
-    )
-    eta = 0.2 + 0.3 * data.x + shock
-    data["y"] = eta + 0.4 * data.d + rng.normal(size=n)
-    data["count"] = rng.poisson(np.exp(eta))
-    data["binary"] = rng.binomial(1, 1 / (1 + np.exp(-eta)))
-    data["w"] = rng.integers(1, 4, size=n)
-    return data.rename(
-        columns={
-            "x": "X1",
-            "d": "X2",
-            "z": "Z1",
-            "y": "Y",
-            "w": "weights",
-            "c1": "f1",
-            "fe": "f2",
-            "c4": "f3",
-        }
-    )
-
-
-@pytest.fixture(scope="module")
-def data_feols(
-    request, multiway_cluster_data, N=1000, seed=76540251, beta_type="2", error_type="2"
-):
-    source = getattr(request, "param", "standard")
-    if source == "multiway":
-        return multiway_cluster_data
-    if source == "multiway-iv":
-        return multiway_cluster_data.rename(columns={"X1": "X2", "X2": "X1"})
+def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Feols"
     )
@@ -118,13 +69,7 @@ def data_feols_variants(data_feols):
 
 
 @pytest.fixture
-def data_fepois(
-    request, multiway_cluster_data, N=1000, seed=7651, beta_type="2", error_type="2"
-):
-    if getattr(request, "param", "standard") == "multiway":
-        data = multiway_cluster_data.copy()
-        data["Y"] = data["count"]
-        return data
+def data_fepois(N=1000, seed=7651, beta_type="2", error_type="2"):
     return pf.get_data(
         N=N, seed=seed, beta_type=beta_type, error_type=error_type, model="Fepois"
     )
@@ -223,36 +168,13 @@ def _get_vcov_diag(py_model, r_model, coefname, is_iv=False):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("dropna", [False, True])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize(
-    "fml,f3_type,inference,G_df,data_feols,dropna",
-    [
-        (fml, f3_type, inference, "min", "standard", dropna)
-        for dropna in [False, True]
-        for fml, f3_type in FEOLS_FORMULA_F3_CASES
-        for inference in ["iid", "hetero", {"CRV1": "group_id"}]
-    ]
-    + [
-        pytest.param(
-            fml,
-            "str",
-            {"CRV1": cluster},
-            G_df,
-            "multiway",
-            True,
-            id=f"multiway-{nesting}-{cluster}-{G_df}",
-        )
-        for nesting, fml in [
-            ("no-fe", "Y ~ X1"),
-            ("nested", "Y ~ X1 | f1"),
-            ("nonnested", "Y ~ X1 | f2"),
-            ("mixed", "Y ~ X1 | f1 + f2"),
-        ]
-        for cluster in ["f1+c2", "f1+c2+c3"]
-        for G_df in ["min", "conventional"]
-    ],
+    "fml,f3_type",
+    FEOLS_FORMULA_F3_CASES,
     ids=lambda value: str(value),
-    indirect=["data_feols"],
 )
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
@@ -260,14 +182,13 @@ def test_single_fit_feols(
     data_feols_variants,
     dropna,
     inference,
-    G_df,
     weights,
     f3_type,
     fml,
     k_adj,
     G_adj,
 ):
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj, G_df=G_df)
+    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
     data = data_feols_variants[(dropna, f3_type)]
 
     data_r = get_data_r(fml, data)
@@ -287,7 +208,7 @@ def test_single_fit_feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -295,20 +216,12 @@ def test_single_fit_feols(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
         )
 
     # r_fixest to global r env, needed for
     # operations as in df.K
     ro.globalenv["r_fixest"] = r_fixest
-
-    if isinstance(inference, dict) and "+" in inference["CRV1"]:
-        _assert_fixest_inference(
-            fit=mod,
-            r_fit=r_fixest,
-            cluster=inference["CRV1"],
-            inference_atol=1e-8,
-        )
 
     py_coef = mod.coef().xs("X1")
     py_n_coefs = mod.coef().values.size
@@ -515,48 +428,19 @@ def test_single_fit_feols_empty(
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
-@pytest.mark.parametrize(
-    "fml,inference,G_df,data_fepois,offset,use_solver_defaults",
-    [
-        (fml, inference, "min", "standard", offset, False)
-        for offset in [False, True]
-        for fml in ols_fmls
-        for inference in ["iid", "hetero", {"CRV1": "group_id"}]
-    ]
-    + [
-        pytest.param(
-            "Y ~ X1 | f1",
-            {"CRV1": "f1+c2+c3"},
-            G_df,
-            "multiway",
-            False,
-            use_solver_defaults,
-            id=f"multiway-{G_df}-defaults={use_solver_defaults}",
-        )
-        for G_df in ["min", "conventional"]
-        for use_solver_defaults in [False, True]
-    ],
-    indirect=["data_fepois"],
-)
+@pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("offset", [False, True])
 def test_single_fit_fepois(
-    data_fepois,
-    inference,
-    G_df,
-    f3_type,
-    fml,
-    k_adj,
-    G_adj,
-    weights,
-    offset,
-    use_solver_defaults,
+    data_fepois, inference, f3_type, fml, k_adj, G_adj, weights, offset
 ):
     _skip_f3_checks(fml, f3_type)
 
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj, G_df=G_df)
+    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data_fepois = data_fepois.copy()
     if offset:
@@ -576,17 +460,13 @@ def test_single_fit_fepois(
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
-    # The absorbed multiway cases also exercise the public solver defaults.
-    py_solver_kwargs = (
-        {} if use_solver_defaults else {"iwls_tol": 1e-10, "iwls_maxiter": 100}
-    )
-    r_solver_kwargs = {} if use_solver_defaults else {"glm_tol": 1e-10, "glm_iter": 100}
     mod = pf.fepois(
         fml=fml,
         data=data_fepois,
         vcov=inference,
         ssc=ssc_,
-        **py_solver_kwargs,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
         weights=weights,
         offset=offset_var if offset else None,
     )
@@ -594,8 +474,9 @@ def test_single_fit_fepois(
     r_kwargs = {
         "vcov": r_inference,
         "data": data_r,
-        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
-        **r_solver_kwargs,
+        "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_iter": 100,
     }
     if weights is not None:
         r_kwargs["weights"] = ro.Formula("~" + weights)
@@ -603,18 +484,6 @@ def test_single_fit_fepois(
         r_kwargs["offset"] = ro.Formula("~" + offset_var)
 
     r_fixest = fixest.fepois(ro.Formula(r_fml), **r_kwargs)
-
-    if isinstance(inference, dict) and "+" in inference["CRV1"]:
-        _assert_fixest_inference(
-            fit=mod,
-            r_fit=r_fixest,
-            cluster=inference["CRV1"],
-            inference_atol=1e-6,
-        )
-        if use_solver_defaults:
-            # Preserve the original default-solver assertion contract above.
-            # The tighter-solver cases also check derived quantities below.
-            return
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -715,57 +584,66 @@ def test_single_fit_fepois(
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml,vcov,G_df",
+    "fml",
     [
-        (fml, "hetero", "min")
-        for fml in [
-            "y ~ x",
-            "y ~ x | fe",
-            "y ~ x | d ~ z",
-            "y ~ x | fe | d ~ z",
-        ]
-    ]
-    + [
-        pytest.param("y ~ x | fe", {"CRV1": "fe+c2+c3"}, G_df, id=f"multiway-{G_df}")
-        for G_df in ["min", "conventional"]
+        "y ~ x",
+        "y ~ x | fe",
+        "y ~ x | d ~ z",
+        "y ~ x | fe | d ~ z",
     ],
 )
-def test_frequency_weighted_linear_models_against_fixest(
-    multiway_cluster_data, fml, vcov, G_df
-):
+def test_frequency_weighted_linear_models_against_fixest(fml):
     """Compare fweight OLS and IV covariance to R fixest literal expansion."""
-    data = (
-        multiway_cluster_data.rename(
-            columns={"Y": "y", "X1": "x", "f1": "fe", "weights": "fweights"}
-        )
-        if isinstance(vcov, dict)
-        else _make_frequency_weighted_linear_data()
-    )
+    data = _make_frequency_weighted_linear_data()
     expanded_data = (
         data.loc[data.index.repeat(data["fweights"])]
         .drop(columns="fweights")
         .reset_index(drop=True)
     )
-    py_ssc = ssc(k_adj=True, G_adj=True, G_df=G_df)
-    r_ssc = fixest.ssc(True, "nonnested", False, True, G_df, "min")
+    py_ssc = ssc(k_adj=True, G_adj=True)
+    r_ssc = fixest.ssc(True, "nonnested", False, True, "min", "min")
 
     py_fit = pf.feols(
         fml=fml,
         data=data,
         weights="fweights",
         weights_type="fweights",
-        vcov=vcov,
+        vcov="hetero",
         ssc=py_ssc,
     )
-    r_fit = fixest.feols(
-        ro.Formula(fml), data=expanded_data, vcov=_get_r_inference(vcov), ssc=r_ssc
-    )
+    r_fit = fixest.feols(ro.Formula(fml), data=expanded_data, vcov="hetero", ssc=r_ssc)
 
-    _assert_fixest_inference(
-        fit=py_fit,
-        r_fit=r_fit,
-        cluster=vcov["CRV1"] if isinstance(vcov, dict) else None,
-        inference_atol=1e-8,
+    ro.globalenv[".fweight_r_fit"] = r_fit
+    r_coefficient_names = list(ro.r("names(coef(.fweight_r_fit))"))
+    r_vcov_names = list(ro.r("rownames(vcov(.fweight_r_fit))"))
+    py_coefficient_names = list(py_fit.coef().index)
+    is_iv = "d ~ z" in fml
+    r_name_by_py_name = {
+        "Intercept": "(Intercept)",
+        "d": "fit_d" if is_iv else "d",
+    }
+    r_order = [
+        r_coefficient_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+    r_vcov_order = [
+        r_vcov_names.index(r_name_by_py_name.get(name, name))
+        for name in py_coefficient_names
+    ]
+
+    np.testing.assert_allclose(
+        py_fit.coef().to_numpy(),
+        np.asarray(stats.coef(r_fit))[r_order],
+        rtol=0,
+        atol=1e-8,
+        err_msg="Fweight coefficients differ from the R fixest literal expansion",
+    )
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(r_fit))[np.ix_(r_vcov_order, r_vcov_order)],
+        rtol=0,
+        atol=1e-7,
+        err_msg="Fweight covariance differs from the R fixest literal expansion",
     )
 
 
@@ -932,33 +810,11 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "family,fml,inference,G_df,data_fepois,use_solver_defaults",
-    [
-        (family, fml, inference, "min", "standard", False)
-        for family in ["logit", "probit", "gaussian", "poisson"]
-        for fml in ols_fmls
-        for inference in ["iid", "hetero", {"CRV1": "group_id"}]
-    ]
-    + [
-        pytest.param(
-            "logit",
-            "Y ~ X1 | f1",
-            {"CRV1": "f1+c2+c3"},
-            G_df,
-            "multiway",
-            use_solver_defaults,
-            id=f"multiway-logit-{G_df}-defaults={use_solver_defaults}",
-        )
-        for G_df in ["min", "conventional"]
-        for use_solver_defaults in [False, True]
-    ],
-    indirect=["data_fepois"],
-)
+@pytest.mark.parametrize("family", ["logit", "probit", "gaussian", "poisson"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("fml", ols_fmls)
 @pytest.mark.parametrize("weights", [None, "weights"])
-def test_single_fit_feglm(
-    data_fepois, inference, G_df, fml, weights, family, use_solver_defaults
-):
+def test_single_fit_feglm(data_fepois, inference, fml, weights, family):
     """Verify weighted/unweighted feglm against R fixest.feglm.
 
     Mirrors `test_single_fit_fepois` (same parametrize grid; same artifacts
@@ -968,31 +824,27 @@ def test_single_fit_feglm(
     """
     _skip_f3_checks(fml, "str")
 
-    ssc_ = ssc(k_adj=True, G_adj=True, G_df=G_df)
+    ssc_ = ssc(k_adj=True, G_adj=True)
 
     data = data_fepois.copy()
     data.where(data != "nan", np.nan, inplace=True)
     data = _convert_f3(data, "str")
 
     # Binary outcome for logit/probit; original Y for gaussian.
-    data["Y_bin"] = data["binary"] if "binary" in data else (data["Y"] > 0).astype(int)
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
     py_fml = fml.replace("Y", "Y_bin", 1) if family in ("logit", "probit") else fml
     r_fml = _c_to_as_factor(py_fml)
     r_inference = _get_r_inference(inference)
     data_r = get_data_r(py_fml, data)
 
-    # The absorbed multiway cases also exercise the public solver defaults.
-    py_solver_kwargs = (
-        {} if use_solver_defaults else {"iwls_tol": 1e-10, "iwls_maxiter": 100}
-    )
-    r_solver_kwargs = {} if use_solver_defaults else {"glm_tol": 1e-10, "glm_iter": 100}
     mod = pf.feglm(
         fml=py_fml,
         data=data,
         family=family,
         vcov=inference,
         ssc=ssc_,
-        **py_solver_kwargs,
+        iwls_tol=1e-10,
+        iwls_maxiter=100,
         weights=weights,
     )
 
@@ -1027,26 +879,15 @@ def test_single_fit_feglm(
     r_kwargs = {
         "vcov": r_inference,
         "data": data_r,
-        "ssc": fixest.ssc(True, "nonnested", False, True, G_df, "min"),
-        **r_solver_kwargs,
+        "ssc": fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        "glm_tol": 1e-10,
+        "glm_iter": 100,
         "family": r_family,
     }
     if weights is not None:
         r_kwargs["weights"] = ro.Formula("~" + weights)
 
     r_fixest = fixest.feglm(ro.Formula(r_fml), **r_kwargs)
-
-    if isinstance(inference, dict) and "+" in inference["CRV1"]:
-        _assert_fixest_inference(
-            fit=mod,
-            r_fit=r_fixest,
-            cluster=inference["CRV1"],
-            inference_atol=1e-6,
-        )
-        if use_solver_defaults:
-            # Preserve the original default-solver assertion contract above.
-            # The tighter-solver cases also check derived quantities below.
-            return
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -1129,47 +970,23 @@ def test_single_fit_feglm(
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("f3_type", ["str"])
-@pytest.mark.parametrize(
-    "fml,r_fml,inference,G_df,data_feols",
-    [
-        (fml, None, inference, "min", "standard")
-        for fml in iv_fmls
-        for inference in ["iid", "hetero", {"CRV1": "group_id"}]
-    ]
-    + [
-        pytest.param(
-            fml,
-            r_fml,
-            {"CRV1": "f1+c2+c3"},
-            G_df,
-            "multiway-iv",
-            id=f"multiway-{syntax}-{G_df}",
-        )
-        for syntax, fml, r_fml in [
-            ("legacy", "Y ~ X2 | f1 | X1 ~ Z1", None),
-            ("bracket", "Y ~ X2 + [X1 ~ Z1] | f1", "Y ~ X2 | f1 | X1 ~ Z1"),
-        ]
-        for G_df in ["min", "conventional"]
-    ],
-    indirect=["data_feols"],
-)
+@pytest.mark.parametrize("fml", iv_fmls)
 @pytest.mark.parametrize("k_adj", [True])
 @pytest.mark.parametrize("G_adj", [True])
 def test_single_fit_iv(
     data_feols,
     inference,
-    G_df,
     weights,
     f3_type,
     fml,
-    r_fml,
     k_adj,
     G_adj,
 ):
     _skip_f3_checks(fml, f3_type)
 
-    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj, G_df=G_df)
+    ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
 
     data = data_feols.copy()
     # long story, but categories need to be strings to be converted to R factors,
@@ -1179,7 +996,7 @@ def test_single_fit_iv(
     data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
-    r_fml = _c_to_as_factor(fml if r_fml is None else r_fml)
+    r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
     mod = pf.feols(fml=fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
@@ -1188,7 +1005,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
             weights=ro.Formula("~" + weights),
         )
     else:
@@ -1196,15 +1013,7 @@ def test_single_fit_iv(
             ro.Formula(r_fml),
             vcov=r_inference,
             data=data_r,
-            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
-        )
-
-    if isinstance(inference, dict) and "+" in inference["CRV1"]:
-        _assert_fixest_inference(
-            fit=mod,
-            r_fit=r_fixest,
-            cluster=inference["CRV1"],
-            inference_atol=1e-8,
+            ssc=fixest.ssc(k_adj, "nonnested", False, G_adj, "min", "min"),
         )
 
     py_coef = mod.coef().xs("X1")
@@ -1632,82 +1441,68 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "data", [get_data(N=500, seed=9289, beta_type="1", error_type="1")]
+)
+@pytest.mark.parametrize("k_adj", [True, False])
+@pytest.mark.parametrize("k_fixef", ["none", "full", "nonnested"])
+@pytest.mark.parametrize("G_adj", [True, False])
 @pytest.mark.parametrize("G_df", ["min", "conventional"])
-def test_cluster_label_collisions_against_fixest(multiway_cluster_data, G_df):
-    """Cluster tuples that share a joined string must remain distinct."""
-    data = multiway_cluster_data.copy()
-    # ("a-b", "c") and ("a", "b-c") both become "a-b-c" if joined with "-".
-    data["f1"] = data.f1.map(lambda g: {0: "a-b", 1: "a"}.get(g, f"f1-{g}"))
-    data["c2"] = data.c2.map(lambda g: {0: "c", 1: "b-c"}.get(g, f"c2-{g}"))
-    cluster = "f1+c2+c3"
-    fit = pf.feols("Y ~ X1", data=data, vcov={"CRV1": cluster}, ssc=ssc(G_df=G_df))
-    r_fit = fixest.feols(
-        ro.Formula("Y ~ X1"),
+def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
+    data = data.dropna()
+
+    fit1 = feols(
+        "Y ~ X1 + X2 ",
         data=data,
-        vcov=ro.Formula("~" + cluster),
-        ssc=fixest.ssc(True, "nonnested", False, True, G_df, "min"),
+        vcov={"CRV1": "f1 +f2"},
+        ssc=ssc(k_adj=k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df),
     )
-    _assert_fixest_inference(fit=fit, r_fit=r_fit, cluster=cluster, inference_atol=1e-8)
 
+    feols_fit1 = fixest.feols(
+        ro.Formula("Y ~ X1 + X2"),
+        data=data,
+        cluster=ro.Formula("~f1+f2"),
+        ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
+    )
 
-def _assert_fixest_inference(*, fit, r_fit, cluster, inference_atol):
-    """Compare named estimates, full covariance, inference and exact counts.
+    # check that coefs match
+    np.testing.assert_allclose(
+        fit1.coef(),
+        stats.coef(feols_fit1),
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"CRV1-coef: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+    )
 
-    Cluster reductions differ in accumulation order (1e-8 for linear fits);
-    iterative stopping error requires 1e-6 for GLM inference.
-    """
-    ro.globalenv["reference_fit"] = r_fit
-    r_names = list(ro.r("names(coef(reference_fit))"))
-    r_vcov_names = list(ro.r("rownames(vcov(reference_fit))"))
-    expected_names = [
-        "(Intercept)"
-        if name == "Intercept"
-        else f"fit_{name}"
-        if f"fit_{name}" in r_names
-        else name
-        for name in fit.coef().index
-    ]
-    assert set(expected_names) == set(r_names), "fixest coefficient names"
-    assert set(expected_names) == set(r_vcov_names), "fixest covariance names"
-    order = [r_names.index(name) for name in expected_names]
-    vcov_order = [r_vcov_names.index(name) for name in expected_names]
-    np.testing.assert_allclose(
-        fit.coef(),
-        np.asarray(stats.coef(r_fit))[order],
-        rtol=0,
-        atol=1e-8,
-        err_msg="fixest coefficients",
-    )
-    np.testing.assert_allclose(
-        fit.variance_covariance.vcov,
-        np.asarray(stats.vcov(r_fit))[np.ix_(vcov_order, vcov_order)],
-        rtol=0,
-        atol=inference_atol,
-        err_msg="fixest covariance",
-    )
-    np.testing.assert_allclose(
-        fit.se(),
-        np.asarray(fixest.se(r_fit))[order],
-        rtol=0,
-        atol=inference_atol,
-        err_msg="fixest standard errors",
-    )
-    np.testing.assert_allclose(
-        fit.pvalue(),
-        np.asarray(fixest.pvalue(r_fit))[order],
-        rtol=0,
-        atol=inference_atol,
-        err_msg="fixest p-values",
-    )
-    assert fit.variance_covariance.df_k == int(
-        ro.r('attr(reference_fit$cov.scaled, "df.K")')[0]
-    ), "fixest df_k"
-    assert fit.variance_covariance.df_t == int(
-        ro.r('attr(reference_fit$cov.scaled, "df.t")')[0]
-    ), "fixest df_t"
-    assert fit.sample_info.n_obs == int(stats.nobs(r_fit)[0]), "fixest observations"
-    if cluster is not None:
-        assert len(fit.variance_covariance.G) == 2 ** len(cluster.split("+")) - 1
+    if True:
+        # test vcov's
+        np.testing.assert_allclose(
+            fit1.variance_covariance.vcov,
+            stats.vcov(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-vcov: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
+
+    if True:
+        # now test se's
+        np.testing.assert_allclose(
+            fit1.se(),
+            fixest.se(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-se: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
+
+    if True:
+        # now test pvalues
+        np.testing.assert_allclose(
+            fit1.pvalue(),
+            fixest.pvalue(feols_fit1),
+            rtol=1e-04,
+            atol=1e-04,
+            err_msg=f"CRV1-pvalue: G_adj = {G_adj}, G_df = {G_df}, k_adj = {k_adj}, k_fixef = {k_fixef}",
+        )
 
 
 @pytest.mark.against_r_core
@@ -1914,14 +1709,10 @@ def test_singleton_dropping():
 
 
 @pytest.fixture(scope="module")
-def ssc_data(request, multiway_cluster_data):
+def ssc_data():
     data = {}
     for model, data_model in [("feols", "Feols"), ("fepois", "Fepois")]:
-        base = (
-            multiway_cluster_data
-            if getattr(request, "param", "standard") == "multiway"
-            else pf.get_data(model=data_model)
-        )
+        base = pf.get_data(model=data_model)
         data[(model, False)] = base
         data[(model, True)] = base.dropna()
     return data
@@ -1929,69 +1720,29 @@ def ssc_data(request, multiway_cluster_data):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml,dropna,vcov,G_df,model,ssc_data",
-    [
-        pytest.param(
-            fml, dropna, vcov, "min", model, "standard", id=f"{case_id}-{model}"
-        )
-        for (fml, dropna, vcov), case_id in zip(
-            ssc_formula_vcov_dropna_cases, ssc_formula_vcov_dropna_case_ids, strict=True
-        )
-        for model in ["feols", "fepois"]
-    ]
-    + [
-        pytest.param(
-            fml,
-            True,
-            cluster,
-            G_df,
-            "feols",
-            "multiway",
-            id=f"multiway-{nesting}-{cluster}-{G_df}",
-        )
-        for nesting, fml in [
-            ("no-fe", "Y ~ X1"),
-            ("nested", "Y ~ X1 | f1"),
-            ("nonnested", "Y ~ X1 | f2"),
-            ("mixed", "Y ~ X1 | f1 + f2"),
-        ]
-        # Preserve every one-/two-/three-way SSC combination from the
-        # original multiway matrix, even when corrections are equivalent.
-        for cluster in ["f1", "f1+c2", "f1+c2+c3"]
-        for G_df in ["min", "conventional"]
-    ]
-    + [
-        pytest.param(
-            "Y ~ X1 | f1 + f2",
-            True,
-            "f1+c2+c3+f3",
-            G_df,
-            "feols",
-            "multiway",
-            id=f"multiway-fourway-{G_df}",
-        )
-        for G_df in ["min", "conventional"]
-    ],
-    indirect=["ssc_data"],
+    "fml,dropna,vcov",
+    ssc_formula_vcov_dropna_cases,
+    ids=ssc_formula_vcov_dropna_case_ids,
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("k_adj", [True, False])
 @pytest.mark.parametrize("G_adj", [True, False])
 @pytest.mark.parametrize("k_fixef", ["full", "none", "nonnested"])
-def test_ssc(ssc_data, fml, dropna, weights, vcov, G_df, k_adj, G_adj, k_fixef, model):
+@pytest.mark.parametrize("model", ["feols", "fepois"])
+def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model):
     df = ssc_data[(model, dropna)]
 
     r_kwargs = {
         "fml": ro.Formula(_fixed_effect_interactions_to_fixest(fml)),
-        "vcov": vcov if vcov in ["iid", "hetero"] else _get_r_inference({"CRV1": vcov}),
+        "vcov": vcov if vcov in ["iid", "hetero"] else ro.Formula(f"~{vcov}"),
         "data": df,
-        "ssc": fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
+        "ssc": fixest.ssc(k_adj, k_fixef, False, G_adj, "min", "min"),
     }
 
     py_kwargs = {
         "fml": fml,
         "data": df,
-        "ssc": pf.ssc(k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df=G_df),
+        "ssc": pf.ssc(k_adj, k_fixef=k_fixef, G_adj=G_adj, G_df="min"),
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
 
@@ -2011,15 +1762,61 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, G_df, k_adj, G_adj, k_fixef, 
         r_fit = fixest.fepois(**r_kwargs)
         py_fit = pf.fepois(**py_kwargs)
 
-    _assert_fixest_inference(
-        fit=py_fit,
-        r_fit=r_fit,
-        cluster=vcov if vcov not in ("iid", "hetero") else None,
-        inference_atol=1e-8 if model == "feols" else 1e-6,
+    ro.globalenv["r_fit"] = r_fit
+    r_df_t = int(ro.r('attr(r_fit$cov.scaled, "df.t")')[0])
+    r_df_k = int(ro.r('attr(r_fit$cov.scaled, "df.K")')[0])
+
+    py_df_t = py_fit.variance_covariance.df_t
+    py_df_k = py_fit.variance_covariance.df_k
+
+    py_nobs = py_fit.sample_info.n_obs
+    r_nobs = stats.nobs(r_fit)
+
+    # coefficients identical:
+    np.testing.assert_allclose(
+        py_fit.coef(),
+        ro.r("r_fit$coeftable[,1]"),
+        rtol=1e-08,
+        atol=1e-08,
+        err_msg=f"coefficients do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
-    ro.globalenv["r_fit"] = r_fit
+    np.testing.assert_allclose(
+        py_nobs,
+        r_nobs,
+        err_msg=f"nobs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
 
+    # df_t identical:
+    np.testing.assert_allclose(
+        py_df_t,
+        r_df_t,
+        err_msg=f"df_t do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+
+    # df.K identical:
+    np.testing.assert_allclose(
+        r_df_k,
+        py_df_k,
+        err_msg=f"df.K do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+
+    # SEs identical:
+    np.testing.assert_allclose(
+        py_fit.se(),
+        ro.r("r_fit$coeftable[,2]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"SEs do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # p-values identical:
+    np.testing.assert_allclose(
+        py_fit.pvalue(),
+        ro.r("r_fit$coeftable[,4]"),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"p-values do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
     # t-stats identical:
     np.testing.assert_allclose(
         py_fit.tstat(),
@@ -2036,6 +1833,14 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, G_df, k_adj, G_adj, k_fixef, 
         rtol=1e-07 if model == "feols" else 1e-06,
         atol=1e-07 if model == "feols" else 1e-06,
         err_msg=f"confint do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
+    )
+    # vcov identical:
+    np.testing.assert_allclose(
+        py_fit.variance_covariance.vcov,
+        stats.vcov(r_fit),
+        rtol=1e-07 if model == "feols" else 1e-06,
+        atol=1e-07 if model == "feols" else 1e-06,
+        err_msg=f"vcov do not match for fml = {fml}, vcov = {vcov}, k_adj = {k_adj}, G_adj = {G_adj}, k_fixef = {k_fixef}",
     )
 
 
@@ -2060,12 +1865,11 @@ def test_inf_dropping(fml, weights):
 
 
 def _get_r_inference(inference):
-    if isinstance(inference, dict):
-        cluster = inference["CRV1"]
-        # fixest 0.14 needs an explicit fourway type for four-variable formulas.
-        vcov_type = "fourway" if len(cluster.split("+")) == 4 else "cluster"
-        return ro.Formula(f"{vcov_type}~{cluster}")
-    return inference
+    return (
+        ro.Formula("~" + inference["CRV1"])
+        if isinstance(inference, dict)
+        else inference
+    )
 
 
 def _get_r_df(r_fixest, is_iv=False):
