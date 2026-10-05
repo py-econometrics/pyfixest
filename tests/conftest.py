@@ -1,5 +1,7 @@
 "Pytest configuration for pyfixest tests."
 
+from __future__ import annotations
+
 import os
 import sys
 
@@ -22,6 +24,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="fit tests/test_release_contract.py and record the results as the baseline",
+    )
+    parser.addoption(
+        "--rpy2-files",
+        action="store_true",
+        default=False,
+        help="collect only test modules skipped when rpy2 is unavailable",
     )
 
 
@@ -80,6 +88,20 @@ try:
 
 except ImportError:
     collect_ignore = [*_rpy2_test_files]
+
+
+def pytest_configure(config):
+    """Require R dependencies when explicitly selecting rpy2 test modules."""
+    if config.getoption("--rpy2-files") and "collect_ignore" in globals():
+        raise pytest.UsageError("--rpy2-files requires an R-enabled environment")
+
+
+def pytest_ignore_collect(collection_path, config):
+    """Select the same module list used by the non-R collection skip."""
+    if config.getoption("--rpy2-files") and collection_path.suffix == ".py":
+        return collection_path.name not in _rpy2_test_files
+    return None
+
 
 # Force single-threaded BLAS for deterministic HAC standard errors.
 #

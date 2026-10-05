@@ -282,6 +282,8 @@ description = "HAC standard error tests vs R"
 env = { OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1", MKL_NUM_THREADS = "1", VECLIB_MAXIMUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1" }
 
 [tool.pixi.feature.r.tasks]
+check-ci-test-coverage = { cmd = "python .github/check_test_coverage.py", depends-on = ["_setup"], description = "Check that every collected test belongs to a CI pytest task" }
+test-r-python = { cmd = 'pytest tests --rpy2-files -n auto -m "not (against_r_core or against_r_extended or hac)" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Python tests in modules requiring rpy2 for collection" }
 test-all = { cmd = "pytest -rs -n auto --cov-report=term tests", depends-on = ["_setup"], description = "Run all tests available in the current Python + R environment" }
 test-r-core = { cmd = 'pytest -rs -n auto tests -m "against_r_core and not fast_r" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "Canonical tests against R packages available on conda-forge" }
 test-r-core-other = { cmd = 'pytest -rs -n auto tests --ignore=tests/test_vs_fixest.py --ignore=tests/test_multiway_clustering_vs_fixest.py -m "against_r_core and not fast_r" --cov=pyfixest --cov-report=xml', depends-on = ["_setup"], description = "CI shard for canonical conda-forge R tests outside test_vs_fixest.py" }
