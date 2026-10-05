@@ -102,6 +102,66 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        ("Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
+        ("Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
+        # fixest rewrites ':' even inside quoted FE names; the alias f1
+        # carries exactly the same levels and gives a usable external oracle.
+        ("Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
+        (
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
+            # fixest also drops instrument backticks when rebuilding its
+            # first stage; compare the identical original columns in R.
+            "Y ~ X2 | `my fe` | X1 ~ Z1",
+            {"X1": "my endog"},
+        ),
+    ],
+)
+def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """#1735: quoted fixed-effect and IV names match fixest."""
+    data = data_feols.assign(
+        **{
+            "my outcome": data_feols.Y,
+            "my var": data_feols.X1,
+            "my endog": data_feols.X1,
+            "my instrument": data_feols.Z1,
+            "my fe": data_feols.f1,
+            "firm.id": data_feols.f1,
+            "a:b": data_feols.f1,
+        }
+    )
+    fit = pf.feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
+    coef_r = stats.coef(fit_r)
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept")
+            .removeprefix("fit_")
+            .replace("`", "")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances: direct solves agree closely;
+    # FE projection and derived inference allow slightly more rounding error.
+    np.testing.assert_allclose(
+        fit.coef()[names], coef_r, rtol=0, atol=1e-8, err_msg="coefficients != fixest"
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+
+
 @pytest.fixture(scope="module")
 def data_feols_variants(data_feols):
     return build_feols_data_variants(data_feols)

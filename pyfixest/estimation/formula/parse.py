@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import itertools
+import keyword
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Final
@@ -21,6 +22,7 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_python_expression,
@@ -44,11 +46,40 @@ _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
 )
 
 
+def _fixed_effect_argument(factor: Factor) -> str:
+    """Render a Python argument for the FE encoder, resolving quoted lookups there.
+
+    Formulaic evaluates arguments when calling our encoder's dependency hook.
+    Nested Q() calls would then run without their materialization context.
+    Pass literal column names instead, which the encoder resolves later.
+    """
+    if factor.eval_method is Factor.EvalMethod.LOOKUP:
+        if not factor.expr.isidentifier() or keyword.iskeyword(factor.expr):
+            return repr(factor.expr)
+        return factor.expr
+    if is_python_expression(factor):
+        try:
+            expression = ast.parse(factor.expr, mode="eval").body
+        except SyntaxError:
+            expression = None
+        if (
+            isinstance(expression, ast.Call)
+            and isinstance(expression.func, ast.Name)
+            and expression.func.id == "Q"
+            and len(expression.args) == 1
+            and not expression.keywords
+            and isinstance(expression.args[0], ast.Constant)
+            and isinstance(expression.args[0].value, str)
+        ):
+            return repr(expression.args[0].value)
+    return factor.expr
+
+
 def _wrap_fixed_effect(term: Term) -> Term:
     """Encode one FE term's factors together in a single stateful call."""
-    arguments = ", ".join(factor.expr for factor in term.factors)
+    arguments = (_fixed_effect_argument(factor=factor) for factor in term.factors)
     encoder = Factor(
-        f"__fixed_effect__({arguments})",
+        f"__fixed_effect__({', '.join(arguments)})",
         eval_method=Factor.EvalMethod.PYTHON,
     )
     return Term([encoder])
@@ -326,16 +357,16 @@ class Formula:
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
-        endogenous_are_covariates = self.endogenous.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        endogenous_are_covariates = formula_required_variables(
+            formula=self.endogenous
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if endogenous_are_covariates:
             raise EndogVarsAsCovarsError(
                 f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
             )
-        instruments_are_covariates = self.instruments.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        instruments_are_covariates = formula_required_variables(
+            formula=self.instruments
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if instruments_are_covariates:
             raise InstrumentsAsCovarsError(
                 f"Instruments specified as covariates: {instruments_are_covariates}"

@@ -30,6 +30,16 @@ def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]
     return (term for term in formula if term != "1")
 
 
+def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[str]:
+    """Collect dependencies without normalizing literal lookup names."""
+    return {
+        str(variable)
+        for term in formula
+        for factor in term.factors
+        for variable in factor.required_variables
+    }
+
+
 def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
     """Return whether formulaic parsed an IV RHS as a StructuredFormula."""
     return isinstance(rhs, formulaic.formula.StructuredFormula)
