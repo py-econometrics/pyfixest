@@ -517,9 +517,9 @@ def test_single_fit_feols_empty(
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize(
-    "fml,inference,G_df,data_fepois,offset",
+    "fml,inference,G_df,data_fepois,offset,use_solver_defaults",
     [
-        (fml, inference, "min", "standard", offset)
+        (fml, inference, "min", "standard", offset, False)
         for offset in [False, True]
         for fml in ols_fmls
         for inference in ["iid", "hetero", {"CRV1": "group_id"}]
@@ -531,9 +531,11 @@ def test_single_fit_feols_empty(
             G_df,
             "multiway",
             False,
-            id=f"multiway-{G_df}",
+            use_solver_defaults,
+            id=f"multiway-{G_df}-defaults={use_solver_defaults}",
         )
         for G_df in ["min", "conventional"]
+        for use_solver_defaults in [False, True]
     ],
     indirect=["data_fepois"],
 )
@@ -541,7 +543,16 @@ def test_single_fit_feols_empty(
 @pytest.mark.parametrize("G_adj", [True])
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_single_fit_fepois(
-    data_fepois, inference, G_df, f3_type, fml, k_adj, G_adj, weights, offset
+    data_fepois,
+    inference,
+    G_df,
+    f3_type,
+    fml,
+    k_adj,
+    G_adj,
+    weights,
+    offset,
+    use_solver_defaults,
 ):
     _skip_f3_checks(fml, f3_type)
 
@@ -565,13 +576,17 @@ def test_single_fit_fepois(
     r_fml = _c_to_as_factor(fml)
     r_inference = _get_r_inference(inference)
 
+    # The absorbed multiway cases also exercise the public solver defaults.
+    py_solver_kwargs = (
+        {} if use_solver_defaults else {"iwls_tol": 1e-10, "iwls_maxiter": 100}
+    )
+    r_solver_kwargs = {} if use_solver_defaults else {"glm_tol": 1e-10, "glm_iter": 100}
     mod = pf.fepois(
         fml=fml,
         data=data_fepois,
         vcov=inference,
         ssc=ssc_,
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
+        **py_solver_kwargs,
         weights=weights,
         offset=offset_var if offset else None,
     )
@@ -580,8 +595,7 @@ def test_single_fit_fepois(
         "vcov": r_inference,
         "data": data_r,
         "ssc": fixest.ssc(k_adj, "nonnested", False, G_adj, G_df, "min"),
-        "glm_tol": 1e-10,
-        "glm_iter": 100,
+        **r_solver_kwargs,
     }
     if weights is not None:
         r_kwargs["weights"] = ro.Formula("~" + weights)
@@ -597,6 +611,10 @@ def test_single_fit_fepois(
             cluster=inference["CRV1"],
             inference_atol=1e-6,
         )
+        if use_solver_defaults:
+            # Preserve the original default-solver assertion contract above.
+            # The tighter-solver cases also check derived quantities below.
+            return
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -915,9 +933,9 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "family,fml,inference,G_df,data_fepois",
+    "family,fml,inference,G_df,data_fepois,use_solver_defaults",
     [
-        (family, fml, inference, "min", "standard")
+        (family, fml, inference, "min", "standard", False)
         for family in ["logit", "probit", "gaussian", "poisson"]
         for fml in ols_fmls
         for inference in ["iid", "hetero", {"CRV1": "group_id"}]
@@ -929,14 +947,18 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
             {"CRV1": "f1+c2+c3"},
             G_df,
             "multiway",
-            id=f"multiway-logit-{G_df}",
+            use_solver_defaults,
+            id=f"multiway-logit-{G_df}-defaults={use_solver_defaults}",
         )
         for G_df in ["min", "conventional"]
+        for use_solver_defaults in [False, True]
     ],
     indirect=["data_fepois"],
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
-def test_single_fit_feglm(data_fepois, inference, G_df, fml, weights, family):
+def test_single_fit_feglm(
+    data_fepois, inference, G_df, fml, weights, family, use_solver_defaults
+):
     """Verify weighted/unweighted feglm against R fixest.feglm.
 
     Mirrors `test_single_fit_fepois` (same parametrize grid; same artifacts
@@ -959,14 +981,18 @@ def test_single_fit_feglm(data_fepois, inference, G_df, fml, weights, family):
     r_inference = _get_r_inference(inference)
     data_r = get_data_r(py_fml, data)
 
+    # The absorbed multiway cases also exercise the public solver defaults.
+    py_solver_kwargs = (
+        {} if use_solver_defaults else {"iwls_tol": 1e-10, "iwls_maxiter": 100}
+    )
+    r_solver_kwargs = {} if use_solver_defaults else {"glm_tol": 1e-10, "glm_iter": 100}
     mod = pf.feglm(
         fml=py_fml,
         data=data,
         family=family,
         vcov=inference,
         ssc=ssc_,
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
+        **py_solver_kwargs,
         weights=weights,
     )
 
@@ -1002,8 +1028,7 @@ def test_single_fit_feglm(data_fepois, inference, G_df, fml, weights, family):
         "vcov": r_inference,
         "data": data_r,
         "ssc": fixest.ssc(True, "nonnested", False, True, G_df, "min"),
-        "glm_tol": 1e-10,
-        "glm_iter": 100,
+        **r_solver_kwargs,
         "family": r_family,
     }
     if weights is not None:
@@ -1018,6 +1043,10 @@ def test_single_fit_feglm(data_fepois, inference, G_df, fml, weights, family):
             cluster=inference["CRV1"],
             inference_atol=1e-6,
         )
+        if use_solver_defaults:
+            # Preserve the original default-solver assertion contract above.
+            # The tighter-solver cases also check derived quantities below.
+            return
 
     py_coef = mod.coef().xs("X1")
     py_se = mod.se().xs("X1")
@@ -1102,20 +1131,25 @@ def test_single_fit_feglm(data_fepois, inference, G_df, fml, weights, family):
 @pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.parametrize("f3_type", ["str"])
 @pytest.mark.parametrize(
-    "fml,inference,G_df,data_feols",
+    "fml,r_fml,inference,G_df,data_feols",
     [
-        (fml, inference, "min", "standard")
+        (fml, None, inference, "min", "standard")
         for fml in iv_fmls
         for inference in ["iid", "hetero", {"CRV1": "group_id"}]
     ]
     + [
         pytest.param(
-            "Y ~ X2 | f1 | X1 ~ Z1",
+            fml,
+            r_fml,
             {"CRV1": "f1+c2+c3"},
             G_df,
             "multiway-iv",
-            id=f"multiway-{G_df}",
+            id=f"multiway-{syntax}-{G_df}",
         )
+        for syntax, fml, r_fml in [
+            ("legacy", "Y ~ X2 | f1 | X1 ~ Z1", None),
+            ("bracket", "Y ~ X2 + [X1 ~ Z1] | f1", "Y ~ X2 | f1 | X1 ~ Z1"),
+        ]
         for G_df in ["min", "conventional"]
     ],
     indirect=["data_feols"],
@@ -1129,6 +1163,7 @@ def test_single_fit_iv(
     weights,
     f3_type,
     fml,
+    r_fml,
     k_adj,
     G_adj,
 ):
@@ -1144,7 +1179,7 @@ def test_single_fit_iv(
     data = _convert_f3(data, f3_type)
 
     data_r = get_data_r(fml, data)
-    r_fml = _c_to_as_factor(fml)
+    r_fml = _c_to_as_factor(fml if r_fml is None else r_fml)
     r_inference = _get_r_inference(inference)
 
     mod = pf.feols(fml=fml, data=data, vcov=inference, ssc=ssc_, weights=weights)
@@ -1920,11 +1955,10 @@ def ssc_data(request, multiway_cluster_data):
             ("nonnested", "Y ~ X1 | f2"),
             ("mixed", "Y ~ X1 | f1 + f2"),
         ]
-        for cluster, G_df in [
-            ("f1+c2", "conventional"),
-            ("f1+c2+c3", "min"),
-            ("f1+c2+c3", "conventional"),
-        ]
+        # Preserve every one-/two-/three-way SSC combination from the
+        # original multiway matrix, even when corrections are equivalent.
+        for cluster in ["f1", "f1+c2", "f1+c2+c3"]
+        for G_df in ["min", "conventional"]
     ]
     + [
         pytest.param(
