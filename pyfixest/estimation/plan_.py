@@ -121,15 +121,23 @@ class ParsedFormula:
     is_multiple_estimation: bool
 
 
-def parse_formula(config: EstimationConfig) -> ParsedFormula:
-    """Parse the config's `fml` string into a `ParsedFormula`.
+def parse_formula(
+    config: EstimationConfig, *, formula: FixestFormula | None = None
+) -> ParsedFormula:
+    """Plan the config's string or reuse a parsed single-model formula.
 
-    Pure: same `(fml, split, fsplit, quantile_process)` always produce
+    Pure: same `(formula, fml, split, fsplit, quantile_process)` always produce
     the same parse. `is_multiple_estimation` reflects formula
     expansion *and* sample-split / multi-quantile fan-out.
     """
     run_split = config.split is not None or config.fsplit is not None
-    formula_dictionary = FixestFormula.parse_to_dict(config.fml)
+    formula_dictionary = (
+        FixestFormula.parse_to_dict(config.fml)
+        if formula is None
+        else {
+            str(formula.fixed_effects) if formula.is_fixed_effects else None: [formula]
+        }
+    )
     process = config.quantile_process
     is_multiple_estimation = (
         sum(len(v) for v in formula_dictionary.values()) > 1

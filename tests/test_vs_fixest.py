@@ -63,6 +63,45 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
+        ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
+        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+    ],
+)
+def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """Arithmetic factors retain their meaning through matrix construction."""
+    fit = pf.feols(fml, data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances for direct solves and inference.
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+
+
 @pytest.fixture(scope="module")
 def data_feols_variants(data_feols):
     return build_feols_data_variants(data_feols)
