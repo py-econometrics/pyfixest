@@ -9,16 +9,19 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import EndogVarsAsCovarsError, InstrumentsAsCovarsError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     i_term_columns,
     iter_i_categorical_levels,
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.parse import Formula
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
@@ -61,6 +64,49 @@ def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
     terms = terms_without_intercept(formulaic.Formula(formula))
 
     assert [str(term) for term in terms] == expected
+
+
+@pytest.mark.parametrize(
+    "rhs, expected",
+    [
+        ("`my var`", {"my var"}),
+        ("`firm.id`", {"firm.id"}),
+        ("I(`my var`)", {"my var"}),
+        ("Q('my var')", {"my var"}),
+        ("{X1 * X2}", {"X1", "X2"}),
+    ],
+)
+def test_required_variables_preserve_quoted_names(rhs, expected):
+    """IV dependency checks preserve literal names and transformed dependencies."""
+    parsed = Formula.parse(f"Y ~ {rhs}")[0]
+    assert formula_required_variables(parsed.exogenous) == expected
+
+
+@pytest.mark.parametrize(
+    "fml, error",
+    [
+        (
+            "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ I(`my var`) + [X2 ~ Q('my var')]",
+            InstrumentsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [X2 ~ I(`my var`)]",
+            InstrumentsAsCovarsError,
+        ),
+    ],
+)
+def test_iv_rejects_quoted_variable_overlap(fml, error):
+    """Quoted transformations must not hide a variable used in both IV roles."""
+    with pytest.raises(error, match="my var"):
+        Formula.parse(fml)
 
 
 def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
