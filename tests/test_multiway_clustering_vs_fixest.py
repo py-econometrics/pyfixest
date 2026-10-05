@@ -1,8 +1,9 @@
-"""Live R fixest coverage for multiway CRV1 covariance and SSC options.
+"""Live R coverage for multiway CRV1/CRV3 covariance and SSC options.
 
 Keep the complete correction matrix separate from the general estimator tests.
 The seeded fixture avoids eigenvalue repair so comparisons exercise the raw
 inclusion-exclusion estimator; repair remains a documented compatibility gap.
+CRV3 comparisons use sandwich's HC3 for OLS and its jackknife for Poisson.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import pyfixest as pf
 from pyfixest.utils.utils import ssc
 
 fixest = importr("fixest")
+sandwich = importr("sandwich")
 stats = importr("stats")
 
 
@@ -270,3 +272,74 @@ def _assert_multiway_clustering_against_fixest(
     ), "multiway df_t"
     assert fit.sample_info.n_obs == int(stats.nobs(r_fit)[0]), "multiway observations"
     assert len(fit.variance_covariance.G) == 2**n_clusters - 1
+
+
+@pytest.fixture(scope="module")
+def crv3_cluster_data():
+    """Small crossed panel for both shortcut and refit CRV3 comparisons."""
+    rng = np.random.default_rng(123)
+    # Replicated crossed cells keep every delete-cluster fit identified, with
+    # unequal cluster counts to detect incorrect per-component normalization.
+    data = pd.DataFrame(
+        np.indices((4, 5, 6, 2)).reshape(4, -1)[:3].T,
+        columns=["c1", "c2", "c3"],
+    )
+    n = len(data)
+    data["x"] = rng.normal(size=n)
+    data["z"] = rng.normal(size=n)
+    data["fe"] = rng.integers(3, size=n)
+    eta = 0.2 + 0.3 * data.x - 0.2 * data.z + 0.1 * data.fe
+    for column in ["c1", "c2", "c3"]:
+        shocks = rng.normal(scale=0.2, size=(data[column].max() + 1, 3))
+        eta += np.sum(
+            shocks[data[column]] * np.column_stack([np.ones(n), data.x, data.z]),
+            axis=1,
+        )
+    data["y"] = eta + rng.normal(size=n)
+    data["count"] = rng.poisson(np.exp(eta))
+    return data
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml,r_fml,n_clusters",
+    [
+        pytest.param("y ~ x + z", None, 1, id="ols-oneway"),
+        pytest.param("y ~ x + z", None, 2, id="ols-twoway"),
+        pytest.param("y ~ x + z", None, 3, id="ols-threeway"),
+        pytest.param(
+            "y ~ x + z | fe", "y ~ x + z + factor(fe)", 3, id="ols-fe-threeway"
+        ),
+    ],
+)
+def test_multiway_crv3_against_sandwich(crv3_cluster_data, fml, r_fml, n_clusters):
+    """OLS cluster HC3 equals the delete-cluster jackknife, including FE dummies."""
+    cluster = "+".join(f"c{i}" for i in range(1, n_clusters + 1))
+    fit = pf.feols(
+        fml=fml,
+        data=crv3_cluster_data,
+        vcov={"CRV3": cluster},
+        ssc=ssc(k_adj=False, G_adj=False),
+    )
+    r_fit = stats.lm(
+        ro.Formula(fml if r_fml is None else r_fml), data=crv3_cluster_data
+    )
+    # HC3's inverse cluster factor (G-1)/G is canceled by cadjust=TRUE,
+    # matching pyfixest with both SSC adjustments disabled.
+    r_vcov = sandwich.vcovCL(
+        r_fit, cluster=ro.Formula("~" + cluster), type="HC3", cadjust=True, fix=False
+    )
+    expected_names = [
+        "(Intercept)" if name == "Intercept" else name for name in fit.coef().index
+    ]
+    r_names = list(ro.r("function(model) names(coef(model))")(r_fit))
+    order = [r_names.index(name) for name in expected_names]
+    np.testing.assert_allclose(
+        fit.coef(), np.asarray(stats.coef(r_fit))[order], rtol=0, atol=1e-8
+    )
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        np.asarray(r_vcov)[np.ix_(order, order)],
+        rtol=0,
+        atol=1e-8,
+    )
