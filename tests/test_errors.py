@@ -335,6 +335,54 @@ def test_misplaced_iv_syntax_errors(estimator, fml, reason):
     )
 
 
+@pytest.mark.parametrize(
+    "estimator",
+    [
+        feols,
+        fepois,
+        partial(pf.feglm, family="gaussian"),
+        partial(pf.quantreg, quantile=0.5),
+    ],
+)
+@pytest.mark.parametrize(
+    "dependent, reason",
+    [
+        ("sw0(Y, Y2)", "`sw0()` is not supported"),
+        ("csw(Y, Y2)", "`csw()` is not supported"),
+        ("csw0(Y, Y2)", "`csw0()` is not supported"),
+        ("mvsw(Y, Y2)", "`mvsw()` is not supported"),
+        ("c(Y, Y2)", "`c()` is not supported"),
+        ("csw0 (\nY,\nY2\n)", "`csw0()` is not supported"),
+        ("sw(Y, sw0(Y2, Y))", "`sw0()` is not supported"),
+        ("Y + 0", "Invalid dependent expression"),
+        ("Y - 1", "Invalid dependent expression"),
+        ("Y / 2", "Invalid dependent expression"),
+        ("Y**2", "Invalid dependent expression"),
+        ("Y*Y2", "Invalid dependent expression"),
+        ("(Y + Y2)", "Invalid dependent expression"),
+        ("sw(Y, Y2 - 1)", "Invalid dependent expression"),
+        ("sw(Y, Y2 + 0)", "Invalid dependent expression"),
+        ("sw(Y, Y2 + Y)", "Invalid dependent expression"),
+        ("sw(Y, 1)", "Invalid dependent expression"),
+        ("sw(Y,)", "Invalid dependent expression"),
+        ("sw(Y, sw(Y2, Y))", "`sw()` must be the entire left-hand side"),
+        ("sw(Y, Y2) - 1", "`sw()` must be the entire left-hand side"),
+        ("sw(Y, Y2) + Y", "`sw()` must be the entire left-hand side"),
+        ("I(sw0(Y, Y2))", "cannot be nested"),
+        ("log(sw(Y, Y2))", "cannot be nested"),
+    ],
+)
+def test_unsupported_dependent_syntax_errors(estimator, dependent, reason):
+    # Missing formula columns ensure rejection before any model is fitted.
+    data = pd.DataFrame({"unused": [1.0, 2.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        with pytest.raises(FormulaSyntaxError, match=re.escape(reason)) as caught:
+            estimator(fml=f"{dependent} ~ X1 + [X2 ~ Z1] | f1", data=data)
+    assert "Use `sw(Y, Y2)`" in str(caught.value)
+    assert "`I(...)` for outcome arithmetic" in str(caught.value)
+
+
 @pytest.mark.skip("Not yet implemented.")
 def test_poisson_devpar_count():
     """Check that the dependent variable is a count variable."""

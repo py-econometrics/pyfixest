@@ -9,6 +9,7 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.utils.utils import get_data, ssc
@@ -1047,6 +1048,60 @@ def test_single_fit_iv(
     check_absolute_diff(py_pval, r_pval, 1e-06, "py_pval != r_pval")
     check_absolute_diff(py_tstat, r_tstat, 1e-06, "py_tstat != r_tstat")
     check_absolute_diff(py_confint, r_confint, 1e-06, "py_confint != r_confint")
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_formula,py_formula,n_models,legacy",
+    [
+        ("sw0(Y, Y2) ~ X1", "sw(Y, Y2) ~ X1", 2, False),
+        ("csw(Y, Y2) ~ X1", "sw(Y, Y2) ~ X1", 2, False),
+        ("csw0(Y, Y2) ~ X1", "sw(Y, Y2) ~ X1", 2, False),
+        ("mvsw(Y, Y2) ~ X1", "sw(Y, Y2, I(Y + Y2)) ~ X1", 3, False),
+        ("c(Y, Y2) ~ X1", "sw(Y, Y2) ~ X1", 2, False),
+        ("Y - 1 ~ X1", "I(Y - 1) ~ X1", 1, False),
+        ("Y + 0 ~ X1", "I(Y + 0) ~ X1", 1, False),
+        ("Y + Y2 ~ X1", "I(Y + Y2) ~ X1", 1, True),
+    ],
+)
+def test_lhs_syntax_intentional_fixest_difference(
+    data_feols, r_formula, py_formula, n_models, legacy
+):
+    """Record the intentional LHS syntax differences against fixest 0.14.0."""
+    data = data_feols.dropna()
+    if legacy:
+        with pytest.warns(DeprecationWarning, match="multiple dependent variables"):
+            legacy_fit = pf.feols(fml=r_formula, data=data)
+        # The legacy plus spelling still means separate outcomes in PyFixest.
+        assert len(legacy_fit.to_list()) == 2
+    else:
+        with pytest.raises(FormulaSyntaxError, match=r"Use `sw\(Y, Y2\)`"):
+            pf.feols(fml=r_formula, data=data)
+
+    py_fit = pf.feols(fml=py_formula, data=data)
+    py_models = py_fit.to_list() if isinstance(py_fit, FixestMulti) else [py_fit]
+    r_fit = fixest.feols(ro.Formula(r_formula), data=data)
+    r_models = (
+        [r_fit.rx2(i + 1) for i in range(len(r_fit))]
+        if "fixest_multi" in r_fit.rclass
+        else [r_fit]
+    )
+    assert len(py_models) == len(r_models) == n_models
+    for py_model, r_model in zip(py_models, r_models, strict=True):
+        with ro.default_converter.context():
+            r_coef = r_model.rx2("coefficients")
+        names = [
+            "Intercept" if name == "(Intercept)" else name for name in r_coef.names
+        ]
+        assert set(py_model.coef().index) == set(names)
+        # Both use ordinary OLS on identical rows; allow only rounding error.
+        np.testing.assert_allclose(
+            py_model.coef().reindex(names).to_numpy(),
+            np.asarray(r_coef),
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Supported replacement coefficients differ from fixest for {r_formula}",
+        )
 
 
 @pytest.mark.against_r_core

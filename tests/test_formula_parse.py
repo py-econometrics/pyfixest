@@ -952,6 +952,9 @@ class TestValidation:
         ("Y ~ sw0(X1, X2)", 3),
         ("Y ~ csw0(X1, X2)", 3),
         ("Y + Y2 ~ X1", 2),
+        ("sw(Y, Y2) ~ X1", 2),
+        ("sw (\nY,\nI(Y2 - 1)\n) ~ X1", 2),
+        ("sw(Y, I(Y2 + Y)) ~ csw(X1, X2) | sw(f1, f2)", 8),
         ("Y ~ X1 | sw(f1, f2)", 2),
         ("Y ~ mvsw(X1, X2)", 4),
         ("Y ~ mvsw(X1, X2, Z1)", 8),
@@ -1067,17 +1070,35 @@ class TestEdgeCases:
         assert len(result) == 1
         assert result[0].second_stage == expected_second_stage
 
-    def test_transformed_dependent_matches_precomputed_column(self, test_data):
-        """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
+    @pytest.mark.parametrize(
+        "expression,dependent",
+        [
+            ("Y + Y2", "I(Y + Y2)"),
+            ("Y - 1", "I(Y - 1)"),
+            ("Y * Y2", "I(Y * Y2)"),
+            ("Y**2", "I(Y**2)"),
+        ],
+    )
+    def test_transformed_dependent_matches_precomputed_column(
+        self, test_data, expression, dependent
+    ):
+        """Explicit outcome arithmetic works alone and inside `sw()`."""
         data = test_data.dropna().copy()
-        data["Y_sum"] = data["Y"] + data["Y2"]
+        data["Y_transformed"] = data.eval(expression)
 
-        transformed = pf.feols("I(Y + Y2) ~ X1", data)
-        precomputed = pf.feols("Y_sum ~ X1", data)
+        transformed = pf.feols(f"{dependent} ~ X1", data)
+        precomputed = pf.feols("Y_transformed ~ X1", data)
+        multiple = pf.feols(f"sw(Y, {dependent}) ~ X1", data).to_list()
 
-        np.testing.assert_allclose(
-            transformed.coef().to_numpy(), precomputed.coef().to_numpy()
-        )
+        assert len(multiple) == 2
+        for fit in [transformed, multiple[1]]:
+            np.testing.assert_allclose(
+                fit.coef().to_numpy(),
+                precomputed.coef().to_numpy(),
+                rtol=1e-12,
+                atol=1e-12,
+                err_msg="Transformed outcome coefficients differ from precomputed outcome",
+            )
 
     def test_iv_endogenous_in_second_stage(self):
         """Endogenous variable should be added to second_stage covariates."""
