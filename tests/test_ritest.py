@@ -58,6 +58,30 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
 
 
+@pytest.mark.parametrize(
+    "fml", ["Y ~ X1 | f1^f2", "Y ~ X1 | f3 + f1:f2", "Y ~ X1 | Q('my fe')"]
+)
+def test_fast_algorithm_with_interacted_and_expression_fixed_effects(data, fml):
+    """The fast path uses the encoded fixed effects, not raw data columns."""
+    data["my fe"] = data["f1"]
+    fit = pf.feols(fml, data=data)
+
+    ritest_stats = {}
+    for algorithm in ["slow", "fast"]:
+        fit.ritest(
+            resampvar="X1",
+            reps=50,
+            rng=np.random.default_rng(1),
+            choose_algorithm=algorithm,
+            store_ritest_statistics=True,
+        )
+        ritest_stats[algorithm] = fit.ritest_statistics.statistics.copy()
+
+    np.testing.assert_allclose(
+        ritest_stats["fast"], ritest_stats["slow"], atol=1e-8, rtol=1e-8
+    )
+
+
 @pytest.mark.extended
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1"])
 @pytest.mark.parametrize("resampvar", ["X1"])
