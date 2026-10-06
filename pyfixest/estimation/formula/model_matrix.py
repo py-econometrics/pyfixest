@@ -18,6 +18,9 @@ from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    fixed_effect_context,
+)
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
@@ -474,7 +477,11 @@ def create_model_matrix(
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
+        context=fixed_effect_context(
+            terms=formula.fixed_effects_wrapped if formula.is_fixed_effects else (),
+            data=data,
+            context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
+        ),
     )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,

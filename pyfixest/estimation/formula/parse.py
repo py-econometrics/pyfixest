@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import itertools
-import keyword
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Final
@@ -29,6 +28,9 @@ from pyfixest.estimation.formula.formulaic_compat import (
     is_structured_formula,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    wrap_fixed_effect,
+)
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
@@ -46,43 +48,9 @@ _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
 )
 
 
-def _fixed_effect_argument(factor: Factor) -> str:
-    """Render a Python argument for the FE encoder, resolving quoted lookups there.
-
-    Formulaic evaluates arguments when calling our encoder's dependency hook.
-    Nested Q() calls would then run without their materialization context.
-    Pass literal column names instead, which the encoder resolves later.
-    """
-    if factor.eval_method is Factor.EvalMethod.LOOKUP:
-        if not factor.expr.isidentifier() or keyword.iskeyword(factor.expr):
-            return repr(factor.expr)
-        return factor.expr
-    if is_python_expression(factor):
-        try:
-            expression = ast.parse(factor.expr, mode="eval").body
-        except SyntaxError:
-            expression = None
-        if (
-            isinstance(expression, ast.Call)
-            and isinstance(expression.func, ast.Name)
-            and expression.func.id == "Q"
-            and len(expression.args) == 1
-            and not expression.keywords
-            and isinstance(expression.args[0], ast.Constant)
-            and isinstance(expression.args[0].value, str)
-        ):
-            return repr(expression.args[0].value)
-    return factor.expr
-
-
 def _wrap_fixed_effect(term: Term) -> Term:
-    """Encode one FE term's factors together in a single stateful call."""
-    arguments = (_fixed_effect_argument(factor=factor) for factor in term.factors)
-    encoder = Factor(
-        f"__fixed_effect__({', '.join(arguments)})",
-        eval_method=Factor.EvalMethod.PYTHON,
-    )
-    return Term([encoder])
+    """Carry the parsed FE term as metadata on a numeric wrapper call."""
+    return wrap_fixed_effect(term=term)
 
 
 @dataclass(frozen=True, slots=True)

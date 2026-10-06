@@ -22,6 +22,10 @@ from pyfixest.estimation.formula.formulaic_compat import (
     terms_without_intercept,
 )
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FixedEffectEncoding,
+    fixed_effect_context,
+)
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
@@ -263,11 +267,185 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
     fe_spec = fit.model.model_spec["fe"]
-    fe_state = fe_spec.transform_state["__fixed_effect__(f1)"]
-    enc_df = fe_state["__fixed_effect_encoding__"]
+    (factor,) = fe_spec.formula[0].factors
+    assert factor.metadata["term"].factors[0].expr == "f1"
+    assert factor.expr.removeprefix("__fixed_effect__(").removesuffix(")").isdigit()
+    assert fe_spec.required_variables == {"f1"}
+    fe_state = fe_spec.transform_state[factor.expr]
+    encoding = fe_state["__fixed_effect_encoding__"]
+    assert isinstance(encoding, FixedEffectEncoding)
+    assert encoding.levels[0].tolist() == sorted(data.f1.unique())
 
-    assert isinstance(enc_df, pd.DataFrame)
-    assert "__fixed_effect_encoding__" in enc_df.columns
+
+@pytest.mark.parametrize(
+    "name", ["my fe", "firm.id", "a:b", 'fe"quote', "fe\\backslash"]
+)
+@pytest.mark.parametrize("expression", ["`{name}`", "C(`{name}`)"])
+def test_fe_metadata_preserves_lookup_and_dependencies(data, name, expression):
+    """FE lookup names survive materialization, recovery, and prediction."""
+    renamed = data.rename(columns={"f1": name})
+    renamed.loc[0, name] = np.nan
+    # Stateful Python expressions containing quotes/backslashes remain limited
+    # by Formulaic's own state-key escaping; plain LOOKUP factors bypass it.
+    fit = pf.feols(f"Y ~ X1 | {expression.format(name=name)}:f2", data=renamed)
+    spec = fit.model.model_spec["fe"]
+    assert {name, "f2"}.issubset(spec.variables)
+    # Formulaic normalizes dotted names when deriving required_variables;
+    # the original dependency remains in variables, as in the existing hook.
+    if "." not in name:
+        assert spec.required_variables == {name, "f2"}
+    baseline = pf.feols("Y ~ X1 | f1:f2", data=renamed.rename(columns={name: "f1"}))
+    np.testing.assert_allclose(
+        fit.coef(), baseline.coef(), rtol=0, atol=1e-12, err_msg="FE coefficients"
+    )
+    prediction = fit.predict(newdata=renamed.iloc[:10])
+    assert np.isnan(prediction[0])
+    np.testing.assert_allclose(
+        prediction[1:],
+        baseline.predict(newdata=renamed.rename(columns={name: "f1"}).iloc[:10])[1:],
+        rtol=0,
+        atol=1e-10,
+        err_msg="FE predictions",
+    )
+
+
+@pytest.mark.parametrize(
+    "expression", ["Q('my fe')", "C(Q('my fe'))", "I(center(Q('my fe')))"]
+)
+def test_fe_nested_transforms_retain_state_and_dependencies(data, expression):
+    """Original Python factors retain context, dependencies, and learned state."""
+    renamed = data.rename(columns={"f1": "my fe"})
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=renamed)
+    spec = fit.model.model_spec["fe"]
+    assert spec.required_variables == {"my fe"}
+    newdata = renamed.iloc[:10]
+    matrix = spec.get_model_matrix(
+        newdata,
+        context=fixed_effect_context(
+            terms=spec.formula, data=newdata, context=FORMULAIC_TRANSFORMS
+        ),
+    )
+    np.testing.assert_array_equal(
+        matrix.to_numpy(),
+        fit.model_matrix.fixed_effects.iloc[:10].to_numpy(),
+        err_msg="persistent FE transform state",
+    )
+
+
+@pytest.mark.parametrize("arity", [1, 2, 3])
+@pytest.mark.parametrize("kind", ["numeric", "string", "categorical", "mixed"])
+def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
+    """Level indexes preserve fitted codes, including categorical reference order."""
+    frame = data.copy()
+    frame["f3"] = frame.f1 % 2
+    if kind == "string":
+        frame["f1"] = frame.f1.astype(str)
+    elif kind == "categorical":
+        frame["f1"] = pd.Categorical(
+            frame.f1, categories=[4, 2, 0, 3, 1, 99], ordered=True
+        )
+    elif kind == "mixed":
+        frame["f1"] = frame.f1.astype(object).where(frame.f1 < 3, "a")
+    frame.loc[0, "f1"] = np.nan
+    names = ["f1", "f2", "f3"][:arity]
+    expected = frame.groupby(names).ngroup().dropna()
+    fit = pf.feols(f"Y ~ X1 | {':'.join(names)}", data=frame, fixef_rm="none")
+    np.testing.assert_array_equal(
+        fit.model_matrix.fixed_effects.iloc[:, 0],
+        expected,
+        err_msg="FE group codes and reference order",
+    )
+
+
+@pytest.mark.parametrize(
+    "kind", ["categorical", "bool_to_numeric", "numeric_to_bool", "unmatched_string"]
+)
+def test_fe_prediction_matches_values_across_dtypes(data, kind):
+    """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
+    frame = data.copy()
+    frame["f1"] = frame.f1 % 2
+    if kind == "categorical":
+        frame["f1"] = frame.f1.astype("category")
+    elif kind == "bool_to_numeric":
+        frame["f1"] = frame.f1.astype(bool)
+    fit = pf.feols("Y ~ X1 | f1", data=frame)
+    newdata = frame.iloc[:10].copy()
+    if kind == "unmatched_string":
+        newdata["f1"] = newdata.f1.astype(str)
+        with pytest.warns(UserWarning, match="unseen level"):
+            assert np.isnan(fit.predict(newdata=newdata)).all()
+        return
+    newdata["f1"] = newdata.f1.astype(bool if kind == "numeric_to_bool" else int)
+    if kind in {"bool_to_numeric", "numeric_to_bool"}:
+        with pytest.warns(UserWarning, match="unseen level"):
+            assert np.isnan(fit.predict(newdata=newdata)).all()
+        return
+    np.testing.assert_allclose(
+        fit.predict(newdata=newdata),
+        fit.predict()[:10],
+        rtol=0,
+        atol=1e-10,
+        err_msg="FE predictions across compatible dtypes",
+    )
+
+
+@pytest.mark.parametrize("expression", ["I(f1 * 10)", "f1:{f1 // 2}", "I(center(f1))"])
+def test_fe_expression_prediction_and_labels(data, expression):
+    """Expression FEs use parsed labels and evaluated values in every consumer."""
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=data)
+    np.testing.assert_allclose(
+        fit.predict(newdata=data.iloc[:10]),
+        fit.predict()[:10],
+        rtol=0,
+        atol=1e-10,
+        err_msg="expression FE predictions",
+    )
+    expected_label = ":".join(
+        str(factor) for factor in fit.model.fixest_formula.fixed_effects[0].factors
+    )
+    assert set(fit.fixef().variable) == {expected_label}
+    newdata = data.iloc[:10].copy()
+    newdata.loc[0, "f1"] = 999
+    newdata.loc[1, "f1"] = np.nan
+    with pytest.warns(UserWarning, match="1 unseen level"):
+        prediction = fit.predict(newdata=newdata)
+    assert np.isnan(prediction[:2]).all()
+    assert np.isfinite(prediction[2:]).all()
+
+
+def test_fe_unseen_combination_and_factor_row_alignment(data):
+    """Match factors by row index and reject new pairs of individually seen levels."""
+    frame = data.copy()
+    frame["f2"] = frame.f1 % 2
+
+    def reverse_rows(values):
+        return values.iloc[::-1]
+
+    fit = pf.feols(
+        "Y ~ X1 | f1:reverse_rows(f2)",
+        data=frame,
+        context={"reverse_rows": reverse_rows},
+    )
+    baseline = pf.feols("Y ~ X1 | f1:f2", data=frame)
+    np.testing.assert_allclose(
+        fit.coef(),
+        baseline.coef(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="row-aligned FE coefficients",
+    )
+    newdata = frame.iloc[:10].copy()
+    newdata.loc[0, "f2"] = 1 - newdata.loc[0, "f2"]
+    with pytest.warns(UserWarning, match="1 unseen level"):
+        prediction = fit.predict(newdata=newdata)
+    assert np.isnan(prediction[0])
+    np.testing.assert_allclose(
+        prediction[1:],
+        baseline.predict(newdata=frame.iloc[1:10]),
+        rtol=0,
+        atol=1e-10,
+        err_msg="seen FE combinations",
+    )
 
 
 def test_materializer_cache_contains_evaluated_factor_values(

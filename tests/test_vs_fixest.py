@@ -115,6 +115,9 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
         # carries exactly the same levels and gives a usable external oracle.
         ("Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
         ("Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
+        # These expressions preserve f1's groups; compare that partition in R.
+        ("Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
         (
             "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
             # fixest also drops instrument backticks when rebuilding its
