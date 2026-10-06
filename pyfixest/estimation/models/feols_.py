@@ -2146,11 +2146,8 @@ class Feols(ResultAccessorMixin):
                 if self.observation_weights.values is None
                 else self.observation_weights.values
             )
-            fval_df = (
-                self._data[list(self.model.fixed_effects)]
-                if self.model.has_fixef
-                else None
-            )
+            # encoded fixed effects also cover interactions and expressions
+            fval_df = self.model_matrix.fixed_effects
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(
