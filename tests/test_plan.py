@@ -6,7 +6,6 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
-from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -14,6 +13,7 @@ from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
     GlmEstimationOptions,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.models.fegaussian_ import Fegaussian
@@ -127,21 +127,23 @@ def test_quantile_process_needs_a_method_that_fits_one():
 def test_build_all_splits_full_only():
     data = pf.get_data()
     splits = build_all_splits(run_full=True, run_split=False, splitvar=None, data=data)
-    assert splits == [_ALL_SAMPLE]
+    assert splits == [None]
 
 
 def test_build_all_splits_split_only():
     data = pf.get_data()
     splits = build_all_splits(run_full=False, run_split=True, splitvar="f1", data=data)
     expected = sorted(data["f1"].dropna().unique().tolist())
-    assert splits == expected
+    assert splits == [SampleSplit(var="f1", value=value) for value in expected]
 
 
 def test_build_all_splits_full_plus_split_puts_full_first():
     data = pf.get_data()
     splits = build_all_splits(run_full=True, run_split=True, splitvar="f1", data=data)
-    assert splits[0] is _ALL_SAMPLE
-    assert splits[1:] == sorted(data["f1"].dropna().unique().tolist())
+    assert splits[0] == SampleSplit(var="f1", value=None)
+    assert [split.value for split in splits[1:]] == sorted(
+        data["f1"].dropna().unique().tolist()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -157,14 +159,13 @@ def test_single_formula_emits_one_spec():
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (_ALL_SAMPLE, "f1")
+    assert specs[0].cache_key == (None, "f1")
 
 
 def test_csw_emits_one_spec_per_fixef_step():
@@ -175,9 +176,8 @@ def test_csw_emits_one_spec_per_fixef_step():
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     # csw(f1, f2) → two fixef keys: "f1" then "f1+f2"
     assert len(specs) == 2
@@ -197,9 +197,8 @@ def test_cache_keys_are_contiguous_blocks():
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     seen: list = []
     for spec in specs:
@@ -227,10 +226,9 @@ def test_split_expansion_walks_full_then_each_split_value():
         data=data,
         splits=splits,
         is_iv=False,
-        splitvar="f2",
     )
     assert len(specs) == len(splits)
-    assert [s.sample_split_value for s in specs] == splits
+    assert [s.sample_split for s in specs] == splits
 
 
 def test_iv_formula_resolves_each_spec_to_feiv():
@@ -243,9 +241,8 @@ def test_iv_formula_resolves_each_spec_to_feiv():
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=is_iv,
-        splitvar=None,
     )
     assert all(s.model_cls is Feiv for s in specs)
 
@@ -380,9 +377,8 @@ def test_options_object_is_shared_across_multiple_estimation():
         config=cfg,
         formula_dict=fd,
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert len(specs) > 1
     assert all(spec.options is cfg.options for spec in specs)
@@ -405,9 +401,8 @@ def test_quantile_process_is_handed_to_every_spec():
         config=cfg,
         formula_dict=_parse(cfg.fml),
         data=data,
-        splits=[_ALL_SAMPLE],
+        splits=[None],
         is_iv=False,
-        splitvar=None,
     )
     assert [spec.quantile_process for spec in specs] == [process]
     assert specs[0].model_cls is QuantregMulti
@@ -437,9 +432,8 @@ def test_options_must_match_the_model_class():
             config=cfg,
             formula_dict=_parse(cfg.fml),
             data=data,
-            splits=[_ALL_SAMPLE],
+            splits=[None],
             is_iv=False,
-            splitvar=None,
         )
 
 
@@ -475,6 +469,9 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         def get_fit(self):
             self.events.append("fit")
 
+        def _publish_fit_statistics(self):
+            self.events.append("fit statistics")
+
         def _check_vcov_support(self, spec):
             assert spec == iid
             self.events.append("check vcov")
@@ -504,8 +501,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         fixef_key=None,
         data=pf.get_data(),
         options=EstimationOptions(**_SHARED_OPTIONS),
-        sample_split_value=_ALL_SAMPLE,
-        sample_split_var=None,
+        sample_split=None,
     )
 
     fit_one(
@@ -520,11 +516,11 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
         "validate",
         "check vcov",
         "fit",
+        "fit statistics",
         "vcov",
         "inference",
         "finalize",
-        "clear",
-    ]
+    ], "fit_one returns complete models; the estimation functions apply retention"
 
 
 def test_quantreg_multi_prepares_children_in_lifecycle_hook():

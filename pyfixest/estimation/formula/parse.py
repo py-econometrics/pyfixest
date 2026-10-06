@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import ast
 import itertools
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -6,7 +9,7 @@ from typing import Final
 import formulaic
 import formulaic.formula
 from formulaic.parser import DefaultFormulaParser
-from formulaic.parser.types import FormulaParser
+from formulaic.parser.types import Factor, FormulaParser, Term
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -20,6 +23,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     filter_multistage_endogenous_terms,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
+    is_python_expression,
     is_structured_formula,
     terms_without_intercept,
 )
@@ -35,6 +39,204 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
+_PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
+    include_intercept=False
+)
+
+
+@dataclass(frozen=True, slots=True)
+class FixedEffectSpecification:
+    """Specification for materialization of fixed effect term.
+
+    Attributes
+    ----------
+    levels : Term
+        Formulaic term that identifies the fixed-effect levels.
+    intercept : bool
+        Whether the effect includes a constant loading for every level.
+    slopes : tuple[Term, ...]
+        Formulaic terms representing varying slopes by fixed-effect level.
+    """
+
+    levels: Term
+    intercept: bool
+    slopes: tuple[Term, ...] = ()
+
+    @classmethod
+    def from_term(cls, term: Term) -> FixedEffectSpecification:
+        """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
+        # A fixed-effect term can have multiple factors if it represents interactions
+        # For example f1:f2[z] has two factors: `(f1, f2[z])`
+
+        varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
+        for position, factor in enumerate(term.factors):
+            factor_expression = _factor_ast(factor)
+            if factor_expression is None or not isinstance(
+                factor_expression, ast.Subscript
+            ):
+                continue
+            varying_slope_expressions.append((factor_expression, position))
+
+        if not varying_slope_expressions:
+            return cls(levels=term, intercept=True)
+        if len(varying_slope_expressions) != 1:
+            # Reject expressions of the form `f1[z1]:f2[z2]`
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: cannot specify more than one "
+                "varying-slope expression in a single term. For slopes on interacted "
+                "levels, use one bracket pair, for example `f1:f2[z1, z2]`."
+            )
+
+        expression, slope_factor_position = varying_slope_expressions[0]
+        last_factor_position = len(term.factors) - 1
+        # Accept `f1:f2[z]`, but reject `f1[z]:f2`.
+        if slope_factor_position != last_factor_position:
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: varying-slope syntax is only "
+                "supported on the final factor of a fixed-effect interaction, "
+                "for example `f1:f2[z]`."
+            )
+        # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
+        # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
+
+        fixed_effect_level = expression.value  # `f2`
+        fixed_effect_slopes = expression.slice  # `z`
+        if isinstance(fixed_effect_level, ast.Subscript):
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: nested varying-slope "
+                "subscripts are not supported. Separate slopes with commas, "
+                "for example `f1[z1, z2]` (with fixed-effect intercepts) or "
+                "`f1[[z1, z2]]` (without fixed-effect intercepts)."
+            )
+        # Formula operators can silently change a Python level expression:
+        # reparsing `f1 - f2` as a formula would leave only `f1`.
+        if isinstance(fixed_effect_level, (ast.BinOp, ast.UnaryOp)):
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: unsupported fixed-effect "
+                f"level expression `{ast.unparse(fixed_effect_level)}`. Arithmetic "
+                "is not supported directly in varying-slope fixed-effect levels. "
+                "Create a grouping column first, for example `group[z]`."
+            )
+
+        if isinstance(fixed_effect_slopes, ast.List):
+            # Varying slopes without fixed effect: f1[[z1, z2]]
+            intercept = False
+            slope_nodes = tuple(fixed_effect_slopes.elts)
+        else:
+            # Varying slopes fixed effect: f1[z1] or f1[z1, z2]
+            intercept = True
+            slope_nodes = (
+                tuple(fixed_effect_slopes.elts)
+                if isinstance(fixed_effect_slopes, ast.Tuple)  # f1[z1, z2]
+                else (fixed_effect_slopes,)  # f1[z1]
+            )
+
+        if not slope_nodes:
+            # Guard against empty slope lists such as `f1[[]]`.
+            raise FormulaSyntaxError(
+                f"Invalid fixed-effect term `{term}`: a varying-slope term must "
+                "specify at least one slope, for example `f1[z]` or `f1[[z]]`. "
+                "For an ordinary fixed effect without slopes, use `f1`."
+            )
+        for node in slope_nodes:
+            if not _is_slope_expression(node):
+                raise FormulaSyntaxError(
+                    f"Invalid fixed-effect term `{term}`: unsupported slope "
+                    f"expression `{ast.unparse(node)}`. Slopes must be column "
+                    "names, arithmetic expressions, or transform calls, for "
+                    "example `f1[z]`, `f1[z**2]`, or `f1[[np.log(z)]]`. "
+                    "Separate multiple slopes with commas."
+                )
+        return cls(
+            levels=Term(term.factors[:-1] + _term_from_ast(fixed_effect_level).factors),
+            intercept=intercept,
+            slopes=tuple(
+                _term_from_ast(node, preserve_arithmetic=True) for node in slope_nodes
+            ),
+        )
+
+
+def _is_slope_expression(node: ast.AST) -> bool:
+    """Accept names, dotted names, calls, and arithmetic as slope expressions.
+
+    Scalar literals are allowed inside expressions (such as `z / 2` or
+    transform keyword arguments), but an expression must contain a name.
+    This is a syntactic check, not proof of dependence on a data column:
+    names in expressions such as `np.pi` and `transform()` also qualify. Only
+    `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-` are supported.
+    Containers, indexing, slices, comparisons, comprehensions, and argument
+    unpacking are excluded, including when nested inside a transform.
+
+    Supported examples include `z`, `-z`, `z**2`, `(z1 + z2) / 2`,
+    `np.log(z)`, and `transform(z, mode="scale", center=True)`. Unsupported
+    examples include `0`, `"z"`, `z[0]`, `z > 0`, and `[x for x in z]`.
+    """
+    supported_nodes = (
+        ast.Name,  # z
+        ast.Attribute,  # np.log
+        ast.Call,  # np.log(z)
+        ast.BinOp,  # z + 1, z**2
+        ast.UnaryOp,  # -z, +z
+        ast.Constant,  # 2 in z / 2; True in center=True
+        ast.keyword,  # center=True
+        ast.Load,  # variable-read context added by the AST
+        ast.Add,  # +
+        ast.Sub,  # -
+        ast.Mult,  # *
+        ast.Div,  # /
+        ast.FloorDiv,  # //
+        ast.Mod,  # %
+        ast.Pow,  # **
+        ast.UAdd,  # unary +
+        ast.USub,  # unary -
+    )
+    nodes = tuple(ast.walk(node))
+    return (
+        any(isinstance(child, ast.Name) for child in nodes)
+        and all(isinstance(child, supported_nodes) for child in nodes)
+        and all(
+            child.arg is not None for child in nodes if isinstance(child, ast.keyword)
+        )
+    )
+
+
+def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term:
+    """Parse one extracted Python expression as one Formulaic term."""
+    expression = ast.unparse(node)
+    # Slopes are evaluated expressions: formula operators would silently turn
+    # `z**2` into `z`, for example. Keep bare names as ordinary column lookups.
+    formula_expression = (
+        "{" + expression + "}"
+        if preserve_arithmetic and not isinstance(node, ast.Name)
+        else expression
+    )
+    formula = formulaic.Formula(formula_expression, _parser=_PARSER_NO_INTERCEPT)
+    if not isinstance(formula, formulaic.formula.SimpleFormula) or len(formula) != 1:
+        raise FormulaSyntaxError(
+            f"Invalid fixed-effect expression `{expression}`: expected exactly "
+            f"one formula term, but parsed `{formula}`. Specify separate fixed "
+            "effects with `+`, for example `f1[z] + f2[z]`. To specify multiple "
+            "slopes for one fixed effect, separate them with commas, "
+            "for example `f1[z1, z2]`."
+        )
+    return formula[0]
+
+
+def _factor_ast(factor: Factor) -> ast.expr | None:
+    """Return the AST for a Python-evaluated Formulaic factor."""
+    # Factor must encoded as Python expression by formulaic
+    # (because `f1[z]` is Python syntax)
+
+    if not is_python_expression(factor):
+        return None
+    try:
+        return ast.parse(factor.expr, mode="eval").body
+    except SyntaxError as exception:
+        raise FormulaSyntaxError(
+            f"Could not parse fixed-effect expression `{factor.expr}`: "
+            f"{exception.msg}. Expected a valid Python expression, "
+            "for example `f1[z]` or `f1[[z1, z2]]` for varying slopes."
+        ) from exception
 
 
 @dataclass(kw_only=True, frozen=True, slots=True, repr=False)
@@ -223,11 +425,20 @@ class Formula:
         )
 
     @property
+    def fixed_effect_specifications(self) -> tuple[FixedEffectSpecification, ...]:
+        """Fixed effects represented as symbolic `within::Effect` terms."""
+        if not self.is_fixed_effects:
+            return ()
+        return tuple(
+            FixedEffectSpecification.from_term(term) for term in self.fixed_effects
+        )
+
+    @property
     def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
         return formulaic.formula.Formula(
             [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
-            _parser=DefaultFormulaParser(include_intercept=False),
+            _parser=_PARSER_NO_INTERCEPT,
         )
 
     @property
@@ -246,7 +457,7 @@ class Formula:
         return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
 
     @classmethod
-    def parse(cls, formula: str) -> list["Formula"]:
+    def parse(cls, formula: str) -> list[Formula]:
         """
         Parse fixest-style formula. In case of multiple estimation syntax,
         returns a list of multiple regression formulas.
@@ -258,7 +469,7 @@ class Formula:
         ]
 
     @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list["Formula"]]:
+    def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:
         """Group parsed formulas into dictionary keyed by fixed effects."""
         formulas = cls.parse(formula)
         result: dict[str | None, list[Formula]] = {}
@@ -273,7 +484,11 @@ class Formula:
 
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
-    """Expand the first multiple estimation syntax in formula."""
+    """Expand the first multiple estimation syntax in formula.
+
+    The call may have a space before its parenthesis and arguments on several
+    lines, as in `csw (X1,` followed by `X2)` on the next line.
+    """
     match = _MULTIPLE_ESTIMATION_PATTERN.search(formula)
     if not match:
         return None
@@ -287,11 +502,6 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         string=formula[parenthesis_open:parenthesis_closed],
         separator=",",
     )
-    if len(arguments) < 2 and kind is not _MultipleEstimationType.mvsw:
-        raise FormulaSyntaxError(
-            f"'{kind.name}(...)' requires at least 2 arguments, got {len(arguments)}. "
-            f"Check for extra parentheses, e.g. sw((a, b)) should be sw(a, b)."
-        )
     if kind is _MultipleEstimationType.mvsw:
         # Multiverse stepwise: all combinations of arguments
         arguments = [
@@ -313,7 +523,8 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         arguments = ["1", *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
-        formula.replace(multiple_estimation_call, argument) for argument in arguments
+        formula.replace(multiple_estimation_call, f"({argument})")
+        for argument in arguments
     ]
 
 

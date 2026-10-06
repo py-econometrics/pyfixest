@@ -31,6 +31,8 @@ from pyfixest.estimation.internals.model_state import (
     WithinIvData,
     WithinLinearData,
 )
+from pyfixest.estimation.internals.retention import omitted_attributes
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 
 
 @pytest.fixture
@@ -492,11 +494,20 @@ def test_published_components_preserve_inputs(
         "_tZy",
         "_tZZinv",
         "_tZXinv",
+        "_has_converged",
+        "_it",
+        "_x_final",
+        "_s_final",
+        "_z_final",
+        "_w_final",
+        "_y_final",
     )
     assert not any(hasattr(fit, name) for name in removed)
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")
+        assert isinstance(fit.solution, QuantregSolution)
+        np.testing.assert_allclose(fit.solution.beta, fit.coef().to_numpy())
     else:
         assert isinstance(fit.sandwich, SandwichComponents)
     pd.testing.assert_frame_equal(lifecycle_data, original)
@@ -521,7 +532,13 @@ def test_multi_quantile_children_follow_ols_retention(
     )
     ols = pf.feols("y ~ x", lifecycle_data, store_data=store_data, lean=lean)
     assert hasattr(ols, "sandwich") == (not lean)
+    # cfm2 solves only the central quantile and updates the others by a single
+    # Newton step, so only that child carries an interior point solution.
+    solved = {0.5} if multi_method == "cfm2" else {0.25, 0.5, 0.75}
     for child in fit.to_list():
+        assert hasattr(child, "solution") is (
+            child.options.quantile in solved and not lean
+        )
         assert not hasattr(child, "sandwich")
         for name in ("_data", "model_matrix", "within_data", "observation_weights"):
             assert hasattr(child, name) == hasattr(ols, name), name
@@ -606,15 +623,34 @@ def test_store_data_false_retains_robust_effective_f(
     )
 
 
-@pytest.mark.parametrize(
-    "estimator,kwargs",
-    [
-        (pf.feols, {}),
-        (pf.fepois, {}),
-        (pf.feglm, {"family": "gaussian"}),
-        (pf.quantreg, {}),
-    ],
-)
+_ESTIMATION_FUNCTIONS = [
+    (pf.feols, {}),
+    (pf.fepois, {}),
+    (pf.feglm, {"family": "gaussian"}),
+    (pf.quantreg, {}),
+]
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
+def test_estimation_functions_apply_lean(
+    lifecycle_data: pd.DataFrame, estimator, kwargs
+) -> None:
+    """Each estimation function applies `lean` to every model it returns."""
+    data = lifecycle_data.assign(y_count=np.tile([1, 2, 3, 4], 6))
+    outcome = "y_count" if estimator is pf.fepois else "y"
+    single = estimator(f"{outcome} ~ x", data, lean=True, **kwargs)
+    multiple = estimator(f"{outcome} ~ sw(x, x2)", data, lean=True, **kwargs)
+
+    for fit in [single, *multiple.to_list()]:
+        retained = [
+            name
+            for name in omitted_attributes(fit.options.retention)
+            if hasattr(fit, name)
+        ]
+        assert not retained, f"lean=True retained {retained}"
+
+
+@pytest.mark.parametrize("estimator,kwargs", _ESTIMATION_FUNCTIONS)
 def test_lean_prediction_on_new_data_without_fixed_effects(
     lifecycle_data: pd.DataFrame, estimator, kwargs
 ) -> None:
@@ -741,7 +777,7 @@ def test_split_samples_count_only_formula_drops(lifecycle_data: pd.DataFrame):
     data.loc[7, "x"] = np.nan
     fit = pf.feols("y ~ x", data, split="fe")
     for model in fit.to_list():
-        level = model.model.sample_split_value
+        level = model.model.sample_split.value
         population = data.index[data["fe"] == level]
         sample_info = model.sample_info
         assert sample_info.n_rows == len(population) - int(level == "b")

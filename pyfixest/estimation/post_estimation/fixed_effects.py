@@ -20,6 +20,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FIXED_EFFECT_ENCODING,
 )
+from pyfixest.utils.dev_utils import _find_stack_level
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
@@ -266,7 +267,7 @@ def warn_on_unseen_fixed_effect_levels(
                 f"`{':'.join(source_columns)}`: {missing.iloc[:20]}\n"
                 "Predictions for affected observations will be NaN",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=_find_stack_level(),
             )
 
 

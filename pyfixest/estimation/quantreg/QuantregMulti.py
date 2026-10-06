@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 from dataclasses import replace
 
 import numpy as np
@@ -13,6 +12,7 @@ from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
     QuantregEstimationOptions,
+    SampleSplit,
     VcovSpec,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
@@ -32,8 +32,7 @@ class QuantregMulti:
         quantile: list[float],
         multi_method: QuantregMultiOptions,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        sample_split_var: str | None = None,
-        sample_split_value: str | int | None = None,
+        sample_split: SampleSplit | None = None,
     ):
         # `options.quantile` is the first requested quantile; each child fit
         # carries its own quantile and shares every other option.
@@ -45,8 +44,7 @@ class QuantregMulti:
                 data=data,
                 options=replace(options, quantile=q),
                 lookup_demeaned_data=lookup_demeaned_data,
-                sample_split_var=sample_split_var,
-                sample_split_value=sample_split_value,
+                sample_split=sample_split,
             )
             for q in self.quantiles
         }
@@ -92,12 +90,12 @@ class QuantregMulti:
 
         if self.options.method == "pfn":
             fit_kwargs["rng"] = rng
-        beta_hat = self.all_quantregs[q[q_median_idx]]._fit(**fit_kwargs)[0]
+        median_quantreg = self.all_quantregs[q[q_median_idx]]
+        median_quantreg.solution = median_quantreg._fit(**fit_kwargs)
+        beta_hat = median_quantreg.solution.beta
 
-        self.all_quantregs[q[q_median_idx]]._beta_hat = beta_hat
-        self.all_quantregs[q[q_median_idx]]._u_hat = (
-            Y.flatten() - (X @ beta_hat).flatten()
-        )
+        median_quantreg._beta_hat = beta_hat
+        median_quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -117,11 +115,13 @@ class QuantregMulti:
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
-                beta_hat = self.all_quantregs[q[i]].fit_qreg_pfn(
+                quantreg = self.all_quantregs[q[i]]
+                quantreg.solution = quantreg.fit_qreg_pfn(
                     X=X, Y=Y, q=q[i], beta_init=beta_hat_prev, eta=0.5
-                )[0]
-                self.all_quantregs[q[i]]._beta_hat = beta_hat
-                self.all_quantregs[q[i]]._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+                )
+                beta_hat = quantreg.solution.beta
+                quantreg._beta_hat = beta_hat
+                quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -188,6 +188,11 @@ class QuantregMulti:
 
         return self.all_quantregs
 
+    def _publish_fit_statistics(self) -> None:
+        "Publish the goodness-of-fit measures of every quantile."
+        for quantreg in self.all_quantregs.values():
+            quantreg._publish_fit_statistics()
+
     def _check_vcov_support(self, spec: VcovSpec) -> None:
         "Reject a covariance estimator the quantile regressions cannot compute."
         for quantreg in self.all_quantregs.values():
@@ -216,10 +221,3 @@ class QuantregMulti:
     def _iter_fitted_models(self) -> tuple[Quantreg, ...]:
         """Yield each fitted quantile to the result container."""
         return tuple(self.all_quantregs.values())
-
-    def _clear_attributes(self) -> None:
-        "Clear all large non-necessary attributes to free memory."
-        for quantreg in self.all_quantregs.values():
-            quantreg._clear_attributes()
-
-        gc.collect()

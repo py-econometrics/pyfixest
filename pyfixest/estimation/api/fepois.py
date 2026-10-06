@@ -15,7 +15,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import Ssc
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def fepois(
@@ -131,15 +131,6 @@ def fepois(
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
-
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
 
@@ -253,7 +244,10 @@ def fepois(
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
     For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
-    # Thin wrapper: fepois is exactly feglm(family="poisson").
+    # Thin wrapper: fepois is exactly feglm(family="poisson"). Capture the
+    # context here, as an integer frame offset passed on to feglm would resolve
+    # relative to this frame rather than the user's.
+    context = {} if context is None else capture_context(context)
     return feglm(
         fml=fml,
         data=data,

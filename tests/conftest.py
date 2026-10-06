@@ -32,6 +32,7 @@ _rpy2_test_files = [
     "test_i.py",
     "test_iv.py",
     "test_multcomp.py",
+    "test_multiway_clustering_vs_fixest.py",
     "test_poisson.py",
     "test_predict_resid_fixef.py",
     "test_quantreg.py",

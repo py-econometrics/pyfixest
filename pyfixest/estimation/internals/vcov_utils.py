@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
@@ -64,12 +65,13 @@ class ClusterPrep:
     cluster_df: pd.DataFrame
     cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
     G: list[int]  # cluster counts per column, post ssc["G_df"] adjustment
+    vcov_signs: list[int]  # inclusion-exclusion sign per column
     k_fe_nested: int
     n_fe_fully_nested: int
 
     @property
     def n_dimensions(self) -> int:
-        "Number of cluster dimensions: one, or three for two-way clustering."
+        "Number of nonempty cluster combinations: 2**n_clusters - 1."
         return self.cluster_df.shape[1]
 
     def dimensions(self) -> Iterator[tuple[np.ndarray, np.ndarray]]:
@@ -86,16 +88,13 @@ def prepare_cluster_state(
     ssc: Ssc,
     fixef: tuple[str, ...],
     fe: pd.DataFrame | np.ndarray | None,
-    k_fe: np.ndarray | pd.Series | None,
+    n_levels_by_fe: tuple[int, ...],
 ) -> ClusterPrep:
-    "Build cluster_df, int-factorized cluster array, G, and nested-FE counts."
+    """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
     _check_cluster_df(cluster_df=cluster_df, data=data)
 
-    if cluster_df.shape[1] > 1:
-        cluster_df = _prepare_twoway_clustering(
-            clustervar=clustervar, cluster_df=cluster_df
-        )
+    cluster_df, vcov_signs = _prepare_multiway_clustering(cluster_df=cluster_df)
 
     G = _count_G_for_ssc_correction(cluster_df=cluster_df, G_df=ssc.G_df)
 
@@ -108,8 +107,6 @@ def prepare_cluster_state(
     if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError("`fe` must not be None when `fixef` is specified.")
-        if k_fe is None:
-            raise ValueError("`k_fe` must not be None when `fixef` is specified.")
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
@@ -118,12 +115,14 @@ def prepare_cluster_state(
             if isinstance(fe, pd.DataFrame)
             else fe.astype(np.uintp),
         )
-        k_fe_nested = np.sum(k_fe[k_fe_nested_flag]) if n_fe_fully_nested > 0 else 0
+        if n_fe_fully_nested > 0:
+            k_fe_nested = int(np.sum(np.asarray(n_levels_by_fe)[k_fe_nested_flag]))
 
     return ClusterPrep(
         cluster_df=cluster_df,
         cluster_arr_int=cluster_arr_int,
         G=G,
+        vcov_signs=vcov_signs,
         k_fe_nested=k_fe_nested,
         n_fe_fully_nested=n_fe_fully_nested,
     )
@@ -136,9 +135,8 @@ class ClusterSmallSampleCorrection:
     Attributes
     ----------
     adj : np.ndarray
-        Small-sample factor per cluster dimension. The two-way interaction
-        dimension carries the negative sign of the Cameron-Gelbach-Miller
-        combination.
+        Small-sample factor per cluster combination, positive for odd-sized
+        combinations and negative for even-sized combinations.
     df_k : int
         Parameters counted by the ``k_adj`` adjustment.
     df_t : int
@@ -158,7 +156,6 @@ def get_ssc_cluster(
     dof_counts: Callable[..., DegreesOfFreedomCounts],
 ) -> ClusterSmallSampleCorrection:
     "Small-sample factors per cluster dimension, ``df_k``, and ``df_t``."
-    vcov_sign_list = (1, 1, -1)
     ssc_arr = np.zeros(prep.n_dimensions)
     df_t_full = np.zeros(prep.n_dimensions)
     df_k = 0
@@ -172,7 +169,7 @@ def get_ssc_cluster(
             ),
             vcov_type="CRV",
         )
-        ssc_arr[x] = correction.adj * vcov_sign_list[x]
+        ssc_arr[x] = correction.adj * prep.vcov_signs[x]
         df_k = correction.df_k
         df_t_full[x] = correction.df_t
     return ClusterSmallSampleCorrection(
@@ -216,7 +213,7 @@ def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int
         G.append(cluster_df[col].nunique())
 
     if G_df == "min":
-        G = [min(G)] * 3
+        G = [min(G)] * len(G)
 
     return G
 
@@ -307,13 +304,21 @@ def _dk_meat_panel(
     )
 
 
-def _prepare_twoway_clustering(clustervar: list, cluster_df: pd.DataFrame):
-    cluster_one = clustervar[0]
-    cluster_two = clustervar[1]
-    cluster_df_one_str = cluster_df[cluster_one].astype(str)
-    cluster_df_two_str = cluster_df[cluster_two].astype(str)
-    cluster_df.loc[:, "cluster_intersection"] = cluster_df_one_str.str.cat(
-        cluster_df_two_str, sep="-"
-    )
+def _prepare_multiway_clustering(
+    *, cluster_df: pd.DataFrame
+) -> tuple[pd.DataFrame, list[int]]:
+    """Build intersections for Cameron, Gelbach and Miller (2011).
 
-    return cluster_df
+    https://doi.org/10.1198/jbes.2010.07136
+    Odd-sized subsets enter positively and even-sized subsets negatively.
+    Factorize tuples so labels containing separators cannot collide.
+    """
+    clustervar = list(cluster_df.columns)
+    vcov_signs = [1] * len(clustervar)
+    for size in range(2, len(clustervar) + 1):
+        for columns in combinations(clustervar, size):
+            cluster_df["+".join(columns)] = pd.factorize(
+                pd.MultiIndex.from_frame(cluster_df[list(columns)])
+            )[0]
+            vcov_signs.append((-1) ** (size + 1))
+    return cluster_df, vcov_signs

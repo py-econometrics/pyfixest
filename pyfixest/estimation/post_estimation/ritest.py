@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
 from typing import Any
 
@@ -8,6 +9,8 @@ import pandas as pd
 from numpy.typing import NDArray
 from scipy.stats import norm
 from tqdm import tqdm
+
+from pyfixest.utils.dev_utils import _find_stack_level
 
 # Numba is an optional dependency. The fast randomization-inference path uses it;
 # the slow path does not. We import lazily so the module loads cleanly even when
@@ -62,8 +65,8 @@ def _get_ritest_stats_slow(
     fit_fn : Callable[..., Any]
         Refits the model on each resampled data set with the fitted model's
         estimation options and the covariance estimator of the test statistic,
-        such as the model's `_refit` method with `vcov` bound. It is called
-        with the keyword arguments `fml` and `data` only.
+        such as `refit` with the model and `vcov` bound. It is called with
+        the keyword arguments `fml` and `data` only.
     rng : np.random.Generator
         The random number generator.
     clustervar_arr : np.ndarray, optional
@@ -401,7 +404,11 @@ def _plot_ritest_pvalue(
                 ylab,
             )
         except ImportError:
-            print("lets-plot is not installed. Falling back to matplotlib.")
+            warnings.warn(
+                "lets-plot is not installed. Falling back to matplotlib.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
             plot_backend = "matplotlib"
         else:
             LetsPlot.setup_html()

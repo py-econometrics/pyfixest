@@ -7,6 +7,7 @@ from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
+from pyfixest.utils.dev_utils import _find_stack_level
 
 ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
@@ -19,7 +20,11 @@ def _check_label_keys_in_covars(label_keys: list[str], covariate_names: list[str
     )
     for label_key in label_keys:
         if label_key not in covariate_names:
-            warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
+            warnings.warn(
+                f"The label key '{label_key}' is not in the covariate names.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
 
 
 def _relabel_expvar(
@@ -284,7 +289,9 @@ def _post_processing_input_checks(
             for i, model in enumerate(duplicates):
                 model._model_name_plot = f"Model {i}: {model.model.model_name}"
                 warnings.warn(
-                    f"The model name '{model.model.model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'."
+                    f"The model name '{model.model.model_name}' is duplicated for models in the `models` you provided. To avoid overlapping model names / plots, the _model_name_plot attribute has been changed to '{model._model_name_plot}'.",
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
 
         if rename_models is not None:
@@ -294,7 +301,9 @@ def _post_processing_input_checks(
                     f"""
                     The following model names specified in rename_models are not found in the models:
                     {model_name_diff}
-                    """
+                    """,
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
                 )
 
     return models_list

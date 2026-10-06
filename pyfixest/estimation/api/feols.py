@@ -13,7 +13,6 @@ from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -62,10 +61,11 @@ def feols(
     Parameters
     ----------
     fml : str
-        A three-sided formula string using fixest formula syntax.
-        Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
-        fixed effects, and instruments. Special syntax includes stepwise regressions,
-        cumulative stepwise regression, multiple dependent variables,
+        A formula string using fixest formula syntax.
+        Syntax: "Y ~ X1 + X2 + [X_endog ~ Z1] | FE1 + FE2". "|" separates the model
+        from the fixed effects; instruments go into a "[endogenous ~ instruments]"
+        block on the right-hand side. Special syntax includes stepwise regressions,
+        cumulative stepwise regression, multiple dependent variables via sw(),
         interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
 
     data : DataFrameType
@@ -150,15 +150,6 @@ def feols(
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
-
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
 
     use_compression: bool
         .. deprecated::
@@ -318,14 +309,31 @@ def feols(
     with `Y2` as the dependent variable.
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | f1 + f2", data)
     pf.etable(fit)
     ```
 
     It is possible to combine different multiple estimation operators:
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
+    pf.etable(fit)
+    ```
+
+    As in `fixest`, the arguments of a multiple estimation operator may span
+    several lines, for example in a triple-quoted string with one argument per
+    line, and a space may separate the operator from its parenthesis, as in
+    `csw (X1, X2)`:
+
+    ```{python}
+    fml = '''
+    Y ~ csw (
+        X1,
+        X2
+    )
+    | f1
+    '''
+    fit = pf.feols(fml, data)
     pf.etable(fit)
     ```
 
@@ -344,21 +352,22 @@ def feols(
     pf.etable(fit)
     ```
 
-    Besides OLS, `feols()` also supports IV estimation via three-part formulas.
+    Besides OLS, `feols()` also supports IV estimation via an instrument block
+    `[endogenous ~ instruments]` on the right-hand side of the formula.
     IV models return an instance of the [Feiv](/reference/estimation.models.feiv_.Feiv.qmd)
     class (which inherits from [Feols](/reference/estimation.models.feols_.Feols.qmd)).
 
     ```{python}
-    fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data)
+    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
     type(fit_iv)
     ```
 
     Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
     are the fixed effects, as before. To estimate IV models without fixed effects,
-    simply omit the fixed effects part of the formula:
+    simply omit the fixed effects:
 
     ```{python}
-    fit_iv2 = pf.feols("Y ~ X2 | X1 ~ Z1", data)
+    fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
     fit_iv2.tidy()
     ```
 
@@ -510,7 +519,6 @@ def feols(
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
 
     if not isinstance(use_compression, bool):
         raise TypeError("The function argument `use_compression` must be of type bool.")
@@ -567,4 +575,4 @@ def feols(
     )
 
     parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    return run_estimation(config, parsed, apply_retention=True)
