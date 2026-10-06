@@ -28,6 +28,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Iterative-rectifier separation checks use the retained response, regressors and fixed-effect codes. Stateful terms keep their fitted values after sample filtering, and predictors supplied through formula context cannot be shadowed by auxiliary columns.
+
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
