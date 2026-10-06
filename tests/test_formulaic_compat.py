@@ -263,7 +263,7 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
 
 
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
-    """FE transform_state stores __fixed_effect_encoding__ DataFrame."""
+    """FE transform_state stores the fitted level indexes and combinations."""
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
     fe_spec = fit.model.model_spec["fe"]
