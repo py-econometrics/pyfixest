@@ -1437,6 +1437,15 @@ class Feols(ResultAccessorMixin):
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
 
+            # drop the covariates the fit removed as collinear
+            collinear = set(self.model_matrix.independent.columns) - set(
+                self._coefnames
+            )
+            if collinear:
+                keep = [i for i, name in enumerate(xnames) if name not in collinear]
+                X = X[:, keep]
+                xnames = [xnames[i] for i in keep]
+
         else:
             Y = self.within_data.response.flatten()
             X = self.within_data.design
