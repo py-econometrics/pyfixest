@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.stats import norm, t
 
+from pyfixest.estimation.internals.literals import EstimationMethod
+
 
 @dataclass(frozen=True, slots=True)
 class InferenceDist:
@@ -38,9 +40,11 @@ class GlmFamily:
 
     Bundles the link function, inverse link, derivative of the link, variance function,
     deviance, initial mu, and dependent-variable validation into a single object.
+    `method` names the estimation function in `fit.model.method`.
     """
 
     name: str
+    method: EstimationMethod
     link: Callable[[np.ndarray], np.ndarray]
     inv_link: Callable[[np.ndarray], np.ndarray]
     gprime: Callable[[np.ndarray], np.ndarray]
@@ -138,6 +142,7 @@ def _mu_start_pois(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
 
 LOGIT = GlmFamily(
     name="logit",
+    method="feglm-logit",
     link=lambda mu: np.log(mu / (1 - mu)),
     inv_link=lambda eta: np.exp(eta) / (1 + np.exp(eta)),
     gprime=lambda mu: 1 / (mu * (1 - mu)),
@@ -149,6 +154,7 @@ LOGIT = GlmFamily(
 
 PROBIT = GlmFamily(
     name="probit",
+    method="feglm-probit",
     link=norm.ppf,
     inv_link=norm.cdf,
     gprime=lambda mu: 1 / norm.pdf(norm.ppf(mu)),
@@ -160,6 +166,7 @@ PROBIT = GlmFamily(
 
 GAUSSIAN = GlmFamily(
     name="gaussian",
+    method="feglm-gaussian",
     link=lambda mu: mu,
     inv_link=lambda eta: eta,
     gprime=lambda mu: np.ones_like(mu),
@@ -172,6 +179,7 @@ GAUSSIAN = GlmFamily(
 
 POISSON = GlmFamily(
     name="poisson",
+    method="fepois",
     link=np.log,
     inv_link=np.exp,
     gprime=lambda mu: 1 / mu,
