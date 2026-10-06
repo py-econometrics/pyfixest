@@ -117,7 +117,10 @@ def quantreg(
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Currently supported are
         "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
+        The "hetero" option follows the Gaussian-kernel sandwich implemented by
+        R's `quantreg::summary.rq(se="ker")`; "iid" retains its existing
+        kernel convention. Cluster robust errors are based on a kernel estimator
+        as in Powell (1991).
         The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
         Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
         Cluster robust inference
