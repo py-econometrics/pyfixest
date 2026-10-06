@@ -20,7 +20,6 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
-    get_fixed_effect_encoding,
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
@@ -113,16 +112,14 @@ prediction_type = Literal["response", "link"]
 
 
 def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
-    """Name each absorbed term in materialized fixed-effect column order."""
-    if model_matrix.fixed_effects is None:
+    """Name each absorbed term in materialized fixed-effect column order.
+
+    Empty when the materialized model matrix carries no fixed-effect block.
+    """
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    spec = model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
-    return tuple(
-        get_fixed_effect_encoding(
-            transform_state=spec.transform_state, column=column
-        ).variable
-        for column in spec.column_names
-    )
+    return tuple(fixed_effects.columns)
 
 
 class Feols(ResultAccessorMixin):

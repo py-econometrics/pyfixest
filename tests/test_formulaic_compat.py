@@ -7,9 +7,16 @@ import formulaic.formula
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import FactorEvaluationError
+from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import EndogVarsAsCovarsError, InstrumentsAsCovarsError
+from pyfixest.demeaners import MapDemeaner
+from pyfixest.errors import (
+    EndogVarsAsCovarsError,
+    FixedEffectEvaluationError,
+    InstrumentsAsCovarsError,
+)
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -25,6 +32,7 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectEncoding,
     fixed_effect_context,
+    wrap_fixed_effect,
 )
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
@@ -548,7 +556,7 @@ def test_fixed_effect_names_follow_encoded_columns(
         fixef_rm="none",
     )
     assert fit.model.fixed_effects == expected_names
-    assert len(expected_names) == fit.model_matrix.fixed_effects.shape[1]
+    assert tuple(fit.model_matrix.fixed_effects.columns) == expected_names
     # Replay exactly the encoded partition under ordinary lookup names.
     reference_data = data.copy()
     encoded_names = []
@@ -568,4 +576,57 @@ def test_fixed_effect_names_follow_encoded_columns(
     )
     np.testing.assert_allclose(
         fit.se(), reference.se(), rtol=1e-10, err_msg="clustered FE standard errors"
+    )
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1 | f1:nope", "Y ~ X1 | I(f1 + nope)"])
+def test_fe_error_names_term_and_missing_factor(data, fml):
+    with pytest.raises(
+        FixedEffectEvaluationError, match=r"fixed effect.*nope.*factor"
+    ) as exc:
+        pf.feols(fml, data=data)
+    assert "__fixed_effect__" not in str(exc.value)
+    assert isinstance(exc.value.__cause__, (KeyError, NameError))
+
+
+def test_fe_encoding_error_names_term(data):
+    data = data.assign(f1=[[value] for value in data.f1])
+    with pytest.raises(
+        FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
+    ) as exc:
+        pf.feols("Y ~ X1 | f1", data=data)
+    assert "__fixed_effect__" not in str(exc.value)
+    assert isinstance(exc.value.__cause__, TypeError)
+
+
+def test_fe_rejects_literal_factor(data):
+    terms = formulaic.formula.SimpleFormula(
+        [wrap_fixed_effect(Term([Factor("2", eval_method=Factor.EvalMethod.LITERAL)]))]
+    )
+    with pytest.raises(
+        FixedEffectEvaluationError, match="must be a lookup or Python expression"
+    ):
+        terms.get_model_matrix(
+            data, context=fixed_effect_context(terms=terms, data=data, context={})
+        )
+
+
+def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
+    data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
+    fit = pf.feols(
+        "Y ~ X1 | `f1:f2` + f1:f2",
+        data=data,
+        fixef_rm="none",
+        demeaner=MapDemeaner(fixef_tol=1e-12),
+    )
+    assert tuple(fit.model_matrix.fixed_effects.columns) == ("`f1:f2`", "f1:f2")
+    assert fit.model.fixed_effects == tuple(fit.model_matrix.fixed_effects.columns)
+    np.testing.assert_allclose(
+        # Tighten both FE recovery and demeaning so this checks alignment,
+        # independently of their default iterative stopping errors.
+        fit.predict(newdata=data.iloc[:5], atol=1e-12, btol=1e-12),
+        fit.predict()[:5],
+        rtol=0,
+        atol=1e-8,
+        err_msg="distinct FE partitions with ambiguous labels",
     )
