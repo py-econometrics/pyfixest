@@ -27,7 +27,7 @@ class FixedEffectEncoding:
 
     term: Term
     levels: tuple[pd.Index, ...]
-    combinations: pd.MultiIndex
+    combinations: pd.RangeIndex | pd.MultiIndex
 
     @property
     def variable(self) -> str:
@@ -35,20 +35,29 @@ class FixedEffectEncoding:
         return ":".join(str(factor) for factor in self.term.factors)
 
     @classmethod
-    def from_values(
+    def fit(
         cls, *, term: Term, values: tuple[pd.Series, ...]
-    ) -> FixedEffectEncoding:
-        """Learn observed levels and combinations in the fitted group order."""
+    ) -> tuple[FixedEffectEncoding, pd.Series]:
+        """Learn indexes and return training codes without repeating lookups."""
         levels = tuple(_sorted_levels(column=column) for column in values)
         per_factor = [
             level.get_indexer(column)
             for level, column in zip(levels, values, strict=True)
         ]
-        valid = np.all(np.column_stack(per_factor) >= 0, axis=1)
-        combinations = (
-            pd.MultiIndex.from_arrays(per_factor)[valid].unique().sort_values()
+        if len(values) == 1:
+            # The sorted level index already defines the complete code order.
+            combinations = pd.RangeIndex(len(levels[0]))
+            codes = per_factor[0].astype(np.float64)
+        else:
+            valid = np.all(np.column_stack(per_factor) >= 0, axis=1)
+            observed = pd.MultiIndex.from_arrays(per_factor)
+            combinations = observed[valid].unique().sort_values()
+            codes = combinations.get_indexer(observed).astype(np.float64)
+        codes[codes < 0] = np.nan
+        return (
+            cls(term=term, levels=levels, combinations=combinations),
+            pd.Series(codes, index=values[0].index),
         )
-        return cls(term=term, levels=levels, combinations=combinations)
 
     def encode(self, *, values: tuple[pd.Series, ...]) -> pd.Series:
         """Use the fitted indexes for both training and prediction matching."""
@@ -56,15 +65,19 @@ class FixedEffectEncoding:
             level.get_indexer(column)
             for level, column in zip(self.levels, values, strict=True)
         ]
-        missing = np.any(np.column_stack(per_factor) < 0, axis=1)
-        codes = self.combinations.get_indexer(
-            pd.MultiIndex.from_arrays(per_factor)
-        ).astype(np.float64)
-        codes[missing | (codes < 0)] = np.nan
+        if len(values) == 1:
+            codes = per_factor[0].astype(np.float64)
+        else:
+            codes = self.combinations.get_indexer(
+                pd.MultiIndex.from_arrays(per_factor)
+            ).astype(np.float64)
+        codes[codes < 0] = np.nan
         return pd.Series(codes, index=values[0].index)
 
     def decoded_values(self, *, codes: np.ndarray) -> tuple[np.ndarray, ...]:
         """Return original level values for the requested fitted FE codes."""
+        if len(self.levels) == 1:
+            return (self.levels[0].to_numpy()[codes],)
         combinations = self.combinations[codes]
         return tuple(
             level.to_numpy()[
@@ -183,23 +196,23 @@ def encode_fixed_effects(
         term=term, context=_context, factor_states=factor_states, spec=_spec
     )
     if FIXED_EFFECT_ENCODING not in state:
-        state[FIXED_EFFECT_ENCODING] = FixedEffectEncoding.from_values(
-            term=term, values=values
+        encoding, codes = FixedEffectEncoding.fit(term=term, values=values)
+        state[FIXED_EFFECT_ENCODING] = encoding
+    else:
+        encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING])
+        codes = encoding.encode(values=values)
+        unseen = codes.isna().to_numpy() & np.all(
+            np.column_stack([column.notna().to_numpy() for column in values]), axis=1
         )
-    encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING])
-    codes = encoding.encode(values=values)
-    unseen = codes.isna().to_numpy() & np.all(
-        np.column_stack([column.notna().to_numpy() for column in values]), axis=1
-    )
-    if unseen.any():
-        missing = pd.concat(values, axis=1).loc[unseen].drop_duplicates()
-        warnings.warn(
-            f"{missing.shape[0]} unseen level(s) for fixed effect "
-            f"`{encoding.variable}`: {missing.iloc[:20]}\n"
-            "Predictions for affected observations will be NaN",
-            UserWarning,
-            stacklevel=_find_stack_level(),
-        )
+        if unseen.any():
+            missing = pd.concat(values, axis=1).loc[unseen].drop_duplicates()
+            warnings.warn(
+                f"{missing.shape[0]} unseen level(s) for fixed effect "
+                f"`{encoding.variable}`: {missing.iloc[:20]}\n"
+                "Predictions for affected observations will be NaN",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
     if metadata["dummies"]:
         return FactorValues(codes, kind="categorical", spans_intercept=True)
     return codes
