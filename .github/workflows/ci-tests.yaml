@@ -92,6 +92,12 @@ jobs:
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
+      - name: Run Python tests in R-dependent modules
+        if: matrix.test-task == 'test-r-core-other'
+        run: pixi run -e py312-r test-r-python
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+
       - name: Upload coverage to Codecov (partial)
         uses: codecov/codecov-action@v7
         with:
