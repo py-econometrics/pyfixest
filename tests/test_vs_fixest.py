@@ -11,6 +11,9 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.model_state import VcovSpec
+from pyfixest.estimation.post_estimation.ritest import _resample
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
     FEOLS_FORMULA_F3_CASES,
@@ -160,6 +163,145 @@ def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_ter
         atol=1e-7,
         err_msg="standard errors != fixest",
     )
+
+
+@pytest.mark.against_r_core
+def test_parsed_no_intercept_refit_against_fixest(data_feols):
+    """#1759: replaying the parsed formula retains the absent intercept."""
+    fit = pf.feols("Y ~ X1 - 1", data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula("Y ~ X1 - 1"), data=data_feols, vcov="iid")
+    replay = refit(
+        fit,
+        data=fit._data,
+        vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+    )
+
+    assert list(fit.coef().index) == ["X1"]
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0])
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="no-intercept coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        replay.coef(),
+        fit.coef(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay added an intercept",
+    )
+    np.testing.assert_allclose(
+        replay.se(),
+        fit.se(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay changed standard errors",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_no_intercept_ritest_against_fixest(data_feols, statistic):
+    """Each no-intercept resample agrees with a live R fit of that sample."""
+    data = data_feols.dropna().assign(D=lambda frame: (frame.X1 > 0).astype(float))
+    fit = pf.feols("Y ~ D - 1", data=data)
+    expected = []
+    rng = np.random.default_rng(71)
+    for _ in range(5):
+        resampled = fit._data.copy(deep=False)
+        resampled["D"] = _resample(
+            resampvar_arr=fit._data.D.to_numpy(), rng=rng
+        ).flatten()
+        reference = fixest.feols(ro.Formula("Y ~ D - 1"), data=resampled, vcov="iid")
+        value = (
+            stats.coef(reference)[0]
+            if statistic == "randomization-c"
+            else np.asarray(fixest.coeftable(reference))[0, 2]
+        )
+        expected.append(value)
+    fit.ritest(
+        "D",
+        reps=5,
+        type=statistic,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(71),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+    )
+    if statistic == "randomization-c":
+        fit.ritest(
+            "D",
+            reps=5,
+            choose_algorithm="fast",
+            rng=np.random.default_rng(71),
+            store_ritest_statistics=True,
+        )
+        np.testing.assert_allclose(
+            fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+        )
+
+
+@pytest.mark.against_r_core
+def test_no_intercept_poisson_crv3_against_fixest():
+    """No-intercept CRV3 agrees with leave-cluster-out R Poisson fits."""
+    data = pf.get_data(N=300, seed=731, model="Fepois").dropna()
+    data["cluster"] = np.arange(len(data)) % 5
+    fit = pf.fepois(
+        "Y ~ X1 - 1",
+        data=data,
+        vcov={"CRV3": "cluster"},
+        ssc=ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-12,
+    )
+    reference = fixest.fepois(
+        ro.Formula("Y ~ X1 - 1"), data=data, vcov="iid", glm_tol=1e-12
+    )
+    coef = np.asarray(stats.coef(reference))
+    vcov = np.zeros((1, 1))
+    for cluster in data.cluster.unique():
+        jack = fixest.fepois(
+            ro.Formula("Y ~ X1 - 1"),
+            data=data[data.cluster != cluster],
+            vcov="iid",
+            glm_tol=1e-12,
+        )
+        difference = np.asarray(stats.coef(jack)) - coef
+        vcov += np.outer(difference, difference)
+    np.testing.assert_allclose(fit.coef(), coef, rtol=0, atol=1e-8)
+    np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
+
+
+@pytest.mark.against_r_core
+def test_parsed_separation_against_fixest():
+    """IR uses the evaluated response and retains arithmetic regressors."""
+    data = pd.DataFrame(
+        {
+            "Y": [0, 0, 0, 1, 2, 3, 1, 2],
+            "X": [1, 2, 1, 2, 3, 4, 2, 3],
+            "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
+        }
+    )
+    fit = pf.fepois(
+        "{Y * 2} ~ {X ** 2} - 1 | fe",
+        data=data,
+        separation_check=["ir"],
+        iwls_tol=1e-12,
+        ssc=ssc(k_adj=False, G_adj=False),
+    )
+    reference = fixest.fepois(
+        ro.Formula("I(Y * 2) ~ I(X^2) - 1 | fe"),
+        data=data,
+        vcov="iid",
+        glm_tol=1e-12,
+        ssc=fixest.ssc(K_adj=False, G_adj=False),
+    )
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
+    np.testing.assert_allclose(fit.coef(), stats.coef(reference), rtol=0, atol=1e-8)
+    np.testing.assert_allclose(fit.se(), fixest.se(reference), rtol=0, atol=1e-7)
 
 
 @pytest.fixture(scope="module")

@@ -133,7 +133,7 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
-                fml=self.model.formula,
+                fml=self.model.fixest_formula,
                 data=self._data,
                 demeaner=self.options.demeaner,
                 methods=self.options.separation_check,

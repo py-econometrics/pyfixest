@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import keyword
 import re
 import warnings
 from dataclasses import replace
@@ -10,6 +11,7 @@ from typing import ClassVar, Literal, cast, overload
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.parser.types import Factor, Term
 from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
@@ -24,6 +26,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.formula.parse import _wrap_fixed_effect
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST
@@ -310,7 +313,6 @@ class Feols(ResultAccessorMixin):
         unsplit fit publishes ``None`` as its split variable and value.
         """
         return ModelDescription(
-            formula=fixest_formula.formula,
             fixest_formula=fixest_formula,
             method="feols",
             is_iv=False,
@@ -1419,16 +1421,41 @@ class Feols(ResultAccessorMixin):
             A tuple with the dependent variable, the model matrix, and the column names.
         """
         if self.model.has_fixef:
-            fml_linear, fixef = self.model.formula.split("|")
-            fixef_vars = fixef.split("+")
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
+            formula = self.model.fixest_formula
+            stage = formula.second_stage
+            terms = list(stage.rhs)
+            # FE models use an encoding intercept for reduced-rank categorical
+            # terms. An FE-only stage has no regressors to supply it.
+            if not terms:
+                terms.append(Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
+            for term in formula.fixed_effects:
+                if len(term.factors) == 1 and (
+                    term.factors[0].eval_method is not Factor.EvalMethod.LOOKUP
+                    or (
+                        term.factors[0].expr.isidentifier()
+                        and not keyword.iskeyword(term.factors[0].expr)
+                    )
+                ):
+                    expression = term.factors[0].expr
+                else:
+                    expression = _wrap_fixed_effect(term=term).factors[0].expr
+                terms.append(
+                    Term(
+                        [
+                            Factor(
+                                f"C({expression})", eval_method=Factor.EvalMethod.PYTHON
+                            )
+                        ]
+                    )
+                )
+            formula_dummies = formulaic.formula.StructuredFormula(
+                lhs=stage.lhs, rhs=formulaic.formula.SimpleFormula(terms)
+            )
             # output = "pandas" as Y, X need to be np.arrays for parallel processing
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
+            Y, X = formula_dummies.get_model_matrix(
                 self._data,
                 output=output,
                 context=FORMULAIC_TRANSFORMS | {**self.options.context},
@@ -2127,7 +2154,6 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
-                fml=self.model.formula,
                 reps=reps,
                 type=type,
                 rng=rng,

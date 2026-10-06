@@ -28,6 +28,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Randomization inference, iterative-rectifier separation checks, and fixed-effect dummy construction reuse parsed formulas, preserving no-intercept specifications and evaluated expressions without reparsing model descriptions. See [#1759](https://github.com/py-econometrics/pyfixest/issues/1759).
 - Formulaic 1.2.2 is now required. Fixed-effect estimation accepts quoted column names such as `my fe`, `firm.id`, and `a:b`, and IV dependency checks recognize quoted and transformed variables. This addresses part of [#1735](https://github.com/py-econometrics/pyfixest/issues/1735).
 - Model-matrix construction and ordinary and IV first-stage refits reuse parsed formulas. Arithmetic factors such as `{X1 * X2}` retain their meaning, and ordinary refits preserve formulas without an intercept.
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.

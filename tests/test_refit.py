@@ -171,8 +171,7 @@ def test_ritest_refits_replay_options(data, case):
     expected = _get_ritest_stats_slow(
         **ritest_kwargs,
         data=fit._data,
-        fml=FML,
-        fit_fn=partial(estimator, vcov="iid", **options),
+        fit_fn=partial(estimator, fml=FML, vcov="iid", **options),
         rng=np.random.default_rng(3),
     )
     np.testing.assert_allclose(

@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-import re
 import warnings
 from collections.abc import Mapping
 from functools import partial
-from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.internals.model_state import EstimationOptions, VcovSpec
 from pyfixest.utils.dev_utils import _find_stack_level
+from pyfixest.utils.utils import ssc
 
 if TYPE_CHECKING:
     from pyfixest.estimation.models.feols_ import Feols
 
 
 def check_for_separation(
-    fml: str,
+    fml: Formula,
     data: pd.DataFrame,
     Y: pd.DataFrame,
     X: pd.DataFrame,
@@ -35,7 +37,7 @@ def check_for_separation(
 
     Parameters
     ----------
-    fml : str
+    fml : Formula
         The formula used for estimation.
     data : pd.DataFrame
         The data used for estimation.
@@ -90,7 +92,7 @@ def check_for_separation(
 class _SeparationMethod(Protocol):
     def __call__(
         self,
-        fml: str,
+        fml: Formula,
         data: pd.DataFrame,
         Y: pd.DataFrame,
         X: pd.DataFrame,
@@ -101,7 +103,7 @@ class _SeparationMethod(Protocol):
 
         Parameters
         ----------
-        fml : str
+        fml : Formula
             The formula used for estimation.
         data : pd.DataFrame
             The data used for estimation.
@@ -121,14 +123,14 @@ class _SeparationMethod(Protocol):
 
 
 def _check_for_separation_fe(
-    fml: str, data: pd.DataFrame, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    fml: Formula, data: pd.DataFrame, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
 ) -> set[int]:
     """
     Check for separation using the "fe" check.
 
     Parameters
     ----------
-    fml : str
+    fml : Formula
         The formula used for estimation.
     data : pd.DataFrame
         The data used for estimation.
@@ -170,7 +172,7 @@ def _check_for_separation_fe(
 
 
 def _check_for_separation_ir(
-    fml: str,
+    fml: Formula,
     data: pd.DataFrame,
     Y: pd.DataFrame,
     X: pd.DataFrame,
@@ -186,7 +188,7 @@ def _check_for_separation_ir(
 
     Parameters
     ----------
-    fml : str
+    fml : Formula
         The formula used for estimation.
     data : pd.DataFrame
         The data used for estimation.
@@ -211,39 +213,60 @@ def _check_for_separation_ir(
         Set of indices of separated observations.
     """
     # lazy load to avoid circular import
-    fixest_module = import_module("pyfixest.estimation")
-    feols = fixest_module.feols
+    from pyfixest.estimation.plan_ import parse_formula
+    from pyfixest.estimation.runner import run_estimation
+
     # initialize
     separation_na: set[int] = set()
     tmp_suffix = "_separationTmp"
-    # build formula
-    name_dependent, rest = re.split(r"\s*~\s*", fml, maxsplit=1)
     name_dependent_separation = "U"
-    if name_dependent_separation in data.columns:
+    while name_dependent_separation in data.columns:
         name_dependent_separation += tmp_suffix
+    name_weights = "omega"
+    while name_weights in data.columns:
+        name_weights += tmp_suffix
 
-    fml_separation = f"{name_dependent_separation} ~ {rest}"
+    fml_separation = fml.with_dependent(name=name_dependent_separation)
 
-    dependent: pd.Series = data[name_dependent]
+    dependent = Y.iloc[:, 0]
     is_interior = dependent > 0
     if is_interior.all():
         # no boundary sample, can exit
         return separation_na
 
     # initialize variables
-    tmp: pd.DataFrame = pd.DataFrame(index=data.index)
-    tmp["U"] = (dependent == 0).astype(float).rename("U")
+    tmp = data.copy(deep=False)
+    tmp[name_dependent_separation] = (dependent == 0).astype(float)
     # weights
     N0 = (dependent > 0).sum()
     K = N0 / tol**2
-    tmp["omega"] = pd.Series(
-        np.where(dependent > 0, K, 1), name="omega", index=data.index
+    tmp[name_weights] = np.where(dependent > 0, K, 1)
+
+    # Auxiliary weighted OLS uses the public feols defaults and the outer
+    # fit's demeaner and evaluation context. The parsed plan is reused across
+    # iterations; the GLM itself has not been fitted yet, so refit cannot run.
+    config = EstimationConfig(
+        method="feols",
+        data=tmp,
+        fml=fml_separation.formula,
+        options=EstimationOptions(
+            ssc=ssc(),
+            drop_singletons=True,
+            drop_intercept=False,
+            weights=name_weights,
+            weights_type="aweights",
+            offset=None,
+            collin_tol=1e-9,
+            solver="scipy.linalg.solve",
+            demeaner=demeaner,
+            store_data=True,
+            copy_data=True,
+            lean=False,
+            context=context if context is not None else {},
+        ),
+        vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
     )
-    # combine data
-    # TODO: avoid create new object?
-    tmp = data.join(tmp, how="left", validate="one_to_one", rsuffix=tmp_suffix)
-    # TODO: need to ensure that join doesn't create duplicated columns
-    # assert not tmp.columns.duplicated().any()
+    parsed = parse_formula(config, formula=fml_separation)
 
     iteration = 0
     has_converged = False
@@ -253,17 +276,10 @@ def _check_for_separation_ir(
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         fitted = cast(
             "Feols",
-            feols(
-                fml=fml_separation,
-                data=tmp,
-                weights="omega",
-                demeaner=demeaner,
-                context=context,
-            ),
+            run_estimation(config, parsed, apply_retention=False),
         )
         # The inner fit resets its index; predictions retain tmp's row order.
-        tmp["Uhat"] = fitted.predict()
-        Uhat = tmp["Uhat"]
+        Uhat = pd.Series(fitted.predict(), index=tmp.index)
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
@@ -272,7 +288,7 @@ def _check_for_separation_ir(
             # all separated observations have been identified
             has_converged = True
             break
-        tmp.loc[~is_interior, "U"] = np.fmax(
+        tmp.loc[~is_interior, name_dependent_separation] = np.fmax(
             Uhat[~is_interior], 0
         )  # rectified linear unit (ReLU)
 

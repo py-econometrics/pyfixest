@@ -37,7 +37,6 @@ _NUMBA_RITEST_ERROR = (
 def _get_ritest_stats_slow(
     data: pd.DataFrame,
     resampvar: str,
-    fml: str,
     type: str,
     reps: int,
     fit_fn: Callable[..., Any],
@@ -53,8 +52,6 @@ def _get_ritest_stats_slow(
         The input data set.
     resampvar : str
         The name of the treatment variable.
-    fml : str
-        The formula of the regression model.
     type : str
         The type of the test statistic. Must be one of 'randomization-c'
         or 'randomization-t'. If 'randomization-c', the statistic
@@ -66,7 +63,7 @@ def _get_ritest_stats_slow(
         Refits the model on each resampled data set with the fitted model's
         estimation options and the covariance estimator of the test statistic,
         such as `refit` with the model and `vcov` bound. It is called with
-        the keyword arguments `fml` and `data` only.
+        the keyword argument `data` only, reusing the fitted parsed formula.
     rng : np.random.Generator
         The random number generator.
     clustervar_arr : np.ndarray, optional
@@ -82,7 +79,6 @@ def _get_ritest_stats_slow(
     # the resampled column goes into a shallow copy, so `data` keeps its
     # columns; `fit_fn` must not modify its input
     data_resampled = data.copy(deep=False)
-    fml_update = fml.replace(resampvar, f"{resampvar}_resampled")
 
     resampvar_arr = data_resampled[resampvar].to_numpy()
 
@@ -96,13 +92,13 @@ def _get_ritest_stats_slow(
             iterations=1,
         ).flatten()
 
-        data_resampled[f"{resampvar}_resampled"] = D_treat
+        data_resampled[resampvar] = D_treat
 
-        fixest_fit = fit_fn(fml=fml_update, data=data_resampled)
+        fixest_fit = fit_fn(data=data_resampled)
         if type == "randomization-c":
-            ri_stats[i] = fixest_fit.coef().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.coef().xs(resampvar)
         else:
-            ri_stats[i] = fixest_fit.tstat().xs(f"{resampvar}_resampled")
+            ri_stats[i] = fixest_fit.tstat().xs(resampvar)
 
     return ri_stats
 

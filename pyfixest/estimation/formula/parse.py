@@ -532,6 +532,17 @@ class Formula:
             )
         )
 
+    def with_dependent(self, *, name: str) -> Formula:
+        """Replace the response by a column lookup, retaining parsed RHS terms."""
+        return Formula(
+            _formula=formulaic.formula.StructuredFormula(
+                lhs=formulaic.formula.SimpleFormula(
+                    [Term([Factor(name, eval_method=Factor.EvalMethod.LOOKUP)])]
+                ),
+                rhs=self._formula.rhs,
+            )
+        )
+
     @classmethod
     def parse(cls, formula: str) -> list[Formula]:
         """
