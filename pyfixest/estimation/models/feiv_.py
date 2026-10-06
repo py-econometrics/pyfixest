@@ -189,8 +189,8 @@ class Feiv(Feols):
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=tuple(endogenous_frame.columns),
-                x_names=tuple(instrument_frame.columns),
+                y_keys=self.model_matrix.endogenous_column_identifiers,
+                x_keys=self.model_matrix.instrument_column_identifiers,
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,

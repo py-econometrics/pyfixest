@@ -18,6 +18,7 @@ from pyfixest.estimation.post_estimation.ritest import _resample
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
+    DEMEAN_CACHE_COLLISION_CASES,
     FEOLS_FORMULA_F3_CASES,
     build_feols_data_variants,
     fixed_effect_interactions_to_legacy,
@@ -1932,6 +1933,31 @@ def _skip_f3_checks(fml, f3_type):
         pytest.skip(
             "No need to tests for different types of factor variable when not included in formula."
         )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("terms, r_terms", DEMEAN_CACHE_COLLISION_CASES)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_stepwise_column_identity_against_fixest(data_feols, terms, r_terms, weights):
+    """Stepwise fits with colliding column names agree with independent R fits."""
+    data = data_feols.dropna().assign(**{"X1 ** 2": lambda frame: 3 * np.sin(frame.X1)})
+    fits = pf.feols(
+        f"Y ~ sw({', '.join(terms)}) | f1",
+        data=data,
+        weights=weights,
+        vcov="iid",
+        fixef_rm="none",
+    ).to_list()
+    for fit, term in zip(fits, r_terms, strict=True):
+        fit_r = fixest.feols(
+            ro.Formula(f"Y ~ {term} | f1"),
+            data=data,
+            vcov="iid",
+            fixef_rm="none",
+            **({"weights": ro.Formula("~weights")} if weights else {}),
+        )
+        np.testing.assert_allclose(fit.coef(), stats.coef(fit_r), rtol=0, atol=1e-8)
+        np.testing.assert_allclose(fit.se(), fixest.se(fit_r), rtol=0, atol=1e-7)
 
 
 @pytest.mark.against_r_core
