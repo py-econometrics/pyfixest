@@ -267,6 +267,7 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://michaellindon.github.io/about/"><img src="https://avatars.githubusercontent.com/u/4892846?v=4?s=40" width="40px;" alt="Michael Lindon"/><br /><sub><b>Michael Lindon</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=michaellindon" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/xuu33030"><img src="https://avatars.githubusercontent.com/u/268775543?v=4?s=40" width="40px;" alt="xuu33030"/><br /><sub><b>xuu33030</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=xuu33030" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/tonycoder-hub"><img src="https://avatars.githubusercontent.com/u/54679772?v=4?s=40" width="40px;" alt="Tony Jin"/><br /><sub><b>Tony Jin</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=tonycoder-hub" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/raashish1601"><img src="https://avatars.githubusercontent.com/u/94279692?v=4?s=40" width="40px;" alt="Raashish Aggarwal"/><br /><sub><b>Raashish Aggarwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=raashish1601" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
