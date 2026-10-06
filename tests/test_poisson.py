@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import os
 
@@ -131,3 +133,29 @@ def test_against_fixest(fml):
     np.testing.assert_allclose(
         fit_r.rx2("deviance"), fit.fitstat.deviance, atol=1e-08, rtol=1e-07
     )
+
+
+@pytest.mark.xfail(
+    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
+)
+@pytest.mark.parametrize("lhs", ["`my outcome`", "{Y * 2}"])
+def test_separation_preserves_response_and_auxiliary_columns(lhs):
+    data = pd.DataFrame(
+        {
+            "Y": [0, 0, 0, 1, 2, 3, 1, 2],
+            "X": [1, 2, 1, 2, 3, 4, 2, 3],
+            "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
+            "U": np.arange(8),
+            "U_separationTmp": np.arange(8),
+            "omega": np.ones(8),
+            "Uhat": np.ones(8),
+        }
+    )
+    data["my outcome"] = data.Y
+    original = data.copy(deep=True)
+    expected = pf.fepois("Y ~ X - 1 | fe", data=data, separation_check=["ir"])
+    fit = pf.fepois(f"{lhs} ~ X - 1 | fe", data=data, separation_check=["ir"])
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs == 6
+    # Scaling a Poisson response shifts the FE intercepts, leaving its slope.
+    np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-6, atol=1e-8)
+    pd.testing.assert_frame_equal(data, original)
