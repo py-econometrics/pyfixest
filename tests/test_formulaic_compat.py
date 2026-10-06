@@ -36,6 +36,7 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 )
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
+FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
 
 
 @pytest.fixture
@@ -662,3 +663,21 @@ def test_fe_dummy_names_decode_levels(data, output, interaction):
         atol=1e-8,
         err_msg="decoded-label FE prediction",
     )
+
+
+@pytest.mark.parametrize(
+    "name, cause", [('fe"quote', SyntaxError), ("fe\\backslash", KeyError)]
+)
+@pytest.mark.parametrize("fixed_effect", [False, True])
+@pytest.mark.xfail(strict=True, raises=FactorEvaluationError, reason=FORMULAIC_279)
+def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
+    renamed = data.rename(columns={"f1": name})
+    expression = f"Q({name!r})"
+    try:
+        if fixed_effect:
+            pf.feols(f"Y ~ X1 | {expression}", data=renamed)
+        else:
+            formulaic.model_matrix(f"Y ~ X1 + {expression}", data=renamed)
+    except FactorEvaluationError as exc:
+        assert isinstance(exc.__cause__, cause)
+        raise
