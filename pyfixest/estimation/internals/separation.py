@@ -1,31 +1,26 @@
 from __future__ import annotations
 
-import re
 import warnings
-from collections.abc import Mapping
 from functools import partial
-from importlib import import_module
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
 
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
+from pyfixest.estimation.internals.demean_ import DemeanCache
+from pyfixest.estimation.internals.solvers import solve_ols
 from pyfixest.utils.dev_utils import _find_stack_level
-
-if TYPE_CHECKING:
-    from pyfixest.estimation.models.feols_ import Feols
 
 
 def check_for_separation(
-    fml: str,
-    data: pd.DataFrame,
+    *,
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
     methods: list[str] | None = None,
-    context: Mapping[str, Any] | None = None,
 ) -> list[int]:
     """
     Check for separation.
@@ -35,10 +30,6 @@ def check_for_separation(
 
     Parameters
     ----------
-    fml : str
-        The formula used for estimation.
-    data : pd.DataFrame
-        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -50,8 +41,6 @@ def check_for_separation(
     methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
-    context : Mapping[str, Any], optional
-        Captured formula context forwarded to iterative-rectifier refits.
 
     Returns
     -------
@@ -60,7 +49,7 @@ def check_for_separation(
     """
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
-        "ir": partial(_check_for_separation_ir, demeaner=demeaner, context=context),
+        "ir": partial(_check_for_separation_ir, demeaner=demeaner),
     }
     if methods is None:
         methods = list(valid_methods)
@@ -73,9 +62,7 @@ def check_for_separation(
 
     separation_na: set[int] = set()
     for method in methods:
-        separation_na = separation_na.union(
-            valid_methods[method](fml=fml, data=data, Y=Y, X=X, fe=fe)
-        )
+        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X, fe=fe))
 
     if separation_na:
         warnings.warn(
@@ -89,49 +76,18 @@ def check_for_separation(
 
 class _SeparationMethod(Protocol):
     def __call__(
-        self,
-        fml: str,
-        data: pd.DataFrame,
-        Y: pd.DataFrame,
-        X: pd.DataFrame,
-        fe: pd.DataFrame,
-    ) -> set[int]:
-        """
-        Check for separation.
-
-        Parameters
-        ----------
-        fml : str
-            The formula used for estimation.
-        data : pd.DataFrame
-            The data used for estimation.
-        Y : pd.DataFrame
-            Dependent variable.
-        X : pd.DataFrame
-            Independent variables.
-        fe : pd.DataFrame
-            Fixed effects.
-
-        Returns
-        -------
-        set
-            Set of indices of separated observations.
-        """
-        ...
+        self, *, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    ) -> set[int]: ...
 
 
 def _check_for_separation_fe(
-    fml: str, data: pd.DataFrame, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    *, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
 ) -> set[int]:
     """
     Check for separation using the "fe" check.
 
     Parameters
     ----------
-    fml : str
-        The formula used for estimation.
-    data : pd.DataFrame
-        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -170,26 +126,25 @@ def _check_for_separation_fe(
 
 
 def _check_for_separation_ir(
-    fml: str,
-    data: pd.DataFrame,
+    *,
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
     tol: float = 1e-4,
     maxiter: int = 100,
-    context: Mapping[str, Any] | None = None,
 ) -> set[int]:
     """
     Check for separation using the "iterative rectifier" algorithm
     proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
 
+    The inputs contain the outer model's evaluated columns and retained rows.
+    Auxiliary weighted projections preserve that sample and the absorbed FE
+    span, which includes a constant even without an explicit intercept column.
+    Collinear covariates are selected once after weighted FE absorption.
+
     Parameters
     ----------
-    fml : str
-        The formula used for estimation.
-    data : pd.DataFrame
-        The data used for estimation.
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
@@ -202,48 +157,39 @@ def _check_for_separation_ir(
         Tolerance to detect separated observation. Defaults to 1e-4.
     maxiter : int
         Maximum number of iterations. Defaults to 100.
-    context : Mapping[str, Any], optional
-        Captured formula context used to evaluate the auxiliary formula.
 
     Returns
     -------
     set
         Set of indices of separated observations.
     """
-    # lazy load to avoid circular import
-    fixest_module = import_module("pyfixest.estimation")
-    feols = fixest_module.feols
-    # initialize
-    separation_na: set[int] = set()
-    tmp_suffix = "_separationTmp"
-    # build formula
-    name_dependent, rest = re.split(r"\s*~\s*", fml, maxsplit=1)
-    name_dependent_separation = "U"
-    if name_dependent_separation in data.columns:
-        name_dependent_separation += tmp_suffix
-
-    fml_separation = f"{name_dependent_separation} ~ {rest}"
-
-    dependent: pd.Series = data[name_dependent]
+    dependent = Y.iloc[:, 0]
     is_interior = dependent > 0
     if is_interior.all():
-        # no boundary sample, can exit
-        return separation_na
+        return set()
 
-    # initialize variables
-    tmp: pd.DataFrame = pd.DataFrame(index=data.index)
-    tmp["U"] = (dependent == 0).astype(float).rename("U")
-    # weights
-    N0 = (dependent > 0).sum()
-    K = N0 / tol**2
-    tmp["omega"] = pd.Series(
-        np.where(dependent > 0, K, 1), name="omega", index=data.index
-    )
-    # combine data
-    # TODO: avoid create new object?
-    tmp = data.join(tmp, how="left", validate="one_to_one", rsuffix=tmp_suffix)
-    # TODO: need to ensure that join doesn't create duplicated columns
-    # assert not tmp.columns.duplicated().any()
+    # Project on the original materialized design. Stateful terms and FE codes
+    # must not be reevaluated after the outer fit filters its rows.
+    response = (dependent == 0).to_numpy(dtype=np.float64)[:, None]
+    weights = np.where(is_interior, is_interior.sum() / tol**2, 1.0)
+    fixed_effects = fe.to_numpy()
+    cache = DemeanCache()
+    sample = frozenset()
+    design = X.to_numpy(dtype=np.float64)
+    if design.shape[1]:
+        design = cache.demean_array(
+            x=design,
+            flist=fixed_effects,
+            weights=weights,
+            na_index=sample,
+            demeaner=demeaner,
+        )
+        design, _ = drop_multicollinear_variables(
+            X=design,
+            names=X.columns.tolist(),
+            collin_tol=1e-9,
+        )
+    hessian = design.T @ (weights[:, None] * design)
 
     iteration = 0
     has_converged = False
@@ -251,19 +197,24 @@ def _check_for_separation_ir(
         iteration += 1
         # regress U on X
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
-        fitted = cast(
-            "Feols",
-            feols(
-                fml=fml_separation,
-                data=tmp,
-                weights="omega",
-                demeaner=demeaner,
-                context=context,
-            ),
+        response_demeaned = cache.demean_array(
+            x=response,
+            flist=fixed_effects,
+            weights=weights,
+            na_index=sample,
+            demeaner=demeaner,
         )
-        # The inner fit resets its index; predictions retain tmp's row order.
-        tmp["Uhat"] = fitted.predict()
-        Uhat = tmp["Uhat"]
+        if design.shape[1]:
+            beta = solve_ols(
+                tZX=hessian,
+                tZY=design.T @ (weights[:, None] * response_demeaned),
+                solver="scipy.linalg.solve",
+            )
+            residuals = response_demeaned[:, 0] - design @ beta
+        else:
+            residuals = response_demeaned[:, 0]
+        # Within residuals equal full-model residuals, including the FE fit.
+        Uhat = pd.Series(response[:, 0] - residuals, index=dependent.index)
         # update when within tolerance of zero
         # need to be more strict below zero to avoid false positives
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
@@ -272,10 +223,10 @@ def _check_for_separation_ir(
             # all separated observations have been identified
             has_converged = True
             break
-        tmp.loc[~is_interior, "U"] = np.fmax(
-            Uhat[~is_interior], 0
-        )  # rectified linear unit (ReLU)
+        # rectified linear unit (ReLU)
+        response[~is_interior.to_numpy(), 0] = np.fmax(Uhat[~is_interior], 0)
 
+    separation_na: set[int] = set()
     if has_converged:
         separation_na = set(dependent[Uhat > 0].index)
     else:
