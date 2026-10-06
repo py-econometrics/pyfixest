@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import formulaic
 import formulaic.formula
@@ -16,6 +16,10 @@ from pyfixest.estimation.formula.transforms.factor_interaction import (
     is_i_contrast_state_key,
     variable_from_contrast_state_key,
 )
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FIXED_EFFECT_ENCODING,
+    FixedEffectEncoding,
+)
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -25,9 +29,32 @@ class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
+def get_fixed_effect_encoding(
+    *, transform_state: Mapping[str, Any], column: str
+) -> FixedEffectEncoding:
+    """Read pyfixest's typed encoding from Formulaic's transform-state layout."""
+    try:
+        return cast(FixedEffectEncoding, transform_state[column][FIXED_EFFECT_ENCODING])
+    except KeyError as exc:
+        raise FormulaicCompatibilityError(
+            f"Fixed-effect encoding for `{column}` is missing from the "
+            "formulaic transform state."
+        ) from exc
+
+
 def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
     """Yield formula terms excluding Formulaic's intercept term."""
     return (term for term in formula if term != "1")
+
+
+def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[str]:
+    """Collect dependencies without normalizing literal lookup names."""
+    return {
+        str(variable)
+        for term in formula
+        for factor in term.factors
+        for variable in factor.required_variables
+    }
 
 
 def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
