@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from formulaic.errors import FactorEvaluationError
+
+
+class FixedEffectEvaluationError(FactorEvaluationError):
+    """A parsed fixed-effect factor or encoding could not be evaluated."""
+
+
 class FixedEffectInteractionError(Exception):  # noqa: D101
     pass
 
