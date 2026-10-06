@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import keyword
 import re
 import warnings
 from dataclasses import replace
@@ -1429,16 +1428,7 @@ class Feols(ResultAccessorMixin):
             if not terms:
                 terms.append(Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
             for term in formula.fixed_effects:
-                if len(term.factors) == 1 and (
-                    term.factors[0].eval_method is not Factor.EvalMethod.LOOKUP
-                    or (
-                        term.factors[0].expr.isidentifier()
-                        and not keyword.iskeyword(term.factors[0].expr)
-                    )
-                ):
-                    expression = term.factors[0].expr
-                else:
-                    expression = _wrap_fixed_effect(term=term).factors[0].expr
+                expression = _wrap_fixed_effect(term=term).factors[0].expr
                 terms.append(
                     Term(
                         [

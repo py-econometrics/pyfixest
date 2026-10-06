@@ -79,7 +79,7 @@ def test_refit_retains_parsed_stages(fml, monkeypatch):
 
 
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
-@pytest.mark.parametrize("fixed_effects", ["`my fe`", "f1:f2"])
+@pytest.mark.parametrize("fixed_effects", ["f1", "`my fe`", "f1:f2"])
 def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     data = pf.get_data(N=300).dropna()
     data["my fe"] = data.f1
@@ -92,7 +92,7 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     )
     reference = pf.feols(
         "Y ~ product + X2 + C(`my fe`)"
-        if fixed_effects == "`my fe`"
+        if fixed_effects != "f1:f2"
         else "Y ~ product + X2 + C(group)",
         data=data,
     )
