@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Iterable, Mapping, MutableMapping
+from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Final, cast
 
 import numpy as np
 import pandas as pd
-from formulaic.materializers.types import FactorValues
 from formulaic.parser.types import Factor, Term
 from formulaic.transforms import TRANSFORMS
+from formulaic.transforms.contrasts import C, TreatmentContrasts
 from formulaic.utils.layered_mapping import LayeredMapping
 from formulaic.utils.stateful_transforms import stateful_eval, stateful_transform
 from formulaic.utils.variables import Variable, get_required_variables
@@ -19,6 +19,20 @@ from formulaic.utils.variables import Variable, get_required_variables
 from pyfixest.utils.dev_utils import _find_stack_level
 
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
+
+
+@dataclass(kw_only=True)
+class _FixedEffectContrasts(TreatmentContrasts):
+    """Native treatment coding with the parsed FE label in dummy names."""
+
+    variable: str
+
+    @TreatmentContrasts.override
+    def get_factor_format(
+        self, levels: Sequence[Hashable], reduced_rank: bool = True
+    ) -> str:
+        label = self.variable.replace("{", "{{").replace("}", "}}")
+        return label + ("[T.{field}]" if reduced_rank else "[{field}]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,7 +228,7 @@ def encode_fixed_effects(
                 stacklevel=_find_stack_level(),
             )
     if metadata["dummies"]:
-        return FactorValues(codes, kind="categorical", spans_intercept=True)
+        return C(codes, contrasts=_FixedEffectContrasts(variable=encoding.variable))
     return codes
 
 

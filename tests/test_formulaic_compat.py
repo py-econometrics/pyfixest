@@ -278,7 +278,7 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["my fe", "firm.id", "a:b", 'fe"quote', "fe\\backslash"]
+    "name", ["my fe", "firm.id", "a:b", 'fe"quote', "fe\\backslash", "fe{brace}"]
 )
 @pytest.mark.parametrize("expression", ["`{name}`", "C(`{name}`)"])
 def test_fe_metadata_preserves_lookup_and_dependencies(data, name, expression):
