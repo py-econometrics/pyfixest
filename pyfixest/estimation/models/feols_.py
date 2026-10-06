@@ -2146,7 +2146,6 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
-                fml=self.model.formula,
                 reps=reps,
                 type=type,
                 rng=rng,

@@ -28,7 +28,10 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
+
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
+
 - Multiple-estimation model identities and demeaning-cache scopes preserve distinct parsed specifications even when their descriptive formula text is identical.
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction, including quoted names and expression-defined partitions. Compatible numeric and categorical values match across dtypes; unmatched values, including boolean/integer mismatches, predict `NaN` with an unseen-level warning.
