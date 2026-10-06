@@ -111,16 +111,15 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _fixed_effect_names(
-    model_matrix: ModelMatrix, fixest_formula: FixestFormula
-) -> tuple[str, ...]:
-    """Name the absorbed fixed effects in the order the formula writes them.
+def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
+    """Name each absorbed term in materialized fixed-effect column order.
 
     Empty when the materialized model matrix carries no fixed-effect block.
     """
-    if model_matrix.fixed_effects is None:
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(fixed_effects.columns)
 
 
 class Feols(ResultAccessorMixin):
@@ -354,9 +353,7 @@ class Feols(ResultAccessorMixin):
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
-            fixed_effects=_fixed_effect_names(
-                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
-            ),
+            fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
                 tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),

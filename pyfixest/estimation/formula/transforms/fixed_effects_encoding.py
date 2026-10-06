@@ -16,6 +16,7 @@ from formulaic.utils.layered_mapping import LayeredMapping
 from formulaic.utils.stateful_transforms import stateful_eval, stateful_transform
 from formulaic.utils.variables import Variable, get_required_variables
 
+from pyfixest.errors import FixedEffectEvaluationError
 from pyfixest.utils.dev_utils import _find_stack_level
 
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
@@ -26,6 +27,28 @@ class _FixedEffectContrasts(TreatmentContrasts):
     """Native treatment coding with the parsed FE label in dummy names."""
 
     variable: str
+    encoding: FixedEffectEncoding
+
+    @TreatmentContrasts.override
+    def get_coding_column_names(
+        self, levels: Sequence[Hashable], reduced_rank: bool = True
+    ) -> Sequence[Hashable]:
+        codes = super().get_coding_column_names(levels, reduced_rank=reduced_rank)
+        values = self.encoding.decoded_values(codes=np.asarray(codes, dtype=np.int64))
+        if len(values) == 1:
+            return values[0].tolist()
+        return list(zip(*(value.tolist() for value in values), strict=True))
+
+    @TreatmentContrasts.override
+    def get_drop_field(
+        self, levels: Sequence[Hashable], reduced_rank: bool = True
+    ) -> Hashable:
+        code = super().get_drop_field(levels, reduced_rank=reduced_rank)
+        if code is None:
+            return None
+        return self.get_coding_column_names(levels, reduced_rank=False)[
+            list(levels).index(code)
+        ]
 
     @TreatmentContrasts.override
     def get_factor_format(
@@ -188,7 +211,15 @@ def fixed_effect_context(
 
     @wraps(encode_fixed_effects)
     def encode(*args, **kwargs):
-        return encode_fixed_effects(*args, **kwargs)
+        try:
+            return encode_fixed_effects(*args, **kwargs)
+        except FixedEffectEvaluationError:
+            raise
+        except Exception as exc:
+            term = kwargs["_metadata"]["term"]
+            raise FixedEffectEvaluationError(
+                f"Unable to encode fixed effect `{term}`. [{type(exc).__name__}: {exc}]"
+            ) from exc
 
     cast(Any, encode).get_required_variables = required_variables
     return dict(context) | {"__fixed_effect__": encode}
@@ -229,7 +260,12 @@ def encode_fixed_effects(
                 stacklevel=_find_stack_level(),
             )
     if metadata["dummies"]:
-        return C(codes, contrasts=_FixedEffectContrasts(variable=encoding.variable))
+        return C(
+            codes,
+            contrasts=_FixedEffectContrasts(
+                variable=encoding.variable, encoding=encoding
+            ),
+        )
     return codes
 
 
@@ -240,20 +276,30 @@ def evaluate_fixed_effect_factors(
     columns = []
     index = next(iter(context.data.values())).index
     for factor in term.factors:
-        if factor.eval_method is Factor.EvalMethod.LOOKUP:
-            values = context[factor.expr]
-        elif factor.eval_method is Factor.EvalMethod.PYTHON:
-            values = stateful_eval(
-                factor.expr,
-                context,
-                {factor.expr: factor.metadata},
-                factor_states.setdefault(factor.expr, {}),
-                spec,
+        if factor.eval_method not in (
+            Factor.EvalMethod.LOOKUP,
+            Factor.EvalMethod.PYTHON,
+        ):
+            raise FixedEffectEvaluationError(
+                f"Fixed effect `{term}`: factor `{factor}` must be a lookup "
+                "or Python expression."
             )
-        else:
-            raise ValueError(
-                f"Fixed effect `{factor}` must be a lookup or Python expression."
-            )
+        try:
+            if factor.eval_method is Factor.EvalMethod.LOOKUP:
+                values = context[factor.expr]
+            else:
+                values = stateful_eval(
+                    factor.expr,
+                    context,
+                    {factor.expr: factor.metadata},
+                    factor_states.setdefault(factor.expr, {}),
+                    spec,
+                )
+        except Exception as exc:
+            raise FixedEffectEvaluationError(
+                f"Unable to evaluate fixed effect `{term}`: factor `{factor}` failed. "
+                f"[{type(exc).__name__}: {exc}]"
+            ) from exc
         values = getattr(values, "__wrapped__", values)
         if not isinstance(values, pd.Series):
             values = pd.Series(values, index=index, name=factor.expr)

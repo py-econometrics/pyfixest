@@ -103,7 +103,13 @@ def run_estimation(
         for fitted_result in FIT._iter_fitted_models():
             if apply_retention:
                 fitted_result._clear_attributes()
-            fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
+            fixest.all_fitted_models[
+                (
+                    fitted_result.model.fixest_formula.identity,
+                    fitted_result.model.sample_split,
+                    getattr(fitted_result.options, "quantile", None),
+                )
+            ] = fitted_result
 
     if parsed.is_multiple_estimation:
         return fixest
