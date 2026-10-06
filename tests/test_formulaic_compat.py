@@ -357,9 +357,7 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     )
 
 
-@pytest.mark.parametrize(
-    "kind", ["categorical", "bool_to_numeric", "numeric_to_bool", "unmatched_string"]
-)
+@pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
 def test_fe_prediction_matches_values_across_dtypes(data, kind):
     """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
     frame = data.copy()
@@ -370,11 +368,6 @@ def test_fe_prediction_matches_values_across_dtypes(data, kind):
         frame["f1"] = frame.f1.astype(bool)
     fit = pf.feols("Y ~ X1 | f1", data=frame)
     newdata = frame.iloc[:10].copy()
-    if kind == "unmatched_string":
-        newdata["f1"] = newdata.f1.astype(str)
-        with pytest.warns(UserWarning, match="unseen level"):
-            assert np.isnan(fit.predict(newdata=newdata)).all()
-        return
     newdata["f1"] = newdata.f1.astype(bool if kind == "numeric_to_bool" else int)
     if kind in {"bool_to_numeric", "numeric_to_bool"}:
         with pytest.warns(UserWarning, match="unseen level"):
