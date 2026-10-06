@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ def refit(
     fit: Feols,
     *,
     data: pd.DataFrame,
-    fml: str | None = None,
+    formula: Formula | None = None,
     vcov: VcovSpec,
     same_sample: bool = False,
 ) -> Feols:
@@ -51,8 +52,8 @@ def refit(
         The fitted model whose estimator and options are replayed.
     data : pd.DataFrame
         The data to fit, with the columns of the fit's sample.
-    fml : str, optional
-        The formula to fit; defaults to the fit's.
+    formula : Formula, optional
+        The formula to fit; defaults to the fit's retained parsed formula.
     vcov : VcovSpec
         The covariance estimator of the refit.
     same_sample : bool, optional
@@ -66,7 +67,7 @@ def refit(
     """
     # lazy loading to avoid circular import
     from pyfixest.estimation.models.feols_ import Feols
-    from pyfixest.estimation.plan_ import estimation_method_of, parse_formula
+    from pyfixest.estimation.plan_ import estimation_method_of, plan_formulas
     from pyfixest.estimation.runner import run_estimation
 
     require_retained(fit, "refit", "_data")
@@ -89,16 +90,18 @@ def refit(
             fit.options,
             demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
         )
+    formula = fit.model.fixest_formula if formula is None else formula
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
         data=data.copy(deep=False),
-        fml=fit.model.formula if fml is None else fml,
+        formulas=(formula,),
         # the shallow copy above keeps `data` unchanged without a deep copy
         options=replace(options, copy_data=False),
         vcov=vcov,
     )
     # the caller reads the refit in full or throws it away
-    result = run_estimation(config, parse_formula(config), apply_retention=False)
+    parsed = plan_formulas(config)
+    result = run_estimation(config, parsed, apply_retention=False)
     if not isinstance(result, Feols):
         raise TypeError(f"A refit must return a single model, not {result!r}.")
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:

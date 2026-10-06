@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import itertools
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Final
 
@@ -371,9 +371,8 @@ class Formula:
     def is_fixed_effects(self) -> bool:
         """Boolean indicating whether the formula is a fixed effects specification."""
         # A MULTIPART formula is a tuple of formulas on the right hand side
-        return (
-            isinstance(self._formula.rhs, tuple)
-            and str(self._formula.rhs[-1]) not in ["", "0", "1"]  # ignore intercept
+        return isinstance(self._formula.rhs, tuple) and any(
+            terms_without_intercept(self._formula.rhs[-1])
         )
 
     @property
@@ -442,19 +441,47 @@ class Formula:
         )
 
     @property
-    def second_stage(self) -> str:
-        """The second stage formula."""
-        right_hand_side = list(self.exogenous)
+    def second_stage(self) -> formulaic.formula.StructuredFormula:
+        """Parsed response and regressors for second-stage materialization."""
+        terms: Iterable[Term] = self.exogenous
         if self.is_instrumental_variable:
-            right_hand_side += list(self.endogenous)
-        return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
+            terms = itertools.chain(terms, self.endogenous)
+        return self._stage_formula(dependent=self.dependent, terms=terms)
 
-    @property
-    def first_stage(self) -> str:
-        """The first stage formula of an instrumental variable specification."""
+    def _stage_formula(
+        self,
+        *,
+        dependent: formulaic.formula.SimpleFormula,
+        terms: Iterable[Term],
+    ) -> formulaic.formula.StructuredFormula:
+        rhs_terms = list(terms)
+        # Preserve the existing reduced-rank categorical encoding for FE models.
+        # ModelMatrix removes this encoding intercept after materialization.
+        if (
+            self.is_fixed_effects
+            and rhs_terms
+            and not any(term == "1" for term in rhs_terms)
+        ):
+            rhs_terms.insert(
+                0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)])
+            )
+        return formulaic.formula.StructuredFormula(
+            lhs=dependent, rhs=formulaic.formula.SimpleFormula(rhs_terms)
+        )
+
+    def as_first_stage(self) -> Formula:
+        """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
+        rhs = formulaic.formula.SimpleFormula(
+            itertools.chain(self.instruments, self.exogenous)
+        )
+        return Formula(
+            _formula=formulaic.formula.StructuredFormula(
+                lhs=self.endogenous,
+                rhs=(rhs, self.fixed_effects) if self.is_fixed_effects else rhs,
+            )
+        )
 
     @classmethod
     def parse(cls, formula: str) -> list[Formula]:
