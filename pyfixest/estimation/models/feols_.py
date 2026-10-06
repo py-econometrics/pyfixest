@@ -111,16 +111,15 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _fixed_effect_names(
-    model_matrix: ModelMatrix, fixest_formula: FixestFormula
-) -> tuple[str, ...]:
-    """Name the absorbed fixed effects in the order the formula writes them.
+def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
+    """Name each absorbed term in materialized fixed-effect column order.
 
     Empty when the materialized model matrix carries no fixed-effect block.
     """
-    if model_matrix.fixed_effects is None:
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(fixed_effects.columns)
 
 
 def _render_sample_label(value: object) -> str:
@@ -360,9 +359,7 @@ class Feols(ResultAccessorMixin):
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
-            fixed_effects=_fixed_effect_names(
-                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
-            ),
+            fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
                 tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
@@ -1430,6 +1427,8 @@ class Feols(ResultAccessorMixin):
             formula = self.model.fixest_formula
             stage = formula.second_stage
             terms = list(stage.rhs)
+            # FE models use an encoding intercept for reduced-rank categorical
+            # terms. An FE-only stage has no regressors to supply it.
             if not terms:
                 terms.append(Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
             dummy_terms = [

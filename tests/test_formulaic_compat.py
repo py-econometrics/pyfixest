@@ -11,11 +11,16 @@ import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
 from formulaic.materializers.base import FormulaMaterializer
+from formulaic.parser.types import Factor, Term
 from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
-from pyfixest.errors import EndogVarsAsCovarsError, InstrumentsAsCovarsError
+from pyfixest.errors import (
+    EndogVarsAsCovarsError,
+    FixedEffectEvaluationError,
+    InstrumentsAsCovarsError,
+)
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -31,6 +36,7 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectEncoding,
     fixed_effect_context,
+    wrap_fixed_effect,
 )
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
@@ -432,10 +438,6 @@ def test_fe_unseen_combination_and_factor_row_alignment(data):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-)
 @pytest.mark.parametrize(
     "fixed_effects, expected_names",
     [
@@ -487,10 +489,6 @@ def test_fixed_effect_names_follow_encoded_columns(
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
 @pytest.mark.parametrize("interaction", [False, True])
 def test_fe_dummy_names_decode_levels(data, output, interaction):
@@ -523,10 +521,6 @@ def test_fe_dummy_names_decode_levels(data, output, interaction):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-)
 def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
     data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
     fit = pf.feols(
@@ -695,3 +689,72 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     path = "one-hot"
     fit._model_matrix_one_hot()
     assert observed == {"fit", "fixef", "predict", "one-hot"}
+
+
+@pytest.mark.parametrize("fml", ["Y ~ X1 | f1:nope", "Y ~ X1 | I(f1 + nope)"])
+def test_fe_error_names_term_and_missing_factor(data, fml):
+    with pytest.raises(
+        FixedEffectEvaluationError, match=r"fixed effect.*nope.*factor"
+    ) as exc:
+        pf.feols(fml, data=data)
+    assert "__fixed_effect__" not in str(exc.value)
+    assert isinstance(exc.value.__cause__, (KeyError, NameError))
+
+
+def test_fe_encoding_error_names_term(data):
+    data = data.assign(f1=[[value] for value in data.f1])
+    with pytest.raises(
+        FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
+    ) as exc:
+        pf.feols("Y ~ X1 | f1", data=data)
+    assert "__fixed_effect__" not in str(exc.value)
+    assert isinstance(exc.value.__cause__, TypeError)
+
+
+def test_fe_rejects_literal_factor(data):
+    terms = formulaic.formula.SimpleFormula(
+        [wrap_fixed_effect(Term([Factor("2", eval_method=Factor.EvalMethod.LITERAL)]))]
+    )
+    with pytest.raises(
+        FixedEffectEvaluationError, match="must be a lookup or Python expression"
+    ):
+        terms.get_model_matrix(
+            data, context=fixed_effect_context(terms=terms, data=data, context={})
+        )
+
+
+@pytest.mark.parametrize("output", ["numpy", "sparse"])
+@pytest.mark.parametrize("fixed_effects", ["f1", "`my fe`", "f1:f2"])
+def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
+    data = pf.get_data(N=300).dropna()
+    data["my fe"] = data.f1
+    data["group"] = data.groupby(["f1", "f2"]).ngroup()
+    data["product"] = data.X1 * data.X2
+    fit = pf.feols(
+        f"Y ~ {{X1 * X2}} + X2 - 1 | {fixed_effects}",
+        data=data,
+        fixef_rm="none",
+    )
+    reference = pf.feols(
+        "Y ~ product + X2 + C(`my fe`)"
+        if fixed_effects != "f1:f2"
+        else "Y ~ product + X2 + C(group)",
+        data=data,
+    )
+    monkeypatch.setattr(
+        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+    )
+    monkeypatch.setattr(Formula, "parse", _fail_on_reparse)
+    y, x, names = fit._model_matrix_one_hot(output=output)
+    x = x.toarray() if output == "sparse" else x
+    assert "X1 * X2" in names
+    label = fixed_effects.replace("`", "")
+    assert any(label in name for name in names)
+    assert all("__fixed_effect__" not in name for name in names)
+    np.testing.assert_allclose(y, reference.within_data.response.flatten())
+    # Dummy names can differ in their quoting, but their values and order agree.
+    np.testing.assert_allclose(x, reference.within_data.design)
+
+
+def _fail_on_reparse(*args, **kwargs):
+    raise AssertionError("Internal consumers must reuse the parsed formula.")

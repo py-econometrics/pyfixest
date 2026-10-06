@@ -16,7 +16,10 @@ from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
+from pyfixest.estimation.formula.formulaic_compat import (
+    flatten_model_matrix,
+    get_fixed_effect_encoding,
+)
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     fixed_effect_context,
@@ -141,6 +144,19 @@ class ModelMatrix:
         )
         self._fixed_effects_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
+        )
+        self._fixed_effects_labels = (
+            [
+                get_fixed_effect_encoding(
+                    transform_state=self._model_spec[
+                        _ModelMatrixKey.fixed_effects
+                    ].transform_state,
+                    column=column,
+                ).variable
+                for column in self._fixed_effects_column_names
+            ]
+            if self._fixed_effects_column_names is not None
+            else []
         )
         self._endogenous_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
@@ -311,7 +327,9 @@ class ModelMatrix:
         """
         if self._fixed_effects_column_names is None:
             return None
-        return self._data.loc[:, self._fixed_effects_column_names]
+        fixed_effects = self._data.loc[:, self._fixed_effects_column_names]
+        fixed_effects.columns = self._fixed_effects_labels
+        return fixed_effects
 
     @property
     def endogenous(self) -> pd.DataFrame | None:

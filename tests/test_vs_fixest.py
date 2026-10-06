@@ -1930,10 +1930,6 @@ def _skip_f3_checks(fml, f3_type):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
-)
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_stepwise_fe_identity_against_fixest(data_feols, weights):
@@ -2014,54 +2010,28 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "vcov, fml, fml_r, renamed_terms",
+    "fml, fml_r, renamed_terms",
     [
-        pytest.param("iid", "Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
-        pytest.param("iid", "Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
-        pytest.param("iid", "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param("iid", "Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
-        pytest.param("iid", "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | I(f1 + f2)",
-            "Y ~ X1 | fe_sum",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param("iid", "Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
-        pytest.param(
-            "iid",
+        ("Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
+        ("Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
+        # fixest rewrites ':' even inside quoted FE names; the alias f1
+        # carries exactly the same levels and gives a usable external oracle.
+        ("Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
+        # Compare expression-defined partitions through lookup columns in R.
+        ("Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | I(f1 + f2)", "Y ~ X1 | fe_sum", {}),
+        ("Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
+        (
             "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
-            "Y ~ X2 | `my fe` | X1 ~ Z1",
-            {"X1": "my endog"},
-        ),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | I(f1 + f2)",
-            "Y ~ X1 | fe_sum",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
+            # fixest also drops instrument backticks when rebuilding its
+            # first stage; compare the identical original columns in R.
             "Y ~ X2 | `my fe` | X1 ~ Z1",
             {"X1": "my endog"},
         ),
     ],
 )
+@pytest.mark.parametrize("vcov", ["iid", {"CRV1": "f1"}])
 def test_quoted_fixed_effects_against_fixest(
     data_feols, fml, fml_r, renamed_terms, vcov
 ):

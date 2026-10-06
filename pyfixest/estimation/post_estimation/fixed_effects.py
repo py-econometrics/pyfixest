@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from formulaic import ModelSpec
 from formulaic.parser.types import Term
+from formulaic.transforms.contrasts import TreatmentContrasts
 from numpy._typing import NDArray
 from scipy.sparse import csc_matrix
 
@@ -227,7 +228,9 @@ def get_fixed_effect_coefficient_positions(
     (factor,) = term.factors
     contrasts_state = model_spec.factor_contrasts[factor]
     coefficient_indices = model_spec.term_indices[term]
-    coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
+    # Coefficient alignment uses integer codes, independently of decoded labels.
+    coefficient_codes = TreatmentContrasts.get_coding_column_names(
+        contrasts_state.contrasts,
         contrasts_state.levels,
         reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
     )
