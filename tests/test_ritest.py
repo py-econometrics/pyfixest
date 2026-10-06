@@ -57,6 +57,7 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-8, rtol=1e-8)
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
 
+
 @pytest.mark.extended
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1"])
 @pytest.mark.parametrize("resampvar", ["X1"])
