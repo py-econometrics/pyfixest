@@ -28,6 +28,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Multiple-estimation model identities and demeaning-cache scopes preserve distinct parsed specifications even when their descriptive formula text is identical.
+
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction, including quoted names and expression-defined partitions. Compatible numeric and categorical values match across dtypes; unmatched values, including boolean/integer mismatches, predict `NaN` with an unseen-level warning.
 
 - Multiple-estimation dictionaries remain keyed by readable model-name strings. Expanded names preserve expression braces and literal-column quoting, so distinct specifications do not overwrite each other. Names without an intercept explicitly include `0`; string sample-group values are consistently quoted, while the full-sample sentinel displays as unquoted `all`. Update name-based dictionary lookups and `rename_models` mappings for these names.

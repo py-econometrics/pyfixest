@@ -7,7 +7,9 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.parse import FormulaKey
 from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.model_state import SampleSplit
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
@@ -87,6 +89,10 @@ def run_estimation(
     lookup_demeaned_data: dict[frozenset[int], DemeanedData] = {}
     lookup_preconditioner: dict[frozenset[int], Preconditioner] = {}
 
+    # Deduplicate by parsed semantics; the public dictionary uses readable names.
+    models_by_identity: dict[
+        tuple[FormulaKey, SampleSplit | None, float | None], Feols | Fepois | Feiv
+    ] = {}
     for spec in specs:
         if spec.cache_key != prev_cache_key:
             lookup_demeaned_data = {}
@@ -103,8 +109,17 @@ def run_estimation(
         for fitted_result in FIT._iter_fitted_models():
             if apply_retention:
                 fitted_result._clear_attributes()
-            fixest.all_fitted_models[fitted_result.model.model_name] = fitted_result
+            models_by_identity[
+                (
+                    fitted_result.model.fixest_formula.identity,
+                    fitted_result.model.sample_split,
+                    getattr(fitted_result.options, "quantile", None),
+                )
+            ] = fitted_result
 
+    fixest.all_fitted_models.update(
+        (fit.model.model_name, fit) for fit in models_by_identity.values()
+    )
     if parsed.is_multiple_estimation:
         return fixest
     return fixest.fetch_model(0, print_fml=False)
