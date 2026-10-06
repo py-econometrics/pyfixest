@@ -64,6 +64,43 @@ def data_feols(N=1000, seed=76540251, beta_type="2", error_type="2"):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_stepwise_fe_identity_against_fixest(data_feols, weights):
+    """#1776: colliding display formulas retain both distinct R partitions."""
+    data = data_feols.dropna().assign(fe_sum=lambda frame: frame.f1 + frame.f2)
+    fits = pf.feols(
+        "Y ~ X1 | sw({f1 + f2}, f1 + f2)",
+        data=data,
+        weights=weights,
+        vcov={"CRV1": "f1"},
+        fixef_rm="none",
+    ).to_list()
+    assert len(fits) == 2
+    for fit, fe_formula in zip(fits, ["fe_sum", "f1 + f2"], strict=True):
+        fit_r = fixest.feols(
+            ro.Formula(f"Y ~ X1 | {fe_formula}"),
+            data=data,
+            vcov=ro.Formula("~f1"),
+            fixef_rm="none",
+            **({"weights": ro.Formula("~weights")} if weights else {}),
+        )
+        np.testing.assert_allclose(
+            fit.coef()[["X1"]],
+            stats.coef(fit_r),
+            rtol=0,
+            atol=1e-8,
+            err_msg="stepwise FE coefficients != fixest",
+        )
+        np.testing.assert_allclose(
+            fit.se()[["X1"]],
+            fixest.se(fit_r),
+            rtol=0,
+            atol=1e-7,
+            err_msg="stepwise FE standard errors != fixest",
+        )
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml, fml_r, renamed_terms",
     [

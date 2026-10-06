@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 import pyfixest as pf
@@ -165,7 +166,7 @@ def test_single_formula_emits_one_spec():
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (None, "f1")
+    assert specs[0].cache_key == (None, specs[0].formula.fixed_effects_key)
 
 
 def test_csw_emits_one_spec_per_fixef_step():
@@ -182,6 +183,47 @@ def test_csw_emits_one_spec_per_fixef_step():
     # csw(f1, f2) → two fixef keys: "f1" then "f1+f2"
     assert len(specs) == 2
     assert specs[0].fixef_key != specs[1].fixef_key
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "fml, references",
+    [
+        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
+        (
+            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
+            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
+        ),
+        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
+    ],
+)
+def test_distinct_structures_with_same_display_survive(fml, references, weights):
+    """#1776: model identity and demean-cache scopes use parsed semantics."""
+    data = pf.get_data(N=400, seed=123).dropna()
+    data["f1 + f2"] = data.f2
+    fits = pf.feols(fml, data=data, weights=weights, fixef_rm="none").to_list()
+    assert len(fits) == len(references)
+    for fit, reference_formula in zip(fits, references, strict=True):
+        reference = pf.feols(
+            reference_formula, data=data, weights=weights, fixef_rm="none"
+        )
+        assert (
+            fit.model.fixest_formula.identity == reference.model.fixest_formula.identity
+        )
+        assert list(fit.coef().index) == list(reference.coef().index)
+        np.testing.assert_allclose(
+            fit.coef(), reference.coef(), rtol=1e-10, err_msg="stepwise coefficients"
+        )
+        np.testing.assert_allclose(
+            fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
+        )
+
+
+def test_full_sample_and_group_named_all_have_distinct_identity():
+    data = pf.get_data(N=300).dropna()
+    data["group"] = data.f1.map(lambda value: "all" if value < 10 else "rest")
+    fits = pf.feols("Y ~ X1 | f1", data=data, fsplit="group").to_list()
+    assert [fit.model.sample_split.value for fit in fits] == [None, "all", "rest"]
 
 
 def test_cache_keys_are_contiguous_blocks():

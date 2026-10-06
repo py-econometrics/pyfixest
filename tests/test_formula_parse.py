@@ -445,10 +445,12 @@ class TestFormulaParse:
     def test_parse_to_dict_groups_by_fe(self):
         """Test parsing of formulas into dictionary."""
         result = Formula.parse_to_dict("Y ~ X1 | sw(f1, f2)")
-        assert "f1" in result
-        assert "f2" in result
-        assert len(result["f1"]) == 1
-        assert len(result["f2"]) == 1
+        assert len(result) == 2
+        assert [str(group[0].fixed_effects) for group in result.values()] == [
+            "f1",
+            "f2",
+        ]
+        assert all(len(group) == 1 for group in result.values())
 
     def test_parse_to_dict_no_fe(self):
         """Test parsing of formulas into dictionary without fixed effects."""
@@ -541,8 +543,10 @@ class TestFormulaParse:
         """parse_to_dict should group csw0 FE correctly, with None for zero-step."""
         result = Formula.parse_to_dict("Y ~ X1 | csw0(f1, f2)")
         assert None in result  # zero step
-        assert "f1" in result
-        assert "f1 + f2" in result
+        assert len(result) == 3
+        assert [
+            str(group[0].fixed_effects) for key, group in result.items() if key
+        ] == ["f1", "f1 + f2"]
 
 
 class TestFixedEffectInteractions:
@@ -1052,7 +1056,7 @@ class TestEdgeCases:
     def test_fe_key_in_dict(self):
         """Fixed effects are used as keys in parse_to_dict."""
         result = Formula.parse_to_dict("Y ~ X1 | f1")
-        assert "f1" in result
+        assert Formula.parse("Y ~ X1 | f1")[0].fixed_effects_key in result
 
     def test_multiple_dependent_variables(self):
         """Test multiple independent variables."""
