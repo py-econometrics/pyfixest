@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
+from formulaic.materializers.base import FormulaMaterializer
 from formulaic.parser.types import Factor, Term
+from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
@@ -612,27 +614,6 @@ def test_fe_rejects_literal_factor(data):
         )
 
 
-def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
-    data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
-    fit = pf.feols(
-        "Y ~ X1 | `f1:f2` + f1:f2",
-        data=data,
-        fixef_rm="none",
-        demeaner=MapDemeaner(fixef_tol=1e-12),
-    )
-    assert tuple(fit.model_matrix.fixed_effects.columns) == ("`f1:f2`", "f1:f2")
-    assert fit.model.fixed_effects == tuple(fit.model_matrix.fixed_effects.columns)
-    np.testing.assert_allclose(
-        # Tighten both FE recovery and demeaning so this checks alignment,
-        # independently of their default iterative stopping errors.
-        fit.predict(newdata=data.iloc[:5], atol=1e-12, btol=1e-12),
-        fit.predict()[:5],
-        rtol=0,
-        atol=1e-8,
-        err_msg="distinct FE partitions with ambiguous labels",
-    )
-
-
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
 @pytest.mark.parametrize("interaction", [False, True])
 def test_fe_dummy_names_decode_levels(data, output, interaction):
@@ -681,3 +662,57 @@ def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
     except FactorEvaluationError as exc:
         assert isinstance(exc.__cause__, cause)
         raise
+
+
+def test_fe_context_binding_is_required(data):
+    terms = Formula.parse("Y ~ X1 | f1")[0].fixed_effects_wrapped
+    with pytest.raises(FactorEvaluationError, match=r"__fixed_effect__.*NameError"):
+        terms.get_model_matrix(data, context=FORMULAIC_TRANSFORMS)
+
+
+def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
+    data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
+    fit = pf.feols(
+        "Y ~ X1 | `f1:f2` + f1:f2",
+        data=data,
+        fixef_rm="none",
+        demeaner=MapDemeaner(fixef_tol=1e-12),
+    )
+    assert tuple(fit.model_matrix.fixed_effects.columns) == ("`f1:f2`", "f1:f2")
+    assert fit.model.fixed_effects == tuple(fit.model_matrix.fixed_effects.columns)
+    np.testing.assert_allclose(
+        # Tighten both FE recovery and demeaning so this checks alignment,
+        # independently of their default iterative stopping errors.
+        fit.predict(newdata=data.iloc[:5], atol=1e-12, btol=1e-12),
+        fit.predict()[:5],
+        rtol=0,
+        atol=1e-8,
+        err_msg="distinct FE partitions with ambiguous labels",
+    )
+
+
+def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
+    evaluate = FormulaMaterializer._evaluate_factor
+    observed = set()
+    path = "fit"
+
+    def check_variables(self, factor, spec, drop_rows):
+        evaluated = evaluate(self, factor, spec, drop_rows)
+        if "term" in factor.metadata:
+            assert {
+                str(variable)
+                for variable in evaluated.variables
+                if Variable.Role.VALUE in variable.roles
+            } == {"f1", "f2"}
+            observed.add(path)
+        return evaluated
+
+    monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", check_variables)
+    fit = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    path = "fixef"
+    fit.fixef()
+    path = "predict"
+    fit.predict(newdata=data.iloc[:5])
+    path = "one-hot"
+    fit._model_matrix_one_hot()
+    assert observed == {"fit", "fixef", "predict", "one-hot"}
