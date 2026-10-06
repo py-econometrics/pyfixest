@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.retention import require_retained
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ def refit(
     fit: Feols,
     *,
     data: pd.DataFrame,
-    fml: str | None = None,
+    fml: str | FixestFormula | None = None,
     vcov: VcovSpec,
     same_sample: bool = False,
 ) -> Feols:
@@ -51,8 +52,8 @@ def refit(
         The fitted model whose estimator and options are replayed.
     data : pd.DataFrame
         The data to fit, with the columns of the fit's sample.
-    fml : str, optional
-        The formula to fit; defaults to the fit's.
+    fml : str or Formula, optional
+        The formula to fit; defaults to the fit's retained parsed formula.
     vcov : VcovSpec
         The covariance estimator of the refit.
     same_sample : bool, optional
@@ -89,16 +90,20 @@ def refit(
             fit.options,
             demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
         )
+    formula = fit.model.fixest_formula if fml is None else fml
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
         data=data.copy(deep=False),
-        fml=fit.model.formula if fml is None else fml,
+        fml=formula.formula if isinstance(formula, FixestFormula) else formula,
         # the shallow copy above keeps `data` unchanged without a deep copy
         options=replace(options, copy_data=False),
         vcov=vcov,
     )
     # the caller reads the refit in full or throws it away
-    result = run_estimation(config, parse_formula(config), apply_retention=False)
+    parsed = parse_formula(
+        config, formula=formula if isinstance(formula, FixestFormula) else None
+    )
+    result = run_estimation(config, parsed, apply_retention=False)
     if not isinstance(result, Feols):
         raise TypeError(f"A refit must return a single model, not {result!r}.")
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:

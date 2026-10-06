@@ -28,6 +28,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- Model-matrix construction and ordinary and IV first-stage refits reuse parsed formulas. Arithmetic factors such as `{X1 * X2}` retain their meaning, and ordinary refits preserve formulas without an intercept.
+
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.
 - Iterative-rectifier separation checks preserve row alignment after missing observations are dropped, so Poisson estimates match those from manually prefiltered data. See [#1777](https://github.com/py-econometrics/pyfixest/issues/1777).
 - The fast `ritest()` algorithm now works with interacted and expression fixed effects such as `| f1^f2`, `| f3 + f1:f2` and `| Q('my fe')`. It raised `KeyError` because it looked the fixed effects up as raw data columns; it now uses the encoded fixed effects of the fit, like the slow algorithm. See [#1780](https://github.com/py-econometrics/pyfixest/issues/1780).

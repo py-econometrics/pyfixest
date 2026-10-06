@@ -1973,10 +1973,6 @@ def test_stepwise_fe_identity_against_fixest(data_feols, weights):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending parsed stages and refits; regression from PR stack #1862",
-)
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml, fml_r, renamed_terms",
@@ -2197,10 +2193,6 @@ def test_quoted_fixed_effects_against_fixest(
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending parsed stages and refits; regression from PR stack #1862",
-)
 @pytest.mark.against_r_core
 def test_parsed_no_intercept_refit_against_fixest(data_feols):
     """#1759: replaying the parsed formula retains the absent intercept."""
@@ -2285,10 +2277,6 @@ def test_no_intercept_ritest_against_fixest(data_feols, statistic):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending parsed stages and refits; regression from PR stack #1862",
-)
 @pytest.mark.against_r_core
 def test_no_intercept_poisson_crv3_against_fixest():
     """No-intercept CRV3 agrees with leave-cluster-out R Poisson fits."""

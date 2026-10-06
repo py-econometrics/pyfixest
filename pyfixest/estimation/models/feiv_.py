@@ -255,16 +255,10 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        fml_first_stage = self.model.fixest_formula.first_stage
-        # Append fixed effects manually since fml_first_stage doesn't include them
-        # (see Formula.fml_first_stage docstring for explanation)
-        if self.model.has_fixef and fml_first_stage is not None:
-            fml_first_stage += f" | {self.model.fixef}"
-
         # As in fixest, the first stage uses the second stage's rows and options.
         model1 = refit(
             self,
-            fml=fml_first_stage,
+            fml=self.model.fixest_formula.as_first_stage(),
             data=self._data,
             vcov=self.variance_covariance.spec,
             same_sample=True,
