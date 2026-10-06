@@ -15,7 +15,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import _post_processing_input_checks
-from pyfixest.utils.dev_utils import _select_order_coefs
+from pyfixest.utils.dev_utils import _find_stack_level, _select_order_coefs
 
 if TYPE_CHECKING:
     import matplotlib.pyplot as plt
@@ -75,7 +75,11 @@ def _apply_coefficient_labels(df: pd.DataFrame, labels: dict) -> None:
     known = set(coefnames).union(*(_split_interaction(c) for c in coefnames))
     for label_key in labels:
         if label_key not in known:
-            warnings.warn(f"The label key '{label_key}' is not in the covariate names.")
+            warnings.warn(
+                f"The label key '{label_key}' is not in the covariate names.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
     df["Coefficient"] = df["Coefficient"].map(lambda c: _relabel_coefficient(c, labels))
 
 
@@ -211,7 +215,7 @@ def iplot(
             "as coefficients created via `i()` are already named 'variable::value'. "
             "Use `labels` to rename coefficients instead.",
             DeprecationWarning,
-            stacklevel=2,
+            stacklevel=_find_stack_level(),
         )
 
     df_all: list[pd.DataFrame] = []
