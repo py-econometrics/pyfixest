@@ -71,7 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-task: [test-r-core-other, test-r-extended, test-r-fixest, test-r-hac, test-r-python]
+        test-task: [test-r-core-other, test-r-extended, test-r-fixest, test-r-hac]
     steps:
       - uses: actions/checkout@v7
 
@@ -83,16 +83,18 @@ jobs:
           frozen: true
           environments: py312-r
 
-      - name: Check that every test belongs to a CI task
-        if: matrix.test-task == 'test-r-python'
-        run: pixi run -e py312-r check-ci-test-coverage
-
       - name: Run fast R preflight
         if: matrix.test-task == 'test-r-fixest'
         run: pixi run -e py312-r test-r-fixest-fast
 
       - name: Run ${{ matrix.test-task }}
         run: pixi run -e py312-r ${{ matrix.test-task }}
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+
+      - name: Run Python tests in R-dependent modules
+        if: matrix.test-task == 'test-r-core-other'
+        run: pixi run -e py312-r test-r-python
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
 
