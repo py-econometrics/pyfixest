@@ -2223,33 +2223,76 @@ def test_no_intercept_poisson_crv3_against_fixest():
     np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
-)
 @pytest.mark.against_r_core
-def test_parsed_separation_against_fixest():
-    """IR uses the evaluated response and retains arithmetic regressors."""
-    data = pd.DataFrame(
-        {
-            "Y": [0, 0, 0, 1, 2, 3, 1, 2],
-            "X": [1, 2, 1, 2, 3, 4, 2, 3],
-            "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
-        }
-    )
+@pytest.mark.parametrize("case", ["arithmetic", "stateful", "context"])
+def test_separation_retained_design_against_fixest(case):
+    """IR preserves the evaluated design and agrees with an independent R fit."""
+    context = {}
+    if case == "arithmetic":
+        data = pd.DataFrame(
+            {
+                "Y": [0, 0, 0, 1, 2, 3, 1, 2],
+                "X": [1, 2, 1, 2, 3, 4, 2, 3],
+                "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
+            }
+        )
+        formula = "{Y * 2} ~ {X ** 2} - 1 | fe"
+        reference_formula = "I(Y * 2) ~ I(X^2) - 1 | fe"
+        n_obs = 6
+    elif case == "stateful":
+        rng = np.random.default_rng(4)
+        data = pd.DataFrame(
+            {
+                "c": np.repeat([-0.4, 0.4, 1.3, 3.8], [40, 10, 5, 10]),
+                "y": np.repeat([1.0, 0.0, 1.0, np.nan], [40, 10, 5, 10]),
+                "x": rng.normal(size=65),
+            }
+        )
+        data["g"] = np.floor(data.c - data.c.mean())
+        data["transformed_x"] = np.sin(data.x - data.x.mean())
+        formula = "y ~ np.sin(center(x)) | np.floor(center(c))"
+        reference_formula = "y ~ transformed_x | g"
+        n_obs = 55
+    else:
+        rng = np.random.default_rng(415)
+        data = pd.DataFrame(
+            {
+                "y": rng.poisson(1, 100),
+                "x": rng.normal(size=100),
+                "f": np.arange(100) % 5,
+            }
+        )
+        formula = "y ~ omega | f"
+        reference_formula = "y ~ x | f"
+        context = {"omega": data.x}
+        n_obs = 100
     fit = pf.fepois(
-        "{Y * 2} ~ {X ** 2} - 1 | fe",
+        formula,
         data=data,
+        context=context,
         separation_check=["ir"],
         iwls_tol=1e-12,
         ssc=ssc(k_adj=False, G_adj=False),
     )
     reference = fixest.fepois(
-        ro.Formula("I(Y * 2) ~ I(X^2) - 1 | fe"),
+        ro.Formula(reference_formula),
         data=data,
         vcov="iid",
         glm_tol=1e-12,
         ssc=fixest.ssc(K_adj=False, G_adj=False),
     )
-    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
-    np.testing.assert_allclose(fit.coef(), stats.coef(reference), rtol=0, atol=1e-8)
-    np.testing.assert_allclose(fit.se(), fixest.se(reference), rtol=0, atol=1e-7)
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == n_obs
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IR coefficients differ from R's fit of the same evaluated design",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IR standard errors differ from R's fit of the same evaluated design",
+    )
