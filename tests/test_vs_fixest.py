@@ -1880,7 +1880,7 @@ def test_inf_dropping(fml, weights):
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
-        match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
+        match=f"{n_zeros} rows with infinite values dropped from the model.",
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 

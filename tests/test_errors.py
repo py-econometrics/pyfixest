@@ -917,11 +917,6 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "dropped due to multicollinearity",
         ),
         (
-            lambda d: feols("log(Y) ~ X1", data=d),
-            UserWarning,
-            "rows with infinite values detected",
-        ),
-        (
             lambda d: fepois(
                 "Y ~ X | f",
                 data=pd.DataFrame(
