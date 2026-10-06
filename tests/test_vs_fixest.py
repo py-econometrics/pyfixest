@@ -2016,37 +2016,10 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
 @pytest.mark.parametrize(
     "vcov, fml, fml_r, renamed_terms",
     [
-        pytest.param(
-            "iid",
-            "Y ~ X1 | `my fe`",
-            "Y ~ X1 | `my fe`",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | firm.id",
-            "Y ~ X1 | firm.id",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param("iid", "Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
+        pytest.param("iid", "Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
         pytest.param("iid", "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | `my fe`:f2",
-            "Y ~ X1 | `my fe`^f2",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param("iid", "Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
         pytest.param("iid", "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
         pytest.param(
             "iid",
@@ -2058,57 +2031,17 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
                 reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
             ),
         ),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | f1:{f1 // 2}",
-            "Y ~ X1 | f1",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param("iid", "Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
         pytest.param(
             "iid",
             "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
             "Y ~ X2 | `my fe` | X1 ~ Z1",
             {"X1": "my endog"},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
         ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | `my fe`",
-            "Y ~ X1 | `my fe`",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | firm.id",
-            "Y ~ X1 | firm.id",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `my fe`", "Y ~ X1 | `my fe`", {}),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | firm.id", "Y ~ X1 | firm.id", {}),
         pytest.param({"CRV1": "f1"}, "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | `my fe`:f2",
-            "Y ~ X1 | `my fe`^f2",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
         pytest.param({"CRV1": "f1"}, "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
         pytest.param(
             {"CRV1": "f1"},
@@ -2120,25 +2053,12 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
                 reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
             ),
         ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | f1:{f1 // 2}",
-            "Y ~ X1 | f1",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
         pytest.param(
             {"CRV1": "f1"},
             "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
             "Y ~ X2 | `my fe` | X1 ~ Z1",
             {"X1": "my endog"},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
         ),
     ],
 )

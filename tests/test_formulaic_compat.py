@@ -10,18 +10,27 @@ import numpy as np
 import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
+from formulaic.materializers.base import FormulaMaterializer
+from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
+from pyfixest.errors import EndogVarsAsCovarsError, InstrumentsAsCovarsError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     i_term_columns,
     iter_i_categorical_levels,
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
+)
+from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FixedEffectEncoding,
+    fixed_effect_context,
 )
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
@@ -219,15 +228,18 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
 
 
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
-    """FE transform_state stores __fixed_effect_encoding__ DataFrame."""
+    """FE transform_state stores the fitted level indexes and combinations."""
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
     fe_spec = fit.model.model_spec["fe"]
-    fe_state = fe_spec.transform_state["__fixed_effect__(f1)"]
-    enc_df = fe_state["__fixed_effect_encoding__"]
-
-    assert isinstance(enc_df, pd.DataFrame)
-    assert "__fixed_effect_encoding__" in enc_df.columns
+    (factor,) = fe_spec.formula[0].factors
+    assert factor.metadata["term"].factors[0].expr == "f1"
+    assert factor.expr.removeprefix("__fixed_effect__(").removesuffix(")").isdigit()
+    assert fe_spec.required_variables == {"f1"}
+    fe_state = fe_spec.transform_state[factor.expr]
+    encoding = fe_state["__fixed_effect_encoding__"]
+    assert isinstance(encoding, FixedEffectEncoding)
+    assert encoding.levels[0].tolist() == sorted(data.f1.unique())
 
 
 def test_materializer_cache_contains_evaluated_factor_values(
@@ -336,10 +348,6 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending indexed fixed-effect encoding; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
 def test_fe_prediction_matches_values_across_dtypes(data, kind):
     """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
@@ -365,10 +373,6 @@ def test_fe_prediction_matches_values_across_dtypes(data, kind):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("expression", ["I(f1 * 10)", "f1:{f1 // 2}", "I(center(f1))"])
 def test_fe_expression_prediction_and_labels(data, expression):
     """Expression FEs use parsed labels and evaluated values in every consumer."""
@@ -560,3 +564,134 @@ def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
     except FactorEvaluationError as exc:
         assert isinstance(exc.__cause__, cause)
         raise
+
+
+@pytest.mark.parametrize(
+    "rhs, expected",
+    [
+        ("`my var`", {"my var"}),
+        ("`firm.id`", {"firm.id"}),
+        ("I(`my var`)", {"my var"}),
+        ("Q('my var')", {"my var"}),
+        ("{X1 * X2}", {"X1", "X2"}),
+    ],
+)
+def test_required_variables_preserve_quoted_names(rhs, expected):
+    """IV dependency checks preserve literal names and transformed dependencies."""
+    parsed = Formula.parse(f"Y ~ {rhs}")[0]
+    assert formula_required_variables(parsed.exogenous) == expected
+
+
+@pytest.mark.parametrize(
+    "fml, error",
+    [
+        (
+            "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ I(`my var`) + [X2 ~ Q('my var')]",
+            InstrumentsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [X2 ~ I(`my var`)]",
+            InstrumentsAsCovarsError,
+        ),
+    ],
+)
+def test_iv_rejects_quoted_variable_overlap(fml, error):
+    """Quoted transformations must not hide a variable used in both IV roles."""
+    with pytest.raises(error, match="my var"):
+        Formula.parse(fml)
+
+
+@pytest.mark.parametrize(
+    "name", ["my fe", "firm.id", "a:b", 'fe"quote', "fe\\backslash", "fe{brace}"]
+)
+@pytest.mark.parametrize("expression", ["`{name}`", "C(`{name}`)"])
+def test_fe_metadata_preserves_lookup_and_dependencies(data, name, expression):
+    """FE lookup names survive materialization, recovery, and prediction."""
+    renamed = data.rename(columns={"f1": name})
+    renamed.loc[0, name] = np.nan
+    # Stateful Python expressions containing quotes/backslashes remain limited
+    # by Formulaic's own state-key escaping; plain LOOKUP factors bypass it.
+    fit = pf.feols(f"Y ~ X1 | {expression.format(name=name)}:f2", data=renamed)
+    spec = fit.model.model_spec["fe"]
+    assert {name, "f2"}.issubset(spec.variables)
+    # Formulaic normalizes dotted names when deriving required_variables;
+    # the original dependency remains in variables, as in the existing hook.
+    if "." not in name:
+        assert spec.required_variables == {name, "f2"}
+    baseline = pf.feols("Y ~ X1 | f1:f2", data=renamed.rename(columns={name: "f1"}))
+    np.testing.assert_allclose(
+        fit.coef(), baseline.coef(), rtol=0, atol=1e-12, err_msg="FE coefficients"
+    )
+    prediction = fit.predict(newdata=renamed.iloc[:10])
+    assert np.isnan(prediction[0])
+    np.testing.assert_allclose(
+        prediction[1:],
+        baseline.predict(newdata=renamed.rename(columns={name: "f1"}).iloc[:10])[1:],
+        rtol=0,
+        atol=1e-10,
+        err_msg="FE predictions",
+    )
+
+
+@pytest.mark.parametrize(
+    "expression", ["Q('my fe')", "C(Q('my fe'))", "I(center(Q('my fe')))"]
+)
+def test_fe_nested_transforms_retain_state_and_dependencies(data, expression):
+    """Original Python factors retain context, dependencies, and learned state."""
+    renamed = data.rename(columns={"f1": "my fe"})
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=renamed)
+    spec = fit.model.model_spec["fe"]
+    assert spec.required_variables == {"my fe"}
+    newdata = renamed.iloc[:10]
+    matrix = spec.get_model_matrix(
+        newdata,
+        context=fixed_effect_context(
+            terms=spec.formula, data=newdata, context=FORMULAIC_TRANSFORMS
+        ),
+    )
+    np.testing.assert_array_equal(
+        matrix.to_numpy(),
+        fit.model_matrix.fixed_effects.iloc[:10].to_numpy(),
+        err_msg="persistent FE transform state",
+    )
+
+
+def test_fe_context_binding_is_required(data):
+    terms = Formula.parse("Y ~ X1 | f1")[0].fixed_effects_wrapped
+    with pytest.raises(FactorEvaluationError, match=r"__fixed_effect__.*NameError"):
+        terms.get_model_matrix(data, context=FORMULAIC_TRANSFORMS)
+
+
+def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
+    evaluate = FormulaMaterializer._evaluate_factor
+    observed = set()
+    path = "fit"
+
+    def check_variables(self, factor, spec, drop_rows):
+        evaluated = evaluate(self, factor, spec, drop_rows)
+        if "term" in factor.metadata:
+            assert {
+                str(variable)
+                for variable in evaluated.variables
+                if Variable.Role.VALUE in variable.roles
+            } == {"f1", "f2"}
+            observed.add(path)
+        return evaluated
+
+    monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", check_variables)
+    fit = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    path = "fixef"
+    fit.fixef()
+    path = "predict"
+    fit.predict(newdata=data.iloc[:5])
+    path = "one-hot"
+    fit._model_matrix_one_hot()
+    assert observed == {"fit", "fixef", "predict", "one-hot"}

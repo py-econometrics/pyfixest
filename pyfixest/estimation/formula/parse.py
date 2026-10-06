@@ -21,11 +21,15 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_python_expression,
     is_structured_formula,
     terms_without_intercept,
+)
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    wrap_fixed_effect,
 )
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
@@ -45,10 +49,8 @@ _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
 
 
 def _wrap_fixed_effect(term: Term) -> Term:
-    """Preserve the legacy FE call normalization until metadata encoding."""
-    return formulaic.formula.Formula(
-        [f"__fixed_effect__{term.factors}"], _parser=_PARSER_NO_INTERCEPT
-    )[0]
+    """Carry the parsed FE term as metadata on a numeric wrapper call."""
+    return wrap_fixed_effect(term=term)
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,16 +325,16 @@ class Formula:
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
-        endogenous_are_covariates = self.endogenous.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        endogenous_are_covariates = formula_required_variables(
+            formula=self.endogenous
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if endogenous_are_covariates:
             raise EndogVarsAsCovarsError(
                 f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
             )
-        instruments_are_covariates = self.instruments.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        instruments_are_covariates = formula_required_variables(
+            formula=self.instruments
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if instruments_are_covariates:
             raise InstrumentsAsCovarsError(
                 f"Instruments specified as covariates: {instruments_are_covariates}"
