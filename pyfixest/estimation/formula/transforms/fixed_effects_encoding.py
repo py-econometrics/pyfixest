@@ -27,6 +27,28 @@ class _FixedEffectContrasts(TreatmentContrasts):
     """Native treatment coding with the parsed FE label in dummy names."""
 
     variable: str
+    encoding: FixedEffectEncoding
+
+    @TreatmentContrasts.override
+    def get_coding_column_names(
+        self, levels: Sequence[Hashable], reduced_rank: bool = True
+    ) -> Sequence[Hashable]:
+        codes = super().get_coding_column_names(levels, reduced_rank=reduced_rank)
+        values = self.encoding.decoded_values(codes=np.asarray(codes, dtype=np.int64))
+        if len(values) == 1:
+            return values[0].tolist()
+        return list(zip(*(value.tolist() for value in values), strict=True))
+
+    @TreatmentContrasts.override
+    def get_drop_field(
+        self, levels: Sequence[Hashable], reduced_rank: bool = True
+    ) -> Hashable:
+        code = super().get_drop_field(levels, reduced_rank=reduced_rank)
+        if code is None:
+            return None
+        return self.get_coding_column_names(levels, reduced_rank=False)[
+            list(levels).index(code)
+        ]
 
     @TreatmentContrasts.override
     def get_factor_format(
@@ -237,7 +259,12 @@ def encode_fixed_effects(
                 stacklevel=_find_stack_level(),
             )
     if metadata["dummies"]:
-        return C(codes, contrasts=_FixedEffectContrasts(variable=encoding.variable))
+        return C(
+            codes,
+            contrasts=_FixedEffectContrasts(
+                variable=encoding.variable, encoding=encoding
+            ),
+        )
     return codes
 
 

@@ -630,3 +630,35 @@ def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
         atol=1e-8,
         err_msg="distinct FE partitions with ambiguous labels",
     )
+
+
+@pytest.mark.parametrize("output", ["numpy", "sparse"])
+@pytest.mark.parametrize("interaction", [False, True])
+def test_fe_dummy_names_decode_levels(data, output, interaction):
+    data = data.assign(firm=data.f1.map(lambda value: f"firm_{value}"))
+    term = "firm:f2" if interaction else "firm"
+    fit = pf.feols(f"Y ~ X1 | {term}", data=data, fixef_rm="none")
+    _, design, names = fit._model_matrix_one_hot(output=output)
+    design = design.toarray() if output == "sparse" else design
+    levels = (
+        sorted(set(zip(data.firm, data.f2, strict=True)))
+        if interaction
+        else sorted(data.firm.unique())
+    )
+    assert list(names[2:]) == [f"{term}[T.{level}]" for level in levels[1:]]
+    for position, level in enumerate(levels[1:], start=2):
+        expected = (
+            (data.firm == level[0]) & (data.f2 == level[1])
+            if interaction
+            else data.firm == level
+        )
+        np.testing.assert_array_equal(
+            design[:, position], expected, err_msg="decoded FE dummy"
+        )
+    np.testing.assert_allclose(
+        fit.predict(newdata=data.iloc[:5]),
+        fit.predict()[:5],
+        rtol=0,
+        atol=1e-8,
+        err_msg="decoded-label FE prediction",
+    )
