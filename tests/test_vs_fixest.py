@@ -112,8 +112,9 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
         # carries exactly the same levels and gives a usable external oracle.
         ("Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
         ("Y ~ X1 | `my fe`:f2", "Y ~ X1 | `my fe`^f2", {}),
-        # These expressions preserve f1's groups; compare that partition in R.
+        # Compare expression-defined partitions through lookup columns in R.
         ("Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
+        ("Y ~ X1 | I(f1 + f2)", "Y ~ X1 | fe_sum", {}),
         ("Y ~ X1 | f1:{f1 // 2}", "Y ~ X1 | f1", {}),
         (
             "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
@@ -124,7 +125,10 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
         ),
     ],
 )
-def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_terms):
+@pytest.mark.parametrize("vcov", ["iid", {"CRV1": "f1"}])
+def test_quoted_fixed_effects_against_fixest(
+    data_feols, fml, fml_r, renamed_terms, vcov
+):
     """#1735: quoted fixed-effect and IV names match fixest."""
     data = data_feols.assign(
         **{
@@ -135,10 +139,15 @@ def test_quoted_fixed_effects_against_fixest(data_feols, fml, fml_r, renamed_ter
             "my fe": data_feols.f1,
             "firm.id": data_feols.f1,
             "a:b": data_feols.f1,
+            "fe_sum": data_feols.f1 + data_feols.f2,
         }
     )
-    fit = pf.feols(fml, data=data, vcov="iid")
-    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
+    fit = pf.feols(fml, data=data, vcov=vcov)
+    fit_r = fixest.feols(
+        ro.Formula(fml_r),
+        data=data,
+        vcov="iid" if vcov == "iid" else ro.Formula("~f1"),
+    )
     coef_r = stats.coef(fit_r)
     names = [
         renamed_terms.get(name, name)

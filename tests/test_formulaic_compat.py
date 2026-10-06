@@ -520,3 +520,52 @@ def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> N
 
     assert np.isnan(pred[0])
     assert np.all(np.isfinite(pred[1:]))
+
+
+@pytest.mark.parametrize(
+    "fixed_effects, expected_names",
+    [
+        ("I(f1 + f2)", ("I(f1 + f2)",)),
+        ("`my fe`", ("my fe",)),
+        ("`my + fe`", ("my + fe",)),
+        ("f2 + I(f1 + f2)", ("f2", "I(f1 + f2)")),
+        ("f1:f2 + `my fe`", ("my fe", "f1:f2")),
+    ],
+)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_fixed_effect_names_follow_encoded_columns(
+    fixed_effects, expected_names, weights
+):
+    """#1779: labels preserve term boundaries and match the nesting-check input."""
+    data = pf.get_data(N=400, seed=123).dropna().reset_index(drop=True)
+    data["my fe"] = data.f1
+    data["my + fe"] = data.f1
+    fit = pf.feols(
+        f"Y ~ X1 | {fixed_effects}",
+        data=data,
+        weights=weights,
+        vcov={"CRV1": "f1"},
+        fixef_rm="none",
+    )
+    assert fit.model.fixed_effects == expected_names
+    assert len(expected_names) == fit.model_matrix.fixed_effects.shape[1]
+    # Replay exactly the encoded partition under ordinary lookup names.
+    reference_data = data.copy()
+    encoded_names = []
+    for position in range(len(expected_names)):
+        name = f"encoded_fe_{position}"
+        reference_data[name] = fit.model_matrix.fixed_effects.iloc[:, position]
+        encoded_names.append(name)
+    reference = pf.feols(
+        "Y ~ X1 | " + " + ".join(encoded_names),
+        data=reference_data,
+        weights=weights,
+        vcov={"CRV1": "f1"},
+        fixef_rm="none",
+    )
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), rtol=1e-10, err_msg="FE coefficients"
+    )
+    np.testing.assert_allclose(
+        fit.se(), reference.se(), rtol=1e-10, err_msg="clustered FE standard errors"
+    )
