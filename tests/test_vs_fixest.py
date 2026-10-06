@@ -1932,9 +1932,6 @@ def _skip_f3_checks(fml, f3_type):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.xfail(
-    strict=True, reason="#1776: structural FE identity is enabled in the identity layer"
-)
 def test_stepwise_fe_identity_against_fixest(data_feols, weights):
     """#1776: colliding display formulas retain both distinct R partitions."""
     data = data_feols.dropna().assign(fe_sum=lambda frame: frame.f1 + frame.f2)

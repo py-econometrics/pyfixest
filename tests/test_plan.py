@@ -166,7 +166,7 @@ def test_single_formula_emits_one_spec():
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (None, "f1")
+    assert specs[0].cache_key == (None, specs[0].formula.fixed_effects_key)
 
 
 def test_csw_emits_one_spec_per_fixef_step():
@@ -558,21 +558,10 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
 @pytest.mark.parametrize(
     "fml, references",
     [
-        pytest.param(
-            "Y ~ X1 | sw({f1 + f2}, f1 + f2)",
-            ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"],
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending structural formula identity; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
+        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
+        (
             "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
             ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending structural formula identity; regression from PR stack #1862",
-            ),
         ),
         ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
     ],
