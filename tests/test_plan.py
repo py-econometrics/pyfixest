@@ -34,6 +34,7 @@ from pyfixest.estimation.plan_ import (
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.utils import Ssc
+from tests._feols_test_cases import DEMEAN_CACHE_COLLISION_CASES
 
 _SHARED_OPTIONS = dict(
     ssc=Ssc(),
@@ -167,6 +168,12 @@ def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
     config = _config("feols", fml, pf.get_data())
     formula_dict = plan_formulas(config=config).formula_dict
 
+    expected_groups = {
+        Formula.parse(f"Y ~ X1 | {key}")[0].fixed_effects_key
+        if key is not None
+        else None: outcomes
+        for key, outcomes in expected_groups.items()
+    }
     assert list(formula_dict) == list(expected_groups)
     assert {
         key: [str(formula.dependent) for formula in formulas]
@@ -174,9 +181,7 @@ def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
     } == expected_groups
     for key, formulas in formula_dict.items():
         for formula in formulas:
-            assert (
-                str(formula.fixed_effects) if formula.is_fixed_effects else None
-            ) == key
+            assert formula.fixed_effects_key == key
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +203,7 @@ def test_single_formula_emits_one_spec():
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (None, "f1")
+    assert specs[0].cache_key == (None, specs[0].formula.fixed_effects_key)
 
 
 def test_csw_emits_one_spec_per_fixef_step():
@@ -612,6 +617,52 @@ def test_distinct_structures_with_same_display_survive(weights):
         np.testing.assert_allclose(
             fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
         )
+
+
+@pytest.mark.parametrize("terms", [case[0] for case in DEMEAN_CACHE_COLLISION_CASES])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_demean_cache_distinguishes_colliding_columns(terms, weights):
+    """Stepwise fits match separate fits after reordering models or renaming columns."""
+    data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    for renamed in [False, True]:
+        renamed_data = (
+            data.rename(columns={"X2": "renamed_X2", "X1 ** 2": "literal"})
+            if renamed
+            else data
+        )
+        model_terms = (
+            tuple(
+                term.replace("X2", "renamed_X2").replace("`X1 ** 2`", "literal")
+                for term in terms
+            )
+            if renamed
+            else terms
+        )
+        references = [
+            pf.feols(
+                f"Y ~ {term} | f1", data=renamed_data, weights=weights, fixef_rm="none"
+            )
+            for term in model_terms
+        ]
+        for order in [model_terms, model_terms[::-1]]:
+            multi = pf.feols(
+                f"Y ~ sw({', '.join(order)}) | f1",
+                data=renamed_data,
+                weights=weights,
+                fixef_rm="none",
+            )
+            for fit, term in zip(multi.to_list(), order, strict=True):
+                reference = references[model_terms.index(term)]
+                np.testing.assert_allclose(
+                    fit.coef(), reference.coef(), rtol=1e-10, atol=1e-10
+                )
+                np.testing.assert_allclose(
+                    fit.se(), reference.se(), rtol=1e-10, atol=1e-10
+                )
+                np.testing.assert_allclose(
+                    fit.predict(), reference.predict(), rtol=1e-10, atol=1e-10
+                )
 
 
 def test_full_sample_and_group_named_all_have_distinct_identity():
