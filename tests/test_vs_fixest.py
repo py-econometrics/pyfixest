@@ -1565,6 +1565,29 @@ def test_wls_na():
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+def test_wls_zero_weights(fml):
+    """Zero-weight rows are dropped before estimation, as in R fixest."""
+    data = get_data().dropna()
+    data.loc[data.index[:5], "weights"] = 0.0
+
+    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+        fit_py = feols(fml, data=data, weights="weights", vcov="hetero")
+    fit_r = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        vcov="hetero",
+        ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
+    )
+
+    assert fit_py.sample_info.n_obs == stats.nobs(fit_r)[0]
+    assert fit_py.sample_info.dropped_by_stage.zero_weight == 5
+    np.testing.assert_allclose(fit_py.coef(), stats.coef(fit_r), rtol=rtol, atol=atol)
+    np.testing.assert_allclose(fit_py.se(), fixest.se(fit_r), rtol=rtol, atol=atol)
+
+
 def _py_fml_to_r_fml(py_fml):
     """
     Covernt pyfixest formula.
