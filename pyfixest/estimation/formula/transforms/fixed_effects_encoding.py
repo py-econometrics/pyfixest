@@ -31,6 +31,7 @@ class _FixedEffectContrasts(TreatmentContrasts):
     def get_factor_format(
         self, levels: Sequence[Hashable], reduced_rank: bool = True
     ) -> str:
+        # Formulaic calls str.format() on this template; labels are literal text.
         label = self.variable.replace("{", "{{").replace("}", "}}")
         return label + ("[T.{field}]" if reduced_rank else "[{field}]")
 

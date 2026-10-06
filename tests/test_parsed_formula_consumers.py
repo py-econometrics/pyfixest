@@ -103,6 +103,9 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     y, x, names = fit._model_matrix_one_hot(output=output)
     x = x.toarray() if output == "sparse" else x
     assert "X1 * X2" in names
+    label = fixed_effects.replace("`", "")
+    assert any(label in name for name in names)
+    assert all("__fixed_effect__" not in name for name in names)
     np.testing.assert_allclose(y, reference.within_data.response.flatten())
     # Dummy names can differ in their quoting, but their values and order agree.
     np.testing.assert_allclose(x, reference.within_data.design)
