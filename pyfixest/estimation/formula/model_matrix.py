@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
+    _model_spec_column_identifiers,
     flatten_model_matrix,
     get_fixed_effect_encoding,
 )
@@ -24,7 +25,7 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectContext,
 )
-from pyfixest.estimation.formula.utils import _get_weights
+from pyfixest.estimation.formula.utils import ColumnIdentifier, _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
@@ -359,6 +360,42 @@ class ModelMatrix:
         if self._instruments_column_names is None:
             return None
         return self._data.loc[:, self._instruments_column_names]
+
+    @property
+    def dependent_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
+        """Column identifiers of ``dependent``."""
+        return _model_spec_column_identifiers(
+            model_spec=self._model_spec[_ModelMatrixKey.main].lhs,
+            columns=self._dependent_column_names or [],
+        )
+
+    @property
+    def independent_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
+        """Column identifiers of ``independent``."""
+        return _model_spec_column_identifiers(
+            model_spec=self._model_spec[_ModelMatrixKey.main].rhs,
+            columns=self._independent_column_names or [],
+        )
+
+    @property
+    def endogenous_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
+        """Column identifiers of ``endogenous``; empty without an IV specification."""
+        if self._endogenous_column_names is None:
+            return ()
+        return _model_spec_column_identifiers(
+            model_spec=self._model_spec[_ModelMatrixKey.instrumental_variable].lhs,
+            columns=self._endogenous_column_names,
+        )
+
+    @property
+    def instrument_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
+        """Column identifiers of ``instruments``; empty without an IV specification."""
+        if self._instruments_column_names is None:
+            return ()
+        return _model_spec_column_identifiers(
+            model_spec=self._model_spec[_ModelMatrixKey.instrumental_variable].rhs,
+            columns=self._instruments_column_names,
+        )
 
     @property
     def weights(self) -> pd.DataFrame | None:

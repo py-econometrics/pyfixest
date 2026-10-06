@@ -8,7 +8,7 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
-from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.parse import Formula, FormulaPartKey
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
@@ -108,7 +108,7 @@ def estimation_method_of(model_cls: type) -> EstimationMethod:
 class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.
 
-    `formula_dict` keys by the fixed-effects formula string (or
+    `formula_dict` keys by the structure of the fixed-effects terms (or
     `None` when no FE) and maps to the list of `Formula`
     objects for that block.
     `is_iv` is true when any formula has a
@@ -116,7 +116,7 @@ class ParsedFormula:
     `is_multiple_estimation` if multiple estimation syntax is used.
     """
 
-    formula_dict: dict[str | None, list[Formula]]
+    formula_dict: dict[FormulaPartKey | None, list[Formula]]
     is_iv: bool
     is_multiple_estimation: bool
 
@@ -124,9 +124,9 @@ class ParsedFormula:
 def plan_formulas(config: EstimationConfig) -> ParsedFormula:
     """Group parsed formulas and account for sample and quantile fan-out."""
     run_split = config.split is not None or config.fsplit is not None
-    formula_dictionary: dict[str | None, list[Formula]] = {}
+    formula_dictionary: dict[FormulaPartKey | None, list[Formula]] = {}
     for formula in config.formulas:
-        key = str(formula.fixed_effects) if formula.is_fixed_effects else None
+        key = formula.fixed_effects_key
         formula_dictionary.setdefault(key, []).append(formula)
     process = config.quantile_process
     is_multiple_estimation = (
@@ -161,14 +161,14 @@ class ModelSpec:
     method: EstimationMethod
     model_cls: ModelFactory
     formula: Formula
-    fixef_key: str | None
+    fixef_key: FormulaPartKey | None
     data: pd.DataFrame
     options: EstimationOptions
     sample_split: SampleSplit | None
     quantile_process: QuantileProcess | None = None
 
     @property
-    def cache_key(self) -> tuple[SampleSplit | None, str | None]:
+    def cache_key(self) -> tuple[SampleSplit | None, FormulaPartKey | None]:
         """Specs with the same key can share demean / preconditioner caches."""
         return (self.sample_split, self.fixef_key)
 
@@ -203,7 +203,7 @@ def build_all_splits(
 def expand_specs(
     *,
     config: EstimationConfig,
-    formula_dict: Mapping[str | None, list[Formula]],
+    formula_dict: Mapping[FormulaPartKey | None, list[Formula]],
     data: pd.DataFrame,
     splits: list[SampleSplit | None],
     is_iv: bool,

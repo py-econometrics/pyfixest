@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import warnings
 from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from formulaic.utils.stateful_transforms import stateful_eval, stateful_transfor
 from formulaic.utils.variables import Variable, get_required_variables
 
 from pyfixest.errors import FixedEffectEvaluationError
+from pyfixest.estimation.formula.utils import term_key
 from pyfixest.utils.dev_utils import _find_stack_level
 
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
@@ -94,10 +96,9 @@ def wrap_fixed_effect(term: Term) -> Term:
     Original lookup names remain metadata and never become executable Python
     source.
     """
-    identity = repr(
-        [(factor.expr, factor.eval_method.value) for factor in term.factors]
+    identifier = int(
+        hashlib.sha256(json.dumps(term_key(term=term)).encode()).hexdigest(), 16
     )
-    identifier = int(hashlib.sha256(identity.encode()).hexdigest(), 16)
     return Term(
         [
             Factor(

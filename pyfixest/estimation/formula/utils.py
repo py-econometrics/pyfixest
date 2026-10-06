@@ -2,14 +2,42 @@ from __future__ import annotations
 
 import re
 import warnings
+from dataclasses import dataclass
 from enum import Enum
+from typing import TypeAlias
 
 import pandas as pd
 from formulaic.parser.algos import tokenize
-from formulaic.parser.types import Token
+from formulaic.parser.types import Term, Token
 
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
+
+TermKey: TypeAlias = tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnIdentifier:
+    """Hashable identity of one column produced by formula encoding.
+
+    ``term`` preserves factor expressions and evaluation modes.
+    ``encoded_position`` identifies a column within that term's encoding.
+    ``name`` distinguishes fitted coding choices, including contrast rank.
+    """
+
+    term: TermKey
+    encoded_position: int
+    name: str
+
+
+def term_key(*, term: Term) -> TermKey:
+    """Identify factors by expression and evaluation mode.
+
+    Formulaic's Factor and Term equality and hashing ignore evaluation mode,
+    so they cannot distinguish a column lookup from an evaluated expression
+    with the same text.
+    """
+    return tuple((factor.expr, factor.eval_method.value) for factor in term.factors)
 
 
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:

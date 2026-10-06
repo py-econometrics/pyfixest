@@ -34,6 +34,7 @@ from pyfixest.estimation.plan_ import (
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.utils import Ssc
+from tests._feols_test_cases import DEMEAN_CACHE_COLLISION_CASES
 
 _SHARED_OPTIONS = dict(
     ssc=Ssc(),
@@ -163,7 +164,7 @@ def test_single_formula_emits_one_spec():
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (None, "f1")
+    assert specs[0].cache_key == (None, specs[0].formula.fixed_effects_key)
 
 
 def test_csw_emits_one_spec_per_fixef_step():
@@ -555,21 +556,10 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
 @pytest.mark.parametrize(
     "fml, references",
     [
-        pytest.param(
-            "Y ~ X1 | sw({f1 + f2}, f1 + f2)",
-            ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"],
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending structural formula identity; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
+        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
+        (
             "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
             ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending structural formula identity; regression from PR stack #1862",
-            ),
         ),
         ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
     ],
@@ -594,6 +584,52 @@ def test_distinct_structures_with_same_display_survive(fml, references, weights)
         np.testing.assert_allclose(
             fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
         )
+
+
+@pytest.mark.parametrize("terms", [case[0] for case in DEMEAN_CACHE_COLLISION_CASES])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_demean_cache_distinguishes_colliding_columns(terms, weights):
+    """Stepwise fits match separate fits after reordering models or renaming columns."""
+    data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    for renamed in [False, True]:
+        renamed_data = (
+            data.rename(columns={"X2": "renamed_X2", "X1 ** 2": "literal"})
+            if renamed
+            else data
+        )
+        model_terms = (
+            tuple(
+                term.replace("X2", "renamed_X2").replace("`X1 ** 2`", "literal")
+                for term in terms
+            )
+            if renamed
+            else terms
+        )
+        references = [
+            pf.feols(
+                f"Y ~ {term} | f1", data=renamed_data, weights=weights, fixef_rm="none"
+            )
+            for term in model_terms
+        ]
+        for order in [model_terms, model_terms[::-1]]:
+            multi = pf.feols(
+                f"Y ~ sw({', '.join(order)}) | f1",
+                data=renamed_data,
+                weights=weights,
+                fixef_rm="none",
+            )
+            for fit, term in zip(multi.to_list(), order, strict=True):
+                reference = references[model_terms.index(term)]
+                np.testing.assert_allclose(
+                    fit.coef(), reference.coef(), rtol=1e-10, atol=1e-10
+                )
+                np.testing.assert_allclose(
+                    fit.se(), reference.se(), rtol=1e-10, atol=1e-10
+                )
+                np.testing.assert_allclose(
+                    fit.predict(), reference.predict(), rtol=1e-10, atol=1e-10
+                )
 
 
 def test_full_sample_and_group_named_all_have_distinct_identity():

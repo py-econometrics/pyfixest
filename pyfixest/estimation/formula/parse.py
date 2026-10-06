@@ -4,7 +4,7 @@ import ast
 import itertools
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, TypeAlias
 
 import formulaic
 import formulaic.formula
@@ -34,10 +34,12 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 )
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
+    TermKey,
     _get_position_of_first_parenthesis_pair,
     _MultipleEstimationType,
     _preprocess,
     _str_split_by_sep,
+    term_key,
 )
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
@@ -47,6 +49,14 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+
+FormulaPartKey: TypeAlias = tuple[TermKey, ...]
+FormulaKey: TypeAlias = tuple[FormulaPartKey, ...]
+
+
+def _formula_part_key(terms: Iterable[Term]) -> FormulaPartKey:
+    """Preserve term boundaries and lookup/expression evaluation semantics."""
+    return tuple(term_key(term=term) for term in terms)
 
 
 def _render_factor(factor: Factor) -> str:
@@ -403,6 +413,24 @@ class Formula:
         return result
 
     @property
+    def fixed_effects_key(self) -> FormulaPartKey | None:
+        """Structural identity of the absorbed terms for grouping and caching."""
+        return _formula_part_key(self.fixed_effects) if self.is_fixed_effects else None
+
+    @property
+    def identity(self) -> FormulaKey:
+        """Model identity independent of its potentially ambiguous display text."""
+        return (
+            _formula_part_key(self.dependent),
+            _formula_part_key(self.exogenous),
+            _formula_part_key(self.endogenous) if self.is_instrumental_variable else (),
+            _formula_part_key(self.instruments)
+            if self.is_instrumental_variable
+            else (),
+            self.fixed_effects_key or (),
+        )
+
+    @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:
         """The left hand side of the formula."""
         return self._formula.lhs
@@ -549,17 +577,14 @@ class Formula:
         ]
 
     @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:
+    def parse_to_dict(cls, formula: str) -> dict[FormulaPartKey | None, list[Formula]]:
         """Group parsed formulas into dictionary keyed by fixed effects."""
         formulas = cls.parse(formula)
-        result: dict[str | None, list[Formula]] = {}
+        result: dict[FormulaPartKey | None, list[Formula]] = {}
         for parsed_formula in formulas:
-            fixed_effects = (
-                str(parsed_formula.fixed_effects)
-                if parsed_formula.is_fixed_effects
-                else None
+            result.setdefault(parsed_formula.fixed_effects_key, []).append(
+                parsed_formula
             )
-            result.setdefault(fixed_effects, []).append(parsed_formula)
         return result
 
 

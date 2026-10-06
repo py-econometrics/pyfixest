@@ -20,6 +20,7 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FIXED_EFFECT_ENCODING,
     FixedEffectEncoding,
 )
+from pyfixest.estimation.formula.utils import ColumnIdentifier, term_key
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -27,6 +28,26 @@ if TYPE_CHECKING:
 
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
+
+
+def _model_spec_column_identifiers(
+    *, model_spec: ModelSpec, columns: Iterable[str]
+) -> tuple[ColumnIdentifier, ...]:
+    """Identify retained columns by term semantics and fitted encoding position.
+
+    Display names alone can coincide for different evaluated factors. The
+    encoded name also distinguishes full-rank and treatment-coded columns.
+    """
+    identifiers_by_name = {}
+    # IV specifications can repeat the intercept term. The fitted structure
+    # retains its encoded columns; term_indices collapses repeated terms.
+    for term, _, encoded_columns in model_spec.structure or ():
+        identity = term_key(term=term)
+        for encoded_position, name in enumerate(encoded_columns):
+            identifiers_by_name[name] = ColumnIdentifier(
+                term=identity, encoded_position=encoded_position, name=name
+            )
+    return tuple(identifiers_by_name[column] for column in columns)
 
 
 def get_fixed_effect_encoding(

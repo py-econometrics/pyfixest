@@ -32,6 +32,8 @@ Other things:
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
+- Multiple-estimation model identities and shared demeaned columns use parsed term semantics, including lookup versus Python evaluation. Stepwise fits no longer reuse another expression's values merely because its encoded columns have the same display names, including transformed `i()` terms. Equivalent columns still share cached values. Fixes [#1762](https://github.com/py-econometrics/pyfixest/issues/1762).
+
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction, including quoted names and expression-defined partitions. Compatible numeric and categorical values match across dtypes; unmatched values, including boolean/integer mismatches, predict `NaN` with an unseen-level warning.
 
 - Multiple-estimation dictionaries remain keyed by readable model-name strings. Expanded names preserve expression braces and literal-column quoting, so distinct specifications do not overwrite each other. Names without an intercept explicitly include `0`; string sample-group values are consistently quoted, while the full-sample sentinel displays as unquoted `all`. Update name-based dictionary lookups and `rename_models` mappings for these names.
@@ -127,8 +129,8 @@ Other things:
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
-- The internal demeaning cache now stores named `float64` arrays instead of a
-  `DataFrame`, so cached columns are selected by position rather than rebuilt
+- The internal demeaning cache now stores `float64` arrays with column identifiers
+  instead of a `DataFrame`, so cached columns are selected by position rather than rebuilt
   as a frame on every fit, and the returned response and regressor columns
   follow the order the model asked for regardless of the order the cache
   filled up in. Cached data is handed out read-only, so one fit cannot corrupt

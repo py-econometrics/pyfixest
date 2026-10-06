@@ -8,18 +8,19 @@ from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
+from pyfixest.estimation.formula.utils import ColumnIdentifier
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DemeanedData:
-    """Cache entry for named, demeaned columns.
+    """Cache entry for demeaned columns and their identifiers.
 
     Attributes
     ----------
     values : NDArray[np.float64]
-        Demeaned columns, shape ``(n_rows, len(columns))``.
-    columns : tuple[str, ...]
-        Column names, in the insertion order of the columns in ``values``.
+        Demeaned columns, shape ``(n_rows, len(column_identifiers))``.
+    column_identifiers : tuple[ColumnIdentifier, ...]
+        Column identifiers, in the insertion order of the columns in ``values``.
 
     Notes
     -----
@@ -32,7 +33,7 @@ class DemeanedData:
     """
 
     values: NDArray[np.float64]
-    columns: tuple[str, ...]
+    column_identifiers: tuple[ColumnIdentifier, ...]
 
 
 class DemeanCache:
@@ -40,7 +41,8 @@ class DemeanCache:
 
     `Compute once, never forget`:
 
-    - `lookup_demeaned_data`: already-demeaned named arrays from previous fits.
+    - `lookup_demeaned_data`: already-demeaned arrays keyed by column identifiers
+       from previous fits.
     - `lookup_preconditioner`: the preconditioner from the first fit on a
        data set / na index combination.
 
@@ -117,8 +119,8 @@ class DemeanCache:
         Y: NDArray[np.float64],
         X: NDArray[np.float64],
         *,
-        y_names: Sequence[str],
-        x_names: Sequence[str],
+        y_keys: Sequence[ColumnIdentifier],
+        x_keys: Sequence[ColumnIdentifier],
         fe: np.ndarray | None,
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
@@ -128,10 +130,10 @@ class DemeanCache:
         NDArray[np.float64],
         Preconditioner | None,
     ]:
-        """Demean response and design arrays and cache missing named columns.
+        """Demean response and design arrays and cache missing column identities.
 
         New columns are appended to the cache in their requested order. Returned
-        arrays always follow ``y_names`` and ``x_names``, independently of the
+        arrays always follow ``y_keys`` and ``x_keys``, independently of the
         cache's insertion order.
 
         Parameters
@@ -140,10 +142,10 @@ class DemeanCache:
             Response array, shape ``(n_rows, n_responses)``.
         X : NDArray[np.float64]
             Design array, shape ``(n_rows, n_regressors)``.
-        y_names : Sequence[str]
-            Ordered response names corresponding to the columns of ``Y``.
-        x_names : Sequence[str]
-            Ordered regressor names corresponding to the columns of ``X``.
+        y_keys : Sequence[ColumnIdentifier]
+            Ordered response identities corresponding to the columns of ``Y``.
+        x_keys : Sequence[ColumnIdentifier]
+            Ordered regressor identities corresponding to the columns of ``X``.
         fe : np.ndarray or None
             Encoded fixed-effect identifiers, or ``None`` for no fixed effects.
         weights : NDArray[np.float64] or None
@@ -166,9 +168,9 @@ class DemeanCache:
         if fe is None:
             return Y_array, X_array, None
 
-        y_names_tuple = tuple(y_names)
-        x_names_tuple = tuple(x_names)
-        yx_names = y_names_tuple + x_names_tuple
+        y_keys_tuple = tuple(y_keys)
+        x_keys_tuple = tuple(x_keys)
+        yx_keys = y_keys_tuple + x_keys_tuple
 
         cached = self.lookup_demeaned_data.get(na_index)
         used_preconditioner: Preconditioner | None = None
@@ -179,39 +181,34 @@ class DemeanCache:
             )
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
-            cached = DemeanedData(
-                values=YX_demeaned,
-                columns=yx_names,
-            )
+            cached = DemeanedData(values=YX_demeaned, column_identifiers=yx_keys)
             self.lookup_demeaned_data[na_index] = cached
         else:
-            cached_names = cached.columns
-            cached_name_set = frozenset(cached_names)
+            cached_keys = cached.column_identifiers
+            cached_key_set = frozenset(cached_keys)
             uncached_positions = tuple(
-                index
-                for index, name in enumerate(yx_names)
-                if name not in cached_name_set
+                index for index, key in enumerate(yx_keys) if key not in cached_key_set
             )
             if uncached_positions:
                 YX = np.concatenate((Y_array, X_array), axis=1)
                 uncached_demeaned, used_preconditioner = self._run_or_raise(
                     YX[:, uncached_positions], fe, weights, na_index, demeaner
                 )
-                uncached_names = tuple(yx_names[index] for index in uncached_positions)
+                uncached_keys = tuple(yx_keys[index] for index in uncached_positions)
                 cached_demeaned = np.concatenate(
                     (cached.values, uncached_demeaned), axis=1
                 )
                 cached_demeaned.setflags(write=False)
                 cached = DemeanedData(
                     values=cached_demeaned,
-                    columns=cached_names + uncached_names,
+                    column_identifiers=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
             # Every requested column is demeaned and cached at this point.
-            YX_demeaned = self._select_columns(cached, yx_names)
+            YX_demeaned = self._select_columns(cached, yx_keys)
 
-        # ``yx_names`` lists the responses first, so they lead the columns.
-        n_response_columns = len(y_names_tuple)
+        # ``yx_keys`` lists the responses first, so they lead the columns.
+        n_response_columns = len(y_keys_tuple)
         response_demeaned = YX_demeaned[:, :n_response_columns]
         design_demeaned = YX_demeaned[:, n_response_columns:]
         return response_demeaned, design_demeaned, used_preconditioner
@@ -219,12 +216,12 @@ class DemeanCache:
     @staticmethod
     def _select_columns(
         cached: DemeanedData,
-        yx_names: tuple[str, ...],
+        yx_keys: tuple[ColumnIdentifier, ...],
     ) -> NDArray[np.float64]:
-        cached_position_by_name = {
-            name: position for position, name in enumerate(cached.columns)
+        cached_position_by_key = {
+            key: position for position, key in enumerate(cached.column_identifiers)
         }
-        positions = tuple(cached_position_by_name[name] for name in yx_names)
+        positions = tuple(cached_position_by_key[key] for key in yx_keys)
         selects_cached_prefix = positions == tuple(range(len(positions)))
         if selects_cached_prefix:
             # Basic slicing gives a view, which inherits the read-only flag.
