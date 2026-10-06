@@ -25,7 +25,9 @@ def test_fast_ritest_requires_numba(monkeypatch):
 
 
 @pytest.mark.extended
-@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
+@pytest.mark.parametrize(
+    "fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2", "Y~X1+f3|f1:I(f1 // 2)"]
+)
 @pytest.mark.parametrize("resampvar", ["X1", "f3"])
 @pytest.mark.parametrize("reps", [111, 212])
 @pytest.mark.parametrize("cluster", [None, "group_id"])

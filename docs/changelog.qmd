@@ -30,6 +30,10 @@ Other things:
 
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 
+- Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
+
+- Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction, including quoted names and expression-defined partitions. Compatible numeric and categorical values match across dtypes; unmatched values, including boolean/integer mismatches, predict `NaN` with an unseen-level warning.
+
 - Model-matrix construction and ordinary and IV first-stage refits reuse parsed formulas. Arithmetic factors such as `{X1 * X2}` retain their meaning, and ordinary refits preserve formulas without an intercept.
 
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.

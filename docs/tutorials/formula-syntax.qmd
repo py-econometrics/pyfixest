@@ -77,6 +77,12 @@ fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.
 
+Quote column names containing spaces or punctuation with backticks, for example
+``"Y ~ X1 | `my fe`"``. Backticks also support names containing quotation marks
+or backslashes. Explicit `Q()` calls containing these characters currently fail
+because of [Formulaic's state-key escaping](https://github.com/matthewwardrop/formulaic/pull/279);
+use backtick quoting for those names.
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.

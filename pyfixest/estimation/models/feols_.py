@@ -10,6 +10,7 @@ from typing import ClassVar, Literal, cast, overload
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.parser.types import Factor, Term
 from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
@@ -24,6 +25,10 @@ from pyfixest.estimation.formula.formulaic_compat import (
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    fixed_effect_context,
+    wrap_fixed_effect,
+)
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST
@@ -84,11 +89,9 @@ from pyfixest.estimation.post_estimation.decomposition import (
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
     build_fixed_effects,
-    check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
     fixed_effects_to_frame,
     predict_fixed_effects,
-    warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
@@ -108,16 +111,15 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _fixed_effect_names(
-    model_matrix: ModelMatrix, fixest_formula: FixestFormula
-) -> tuple[str, ...]:
-    """Name the absorbed fixed effects in the order the formula writes them.
+def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
+    """Name each absorbed term in materialized fixed-effect column order.
 
     Empty when the materialized model matrix carries no fixed-effect block.
     """
-    if model_matrix.fixed_effects is None:
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(fixed_effects.columns)
 
 
 class Feols(ResultAccessorMixin):
@@ -351,9 +353,7 @@ class Feols(ResultAccessorMixin):
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
-            fixed_effects=_fixed_effect_names(
-                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
-            ),
+            fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
                 tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
@@ -1418,19 +1418,33 @@ class Feols(ResultAccessorMixin):
             A tuple with the dependent variable, the model matrix, and the column names.
         """
         if self.model.has_fixef:
-            fml_linear, fixef = self.model.formula.split("|")
-            fixef_vars = fixef.split("+")
-            fixef_vars_C = [f"C({x})" for x in fixef_vars]
-            fixef_fml = "+".join(fixef_vars_C)
-            fml_dummies = f"{fml_linear} + {fixef_fml}"
+            formula = self.model.fixest_formula
+            stage = formula.second_stage
+            terms = list(stage.rhs)
+            # FE models use an encoding intercept for reduced-rank categorical
+            # terms. An FE-only stage has no regressors to supply it.
+            if not terms:
+                terms.append(Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
+            dummy_terms = [
+                wrap_fixed_effect(term=term, dummies=True)
+                for term in formula.fixed_effects
+            ]
+            terms.extend(dummy_terms)
+            formula_dummies = formulaic.formula.StructuredFormula(
+                lhs=stage.lhs, rhs=formulaic.formula.SimpleFormula(terms)
+            )
             # output = "pandas" as Y, X need to be np.arrays for parallel processing
             # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
             # which cannot be pickled by joblib
 
-            Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
+            Y, X = formula_dummies.get_model_matrix(
                 self._data,
                 output=output,
-                context=FORMULAIC_TRANSFORMS | {**self.options.context},
+                context=fixed_effect_context(
+                    terms=dummy_terms,
+                    data=self._data,
+                    context=FORMULAIC_TRANSFORMS | {**self.options.context},
+                ),
             )
             xnames = X.model_spec.column_names
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
@@ -1745,7 +1759,7 @@ class Feols(ResultAccessorMixin):
 
         self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
-        require_retained(self, "fixef", "_data", "model_matrix")
+        require_retained(self, "fixef", "model_matrix")
 
         model_spec = self.model.model_spec
         assert model_spec is not None, "fixef() runs after the model matrix is built"
@@ -1759,14 +1773,12 @@ class Feols(ResultAccessorMixin):
             # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
             uhat = uhat - X @ self._beta_hat
-        # one-hot encoding of fixed effects (treatment coding: reference level
-        # dropped for the second and subsequent FEs via ensure_full_rank=True).
+        # Recover from retained codes, omitting the first observed level of
+        # the second and subsequent FEs under treatment normalization.
+        fixed_effects = self.model_matrix.fixed_effects
+        assert fixed_effects is not None
         contrast_coding = contrast_code_fixed_effects(
-            fixed_effects=self.model.fixest_formula.fixed_effects_wrapped,
-            fixed_effect_names=fe_spec.column_names,
-            data=self._data,
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-            transform_state=fe_spec.transform_state,
+            fixed_effects=fixed_effects, column_names=fe_spec.column_names
         )
         D = contrast_coding.matrix
         D_w = D
@@ -1911,12 +1923,14 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
-                check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
-                    newdata, context=context, na_action="ignore"
+                    newdata,
+                    context=fixed_effect_context(
+                        terms=fe_spec.formula, data=newdata, context=context
+                    ),
+                    na_action="ignore",
                 )
-                warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):
