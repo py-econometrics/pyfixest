@@ -1,5 +1,6 @@
 """Smoke tests for formulaic internals relied on by pyfixest."""
 
+import warnings
 from types import SimpleNamespace
 
 import formulaic
@@ -19,8 +20,51 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.transforms.misc import encode_groups
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
+
+
+@pytest.mark.parametrize("legacy_na_codes", [False, True])
+def test_group_encoding_missing_keys(monkeypatch, legacy_na_codes):
+    """Missing keys remain NaN even when pandas ngroup returns legacy -1."""
+    if legacy_na_codes:
+        from pandas.core.groupby.generic import DataFrameGroupBy
+
+        original = DataFrameGroupBy.ngroup
+        monkeypatch.setattr(
+            DataFrameGroupBy,
+            "ngroup",
+            lambda self: original(self).fillna(-1).astype(int),
+        )
+    keys = pd.DataFrame({"a": [1, 1, np.nan, 2], "b": [0, np.nan, 0, 0]})
+    pd.testing.assert_series_equal(
+        encode_groups(keys), pd.Series([0.0, np.nan, np.nan, 1.0])
+    )
+
+
+@pytest.mark.parametrize("fixed_effects", ["f2", "f1 + f2", "f1:f2"])
+def test_fixed_effect_missing_categorical_keys(data, fixed_effects):
+    """Fit and FE post-estimation drop missing categorical keys without warnings."""
+    data["f2"] = pd.Categorical(data["f2"], categories=[0, 1, 2, 99])
+    data.loc[data.index[:10], "f2"] = np.nan
+    complete = data.dropna()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        fit = pf.feols(f"Y ~ X1 | {fixed_effects}", data=data)
+        reference = pf.feols(f"Y ~ X1 | {fixed_effects}", data=complete)
+        predictions = fit.predict(newdata=complete.head(3))
+        reference_predictions = reference.predict(newdata=complete.head(3))
+        fit.fixef()
+    assert fit.sample_info.n_obs == len(complete) == 90
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), err_msg="FE coefficients differ after NA removal"
+    )
+    np.testing.assert_allclose(
+        predictions,
+        reference_predictions,
+        err_msg="FE predictions differ after NA removal",
+    )
 
 
 @pytest.fixture

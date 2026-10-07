@@ -28,6 +28,20 @@ def gelbach_decomposition():
     return gb
 
 
+def test_decomposition_uses_interacted_cluster_ids():
+    data = gelbach_data(nobs=160)
+    data["f1"] = np.arange(len(data)) % 3
+    data["f2"] = np.arange(len(data)) // 3 % 4
+    data["joint"] = pd.factorize(pd.MultiIndex.from_frame(data[["f1", "f2"]]))[0]
+
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, vcov={"CRV1": "f1:f2"})
+    reference = pf.feols("y ~ x1 + x21 + x22 + x23", data=data, vcov={"CRV1": "joint"})
+
+    result = fit.decompose(decomp_var="x1", reps=5, nthreads=1, seed=17)
+    reference_result = reference.decompose(decomp_var="x1", reps=5, nthreads=1, seed=17)
+    pd.testing.assert_frame_equal(result.tidy(), reference_result.tidy())
+
+
 @pytest.fixture
 def stata_results():
     # Define the data

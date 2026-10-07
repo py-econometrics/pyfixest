@@ -18,7 +18,8 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.estimation.formula.transforms.misc import encode_groups
+from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -177,11 +178,9 @@ def get_ssc_cluster(
     )
 
 
-def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
-    if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
-    else:
+def _get_cluster_df(data: DataFrameType, clustervar: list[str]) -> pd.DataFrame:
+    data_pandas = _narwhals_to_pandas(data)
+    if data_pandas.empty:
         raise AttributeError(
             """The input data set needs to be stored in the model object if
             you call `vcov()` post estimation with a novel cluster variable.
@@ -189,6 +188,21 @@ def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
             the regression.
             """
         )
+    cluster_columns = []
+    for dimension in clustervar:
+        components = [component.strip() for component in dimension.split(":")]
+        missing = [name for name in components if name not in data_pandas.columns]
+        if missing:
+            raise ValueError(
+                f"Cluster variable(s) {missing!r} in {dimension!r} not found in the data."
+            )
+        values = (
+            data_pandas[components[0]].copy()
+            if len(components) == 1
+            else encode_groups(data_pandas[components])
+        )
+        cluster_columns.append(values.rename(dimension))
+    cluster_df = pd.concat(cluster_columns, axis=1)
 
     return cluster_df
 
