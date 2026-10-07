@@ -101,12 +101,18 @@ class DID2S(DID):
             treatment="is_treated",
         )  # returns triple Feols, first_u, second_u
 
-    def vcov(self):
+    def vcov(self, coefnames: list[str] | None = None):
         """
         Variance-covariance matrix.
 
         Calculates the variance-covariance matrix of the coefficient estimates
         for the Difference-in-Differences (DiD) estimator.
+
+        Parameters
+        ----------
+        coefnames : list[str], optional
+            Names of the second-stage coefficients kept by the fit. Columns
+            dropped as collinear are excluded from the variance computation.
 
         Returns
         -------
@@ -124,6 +130,7 @@ class DID2S(DID):
             # `DID2S.__init__` requires `cluster: str`
             cluster=cast(str, self._cluster),
             weights=self._weights_name,
+            coefnames=coefnames,
         )
 
     def iplot(
@@ -268,6 +275,7 @@ def _did2s_vcov(
     second_u: np.ndarray,
     cluster: str,
     weights: str | None = None,
+    coefnames: list[str] | None = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -297,6 +305,10 @@ def _did2s_vcov(
         Default is None. Weights for WLS estimation. If None, all observations
         are weighted equally. If a string, the name of the column in `data` that
         contains the weights.
+    coefnames : list[str], optional
+        Names of the second-stage coefficients kept by the fit. Columns that
+        the second-stage fit dropped as collinear are excluded here as well, so
+        the variance matrix matches the estimated coefficients.
 
     Returns
     -------
@@ -360,6 +372,8 @@ def _did2s_vcov(
         drop_intercept=True,
     )
     X2 = mm_second_stage.independent
+    if coefnames is not None:
+        X2 = X2[coefnames]
 
     X1 = csr_matrix(X1.to_numpy() * weights_array[:, None])
     X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])

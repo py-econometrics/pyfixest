@@ -179,6 +179,42 @@ def test_did2s(data, weights):
     )
 
 
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s_drops_collinear_second_stage_columns(data, weights):
+    """Collinear second-stage columns are dropped from the did2s vcov too."""
+    data["treat_f"] = data["treat"].astype(float)
+    data["z"] = 0.0
+    data["g1"] = (data["group"] == "Group 1") * data["treat_f"]
+    data["g2"] = (data["group"] == "Group 2") * data["treat_f"]
+
+    def fit(second_stage):
+        return did2s_pyfixest(
+            data,
+            yname="dep_var",
+            first_stage="~ 0 | unit + year",
+            second_stage=second_stage,
+            treatment="treat",
+            cluster="state",
+            weights=weights,
+        )
+
+    # an all-zero covariate matches the fit without it
+    fit_z = fit("~ treat_f + z")
+    fit_ref = fit("~ treat_f")
+    np.testing.assert_allclose(fit_z.coef(), fit_ref.coef())
+    np.testing.assert_allclose(fit_z.se(), fit_ref.se())
+
+    # "Group 3" is never treated, so its i() column is all zero and dropped
+    fit_i = fit("~ i(group, treat_f)")
+    fit_groups = fit("~ g1 + g2")
+    assert list(fit_i.coef().index) == [
+        "group::Group 1:treat_f",
+        "group::Group 2:treat_f",
+    ]
+    np.testing.assert_allclose(fit_i.coef(), fit_groups.coef())
+    np.testing.assert_allclose(fit_i.se(), fit_groups.se())
+
+
 def test_errors(data):
     # test expected errors: treatment
 
