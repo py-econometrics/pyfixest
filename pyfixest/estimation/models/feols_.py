@@ -572,7 +572,7 @@ class Feols(ResultAccessorMixin):
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
         *,
-        vcov_fix: bool = False,
+        vcov_fix: bool = True,
     ) -> Feols:
         """
         Compute covariance matrices for an estimated regression model.
@@ -595,7 +595,7 @@ class Feols(ResultAccessorMixin):
 
         vcov_fix : bool, optional
             Repair non-positive-definite multiway clustered covariance matrices.
-            Defaults to False. Warns only if a matrix entry changes by more than
+            Defaults to True. Warns only if a matrix entry changes by more than
             1e-8. Has no effect on other covariance types.
 
         Returns

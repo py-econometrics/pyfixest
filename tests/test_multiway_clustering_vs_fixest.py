@@ -304,7 +304,7 @@ def _assert_multiway_clustering_against_fixest(
         )
         repaired = fit.variance_covariance.vcov.copy()
         with np.errstate(invalid="ignore"):
-            fit.vcov({"CRV1": cluster})
+            fit.vcov({"CRV1": cluster}, vcov_fix=False)
         raw_r = stats.vcov(
             r_fit,
             vcov=ro.Formula(

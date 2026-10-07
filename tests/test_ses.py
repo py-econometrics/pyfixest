@@ -265,13 +265,13 @@ def test_vcov_fix_updates_inference(indefinite_cluster_data, vcov_type, scale):
 
     data = indefinite_cluster_data.assign(y=indefinite_cluster_data.y * scale)
     vcov = {vcov_type: "c1+c2+c3+c4"}
-    fit = feols("y ~ x + z", data, vcov=vcov)
+    fit = feols("y ~ x + z", data, vcov=vcov, vcov_fix=False)
     raw = fit.variance_covariance
     assert np.linalg.eigvalsh(raw.vcov).min() < 0
     coefficients = fit.coef().copy()
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        assert fit.vcov(vcov, vcov_fix=True) is fit
+        assert fit.vcov(vcov) is fit
     fixed = fit.variance_covariance
     repair_warnings = [w for w in caught if "not positive definite" in str(w.message)]
     assert len(repair_warnings) == (scale == 1.0)
@@ -285,10 +285,10 @@ def test_vcov_fix_updates_inference(indefinite_cluster_data, vcov_type, scale):
     if raw.meat is not None:
         np.testing.assert_array_equal(fixed.meat, raw.meat, err_msg="raw sandwich meat")
     assert (fixed.df_k, fixed.df_t, fixed.G) == (raw.df_k, raw.df_t, raw.G)
-    # A later call with the default False must restore the uncorrected result.
-    fit.vcov(vcov)
+    # A later call with vcov_fix=False must restore the uncorrected result.
+    fit.vcov(vcov, vcov_fix=False)
     np.testing.assert_array_equal(
-        fit.variance_covariance.vcov, raw.vcov, err_msg="opt-in repair"
+        fit.variance_covariance.vcov, raw.vcov, err_msg="opt-out repair"
     )
 
 
@@ -310,7 +310,6 @@ def test_vcov_fix_multiple_estimation(indefinite_cluster_data, retention, demean
             "y ~ x + sw(z, d) | c1",
             indefinite_cluster_data,
             vcov=vcov,
-            vcov_fix=True,
             demeaner=backend,
             **retention,
         )
@@ -319,11 +318,11 @@ def test_vcov_fix_multiple_estimation(indefinite_cluster_data, retention, demean
         assert np.isfinite(fit.tidy().to_numpy()).all()
     if retention:
         with pytest.raises(MissingModelDataError, match="vcov"):
-            fits.vcov(vcov, vcov_fix=True)
+            fits.vcov(vcov)
     else:
-        fits.vcov(vcov)
+        fits.vcov(vcov, vcov_fix=False)
         with pytest.warns(UserWarning, match="not positive definite.*fixed"):
-            assert fits.vcov(vcov, vcov_fix=True) is fits
+            assert fits.vcov(vcov) is fits
 
 
 @pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "c1"}, {"CRV1": "c1+c2"}])

@@ -25,7 +25,7 @@ def _resolve_vcov(
     vcov: str | dict[str, str] | None,
     vcov_kwargs: Mapping[str, str | int] | None,
     *,
-    vcov_fix: bool = False,
+    vcov_fix: bool = True,
 ) -> VcovSpec:
     """Parse the requested covariance estimator before any model is fitted."""
     return VcovSpec.from_user_input(

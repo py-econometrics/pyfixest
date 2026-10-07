@@ -17,7 +17,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
-- Add opt-in `vcov_fix=True` to repair non-positive-definite multiway clustered covariance matrices and update inference, matching R fixest’s eigenvalue correction.
+- Add `vcov_fix` to repair non-positive-definite multiway clustered covariance matrices and update inference, matching R fixest’s eigenvalue correction. It defaults to `True`, as in fixest, so multiway clustered standard errors that were previously `NaN` or came from an indefinite matrix now change; pass `vcov_fix=False` to keep the uncorrected matrix.
 
 ### Word Regression Tables
 

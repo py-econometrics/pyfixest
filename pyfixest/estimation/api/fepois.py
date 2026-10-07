@@ -42,7 +42,7 @@ def fepois(
     split: str | None = None,
     fsplit: str | None = None,
     accelerate: bool = True,
-    vcov_fix: bool = False,
+    vcov_fix: bool = True,
 ) -> Feols | Fepois | FixestMulti:
     """
     Estimate Poisson regression model with fixed effects using the `ppmlhdfe` algorithm.
@@ -74,7 +74,7 @@ def fepois(
 
     vcov_fix : bool, optional
         Repair non-positive-definite multiway clustered covariance matrices.
-        Defaults to False. Warns only if a matrix entry changes by more than
+        Defaults to True. Warns only if a matrix entry changes by more than
         1e-8. Has no effect on other covariance types.
 
     vcov_kwargs : Optional[dict[str, any]]

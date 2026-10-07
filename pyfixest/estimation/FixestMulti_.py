@@ -109,7 +109,7 @@ class FixestMulti(TidyColumnAccessors):
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         *,
-        vcov_fix: bool = False,
+        vcov_fix: bool = True,
     ):
         """
         Update regression inference "on the fly".
@@ -131,7 +131,7 @@ class FixestMulti(TidyColumnAccessors):
 
         vcov_fix : bool, optional
             Repair non-positive-definite multiway clustered covariance matrices
-            in each model. Defaults to False; see `Feols.vcov`.
+            in each model. Defaults to True; see `Feols.vcov`.
 
         Returns
         -------

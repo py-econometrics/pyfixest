@@ -51,7 +51,7 @@ def feols(
     seed: int | None = None,
     split: str | None = None,
     fsplit: str | None = None,
-    vcov_fix: bool = False,
+    vcov_fix: bool = True,
 ) -> Feols | FixestMulti:
     """
     Estimate a linear regression model with fixed effects using fixest formula syntax.
@@ -90,7 +90,7 @@ def feols(
     vcov_fix : bool, optional
         Repair non-positive-definite multiway clustered covariance matrices using
         the eigenvalue correction of Cameron, Gelbach & Miller (2011). Defaults
-        to False. Warns only if a matrix entry changes by more than 1e-8.
+        to True. Warns only if a matrix entry changes by more than 1e-8.
         Has no effect on other covariance types.
 
     weights : Union[None, str], optional.
