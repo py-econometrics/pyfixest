@@ -67,6 +67,7 @@ def feglm(
     split: str | None = None,
     fsplit: str | None = None,
     accelerate: bool = True,
+    vcov_fix: bool = True,
 ) -> Feols | Fepois | FixestMulti:
     """
     Estimate GLM regression models with fixed effects.
@@ -116,6 +117,11 @@ def feglm(
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
         For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
         pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+
+    vcov_fix : bool, optional
+        Repair non-positive-definite multiway clustered covariance matrices.
+        Defaults to True. Warns only if a matrix entry changes by more than
+        1e-8. Has no effect on other covariance types.
 
     vcov_kwargs : Optional[dict[str, any]]
          Additional keyword arguments to pass to the vcov function. These keywoards include
@@ -297,7 +303,7 @@ def feglm(
     if separation_check is None:
         separation_check = ["fe"]
     ssc = _resolve_ssc(ssc)
-    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs, vcov_fix=vcov_fix)
 
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)

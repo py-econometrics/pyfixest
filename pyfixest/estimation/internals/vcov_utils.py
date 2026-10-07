@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import combinations
@@ -18,7 +19,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _find_stack_level, _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -56,6 +57,26 @@ def combine_terms(terms: Sequence[VcovTerm], ssc: np.ndarray) -> VcovTerm:
         if meat is not None and term.meat is not None:
             meat += factor * term.meat
     return VcovTerm(vcov=vcov, meat=meat)
+
+
+def repair_cluster_vcov(*, vcov: np.ndarray) -> np.ndarray:
+    """Repair a non-positive-definite clustered covariance, shape (k, k).
+
+    Apply the eigenvalue correction of Cameron, Gelbach & Miller (2011),
+    https://faculty.econ.ucdavis.edu/faculty/cameron/research/JBESpaper2009version.pdf?utm_source=chatgpt.com.
+    """
+    eigenvalues, eigenvectors = np.linalg.eigh(vcov)
+    if np.all(eigenvalues > 0):
+        return vcov
+    repaired = (eigenvectors * np.maximum(eigenvalues, 1e-16)) @ eigenvectors.T
+    if np.any(np.abs(repaired - vcov) > 1e-8):
+        warnings.warn(
+            "The VCOV matrix is not positive definite and was fixed by "
+            "eigenvalue correction (vcov_fix=True).",
+            UserWarning,
+            stacklevel=_find_stack_level(),
+        )
+    return repaired
 
 
 @dataclass

@@ -51,6 +51,7 @@ def feols(
     seed: int | None = None,
     split: str | None = None,
     fsplit: str | None = None,
+    vcov_fix: bool = True,
 ) -> Feols | FixestMulti:
     """
     Estimate a linear regression model with fixed effects using fixest formula syntax.
@@ -85,6 +86,12 @@ def feols(
         "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
          identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
+
+    vcov_fix : bool, optional
+        Repair non-positive-definite multiway clustered covariance matrices using
+        the eigenvalue correction of Cameron, Gelbach & Miller (2011). Defaults
+        to True. Warns only if a matrix entry changes by more than 1e-8.
+        Has no effect on other covariance types.
 
     weights : Union[None, str], optional.
         Default is None. Weights for WLS estimation. If None, all observations
@@ -515,7 +522,7 @@ def feols(
     ```
     """
     ssc = _resolve_ssc(ssc)
-    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs, vcov_fix=vcov_fix)
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
