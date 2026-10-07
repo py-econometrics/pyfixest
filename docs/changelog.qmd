@@ -30,6 +30,10 @@ Other things:
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction, including quoted names and expression-defined partitions. Compatible numeric and categorical values match across dtypes; unmatched values, including boolean/integer mismatches, predict `NaN` with an unseen-level warning.
 
+- Multiple-estimation dictionaries remain keyed by readable model-name strings. Expanded names preserve expression braces and literal-column quoting, so distinct specifications do not overwrite each other. Names without an intercept explicitly include `0`; string sample-group values are consistently quoted, while the full-sample sentinel displays as unquoted `all`. Update name-based dictionary lookups and `rename_models` mappings for these names.
+
+- `fit.model.formula` now preserves expression braces, literal-column quoting, and absent intercepts in expanded formulas, including IV stages. Passing this string back to an estimator preserves the formula specification.
+
 - Model-matrix construction and ordinary and IV first-stage refits reuse parsed formulas. Arithmetic factors such as `{X1 * X2}` retain their meaning, and ordinary refits preserve formulas without an intercept.
 
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.
