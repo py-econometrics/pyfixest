@@ -7,7 +7,10 @@ from pyfixest.utils.utils import get_data, ssc
 
 @pytest.fixture
 def data():
-    return get_data(N=2_000, seed=9)
+    data = get_data(N=2_000, seed=9)
+    # collinear with the f1 fixed effects; the fit drops it
+    data["Xc"] = data.groupby("f1")["X2"].transform("mean")
+    return data
 
 
 # note - tests currently fail because of ssc adjustments
@@ -25,7 +28,7 @@ def test_hc_equivalence(data, fml):
     np.testing.assert_allclose(tstat / boot_tstat, np.sqrt(ssc))
 
 
-@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2"])
+@pytest.mark.parametrize("fml", ["Y~X1", "Y~X1|f1", "Y~X1|f1+f2", "Y~X1+Xc|f1"])
 def test_crv1_equivalence(data, fml):
     fixest = pf.feols(
         fml, data=data, vcov={"CRV1": "group_id"}, ssc=ssc(k_adj=False, G_adj=False)
@@ -36,20 +39,3 @@ def test_crv1_equivalence(data, fml):
     ]
 
     np.testing.assert_allclose(tstat, boot_tstat)
-
-
-def test_collinear_covariate_is_dropped():
-    """wildboottest() uses the fitted columns, not the collinear covariate."""
-    data = get_data().dropna().reset_index(drop=True)
-    data["Xc"] = data.groupby("f1")["X2"].transform("mean")
-    fit = pf.feols("Y ~ X1 + Xc | f1", data=data)
-    ref = pf.feols("Y ~ X1 | f1", data=data)
-
-    _, X, xnames = fit._model_matrix_one_hot()
-    assert "Xc" not in xnames
-    assert np.linalg.matrix_rank(X) == X.shape[1] == len(xnames)
-
-    boot = fit.wildboottest(param="X1", reps=999, seed=3)
-    boot_ref = ref.wildboottest(param="X1", reps=999, seed=3)
-    np.testing.assert_allclose(boot["t value"], boot_ref["t value"])
-    np.testing.assert_allclose(boot["Pr(>|t|)"], boot_ref["Pr(>|t|)"])

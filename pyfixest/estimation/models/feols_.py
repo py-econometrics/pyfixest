@@ -1438,9 +1438,7 @@ class Feols(ResultAccessorMixin):
             X = csc_matrix(X) if output == "sparse" else X
 
             # drop the covariates the fit removed as collinear
-            collinear = set(self.model_matrix.independent.columns) - set(
-                self._coefnames
-            )
+            collinear = set(self.collinearity.dropped_coef_names)
             if collinear:
                 keep = [i for i, name in enumerate(xnames) if name not in collinear]
                 X = X[:, keep]
