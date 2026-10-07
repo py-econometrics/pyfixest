@@ -1,3 +1,4 @@
+import re
 from typing import cast
 
 import formulaic
@@ -316,7 +317,20 @@ def _did2s_vcov(
 
     # some formula parsing to get the correct formula for the first and second stage model matrix
     first_stage_x, first_stage_fe = first_stage.split("|")
-    first_stage_fe_list = [f"C({i.strip()})" for i in first_stage_fe.split("+")]
+    first_stage_fe_list = []
+    for fe_index, fe in enumerate(first_stage_fe.split("+")):
+        fe_vars = [var.strip() for var in re.split(r"[\^:]", fe)]
+        if len(fe_vars) == 1:
+            first_stage_fe_list.append(f"C({fe_vars[0]})")
+        else:
+            # Interacted fixed effects (`a^b` or `a:b`): encode each combination as
+            # one level. Inside C(), formulaic would evaluate `a^b` as a bitwise XOR
+            # and reject `a:b`.
+            fe_name = f"__did2s_fe_{fe_index}"
+            data = data.assign(
+                **{fe_name: data[fe_vars].astype(str).agg("^".join, axis=1)}
+            )
+            first_stage_fe_list.append(f"C({fe_name})")
     first_stage_fe_fml = "+".join(first_stage_fe_list)
     first_stage_fml = f"{first_stage_x}+{first_stage_fe_fml}"
 

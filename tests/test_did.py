@@ -246,6 +246,28 @@ def test_did2s_wildboottest_ccv_unsupported(data):
         fit.ccv(treatment="treat", cluster="state")
 
 
+@pytest.mark.parametrize("fixed_effects", ["year^region", "year:region"])
+def test_did2s_interacted_fixed_effects(data, fixed_effects):
+    "An interacted first-stage fixed effect matches an explicit combined column."
+    data = data.assign(region=data["state"] % 3)
+    data["year_region"] = data["year"] * 10 + data["region"]
+
+    fits = [
+        did2s_pyfixest(
+            data,
+            yname="dep_var",
+            first_stage=f"~ 0 | unit + {fe}",
+            second_stage="~ i(treat)",
+            treatment="treat",
+            cluster="state",
+        )
+        for fe in ["year_region", fixed_effects]
+    ]
+
+    np.testing.assert_allclose(fits[1].coef(), fits[0].coef())
+    np.testing.assert_allclose(fits[1].se(), fits[0].se())
+
+
 @pytest.mark.parametrize("estimator", ["twfe", "saturated"])
 def test_event_study_crv3_refits_with_feols(data, estimator):
     "CRV3 on an event study must refit the linear model, not the Poisson estimator."
