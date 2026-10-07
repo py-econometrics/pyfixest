@@ -122,6 +122,13 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
     return tuple(fixed_effects.columns)
 
 
+def _render_sample_label(value: object) -> str:
+    """Distinguish string group values from the full sample and scalar values."""
+    if value is None:
+        return "all"
+    return repr(value) if isinstance(value, str) else str(value)
+
+
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -311,17 +318,15 @@ class Feols(ResultAccessorMixin):
         `_publish_model_matrix()` republishes the description with them. An
         unsplit fit publishes ``None`` as its split variable and value.
         """
+        model_name = fixest_formula.render()
+        if sample_split is not None:
+            sample_label = _render_sample_label(sample_split.value)
+            model_name += f" (Sample: {sample_split.var} = {sample_label})"
         return ModelDescription(
-            formula=fixest_formula.formula,
             fixest_formula=fixest_formula,
             method="feols",
             is_iv=False,
-            model_name=(
-                fixest_formula.formula
-                if sample_split is None
-                else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
-                f"{'all' if sample_split.value is None else sample_split.value})"
-            ),
+            model_name=model_name,
             sample_split=sample_split,
             inference_dist=T_DIST,
         )

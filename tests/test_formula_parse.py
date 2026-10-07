@@ -1160,3 +1160,87 @@ class TestEdgeCases:
             )
             if result[0].is_instrumental_variable:
                 assert reparsed[0].first_stage == result[0].first_stage
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1 - 1",
+        "Y ~ 0",
+        "Y ~ X1:X2 | f1:f2",
+        "Y ~ {X1 + X2} | {f1 + f2}",
+        "Y ~ `X1 + X2` | `f1 + f2`",
+        'Y ~ log(X1) + np.log(X2) | Q("my fe")',
+        "Y ~ {X1 ** 2} + {np.pi} | f1",
+        "Y ~ X2 + [X1 ~ Z1] | f1",
+        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
+        "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
+        "Y ~ `tick\\`name` | f1",
+        "Y ~ X1 | f1[z]",
+        "Y ~ X1 | f1[[z1, z2]]",
+    ],
+)
+def test_rendered_formula_preserves_parsed_factors(fml):
+    (parsed,) = Formula.parse(fml)
+    (reparsed,) = Formula.parse(parsed.render())
+    for part in [
+        "dependent",
+        "exogenous",
+        "endogenous",
+        "instruments",
+        "fixed_effects",
+    ]:
+        if (
+            part in ("endogenous", "instruments")
+            and not parsed.is_instrumental_variable
+        ) or (part == "fixed_effects" and not parsed.is_fixed_effects):
+            continue
+
+        def factors(terms):
+            return [
+                [(factor.expr, factor.eval_method) for factor in term.factors]
+                for term in terms
+            ]
+
+        assert factors(getattr(reparsed, part)) == factors(getattr(parsed, part)), (
+            parsed.render()
+        )
+
+
+@pytest.mark.parametrize(
+    "fml, expected",
+    [
+        ("Y ~ X1 | {f1 + f2}", "Y ~ X1 | {f1 + f2}"),
+        ("Y ~ X1 | `f1 + f2`", "Y ~ X1 | `f1 + f2`"),
+        ("Y ~ X1 | f1 + f2", "Y ~ X1 | f1 + f2"),
+        ("Y ~ X1", "Y ~ 1 + X1"),
+        ("Y ~ X1 - 1", "Y ~ 0 + X1"),
+    ],
+)
+def test_rendered_formula_names(fml, expected):
+    (parsed,) = Formula.parse(fml)
+    assert parsed.render() == expected
+
+
+def test_rendered_sample_labels_are_unambiguous():
+    from pyfixest.estimation.models.feols_ import _render_sample_label
+
+    values = [
+        None,
+        "all",
+        "'all'",
+        '"all"',
+        "rest",
+        1,
+        "1",
+        float("inf"),
+        "inf",
+        True,
+        "True",
+    ]
+    labels = [_render_sample_label(value) for value in values]
+    assert len(set(labels)) == len(values)
+    assert labels[0] == "all"
+    assert labels[4] == "'rest'"
+    assert labels[5] == "1"

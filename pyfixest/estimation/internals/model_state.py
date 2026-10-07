@@ -225,8 +225,6 @@ class ModelDescription:
 
     Parameters
     ----------
-    formula : str
-        The formula the model was fitted from.
     fixest_formula : Formula
         The parsed formula, with its stages, fixed effects, and instruments.
     method : str
@@ -271,7 +269,6 @@ class ModelDescription:
     ```
     """
 
-    formula: str
     fixest_formula: Formula
     method: str
     is_iv: bool
@@ -282,6 +279,11 @@ class ModelDescription:
     fixed_effects: tuple[str, ...] = ()
     interacted_covariates: tuple[str, ...] = ()
     model_spec: _ModelSpecMapping | None = field(default=None, repr=False)
+
+    @property
+    def formula(self) -> str:
+        """The expanded formula, preserving quoting, expressions, and intercepts."""
+        return self.fixest_formula.render()
 
     @property
     def has_fixef(self) -> bool:

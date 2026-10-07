@@ -9,7 +9,8 @@ from typing import Final
 import formulaic
 import formulaic.formula
 from formulaic.parser import DefaultFormulaParser
-from formulaic.parser.types import Factor, FormulaParser, Term
+from formulaic.parser.algos import tokenize
+from formulaic.parser.types import Factor, FormulaParser, Term, Token
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -46,6 +47,49 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+
+
+def _render_factor(factor: Factor) -> str:
+    """Render one factor without confusing lookups with Python expressions."""
+    expression = factor.expr
+    if factor.eval_method is Factor.EvalMethod.LOOKUP:
+        # Backticks retain literal characters, including quotes and backslashes.
+        return (
+            expression
+            if all(part.isidentifier() for part in expression.split("."))
+            else f"`{expression}`"
+        )
+    if factor.eval_method is Factor.EvalMethod.PYTHON:
+        tokens = list(tokenize(expression))
+        if (
+            len(tokens) == 1
+            and tokens[0].kind is Token.Kind.PYTHON
+            and tokens[0].token == expression
+        ):
+            # Calls and subscripts already identify a single Python factor.
+            return expression
+        return "{" + expression + "}"
+    return expression
+
+
+def _render_formula_part(
+    terms: Iterable[Term], *, preserve_intercept: bool = False
+) -> str:
+    terms = tuple(terms)
+    result = (
+        " + ".join(
+            ":".join(_render_factor(factor) for factor in term.factors)
+            for term in terms
+        )
+        or "0"
+    )
+    if (
+        preserve_intercept
+        and result != "0"
+        and not any(str(term) == "1" for term in terms)
+    ):
+        result = "0 + " + result
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -351,6 +395,22 @@ class Formula:
         if self.is_fixed_effects:
             formula = f"{formula} | {self.fixed_effects}"
         return formula
+
+    def render(self) -> str:
+        """Render an expanded formula preserving lookup and expression semantics.
+
+        This is the readable public model name. Materialization uses the retained
+        parsed stages; display strings are never used as internal identities.
+        """
+        exogenous = _render_formula_part(
+            self.exogenous, preserve_intercept=not self.is_fixed_effects
+        )
+        result = f"{_render_formula_part(self.dependent)} ~ {exogenous}"
+        if self.is_instrumental_variable:
+            result += f" + [{_render_formula_part(self.endogenous)} ~ {_render_formula_part(self.instruments, preserve_intercept=True)}]"
+        if self.is_fixed_effects:
+            result += " | " + _render_formula_part(self.fixed_effects)
+        return result
 
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:

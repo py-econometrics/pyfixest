@@ -2122,10 +2122,6 @@ def test_parsed_no_intercept_refit_against_fixest(data_feols):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending parsed randomization inference; regression from PR stack #1862",
-)
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
 def test_no_intercept_ritest_against_fixest(data_feols, statistic):
