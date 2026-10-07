@@ -90,7 +90,7 @@ def refit(
             fit.options,
             demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
         )
-    formula = fit.model.fixest_formula if formula is None else formula
+    formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
         data=data.copy(deep=False),

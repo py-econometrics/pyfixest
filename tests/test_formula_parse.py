@@ -554,7 +554,7 @@ class TestFixedEffectInteractions:
             parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
 
         assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
-        assert parsed.formula == "Y ~ X1 | f1:f2"
+        assert parsed.render() == "Y ~ X1 | f1:f2"
 
     def test_legacy_interaction_warns_once_and_is_canonical(self):
         canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
@@ -567,7 +567,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert legacy._formula.rhs[1] == canonical._formula.rhs[1]
-        assert legacy.formula == canonical.formula == "Y ~ X1 | f1:f2"
+        assert legacy.render() == canonical.render() == "Y ~ X1 | f1:f2"
 
     @pytest.mark.parametrize(
         "fixed_effects,expected",
@@ -582,7 +582,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert set(str(parsed.fixed_effects).split(" + ")) == set(expected.split(" + "))
-        assert "^" not in parsed.formula
+        assert "^" not in parsed.render()
 
     def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
         formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
@@ -629,7 +629,7 @@ class TestInstrumentalVariableBoundaries:
             parsed = Formula.parse(formula)[0]
         assert len(caught) == 1
         reference = Formula.parse(canonical)[0]
-        assert parsed.formula == reference.formula
+        assert parsed.render() == reference.render()
         assert parsed.is_fixed_effects == reference.is_fixed_effects
         assert parsed.is_instrumental_variable
 
@@ -1153,7 +1153,7 @@ class TestEdgeCases:
             result = Formula.parse(fml)
             assert len(result) == 1
             # Reconstructed formula should re-parse to the same structure
-            reparsed = Formula.parse(result[0].formula)
+            reparsed = Formula.parse(result[0].render())
             assert len(reparsed) == 1
             assert reparsed[0].second_stage == result[0].second_stage
             assert reparsed[0].is_fixed_effects == result[0].is_fixed_effects
@@ -1169,3 +1169,88 @@ class TestEdgeCases:
                     reparsed[0].as_first_stage().second_stage
                     == result[0].as_first_stage().second_stage
                 )
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1 - 1",
+        "Y ~ 0",
+        "Y ~ X1:X2 | f1:f2",
+        "Y ~ {X1 + X2} | {f1 + f2}",
+        "Y ~ `X1 + X2` | `f1 + f2`",
+        'Y ~ log(X1) + np.log(X2) | Q("my fe")',
+        "Y ~ {X1 ** 2} + {np.pi} | f1",
+        "Y ~ X2 + [X1 ~ Z1] | f1",
+        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
+        "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
+        "Y ~ `tick\\`name` | f1",
+        "Y ~ X1 | f1[z]",
+        "Y ~ X1 | f1[[z1, z2]]",
+    ],
+)
+def test_rendered_formula_preserves_parsed_factors(fml):
+    (parsed,) = Formula.parse(fml)
+    assert repr(parsed) == str(parsed) == parsed.render()
+    (reparsed,) = Formula.parse(parsed.render())
+    for part in [
+        "dependent",
+        "exogenous",
+        "endogenous",
+        "instruments",
+        "fixed_effects",
+    ]:
+        if (
+            part in ("endogenous", "instruments")
+            and not parsed.is_instrumental_variable
+        ) or (part == "fixed_effects" and not parsed.is_fixed_effects):
+            continue
+
+        def factors(terms):
+            return [
+                [(factor.expr, factor.eval_method) for factor in term.factors]
+                for term in terms
+            ]
+
+        assert factors(getattr(reparsed, part)) == factors(getattr(parsed, part)), (
+            parsed.render()
+        )
+
+
+@pytest.mark.parametrize(
+    "fml, expected",
+    [
+        ("Y ~ X1 | {f1 + f2}", "Y ~ X1 | {f1 + f2}"),
+        ("Y ~ X1 | `f1 + f2`", "Y ~ X1 | `f1 + f2`"),
+        ("Y ~ X1 | f1 + f2", "Y ~ X1 | f1 + f2"),
+        ("Y ~ X1", "Y ~ 1 + X1"),
+        ("Y ~ X1 - 1", "Y ~ 0 + X1"),
+    ],
+)
+def test_rendered_formula_names(fml, expected):
+    (parsed,) = Formula.parse(fml)
+    assert parsed.render() == expected
+
+
+def test_rendered_sample_labels_are_unambiguous():
+    from pyfixest.estimation.models.feols_ import _render_sample_label
+
+    values = [
+        None,
+        "all",
+        "'all'",
+        '"all"',
+        "rest",
+        1,
+        "1",
+        float("inf"),
+        "inf",
+        True,
+        "True",
+    ]
+    labels = [_render_sample_label(value) for value in values]
+    assert len(set(labels)) == len(values)
+    assert labels[0] == "all"
+    assert labels[4] == "'rest'"
+    assert labels[5] == "1"

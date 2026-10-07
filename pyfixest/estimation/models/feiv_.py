@@ -258,7 +258,7 @@ class Feiv(Feols):
         # As in fixest, the first stage uses the second stage's rows and options.
         model1 = refit(
             self,
-            formula=self.model.fixest_formula.as_first_stage(),
+            formula=self.model.parsed_formula.as_first_stage(),
             data=self._data,
             vcov=self.variance_covariance.spec,
             same_sample=True,
