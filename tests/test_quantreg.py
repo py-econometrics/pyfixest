@@ -7,6 +7,7 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.estimation.quantreg.vcov_ import vcov_hetero_qreg
 
 # Import R packages
 quantreg = importr("quantreg")
@@ -68,8 +69,7 @@ def stata_results_crv():
 def test_quantreg_vs_r(data, fml, vcov, quantile, method):
     """
     Test that pyfixest's quantreg implementation equals R's quantreg implementation.
-    Only tests nid errors as Powell sandwich errors are not implemented in quantreg.
-    Tested below against statsmodels.
+    Tests nid errors; heteroskedastic kernel-sandwich errors are tested separately.
     """
     # Fit model in pyfixest
 
@@ -179,6 +179,161 @@ def get_data2(N, seed):
     return pd.DataFrame({"Y": Y, "X1": X[:, 0], "X2": X[:, 1], "f1": f1})
 
 
+def get_heteroskedastic_quantreg_data(N=2_000):
+    "Generate the deterministic heteroskedastic data from issue #1744."
+    rng = np.random.default_rng(1)
+    x = rng.normal(size=N)
+    x2 = rng.uniform(size=N)
+    y = 1 + x + (1 + 2 * np.abs(x)) * rng.normal(size=N)
+    return pd.DataFrame({"y": y, "x": x, "x2": x2})
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("quantile", [0.25, 0.5, 0.9])
+@pytest.mark.parametrize("method", ["fn", "pfn"])
+def test_quantreg_hetero_vs_r_kernel_sandwich(quantile, method):
+    "Test heteroskedastic kernel-sandwich errors against R quantreg."
+    data = get_heteroskedastic_quantreg_data()
+    ssc = pf.ssc(k_adj=False, G_adj=False)
+    tol = 1e-8
+
+    fit_py = pf.quantreg(
+        "y ~ x + x2",
+        data=data,
+        quantile=quantile,
+        vcov="hetero",
+        method=method,
+        tol=tol,
+        ssc=ssc,
+        seed=83838,
+    )
+
+    r_data = pandas2ri.py2rpy(data)
+    fit_r = quantreg.rq(
+        ro.Formula("y ~ x + x2"),
+        data=r_data,
+        tau=quantile,
+        method=method,
+        eps=tol,
+    )
+    with ro.default_converter.context():
+        r_summary = ro.r["summary"](fit_r, se="ker")
+        r_coefficients = r_summary.rx2("coefficients")
+        r_names = list(ro.r["dimnames"](r_coefficients)[0])
+        r_n_obs = int(ro.r["nrow"](fit_r.rx2("model"))[0])
+    r_names = ["Intercept" if name == "(Intercept)" else name for name in r_names]
+    r_se = pd.Series(np.asarray(r_coefficients)[:, 1], index=r_names)
+    py_se = fit_py.se()
+
+    assert fit_py.sample_info.n_obs == r_n_obs, (
+        "PyFixest and R quantreg must retain the same observations."
+    )
+    assert list(py_se.index) == r_names, (
+        "PyFixest and R quantreg must report the same named coefficients."
+    )
+    # The pfn solver showed the largest relative discrepancy in design review
+    # (1.8e-9), so 1e-8 covers solver stopping error without masking drift.
+    np.testing.assert_allclose(
+        py_se.to_numpy(),
+        r_se.to_numpy(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg=f"hetero SE mismatch at tau={quantile} with method={method}",
+    )
+
+
+def test_quantreg_hetero_materially_differs_from_iid():
+    "Test that heteroskedastic inference no longer collapses to IID inference."
+    data = get_heteroskedastic_quantreg_data()
+    ssc = pf.ssc(k_adj=False, G_adj=False)
+
+    iid_se = pf.quantreg(
+        "y ~ x + x2", data=data, quantile=0.5, vcov="iid", ssc=ssc
+    ).se()
+    hetero_se = pf.quantreg(
+        "y ~ x + x2", data=data, quantile=0.5, vcov="hetero", ssc=ssc
+    ).se()
+
+    assert hetero_se["x"] > 1.5 * iid_se["x"], (
+        "The heteroskedastic slope SE must materially exceed its IID counterpart."
+    )
+
+
+@pytest.mark.against_r_core
+def test_quantreg_hetero_halves_boundary_bandwidth():
+    "Test the R-compatible boundary bandwidth at an extreme quantile."
+    data = get_heteroskedastic_quantreg_data(N=60)
+    ssc = pf.ssc(k_adj=False, G_adj=False)
+    quantile = 0.05
+
+    fit_py = pf.quantreg(
+        "y ~ x + x2",
+        data=data,
+        quantile=quantile,
+        vcov="hetero",
+        method="fn",
+        tol=1e-8,
+        ssc=ssc,
+    )
+    fit_r = quantreg.rq(
+        ro.Formula("y ~ x + x2"),
+        data=pandas2ri.py2rpy(data),
+        tau=quantile,
+        method="fn",
+        eps=1e-8,
+    )
+    with ro.default_converter.context():
+        r_coefficients = ro.r["summary"](fit_r, se="ker").rx2("coefficients")
+        r_names = list(ro.r["dimnames"](r_coefficients)[0])
+        r_n_obs = int(ro.r["nrow"](fit_r.rx2("model"))[0])
+    r_names = ["Intercept" if name == "(Intercept)" else name for name in r_names]
+
+    assert fit_py.sample_info.n_obs == r_n_obs, (
+        "PyFixest and R quantreg must retain the same boundary-case observations."
+    )
+    assert list(fit_py.se().index) == r_names, (
+        "PyFixest and R quantreg must report the same boundary-case coefficients."
+    )
+    np.testing.assert_allclose(
+        fit_py.se().to_numpy(),
+        np.asarray(r_coefficients)[:, 1],
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="hetero SE mismatch after boundary-bandwidth halving",
+    )
+
+
+@pytest.mark.parametrize("method", ["fn", "pfn"])
+def test_quantreg_hetero_rejects_zero_residual_bandwidth(method):
+    "Test that a constant outcome reports a degenerate kernel bandwidth."
+    data = pd.DataFrame({"y": np.ones(200), "x": np.linspace(-1, 1, 200)})
+
+    with pytest.raises(ValueError, match="kernel residual bandwidth"):
+        pf.quantreg(
+            "y ~ x",
+            data=data,
+            quantile=0.5,
+            vcov="hetero",
+            method=method,
+            seed=83838,
+        )
+
+
+def test_vcov_hetero_rejects_deterministic_zero_residual_bandwidth():
+    "Test that zero residuals deterministically reject a zero kernel bandwidth."
+    n_obs = 20
+    X = np.column_stack((np.ones(n_obs), np.linspace(-1, 1, n_obs)))
+
+    with pytest.raises(ValueError, match="kernel residual bandwidth"):
+        vcov_hetero_qreg(
+            X=X,
+            Y=np.zeros(n_obs),
+            u_hat=np.zeros(n_obs),
+            q=0.5,
+            N=n_obs,
+        )
+
+
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("data", [get_data2(N=1000, seed=2141233)])
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 + X2"])
@@ -274,8 +429,9 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
     """
     Test that pyfixest's quantreg implementation equals statsmodels' quantreg implementation.
     Used to verify correctness of iid and hetero standard errors.
-    Note: minor differences because pf uses uniform kernel, while statsmodels uses a epanechnikov kernel,
-    plus the fact that pf uses a interior point solver while statsmodels uses IWLS.
+    Note: minor differences because pyfixest's hetero route uses R quantreg's
+    Gaussian kernel sandwich, while statsmodels uses an Epanechnikov kernel,
+    plus the fact that pyfixest uses an interior point solver while statsmodels uses IWLS.
     """
     rng = np.random.default_rng(3993)
     data["Y"] = 1 + 2 * data["X1"] + rng.normal(size=len(data))

@@ -34,21 +34,31 @@ def vcov_iid_qreg(
 def vcov_hetero_qreg(
     X: np.ndarray, Y: np.ndarray, u_hat: np.ndarray, q: float, N: int
 ) -> np.ndarray:
-    "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
+    """
+    Implement R quantreg's heteroskedasticity-robust kernel sandwich.
+
+    This follows ``summary.rq(se="ker")`` from R's quantreg package: a
+    Hall-Sheather probability bandwidth, a Gaussian density estimate for each
+    residual, and the Powell (1991) sandwich covariance estimator.
+    """
     h = get_hall_sheather_bandwidth(q=q, N=N)
-    # interquartile range of u_hat
-    rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
-    sigma = np.std(Y)
-    hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+    while (q - h < 0) or (q + h > 1):
+        h /= 2
 
-    # uniform kernel
-    f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
+    residual_iqr = np.quantile(u_hat, 0.75) - np.quantile(u_hat, 0.25)
+    residual_scale = min(np.std(u_hat, ddof=1), residual_iqr / 1.34)
+    residual_bandwidth = residual_scale * (norm.ppf(q + h) - norm.ppf(q - h))
+    if not np.isfinite(residual_bandwidth) or residual_bandwidth <= 0:
+        raise ValueError(
+            "The kernel residual bandwidth must be finite and strictly positive."
+        )
 
-    D = X.T @ X
-    C = f * D
-    Cinv = np.linalg.inv(C)
+    density = norm.pdf(u_hat / residual_bandwidth) / residual_bandwidth
+    bread = X.T @ (density[:, np.newaxis] * X)
+    bread_inv = np.linalg.inv(bread)
+    meat = X.T @ X
 
-    return q * (1 - q) * Cinv @ D @ Cinv
+    return q * (1 - q) * bread_inv @ meat @ bread_inv
 
 
 def vcov_nid_qreg(
