@@ -1448,6 +1448,13 @@ class Feols(ResultAccessorMixin):
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
 
+            # drop the covariates the fit removed as collinear
+            collinear = set(self.collinearity.dropped_coef_names)
+            if collinear:
+                keep = [i for i, name in enumerate(xnames) if name not in collinear]
+                X = X[:, keep]
+                xnames = [xnames[i] for i in keep]
+
         else:
             Y = self.within_data.response.flatten()
             X = self.within_data.design
@@ -2157,11 +2164,8 @@ class Feols(ResultAccessorMixin):
                 if self.observation_weights.values is None
                 else self.observation_weights.values
             )
-            fval_df = (
-                self._data[list(self.model.fixed_effects)]
-                if self.model.has_fixef
-                else None
-            )
+            # encoded fixed effects also cover interactions and expressions
+            fval_df = self.model_matrix.fixed_effects
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(

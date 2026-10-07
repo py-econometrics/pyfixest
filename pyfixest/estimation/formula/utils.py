@@ -65,7 +65,7 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
         w = pd.to_numeric(w, errors="raise")
     except ValueError:
         raise ValueError(f"The weights column '{weights}' must be numeric.")
-    if not (w.dropna() > 0.0).all():
+    if not (w.dropna() >= 0.0).all():
         raise ValueError(
             f"The weights column '{weights}' must have only non-negative values."
         )
