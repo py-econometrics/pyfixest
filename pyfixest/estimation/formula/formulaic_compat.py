@@ -13,7 +13,7 @@ from formulaic.parser.types import Factor
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
-    is_contrast_state_key,
+    is_i_contrast_state_key,
     variable_from_contrast_state_key,
 )
 
@@ -164,6 +164,22 @@ def rows_with_unseen_contrast_levels(
     return mask
 
 
+def i_term_columns(rhs_spec: ModelSpec) -> list[str]:
+    """Return the model-matrix columns produced by terms that call ``i()``."""
+    i_factor_exprs = {
+        factor_expr
+        for factor_expr, value in rhs_spec.encoder_state.items()
+        if any(is_i_contrast_state_key(key) for key in _unpack_encoder_state(value)[1])
+    }
+    columns: list[str] = []
+    # formulaic internal: `ModelSpec.structure` lists one EncodedTermStructure
+    # per term with the exact model-matrix columns that term produced.
+    for term_structure in rhs_spec.structure or ():
+        if any(factor.expr in i_factor_exprs for factor in term_structure.term.factors):
+            columns.extend(term_structure.columns)
+    return columns
+
+
 def iter_i_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
@@ -173,7 +189,7 @@ def iter_i_categorical_levels(
         if kind is not Factor.Kind.CATEGORICAL:
             continue
         for key, substate in state.items():
-            if is_contrast_state_key(key):
+            if is_i_contrast_state_key(key):
                 variable = variable_from_contrast_state_key(key)
                 if variable in newdata.columns and "categories" in substate:
                     yield variable, set(substate["categories"]), state

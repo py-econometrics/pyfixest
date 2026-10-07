@@ -329,7 +329,7 @@ def contrast_state_key(variable: str) -> str:
     return f"{_CONTRASTS_PREFIX}{variable}{_CONTRASTS_SUFFIX}"
 
 
-def is_contrast_state_key(key: str) -> bool:
+def is_i_contrast_state_key(key: str) -> bool:
     """Return whether a key stores pyfixest i() contrast state."""
     return key.startswith(_CONTRASTS_PREFIX) and key.endswith(_CONTRASTS_SUFFIX)
 

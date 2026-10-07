@@ -484,7 +484,11 @@ class Formula:
 
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
-    """Expand the first multiple estimation syntax in formula."""
+    """Expand the first multiple estimation syntax in formula.
+
+    The call may have a space before its parenthesis and arguments on several
+    lines, as in `csw (X1,` followed by `X2)` on the next line.
+    """
     match = _MULTIPLE_ESTIMATION_PATTERN.search(formula)
     if not match:
         return None

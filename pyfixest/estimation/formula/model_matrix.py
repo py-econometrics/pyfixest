@@ -187,6 +187,16 @@ class ModelMatrix:
             "rows with infinite values",
             stage="infinite",
         )
+        if self._weights_column_names is not None:
+            # fixest drops zero-weight rows before removing singletons
+            is_zero_weight = (
+                self._data[self._weights_column_names].to_numpy() == 0
+            ).any(axis=1)
+            self._drop(
+                is_zero_weight,
+                "rows with zero weight",
+                stage="zero_weight",
+            )
         if self._fixed_effects_column_names is not None:
             # Ensure fixed effects are `int32`
             self._data[self._fixed_effects_column_names] = self._data[
@@ -516,7 +526,7 @@ def _get_formulaic_formula(
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)
-        formula_kwargs.update({_ModelMatrixKey.weights: f"{weights}-1"})
+        formula_kwargs.update({_ModelMatrixKey.weights: f"`{weights}` - 1"})
     if offset is not None:
         formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
     formula_formulaic = formulaic.Formula(

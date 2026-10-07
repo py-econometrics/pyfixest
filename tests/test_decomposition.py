@@ -211,6 +211,23 @@ def test_against_stata(stata_results, combine_covariates, se, agg_first):
     )
 
 
+def test_collinear_covariate_is_dropped():
+    "Covariates the fit dropped as collinear are not decomposed."
+    data = pf.get_data().dropna().reset_index(drop=True)
+    data["Xc"] = data.groupby("f1")["X2"].transform("mean")
+    fit = pf.feols("Y ~ X1 + X2 + Xc | f1", data=data)
+    ref = pf.feols("Y ~ X1 + X2 | f1", data=data)
+
+    fit.decompose(param="X1", only_coef=True)
+    ref.decompose(param="X1", only_coef=True)
+
+    absolute = fit.GelbachDecompositionResults.results.absolute
+    absolute_ref = ref.GelbachDecompositionResults.results.absolute
+    assert absolute.keys() == absolute_ref.keys()
+    for key, value in absolute_ref.items():
+        np.testing.assert_allclose(absolute[key], value)
+
+
 def test_regex():
     "Test the regex functionality for combine_covariates."
     data = gelbach_data(nobs=100)

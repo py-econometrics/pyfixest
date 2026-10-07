@@ -19,6 +19,7 @@ from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
+    i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
@@ -347,13 +348,7 @@ class Feols(ResultAccessorMixin):
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         self.model_matrix = model_matrix
-        # TODO: set dynamically based on naming set in pyfixest.estimation.formula.factor_interaction._encode_i
         independent = model_matrix.independent
-        is_icovar = (
-            independent.columns.str.contains(r"^.+::.+$")
-            if not independent.empty
-            else None
-        )
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
@@ -361,9 +356,7 @@ class Feols(ResultAccessorMixin):
                 model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
             ),
             interacted_covariates=(
-                tuple(independent.columns[is_icovar])
-                if is_icovar is not None and is_icovar.any()
-                else ()
+                tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
             model_spec=model_matrix.model_spec,
         )
@@ -589,7 +582,7 @@ class Feols(ResultAccessorMixin):
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
-            Use ":" to cluster on joint groups and "+" for two-way clustering.
+            Use ":" to cluster on joint groups and "+" for multiway clustering.
             Note that CRV3 inference is currently not supported for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
@@ -706,8 +699,7 @@ class Feols(ResultAccessorMixin):
                 n_levels_by_fe=self.fixef_counts.n_levels_by_fe,
             )
             cluster_ids = None if self.options.lean else prep.cluster_arr_int
-            # prep.G may pad the "min" rule to three entries; keep one per dimension
-            G = tuple(int(g) for g in prep.G[: prep.n_dimensions])
+            G = tuple(int(g) for g in prep.G)
             correction = get_ssc_cluster(
                 prep=prep, ssc_options=self.options.ssc, dof_counts=self._dof_counts
             )
@@ -1457,6 +1449,13 @@ class Feols(ResultAccessorMixin):
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
 
+            # drop the covariates the fit removed as collinear
+            collinear = set(self.collinearity.dropped_coef_names)
+            if collinear:
+                keep = [i for i, name in enumerate(xnames) if name not in collinear]
+                X = X[:, keep]
+                xnames = [xnames[i] for i in keep]
+
         else:
             Y = self.within_data.response.flatten()
             X = self.within_data.design
@@ -2176,11 +2175,8 @@ class Feols(ResultAccessorMixin):
                 if self.observation_weights.values is None
                 else self.observation_weights.values
             )
-            fval_df = (
-                self._data[list(self.model.fixed_effects)]
-                if self.model.has_fixef
-                else None
-            )
+            # encoded fixed effects also cover interactions and expressions
+            fval_df = self.model_matrix.fixed_effects
             D = self._data[resampvar_].to_numpy()
 
             ri_stats = _get_ritest_stats_fast(

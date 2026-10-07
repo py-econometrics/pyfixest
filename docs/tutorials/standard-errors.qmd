@@ -69,15 +69,20 @@ fit_crv1 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV1": "group_id"})
 fit_crv3 = pf.feols("Y ~ X1 + X2 | f1", data=data, vcov={"CRV3": "group_id"})
 ```
 
-Multi-way clustering is supported as well:
+Multi-way clustering accepts any number of cluster variables separated by `+`:
 
 ```python
-fit_twoway = pf.feols(
+fit_multiway = pf.feols(
     "Y ~ X1 + X2 | f1",
-    data=data,
-    vcov={"CRV1": "f1 + f2"},
+    data=data.dropna(),
+    vcov={"CRV1": "f1 + f2 + group_id"},
 )
 ```
+
+CRV1 supports OLS, IV, and GLM fits, including their supported weights and fixed
+effects. CRV3 uses the same multi-way combination for OLS and Poisson fits;
+quantile regression supports only one cluster variable. You can also update a
+fitted model's variance-covariance with `fit.vcov({"CRV1": "f1 + f2 + group_id"})`.
 
 Use `:` to cluster on the joint values of two or more columns as one cluster
 dimension. For example, `f1:f2` groups observations by each distinct pair;

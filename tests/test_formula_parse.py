@@ -96,6 +96,9 @@ class TestMultipleEstimationExpansion:
             ("Y ~ sw(X1, X2, X3)", ["Y ~ (X1)", "Y ~ (X2)", "Y ~ (X3)"]),
             # csw() cases
             ("Y ~ csw(X1, X2)", ["Y ~ (X1)", "Y ~ (X1 + X2)"]),
+            # A space before the parenthesis, as fixest allows
+            ("Y ~ sw (X1, X2)", ["Y ~ (X1)", "Y ~ (X2)"]),
+            ("Y ~ X1 | csw (f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f1 + f2)"]),
             (
                 "Y ~ A + csw(X1, X2, X3)",
                 [
@@ -965,6 +968,30 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     assert n_models == expected_n_models, (
         f"Expected {expected_n_models} models for '{formula}', got {n_models}"
     )
+
+
+def test_stepwise_call_over_several_lines_matches_single_line(test_data):
+    """A triple-quoted formula with one stepwise argument per line fits the same models."""
+    multiline = """
+    Y ~ csw(
+        X1,
+        X2,
+        f2
+    )
+    | f1
+    """
+    fit_multiline = pf.feols(multiline, data=test_data).to_list()
+    fit_single_line = pf.feols("Y ~ csw(X1, X2, f2) | f1", data=test_data).to_list()
+
+    assert [fit.model.formula for fit in fit_multiline] == [
+        "Y ~ X1 | f1",
+        "Y ~ X1 + X2 | f1",
+        "Y ~ X1 + X2 + f2 | f1",
+    ]
+    for multiline_fit, single_line_fit in zip(
+        fit_multiline, fit_single_line, strict=True
+    ):
+        np.testing.assert_allclose(multiline_fit.coef(), single_line_fit.coef())
 
 
 def test_explicit_no_fe_coefficients_match(test_data):

@@ -366,6 +366,8 @@ class DroppedRowCounts:
         Rows with a missing value in any formula variable.
     infinite : int
         Rows with an infinite value in a materialized column.
+    zero_weight : int
+        Rows with an observation weight of zero.
     singleton : int
         Rows removed as singleton fixed-effect levels (``fixef_rm="singleton"``).
     separation : int
@@ -383,13 +385,20 @@ class DroppedRowCounts:
 
     missing: int = 0
     infinite: int = 0
+    zero_weight: int = 0
     singleton: int = 0
     separation: int = 0
 
     @property
     def total(self) -> int:
         """Number of dropped rows over all stages."""
-        return self.missing + self.infinite + self.singleton + self.separation
+        return (
+            self.missing
+            + self.infinite
+            + self.zero_weight
+            + self.singleton
+            + self.separation
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -774,10 +783,6 @@ class VcovSpec:
             clustervar = tuple(
                 dimension.strip() for dimension in cluster_input.split("+")
             )
-            if len(clustervar) > 2:
-                raise ValueError(
-                    f"At most two-way clustering is supported; got {len(clustervar)} cluster variables in {cluster_input!r}."
-                )
             if any(
                 not component.strip()
                 for dimension in clustervar
@@ -864,7 +869,7 @@ class VarianceCovariance:
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
         Small-sample adjustment factors. Length one, or one entry per cluster
-        dimension for CRV inference: three for two-way clustering.
+        combination for CRV inference: ``2**n_clusters - 1`` entries.
     df_k : int
         Number of parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
@@ -876,8 +881,8 @@ class VarianceCovariance:
         Cluster counts per dimension after the ``G_df`` rule; empty unless
         clustered.
     cluster_ids : NDArray[np.intp] or None
-        Sample-aligned integer IDs for the cluster dimensions. Two-way
-        clustering includes a third column for their intersection.
+        Sample-aligned integer IDs for the cluster dimensions, followed by
+        one column per intersection for multiway clustering.
         ``None`` for unclustered inference or ``lean=True``.
 
     Examples
