@@ -19,7 +19,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _find_stack_level, _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -63,10 +63,7 @@ def repair_cluster_vcov(*, vcov: np.ndarray) -> np.ndarray:
     """Repair a non-positive-definite clustered covariance, shape (k, k).
 
     Apply the eigenvalue correction of Cameron, Gelbach & Miller (2011),
-    *Robust Inference with Multiway Clustering*, doi:10.1198/jbes.2010.07136.
-    Like R fixest, floor eigenvalues at 1e-16 when any is nonpositive and
-    warn only when an absolute matrix-entry change exceeds 1e-8. The input
-    is not mutated; positive-definite matrices are returned unchanged.
+    https://faculty.econ.ucdavis.edu/faculty/cameron/research/JBESpaper2009version.pdf?utm_source=chatgpt.com.
     """
     eigenvalues, eigenvectors = np.linalg.eigh(vcov)
     if np.all(eigenvalues > 0):
@@ -77,7 +74,7 @@ def repair_cluster_vcov(*, vcov: np.ndarray) -> np.ndarray:
             "The VCOV matrix is not positive definite and was fixed by "
             "eigenvalue correction (vcov_fix=True).",
             UserWarning,
-            stacklevel=3,
+            stacklevel=_find_stack_level(),
         )
     return repaired
 
