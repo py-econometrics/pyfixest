@@ -62,6 +62,10 @@ QUANTREG_T_REFERENCE = (
     "quantreg confidence intervals now use the t reference distribution "
     "instead of the normal"
 )
+WEIGHTED_RMSE_MATCHES_FIXEST = (
+    "the RMSE of weighted fits divides the weighted sum of squared residuals by "
+    "the sum of the weights instead of the number of observations, as fixest"
+)
 
 # The IRLS rewrite moves fepois' converged point slightly; the measured drift
 # across this matrix stays below 2e-6.
@@ -248,7 +252,11 @@ def test_single_fit_feols(
     _check_fit(baseline, mod)
     baseline.check("resid", mod.resid()[0:5])
     baseline.check("predict", mod.predict()[0:5])
-    for name in ("rmse", "r2", "adj_r2", "r2_within", "adj_r2_within"):
+    if weights is None:
+        baseline.check("rmse", _fit_statistic(mod, "rmse", "_rmse"))
+    else:
+        baseline.skip("rmse", reason=WEIGHTED_RMSE_MATCHES_FIXEST)
+    for name in ("r2", "adj_r2", "r2_within", "adj_r2_within"):
         baseline.check(name, _fit_statistic(mod, name, f"_{name}"))
 
 
