@@ -868,10 +868,10 @@ class VarianceCovariance:
     ----------
     vcov : NDArray[np.float64]
         Small-sample-adjusted covariance matrix, shape (n_coefficients,
-        n_coefficients). 
+        n_coefficients).
     meat : NDArray[np.float64] or None
         Adjusted meat of the sandwich, shape (n_coefficients,
-        n_coefficients). ``None`` where no sandwich exists: ``"iid"``, 
+        n_coefficients). ``None`` where no sandwich exists: ``"iid"``,
         ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
         Small-sample adjustment factors. Length one, or one entry per cluster

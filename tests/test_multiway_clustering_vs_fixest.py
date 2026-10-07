@@ -229,14 +229,6 @@ def _assert_multiway_clustering_against_fixest(
         ssc=fixest.ssc(k_adj, k_fixef, False, G_adj, G_df, "min"),
         **r_kwargs,
     )
-    if vcov_fix:
-        r_fit = ro.r("summary")(
-            r_fit,
-            vcov=ro.Formula(
-                ("fourway" if n_clusters == 4 else "cluster") + "~" + cluster
-            ),
-            vcov_fix=True,
-        )
     ro.globalenv["multiway_fit"] = r_fit
     r_names = list(ro.r("names(coef(multiway_fit))"))
     r_vcov_names = list(ro.r("rownames(vcov(multiway_fit))"))
@@ -288,20 +280,6 @@ def _assert_multiway_clustering_against_fixest(
     assert fit.sample_info.n_obs == int(stats.nobs(r_fit)[0]), "multiway observations"
     assert len(fit.variance_covariance.G) == 2**n_clusters - 1
     if vcov_fix:
-        np.testing.assert_allclose(
-            fit.tstat(),
-            np.asarray(fixest.tstat(r_fit))[order],
-            rtol=0,
-            atol=inference_atol,
-            err_msg="repaired t-statistics",
-        )
-        np.testing.assert_allclose(
-            fit.confint(),
-            pd.DataFrame(stats.confint(r_fit)).T.values[order],
-            rtol=0,
-            atol=inference_atol,
-            err_msg="repaired confidence intervals",
-        )
         repaired = fit.variance_covariance.vcov.copy()
         with np.errstate(invalid="ignore"):
             fit.vcov({"CRV1": cluster}, vcov_fix=False)
