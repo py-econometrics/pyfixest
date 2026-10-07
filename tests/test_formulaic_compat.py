@@ -63,7 +63,7 @@ def data() -> pd.DataFrame:
 def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     """IV formulas parse to StructuredFormula with .deps[0].lhs/.rhs."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
-    rhs = fit.model.fixest_formula._right_hand_side
+    rhs = fit.model.parsed_formula._right_hand_side
 
     import formulaic.formula
 
@@ -129,7 +129,7 @@ def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     """The _hat suffix from formulaic MULTISTAGE is filtered from exogenous."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
 
-    exog_vars = {str(v) for v in fit.model.fixest_formula.exogenous.required_variables}
+    exog_vars = {str(v) for v in fit.model.parsed_formula.exogenous.required_variables}
 
     assert "X1" in exog_vars
     assert "X2" not in exog_vars
@@ -140,11 +140,11 @@ def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) ->
     """Formulaic names generated terms after the endogenous term, not its variables."""
     fit = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
 
-    exog_terms = {str(term) for term in fit.model.fixest_formula.exogenous}
+    exog_terms = {str(term) for term in fit.model.parsed_formula.exogenous}
 
     # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
     assert exog_terms == {"1", "X1"}
-    assert fit.model.fixest_formula.second_stage == formulaic.Formula(
+    assert fit.model.parsed_formula.second_stage == formulaic.Formula(
         "Y ~ 1 + X1 + np.exp(X2)"
     )
     assert "np.exp(X2)" in fit.coef().index
@@ -645,7 +645,7 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, inter
     assert spec.required_variables == ({name, "f2"} if interaction else {name})
     (factor,) = spec.formula[0].factors
     assert set(spec.transform_state) == {factor.expr}
-    assert factor.metadata["term"] == fit.model.fixest_formula.fixed_effects[0]
+    assert factor.metadata["term"] == fit.model.parsed_formula.fixed_effects[0]
     assert set(fit.fixef().variable) == {f"{name}:f2" if interaction else name}
     baseline_data = renamed.rename(columns={name: "f1"})
     baseline = pf.feols(
@@ -772,7 +772,7 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
         data=data,
     )
     monkeypatch.setattr(
-        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+        Formula, "render", lambda self: "descriptive text, not a formula"
     )
     monkeypatch.setattr(Formula, "parse", _fail_on_reparse)
     monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", _fail_on_reparse)
