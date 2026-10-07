@@ -9,6 +9,69 @@ from pyfixest.estimation import feols
 from pyfixest.utils.utils import get_data
 
 
+def test_simult_confint_singular_cluster_covariance():
+    """Few clusters can give valid, rank-deficient simultaneous intervals."""
+    import statsmodels.api as sm
+    from scipy.stats import multivariate_normal
+
+    rng = np.random.default_rng(1024)
+    names = [f"x{i}" for i in range(8)]
+    data = pd.DataFrame(rng.normal(size=(80, 9)), columns=["y", *names])
+    data["cluster"] = np.repeat(np.arange(4), 20)
+    fit = feols("y ~ " + " + ".join(names), data, vcov={"CRV1": "cluster"})
+    reference = sm.OLS(data.y, sm.add_constant(data[names])).fit(
+        cov_type="cluster", cov_kwds={"groups": data.cluster}
+    )
+    reference_se = reference.bse.rename(index={"const": "Intercept"}).loc[
+        fit.coef().index
+    ]
+    # Both packages solve the same small dense OLS problem; this tolerance only
+    # allows floating-point differences in the solver and cluster reductions.
+    np.testing.assert_allclose(
+        fit.se(),
+        reference_se,
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="cluster standard errors vs statsmodels",
+    )
+    intervals = fit.confint(inference_type="simult", reps=100_000, seed=123)
+    assert np.isfinite(intervals.to_numpy()).all()
+    critical_values = (intervals["97.5%"] - fit.coef()) / fit.se()
+    np.testing.assert_allclose(
+        critical_values,
+        critical_values.iloc[0],
+        rtol=1e-12,
+        err_msg="simultaneous intervals share one critical value",
+    )
+    reference_cov = reference.cov_params().rename(
+        index={"const": "Intercept"}, columns={"const": "Intercept"}
+    )
+    reference_cov = reference_cov.loc[fit.coef().index, fit.coef().index]
+    correlation = reference_cov / np.outer(reference_se, reference_se)
+    assert np.linalg.matrix_rank(correlation) == 3
+    # SciPy permits the singular Gaussian distribution. With 100,000 draws on
+    # each side, 0.004 is more than four standard errors of the tail probability.
+    normal = multivariate_normal(cov=correlation, allow_singular=True, seed=456)
+    draws = normal.rvs(size=100_000)
+    coverage = np.mean(np.max(np.abs(draws), axis=1) <= critical_values.iloc[0])
+    np.testing.assert_allclose(
+        coverage,
+        0.95,
+        atol=0.004,
+        rtol=0,
+        err_msg="simultaneous Gaussian coverage vs SciPy singular distribution",
+    )
+
+
+@pytest.mark.parametrize("scale", [1e-8, 1.0, 1e8])
+def test_simult_critical_value_rejects_indefinite_covariance(scale):
+    """An invalid covariance must not be repaired by discarding its spectrum."""
+    from pyfixest.utils.utils import simultaneous_crit_val
+
+    with pytest.raises(ValueError, match="positive semidefinite"):
+        simultaneous_crit_val(scale * np.array([[1.0, 2.0], [2.0, 1.0]]), 100, seed=123)
+
+
 def test_confint():
     """Test the confint method of the feols class."""
     data = get_data()
