@@ -402,11 +402,13 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
+        sum_weights = fit.sample_info.n_obs
     else:
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+        sum_weights = np.sum(observation_weights)
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / sum_weights))
     np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
     if fit.model.has_fixef:
         assert observation_weights is not None

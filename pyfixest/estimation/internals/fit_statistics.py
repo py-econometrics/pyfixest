@@ -115,10 +115,14 @@ def linear_fit_statistics(
     if weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((Y - np.mean(Y)) ** 2)
+        sum_weights = N
     else:
         w = weights.reshape((-1, 1))
         ssu = np.sum(w.flatten() * residuals**2)
         ssy = np.sum(w * (Y - np.average(Y, weights=w)) ** 2)
+        # As fixest, the weighted mean of the squared residuals, so the RMSE
+        # does not depend on the scale of the weights.
+        sum_weights = np.sum(w)
 
     if has_fixef:
         adj_factor = (N - has_intercept) / (N - k - k_fe)
@@ -133,7 +137,7 @@ def linear_fit_statistics(
         adj_r2_within = 1 - (ssu / ssy_within) * adj_factor_within
 
     return FitStatistics(
-        rmse=np.sqrt(ssu / N),
+        rmse=np.sqrt(ssu / sum_weights),
         r2=1 - (ssu / ssy),
         adj_r2=1 - (ssu / ssy) * adj_factor,
         r2_within=r2_within,

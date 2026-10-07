@@ -361,6 +361,10 @@ def test_single_fit_feols(
     check_absolute_diff(py_r2, r_r2, inference_tol, "py_r2 != r_r2")
     check_absolute_diff(py_adj_r2, r_adj_r2, inference_tol, "py_adj_r2 != r_adj_r2")
 
+    py_rmse = mod.fitstat.rmse
+    r_rmse = float(ro.r('fixest::fitstat(r_fixest, "rmse")$rmse')[0])
+    check_absolute_diff(py_rmse, r_rmse, inference_tol, "py_rmse != r_rmse")
+
     if not np.isnan(py_r2_within):
         check_absolute_diff(
             py_r2_within, r_r2_within, inference_tol, "py_r2_within != r_r2_within"
