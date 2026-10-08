@@ -163,6 +163,26 @@ fit_multi_dep = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
 pf.etable(fit_multi_dep)
 ```
 
+`sw()` is the only supported multiple-estimation operator on the left-hand
+side. Using `sw0()`, `csw()`, `csw0()`, `mvsw()`, or R's `c()` there raises
+`FormulaSyntaxError` with a hint to use `sw()`. The other stepwise operators
+remain available for covariates and fixed effects.
+
+For outcome arithmetic, use an explicit expression such as `I(Y - 1)` or
+`I(Y + Y2)`. Each `sw()` argument must specify one outcome expression:
+
+```{python}
+fit_shifted = pf.feols("I(Y - 1) ~ X1", data=data)
+fit_multi_transformed = pf.feols("sw(Y, I(Y2 - 1)) ~ X1", data=data)
+```
+
+Bare formula operators on an outcome, such as `Y - 1`, `Y + 0`, or `Y**2`,
+are rejected rather than silently changing the requested outcome. Transforms
+such as `log(Y)` remain supported. Legacy `Y + Y2 ~ X1` still fits separate
+outcomes with a `DeprecationWarning`; use `sw(Y, Y2) ~ X1` instead. See the
+[comparison with fixest](../explanation/compare-fixest-pyfixest.qmd#dependent-variables)
+for the intentional syntax differences.
+
 ### `sw()`: stepwise alternatives
 
 `y ~ x1 + sw(x2, x3)` expands to `y ~ x1 + x2` and `y ~ x1 + x3`.

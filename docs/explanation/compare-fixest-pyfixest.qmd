@@ -47,6 +47,35 @@ Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
 translating R's `I(X1^2)`.
 
+### Dependent variables
+
+PyFixest requires `sw()` for multiple dependent variables and explicit
+expressions such as `I(...)` for outcome arithmetic. This keeps separate
+outcomes distinct from a transformed outcome; see
+[#1795](https://github.com/py-econometrics/pyfixest/issues/1795).
+
+| Intent | PyFixest syntax | `fixest` 0.14.0 syntax |
+|---|---|---|
+| Separate models for `Y` and `Y2` | `sw(Y, Y2) ~ X1` | `c(Y, Y2) ~ X1`; also LHS `sw`, `sw0`, `csw`, and `csw0` |
+| Models for `Y`, `Y2`, and their sum | `sw(Y, Y2, I(Y + Y2)) ~ X1` | `mvsw(Y, Y2) ~ X1` |
+| A shifted outcome | `I(Y - 1) ~ X1` | `Y - 1 ~ X1` |
+| A summed outcome | `I(Y + Y2) ~ X1` | `Y + Y2 ~ X1` |
+
+On the left-hand side, PyFixest rejects `sw0()`, `csw()`, `csw0()`, `mvsw()`,
+and `c()` with a `FormulaSyntaxError` that points to `sw()`. Bare outcome
+arithmetic, including `Y - 1`, `Y + 0`, and `Y**2`, also raises a
+`FormulaSyntaxError` that points to `I(...)`. Other outcome transforms such as
+`log(Y)` remain supported.
+
+Legacy `Y + Y2 ~ X1` is still accepted with a `DeprecationWarning` and fits
+two separate outcomes; it will become an error in a future release. In
+`fixest`, the same bare sum fits one model for `Y + Y2`. Use `sw(Y, Y2)` for
+separate outcomes and `I(Y + Y2)` for their sum in PyFixest.
+
+These restrictions apply only to dependent variables. Stepwise operators
+remain supported for covariates and fixed effects; see the
+[formula syntax tutorial](../tutorials/formula-syntax.qmd#multiple-estimation-syntax).
+
 ## Setup
 
 

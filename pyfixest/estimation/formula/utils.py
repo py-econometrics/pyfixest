@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import warnings
 from enum import Enum
@@ -191,6 +192,68 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     return formula
 
 
+def _validate_dependent_expression(dependent: str, *, allow_sw: bool) -> None:
+    """Reject formula algebra on outcomes before stepwise expansion can alter it."""
+    expression = dependent.strip()
+    while expression.startswith("("):
+        start, end = _get_position_of_first_parenthesis_pair(string=expression)
+        if end != len(expression) - 1:
+            break
+        expression = expression[start:end].strip()
+
+    supported = (
+        "Use `sw(Y, Y2)` for multiple dependent variables and "
+        "`I(...)` for outcome arithmetic, for example `I(Y - 1)`."
+    )
+    match = re.match(r"(sw|sw0|csw|csw0|mvsw|c)\s*\(", expression)
+    if match:
+        operator = match.group(1)
+        if operator != "sw":
+            raise FormulaSyntaxError(
+                f"`{operator}()` is not supported on the left-hand side. " + supported
+            )
+        start, end = _get_position_of_first_parenthesis_pair(string=expression)
+        if allow_sw and end == len(expression) - 1:
+            for argument in _str_split_by_sep(
+                string=expression[start:end], separator=","
+            ):
+                _validate_dependent_expression(dependent=argument, allow_sw=False)
+            return
+        raise FormulaSyntaxError(
+            "`sw()` must be the entire left-hand side, with one outcome expression "
+            "per argument. " + supported
+        )
+
+    tokens = list(tokenize(expression))
+    if not tokens or any(
+        token.kind in (Token.Kind.OPERATOR, Token.Kind.VALUE) for token in tokens
+    ):
+        raise FormulaSyntaxError(
+            f"Invalid dependent expression `{dependent}`: bare formula operators "
+            "and constant outcomes are not supported on the left-hand side. "
+            + supported
+        )
+    # Transforms and explicit Python expressions are allowed, but nested
+    # stepwise calls would still be expanded by the formula-wide expander.
+    for token in tokens:
+        if token.kind is Token.Kind.PYTHON:
+            try:
+                expression_ast = ast.parse(token.token, mode="eval")
+            except SyntaxError:
+                # Leave malformed Python expressions to Formulaic's parser.
+                continue
+            for node in ast.walk(expression_ast):
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id in {*_MultipleEstimationType.__members__, "c"}
+                ):
+                    raise FormulaSyntaxError(
+                        "Multiple-dependent syntax cannot be nested inside an "
+                        "outcome transform. " + supported
+                    )
+
+
 def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     """Convert multiple dependent variables to multiple estimation syntax.
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
@@ -201,6 +264,10 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     # Only a top-level `+` separates dependents: `I(Y + Y2)` is a single
     # transformed dependent, not two.
     dependents = _str_split_by_sep(dependent, separator="+")
+    for expression in dependents:
+        _validate_dependent_expression(
+            dependent=expression, allow_sw=len(dependents) == 1
+        )
     if len(dependents) > 1:
         formula_old = formula
         formula = f"{_MultipleEstimationType.sw.name}({', '.join(dependents)}) ~ {rest}"
