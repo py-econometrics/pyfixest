@@ -309,6 +309,12 @@ We also removed:
 
 ### Bug Fixes
 
+- `quantreg(..., multi_method="cfm2")` now updates each quantile with the
+  observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
+  and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single
+  density estimate, so the one-step updates mostly shifted the intercept and
+  returned nearly identical slopes at every quantile
+  ([#1745](https://github.com/py-econometrics/pyfixest/issues/1745)).
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.

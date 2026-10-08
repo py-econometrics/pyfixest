@@ -101,7 +101,7 @@ fit_multi2 = pf.quantreg(
 pf.etable(fit_multi1.to_list() +  fit_multi2.to_list())
 ```
 
-Note that the first method `cfm1` is exactly identical to running separate regressions per quantile, while the second method `cfm2` is only **asymptotically** identical.
+Note that the first method `cfm1` is exactly identical to running separate regressions per quantile. The second method `cfm2` solves only the central quantile and reaches each neighbouring quantile by a single Newton step, so it only approximates separate regressions, and only on a fine grid of quantiles (for example, steps of 0.01). On the coarse grid above, its estimates at the 0.1 and 0.9 quantiles differ visibly from `cfm1`.
 
 You can combine different estimation `method`'s with different `multi_methods`:
 

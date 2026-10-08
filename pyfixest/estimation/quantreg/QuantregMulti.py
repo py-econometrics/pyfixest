@@ -76,7 +76,6 @@ class QuantregMulti:
         # data fixed across qregs, just need take from first one
         X = self.all_quantregs[q[q_median_idx]].within_data.design
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
-        hessian = X.T @ X
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]].options.seed)
 
@@ -140,9 +139,15 @@ class QuantregMulti:
                 kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
                 h_G = get_hall_sheather_bandwidth(q=q[i_prev], N=N)
                 delta = kappa * (norm.ppf(q[i_prev] + h_G) - norm.ppf(q[i_prev] - h_G))
-                J = (np.sum(np.abs(u_hat_prev) < delta) * hessian) / (2 * N * delta)
+                # One-step update of Chernozhukov, Fernández-Val & Melly (2022),
+                # Algorithm 3: the Powell density-weighted Hessian
+                # J = sum_i 1{|u_i| <= delta} x_i x_i' / (2 N delta) and the
+                # score M = sum_i x_i (q_j - 1{u_i <= 0}) / N.
+                near_zero = np.abs(u_hat_prev) <= delta
+                X_near_zero = X[near_zero]
+                J = (X_near_zero.T @ X_near_zero) / (2 * N * delta)
 
-                M = X.T @ (q[i] - (u_hat_prev < 0))[:, None]
+                M = X.T @ (q[i] - (u_hat_prev <= 0))[:, None] / N
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
