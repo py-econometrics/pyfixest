@@ -277,7 +277,6 @@ fit_panel_time = pf.feols(
 fit_panel_time.iplot(
     coord_flip=False,
     plot_backend="matplotlib",
-    cat_template="{value}",
     title="Event Study Plot",
 )
 ```
