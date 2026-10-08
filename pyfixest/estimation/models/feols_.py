@@ -7,27 +7,27 @@ from functools import partial
 from importlib import import_module
 from typing import ClassVar, Literal, cast, overload
 
-import formulaic
 import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor, Term
-from scipy.sparse import csc_matrix, diags
+from scipy.sparse import csc_matrix, diags, hstack
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import (
+    ModelMatrix,
+    _ModelMatrixKey,
+    create_model_matrix,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    fixed_effect_context,
-    wrap_fixed_effect,
+    FixedEffectContext,
 )
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
@@ -90,6 +90,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
     build_fixed_effects,
     contrast_code_fixed_effects,
+    fixed_effect_dummy_names,
     fixed_effects_to_frame,
     predict_fixed_effects,
 )
@@ -327,7 +328,7 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
-        model_matrix = model_matrix_fixest.create_model_matrix(
+        model_matrix = create_model_matrix(
             formula=self.model.fixest_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
@@ -1106,9 +1107,11 @@ class Feols(ResultAccessorMixin):
                 "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
-        if self.model.has_fixef or not run_heteroskedastic:
+        if self.model.has_fixef:
+            require_retained(self, "wildboottest", "model_matrix")
+        if not run_heteroskedastic:
             require_retained(self, "wildboottest", "_data")
-        else:
+        elif not self.model.has_fixef:
             require_retained(self, "wildboottest", "within_data")
 
         if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
@@ -1418,37 +1421,38 @@ class Feols(ResultAccessorMixin):
             A tuple with the dependent variable, the model matrix, and the column names.
         """
         if self.model.has_fixef:
-            formula = self.model.fixest_formula
-            stage = formula.second_stage
-            terms = list(stage.rhs)
-            # FE models use an encoding intercept for reduced-rank categorical
-            # terms. An FE-only stage has no regressors to supply it.
-            if not terms:
-                terms.append(Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
-            dummy_terms = [
-                wrap_fixed_effect(term=term, dummies=True)
-                for term in formula.fixed_effects
-            ]
-            terms.extend(dummy_terms)
-            formula_dummies = formulaic.formula.StructuredFormula(
-                lhs=stage.lhs, rhs=formulaic.formula.SimpleFormula(terms)
+            require_retained(self, "one-hot model matrix", "model_matrix")
+            model_matrix = self.model_matrix
+            fe_spec = model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
+            # A separate intercept requires omitting a reference level from
+            # every FE; the absorbed fit stores only the structural regressors.
+            contrast_coding = contrast_code_fixed_effects(
+                fixed_effects=cast(pd.DataFrame, model_matrix.fixed_effects),
+                column_names=fe_spec.column_names,
+                has_intercept=True,
             )
-            # output = "pandas" as Y, X need to be np.arrays for parallel processing
-            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
-            # which cannot be pickled by joblib
-
-            Y, X = formula_dummies.get_model_matrix(
-                self._data,
-                output=output,
-                context=fixed_effect_context(
-                    terms=dummy_terms,
-                    data=self._data,
-                    context=FORMULAIC_TRANSFORMS | {**self.options.context},
+            Y = model_matrix.dependent.to_numpy().flatten()
+            # The retained matrix includes columns dropped for collinearity;
+            # keep the fitted covariates in their estimated coefficient order.
+            independent = model_matrix.independent[self._coefnames]
+            X = hstack(
+                [
+                    np.ones((model_matrix.n_rows, 1)),
+                    csc_matrix(independent.to_numpy()),
+                    contrast_coding.matrix,
+                ],
+                format="csc",
+            )
+            xnames = [
+                "Intercept",
+                *independent.columns,
+                *fixed_effect_dummy_names(
+                    contrast_coding=contrast_coding,
+                    transform_state=fe_spec.transform_state,
                 ),
-            )
-            xnames = X.model_spec.column_names
-            Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
-            X = csc_matrix(X) if output == "sparse" else X
+            ]
+            if output == "numpy":
+                X = X.toarray()
 
             # drop the covariates the fit removed as collinear
             collinear = set(self.collinearity.dropped_coef_names)
@@ -1624,11 +1628,9 @@ class Feols(ResultAccessorMixin):
         )
 
         require_retained(self, "decompose", "within_data", "observation_weights")
-        if (
-            self.model.has_fixef
-            or cluster is not None
-            or self.variance_covariance.spec.is_clustered
-        ):
+        if self.model.has_fixef:
+            require_retained(self, "decompose", "model_matrix")
+        if cluster is not None or self.variance_covariance.spec.is_clustered:
             require_retained(self, "decompose", "_data")
 
         nthreads_int = -1 if nthreads is None else nthreads
@@ -1761,9 +1763,7 @@ class Feols(ResultAccessorMixin):
 
         require_retained(self, "fixef", "model_matrix")
 
-        model_spec = self.model.model_spec
-        assert model_spec is not None, "fixef() runs after the model matrix is built"
-        fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+        fe_spec = self.model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
 
         # flatten() copies: the weighting below scales uhat in place and must
         # not touch the fitted values the GLM hook may return.
@@ -1775,17 +1775,16 @@ class Feols(ResultAccessorMixin):
             uhat = uhat - X @ self._beta_hat
         # Recover from retained codes, omitting the first observed level of
         # the second and subsequent FEs under treatment normalization.
-        fixed_effects = self.model_matrix.fixed_effects
-        assert fixed_effects is not None
+        # has_fixef guarantees that the retained matrix contains FE codes.
+        fixed_effects = cast(pd.DataFrame, self.model_matrix.fixed_effects)
         contrast_coding = contrast_code_fixed_effects(
             fixed_effects=fixed_effects, column_names=fe_spec.column_names
         )
         D = contrast_coding.matrix
         D_w = D
-        if self.options.has_weights:
+        observation_weights = self.observation_weights.values
+        if observation_weights is not None:
             # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
-            observation_weights = self.observation_weights.values
-            assert observation_weights is not None
             weights_sqrt = np.sqrt(observation_weights)
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
@@ -1923,12 +1922,13 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+                fe_context = FixedEffectContext.make(
+                    terms=fe_spec.formula, data=newdata, context=context
+                ).register()
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
                     newdata,
-                    context=fixed_effect_context(
-                        terms=fe_spec.formula, data=newdata, context=context
-                    ),
+                    context=fe_context,
                     na_action="ignore",
                 )
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
