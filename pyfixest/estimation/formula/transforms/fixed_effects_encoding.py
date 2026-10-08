@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import warnings
-from collections.abc import Hashable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
-from functools import wraps
+from functools import partial, wraps
 from typing import Any, Final, cast
 
 import numpy as np
 import pandas as pd
 from formulaic.parser.types import Factor, Term
 from formulaic.transforms import TRANSFORMS
-from formulaic.transforms.contrasts import C, TreatmentContrasts
 from formulaic.utils.layered_mapping import LayeredMapping
 from formulaic.utils.stateful_transforms import stateful_eval, stateful_transform
 from formulaic.utils.variables import Variable, get_required_variables
@@ -21,42 +20,6 @@ from pyfixest.utils.dev_utils import _find_stack_level
 
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
 _FIXED_EFFECT_TRANSFORM: Final[str] = "__fixed_effect__"
-
-
-@dataclass(kw_only=True)
-class _FixedEffectContrasts(TreatmentContrasts):
-    """Native treatment coding with the parsed FE label in dummy names."""
-
-    encoding: FixedEffectEncoding
-
-    @TreatmentContrasts.override
-    def get_coding_column_names(
-        self, levels: Sequence[Hashable], reduced_rank: bool = True
-    ) -> Sequence[Hashable]:
-        codes = super().get_coding_column_names(levels, reduced_rank=reduced_rank)
-        values = self.encoding.decoded_values(codes=np.asarray(codes, dtype=np.int64))
-        if len(values) == 1:
-            return values[0].tolist()
-        return list(zip(*(value.tolist() for value in values), strict=True))
-
-    @TreatmentContrasts.override
-    def get_drop_field(
-        self, levels: Sequence[Hashable], reduced_rank: bool = True
-    ) -> Hashable:
-        code = super().get_drop_field(levels, reduced_rank=reduced_rank)
-        if code is None:
-            return None
-        return self.get_coding_column_names(levels, reduced_rank=False)[
-            list(levels).index(code)
-        ]
-
-    @TreatmentContrasts.override
-    def get_factor_format(
-        self, levels: Sequence[Hashable], reduced_rank: bool = True
-    ) -> str:
-        # Formulaic calls str.format() on this template; labels are literal text.
-        label = self.encoding.variable.replace("{", "{{").replace("}", "}}")
-        return label + ("[T.{field}]" if reduced_rank else "[{field}]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +39,7 @@ class FixedEffectEncoding:
     def fit(
         cls, *, term: Term, values: tuple[pd.Series, ...]
     ) -> tuple[FixedEffectEncoding, pd.Series]:
-        """Learn indexes and return training codes without repeating lookups."""
+        """Learn the level mappings and return the training codes."""
         # Sorted factorization preserves declared categorical order and safely
         # orders mixed numbers/strings, returning codes and observed levels together.
         factorized = [pd.factorize(column, sort=True) for column in values]
@@ -125,11 +88,11 @@ class FixedEffectEncoding:
         )
 
 
-def wrap_fixed_effect(term: Term, *, dummies: bool = False) -> Term:
+def wrap_fixed_effect(term: Term) -> Term:
     """Carry original factors in metadata; source contains only a stable ID.
 
-    Numeric and dummy encodings use the same stable state key. Original lookup
-    names remain metadata and never become executable Python source.
+    Original lookup names remain metadata and never become executable Python
+    source.
     """
     identity = repr(
         [(factor.expr, factor.eval_method.value) for factor in term.factors]
@@ -140,87 +103,106 @@ def wrap_fixed_effect(term: Term, *, dummies: bool = False) -> Term:
             Factor(
                 f"{_FIXED_EFFECT_TRANSFORM}({identifier})",
                 eval_method=Factor.EvalMethod.PYTHON,
-                metadata={"term": term, "dummies": dummies, "identifier": identifier},
+                metadata={"term": term, "identifier": identifier},
             )
         ]
     )
 
 
-def fixed_effect_context(
-    *, terms: Iterable[Term], data: pd.DataFrame, context: Mapping[str, Any]
-) -> dict[str, Any]:
-    """Bind dependency reporting to this materialization's original FE terms.
+@dataclass(frozen=True, kw_only=True, slots=True)
+class FixedEffectContext:
+    """Per-materialization bindings for the FE encoder and dependency hook.
 
-    Formulaic discovers dependencies from the wrapper call's AST, passing only
-    its integer argument to the dependency hook. Factor metadata is available
-    during evaluation, but not to that hook. This materialization-local ID map
-    lets the hook report the original factors without a global registry or
-    reparsing wrapper source. Formulaic assigns sources to the returned variables.
+    `make()` prepares the bindings, and `register()` exposes them to Formulaic.
+    Formulaic invokes the dependency hook and encoder during materialization.
     """
-    terms_by_id = {}
-    for term in terms:
-        (factor,) = term.factors
-        terms_by_id[factor.metadata["identifier"]] = factor.metadata["term"]
-    if not terms_by_id:
-        return dict(context)
 
-    evaluation_context = LayeredMapping(
-        LayeredMapping(data, name="data"),
-        LayeredMapping(context, name="context"),
-        LayeredMapping(TRANSFORMS, name="transforms"),
-    )
+    context: Mapping[str, Any]
+    terms_by_id: Mapping[int, Term]
+    dependency_context: Mapping[str, Any]
 
-    def with_context(transform):
-        @wraps(transform)
-        def evaluate(*args, **kwargs):
-            # Dependency hooks evaluate nested arguments without stateful_eval.
-            # Supply their context here, using temporary transform state.
-            kwargs.setdefault("_context", evaluation_context)
-            return transform(*args, **kwargs)
+    @classmethod
+    def make(
+        cls, *, terms: Iterable[Term], data: pd.DataFrame, context: Mapping[str, Any]
+    ) -> FixedEffectContext:
+        """Prepare dependency bindings without evaluating the FE factors."""
+        terms_by_id = {}
+        for term in terms:
+            (factor,) = term.factors
+            terms_by_id[factor.metadata["identifier"]] = factor.metadata["term"]
+        if not terms_by_id:
+            return cls(context=context, terms_by_id={}, dependency_context={})
 
-        return evaluate
+        evaluation_context = LayeredMapping(
+            LayeredMapping(data, name="data"),
+            LayeredMapping(context, name="context"),
+            LayeredMapping(TRANSFORMS, name="transforms"),
+        )
+        dependency_context = evaluation_context.with_layers(
+            {
+                name: wraps(transform)(
+                    partial(
+                        _evaluate_transform_with_context,
+                        transform=transform,
+                        context=evaluation_context,
+                    )
+                )
+                for name, transform in (TRANSFORMS | dict(context)).items()
+                if getattr(transform, "__is_stateful_transform__", False)
+            }
+        )
+        return cls(
+            context=context,
+            terms_by_id=terms_by_id,
+            dependency_context=dependency_context,
+        )
 
-    dependency_context = evaluation_context.with_layers(
-        {
-            name: with_context(transform)
-            for name, transform in (TRANSFORMS | dict(context)).items()
-            if getattr(transform, "__is_stateful_transform__", False)
+    def register(self) -> dict[str, Any]:
+        """Return a Formulaic context with the FE encoder and hook registered."""
+        if not self.terms_by_id:
+            return dict(self.context)
+        return dict(self.context) | {
+            _FIXED_EFFECT_TRANSFORM: stateful_transform(
+                encode_fixed_effects, get_required_variables=self.get_required_variables
+            )
         }
-    )
 
-    def required_variables(identifier):
-        original = terms_by_id[identifier]
+    def get_required_variables(self, identifier: int) -> set[Variable]:
+        """Report original FE dependencies when Formulaic invokes the hook.
+
+        Formulaic passes the wrapper's integer argument to this hook, without
+        factor metadata. The local ID map supplies the original parsed term;
+        Formulaic assigns sources to the variables returned here.
+        """
+        original = self.terms_by_id[identifier]
         variables = set()
         for factor in original.factors:
             if factor.eval_method is Factor.EvalMethod.LOOKUP:
                 variables.add(Variable(factor.expr, roles={Variable.Role.VALUE}))
             elif factor.eval_method is Factor.EvalMethod.PYTHON:
                 variables.update(
-                    get_required_variables(factor.expr, dependency_context)
+                    get_required_variables(factor.expr, self.dependency_context)
                 )
         return variables
 
-    @wraps(encode_fixed_effects)
-    def encode(*args, **kwargs):
-        try:
-            return encode_fixed_effects(*args, **kwargs)
-        except FixedEffectEvaluationError:
-            raise
-        except Exception as exc:
-            term = kwargs["_metadata"]["term"]
-            raise FixedEffectEvaluationError(
-                f"Unable to encode fixed effect `{term}`. [{type(exc).__name__}: {exc}]"
-            ) from exc
 
-    cast(Any, encode).get_required_variables = required_variables
-    return dict(context) | {_FIXED_EFFECT_TRANSFORM: encode}
+def _evaluate_transform_with_context(
+    *args, transform: Callable[..., Any], context: Mapping[str, Any], **kwargs
+):
+    """Evaluate a nested transform with context during dependency discovery."""
+    # Dependency hooks evaluate nested arguments without stateful_eval.
+    # Supply their context here, using temporary transform state.
+    kwargs.setdefault("_context", context)
+    return transform(*args, **kwargs)
 
 
-@stateful_transform
 def encode_fixed_effects(
     identifier, _state=None, _metadata=None, _spec=None, _context: Any = None
 ):
     """Evaluate parsed factors and code their observed level combinations.
+
+    The identifier distinguishes Formulaic transform-state keys and is resolved
+    by the dependency hook. Evaluation reads the parsed term from `_metadata`.
 
     LOOKUP names never enter Python source. PYTHON factors retain their own
     source and persistent nested transform state, including prediction state.
@@ -228,33 +210,36 @@ def encode_fixed_effects(
     state = cast(MutableMapping[str, Any], _state)
     metadata = cast(Mapping[str, Any], _metadata)
     term: Term = metadata["term"]
-    factor_states = state.setdefault("factors", {})
-    values = evaluate_fixed_effect_factors(
-        term=term, context=_context, factor_states=factor_states, spec=_spec
-    )
-    if FIXED_EFFECT_ENCODING not in state:
-        encoding, codes = FixedEffectEncoding.fit(term=term, values=values)
-        state[FIXED_EFFECT_ENCODING] = encoding
-    else:
-        encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING])
-        codes = encoding.encode(values=values)
-        unseen = codes.isna().to_numpy() & np.all(
-            np.column_stack([column.notna().to_numpy() for column in values]), axis=1
+    try:
+        factor_states = state.setdefault("factors", {})
+        values = evaluate_fixed_effect_factors(
+            term=term, context=_context, factor_states=factor_states, spec=_spec
         )
-        if unseen.any():
-            missing = pd.concat(values, axis=1).loc[unseen].drop_duplicates()
-            warnings.warn(
-                f"{missing.shape[0]} unseen level(s) for fixed effect "
-                f"`{encoding.variable}`: {missing.iloc[:20]}\n"
-                "Predictions for affected observations will be NaN",
-                UserWarning,
-                stacklevel=_find_stack_level(),
+        if FIXED_EFFECT_ENCODING not in state:
+            encoding, codes = FixedEffectEncoding.fit(term=term, values=values)
+            state[FIXED_EFFECT_ENCODING] = encoding
+        else:
+            encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING])
+            codes = encoding.encode(values=values)
+            unseen = codes.isna().to_numpy() & np.all(
+                np.column_stack([column.notna().to_numpy() for column in values]),
+                axis=1,
             )
-    if metadata["dummies"]:
-        return C(
-            codes,
-            contrasts=_FixedEffectContrasts(encoding=encoding),
-        )
+            if unseen.any():
+                missing = pd.concat(values, axis=1).loc[unseen].drop_duplicates()
+                warnings.warn(
+                    f"{missing.shape[0]} unseen level(s) for fixed effect "
+                    f"`{encoding.variable}`: {missing.iloc[:20]}\n"
+                    "Predictions for affected observations will be NaN",
+                    UserWarning,
+                    stacklevel=_find_stack_level(),
+                )
+    except FixedEffectEvaluationError:
+        raise
+    except Exception as exc:
+        raise FixedEffectEvaluationError(
+            f"Unable to encode fixed effect `{term}`. [{type(exc).__name__}: {exc}]"
+        ) from exc
     return codes
 
 

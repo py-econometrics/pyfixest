@@ -120,6 +120,14 @@ def test_cluster_na():
         ),
         (
             feols,
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.wildboottest(param="X1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
             "Y ~ X1",
             {},
             {"store_data": False},

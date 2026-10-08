@@ -194,13 +194,16 @@ def predict_fixed_effects(
 
 
 def contrast_code_fixed_effects(
-    *, fixed_effects: pd.DataFrame, column_names: Sequence[str]
+    *,
+    fixed_effects: pd.DataFrame,
+    column_names: Sequence[str],
+    has_intercept: bool = False,
 ) -> FixedEffectContrastCoding:
-    """Build recovery dummies directly from retained estimation-sample codes.
+    """Build sparse dummies directly from retained estimation-sample codes.
 
-    Keep every observed level of the first FE. For each subsequent FE, omit
-    its smallest observed code as the reference, matching Formulaic treatment
-    coding. Gaps caused by missing-row or singleton removal stay absent.
+    Without a separate intercept, keep every observed level of the first FE.
+    Otherwise omit its smallest observed code, as for every subsequent FE.
+    Gaps caused by missing-row or singleton removal stay absent.
     """
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     rows = []
@@ -211,11 +214,10 @@ def contrast_code_fixed_effects(
     ):
         codes = fixed_effects[column].to_numpy(dtype=np.int64)
         observed_codes = np.unique(codes)
-        coefficient_codes = observed_codes if position == 0 else observed_codes[1:]
+        keep_all = position == 0 and not has_intercept
+        coefficient_codes = observed_codes if keep_all else observed_codes[1:]
         retained = (
-            np.ones(len(codes), dtype=bool)
-            if position == 0
-            else codes != observed_codes[0]
+            np.ones(len(codes), dtype=bool) if keep_all else codes != observed_codes[0]
         )
         rows.append(np.flatnonzero(retained))
         columns.append(np.searchsorted(coefficient_codes, codes[retained]) + offset)
@@ -235,3 +237,26 @@ def contrast_code_fixed_effects(
     return FixedEffectContrastCoding(
         matrix=matrix, coefficient_positions=coefficient_positions
     )
+
+
+def fixed_effect_dummy_names(
+    *,
+    contrast_coding: FixedEffectContrastCoding,
+    transform_state: Mapping[str, Any],
+) -> list[str]:
+    """Label dummy columns with the original FE factors and level values."""
+    names = []
+    for name, positions in contrast_coding.coefficient_positions.items():
+        encoding = get_fixed_effect_encoding(
+            transform_state=transform_state, column=name
+        )
+        values = encoding.decoded_values(codes=positions.coefficient_codes)
+        levels = (
+            values[0].tolist()
+            if len(values) == 1
+            else list(zip(*(value.tolist() for value in values), strict=True))
+        )
+        reduced_rank = len(positions.coefficient_codes) < len(positions.observed_codes)
+        prefix = "T." if reduced_rank else ""
+        names.extend(f"{encoding.variable}[{prefix}{level}]" for level in levels)
+    return names

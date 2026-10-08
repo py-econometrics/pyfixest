@@ -34,8 +34,8 @@ from pyfixest.estimation.formula.formulaic_compat import (
 )
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FixedEffectContext,
     FixedEffectEncoding,
-    fixed_effect_context,
     wrap_fixed_effect,
 )
 
@@ -491,12 +491,19 @@ def test_fixed_effect_names_follow_encoded_columns(
 
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
 @pytest.mark.parametrize("interaction", [False, True])
-def test_fe_dummy_names_decode_levels(data, output, interaction):
+@pytest.mark.parametrize("filtered", [False, True])
+def test_fe_dummy_names_decode_levels(data, output, interaction, filtered):
     data = data.assign(firm=data.f1.map(lambda value: f"firm_{value}"))
+    if filtered:
+        # Leave gaps in the learned codes: an entire level is missing from Y,
+        # and a distinct singleton level is removed after materialization.
+        data.loc[data.f1 == data.f1.min(), "Y"] = np.nan
+        data.loc[data.index[-1], "firm"] = "singleton"
     term = "firm:f2" if interaction else "firm"
-    fit = pf.feols(f"Y ~ X1 | {term}", data=data, fixef_rm="none")
+    fit = pf.feols(f"Y ~ X1 | {term}", data=data)
     _, design, names = fit._model_matrix_one_hot(output=output)
     design = design.toarray() if output == "sparse" else design
+    data = data.loc[fit.model_matrix.dependent.index]
     levels = (
         sorted(set(zip(data.firm, data.f2, strict=True)))
         if interaction
@@ -647,14 +654,35 @@ def test_fe_nested_transforms_retain_state_and_dependencies(data, expression):
     newdata = renamed.iloc[:10]
     matrix = spec.get_model_matrix(
         newdata,
-        context=fixed_effect_context(
+        context=FixedEffectContext.make(
             terms=spec.formula, data=newdata, context=FORMULAIC_TRANSFORMS
-        ),
+        ).register(),
     )
     np.testing.assert_array_equal(
         matrix.to_numpy(),
         fit.model_matrix.fixed_effects.iloc[:10].to_numpy(),
         err_msg="persistent FE transform state",
+    )
+
+
+def test_fe_wrapper_identity_preserves_evaluation_mode(data):
+    """Equal native factors with different evaluation modes retain separate FEs."""
+    data = data.assign(**{"I(f1)": data.f2})
+    terms = formulaic.formula.SimpleFormula(
+        [
+            wrap_fixed_effect(Term([Factor("I(f1)", eval_method=method)]))
+            for method in (Factor.EvalMethod.LOOKUP, Factor.EvalMethod.PYTHON)
+        ]
+    )
+    context = FixedEffectContext.make(
+        terms=terms, data=data, context=FORMULAIC_TRANSFORMS
+    ).register()
+    matrix = terms.get_model_matrix(data, context=context)
+    assert matrix.model_spec.required_variables == {"I(f1)", "f1"}
+    np.testing.assert_array_equal(
+        matrix.to_numpy(),
+        data[["f2", "f1"]].to_numpy(),
+        err_msg="FE codes for lookup and Python factors with the same expression",
     )
 
 
@@ -670,7 +698,7 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     path = "fit"
 
     def check_variables(self, factor, spec, drop_rows):
-        assert path != "fixef", "Recovery must use retained FE codes"
+        assert path not in {"fixef", "one-hot"}, "Use retained FE codes"
         evaluated = evaluate(self, factor, spec, drop_rows)
         if "term" in factor.metadata:
             assert {
@@ -688,8 +716,11 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     path = "predict"
     fit.predict(newdata=data.iloc[:5])
     path = "one-hot"
+    del fit._data
     fit._model_matrix_one_hot()
-    assert observed == {"fit", "predict", "one-hot"}
+    fit.wildboottest(param="X1", reps=9, seed=42)
+    fit.decompose(decomp_var="X1", only_coef=True)
+    assert observed == {"fit", "predict"}
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1 | f1:nope", "Y ~ X1 | I(f1 + nope)"])
@@ -720,12 +751,15 @@ def test_fe_rejects_literal_factor(data):
         FixedEffectEvaluationError, match="must be a lookup or Python expression"
     ):
         terms.get_model_matrix(
-            data, context=fixed_effect_context(terms=terms, data=data, context={})
+            data,
+            context=FixedEffectContext.make(
+                terms=terms, data=data, context={}
+            ).register(),
         )
 
 
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
-@pytest.mark.parametrize("fixed_effects", ["f1", "`my fe`", "f1:f2"])
+@pytest.mark.parametrize("fixed_effects", ["f1", "`my fe`", "f1:f2", "f1 + f2"])
 def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     data = pf.get_data(N=300).dropna()
     data["my fe"] = data.f1
@@ -737,24 +771,70 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
         fixef_rm="none",
     )
     reference = pf.feols(
-        "Y ~ product + X2 + C(`my fe`)"
-        if fixed_effects != "f1:f2"
-        else "Y ~ product + X2 + C(group)",
+        "Y ~ product + X2 + "
+        + {
+            "f1": "C(`my fe`)",
+            "`my fe`": "C(`my fe`)",
+            "f1:f2": "C(group)",
+            "f1 + f2": "C(f1) + C(f2)",
+        }[fixed_effects],
         data=data,
     )
     monkeypatch.setattr(
         Formula, "formula", property(lambda self: "descriptive text, not a formula")
     )
     monkeypatch.setattr(Formula, "parse", _fail_on_reparse)
+    monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", _fail_on_reparse)
     y, x, names = fit._model_matrix_one_hot(output=output)
     x = x.toarray() if output == "sparse" else x
     assert "X1 * X2" in names
-    label = fixed_effects.replace("`", "")
+    label = fixed_effects.split(" + ")[0].replace("`", "")
     assert any(label in name for name in names)
     assert all("__fixed_effect__" not in name for name in names)
     np.testing.assert_allclose(y, reference.within_data.response.flatten())
     # Dummy names can differ in their quoting, but their values and order agree.
     np.testing.assert_allclose(x, reference.within_data.design)
+
+
+@pytest.mark.parametrize("output", ["numpy", "sparse"])
+def test_one_hot_keeps_fitted_columns_and_fe_state(data, output):
+    data = data.assign(duplicate_x=data.X1)
+    # Learn the FE transform before missing-response removal. Relearning on
+    # the retained rows would introduce a second group.
+    data.loc[0, "Y"] = np.nan
+    data.loc[0, "f1"] = 1000
+    with pytest.warns(UserWarning, match="duplicate_x"):
+        fit = pf.feols(
+            "Y ~ X1 + duplicate_x + center(X2) | I(center(f1)>0)",
+            data=data,
+            fixef_rm="none",
+        )
+    y, x, names = fit._model_matrix_one_hot(output=output)
+    x = x.toarray() if output == "sparse" else x
+    assert fit._coefnames == ["X1", "center(X2)"]
+    assert names == ["Intercept", *fit._coefnames]
+    assert np.unique(fit.model_matrix.fixed_effects).size == 1
+    np.testing.assert_array_equal(y, fit.model_matrix.dependent.to_numpy().flatten())
+    np.testing.assert_array_equal(
+        x[:, 1:], fit.model_matrix.independent[fit._coefnames].to_numpy()
+    )
+    np.testing.assert_allclose(
+        np.linalg.lstsq(x, y, rcond=None)[0][1:], fit.coef(), rtol=1e-10
+    )
+    if output == "numpy":
+        reference = pf.feols(
+            "Y ~ X1 + center(X2) | I(center(f1)>0)",
+            data=data,
+            fixef_rm="none",
+        )
+        pd.testing.assert_series_equal(
+            fit.wildboottest(param="X1", reps=19, seed=42),
+            reference.wildboottest(param="X1", reps=19, seed=42),
+        )
+        decomposition = fit.decompose(decomp_var="X1", only_coef=True)
+        reference_decomposition = reference.decompose(decomp_var="X1", only_coef=True)
+        for name, value in reference_decomposition.results.absolute.items():
+            np.testing.assert_allclose(decomposition.results.absolute[name], value)
 
 
 def _fail_on_reparse(*args, **kwargs):
