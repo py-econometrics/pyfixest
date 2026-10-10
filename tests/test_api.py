@@ -151,9 +151,11 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-@pytest.mark.parametrize("requested", ["auto", "off", "additive", "diagonal"])
+@pytest.mark.parametrize(
+    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
+)
 def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
-    """All four documented string options round-trip through ``LsmrDemeaner``."""
+    """All documented string options round-trip through ``LsmrDemeaner``."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested
@@ -225,7 +227,7 @@ def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
     # the same solve as the original.
     np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
     assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
-    assert fit_reused.preconditioner.variant == pre.variant
+    assert fit_reused.preconditioner.config == pre.config
     assert fit_reused.preconditioner.nrows == pre.nrows
 
 
@@ -304,7 +306,7 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
     assert isinstance(fit.first_stage.model.preconditioner, pf.Preconditioner)
-    assert fit.first_stage.model.preconditioner.variant == preconditioner.variant
+    assert fit.first_stage.model.preconditioner.config == preconditioner.config
     assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 

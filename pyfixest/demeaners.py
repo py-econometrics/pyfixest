@@ -14,6 +14,7 @@ from pyfixest.core.demean import (
     Preconditioner,
     WithinPreconditionerName,
     demean_within,
+    within_preconditioner_name,
 )
 from pyfixest.utils.dev_utils import _find_stack_level
 
@@ -21,11 +22,18 @@ MapBackend = Literal["numba", "rust"]
 LsmrBackend = Literal["within", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
-LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]
+LsmrPreconditioner = Literal["auto", "off", "adaptive", "additive", "diagonal"]
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": (set(get_args(WithinPreconditionerName)), "additive"),
+    "within": (set(get_args(WithinPreconditionerName)), "adaptive"),
     "torch": ({"diagonal"}, "diagonal"),
+}
+
+
+# An adaptive solve hands back its diagonal base or, once escalated, the
+# additive Schwarz map; an adaptive request can reuse either.
+_REUSABLE_PRECONDITIONERS: dict[str, set[str]] = {
+    "adaptive": {"adaptive", "additive"},
 }
 
 
@@ -233,10 +241,13 @@ class LsmrDemeaner(BaseDemeaner):
     `preconditioner` selects the preconditioner. Supported values:
 
     - `"auto"` (default): selects different preconditioners for different
-      backend implementations: `"additive"` for `"within"`; `"diagonal"`
+      backend implementations: `"adaptive"` for `"within"`; `"diagonal"`
       for `"torch"`.
     - `"off"`: disables preconditioning. Supported by `"within"`; not
       supported by `"torch"`.
+    - `"adaptive"`: starts with the diagonal preconditioner and escalates to
+      additive Schwarz only when convergence stalls. Only supported by the
+      `"within"` backend.
     - `"additive"`: additive Schwarz preconditioner. Only supported by the
       `"within"` backend.
     - `"diagonal"`: diagonal (Jacobi) preconditioner. Supported by
@@ -335,7 +346,9 @@ class LsmrDemeaner(BaseDemeaner):
             configuration, while ``cached_preconditioner`` is the model's
             internal "reuse this if it still matches" handle. The cache is
             used only when the current request is a string preconditioner
-            with the same variant (``"additive"`` or ``"diagonal"``). If the
+            built with the same configuration (``"additive"`` or
+            ``"diagonal"``); an ``"adaptive"`` request also reuses an
+            escalated additive Schwarz preconditioner. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
 
@@ -369,7 +382,7 @@ class LsmrDemeaner(BaseDemeaner):
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
-        """Demean via the `within` crate, reusing a matching cached preconditioner."""
+        """Demean via `within`, reusing a matching cached preconditioner."""
         preconditioner: WithinPreconditionerName | Preconditioner
         if isinstance(self.preconditioner, Preconditioner):
             preconditioner = self.preconditioner
@@ -382,7 +395,8 @@ class LsmrDemeaner(BaseDemeaner):
         if (
             cached_preconditioner is not None
             and isinstance(preconditioner, str)
-            and cached_preconditioner.variant.lower() == preconditioner
+            and within_preconditioner_name(cached_preconditioner)
+            in _REUSABLE_PRECONDITIONERS.get(preconditioner, {preconditioner})
         ):
             preconditioner = cached_preconditioner
 
