@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, within_preconditioner_name
 from pyfixest.demeaners import AnyDemeaner
 
 
@@ -70,11 +70,17 @@ class DemeanCache:
 
         For IWLS (Poisson, GLM) the demeaner is called once per iteration
         and returns a preconditioner each time; we keep the one from the
-        first call and ignore later ones.
+        first call and ignore later ones. The exception is an adaptive
+        preconditioner that has not escalated: reusing it escalates and
+        rebuilds additive Schwarz on every later solve, so a later solve's
+        escalated preconditioner replaces it.
         """
-        if (
-            used_preconditioner is not None
-            and na_index not in self.lookup_preconditioner
+        if used_preconditioner is None:
+            return
+        cached = self.lookup_preconditioner.get(na_index)
+        if cached is None or (
+            within_preconditioner_name(cached) == "adaptive"
+            and within_preconditioner_name(used_preconditioner) == "additive"
         ):
             self.lookup_preconditioner[na_index] = used_preconditioner
 

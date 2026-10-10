@@ -483,6 +483,32 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     )
 
 
+def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
+    """An escalated preconditioner replaces a cached adaptive base, nothing else.
+
+    Reusing an adaptive base that has not escalated makes every later solve
+    escalate and rebuild additive Schwarz, so the cache keeps the escalated one.
+    """
+    x, flist, weights = demean_data
+    flist = flist.astype(np.uint32)
+    _, _, adaptive = demean_within(x, flist, weights, preconditioner="adaptive")
+    _, _, additive = demean_within(x, flist, weights, preconditioner="additive")
+    _, _, diagonal = demean_within(x, flist, weights, preconditioner="diagonal")
+    na_index = frozenset()
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, adaptive)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is additive
+    cache.seed_preconditioner(na_index, adaptive)
+    assert cache.lookup_preconditioner[na_index] is additive
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, diagonal)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is diagonal
+
+
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
     """`LsmrDemeaner.demean` reports `None` whenever no preconditioner ran.
 
