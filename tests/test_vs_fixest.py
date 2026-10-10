@@ -1936,6 +1936,53 @@ def _skip_f3_checks(fml, f3_type):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
+def test_absorbed_covariate_decomposition_against_fixest(weights):
+    """The one-hot full effect retains dummies matching dropped covariate names."""
+    rng = np.random.default_rng(981)
+    f = np.arange(200) % 3
+    x = f + rng.normal(size=200)
+    data = pd.DataFrame(
+        {
+            "y": 2 * x + 3 * f + rng.normal(size=200),
+            "x": x,
+            "f": pd.Categorical(f.astype(str)),
+            "weights": rng.integers(1, 4, size=200),
+        }
+    )
+    with pytest.warns(UserWarning, match="variables dropped due to multicollinearity"):
+        fit = pf.feols(
+            "y ~ x + f | f",
+            data=data,
+            weights=weights,
+            weights_type="fweights",
+            vcov="iid",
+        )
+    reference = fixest.feols(
+        ro.Formula("y ~ x + f | f"),
+        data=data,
+        vcov="iid",
+        **({"weights": ro.Formula("~weights")} if weights else {}),
+    )
+    coefficients = dict(
+        zip(
+            ro.r("function(fit) names(coef(fit))")(reference),
+            stats.coef(reference),
+            strict=True,
+        )
+    )
+    decomposition = fit.decompose(decomp_var="x", only_coef=True).results
+    # Match the canonical OLS coefficient tolerance for these direct solves.
+    np.testing.assert_allclose(
+        decomposition.full_effect,
+        coefficients["x"],
+        rtol=0,
+        atol=1e-8,
+        err_msg="decomposition full effect != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
 @pytest.mark.xfail(
     strict=True, reason="#1776: structural FE identity is enabled in the identity layer"
 )

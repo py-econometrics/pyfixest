@@ -1448,15 +1448,16 @@ class Feols(ResultAccessorMixin):
                     transform_state=fe_spec.transform_state,
                 ),
             ]
+            names_index = pd.Index(xnames)
+            duplicates = names_index[names_index.duplicated()].unique().tolist()
+            if duplicates:
+                raise ValueError(
+                    f"One-hot model matrix has duplicate column names: {duplicates}. "
+                    "Rename the conflicting columns or fixed-effect levels "
+                    "before using post-estimation methods."
+                )
             if output == "numpy":
                 X = X.toarray()
-
-            # drop the covariates the fit removed as collinear
-            collinear = set(self.collinearity.dropped_coef_names)
-            if collinear:
-                keep = [i for i, name in enumerate(xnames) if name not in collinear]
-                X = X[:, keep]
-                xnames = [xnames[i] for i in keep]
 
         else:
             Y = self.within_data.response.flatten()

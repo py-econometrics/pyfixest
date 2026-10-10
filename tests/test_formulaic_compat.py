@@ -744,9 +744,11 @@ def test_one_hot_keeps_fitted_columns_and_fe_state(data, output):
     # level must not reappear as a dummy in the retained design.
     data.loc[0, "Y"] = np.nan
     data.loc[0, "f1"] = 1000
+    # Absorbed categorical covariates have the same names as the FE dummies.
+    data["f1"] = data.f1.astype("category")
     with pytest.warns(UserWarning, match="duplicate_x"):
         fit = pf.feols(
-            "Y ~ X1 + duplicate_x + center(X2) | f1",
+            "Y ~ X1 + duplicate_x + f1 + center(X2) | f1",
             data=data,
             fixef_rm="none",
         )
@@ -781,7 +783,26 @@ def test_one_hot_keeps_fitted_columns_and_fe_state(data, output):
         decomposition = fit.decompose(decomp_var="X1", only_coef=True)
         reference_decomposition = reference.decompose(decomp_var="X1", only_coef=True)
         for name, value in reference_decomposition.results.absolute.items():
-            np.testing.assert_allclose(decomposition.results.absolute[name], value)
+            np.testing.assert_allclose(
+                decomposition.results.absolute[name],
+                value,
+                rtol=1e-10,
+                atol=1e-12,
+                err_msg=f"decomposition {name} changed with absorbed covariates",
+            )
+
+
+@pytest.mark.parametrize("consumer", ["numpy", "sparse", "wildboottest", "decompose"])
+def test_one_hot_rejects_duplicate_column_names(data, consumer):
+    data = data.assign(**{"f1[T.1]": data.X1})
+    fit = pf.feols("Y ~ `f1[T.1]` | f1", data=data)
+    with pytest.raises(ValueError, match=r"duplicate column names.*f1\[T\.1\]"):
+        if consumer in {"numpy", "sparse"}:
+            fit._model_matrix_one_hot(output=consumer)
+        elif consumer == "wildboottest":
+            fit.wildboottest(param="f1[T.1]", reps=19, seed=42)
+        else:
+            fit.decompose(decomp_var="f1[T.1]", only_coef=True)
 
 
 def _fail_on_reparse(*args, **kwargs):
