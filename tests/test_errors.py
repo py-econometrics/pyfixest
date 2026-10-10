@@ -120,6 +120,14 @@ def test_cluster_na():
         ),
         (
             feols,
+            "Y ~ X1 | f1",
+            {},
+            {"store_data": False},
+            lambda fit, data: fit.wildboottest(param="X1", reps=2),
+            "wildboottest",
+        ),
+        (
+            feols,
             "Y ~ X1",
             {},
             {"store_data": False},
@@ -485,9 +493,8 @@ def test_rwolf_error():
 def test_predict_fe_dtype_mismatch():
     """FE dtype handling in predict(newdata=...).
 
-    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
-    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
-    numeric-numeric differences predict fine; fully unmatched FE levels warn.
+    Compatible numeric values match across dtypes; unmatched values, including
+    numeric-vs-string differences, warn and predict NaN.
     """
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
@@ -498,11 +505,15 @@ def test_predict_fe_dtype_mismatch():
     pred = fit.predict(newdata=newdata)
     assert np.isfinite(pred).any()
 
-    # numeric fit data vs string newdata: clear pyfixest error
+    # numeric fit data vs string newdata: unmatched levels warn and predict NaN
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_str["f1"] = newdata_str["f1"].astype(str)
-    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
-        fit.predict(newdata=newdata_str)
+    with pytest.warns(
+        UserWarning,
+        match=f"{newdata_str['f1'].nunique()} unseen level",
+    ):
+        pred_str = fit.predict(newdata=newdata_str)
+    assert np.all(np.isnan(pred_str))
 
     # no matching FE level at all: warning + all-NaN predictions
     newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
