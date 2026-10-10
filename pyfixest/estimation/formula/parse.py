@@ -495,20 +495,6 @@ class Formula:
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
 
-    @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:
-        """Group parsed formulas into dictionary keyed by fixed effects."""
-        formulas = cls.parse(formula)
-        result: dict[str | None, list[Formula]] = {}
-        for parsed_formula in formulas:
-            fixed_effects = (
-                str(parsed_formula.fixed_effects)
-                if parsed_formula.is_fixed_effects
-                else None
-            )
-            result.setdefault(fixed_effects, []).append(parsed_formula)
-        return result
-
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     """Expand the first multiple estimation syntax in formula.

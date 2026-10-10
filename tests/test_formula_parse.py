@@ -369,7 +369,7 @@ class TestParenthesisPair:
 
 
 class TestFormulaParse:
-    """Tests for Formula.parse() and Formula.parse_to_dict()."""
+    """Tests for Formula.parse()."""
 
     @pytest.mark.parametrize(
         "formula,expected_count",
@@ -441,20 +441,6 @@ class TestFormulaParse:
         assert len(result) == 2
         assert result[0].second_stage == formulaic.Formula("Y ~ 1 + X1")
         assert result[1].second_stage == formulaic.Formula("Y2 ~ 1 + X1")
-
-    def test_parse_to_dict_groups_by_fe(self):
-        """Test parsing of formulas into dictionary."""
-        result = Formula.parse_to_dict("Y ~ X1 | sw(f1, f2)")
-        assert "f1" in result
-        assert "f2" in result
-        assert len(result["f1"]) == 1
-        assert len(result["f2"]) == 1
-
-    def test_parse_to_dict_no_fe(self):
-        """Test parsing of formulas into dictionary without fixed effects."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-        assert len(result[None]) == 1
 
     def test_parse_sw_in_fe_and_independent(self):
         """Cross-product: sw in both independent and FE."""
@@ -536,13 +522,6 @@ class TestFormulaParse:
             "f1",
             "f1 + f2",
         ]
-
-    def test_parse_to_dict_csw0_fe_groups(self):
-        """parse_to_dict should group csw0 FE correctly, with None for zero-step."""
-        result = Formula.parse_to_dict("Y ~ X1 | csw0(f1, f2)")
-        assert None in result  # zero step
-        assert "f1" in result
-        assert "f1 + f2" in result
 
 
 class TestFixedEffectInteractions:
@@ -1044,16 +1023,6 @@ class TestEdgeCases:
         assert len(result) == 1
         assert result[0].second_stage == formulaic.Formula("Y ~ 1")
 
-    def test_no_fe_in_dict(self):
-        """No fixed effects results in None key in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-
-    def test_fe_key_in_dict(self):
-        """Fixed effects are used as keys in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1 | f1")
-        assert "f1" in result
-
     def test_multiple_dependent_variables(self):
         """Test multiple independent variables."""
         result = Formula.parse("Y + Y2 + Y3 ~ X1")
@@ -1111,28 +1080,26 @@ class TestEdgeCases:
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""
-        result_explicit = Formula.parse_to_dict("Y ~ X1 | 0")
-        result_implicit = Formula.parse_to_dict("Y ~ X1")
+        result_explicit = Formula.parse("Y ~ X1 | 0")
+        result_implicit = Formula.parse("Y ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects
 
     def test_explicit_no_fe_with_iv(self):
         """Y ~ 1 | 0 | Z1 ~ X1 and Y ~ 1 | Z1 ~ X1 should be equivalent."""
-        result_explicit = Formula.parse_to_dict("Y ~ 1 | 0 | Z1 ~ X1")
-        result_implicit = Formula.parse_to_dict("Y ~ 1 | Z1 ~ X1")
+        result_explicit = Formula.parse("Y ~ 1 | 0 | Z1 ~ X1")
+        result_implicit = Formula.parse("Y ~ 1 | Z1 ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects

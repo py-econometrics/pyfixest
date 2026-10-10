@@ -145,6 +145,41 @@ def test_build_all_splits_full_plus_split_puts_full_first():
 
 
 # ---------------------------------------------------------------------------
+# Formula grouping
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "fml, expected_groups",
+    [
+        ("Y ~ X1", {None: ["Y"]}),
+        ("Y ~ X1 | f1", {"f1": ["Y"]}),
+        ("Y ~ X1 | sw(f1, f2)", {"f1": ["Y"], "f2": ["Y"]}),
+        (
+            "Y ~ X1 | csw0(f1, f2)",
+            {None: ["Y"], "f1": ["Y"], "f1 + f2": ["Y"]},
+        ),
+        ("Y + Y2 ~ X1 | sw(f1, f2)", {"f1": ["Y", "Y2"], "f2": ["Y", "Y2"]}),
+    ],
+)
+def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
+    """The planner preserves FE group order and parsed formula order within groups."""
+    config = _config("feols", fml, pf.get_data())
+    formula_dict = plan_formulas(config=config).formula_dict
+
+    assert list(formula_dict) == list(expected_groups)
+    assert {
+        key: [str(formula.dependent) for formula in formulas]
+        for key, formulas in formula_dict.items()
+    } == expected_groups
+    for key, formulas in formula_dict.items():
+        for formula in formulas:
+            assert (
+                str(formula.fixed_effects) if formula.is_fixed_effects else None
+            ) == key
+
+
+# ---------------------------------------------------------------------------
 # expand_specs: spec count & ordering
 # ---------------------------------------------------------------------------
 
@@ -491,7 +526,7 @@ def test_fit_one_uses_the_structural_lifecycle_contract():
             return ()
 
     iid = VcovSpec.from_user_input("iid")
-    formula = Formula.parse_to_dict("Y ~ X1")[None][0]
+    formula = Formula.parse("Y ~ X1")[0]
     spec = ModelSpec(
         method="quantreg",
         model_cls=StubModel,
