@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 import pyfixest as pf
@@ -551,3 +552,152 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
         "drop_multicol_vars",
     ]
     assert fit._X_is_empty is False
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending structural formula identity; regression from PR stack #1862",
+)
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "fml, references",
+    [
+        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
+        (
+            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
+            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
+        ),
+        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
+    ],
+)
+def test_distinct_structures_with_same_display_survive(fml, references, weights):
+    """#1776: model identity and demean-cache scopes use parsed semantics."""
+    data = pf.get_data(N=400, seed=123).dropna()
+    data["f1 + f2"] = data.f2
+    multi = pf.feols(fml, data=data, weights=weights, fixef_rm="none")
+    fits = multi.to_list()
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in fits]
+    assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
+    assert len(fits) == len(references)
+    for fit, reference_formula in zip(fits, references, strict=True):
+        reference = pf.feols(
+            reference_formula, data=data, weights=weights, fixef_rm="none"
+        )
+        assert list(fit.coef().index) == list(reference.coef().index)
+        np.testing.assert_allclose(
+            fit.coef(), reference.coef(), rtol=1e-10, err_msg="stepwise coefficients"
+        )
+        np.testing.assert_allclose(
+            fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
+        )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending structural formula identity; regression from PR stack #1862",
+)
+def test_full_sample_and_group_named_all_have_distinct_identity():
+    data = pf.get_data(N=300).dropna()
+    data["group"] = np.resize(["all", "'all'", "rest"], len(data))
+    multi = pf.feols("Y ~ X1 | f1", data=data, fsplit="group")
+    fits = multi.to_list()
+    assert [fit.model.sample_split.value for fit in fits] == [
+        None,
+        "'all'",
+        "all",
+        "rest",
+    ]
+    assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
+
+
+@pytest.mark.parametrize("fml", ["Y ~ sw(X1, X2)", "Y ~ sw(X1, X2) | f1"])
+@pytest.mark.parametrize("split", [False, True])
+def test_multiple_models_support_name_lookup(fml, split):
+    data = pf.get_data(N=200, seed=17).dropna()
+    data["group"] = data.f1 % 2
+    multi = pf.feols(fml, data=data, fsplit="group" if split else None)
+    models = multi.to_list()
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in models]
+    for fit in models:
+        assert multi.all_fitted_models[fit.model.model_name] is fit
+        reference = pf.feols(fit.model.formula, data=data)
+        suffix = ""
+        if fit.model.sample_split is not None:
+            value = fit.model.sample_split.value
+            suffix = f" (Sample: group = {'all' if value is None else value})"
+        assert fit.model.model_name == reference.model.model_name + suffix
+
+
+def test_quantile_models_support_name_lookup():
+    multi = pf.quantreg(
+        "Y ~ X1",
+        pf.get_data(N=100, seed=17).dropna(),
+        quantile=[0.25, 0.75],
+        method="pfn",
+        seed=7,
+    )
+    models = multi.to_list()
+    assert len(models) == 2
+    assert list(multi.all_fitted_models) == [fit.model.model_name for fit in models]
+    for fit in models:
+        assert multi.all_fitted_models[fit.model.model_name] is fit
+        assert fit.model.model_name.endswith(f"(q = {fit.options.quantile})")
+
+
+@pytest.mark.xfail(strict=True, reason="Pending unambiguous formula rendering")
+@pytest.mark.parametrize(
+    "fml, names",
+    [
+        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
+        (
+            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
+            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
+        ),
+        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
+    ],
+)
+def test_expanded_models_have_unambiguous_string_keys(fml, names):
+    data = pf.get_data(N=200, seed=17).dropna()
+    data["f1 + f2"] = data.f2
+    multi = pf.feols(fml, data=data, fixef_rm="none")
+    assert list(multi.all_fitted_models) == names
+    for fit, name in zip(multi.to_list(), names, strict=True):
+        assert fit.model.model_name == name
+        assert multi.all_fitted_models[name] is fit
+
+
+@pytest.mark.xfail(strict=True, reason="Pending faithful public formula rendering")
+@pytest.mark.parametrize(
+    "estimator, fml, preserved",
+    [
+        (pf.feols, "Y ~ X1 - 1", "0 + X1"),
+        (pf.fepois, "Y ~ X1 - 1", "0 + X1"),
+        (pf.feglm, "Y ~ X1 - 1", "0 + X1"),
+        (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
+        (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
+        (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
+        (pf.feols, "Y ~ X1 | `f1 + f2`", "`f1 + f2`"),
+        (pf.feols, "Y ~ X1 | {f1 + f2}", "{f1 + f2}"),
+        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ 0 + Z1]"),
+        (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
+    ],
+)
+def test_public_formula_roundtrip_preserves_estimation(estimator, fml, preserved):
+    """#1735/#1759: a public formula must replay the expanded specification."""
+    data = pf.get_data(N=400, seed=8123).dropna()
+    data["out come"] = data.Y
+    data["X1 + X2"] = data.X1
+    data["f1 + f2"] = data.f2
+    options = {"fixef_rm": "none"}
+    if estimator is pf.quantreg:
+        options = {}
+    elif estimator is pf.fepois:
+        data["Y"] = np.round(np.abs(data.Y))
+    elif estimator is pf.feglm:
+        options["family"] = "gaussian"
+    fit = estimator(fml, data=data, **options)
+    assert preserved in fit.model.formula
+    replay = estimator(fit.model.formula, data=data, **options)
+    assert list(replay.coef().index) == list(fit.coef().index)
+    np.testing.assert_allclose(replay.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(replay.se(), fit.se(), rtol=1e-10, atol=1e-10)
