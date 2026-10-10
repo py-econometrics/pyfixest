@@ -9,6 +9,7 @@ from types import ModuleType
 from typing import ClassVar, Literal, cast, get_args
 
 import numpy as np
+from within import PreconditionerConfig
 
 from pyfixest.core.demean import (
     Preconditioner,
@@ -259,6 +260,13 @@ class LsmrDemeaner(BaseDemeaner):
       fixed-effect factors because single-factor problems run MAP as the within algo
       provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
+    - A ``within.PreconditionerConfig`` instance: build a new preconditioner
+      using its complete configuration, including custom factorization and
+      adaptive escalation settings. Only supported by ``backend='within'``.
+
+    In ``fepois`` and ``feglm``, each IWLS solve rebuilds for its current
+    working weights. A prebuilt ``Preconditioner`` supplies its complete
+    configuration instead of reusing its factorization in those estimators.
 
     If a *string* value is incompatible with the chosen backend, a
     `UserWarning` is emitted at solve time and the backend's default is
@@ -274,7 +282,7 @@ class LsmrDemeaner(BaseDemeaner):
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
-    preconditioner: LsmrPreconditioner | Preconditioner = "auto"
+    preconditioner: LsmrPreconditioner | Preconditioner | PreconditionerConfig = "auto"
     local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
@@ -299,17 +307,21 @@ class LsmrDemeaner(BaseDemeaner):
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
-        if isinstance(self.preconditioner, Preconditioner):
+        if isinstance(self.preconditioner, (Preconditioner, PreconditionerConfig)):
             if self.backend != "within":
                 raise ValueError(
-                    "A Preconditioner can only be reused with `backend='within'`."
+                    "A Preconditioner or PreconditionerConfig can only be used "
+                    "with `backend='within'`."
                 )
         elif not isinstance(self.preconditioner, str):
-            raise TypeError("`preconditioner` must be a string or a Preconditioner.")
+            raise TypeError(
+                "`preconditioner` must be a string, a Preconditioner, "
+                "or a PreconditionerConfig."
+            )
         elif self.preconditioner not in get_args(LsmrPreconditioner):
             raise ValueError(
-                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)} "
-                "or a Preconditioner."
+                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)}, "
+                "a Preconditioner, or a PreconditionerConfig."
             )
 
         if self.local_size is not None:
@@ -345,7 +357,7 @@ class LsmrDemeaner(BaseDemeaner):
             ``self.preconditioner``: the latter is the user's requested
             configuration, while ``cached_preconditioner`` is the model's
             internal "reuse this if it still matches" handle. The cache is
-            used only when the current request is a string preconditioner
+            used when the current request is a string preconditioner
             built with the same configuration (``"additive"`` or
             ``"diagonal"``); an ``"adaptive"`` request also reuses an
             escalated additive Schwarz preconditioner. If the
@@ -383,8 +395,8 @@ class LsmrDemeaner(BaseDemeaner):
         cached_preconditioner: Preconditioner | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean via `within`, reusing a matching cached preconditioner."""
-        preconditioner: WithinPreconditionerName | Preconditioner
-        if isinstance(self.preconditioner, Preconditioner):
+        preconditioner: WithinPreconditionerName | Preconditioner | PreconditionerConfig
+        if isinstance(self.preconditioner, (Preconditioner, PreconditionerConfig)):
             preconditioner = self.preconditioner
         else:
             preconditioner = cast(

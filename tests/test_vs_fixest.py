@@ -784,13 +784,24 @@ def test_feglm_gaussian_reference_behavior():
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"])
-def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
+@pytest.mark.parametrize(
+    ("fml", "demeaner"),
+    [(fml, pf.MapDemeaner()) for fml in ["Y ~ X1", "Y ~ X1 | f1", "Y ~ X1 | f1 + f2"]]
+    + [
+        pytest.param(
+            "Y ~ X1 | f1 + f2",
+            pf.LsmrDemeaner(preconditioner=preconditioner),
+            id=f"within-{preconditioner}",
+        )
+        for preconditioner in ["additive", "adaptive"]
+    ],
+)
+def test_fepois_transformed_offset_against_fixest(data_fepois, fml, demeaner):
     """Compare transformed-offset estimation and prediction with fixest."""
     data = data_fepois.dropna().copy()
     data["exposure"] = np.random.default_rng(20260810).uniform(0.5, 3.0, len(data))
 
-    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)")
+    fit = pf.fepois(fml=fml, data=data, offset="log(exposure)", demeaner=demeaner)
     fit_r = fixest.fepois(
         ro.Formula(fml), data=data, offset=ro.Formula("~log(exposure)")
     )
@@ -800,6 +811,7 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
         fit_r.rx2("coefficients"),
         rtol=OFFSET_COEF_RTOL,
         atol=OFFSET_COEF_ATOL,
+        err_msg="Poisson offset coefficients differ from fixest",
     )
 
     newdata = data.iloc[:5]
@@ -810,6 +822,7 @@ def test_fepois_transformed_offset_against_fixest(data_fepois, fml):
             rtol=OFFSET_PRED_RTOL,
             atol=OFFSET_PRED_ATOL,
             equal_nan=True,
+            err_msg=f"Poisson {prediction_type} predictions differ from fixest",
         )
 
 
@@ -1058,12 +1071,20 @@ def test_single_fit_iv(
 @pytest.mark.parametrize("seed", [172])
 @pytest.mark.parametrize("dropna", [True, False])
 @pytest.mark.parametrize(
-    "fml",
-    glm_fmls,
+    ("fml", "demeaner"),
+    [(fml, pf.MapDemeaner()) for fml in glm_fmls]
+    + [
+        pytest.param(
+            "Y ~ X1 + X2 | f1 + f2",
+            pf.LsmrDemeaner(preconditioner=preconditioner),
+            id=f"within-{preconditioner}",
+        )
+        for preconditioner in ["additive", "adaptive"]
+    ],
 )
 @pytest.mark.parametrize("inference", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("family", ["probit", "logit", "gaussian"])
-def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
+def test_glm_vs_fixest(N, seed, dropna, fml, demeaner, inference, family):
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
     if dropna:
@@ -1072,7 +1093,9 @@ def test_glm_vs_fixest(N, seed, dropna, fml, inference, family):
     r_inference = _get_r_inference(inference)
 
     # Fit models for the current family
-    fit_py = pf.feglm(fml=fml, data=data, family=family, vcov=inference)
+    fit_py = pf.feglm(
+        fml=fml, data=data, family=family, vcov=inference, demeaner=demeaner
+    )
     r_fml = _py_fml_to_r_fml(fml)
     data_r = get_data_r(fml, data)
 

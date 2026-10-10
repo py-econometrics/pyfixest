@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import pickle
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -346,61 +349,12 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
 
 @pytest.mark.parametrize("preconditioner", ["adaptive", "additive", "diagonal"])
 def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
-    """End-to-end coverage of ``LsmrDemeaner.demean``'s preconditioner-reuse policy.
+    """Explicit cache reuse for linear fits and direct demeaner calls.
 
-    Context
-    -------
-    `LsmrDemeaner.demean`` is the strategy entry point that the model-side
-    `DemeanCache` calls to demean working data on each iteration. The
-    `cached_preconditioner` argument is the callsite-supplied
-    factorization that turns IWLS's "build the factorization once, reuse it
-    across iterations" claim into reality. The method returns the
-    preconditioner actually used so the cache can hold onto it for the next
-    solve. This test exercises that contract directly, bypassing the model
-    classes and the cache so failures point at the reuse logic instead of
-    the IWLS loop.
-
-    Three behaviours are pinned down:
-
-    Leg 1 — first call reports the freshly built preconditioner
-        With no `cached_preconditioner`, `LsmrDemeaner(backend="within")`
-        builds the requested factorization. The method must return it as
-        the third tuple element so the caller can hold onto it.
-
-    Leg 2 — subsequent calls reuse the supplied preconditioner under changed
-    weights (the IWLS hot path)
-        IWLS changes the working weights at every iteration (`W := W * mu`).
-        A pure implementation would rebuild the preconditioner each time,
-        which is the expensive step. Passing the first-iteration factorization
-        back in via `cached_preconditioner` lets us reuse it even though
-        the weights — and therefore the true normal-equations operator — have
-        changed. The factorization is "stale" in that sense, but LSMR still
-        converges to the correct demeaned values, just possibly in a few more
-        iterations. We simulate a weight change with ``weights + 0.25``, then
-        check both that the method returns the *same* Python object (no
-        rebuild) and that the demeaned output still matches an independent
-        ground truth.
-
-        Ground truth comes from ``pyhdfe.residualize`` — a separate, mature
-        FE-residualization implementation. Matching it under changed weights
-        is the strongest evidence that the stale-preconditioner path is
-        mathematically correct, not just self-consistent.
-
-    Leg 3 — passing a cached preconditioner back via ``LsmrDemeaner``
-    reproduces the original solve
-        This is the documented "save in session 1, reload in session 2"
-        workflow in miniature. A fresh ``LsmrDemeaner(preconditioner=...)``
-        with the *original* weights should reproduce leg 1's output bit-for-bit
-        because we are running the same LSMR with the same factorization on
-        the same data.
-
-    Tolerance choices
-    -----------------
-    Leg 2 uses ``rtol=1e-6, atol=1e-8`` because pyhdfe and ``within`` are two
-    different iterative solvers; they agree to within solver tolerance, not
-    machine precision. Leg 3 uses ``1e-10`` on both because we are comparing
-    ``within`` against itself with identical inputs — only floating-point
-    summation order from rayon parallelism could differ.
+    Changed weights stress the numerical validity of a reused factorization;
+    GLM estimators instead rebuild for each IWLS solve. Compare projections
+    with pyhdfe at the existing demeaning tolerance, and identical-input
+    reuse at 1e-10 to detect an unintended change of factorization.
     """
     x, flist, weights = demean_data
     demeaner = LsmrDemeaner(
@@ -423,8 +377,7 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     )
     assert within_preconditioner_name(built) == preconditioner
 
-    # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
-    # an IWLS iteration where only the working weights moved. The method
+    # ----- Leg 2: explicit reuse with changed weights. The method
     # must reuse the cached factorization (same variant + DOF count; pyo3
     # produces a fresh wrapper, identity semantics match upstream ``within``)
     # and the result must still be numerically correct under the *new* weights.
@@ -946,28 +899,36 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         )
 
 
-def test_feols_integration_maxiter():
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize(
+    "demeaner",
+    [MapDemeaner(), LsmrDemeaner(preconditioner="diagonal")],
+)
+def test_estimator_integration_maxiter(estimator, demeaner):
     """Integration test: Test fixef_maxiter flows from demeaner to demean."""
-    import pyfixest as pf
-
     N = 1000  # More observations
     rng = np.random.default_rng(42)
 
     # Create data with many (but not N) fixed effects
     data = pd.DataFrame(
         {
-            "y": rng.normal(0, 1, N),
+            "y": rng.poisson(2, N),
             "x": rng.normal(0, 1, N),
             "fe": rng.integers(0, 50, N),  # 50 fixed effects, not N
+            "fe2": rng.integers(0, 25, N),
         }
     )
 
     # Should fail with tiny maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-        pf.feols("y ~ x | fe", data=data, demeaner=MapDemeaner(fixef_maxiter=1))
+        estimator(
+            "y ~ x | fe + fe2",
+            data=data,
+            demeaner=replace(demeaner, fixef_maxiter=1),
+        )
 
     # Should work with default
-    model = pf.feols("y ~ x | fe", data=data)
+    model = estimator("y ~ x | fe + fe2", data=data, demeaner=demeaner)
     assert model is not None
 
 

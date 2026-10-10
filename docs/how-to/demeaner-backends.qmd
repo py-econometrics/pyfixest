@@ -130,8 +130,10 @@ build (`pre.build_duration_seconds`). It is a `within.Preconditioner`, which
 `pyfixest` re-exports as `pf.Preconditioner`. An adaptive preconditioner that
 escalated during the solve is returned as the additive Schwarz preconditioner.
 
+You can also pass a `within.PreconditionerConfig` object to `LsmrDemeaner(preconditioner=...)` to build a preconditioner with custom settings.
+
 After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
-fit to skip the setup phase:
+OLS or IV fit to skip the setup phase:
 
 ```{python}
 fit_reused = pf.feols(
@@ -143,22 +145,24 @@ fit_reused = pf.feols(
 pf.etable([fit, fit_reused], digits = 6)
 ```
 
-When you use multiple-estimation syntax, `FixestMulti` also shares compatible
+When you use multiple-estimation syntax with OLS or IV, `FixestMulti` shares compatible
 `within` preconditioners across sibling models that are fit on the same sample with
 identical fixed-effect structure. This happens automatically; you only need to
 use `LsmrDemeaner(backend="within")` or a `within` preconditioner option such as
 `preconditioner="diagonal"`.
 
-For GLMs that rely on iterated weighted least squares (IWLS, in `fepois`,
-`feglm`), either the user-provided preconditioner or the preconditioner built in
-the first iteration is used across all IWLS iterations. Because the working
-weights change across iterations, the preconditioner is "stale" with respect to
-the changing problem. Reusing the preconditioner does not change the target
-solution — when LSMR converges, it converges to the correct demeaned values —
-but it can take more iterations per IWLS step, and on poorly conditioned
-problems may fail to converge within `fixef_maxiter`. The tradeoff is paying
-that potential extra iteration cost in exchange for skipping the costly setup
-phase on every IWLS iteration.
+For GLMs that rely on iterated weighted least squares (IWLS, in `fepois` and
+`feglm`), each demeaning solve builds a fresh preconditioner using its current
+working weights. This applies to additive, diagonal, and adaptive
+preconditioning; adaptive starts from diagonal on every solve and escalates
+when needed. A user-provided `Preconditioner` supplies its complete configuration,
+including custom factorization and escalation settings, rather than a
+factorization to reuse. Passing a prebuilt handle therefore does not skip
+construction during IWLS.
+
+Each GLM's `fit.preconditioner` is the preconditioner from its last successful
+IWLS demeaning solve. It is retained for inspection and explicit reuse in
+OLS/IV fits, rather than shared across IWLS iterations or sibling GLM models.
 
 ### Across sessions
 

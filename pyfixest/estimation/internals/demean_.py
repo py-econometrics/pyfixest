@@ -47,8 +47,8 @@ class DemeanCache:
     The index for both caches is the frozen set of `na_index` - as all fits
     operate on the same fixed effects / data structure.
 
-    Model classes call :meth:`demean_array` (IWLS) or :meth:`demean_yx`
-    (OLS/IV).
+    OLS/IV models call :meth:`demean_yx`. GLM working weights change between
+    IWLS solves, which build fresh preconditioners without using this cache.
     """
 
     def __init__(
@@ -68,12 +68,9 @@ class DemeanCache:
     ) -> None:
         """Store the first preconditioner observed for ``na_index``.
 
-        For IWLS (Poisson, GLM) the demeaner is called once per iteration
-        and returns a preconditioner each time; we keep the one from the
-        first call and ignore later ones. The exception is an adaptive
-        preconditioner that has not escalated: reusing it escalates and
-        rebuilds additive Schwarz on every later solve, so a later solve's
-        escalated preconditioner replaces it.
+        Later OLS/IV models in the same cache block may introduce columns that
+        require another solve. If that solve escalates an adaptive
+        preconditioner, retain the additive Schwarz replacement.
         """
         if used_preconditioner is None:
             return
@@ -83,21 +80,6 @@ class DemeanCache:
             and within_preconditioner_name(used_preconditioner) == "additive"
         ):
             self.lookup_preconditioner[na_index] = used_preconditioner
-
-    def demean_array(
-        self,
-        x: np.ndarray,
-        flist: np.ndarray,
-        weights: np.ndarray | None,
-        na_index: frozenset[int],
-        demeaner: AnyDemeaner,
-    ) -> np.ndarray:
-        """Demean `x`, reusing and seeding the cached preconditioner for `na_index`.
-
-        Raises `ValueError` if the demeaning algorithm does not converge.
-        """
-        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
-        return result
 
     def _run_or_raise(
         self,
