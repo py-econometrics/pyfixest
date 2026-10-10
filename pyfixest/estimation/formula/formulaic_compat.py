@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+from collections import deque
 from collections.abc import Iterable, Iterator, Mapping
 from typing import TYPE_CHECKING, Any, cast
 
@@ -10,6 +12,10 @@ import formulaic.formula
 import numpy as np
 import pandas as pd
 from formulaic.parser.types import Factor
+from formulaic.utils import variables as formulaic_variables
+from formulaic.utils.code import format_expr
+from formulaic.utils.stateful_transforms import _is_stateful_transform
+from formulaic.utils.variables import Variable
 
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -23,6 +29,61 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
+
+
+def _get_ast_node_variables_formulaic_284(
+    node: ast.AST, env: Mapping[str, Any], aliases: Mapping[str, str]
+) -> list[Variable]:
+    """Work around unavailable callback arguments in Formulaic's dependency walk.
+
+    Copied from Formulaic 1.2.2's ``_get_ast_node_variables``:
+    https://github.com/matthewwardrop/formulaic/blob/8579df0d49638acbae87e7f4171f97bf66d7d1c8/formulaic/utils/variables.py#L120-L161
+
+    Its stateful dependency callbacks evaluate arguments even when data is unavailable,
+    aborting dependency extraction instead of walking the arguments:
+    https://github.com/matthewwardrop/formulaic/issues/284
+    """
+    variables: list[Variable] = []
+    todo = deque([node])
+    while todo:
+        node = todo.popleft()
+        if _is_stateful_transform(node, env):
+            call = cast(ast.Call, node)
+            delegated = ast.Call(
+                func=ast.Attribute(
+                    value=call.func,
+                    attr="get_required_variables",
+                    ctx=ast.Load(),
+                ),
+                args=call.args,
+                keywords=call.keywords,
+            )
+            try:
+                delegated_variables = eval(
+                    compile(format_expr(delegated), "", "eval"), {}, env
+                )
+            except (NameError, AttributeError):
+                # Missing data names, or nested Q() without its data context,
+                # must not prevent the argument walk below. Literal Q() calls
+                # still contribute their quoted lookup names through the callback.
+                delegated_variables = ()
+            variables.extend(delegated_variables)
+        if not isinstance(node, (ast.Call, ast.Attribute, ast.Name)):
+            todo.extend(ast.iter_child_nodes(node))
+            continue
+        name = formulaic_variables._get_ast_node_name(node)
+        name = aliases.get(name, name)
+        if isinstance(node, ast.Call):
+            variables.append(Variable(name, roles=["callable"]))
+            todo.extend(node.args)
+            todo.extend(node.keywords)
+        else:
+            variables.append(Variable(name, roles=["value"]))
+    return variables
+
+
+if formulaic.__version__ == "1.2.2":
+    formulaic_variables._get_ast_node_variables = _get_ast_node_variables_formulaic_284
 
 
 class FormulaicCompatibilityError(RuntimeError):

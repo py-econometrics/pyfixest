@@ -42,6 +42,8 @@ FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
+FORMULAIC_284 = "https://github.com/matthewwardrop/formulaic/issues/284"
+
 
 @pytest.fixture
 def data() -> pd.DataFrame:
@@ -81,6 +83,46 @@ def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
     terms = terms_without_intercept(formulaic.Formula(formula))
 
     assert [str(term) for term in terms] == expected
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("center(X1)", {"X1"}),
+        ("scale(X1)", {"X1"}),
+        ("poly(X1, 2)", {"X1"}),
+        ("center(scale(X1))", {"X1"}),
+        ("center(`my var`)", {"my var"}),
+        ("center(Q('my var'))", {"my var"}),
+    ],
+)
+def test_formulaic_284_required_variables_without_data(expression, expected):
+    """Stateful callbacks must not hide dependencies when data is unavailable."""
+    formula = formulaic.Formula(expression)
+    assert formula.required_variables == expected, FORMULAIC_284
+    assert formula_required_variables(formula=formula) == expected, FORMULAIC_284
+
+
+def test_formulaic_284_transform_state_reused(data):
+    """The dependency patch preserves materialization and fitted transform state."""
+    frame = data.assign(**{"my var": data.X2})
+    matrix = formulaic.Formula("0 + center(X1) + center(Q('my var'))").get_model_matrix(
+        frame
+    )
+    assert matrix.model_spec.required_variables == {"X1", "my var"}
+    for expression, column in [("center(X1)", "X1"), ("center(Q('my var'))", "my var")]:
+        np.testing.assert_allclose(
+            matrix[expression],
+            frame[column] - frame[column].mean(),
+            atol=1e-12,
+            err_msg="stateful transform materialization",
+        )
+    np.testing.assert_allclose(
+        matrix.model_spec.get_model_matrix(frame.iloc[:5]).to_numpy(),
+        matrix.iloc[:5].to_numpy(),
+        atol=1e-12,
+        err_msg="fitted transform state reuse",
+    )
 
 
 def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
@@ -557,6 +599,14 @@ def test_required_variables_preserve_quoted_names(rhs, expected):
         ),
         (
             "Y ~ Q('my var') + [X2 ~ I(`my var`)]",
+            InstrumentsAsCovarsError,
+        ),
+        (
+            "Y ~ center(`my var`) + [`my var` ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ scale(`my var`) + [X2 ~ `my var`]",
             InstrumentsAsCovarsError,
         ),
     ],

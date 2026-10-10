@@ -1988,12 +1988,24 @@ def test_absorbed_covariate_decomposition_against_fixest(weights):
         ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
         ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
         ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+        (
+            "Y ~ center(X1) + [X2 ~ Z1]",
+            "Y ~ scale(X1, scale = FALSE) | X2 ~ Z1",
+            {"scale(X1, scale = FALSE)": "center(X1)"},
+        ),
+        (
+            "Y ~ X1 + [center(X2) ~ scale(Z1)]",
+            "Y ~ X1 | scale(X2, scale = FALSE) ~ scale(Z1)",
+            {"scale(X2, scale = FALSE)": "center(X2)"},
+        ),
     ],
 )
 def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
-    """Arithmetic factors retain their meaning through matrix construction."""
-    fit = pf.feols(fml, data=data_feols, vcov="iid")
-    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
+    """Expressions retain their meaning through matrix construction."""
+    # Stateful transforms calculate sample moments before missing rows are dropped.
+    data = data_feols.dropna()
+    fit = pf.feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
     names = [
         renamed_terms.get(name, name)
         for name in (
