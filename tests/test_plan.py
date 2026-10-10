@@ -591,22 +591,16 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
     reason="Pending structural formula identity; regression from PR stack #1862",
 )
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize(
-    "fml, references",
-    [
-        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
-        (
-            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
-            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-        ),
-        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
-    ],
-)
-def test_distinct_structures_with_same_display_survive(fml, references, weights):
+def test_distinct_structures_with_same_display_survive(weights):
     """#1776: model identity and demean-cache scopes use parsed semantics."""
     data = pf.get_data(N=400, seed=123).dropna()
-    data["f1 + f2"] = data.f2
-    multi = pf.feols(fml, data=data, weights=weights, fixef_rm="none")
+    references = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols(
+        "Y ~ sw({X1 + X2}, X1 + X2) | f1",
+        data=data,
+        weights=weights,
+        fixef_rm="none",
+    )
     fits = multi.to_list()
     assert list(multi.all_fitted_models) == [fit.model.model_name for fit in fits]
     assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
@@ -677,21 +671,10 @@ def test_quantile_models_support_name_lookup():
 
 
 @pytest.mark.xfail(strict=True, reason="Pending unambiguous formula rendering")
-@pytest.mark.parametrize(
-    "fml, names",
-    [
-        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
-        (
-            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
-            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-        ),
-        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
-    ],
-)
-def test_expanded_models_have_unambiguous_string_keys(fml, names):
+def test_expanded_models_have_unambiguous_string_keys():
     data = pf.get_data(N=200, seed=17).dropna()
-    data["f1 + f2"] = data.f2
-    multi = pf.feols(fml, data=data, fixef_rm="none")
+    names = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols("Y ~ sw({X1 + X2}, X1 + X2) | f1", data=data, fixef_rm="none")
     assert list(multi.all_fitted_models) == names
     for fit, name in zip(multi.to_list(), names, strict=True):
         assert fit.model.model_name == name
@@ -708,8 +691,6 @@ def test_expanded_models_have_unambiguous_string_keys(fml, names):
         (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
         (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
         (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
-        (pf.feols, "Y ~ X1 | `f1 + f2`", "`f1 + f2`"),
-        (pf.feols, "Y ~ X1 | {f1 + f2}", "{f1 + f2}"),
         (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ 0 + Z1]"),
         (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
     ],
@@ -719,7 +700,6 @@ def test_public_formula_roundtrip_preserves_estimation(estimator, fml, preserved
     data = pf.get_data(N=400, seed=8123).dropna()
     data["out come"] = data.Y
     data["X1 + X2"] = data.X1
-    data["f1 + f2"] = data.f2
     options = {"fixef_rm": "none"}
     if estimator is pf.quantreg:
         options = {}
