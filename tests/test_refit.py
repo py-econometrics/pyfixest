@@ -284,6 +284,7 @@ _ARGUMENTS_OUTSIDE_OPTIONS = {
     "data",
     "vcov",
     "vcov_kwargs",
+    "vcov_fix",
     "split",
     "fsplit",
     "use_compression",

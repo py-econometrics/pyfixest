@@ -108,6 +108,8 @@ class FixestMulti(TidyColumnAccessors):
         self,
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
+        *,
+        vcov_fix: bool = True,
     ):
         """
         Update regression inference "on the fly".
@@ -127,12 +129,16 @@ class FixestMulti(TidyColumnAccessors):
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
 
+        vcov_fix : bool, optional
+            Repair non-positive-definite multiway clustered covariance matrices
+            in each model. Defaults to True; see `Feols.vcov`.
+
         Returns
         -------
             An instance of the "Fixest" class with updated inference.
         """
         for fxst in self.all_fitted_models.values():
-            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
+            fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs, vcov_fix=vcov_fix)
         return self
 
     def tidy(self) -> pd.DataFrame:

@@ -2,7 +2,7 @@
 
 Keep the complete correction matrix separate from the general estimator tests.
 The seeded fixture avoids eigenvalue repair so comparisons exercise the raw
-inclusion-exclusion estimator; repair remains a documented compatibility gap.
+inclusion-exclusion estimator. A separate small fixture exercises eigenvalue repair.
 CRV3 comparisons use sandwich's HC3 for OLS and its jackknife for Poisson.
 """
 
@@ -188,6 +188,7 @@ def _assert_multiway_clustering_against_fixest(
     k_fixef,
     G_df,
     r_fml=None,
+    vcov_fix=False,
 ):
     """Compare named estimates, covariance, inference, and counts with fixest."""
     cluster = "+".join(f"c{i}" for i in range(1, n_clusters + 1))
@@ -207,10 +208,16 @@ def _assert_multiway_clustering_against_fixest(
         py_estimator, r_estimator = pf.feglm, fixest.feglm
         kwargs["family"] = model
         r_kwargs["family"] = stats.binomial(link=model)
+    if vcov_fix and model != "feols":
+        # Tighten IRLS stopping so covariance repair is compared independently
+        # of the final working-weight stopping error.
+        kwargs["iwls_tol"] = 1e-12
+        r_kwargs["glm_tol"] = 1e-12
     fit = py_estimator(
         fml=fml,
         data=data,
         vcov={"CRV1": cluster},
+        vcov_fix=vcov_fix,
         ssc=ssc(k_adj=k_adj, G_adj=G_adj, k_fixef=k_fixef, G_df=G_df),
         **kwargs,
     )
@@ -272,6 +279,32 @@ def _assert_multiway_clustering_against_fixest(
     ), "multiway df_t"
     assert fit.sample_info.n_obs == int(stats.nobs(r_fit)[0]), "multiway observations"
     assert len(fit.variance_covariance.G) == 2**n_clusters - 1
+    if vcov_fix:
+        repaired = fit.variance_covariance.vcov.copy()
+        with np.errstate(invalid="ignore"):
+            fit.vcov({"CRV1": cluster}, vcov_fix=False)
+        raw_r = stats.vcov(
+            r_fit,
+            vcov=ro.Formula(
+                ("fourway" if n_clusters == 4 else "cluster") + "~" + cluster
+            ),
+            vcov_fix=False,
+        )
+        np.testing.assert_allclose(
+            fit.variance_covariance.vcov,
+            np.asarray(raw_r)[np.ix_(vcov_order, vcov_order)],
+            rtol=0,
+            atol=inference_atol,
+            err_msg="uncorrected covariance",
+        )
+        assert np.linalg.eigvalsh(fit.variance_covariance.vcov).min() < 0
+        with pytest.warns(UserWarning, match="not positive definite.*fixed"):
+            fit.vcov({"CRV1": cluster}, vcov_fix=True)
+        np.testing.assert_array_equal(
+            fit.variance_covariance.vcov,
+            repaired,
+            err_msg="estimation-time and post-estimation repair",
+        )
 
 
 @pytest.fixture(scope="module")
@@ -343,3 +376,43 @@ def test_multiway_crv3_against_sandwich(crv3_cluster_data, fml, r_fml, n_cluster
         rtol=0,
         atol=1e-8,
     )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "model,fml,r_fml,weights_type,n_clusters,G_df",
+    [
+        ("feols", "y ~ x + z", None, None, 3, "min"),
+        ("feols", "y ~ x + z | c1", None, None, 3, "min"),
+        ("feols", "y ~ x + [d ~ z]", "y ~ x | d ~ z", None, 3, "min"),
+        ("feols", "y ~ x + z", None, "aweights", 3, "min"),
+        ("feols", "y ~ x + z", None, "fweights", 3, "min"),
+        ("feols", "y ~ x + z", None, None, 4, "min"),
+        ("fepois", "count ~ x + z", None, None, 2, "min"),
+        ("feols", "y ~ x + z", None, None, 3, "conventional"),
+        ("feols", "y ~ x + z | c1", None, None, 4, "conventional"),
+        ("logit", "binary ~ x + z", None, None, 2, "min"),
+    ],
+)
+def test_vcov_fix_against_fixest(
+    indefinite_cluster_data, G_df, model, fml, r_fml, weights_type, n_clusters
+):
+    """Permanent covariance and inference comparison with R fixest 0.14.0.
+
+    Seed 42 gives indefinite raw covariance for each case, including positive
+    diagonals with a negative eigenvalue. Use the existing reference tolerances.
+    """
+    with pytest.warns(UserWarning, match="not positive definite.*fixed"):
+        _assert_multiway_clustering_against_fixest(
+            data=indefinite_cluster_data,
+            model=model,
+            fml=fml,
+            r_fml=r_fml,
+            n_clusters=n_clusters,
+            weights_type=weights_type,
+            k_adj=True,
+            G_adj=True,
+            k_fixef="nonnested",
+            G_df=G_df,
+            vcov_fix=True,
+        )

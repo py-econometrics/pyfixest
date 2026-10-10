@@ -1,7 +1,13 @@
 "Pytest configuration for pyfixest tests."
 
+from __future__ import annotations
+
 import os
 import sys
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Fixtures used by tests/test_release_contract.py. Registering them here keeps
 # the test module free of the fixture-shadowing import that ruff rejects.
@@ -115,3 +121,19 @@ if _run_hac_tests:
 # spawns workers. This avoids lock contention when multiple workers try to
 # compile the Rust extension simultaneously.
 import pyfixest  # noqa: F401, E402
+
+
+@pytest.fixture(scope="module")
+def indefinite_cluster_data():
+    """Small crossed clusters with indefinite multiway covariance (seed 42)."""
+    rng = np.random.default_rng(42)
+    n = 100
+    data = pd.DataFrame({f"c{i}": rng.integers(5, size=n) for i in range(1, 5)})
+    for column in ["x", "z", "u"]:
+        data[column] = rng.normal(size=n)
+    data["d"] = data.z + rng.normal(size=n)
+    data["y"] = data.x + 0.3 * data.d + data.u
+    data["count"] = rng.poisson(np.exp(0.2 + 0.1 * data.x))
+    data["binary"] = rng.binomial(1, 0.5, size=n)
+    data["w"] = rng.integers(1, 4, size=n)
+    return data

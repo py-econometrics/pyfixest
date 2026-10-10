@@ -75,6 +75,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     combine_terms,
     get_ssc_cluster,
     prepare_cluster_state,
+    repair_cluster_vcov,
 )
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
@@ -569,6 +570,8 @@ class Feols(ResultAccessorMixin):
         vcov: str | dict[str, str],
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
+        *,
+        vcov_fix: bool = True,
     ) -> Feols:
         """
         Compute covariance matrices for an estimated regression model.
@@ -589,6 +592,10 @@ class Feols(ResultAccessorMixin):
             The data used for estimation. If None, tries to fetch the data from the
             model object. Defaults to None.
 
+        vcov_fix : bool, optional
+            Repair non-positive-definite multiway clustered covariance matrices.
+            Defaults to True. Warns only if a matrix entry changes by more than
+            1e-8. Has no effect on other covariance types.
 
         Returns
         -------
@@ -620,7 +627,7 @@ class Feols(ResultAccessorMixin):
             method="vcov",
             exception_type=VcovTypeNotSupportedError,
         )
-        spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        spec = VcovSpec.from_user_input(vcov, vcov_kwargs, vcov_fix=vcov_fix)
         self._check_vcov_support(spec)
         return self._vcov_from_spec(spec, data=data)
 
@@ -736,8 +743,12 @@ class Feols(ResultAccessorMixin):
             terms = [term]
         term = combine_terms(terms, ssc)
 
+        covariance = term.vcov
+        if spec.vcov_fix and len(spec.clustervar) > 1:
+            covariance = repair_cluster_vcov(vcov=covariance)
+
         self.variance_covariance = VarianceCovariance(
-            vcov=term.vcov,
+            vcov=covariance,
             meat=term.meat,
             ssc=ssc,
             df_k=df_k,

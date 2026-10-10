@@ -84,6 +84,35 @@ effects. CRV3 uses the same multi-way combination for OLS and Poisson fits;
 quantile regression supports only one cluster variable. You can also update a
 fitted model's variance-covariance with `fit.vcov({"CRV1": "f1 + f2 + group_id"})`.
 
+Multi-way covariance estimates can be non-positive-definite in finite samples:
+the combination subtracts the meats of cluster intersections, so the result can
+have negative eigenvalues, negative variances, and `NaN` standard errors. Like R
+fixest, pyfixest repairs such matrices by default with the eigenvalue correction
+of [Cameron, Gelbach & Miller (2011)](https://doi.org/10.1198/jbes.2010.07136):
+it floors nonpositive eigenvalues at `1e-16`. Standard errors, tests, and
+confidence intervals then use the repaired matrix. A warning is emitted only if
+an absolute matrix-entry change exceeds `1e-8`. The uncorrected sandwich meat
+remains available in `fit.variance_covariance.meat`.
+
+Set `vcov_fix=False` in `feols()`, `fepois()`, `feglm()`, or a fitted model's
+`vcov()` call to keep the uncorrected matrix:
+
+```{python}
+import pyfixest as pf
+
+fit_raw = pf.feols(
+    "Y ~ X1 + X2 | f1", data=pf.get_data(),
+    vcov={"CRV1": "f1 + f2"}, vcov_fix=False,
+)
+fit_raw.tidy()
+# Also available after fitting (and on multiple-estimation results):
+fit_raw.vcov({"CRV1": "f1 + f2"}, vcov_fix=False)
+```
+
+The correction applies to multi-way CRV1 and CRV3 only and has no effect on
+other covariance types, whereas R fixest checks every sandwich estimate. It
+does not add support for covariance types a model otherwise rejects.
+
 ## 5. Which Level Should You Cluster On?
 
 Core principle: cluster at the level where shocks or treatment assignment induce dependence.

@@ -24,10 +24,12 @@ def _resolve_ssc(ssc: Ssc | Mapping[str, Any] | None) -> Ssc:
 def _resolve_vcov(
     vcov: str | dict[str, str] | None,
     vcov_kwargs: Mapping[str, str | int] | None,
+    *,
+    vcov_fix: bool = True,
 ) -> VcovSpec:
     """Parse the requested covariance estimator before any model is fitted."""
     return VcovSpec.from_user_input(
-        "iid" if vcov is None else vcov, vcov_kwargs=vcov_kwargs
+        "iid" if vcov is None else vcov, vcov_kwargs=vcov_kwargs, vcov_fix=vcov_fix
     )
 
 
