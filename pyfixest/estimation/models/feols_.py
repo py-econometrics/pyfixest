@@ -26,9 +26,6 @@ from pyfixest.estimation.formula.model_matrix import (
     create_model_matrix,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FixedEffectContext,
-)
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.internals.families import T_DIST
@@ -1922,13 +1919,10 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
-                fe_context = FixedEffectContext.make(
-                    terms=fe_spec.formula, data=newdata, context=context
-                ).register()
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
                     newdata,
-                    context=fe_context,
+                    context=context,
                     na_action="ignore",
                 )
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()

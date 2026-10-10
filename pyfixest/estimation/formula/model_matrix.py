@@ -21,9 +21,6 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_fixed_effect_encoding,
 )
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FixedEffectContext,
-)
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
@@ -496,11 +493,7 @@ def create_model_matrix(
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
     )
-    evaluation_context = FixedEffectContext.make(
-        terms=formula.fixed_effects_wrapped if formula.is_fixed_effects else (),
-        data=data,
-        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
-    ).register()
+    evaluation_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,

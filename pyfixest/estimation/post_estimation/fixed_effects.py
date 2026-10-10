@@ -23,7 +23,7 @@ class FixedEffect:
     ----------
     fixed_effect : str
         Internal encoded fixed-effect name used as the corresponding model-matrix
-        column, whose numeric wrapper ID identifies the parsed term.
+        column. Its factor metadata retains the original parsed term.
     variable : str
         User-facing fixed-effect name. Interacted variables are joined with `:`,
         for example `firm:year`.

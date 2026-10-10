@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-import hashlib
+import keyword
+import unicodedata
 import warnings
-from collections.abc import Callable, Iterable, Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from functools import partial, wraps
 from typing import Any, Final, cast
 
 import numpy as np
 import pandas as pd
 from formulaic.parser.types import Factor, Term
-from formulaic.transforms import TRANSFORMS
-from formulaic.utils.layered_mapping import LayeredMapping
-from formulaic.utils.stateful_transforms import stateful_eval, stateful_transform
-from formulaic.utils.variables import Variable, get_required_variables
+from formulaic.utils.stateful_transforms import stateful_transform
 
-from pyfixest.errors import FixedEffectEvaluationError
+from pyfixest.errors import FixedEffectEvaluationError, FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
 
 FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
@@ -89,132 +86,62 @@ class FixedEffectEncoding:
 
 
 def wrap_fixed_effect(term: Term) -> Term:
-    """Carry original factors in metadata; source contains only a stable ID.
-
-    Original lookup names remain metadata and never become executable Python
-    source.
-    """
-    identity = repr(
-        [(factor.expr, factor.eval_method.value) for factor in term.factors]
-    )
-    identifier = int(hashlib.sha256(identity.encode()).hexdigest(), 16)
+    """Expose ordinary column lookups to Formulaic and retain the original term."""
+    for factor in term.factors:
+        if factor.eval_method is not Factor.EvalMethod.LOOKUP:
+            raise FormulaSyntaxError(
+                f"Unsupported fixed-effect term `{term}`. Fixed effects must be "
+                f"an existing data column or an interaction of multiple data columns "
+                "specified with `:`."
+            )
+        name = factor.expr
+        if not name.isidentifier() or keyword.iskeyword(name):
+            raise FormulaSyntaxError(
+                f"Fixed-effect column name `{name}` must be a valid Python "
+                "identifier and cannot be a Python keyword. Rename the column "
+                "before estimation."
+            )
+        if unicodedata.normalize("NFKC", name) != name:
+            raise FormulaSyntaxError(
+                f"Fixed-effect column name `{name}` must use Python's normalized "
+                "identifier spelling. Rename the column before estimation."
+            )
+    arguments = ", ".join(factor.expr for factor in term.factors)
     return Term(
         [
             Factor(
-                f"{_FIXED_EFFECT_TRANSFORM}({identifier})",
+                f"{_FIXED_EFFECT_TRANSFORM}({arguments})",
                 eval_method=Factor.EvalMethod.PYTHON,
-                metadata={"term": term, "identifier": identifier},
+                metadata={"term": term},
             )
         ]
     )
 
 
-@dataclass(frozen=True, kw_only=True, slots=True)
-class FixedEffectContext:
-    """Per-materialization bindings for the FE encoder and dependency hook.
+@stateful_transform
+def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any = None):
+    """Look up data columns and code their observed level combinations.
 
-    `make()` prepares the bindings, and `register()` exposes them to Formulaic.
-    Formulaic invokes the dependency hook and encoder during materialization.
-    """
-
-    context: Mapping[str, Any]
-    terms_by_id: Mapping[int, Term]
-    dependency_context: Mapping[str, Any]
-
-    @classmethod
-    def make(
-        cls, *, terms: Iterable[Term], data: pd.DataFrame, context: Mapping[str, Any]
-    ) -> FixedEffectContext:
-        """Prepare dependency bindings without evaluating the FE factors."""
-        terms_by_id = {}
-        for term in terms:
-            (factor,) = term.factors
-            terms_by_id[factor.metadata["identifier"]] = factor.metadata["term"]
-        if not terms_by_id:
-            return cls(context=context, terms_by_id={}, dependency_context={})
-
-        evaluation_context = LayeredMapping(
-            LayeredMapping(data, name="data"),
-            LayeredMapping(context, name="context"),
-            LayeredMapping(TRANSFORMS, name="transforms"),
-        )
-        dependency_context = evaluation_context.with_layers(
-            {
-                name: wraps(transform)(
-                    partial(
-                        _evaluate_transform_with_context,
-                        transform=transform,
-                        context=evaluation_context,
-                    )
-                )
-                for name, transform in (TRANSFORMS | dict(context)).items()
-                if getattr(transform, "__is_stateful_transform__", False)
-            }
-        )
-        return cls(
-            context=context,
-            terms_by_id=terms_by_id,
-            dependency_context=dependency_context,
-        )
-
-    def register(self) -> dict[str, Any]:
-        """Return a Formulaic context with the FE encoder and hook registered."""
-        if not self.terms_by_id:
-            return dict(self.context)
-        return dict(self.context) | {
-            _FIXED_EFFECT_TRANSFORM: stateful_transform(
-                encode_fixed_effects, get_required_variables=self.get_required_variables
-            )
-        }
-
-    def get_required_variables(self, identifier: int) -> set[Variable]:
-        """Report original FE dependencies when Formulaic invokes the hook.
-
-        Formulaic passes the wrapper's integer argument to this hook, without
-        factor metadata. The local ID map supplies the original parsed term;
-        Formulaic assigns sources to the variables returned here.
-        """
-        original = self.terms_by_id[identifier]
-        variables = set()
-        for factor in original.factors:
-            if factor.eval_method is Factor.EvalMethod.LOOKUP:
-                variables.add(Variable(factor.expr, roles={Variable.Role.VALUE}))
-            elif factor.eval_method is Factor.EvalMethod.PYTHON:
-                variables.update(
-                    get_required_variables(factor.expr, self.dependency_context)
-                )
-        return variables
-
-
-def _evaluate_transform_with_context(
-    *args, transform: Callable[..., Any], context: Mapping[str, Any], **kwargs
-):
-    """Evaluate a nested transform with context during dependency discovery."""
-    # Dependency hooks evaluate nested arguments without stateful_eval.
-    # Supply their context here, using temporary transform state.
-    kwargs.setdefault("_context", context)
-    return transform(*args, **kwargs)
-
-
-def encode_fixed_effects(
-    identifier, _state=None, _metadata=None, _spec=None, _context: Any = None
-):
-    """Evaluate parsed factors and code their observed level combinations.
-
-    The identifier distinguishes Formulaic transform-state keys and is resolved
-    by the dependency hook. Evaluation reads the parsed term from `_metadata`.
-
-    LOOKUP names never enter Python source. PYTHON factors retain their own
-    source and persistent nested transform state, including prediction state.
+    The column arguments expose dependencies to Formulaic. Read the columns
+    from its data layer to reject observation vectors captured in context.
+    Only fitted level mappings are retained for prediction; observation values
+    always come from data/newdata.
     """
     state = cast(MutableMapping[str, Any], _state)
     metadata = cast(Mapping[str, Any], _metadata)
     term: Term = metadata["term"]
     try:
-        factor_states = state.setdefault("factors", {})
-        values = evaluate_fixed_effect_factors(
-            term=term, context=_context, factor_states=factor_states, spec=_spec
-        )
+        columns = []
+        for factor in term.factors:
+            try:
+                column = _context.data[factor.expr]
+            except KeyError as exc:
+                raise FixedEffectEvaluationError(
+                    f"Column `{factor.expr}` required by fixed effect `{term}` "
+                    "is missing."
+                ) from exc
+            columns.append(column.rename(str(factor)))
+        values = tuple(columns)
         if FIXED_EFFECT_ENCODING not in state:
             encoding, codes = FixedEffectEncoding.fit(term=term, values=values)
             state[FIXED_EFFECT_ENCODING] = encoding
@@ -226,7 +153,15 @@ def encode_fixed_effects(
                 axis=1,
             )
             if unseen.any():
-                missing = pd.concat(values, axis=1).loc[unseen].drop_duplicates()
+                missing = (
+                    # Discard Series labels to combine series by position.
+                    pd.concat(
+                        [column.reset_index(drop=True) for column in values],
+                        axis=1,
+                    )
+                    .iloc[unseen]
+                    .drop_duplicates()
+                )
                 warnings.warn(
                     f"{missing.shape[0]} unseen level(s) for fixed effect "
                     f"`{encoding.variable}`: {missing.iloc[:20]}\n"
@@ -241,43 +176,3 @@ def encode_fixed_effects(
             f"Unable to encode fixed effect `{term}`. [{type(exc).__name__}: {exc}]"
         ) from exc
     return codes
-
-
-def evaluate_fixed_effect_factors(
-    *, term: Term, context: Any, factor_states: MutableMapping[str, Any], spec: Any
-) -> tuple[pd.Series, ...]:
-    """Evaluate FE components positionally, using their fitted transform state."""
-    columns = []
-    index = next(iter(context.data.values())).index
-    for factor in term.factors:
-        if factor.eval_method not in (
-            Factor.EvalMethod.LOOKUP,
-            Factor.EvalMethod.PYTHON,
-        ):
-            raise FixedEffectEvaluationError(
-                f"Fixed effect `{term}`: factor `{factor}` must be a lookup "
-                "or Python expression."
-            )
-        try:
-            if factor.eval_method is Factor.EvalMethod.LOOKUP:
-                values = context[factor.expr]
-            else:
-                values = stateful_eval(
-                    factor.expr,
-                    context,
-                    {factor.expr: factor.metadata},
-                    factor_states.setdefault(factor.expr, {}),
-                    spec,
-                )
-        except Exception as exc:
-            raise FixedEffectEvaluationError(
-                f"Unable to evaluate fixed effect `{term}`: factor `{factor}` failed. "
-                f"[{type(exc).__name__}: {exc}]"
-            ) from exc
-        values = getattr(values, "__wrapped__", values)
-        if not isinstance(values, pd.Series):
-            values = pd.Series(values, index=index, name=factor.expr)
-        elif not values.index.equals(index):
-            values = values.reindex(index)
-        columns.append(values.rename(str(factor)))
-    return tuple(columns)

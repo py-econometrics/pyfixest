@@ -15,10 +15,10 @@ from formulaic.parser.types import Factor, Term
 from formulaic.utils.variables import Variable
 
 import pyfixest as pf
-from pyfixest.demeaners import MapDemeaner
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
+    FormulaSyntaxError,
     InstrumentsAsCovarsError,
 )
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
@@ -34,7 +34,6 @@ from pyfixest.estimation.formula.formulaic_compat import (
 )
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FixedEffectContext,
     FixedEffectEncoding,
     wrap_fixed_effect,
 )
@@ -240,7 +239,7 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     fe_spec = fit.model.model_spec["fe"]
     (factor,) = fe_spec.formula[0].factors
     assert factor.metadata["term"].factors[0].expr == "f1"
-    assert factor.expr.removeprefix("__fixed_effect__(").removesuffix(")").isdigit()
+    assert factor.expr == "__fixed_effect__(f1)"
     assert fe_spec.required_variables == {"f1"}
     fe_state = fe_spec.transform_state[factor.expr]
     encoding = fe_state["__fixed_effect_encoding__"]
@@ -379,114 +378,97 @@ def test_fe_prediction_matches_values_across_dtypes(data, kind):
     )
 
 
-@pytest.mark.parametrize("expression", ["I(f1 * 10)", "f1:{f1 // 2}", "I(center(f1))"])
-def test_fe_expression_prediction_and_labels(data, expression):
-    """Expression FEs use parsed labels and evaluated values in every consumer."""
-    fit = pf.feols(f"Y ~ X1 | {expression}", data=data)
-    np.testing.assert_allclose(
-        fit.predict(newdata=data.iloc[:10]),
-        fit.predict()[:10],
-        rtol=0,
-        atol=1e-10,
-        err_msg="expression FE predictions",
-    )
-    expected_label = ":".join(
-        str(factor) for factor in fit.model.fixest_formula.fixed_effects[0].factors
-    )
-    assert set(fit.fixef().variable) == {expected_label}
-    newdata = data.iloc[:10].copy()
-    newdata.loc[0, "f1"] = 999
-    newdata.loc[1, "f1"] = np.nan
-    with pytest.warns(UserWarning, match="1 unseen level"):
-        prediction = fit.predict(newdata=newdata)
-    assert np.isnan(prediction[:2]).all()
-    assert np.isfinite(prediction[2:]).all()
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "I(f1 * 10)",
+        "f1:{f1 // 2}",
+        "I(center(f1))",
+        "C(f1)",
+        "Q('f1')",
+        "f1:relabel(f2)",
+        "f1[X1]",
+        "f1[[X1]]",
+        "f1:f2[X1, X2]",
+    ],
+)
+def test_fe_rejects_non_lookup_terms(data, expression):
+    """Estimation rejects transforms and varying slopes before materialization."""
+    with pytest.raises(
+        FormulaSyntaxError,
+        match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",
+    ):
+        pf.feols(f"Y ~ X1 | {expression}", data=data)
 
 
-def test_fe_unseen_combination_and_factor_row_alignment(data):
-    """Match factors by row index and reject new pairs of individually seen levels."""
+@pytest.mark.parametrize("duplicate_index", [False, True])
+def test_fe_unseen_combination_diagnostic_is_positional(data, duplicate_index):
+    """Report unseen pairs in row order despite shuffled or duplicate labels."""
     frame = data.copy()
     frame["f2"] = frame.f1 % 2
-
-    def reverse_rows(values):
-        return values.iloc[::-1]
-
-    fit = pf.feols(
-        "Y ~ X1 | f1:reverse_rows(f2)",
-        data=frame,
-        context={"reverse_rows": reverse_rows},
+    frame.index = (
+        np.zeros(len(frame), dtype=int)
+        if duplicate_index
+        else np.random.default_rng(312).permutation(len(frame)) + 1000
     )
-    baseline = pf.feols("Y ~ X1 | f1:f2", data=frame)
+    fit = pf.feols("Y ~ X1 | f1:f2", data=frame)
+    baseline = pf.feols("Y ~ X1 | f1:f2", data=frame.reset_index(drop=True))
     np.testing.assert_allclose(
         fit.coef(),
         baseline.coef(),
         rtol=0,
         atol=1e-12,
-        err_msg="row-aligned FE coefficients",
+        err_msg="positional FE coefficients",
     )
-    newdata = frame.iloc[:10].copy()
-    newdata.loc[0, "f2"] = 1 - newdata.loc[0, "f2"]
-    with pytest.warns(UserWarning, match="1 unseen level"):
+    positions = [8, 3, 6, 1]
+    newdata = frame.iloc[positions].copy()
+    newdata.iloc[0, newdata.columns.get_loc("f2")] = 1 - newdata.f2.iloc[0]
+    with pytest.warns(UserWarning, match="1 unseen level") as recorded:
         prediction = fit.predict(newdata=newdata)
+    expected_missing = pd.DataFrame(
+        {"f1": [newdata.f1.iloc[0]], "f2": [newdata.f2.iloc[0]]}
+    )
+    assert str(expected_missing) in str(recorded[0].message)
     assert np.isnan(prediction[0])
     np.testing.assert_allclose(
         prediction[1:],
-        baseline.predict(newdata=frame.iloc[1:10]),
+        baseline.predict(newdata=frame.iloc[positions[1:]]),
         rtol=0,
         atol=1e-10,
         err_msg="seen FE combinations",
     )
 
 
-@pytest.mark.parametrize(
-    "fixed_effects, expected_names",
-    [
-        ("I(f1 + f2)", ("I(f1 + f2)",)),
-        ("`my fe`", ("my fe",)),
-        ("`my + fe`", ("my + fe",)),
-        ("f2 + I(f1 + f2)", ("f2", "I(f1 + f2)")),
-        ("f1:f2 + `my fe`", ("my fe", "f1:f2")),
-    ],
-)
-@pytest.mark.parametrize("weights", [None, "weights"])
-def test_fixed_effect_names_follow_encoded_columns(
-    fixed_effects, expected_names, weights
-):
-    """#1779: labels preserve term boundaries and match the nesting-check input."""
-    data = pf.get_data(N=400, seed=123).dropna().reset_index(drop=True)
-    data["my fe"] = data.f1
-    data["my + fe"] = data.f1
-    fit = pf.feols(
-        f"Y ~ X1 | {fixed_effects}",
-        data=data,
-        weights=weights,
-        vcov="iid",
-        fixef_rm="none",
-    )
-    assert fit.model.fixed_effects == expected_names
-    assert tuple(fit.model_matrix.fixed_effects.columns) == expected_names
-    # Check term alignment before cluster nesting enters the native kernel.
-    fit.vcov({"CRV1": "f1"})
-    # Replay exactly the encoded partition under ordinary lookup names.
-    reference_data = data.copy()
-    encoded_names = []
-    for position in range(len(expected_names)):
-        name = f"encoded_fe_{position}"
-        reference_data[name] = fit.model_matrix.fixed_effects.iloc[:, position]
-        encoded_names.append(name)
-    reference = pf.feols(
-        "Y ~ X1 | " + " + ".join(encoded_names),
-        data=reference_data,
-        weights=weights,
-        vcov={"CRV1": "f1"},
-        fixef_rm="none",
-    )
-    np.testing.assert_allclose(
-        fit.coef(), reference.coef(), rtol=1e-10, err_msg="FE coefficients"
-    )
-    np.testing.assert_allclose(
-        fit.se(), reference.se(), rtol=1e-10, err_msg="clustered FE standard errors"
-    )
+@pytest.mark.parametrize("expression", ["z", "z:f2"])
+def test_fe_rejects_context_only_columns(data, expression):
+    """Fixed effects must read observation vectors from data, not context."""
+    frame = data.copy()
+    frame.index = np.random.default_rng(312).permutation(len(frame))
+    frame.iloc[0, frame.columns.get_loc("Y")] = np.nan
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
+        pf.feols(f"Y ~ X1 | {expression}", data=frame, context={"z": frame.f1})
+
+
+@pytest.mark.parametrize("expression", ["z", "z:f2"])
+def test_fe_split_rejects_full_sample_context_series(data, expression):
+    """A full-sample context vector cannot describe a shorter split."""
+    frame = data.copy()
+    frame.index = np.random.default_rng(312).permutation(len(frame))
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
+        pf.feols(
+            f"Y ~ X1 | {expression}",
+            data=frame,
+            context={"z": frame.f1},
+            split="f2",
+        )
+
+
+@pytest.mark.parametrize("expression", ["f1", "f1:f2"])
+def test_fe_prediction_requires_data_columns(data, expression):
+    """Prediction cannot substitute a captured training Series for newdata."""
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=data, context={"f1": data.f1})
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `f1`.*is missing"):
+        fit.predict(newdata=data.iloc[:5].drop(columns="f1"))
 
 
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
@@ -528,40 +510,15 @@ def test_fe_dummy_names_decode_levels(data, output, interaction, filtered):
     )
 
 
-def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
-    data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
-    fit = pf.feols(
-        "Y ~ X1 | `f1:f2` + f1:f2",
-        data=data,
-        fixef_rm="none",
-        demeaner=MapDemeaner(fixef_tol=1e-12),
-    )
-    assert tuple(fit.model_matrix.fixed_effects.columns) == ("`f1:f2`", "f1:f2")
-    assert fit.model.fixed_effects == tuple(fit.model_matrix.fixed_effects.columns)
-    np.testing.assert_allclose(
-        # Tighten both FE recovery and demeaning so this checks alignment,
-        # independently of their default iterative stopping errors.
-        fit.predict(newdata=data.iloc[:5], atol=1e-12, btol=1e-12),
-        fit.predict()[:5],
-        rtol=0,
-        atol=1e-8,
-        err_msg="distinct FE partitions with ambiguous labels",
-    )
-
-
 @pytest.mark.parametrize(
     "name, cause", [('fe"quote', SyntaxError), ("fe\\backslash", KeyError)]
 )
-@pytest.mark.parametrize("fixed_effect", [False, True])
 @pytest.mark.xfail(strict=True, raises=FactorEvaluationError, reason=FORMULAIC_279)
-def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
+def test_explicit_q_state_key_escaping(data, name, cause):
     renamed = data.rename(columns={"f1": name})
     expression = f"Q({name!r})"
     try:
-        if fixed_effect:
-            pf.feols(f"Y ~ X1 | {expression}", data=renamed)
-        else:
-            formulaic.model_matrix(f"Y ~ X1 + {expression}", data=renamed)
+        formulaic.model_matrix(f"Y ~ X1 + {expression}", data=renamed)
     except FactorEvaluationError as exc:
         assert isinstance(exc.__cause__, cause)
         raise
@@ -611,31 +568,48 @@ def test_iv_rejects_quoted_variable_overlap(fml, error):
 
 
 @pytest.mark.parametrize(
-    "name", ["my fe", "firm.id", "a:b", 'fe"quote', "fe\\backslash", "fe{brace}"]
+    "name, quoted",
+    [
+        ("firm", False),
+        ("_firm", False),
+        ("match", False),
+        ("fírma", False),
+        ("λ", False),
+        ("firm", True),
+    ],
 )
-@pytest.mark.parametrize("expression", ["`{name}`", "C(`{name}`)"])
-def test_fe_metadata_preserves_lookup_and_dependencies(data, name, expression):
-    """FE lookup names survive materialization, recovery, and prediction."""
+@pytest.mark.parametrize("interaction", [False, True])
+def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, interaction):
+    """Normalized Python identifiers retain dependencies, codes, and labels."""
     renamed = data.rename(columns={"f1": name})
     renamed.loc[0, name] = np.nan
-    # Stateful Python expressions containing quotes/backslashes remain limited
-    # by Formulaic's own state-key escaping; plain LOOKUP factors bypass it.
-    fit = pf.feols(f"Y ~ X1 | {expression.format(name=name)}:f2", data=renamed)
+    expression = f"`{name}`" if quoted else name
+    expression += ":f2" if interaction else ""
+    # A context vector with the same name cannot replace the actual data column.
+    fit = pf.feols(
+        f"Y ~ X1 | {expression}",
+        data=renamed,
+        context={name: renamed[name].iloc[::-1]},
+    )
     spec = fit.model.model_spec["fe"]
-    assert {name, "f2"}.issubset(spec.variables)
-    # Formulaic normalizes dotted names when deriving required_variables;
-    # the original dependency remains in variables, as in the existing hook.
-    if "." not in name:
-        assert spec.required_variables == {name, "f2"}
-    baseline = pf.feols("Y ~ X1 | f1:f2", data=renamed.rename(columns={name: "f1"}))
+    assert spec.required_variables == ({name, "f2"} if interaction else {name})
+    (factor,) = spec.formula[0].factors
+    assert set(spec.transform_state) == {factor.expr}
+    assert factor.metadata["term"] == fit.model.fixest_formula.fixed_effects[0]
+    assert set(fit.fixef().variable) == {f"{name}:f2" if interaction else name}
+    baseline_data = renamed.rename(columns={name: "f1"})
+    baseline = pf.feols(
+        "Y ~ X1 | " + ("f1:f2" if interaction else "f1"), data=baseline_data
+    )
     np.testing.assert_allclose(
         fit.coef(), baseline.coef(), rtol=0, atol=1e-12, err_msg="FE coefficients"
     )
-    prediction = fit.predict(newdata=renamed.iloc[:10])
-    assert np.isnan(prediction[0])
+    positions = [8, 3, 0, 6]
+    prediction = fit.predict(newdata=renamed.iloc[positions])
+    assert np.isnan(prediction[2])
     np.testing.assert_allclose(
-        prediction[1:],
-        baseline.predict(newdata=renamed.rename(columns={name: "f1"}).iloc[:10])[1:],
+        prediction,
+        baseline.predict(newdata=baseline_data.iloc[positions]),
         rtol=0,
         atol=1e-10,
         err_msg="FE predictions",
@@ -643,53 +617,37 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, expression):
 
 
 @pytest.mark.parametrize(
-    "expression", ["Q('my fe')", "C(Q('my fe'))", "I(center(Q('my fe')))"]
+    "name, message",
+    [
+        ("my fe", "valid Python identifier"),
+        ("firm.id", "valid Python identifier"),
+        ("a:b", "valid Python identifier"),
+        ('fe"quote', "valid Python identifier"),
+        ("fe\\backslash", "valid Python identifier"),
+        ("fe{brace}", "valid Python identifier"),
+        ("my + fe", "valid Python identifier"),
+        ("1firm", "valid Python identifier"),
+        ("class", "cannot be a Python keyword"),
+        ("\N{KELVIN SIGN}", "normalized identifier spelling"),
+        ("\N{LATIN SMALL LIGATURE FF}", "normalized identifier spelling"),
+    ],
 )
-def test_fe_nested_transforms_retain_state_and_dependencies(data, expression):
-    """Original Python factors retain context, dependencies, and learned state."""
-    renamed = data.rename(columns={"f1": "my fe"})
-    fit = pf.feols(f"Y ~ X1 | {expression}", data=renamed)
-    spec = fit.model.model_spec["fe"]
-    assert spec.required_variables == {"my fe"}
-    newdata = renamed.iloc[:10]
-    matrix = spec.get_model_matrix(
-        newdata,
-        context=FixedEffectContext.make(
-            terms=spec.formula, data=newdata, context=FORMULAIC_TRANSFORMS
-        ).register(),
-    )
-    np.testing.assert_array_equal(
-        matrix.to_numpy(),
-        fit.model_matrix.fixed_effects.iloc[:10].to_numpy(),
-        err_msg="persistent FE transform state",
-    )
+def test_fe_rejects_invalid_column_names(data, name, message):
+    """Reject names requiring aliases or Python's identifier normalization."""
+    renamed = data.rename(columns={"f1": name})
+    with pytest.raises(FormulaSyntaxError, match=message):
+        pf.feols(f"Y ~ X1 | `{name}`:f2", data=renamed)
 
 
-def test_fe_wrapper_identity_preserves_evaluation_mode(data):
-    """Equal native factors with different evaluation modes retain separate FEs."""
-    data = data.assign(**{"I(f1)": data.f2})
-    terms = formulaic.formula.SimpleFormula(
-        [
-            wrap_fixed_effect(Term([Factor("I(f1)", eval_method=method)]))
-            for method in (Factor.EvalMethod.LOOKUP, Factor.EvalMethod.PYTHON)
-        ]
-    )
-    context = FixedEffectContext.make(
-        terms=terms, data=data, context=FORMULAIC_TRANSFORMS
-    ).register()
-    matrix = terms.get_model_matrix(data, context=context)
-    assert matrix.model_spec.required_variables == {"I(f1)", "f1"}
-    np.testing.assert_array_equal(
-        matrix.to_numpy(),
-        data[["f2", "f1"]].to_numpy(),
-        err_msg="FE codes for lookup and Python factors with the same expression",
-    )
-
-
-def test_fe_context_binding_is_required(data):
-    terms = Formula.parse("Y ~ X1 | f1")[0].fixed_effects_wrapped
-    with pytest.raises(FactorEvaluationError, match=r"__fixed_effect__.*NameError"):
-        terms.get_model_matrix(data, context=FORMULAIC_TRANSFORMS)
+@pytest.mark.parametrize(
+    "expression, method",
+    [("f1", Factor.EvalMethod.PYTHON), ("2", Factor.EvalMethod.LITERAL)],
+)
+def test_fe_wrapper_rejects_non_lookup_evaluation_modes(expression, method):
+    """Only LOOKUP factors qualify, even when a Python expression is a name."""
+    term = Term([Factor(expression, eval_method=method)])
+    with pytest.raises(FormulaSyntaxError, match="Unsupported fixed-effect term"):
+        wrap_fixed_effect(term)
 
 
 def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
@@ -723,14 +681,14 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     assert observed == {"fit", "predict"}
 
 
-@pytest.mark.parametrize("fml", ["Y ~ X1 | f1:nope", "Y ~ X1 | I(f1 + nope)"])
-def test_fe_error_names_term_and_missing_factor(data, fml):
+@pytest.mark.parametrize("fml", ["Y ~ X1 | nope", "Y ~ X1 | f1:nope"])
+def test_fe_missing_column_raises_formulaic_lookup_error(data, fml):
+    """An unresolved argument fails before Formulaic invokes the FE encoder."""
     with pytest.raises(
-        FixedEffectEvaluationError, match=r"fixed effect.*nope.*factor"
+        FactorEvaluationError, match="name 'nope' is not defined"
     ) as exc:
         pf.feols(fml, data=data)
-    assert "__fixed_effect__" not in str(exc.value)
-    assert isinstance(exc.value.__cause__, (KeyError, NameError))
+    assert isinstance(exc.value.__cause__, NameError)
 
 
 def test_fe_encoding_error_names_term(data):
@@ -743,26 +701,10 @@ def test_fe_encoding_error_names_term(data):
     assert isinstance(exc.value.__cause__, TypeError)
 
 
-def test_fe_rejects_literal_factor(data):
-    terms = formulaic.formula.SimpleFormula(
-        [wrap_fixed_effect(Term([Factor("2", eval_method=Factor.EvalMethod.LITERAL)]))]
-    )
-    with pytest.raises(
-        FixedEffectEvaluationError, match="must be a lookup or Python expression"
-    ):
-        terms.get_model_matrix(
-            data,
-            context=FixedEffectContext.make(
-                terms=terms, data=data, context={}
-            ).register(),
-        )
-
-
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
-@pytest.mark.parametrize("fixed_effects", ["f1", "`my fe`", "f1:f2", "f1 + f2"])
+@pytest.mark.parametrize("fixed_effects", ["f1", "f1:f2", "f1 + f2"])
 def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     data = pf.get_data(N=300).dropna()
-    data["my fe"] = data.f1
     data["group"] = data.groupby(["f1", "f2"]).ngroup()
     data["product"] = data.X1 * data.X2
     fit = pf.feols(
@@ -773,8 +715,7 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     reference = pf.feols(
         "Y ~ product + X2 + "
         + {
-            "f1": "C(`my fe`)",
-            "`my fe`": "C(`my fe`)",
+            "f1": "C(f1)",
             "f1:f2": "C(group)",
             "f1 + f2": "C(f1) + C(f2)",
         }[fixed_effects],
@@ -788,42 +729,48 @@ def test_one_hot_uses_parsed_terms(output, fixed_effects, monkeypatch):
     y, x, names = fit._model_matrix_one_hot(output=output)
     x = x.toarray() if output == "sparse" else x
     assert "X1 * X2" in names
-    label = fixed_effects.split(" + ")[0].replace("`", "")
+    label = fixed_effects.split(" + ")[0]
     assert any(label in name for name in names)
     assert all("__fixed_effect__" not in name for name in names)
     np.testing.assert_allclose(y, reference.within_data.response.flatten())
-    # Dummy names can differ in their quoting, but their values and order agree.
+    # Compare dummy values and order independently of their column names.
     np.testing.assert_allclose(x, reference.within_data.design)
 
 
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
 def test_one_hot_keeps_fitted_columns_and_fe_state(data, output):
     data = data.assign(duplicate_x=data.X1)
-    # Learn the FE transform before missing-response removal. Relearning on
-    # the retained rows would introduce a second group.
+    # Learn the FE codes before missing-response removal. The dropped row's
+    # level must not reappear as a dummy in the retained design.
     data.loc[0, "Y"] = np.nan
     data.loc[0, "f1"] = 1000
     with pytest.warns(UserWarning, match="duplicate_x"):
         fit = pf.feols(
-            "Y ~ X1 + duplicate_x + center(X2) | I(center(f1)>0)",
+            "Y ~ X1 + duplicate_x + center(X2) | f1",
             data=data,
             fixef_rm="none",
         )
     y, x, names = fit._model_matrix_one_hot(output=output)
     x = x.toarray() if output == "sparse" else x
     assert fit._coefnames == ["X1", "center(X2)"]
-    assert names == ["Intercept", *fit._coefnames]
-    assert np.unique(fit.model_matrix.fixed_effects).size == 1
+    assert names[:3] == ["Intercept", *fit._coefnames]
+    assert all("1000" not in name for name in names[3:])
+    assert np.unique(fit.model_matrix.fixed_effects).size == data.f1.nunique() - 1
     np.testing.assert_array_equal(y, fit.model_matrix.dependent.to_numpy().flatten())
     np.testing.assert_array_equal(
-        x[:, 1:], fit.model_matrix.independent[fit._coefnames].to_numpy()
+        x[:, 1:3],
+        fit.model_matrix.independent[fit._coefnames].to_numpy(),
+        err_msg="retained covariate columns",
     )
     np.testing.assert_allclose(
-        np.linalg.lstsq(x, y, rcond=None)[0][1:], fit.coef(), rtol=1e-10
+        np.linalg.lstsq(x, y, rcond=None)[0][1:3],
+        fit.coef(),
+        rtol=1e-10,
+        err_msg="one-hot OLS coefficients",
     )
     if output == "numpy":
         reference = pf.feols(
-            "Y ~ X1 + center(X2) | I(center(f1)>0)",
+            "Y ~ X1 + center(X2) | f1",
             data=data,
             fixef_rm="none",
         )

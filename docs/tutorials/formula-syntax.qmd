@@ -30,7 +30,8 @@ fit1 = pf.feols("Y ~ X1 + X2", data=data)
 fit1.summary()
 ```
 
-All transformations that are supported via `formulaic` are also supported via `PyFixest`. To name just a few important ones,
+In the covariate part of the formula, transformations supported by `formulaic`
+are also supported by `PyFixest`. To name just a few important ones,
 you can create categorical variables via the `C()` operator:
 
 ```{python}
@@ -77,11 +78,14 @@ fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.
 
-Quote column names containing spaces or punctuation with backticks, for example
-``"Y ~ X1 | `my fe`"``. Backticks also support names containing quotation marks
-or backslashes. Explicit `Q()` calls containing these characters currently fail
-because of [Formulaic's state-key escaping](https://github.com/matthewwardrop/formulaic/pull/279);
-use backtick quoting for those names.
+Fixed effects must be data columns or interactions of data columns. Their names
+must be valid Python identifiers, cannot be Python keywords, and must use
+Python's normalized identifier spelling. Rename FE columns containing spaces
+or punctuation before estimation. FE transforms such as `I(f1 + f2)` and `C(f1)`
+are unsupported; create the transformed column in `data` first.
+
+Outcome, covariate, and instrument names can still be quoted with backticks,
+for example ``"Y ~ `my covariate` | firm"``.
 
 ## Instrumental Variables (IV) Syntax
 
