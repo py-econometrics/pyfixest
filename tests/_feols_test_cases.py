@@ -3,6 +3,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+DEMEAN_CACHE_COLLISION_CASES = [
+    (("`X1 ** 2`", "{X1 ** 2}"), ("`X1 ** 2`", "I(X1^2)")),
+    (("i(f3, X2)", "i(f3, np.exp(X2 / 5))"), ("i(f3, X2)", "i(f3, exp(X2 / 5))")),
+    (
+        ("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))"),
+        ("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))"),
+    ),
+]
+
 ols_fmls = (
     "Y~X1",
     "Y~X1+X2",
