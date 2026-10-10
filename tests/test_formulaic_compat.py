@@ -1,5 +1,7 @@
 """Smoke tests for formulaic internals relied on by pyfixest."""
 
+from __future__ import annotations
+
 from types import SimpleNamespace
 
 import formulaic
@@ -7,8 +9,10 @@ import formulaic.formula
 import numpy as np
 import pandas as pd
 import pytest
+from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -19,6 +23,8 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+
+FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
@@ -301,3 +307,254 @@ def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> N
 
     assert np.isnan(pred[0])
     assert np.all(np.isfinite(pred[1:]))
+
+
+@pytest.mark.parametrize("arity", [1, 2, 3])
+@pytest.mark.parametrize("kind", ["numeric", "string", "categorical", "mixed"])
+def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
+    """Level indexes preserve fitted codes, including categorical reference order."""
+    frame = data.copy()
+    frame["f3"] = frame.f1 % 2
+    if kind == "string":
+        frame["f1"] = frame.f1.astype(str)
+    elif kind == "categorical":
+        frame["f1"] = pd.Categorical(
+            frame.f1, categories=[4, 2, 0, 3, 1, 99], ordered=True
+        )
+    elif kind == "mixed":
+        frame["f1"] = frame.f1.astype(object).where(frame.f1 < 3, "a")
+    frame.loc[0, "f1"] = np.nan
+    names = ["f1", "f2", "f3"][:arity]
+    expected = frame.groupby(names).ngroup().dropna()
+    fit = pf.feols(f"Y ~ X1 | {':'.join(names)}", data=frame, fixef_rm="none")
+    np.testing.assert_array_equal(
+        fit.model_matrix.fixed_effects.iloc[:, 0],
+        expected,
+        err_msg="FE group codes and reference order",
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending indexed fixed-effect encoding; regression from PR stack #1862",
+)
+@pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
+def test_fe_prediction_matches_values_across_dtypes(data, kind):
+    """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
+    frame = data.copy()
+    frame["f1"] = frame.f1 % 2
+    if kind == "categorical":
+        frame["f1"] = frame.f1.astype("category")
+    elif kind == "bool_to_numeric":
+        frame["f1"] = frame.f1.astype(bool)
+    fit = pf.feols("Y ~ X1 | f1", data=frame)
+    newdata = frame.iloc[:10].copy()
+    newdata["f1"] = newdata.f1.astype(bool if kind == "numeric_to_bool" else int)
+    if kind in {"bool_to_numeric", "numeric_to_bool"}:
+        with pytest.warns(UserWarning, match="unseen level"):
+            assert np.isnan(fit.predict(newdata=newdata)).all()
+        return
+    np.testing.assert_allclose(
+        fit.predict(newdata=newdata),
+        fit.predict()[:10],
+        rtol=0,
+        atol=1e-10,
+        err_msg="FE predictions across compatible dtypes",
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+)
+@pytest.mark.parametrize("expression", ["I(f1 * 10)", "f1:{f1 // 2}", "I(center(f1))"])
+def test_fe_expression_prediction_and_labels(data, expression):
+    """Expression FEs use parsed labels and evaluated values in every consumer."""
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=data)
+    np.testing.assert_allclose(
+        fit.predict(newdata=data.iloc[:10]),
+        fit.predict()[:10],
+        rtol=0,
+        atol=1e-10,
+        err_msg="expression FE predictions",
+    )
+    expected_label = ":".join(
+        str(factor) for factor in fit.model.fixest_formula.fixed_effects[0].factors
+    )
+    assert set(fit.fixef().variable) == {expected_label}
+    newdata = data.iloc[:10].copy()
+    newdata.loc[0, "f1"] = 999
+    newdata.loc[1, "f1"] = np.nan
+    with pytest.warns(UserWarning, match="1 unseen level"):
+        prediction = fit.predict(newdata=newdata)
+    assert np.isnan(prediction[:2]).all()
+    assert np.isfinite(prediction[2:]).all()
+
+
+def test_fe_unseen_combination_and_factor_row_alignment(data):
+    """Match factors by row index and reject new pairs of individually seen levels."""
+    frame = data.copy()
+    frame["f2"] = frame.f1 % 2
+
+    def reverse_rows(values):
+        return values.iloc[::-1]
+
+    fit = pf.feols(
+        "Y ~ X1 | f1:reverse_rows(f2)",
+        data=frame,
+        context={"reverse_rows": reverse_rows},
+    )
+    baseline = pf.feols("Y ~ X1 | f1:f2", data=frame)
+    np.testing.assert_allclose(
+        fit.coef(),
+        baseline.coef(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="row-aligned FE coefficients",
+    )
+    newdata = frame.iloc[:10].copy()
+    newdata.loc[0, "f2"] = 1 - newdata.loc[0, "f2"]
+    with pytest.warns(UserWarning, match="1 unseen level"):
+        prediction = fit.predict(newdata=newdata)
+    assert np.isnan(prediction[0])
+    np.testing.assert_allclose(
+        prediction[1:],
+        baseline.predict(newdata=frame.iloc[1:10]),
+        rtol=0,
+        atol=1e-10,
+        err_msg="seen FE combinations",
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+)
+@pytest.mark.parametrize(
+    "fixed_effects, expected_names",
+    [
+        ("I(f1 + f2)", ("I(f1 + f2)",)),
+        ("`my fe`", ("my fe",)),
+        ("`my + fe`", ("my + fe",)),
+        ("f2 + I(f1 + f2)", ("f2", "I(f1 + f2)")),
+        ("f1:f2 + `my fe`", ("my fe", "f1:f2")),
+    ],
+)
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_fixed_effect_names_follow_encoded_columns(
+    fixed_effects, expected_names, weights
+):
+    """#1779: labels preserve term boundaries and match the nesting-check input."""
+    data = pf.get_data(N=400, seed=123).dropna().reset_index(drop=True)
+    data["my fe"] = data.f1
+    data["my + fe"] = data.f1
+    fit = pf.feols(
+        f"Y ~ X1 | {fixed_effects}",
+        data=data,
+        weights=weights,
+        vcov="iid",
+        fixef_rm="none",
+    )
+    assert fit.model.fixed_effects == expected_names
+    assert tuple(fit.model_matrix.fixed_effects.columns) == expected_names
+    # Check term alignment before cluster nesting enters the native kernel.
+    fit.vcov({"CRV1": "f1"})
+    # Replay exactly the encoded partition under ordinary lookup names.
+    reference_data = data.copy()
+    encoded_names = []
+    for position in range(len(expected_names)):
+        name = f"encoded_fe_{position}"
+        reference_data[name] = fit.model_matrix.fixed_effects.iloc[:, position]
+        encoded_names.append(name)
+    reference = pf.feols(
+        "Y ~ X1 | " + " + ".join(encoded_names),
+        data=reference_data,
+        weights=weights,
+        vcov={"CRV1": "f1"},
+        fixef_rm="none",
+    )
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), rtol=1e-10, err_msg="FE coefficients"
+    )
+    np.testing.assert_allclose(
+        fit.se(), reference.se(), rtol=1e-10, err_msg="clustered FE standard errors"
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+)
+@pytest.mark.parametrize("output", ["numpy", "sparse"])
+@pytest.mark.parametrize("interaction", [False, True])
+def test_fe_dummy_names_decode_levels(data, output, interaction):
+    data = data.assign(firm=data.f1.map(lambda value: f"firm_{value}"))
+    term = "firm:f2" if interaction else "firm"
+    fit = pf.feols(f"Y ~ X1 | {term}", data=data, fixef_rm="none")
+    _, design, names = fit._model_matrix_one_hot(output=output)
+    design = design.toarray() if output == "sparse" else design
+    levels = (
+        sorted(set(zip(data.firm, data.f2, strict=True)))
+        if interaction
+        else sorted(data.firm.unique())
+    )
+    assert list(names[2:]) == [f"{term}[T.{level}]" for level in levels[1:]]
+    for position, level in enumerate(levels[1:], start=2):
+        expected = (
+            (data.firm == level[0]) & (data.f2 == level[1])
+            if interaction
+            else data.firm == level
+        )
+        np.testing.assert_array_equal(
+            design[:, position], expected, err_msg="decoded FE dummy"
+        )
+    np.testing.assert_allclose(
+        fit.predict(newdata=data.iloc[:5]),
+        fit.predict()[:5],
+        rtol=0,
+        atol=1e-8,
+        err_msg="decoded-label FE prediction",
+    )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+)
+def test_ambiguous_fe_labels_preserve_distinct_partitions(data):
+    data = data.assign(**{"f1:f2": np.arange(len(data)) % 7})
+    fit = pf.feols(
+        "Y ~ X1 | `f1:f2` + f1:f2",
+        data=data,
+        fixef_rm="none",
+        demeaner=MapDemeaner(fixef_tol=1e-12),
+    )
+    assert tuple(fit.model_matrix.fixed_effects.columns) == ("`f1:f2`", "f1:f2")
+    assert fit.model.fixed_effects == tuple(fit.model_matrix.fixed_effects.columns)
+    np.testing.assert_allclose(
+        # Tighten both FE recovery and demeaning so this checks alignment,
+        # independently of their default iterative stopping errors.
+        fit.predict(newdata=data.iloc[:5], atol=1e-12, btol=1e-12),
+        fit.predict()[:5],
+        rtol=0,
+        atol=1e-8,
+        err_msg="distinct FE partitions with ambiguous labels",
+    )
+
+
+@pytest.mark.parametrize(
+    "name, cause", [('fe"quote', SyntaxError), ("fe\\backslash", KeyError)]
+)
+@pytest.mark.parametrize("fixed_effect", [False, True])
+@pytest.mark.xfail(strict=True, raises=FactorEvaluationError, reason=FORMULAIC_279)
+def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
+    renamed = data.rename(columns={"f1": name})
+    expression = f"Q({name!r})"
+    try:
+        if fixed_effect:
+            pf.feols(f"Y ~ X1 | {expression}", data=renamed)
+        else:
+            formulaic.model_matrix(f"Y ~ X1 + {expression}", data=renamed)
+    except FactorEvaluationError as exc:
+        assert isinstance(exc.__cause__, cause)
+        raise

@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import matplotlib
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.post_estimation.ritest import _resample
 
 matplotlib.use("Agg")  # Use a non-interactive backend
 
@@ -177,3 +180,50 @@ def test_fepois_ritest():
 @pytest.fixture
 def data_r_vs_t():
     return pf.get_data(N=5000, seed=2999)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending parsed randomization inference; regression from PR stack #1862",
+)
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_ritest_preserves_treatment_names(estimator, statistic):
+    """No-intercept RI retains controls whose names contain the treatment name."""
+    data = pf.get_data(N=300, model="Fepois").dropna()
+    data["D"] = (data.X1 > 0).astype(float)
+    data["D_control"] = data.X2
+    # Neither a pre-existing resampled column nor a substring in a control
+    # should be overwritten or substituted in the formula.
+    data["D_resampled"] = data.X1
+    fml = "Y ~ D + D_control + {D * D_control} - 1"
+    fit = estimator(fml, data=data)
+    original = fit._data.copy(deep=True)
+    reps = 5
+    rng = np.random.default_rng(31)
+    expected = []
+    for _ in range(reps):
+        resampled = original.copy(deep=False)
+        resampled["D"] = _resample(
+            resampvar_arr=original.D.to_numpy(), rng=rng
+        ).flatten()
+        reference = estimator(
+            fml,
+            data=resampled,
+            vcov="iid" if statistic == "randomization-c" else "hetero",
+        )
+        values = (
+            reference.coef() if statistic == "randomization-c" else reference.tstat()
+        )
+        expected.append(values["D"])
+
+    fit.ritest(
+        "D",
+        reps=reps,
+        type=statistic,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(31),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(fit.ritest_statistics.statistics, expected, rtol=1e-10)
+    pd.testing.assert_frame_equal(fit._data, original)
