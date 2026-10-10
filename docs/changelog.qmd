@@ -26,6 +26,13 @@ with per-call formatting through `docx_style`.
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
 
+### `within` LSMR Backend via `within-py`
+
+`LsmrDemeaner(backend="within")` now calls the [`within`](https://github.com/py-econometrics/within) Python package (`within-py>=0.4.0,<0.5.0`, a new required dependency) instead of the `within` Rust crate compiled into pyfixest. Breaking changes:
+
+- `preconditioner="auto"`, the default, now selects `within`'s adaptive preconditioner instead of additive Schwarz. It starts with the diagonal preconditioner and builds additive Schwarz only when convergence stalls. Request it explicitly with `preconditioner="adaptive"`; `preconditioner="additive"` restores the previous default. On problems where the adaptive solve does not escalate, the default `fixef_atol` and `fixef_btol` of `1e-8` give the accuracy of the diagonal preconditioner, so demeaned values and coefficients can differ from the previous default at that order.
+- `pf.Preconditioner` is now `within.Preconditioner`. Its `variant` string is replaced by `config`, a `within.PreconditionerConfig`, and `build_time_seconds` is renamed `build_duration_seconds`. Preconditioners pickled by earlier pyfixest versions can no longer be loaded.
+
 Other things:
 
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.
