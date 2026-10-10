@@ -217,7 +217,7 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
         expected.append(values["D"])
 
     monkeypatch.setattr(
-        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+        Formula, "render", lambda self: "descriptive text, not a formula"
     )
     assert fit.model.formula == fit._fml == "descriptive text, not a formula"
     monkeypatch.setattr(Formula, "parse", _fail_on_reparse)

@@ -62,7 +62,7 @@ class FixestMulti(TidyColumnAccessors):
         """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
         warnings.warn(
             "`FixestFormulaDict` is deprecated and will be removed in a future "
-            "release. Use `fit.model.fixest_formula` on the models returned by "
+            "release. Use `fit.model.parsed_formula` on the models returned by "
             "`to_list()` instead.",
             FutureWarning,
             stacklevel=2,
