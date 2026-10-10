@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from formulaic.model_matrix import ModelMatrices
 from formulaic.parser import DefaultFormulaParser
+from formulaic.parser.types import Factor, Term
 from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
@@ -515,32 +516,31 @@ def _get_formulaic_formula(
     offset: str | None = None,
 ) -> formulaic.Formula:
     # Collate kwargs to be passed to formulaic.Formula
-    formula_kwargs: dict[str, str] = {_ModelMatrixKey.main: formula.second_stage}
+    formula_kwargs: dict[str, formulaic.Formula] = {
+        _ModelMatrixKey.main: formula.second_stage
+    }
     if formula.is_fixed_effects:
         formula_kwargs.update(
-            {_ModelMatrixKey.fixed_effects: f"{formula.fixed_effects_wrapped} - 1"}
+            {_ModelMatrixKey.fixed_effects: formula.fixed_effects_wrapped}
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(
-            {_ModelMatrixKey.instrumental_variable: formula.first_stage}
+            {
+                _ModelMatrixKey.instrumental_variable: formula.as_first_stage().second_stage
+            }
         )
     if weights is not None:
         data[weights] = _get_weights(data, weights)
-        formula_kwargs.update({_ModelMatrixKey.weights: f"`{weights}` - 1"})
+        formula_kwargs[_ModelMatrixKey.weights] = formulaic.formula.SimpleFormula(
+            [Term([Factor(weights, eval_method=Factor.EvalMethod.LOOKUP)])]
+        )
     if offset is not None:
-        formula_kwargs[_ModelMatrixKey.offset] = f"{offset} - 1"
-    formula_formulaic = formulaic.Formula(
-        formula_kwargs,
-        _parser=DefaultFormulaParser(
-            feature_flags=FORMULAIC_FEATURE_FLAG,
-            # When FEs are present, include_intercept=True so that spans_intercept=True
-            # terms (like i()) receive reduced_rank=True from formulaic, causing them to
-            # drop the first level (matching R/fixest). The intercept column is removed
-            # afterwards in ModelMatrix._process(). Without this, i() would receive
-            # reduced_rank=False and generate all levels; the post-hoc collinearity check
-            # would then drop the last level instead of the first, mismatching R.
-            include_intercept=formula.is_fixed_effects,
-        ),
-    )
-
-    return formula_formulaic
+        # Offsets accept expressions as well as column names. Parse this user
+        # input once; the model's already-parsed stages stay intact.
+        formula_kwargs[_ModelMatrixKey.offset] = formulaic.Formula(
+            offset,
+            _parser=DefaultFormulaParser(
+                feature_flags=FORMULAIC_FEATURE_FLAG, include_intercept=False
+            ),
+        )
+    return formulaic.Formula(formula_kwargs)

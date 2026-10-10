@@ -88,7 +88,9 @@ def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) ->
 
     # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
     assert exog_terms == {"1", "X1"}
-    assert fit.model.fixest_formula.second_stage == "Y ~ 1 + X1 + np.exp(X2)"
+    assert fit.model.fixest_formula.second_stage == formulaic.Formula(
+        "Y ~ 1 + X1 + np.exp(X2)"
+    )
     assert "np.exp(X2)" in fit.coef().index
 
 

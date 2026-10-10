@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.post_estimation.ritest import _resample
 
 matplotlib.use("Agg")  # Use a non-interactive backend
@@ -182,13 +183,9 @@ def data_r_vs_t():
     return pf.get_data(N=5000, seed=2999)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending parsed randomization inference; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
 @pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
-def test_ritest_preserves_treatment_names(estimator, statistic):
+def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
     """No-intercept RI retains controls whose names contain the treatment name."""
     data = pf.get_data(N=300, model="Fepois").dropna()
     data["D"] = (data.X1 > 0).astype(float)
@@ -217,6 +214,11 @@ def test_ritest_preserves_treatment_names(estimator, statistic):
         )
         expected.append(values["D"])
 
+    monkeypatch.setattr(
+        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+    )
+    assert fit.model.formula == fit._fml == "descriptive text, not a formula"
+    monkeypatch.setattr(Formula, "parse", _fail_on_reparse)
     fit.ritest(
         "D",
         reps=reps,
@@ -227,3 +229,7 @@ def test_ritest_preserves_treatment_names(estimator, statistic):
     )
     np.testing.assert_allclose(fit.ritest_statistics.statistics, expected, rtol=1e-10)
     pd.testing.assert_frame_equal(fit._data, original)
+
+
+def _fail_on_reparse(*args, **kwargs):
+    raise AssertionError("Randomization inference must reuse the parsed formula.")

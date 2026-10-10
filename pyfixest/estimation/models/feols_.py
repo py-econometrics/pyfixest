@@ -310,7 +310,6 @@ class Feols(ResultAccessorMixin):
         unsplit fit publishes ``None`` as its split variable and value.
         """
         return ModelDescription(
-            formula=fixest_formula.formula,
             fixest_formula=fixest_formula,
             method="feols",
             is_iv=False,
@@ -2134,7 +2133,6 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
-                fml=self.model.formula,
                 reps=reps,
                 type=type,
                 rng=rng,
