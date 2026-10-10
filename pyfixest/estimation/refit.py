@@ -100,8 +100,8 @@ def refit(
         vcov=vcov,
     )
     # the caller reads the refit in full or throws it away
-    parsed = plan_formulas(config)
-    result = run_estimation(config, parsed, apply_retention=False)
+    plan = plan_formulas(config)
+    result = run_estimation(config, plan, apply_retention=False)
     if not isinstance(result, Feols):
         raise TypeError(f"A refit must return a single model, not {result!r}.")
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:

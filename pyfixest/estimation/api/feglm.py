@@ -352,8 +352,8 @@ def feglm(
         fsplit=fsplit,
     )
 
-    parsed = plan_formulas(config)
-    if parsed.is_iv:
+    plan = plan_formulas(config)
+    if plan.is_iv:
         raise NotImplementedError("IV estimation is not supported for GLMs.")
 
-    return run_estimation(config, parsed, apply_retention=True)
+    return run_estimation(config, plan, apply_retention=True)

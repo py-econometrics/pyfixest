@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import itertools
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Final
 
@@ -443,30 +443,15 @@ class Formula:
     @property
     def second_stage(self) -> formulaic.formula.StructuredFormula:
         """Parsed response and regressors for second-stage materialization."""
-        terms: Iterable[Term] = self.exogenous
+        terms = list(self.exogenous)
         if self.is_instrumental_variable:
-            terms = itertools.chain(terms, self.endogenous)
-        return self._stage_formula(dependent=self.dependent, terms=terms)
-
-    def _stage_formula(
-        self,
-        *,
-        dependent: formulaic.formula.SimpleFormula,
-        terms: Iterable[Term],
-    ) -> formulaic.formula.StructuredFormula:
-        rhs_terms = list(terms)
+            terms.extend(self.endogenous)
         # Preserve the existing reduced-rank categorical encoding for FE models.
         # ModelMatrix removes this encoding intercept after materialization.
-        if (
-            self.is_fixed_effects
-            and rhs_terms
-            and not any(term == "1" for term in rhs_terms)
-        ):
-            rhs_terms.insert(
-                0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)])
-            )
+        if self.is_fixed_effects and terms and not any(term == "1" for term in terms):
+            terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
         return formulaic.formula.StructuredFormula(
-            lhs=dependent, rhs=formulaic.formula.SimpleFormula(rhs_terms)
+            lhs=self.dependent, rhs=formulaic.formula.SimpleFormula(terms)
         )
 
     def as_first_stage(self) -> Formula:

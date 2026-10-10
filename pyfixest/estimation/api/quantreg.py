@@ -294,10 +294,10 @@ def quantreg(
         else None,
     )
 
-    parsed = plan_formulas(config)
-    if parsed.is_iv:
+    plan = plan_formulas(config)
+    if plan.is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"
         )
 
-    return run_estimation(config, parsed, apply_retention=True)
+    return run_estimation(config, plan, apply_retention=True)

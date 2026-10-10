@@ -575,5 +575,5 @@ def feols(
         fsplit=fsplit,
     )
 
-    parsed = plan_formulas(config)
-    return run_estimation(config, parsed, apply_retention=True)
+    plan = plan_formulas(config)
+    return run_estimation(config, plan, apply_retention=True)
