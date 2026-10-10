@@ -14,8 +14,6 @@ ndarray = { version = "0.17.2", features = ["rayon"] }
 rayon   = "1.11.0"
 numpy = "0.29.0"
 thiserror = "2.0.16"
-postcard = { version = "1", features = ["use-std"] }
-within = "0.3.0"
 
 [profile.release]
 opt-level = 3        # Maximize performance

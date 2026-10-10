@@ -218,7 +218,7 @@ def test_refits_leave_data_untouched(data, case):
     pd.testing.assert_frame_equal(data, data_before)
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_rebuilds_prebuilt_preconditioner(variant):
     "A preconditioner built on the full sample is not reused on a refit sample."
     data = get_data().dropna()
@@ -244,7 +244,7 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
     )
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
     "A same-sample refit reuses the preconditioner the fit built."
     data = get_data().dropna()

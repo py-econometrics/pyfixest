@@ -65,6 +65,20 @@ BACKEND_CASES = [
     ),
     pytest.param(
         BackendCase(
+            name="within_adaptive",
+            demeaner=pf.LsmrDemeaner(preconditioner="adaptive"),
+            coef_tol=1e-8,
+            predict_tol=1e-6,
+            resid_tol=1e-6,
+            # Full covariance matrices amplify LSMR stopping error in large
+            # factor expansions more than the historical X1 diagonal check.
+            inference_tol=1e-6,
+            tstat_tol=1e-6,
+        ),
+        id="within_adaptive",
+    ),
+    pytest.param(
+        BackendCase(
             name="within_diagonal",
             demeaner=pf.LsmrDemeaner(preconditioner="diagonal"),
             coef_tol=1e-8,

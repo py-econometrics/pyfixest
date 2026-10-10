@@ -26,6 +26,17 @@ with per-call formatting through `docx_style`.
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
 
+### `within` LSMR Backend via `within-py`
+
+`LsmrDemeaner(backend="within")` now calls the [`within`](https://github.com/py-econometrics/within) Python package (`within-py>=0.4.0,<0.5.0`, a new required dependency) instead of the `within` Rust crate compiled into pyfixest.
+
+The default `preconditioner="auto"` now selects the adaptive preconditioner introduced in `within` 0.4.0. Building the additive Schwarz preconditioner is the expensive setup step of the `within` solver, and on well-connected fixed effects it often does not pay off: the extra iterations that the cheap diagonal preconditioner needs cost less than building Schwarz. The adaptive preconditioner starts with the diagonal one and builds additive Schwarz only when convergence stalls. It skips the setup cost where Schwarz does not help and recovers its speed-up on sparse, weakly connected designs where it does.
+
+Breaking changes:
+
+- `preconditioner="auto"` selects the adaptive preconditioner instead of additive Schwarz. Request it explicitly with `preconditioner="adaptive"`; `preconditioner="additive"` restores the previous default. On problems where the adaptive solve does not escalate, the default `fixef_atol` and `fixef_btol` of `1e-8` give the accuracy of the diagonal preconditioner, so demeaned values and coefficients can differ from the previous default at that order.
+- `pf.Preconditioner` is now `within.Preconditioner`. Its `variant` string is replaced by `config`, a `within.PreconditionerConfig`, and `build_time_seconds` is renamed `build_duration_seconds`. Preconditioners pickled by earlier pyfixest versions can no longer be loaded.
+
 Other things:
 
 - Cluster-robust inference now accepts three or more cluster variables, for example `vcov={"CRV1": "firm + year + region"}`, with multi-way small-sample corrections matching R `fixest`.
