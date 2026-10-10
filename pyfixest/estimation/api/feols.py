@@ -11,6 +11,7 @@ from pyfixest.estimation.api.utils import (
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
     _warn_if_experimental_torch_demeaner,
@@ -23,7 +24,7 @@ from pyfixest.estimation.internals.literals import (
 )
 from pyfixest.estimation.internals.model_state import EstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.plan_ import plan_formulas
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import Ssc, capture_context
@@ -567,12 +568,12 @@ def feols(
     config = EstimationConfig(
         method="feols",
         data=data,
-        fml=fml,
+        formulas=tuple(Formula.parse(fml)),
         options=options,
         vcov=vcov_spec,
         split=split,
         fsplit=fsplit,
     )
 
-    parsed = parse_formula(config)
+    parsed = plan_formulas(config)
     return run_estimation(config, parsed, apply_retention=True)

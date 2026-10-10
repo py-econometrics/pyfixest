@@ -29,6 +29,7 @@ from pyfixest.estimation.plan_ import (
     build_all_splits,
     expand_specs,
     fit_one,
+    plan_formulas,
 )
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
@@ -56,7 +57,7 @@ def _config(method: EstimationMethod, fml: str, data, **overrides) -> Estimation
     base = dict(
         method=method,
         data=data,
-        fml=fml,
+        formulas=tuple(Formula.parse(fml)),
         options=EstimationOptions(**_SHARED_OPTIONS),
         vcov=VcovSpec.from_user_input("iid"),
     )
@@ -64,12 +65,8 @@ def _config(method: EstimationMethod, fml: str, data, **overrides) -> Estimation
     return EstimationConfig(**base)
 
 
-def _parse(fml: str):
-    return Formula.parse_to_dict(fml)
-
-
 def _is_iv(formula_dict) -> bool:
-    return any(f.first_stage is not None for fs in formula_dict.values() for f in fs)
+    return any(f.is_instrumental_variable for fs in formula_dict.values() for f in fs)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +152,7 @@ def test_build_all_splits_full_plus_split_puts_full_first():
 def test_single_formula_emits_one_spec():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X1 + X2 | f1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
@@ -172,7 +169,7 @@ def test_single_formula_emits_one_spec():
 def test_csw_emits_one_spec_per_fixef_step():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X1 | csw(f1, f2)", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
@@ -193,7 +190,7 @@ def test_cache_keys_are_contiguous_blocks():
     """
     data = pf.get_data()
     cfg = _config("feols", "Y + Y2 ~ X1 | csw(f1, f2)", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
@@ -219,7 +216,7 @@ def test_split_expansion_walks_full_then_each_split_value():
         data,
         fsplit="f2",
     )
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     splits = build_all_splits(run_full=True, run_split=True, splitvar="f2", data=data)
     specs = expand_specs(
         config=cfg,
@@ -235,7 +232,7 @@ def test_split_expansion_walks_full_then_each_split_value():
 def test_iv_formula_resolves_each_spec_to_feiv():
     data = pf.get_data()
     cfg = _config("feols", "Y ~ X2 | f1 | X1 ~ Z1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     is_iv = _is_iv(fd)
     assert is_iv
     specs = expand_specs(
@@ -373,7 +370,7 @@ def test_options_object_is_shared_across_multiple_estimation():
     """
     data = pf.get_data()
     cfg = _config("feols", "Y + Y2 ~ csw(X1, X2) | f1", data)
-    fd = _parse(cfg.fml)
+    fd = plan_formulas(cfg).formula_dict
     specs = expand_specs(
         config=cfg,
         formula_dict=fd,
@@ -400,7 +397,7 @@ def test_quantile_process_is_handed_to_every_spec():
     cfg = _config("quantreg", "Y ~ X1", data, options=options, quantile_process=process)
     specs = expand_specs(
         config=cfg,
-        formula_dict=_parse(cfg.fml),
+        formula_dict=plan_formulas(cfg).formula_dict,
         data=data,
         splits=[None],
         is_iv=False,
@@ -431,7 +428,7 @@ def test_options_must_match_the_model_class():
     with pytest.raises(TypeError, match="GlmEstimationOptions"):
         expand_specs(
             config=cfg,
-            formula_dict=_parse(cfg.fml),
+            formula_dict=plan_formulas(cfg).formula_dict,
             data=data,
             splits=[None],
             is_iv=False,

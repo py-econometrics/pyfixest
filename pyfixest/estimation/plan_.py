@@ -8,7 +8,7 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
@@ -109,27 +109,25 @@ class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.
 
     `formula_dict` keys by the fixed-effects formula string (or
-    `None` when no FE) and maps to the list of `FixestFormula`
+    `None` when no FE) and maps to the list of `Formula`
     objects for that block.
     `is_iv` is true when any formula has a
     first stage.
     `is_multiple_estimation` if multiple estimation syntax is used.
     """
 
-    formula_dict: dict[str | None, list[FixestFormula]]
+    formula_dict: dict[str | None, list[Formula]]
     is_iv: bool
     is_multiple_estimation: bool
 
 
-def parse_formula(config: EstimationConfig) -> ParsedFormula:
-    """Parse the config's `fml` string into a `ParsedFormula`.
-
-    Pure: same `(fml, split, fsplit, quantile_process)` always produce
-    the same parse. `is_multiple_estimation` reflects formula
-    expansion *and* sample-split / multi-quantile fan-out.
-    """
+def plan_formulas(config: EstimationConfig) -> ParsedFormula:
+    """Group parsed formulas and account for sample and quantile fan-out."""
     run_split = config.split is not None or config.fsplit is not None
-    formula_dictionary = FixestFormula.parse_to_dict(config.fml)
+    formula_dictionary: dict[str | None, list[Formula]] = {}
+    for formula in config.formulas:
+        key = str(formula.fixed_effects) if formula.is_fixed_effects else None
+        formula_dictionary.setdefault(key, []).append(formula)
     process = config.quantile_process
     is_multiple_estimation = (
         sum(len(v) for v in formula_dictionary.values()) > 1
@@ -162,7 +160,7 @@ class ModelSpec:
 
     method: EstimationMethod
     model_cls: ModelFactory
-    formula: FixestFormula
+    formula: Formula
     fixef_key: str | None
     data: pd.DataFrame
     options: EstimationOptions
@@ -205,7 +203,7 @@ def build_all_splits(
 def expand_specs(
     *,
     config: EstimationConfig,
-    formula_dict: Mapping[str | None, list[FixestFormula]],
+    formula_dict: Mapping[str | None, list[Formula]],
     data: pd.DataFrame,
     splits: list[SampleSplit | None],
     is_iv: bool,

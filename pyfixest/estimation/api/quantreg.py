@@ -10,6 +10,7 @@ from pyfixest.estimation.api.utils import (
     _resolve_vcov,
 )
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     FixedRmOptions,
     QuantregMethodOptions,
@@ -19,7 +20,7 @@ from pyfixest.estimation.internals.literals import (
     WeightsTypeOptions,
 )
 from pyfixest.estimation.internals.model_state import QuantregEstimationOptions
-from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.plan_ import plan_formulas
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
 from pyfixest.utils.utils import Ssc, capture_context
@@ -283,7 +284,7 @@ def quantreg(
     config = EstimationConfig(
         method="quantreg",
         data=data,
-        fml=fml,
+        formulas=tuple(Formula.parse(fml)),
         options=options,
         vcov=vcov_spec,
         split=split,
@@ -293,7 +294,7 @@ def quantreg(
         else None,
     )
 
-    parsed = parse_formula(config)
+    parsed = plan_formulas(config)
     if parsed.is_iv:
         raise NotImplementedError(
             "IV Estimation is not supported for Quantile Regression"

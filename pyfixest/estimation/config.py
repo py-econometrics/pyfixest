@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     EstimationMethod,
     QuantregMultiOptions,
@@ -32,8 +33,8 @@ class EstimationConfig:
     ----------
     method
         Which kind of model to fit, e.g. "feols" or "fepois".
-    data, fml
-        The user's data and formula.
+    data, formulas
+        The user's data and parsed, expanded single-model formulas.
     options
         The estimation settings. Every fitted model keeps a copy.
     vcov
@@ -46,7 +47,7 @@ class EstimationConfig:
 
     method: EstimationMethod
     data: Any
-    fml: str
+    formulas: tuple[Formula, ...]
     options: EstimationOptions
     vcov: VcovSpec
     split: str | None = None
