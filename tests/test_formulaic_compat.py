@@ -13,18 +13,23 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
+from pyfixest.errors import EndogVarsAsCovarsError, InstrumentsAsCovarsError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     i_term_columns,
     iter_i_categorical_levels,
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.parse import Formula
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
+
+FORMULAIC_284 = "https://github.com/matthewwardrop/formulaic/issues/284"
 
 FORMULAIC_271 = "https://github.com/matthewwardrop/formulaic/issues/271"
 
@@ -560,3 +565,94 @@ def test_explicit_q_state_key_escaping(data, name, cause, fixed_effect):
     except FactorEvaluationError as exc:
         assert isinstance(exc.__cause__, cause)
         raise
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("center(X1)", {"X1"}),
+        ("scale(X1)", {"X1"}),
+        ("poly(X1, 2)", {"X1"}),
+        ("center(scale(X1))", {"X1"}),
+        ("center(`my var`)", {"my var"}),
+        ("center(Q('my var'))", {"my var"}),
+    ],
+)
+def test_formulaic_284_required_variables_without_data(expression, expected):
+    """Stateful callbacks must not hide dependencies when data is unavailable."""
+    formula = formulaic.Formula(expression)
+    assert formula.required_variables == expected, FORMULAIC_284
+    assert formula_required_variables(formula=formula) == expected, FORMULAIC_284
+
+
+def test_formulaic_284_transform_state_reused(data):
+    """The dependency patch preserves materialization and fitted transform state."""
+    frame = data.assign(**{"my var": data.X2})
+    matrix = formulaic.Formula("0 + center(X1) + center(Q('my var'))").get_model_matrix(
+        frame
+    )
+    assert matrix.model_spec.required_variables == {"X1", "my var"}
+    for expression, column in [("center(X1)", "X1"), ("center(Q('my var'))", "my var")]:
+        np.testing.assert_allclose(
+            matrix[expression],
+            frame[column] - frame[column].mean(),
+            atol=1e-12,
+            err_msg="stateful transform materialization",
+        )
+    np.testing.assert_allclose(
+        matrix.model_spec.get_model_matrix(frame.iloc[:5]).to_numpy(),
+        matrix.iloc[:5].to_numpy(),
+        atol=1e-12,
+        err_msg="fitted transform state reuse",
+    )
+
+
+@pytest.mark.parametrize(
+    "rhs, expected",
+    [
+        ("`my var`", {"my var"}),
+        ("`firm.id`", {"firm.id"}),
+        ("I(`my var`)", {"my var"}),
+        ("Q('my var')", {"my var"}),
+        ("{X1 * X2}", {"X1", "X2"}),
+    ],
+)
+def test_required_variables_preserve_quoted_names(rhs, expected):
+    """IV dependency checks preserve literal names and transformed dependencies."""
+    parsed = Formula.parse(f"Y ~ {rhs}")[0]
+    assert formula_required_variables(parsed.exogenous) == expected
+
+
+@pytest.mark.parametrize(
+    "fml, error",
+    [
+        (
+            "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ I(`my var`) + [X2 ~ Q('my var')]",
+            InstrumentsAsCovarsError,
+        ),
+        (
+            "Y ~ Q('my var') + [X2 ~ I(`my var`)]",
+            InstrumentsAsCovarsError,
+        ),
+        (
+            "Y ~ center(`my var`) + [`my var` ~ Z1]",
+            EndogVarsAsCovarsError,
+        ),
+        (
+            "Y ~ scale(`my var`) + [X2 ~ `my var`]",
+            InstrumentsAsCovarsError,
+        ),
+    ],
+)
+def test_iv_rejects_quoted_variable_overlap(fml, error):
+    """Quoted transformations must not hide a variable used in both IV roles."""
+    with pytest.raises(error, match="my var"):
+        Formula.parse(fml)
