@@ -279,21 +279,29 @@ def test_dependent_and_endogenous_model_matrix_errors(
         feols(fml=fml, data=data, context={"two_columns": two_columns})
 
 
-@pytest.mark.parametrize("transform", ["center(X1)", "scale(X1)", "poly(X1, 2)"])
+@pytest.mark.parametrize(
+    "transform", ["center(X1)", "scale(X1)", "poly(X1, 2)", "X1.fillna(0)"]
+)
 @pytest.mark.parametrize(
     "fml, error",
     [
         ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
         ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
         ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
-        ("Y ~ X1 + [X2 ~ {transform}]", InstrumentsAsCovarsError),
+        ("Y ~ X1 + [X2 ~ Z1 + {transform}]", InstrumentsAsCovarsError),
     ],
 )
 @pytest.mark.parametrize("fixed_effects", ["", " | f1"])
 def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
-    """Stateful transforms cannot hide a variable shared by explicit IV roles."""
+    """Transforms cannot hide dependencies shared with covariates."""
     with pytest.raises(error, match="X1"):
         feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())
+
+
+@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
+def test_iv_rejects_identical_instrument_covariate_terms(term):
+    with pytest.raises(InstrumentsAsCovarsError, match="Instruments specified"):
+        feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data())
 
 
 def test_iv_errors():
