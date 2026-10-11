@@ -7,6 +7,7 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -57,6 +58,34 @@ def test_ols_prediction_internally(data, fml, weights):
     assert len(updated_prediction2) != len(updated_prediction), (
         "Arrays have the same length"
     )
+
+
+@pytest.mark.parametrize("fixed_effects", ["f1", "f1 + f2"])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_recovery_preserves_codes_after_levels_are_removed(fixed_effects, weights):
+    """#1786: dropped levels must not shift recovery's code-to-level mapping."""
+    data = pf.get_data(N=400, seed=6534714).dropna()
+    removed_level = data.f1.min()
+    removed = data.f1 == removed_level
+    data.loc[removed, "Y"] = np.nan
+    singleton = data.index[-1]
+    data.loc[singleton, "f1"] = 999
+    fit = pf.feols(
+        f"Y ~ X1 | {fixed_effects}",
+        data=data,
+        weights=weights,
+        fixef_rm="singleton",
+        demeaner=MapDemeaner(fixef_tol=1e-12),
+    )
+    recovered = fit.fixef(atol=1e-12, btol=1e-12)
+    assert {str(removed_level), "999.0"}.isdisjoint(
+        recovered.loc[recovered.variable == "f1", "level"]
+    )
+    np.testing.assert_allclose(
+        fit.predict(newdata=fit._data), fit.predict(), rtol=0, atol=1e-10
+    )
+    assert np.isnan(fit.predict(newdata=data.loc[removed].iloc[:1])).all()
+    assert np.isnan(fit.predict(newdata=data.loc[[singleton]])).all()
 
 
 @pytest.mark.parametrize("fml", ["Y ~ X1", "Y~X1 |f1", "Y ~ X1 | f1 + f2"])

@@ -1745,11 +1745,9 @@ class Feols(ResultAccessorMixin):
 
         self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
-        require_retained(self, "fixef", "_data", "model_matrix")
+        require_retained(self, "fixef", "model_matrix")
 
-        model_spec = self.model.model_spec
-        assert model_spec is not None, "fixef() runs after the model matrix is built"
-        fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+        fe_spec = self.model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
 
         # flatten() copies: the weighting below scales uhat in place and must
         # not touch the fitted values the GLM hook may return.
@@ -1759,21 +1757,18 @@ class Feols(ResultAccessorMixin):
             # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
             uhat = uhat - X @ self._beta_hat
-        # one-hot encoding of fixed effects (treatment coding: reference level
-        # dropped for the second and subsequent FEs via ensure_full_rank=True).
+        # Recover from retained codes, omitting the first observed level of
+        # the second and subsequent FEs under treatment normalization.
+        # has_fixef guarantees that the retained matrix contains FE codes.
+        fixed_effects = cast(pd.DataFrame, self.model_matrix.fixed_effects)
         contrast_coding = contrast_code_fixed_effects(
-            fixed_effects=self.model.fixest_formula.fixed_effects_wrapped,
-            fixed_effect_names=fe_spec.column_names,
-            data=self._data,
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-            transform_state=fe_spec.transform_state,
+            fixed_effects=fixed_effects, column_names=fe_spec.column_names
         )
         D = contrast_coding.matrix
         D_w = D
-        if self.options.has_weights:
+        observation_weights = self.observation_weights.values
+        if observation_weights is not None:
             # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
-            observation_weights = self.observation_weights.values
-            assert observation_weights is not None
             weights_sqrt = np.sqrt(observation_weights)
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
