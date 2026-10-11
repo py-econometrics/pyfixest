@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
+from within import PreconditionerConfig
+from within.config import LocalSolverConfig, Staleness
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
@@ -347,7 +349,18 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
         )
 
 
-@pytest.mark.parametrize("preconditioner", ["adaptive", "additive", "diagonal"])
+@pytest.mark.parametrize(
+    "preconditioner",
+    [
+        "adaptive",
+        "additive",
+        "diagonal",
+        PreconditionerConfig.Additive(
+            local_solver=LocalSolverConfig(dense_threshold=64)
+        ),
+        PreconditionerConfig.Adaptive(stall=Staleness(window=1, threshold=0.0)),
+    ],
+)
 def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     """Explicit cache reuse for linear fits and direct demeaner calls.
 
@@ -375,7 +388,15 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
-    assert within_preconditioner_name(built) == preconditioner
+    if isinstance(preconditioner, PreconditionerConfig.Adaptive):
+        assert built.config == PreconditionerConfig.Additive(
+            local_solver=preconditioner.local_solver,
+            reduction=preconditioner.reduction,
+        )
+    elif isinstance(preconditioner, PreconditionerConfig):
+        assert built.config == preconditioner
+    else:
+        assert within_preconditioner_name(built) == preconditioner
 
     # ----- Leg 2: explicit reuse with changed weights. The method
     # must reuse the cached factorization (same variant + DOF count; pyo3
@@ -433,6 +454,42 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
         rtol=1e-10,
         atol=1e-10,
         err_msg="same precond + same weights + same data must reproduce the original solve",
+    )
+
+
+@pytest.mark.parametrize("adaptive", [False, True])
+def test_lsmr_within_rebuilds_mismatched_preconditioner_config(adaptive, demean_data):
+    """Matching variant names cannot override different factorization settings."""
+    x, flist, weights = demean_data
+    previous = PreconditionerConfig.Additive(
+        local_solver=LocalSolverConfig(dense_threshold=64)
+    )
+    _, _, cached = demean_within(x, flist, weights, preconditioner=previous)
+    requested_additive = PreconditionerConfig.Additive(
+        local_solver=LocalSolverConfig(dense_threshold=32)
+    )
+    requested = (
+        PreconditionerConfig.Adaptive(
+            local_solver=requested_additive.local_solver,
+            stall=Staleness(window=1, threshold=0.0),
+        )
+        if adaptive
+        else requested_additive
+    )
+
+    result, success, used = LsmrDemeaner(
+        preconditioner=requested, fixef_atol=1e-10, fixef_btol=1e-10
+    ).demean(x=x, flist=flist, weights=weights, cached_preconditioner=cached)
+
+    assert success
+    assert used.config == requested_additive
+    expected = pyhdfe.create(flist).residualize(x, weights.reshape((-1, 1)))
+    np.testing.assert_allclose(
+        result,
+        expected,
+        rtol=1e-6,
+        atol=1e-8,
+        err_msg="demeaned values with the requested preconditioner configuration",
     )
 
 

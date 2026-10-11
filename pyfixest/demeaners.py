@@ -361,6 +361,9 @@ class LsmrDemeaner(BaseDemeaner):
             built with the same configuration (``"additive"`` or
             ``"diagonal"``); an ``"adaptive"`` request also reuses an
             escalated additive Schwarz preconditioner. If the
+            request is a ``within.PreconditionerConfig``, all configuration
+            settings must match; adaptive requests may reuse the additive
+            configuration with the same factorization settings. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
 
@@ -411,6 +414,21 @@ class LsmrDemeaner(BaseDemeaner):
             in _REUSABLE_PRECONDITIONERS.get(preconditioner, {preconditioner})
         ):
             preconditioner = cached_preconditioner
+        elif cached_preconditioner is not None and isinstance(
+            preconditioner, PreconditionerConfig
+        ):
+            config = preconditioner
+            cached_config = cached_preconditioner.config
+            if isinstance(config, PreconditionerConfig.Adaptive) and isinstance(
+                cached_config, PreconditionerConfig.Additive
+            ):
+                # Escalation retains the factorization settings but consumes
+                # the adaptive stall policy, so compare the resulting recipe.
+                config = PreconditionerConfig.Additive(
+                    local_solver=config.local_solver, reduction=config.reduction
+                )
+            if cached_config == config:
+                preconditioner = cached_preconditioner
 
         return demean_within(
             x=x,
