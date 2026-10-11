@@ -28,6 +28,9 @@ from pyfixest.estimation.formula.formulaic_compat import (
     is_structured_formula,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    wrap_fixed_effect,
+)
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
     _get_position_of_first_parenthesis_pair,
@@ -436,9 +439,8 @@ class Formula:
     @property
     def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
         """Wrapped fixed effects for proper encoding."""
-        return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
-            _parser=_PARSER_NO_INTERCEPT,
+        return formulaic.formula.SimpleFormula(
+            wrap_fixed_effect(term=term) for term in self.fixed_effects
         )
 
     @property
