@@ -15,14 +15,13 @@ from formulaic.parser.types import Factor, FormulaParser, Term, Token
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FormulaSyntaxError,
-    InstrumentsAsCovarsError,
+    IVIdentificationError,
     UnderDeterminedIVError,
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
     PyfixestOperatorResolver,
     count_multistage_blocks,
-    formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_python_expression,
@@ -377,19 +376,21 @@ class Formula:
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
-        endogenous_are_covariates = formula_required_variables(
-            formula=self.endogenous
-        ).intersection(formula_required_variables(formula=self.exogenous))
+        endogenous_are_covariates = set(
+            terms_without_intercept(self.endogenous)
+        ).intersection(terms_without_intercept(self.exogenous))
         if endogenous_are_covariates:
             raise EndogVarsAsCovarsError(
                 f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
             )
-        instruments_are_covariates = formula_required_variables(
-            formula=self.instruments
-        ).intersection(formula_required_variables(formula=self.exogenous))
-        if instruments_are_covariates:
-            raise InstrumentsAsCovarsError(
-                f"Instruments specified as covariates: {instruments_are_covariates}"
+        # Redundant instruments are allowed if an excluded instrument remains.
+        excluded_instruments = set(
+            terms_without_intercept(self.instruments)
+        ).difference(terms_without_intercept(self.exogenous))
+        if not excluded_instruments:
+            raise IVIdentificationError(
+                "The instruments add no explanatory power for the endogenous variable: "
+                "all instrument terms are also specified as covariates."
             )
 
     def __repr__(self) -> str:
