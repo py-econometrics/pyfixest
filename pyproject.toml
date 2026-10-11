@@ -68,6 +68,9 @@ benchmarks = [
 module-name = "pyfixest.core._core_impl"
 features = ["pyo3/extension-module"]
 python-source = "."
+include = [
+    { path = "THIRD_PARTY_NOTICES.md", format = ["sdist", "wheel"] },
+]
 exclude = [
     "tests/**",
     "docs/**",

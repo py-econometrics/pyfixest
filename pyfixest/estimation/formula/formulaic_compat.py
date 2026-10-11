@@ -27,12 +27,15 @@ if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
 
 
+# Adapted from Formulaic 1.2.2.
+# Copyright 2019 Matthew Wardrop and contributors.
+# Licensed under MIT; see THIRD_PARTY_NOTICES.md.
 def _get_ast_node_variables_formulaic_284(
     node: ast.AST, env: Mapping[str, Any], aliases: Mapping[str, str]
 ) -> list[Variable]:
     """Work around unavailable callback arguments in Formulaic's dependency walk.
 
-    Copied from Formulaic 1.2.2's ``_get_ast_node_variables``:
+    Adapted from Formulaic 1.2.2's ``_get_ast_node_variables``:
     https://github.com/matthewwardrop/formulaic/blob/8579df0d49638acbae87e7f4171f97bf66d7d1c8/formulaic/utils/variables.py#L120-L161
 
     Its stateful dependency callbacks evaluate arguments even when data is unavailable,
