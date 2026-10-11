@@ -72,6 +72,7 @@ from pyfixest.estimation.internals.vcov_ import (
 from pyfixest.estimation.internals.vcov_utils import (
     ClusterSmallSampleCorrection,
     VcovTerm,
+    _align_data_to_sample,
     combine_terms,
     get_ssc_cluster,
     prepare_cluster_state,
@@ -679,6 +680,8 @@ class Feols(ResultAccessorMixin):
             raise TypeError(
                 f"The data set must be a DataFrame type. Received: {type(data)}"
             ) from e
+        if data is not None:
+            data_to_check = _align_data_to_sample(data_to_check, self._data)
 
         vcov_type = spec.vcov_type
 
