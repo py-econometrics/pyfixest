@@ -1061,11 +1061,43 @@ class TestEdgeCases:
         assert "Z1" in f.second_stage.rhs
         # assert f.as_first_stage().second_stage == "Z1 ~ W1"
 
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [[X2 ~ Z1] ~ Z2]",
+            "Y ~ X1 + [X2 ~ [Z1 ~ Z2]]",
+        ],
+        ids=["nested-endogenous", "nested-instruments"],
+    )
+    def test_reject_nested_multistage_formulas(self, formula):
+        """An IV block cannot contain another IV block on either side."""
+        with pytest.raises(FormulaSyntaxError, match="Nested instrumental-variable"):
+            Formula.parse(formula)
+
     def test_iv_transformed_endogenous_in_second_stage(self):
-        """A transformed endogenous variable survives the _hat term filtering."""
-        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        """A transformed endogenous variable is retained in the second stage."""
+        f = Formula.parse("Y ~ X1 + [log(Z1) ~ W1]")[0]
         assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
         assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
+
+    @pytest.mark.parametrize(
+        "formula",
+        ["Y ~ X1 + [X2:Z2 ~ Z1]", "Y ~ X1 | X2:Z2 ~ Z1"],
+        ids=["bracket", "pipe"],
+    )
+    def test_iv_interacted_endogenous_preserves_parsed_stages(self, formula):
+        """An endogenous interaction stays intact without generated lookup terms."""
+        parsed = Formula.parse(formula)[0]
+        assert parsed.exogenous == formulaic.Formula("1 + X1")
+        assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
+        assert parsed.instruments == formulaic.Formula("1 + Z1")
+        assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
+
+        first_stage = parsed.as_first_stage().second_stage
+        expected_first_stage = formulaic.Formula("X2:Z2 ~ Z1 + X1")
+        assert first_stage.lhs == expected_first_stage.lhs
+        assert set(first_stage.rhs) == set(expected_first_stage.rhs)
+        assert Formula.parse(parsed.render())[0].second_stage == parsed.second_stage
 
     @pytest.mark.parametrize(
         "formula, expected",
