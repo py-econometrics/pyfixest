@@ -16,7 +16,10 @@ from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula.formulaic_compat import flatten_model_matrix
+from pyfixest.estimation.formula.formulaic_compat import (
+    flatten_model_matrix,
+    get_fixed_effect_encoding,
+)
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
@@ -139,6 +142,15 @@ class ModelMatrix:
         self._fixed_effects_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
+        self._fixed_effects_labels = {
+            column: get_fixed_effect_encoding(
+                transform_state=self._model_spec[
+                    _ModelMatrixKey.fixed_effects
+                ].transform_state,
+                column=column,
+            ).variable
+            for column in self._fixed_effects_column_names or []
+        }
         self._endogenous_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
         )
@@ -308,7 +320,9 @@ class ModelMatrix:
         """
         if self._fixed_effects_column_names is None:
             return None
-        return self._data.loc[:, self._fixed_effects_column_names]
+        return self._data.loc[:, self._fixed_effects_column_names].rename(
+            columns=self._fixed_effects_labels
+        )
 
     @property
     def endogenous(self) -> pd.DataFrame | None:
@@ -479,12 +493,13 @@ def create_model_matrix(
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
     )
+    evaluation_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,
         na_action="drop",
         output="pandas",
-        context=FORMULAIC_TRANSFORMS | {**capture_context(context)},
+        context=evaluation_context,
     )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,

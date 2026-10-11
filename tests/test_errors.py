@@ -271,6 +271,23 @@ def test_dependent_and_endogenous_model_matrix_errors(
         feols(fml=fml, data=data, context={"two_columns": two_columns})
 
 
+@pytest.mark.parametrize("transform", ["center(X1)", "scale(X1)", "poly(X1, 2)"])
+@pytest.mark.parametrize(
+    "fml, error",
+    [
+        ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
+        ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
+        ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
+        ("Y ~ X1 + [X2 ~ {transform}]", InstrumentsAsCovarsError),
+    ],
+)
+@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
+def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
+    """Stateful transforms cannot hide a variable shared by explicit IV roles."""
+    with pytest.raises(error, match="X1"):
+        feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())
+
+
 def test_iv_errors():
     data = get_data()
 
@@ -485,9 +502,8 @@ def test_rwolf_error():
 def test_predict_fe_dtype_mismatch():
     """FE dtype handling in predict(newdata=...).
 
-    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
-    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
-    numeric-numeric differences predict fine; fully unmatched FE levels warn.
+    Compatible numeric values match across dtypes; unmatched values, including
+    numeric-vs-string differences, warn and predict NaN.
     """
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
@@ -498,11 +514,15 @@ def test_predict_fe_dtype_mismatch():
     pred = fit.predict(newdata=newdata)
     assert np.isfinite(pred).any()
 
-    # numeric fit data vs string newdata: clear pyfixest error
+    # numeric fit data vs string newdata: unmatched levels warn and predict NaN
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_str["f1"] = newdata_str["f1"].astype(str)
-    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
-        fit.predict(newdata=newdata_str)
+    with pytest.warns(
+        UserWarning,
+        match=f"{newdata_str['f1'].nunique()} unseen level",
+    ):
+        pred_str = fit.predict(newdata=newdata_str)
+    assert np.all(np.isnan(pred_str))
 
     # no matching FE level at all: warning + all-NaN predictions
     newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
@@ -1895,20 +1915,3 @@ def test_estimation_rejects_malformed_ssc():
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
     assert legacy.options.ssc == pf.ssc(k_adj=False)
-
-
-@pytest.mark.parametrize("transform", ["center(X1)", "scale(X1)", "poly(X1, 2)"])
-@pytest.mark.parametrize(
-    "fml, error",
-    [
-        ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
-        ("Y ~ X1 + [X2 ~ {transform}]", InstrumentsAsCovarsError),
-    ],
-)
-@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
-def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
-    """Stateful transforms cannot hide a variable shared by explicit IV roles."""
-    with pytest.raises(error, match="X1"):
-        feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())
