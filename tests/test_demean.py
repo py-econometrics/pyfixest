@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import pickle
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
+from within import PreconditionerConfig
+from within.config import LocalSolverConfig, Staleness
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import demean_within, within_preconditioner_name
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
@@ -121,7 +126,15 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
     ("demeaner", "rtol", "atol"),
     [
         (
-            LsmrDemeaner(),
+            LsmrDemeaner(preconditioner="additive"),
+            1e-6,
+            1e-8,
+        ),
+        (
+            LsmrDemeaner(
+                fixef_atol=1e-10,
+                fixef_btol=1e-10,
+            ),
             1e-6,
             1e-8,
         ),
@@ -187,10 +200,13 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     # (same variant and DOF count) but not the same Python object — pyo3
     # round-trips produce fresh wrappers, matching upstream's value semantics.
     assert preconditioner_reused is not preconditioner
-    assert preconditioner_reused.variant == preconditioner.variant
+    assert preconditioner_reused.config == preconditioner.config
     assert preconditioner_reused.nrows == preconditioner.nrows
     assert preconditioner_reused.ncols == preconditioner.ncols
-    assert preconditioner_reused.build_time_seconds == preconditioner.build_time_seconds
+    assert (
+        preconditioner_reused.build_duration_seconds
+        == preconditioner.build_duration_seconds
+    )
     # Solve-equivalence is the load-bearing correctness check: same factorization
     # applied to the same data must yield bitwise-identical demeaned output.
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
@@ -211,10 +227,9 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     assert success
     assert preconditioner is not None
 
-    build_time = preconditioner.build_time_seconds
+    build_time = preconditioner.build_duration_seconds
     assert isinstance(build_time, float)
     assert build_time >= 0.0
-    assert f"build_time_seconds={build_time:.2f}" in repr(preconditioner)
 
     # the build time survives preconditioner reuse unchagned
     # 1) directly feed preconditioner
@@ -226,12 +241,12 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
+    assert preconditioner_reused.build_duration_seconds == build_time
 
     # 2) load cached preconditioner
     # The build cost survives serialization unchanged.
     restored = pickle.loads(pickle.dumps(preconditioner))
-    assert restored.build_time_seconds == build_time
+    assert restored.build_duration_seconds == build_time
     _, success_reused, preconditioner_reused = demean_within(
         x=x,
         flist=flist.astype(np.uint32, copy=False),
@@ -240,7 +255,7 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
+    assert preconditioner_reused.build_duration_seconds == build_time
 
 
 def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
@@ -335,70 +350,24 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
 
 
 @pytest.mark.parametrize(
-    ("preconditioner", "expected_variant"),
+    "preconditioner",
     [
-        ("additive", "Additive"),
-        ("diagonal", "Diagonal"),
+        "adaptive",
+        "additive",
+        "diagonal",
+        PreconditionerConfig.Additive(
+            local_solver=LocalSolverConfig(dense_threshold=64)
+        ),
+        PreconditionerConfig.Adaptive(stall=Staleness(window=1, threshold=0.0)),
     ],
 )
-def test_lsmr_within_reuses_cached_preconditioner(
-    preconditioner, expected_variant, demean_data
-):
-    """End-to-end coverage of ``LsmrDemeaner.demean``'s preconditioner-reuse policy.
+def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
+    """Explicit cache reuse for linear fits and direct demeaner calls.
 
-    Context
-    -------
-    `LsmrDemeaner.demean`` is the strategy entry point that the model-side
-    `DemeanCache` calls to demean working data on each iteration. The
-    `cached_preconditioner` argument is the callsite-supplied
-    factorization that turns IWLS's "build the factorization once, reuse it
-    across iterations" claim into reality. The method returns the
-    preconditioner actually used so the cache can hold onto it for the next
-    solve. This test exercises that contract directly, bypassing the model
-    classes and the cache so failures point at the reuse logic instead of
-    the IWLS loop.
-
-    Three behaviours are pinned down:
-
-    Leg 1 — first call reports the freshly built preconditioner
-        With no `cached_preconditioner`, `LsmrDemeaner(backend="within")`
-        builds the requested factorization. The method must return it as
-        the third tuple element so the caller can hold onto it.
-
-    Leg 2 — subsequent calls reuse the supplied preconditioner under changed
-    weights (the IWLS hot path)
-        IWLS changes the working weights at every iteration (`W := W * mu`).
-        A pure implementation would rebuild the preconditioner each time,
-        which is the expensive step. Passing the first-iteration factorization
-        back in via `cached_preconditioner` lets us reuse it even though
-        the weights — and therefore the true normal-equations operator — have
-        changed. The factorization is "stale" in that sense, but LSMR still
-        converges to the correct demeaned values, just possibly in a few more
-        iterations. We simulate a weight change with ``weights + 0.25``, then
-        check both that the method returns the *same* Python object (no
-        rebuild) and that the demeaned output still matches an independent
-        ground truth.
-
-        Ground truth comes from ``pyhdfe.residualize`` — a separate, mature
-        FE-residualization implementation. Matching it under changed weights
-        is the strongest evidence that the stale-preconditioner path is
-        mathematically correct, not just self-consistent.
-
-    Leg 3 — passing a cached preconditioner back via ``LsmrDemeaner``
-    reproduces the original solve
-        This is the documented "save in session 1, reload in session 2"
-        workflow in miniature. A fresh ``LsmrDemeaner(preconditioner=...)``
-        with the *original* weights should reproduce leg 1's output bit-for-bit
-        because we are running the same LSMR with the same factorization on
-        the same data.
-
-    Tolerance choices
-    -----------------
-    Leg 2 uses ``rtol=1e-6, atol=1e-8`` because pyhdfe and ``within`` are two
-    different iterative solvers; they agree to within solver tolerance, not
-    machine precision. Leg 3 uses ``1e-10`` on both because we are comparing
-    ``within`` against itself with identical inputs — only floating-point
-    summation order from rayon parallelism could differ.
+    Changed weights stress the numerical validity of a reused factorization;
+    GLM estimators instead rebuild for each IWLS solve. Compare projections
+    with pyhdfe at the existing demeaning tolerance, and identical-input
+    reuse at 1e-10 to detect an unintended change of factorization.
     """
     x, flist, weights = demean_data
     demeaner = LsmrDemeaner(
@@ -419,10 +388,17 @@ def test_lsmr_within_reuses_cached_preconditioner(
     assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
-    assert built.variant == expected_variant
+    if isinstance(preconditioner, PreconditionerConfig.Adaptive):
+        assert built.config == PreconditionerConfig.Additive(
+            local_solver=preconditioner.local_solver,
+            reduction=preconditioner.reduction,
+        )
+    elif isinstance(preconditioner, PreconditionerConfig):
+        assert built.config == preconditioner
+    else:
+        assert within_preconditioner_name(built) == preconditioner
 
-    # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
-    # an IWLS iteration where only the working weights moved. The method
+    # ----- Leg 2: explicit reuse with changed weights. The method
     # must reuse the cached factorization (same variant + DOF count; pyo3
     # produces a fresh wrapper, identity semantics match upstream ``within``)
     # and the result must still be numerically correct under the *new* weights.
@@ -435,10 +411,10 @@ def test_lsmr_within_reuses_cached_preconditioner(
     )
     assert success
     assert isinstance(reused, pf.Preconditioner)
-    assert reused.variant == built.variant
+    assert reused.config == built.config
     assert reused.nrows == built.nrows
     assert reused.ncols == built.ncols
-    assert reused.build_time_seconds == built.build_time_seconds
+    assert reused.build_duration_seconds == built.build_duration_seconds
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
@@ -479,6 +455,68 @@ def test_lsmr_within_reuses_cached_preconditioner(
         atol=1e-10,
         err_msg="same precond + same weights + same data must reproduce the original solve",
     )
+
+
+@pytest.mark.parametrize("adaptive", [False, True])
+def test_lsmr_within_rebuilds_mismatched_preconditioner_config(adaptive, demean_data):
+    """Matching variant names cannot override different factorization settings."""
+    x, flist, weights = demean_data
+    previous = PreconditionerConfig.Additive(
+        local_solver=LocalSolverConfig(dense_threshold=64)
+    )
+    _, _, cached = demean_within(x, flist, weights, preconditioner=previous)
+    requested_additive = PreconditionerConfig.Additive(
+        local_solver=LocalSolverConfig(dense_threshold=32)
+    )
+    requested = (
+        PreconditionerConfig.Adaptive(
+            local_solver=requested_additive.local_solver,
+            stall=Staleness(window=1, threshold=0.0),
+        )
+        if adaptive
+        else requested_additive
+    )
+
+    result, success, used = LsmrDemeaner(
+        preconditioner=requested, fixef_atol=1e-10, fixef_btol=1e-10
+    ).demean(x=x, flist=flist, weights=weights, cached_preconditioner=cached)
+
+    assert success
+    assert used.config == requested_additive
+    expected = pyhdfe.create(flist).residualize(x, weights.reshape((-1, 1)))
+    np.testing.assert_allclose(
+        result,
+        expected,
+        rtol=1e-6,
+        atol=1e-8,
+        err_msg="demeaned values with the requested preconditioner configuration",
+    )
+
+
+def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
+    """An escalated preconditioner replaces a cached adaptive base, nothing else.
+
+    Reusing an adaptive base that has not escalated makes every later solve
+    escalate and rebuild additive Schwarz, so the cache keeps the escalated one.
+    """
+    x, flist, weights = demean_data
+    flist = flist.astype(np.uint32)
+    _, _, adaptive = demean_within(x, flist, weights, preconditioner="adaptive")
+    _, _, additive = demean_within(x, flist, weights, preconditioner="additive")
+    _, _, diagonal = demean_within(x, flist, weights, preconditioner="diagonal")
+    na_index = frozenset()
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, adaptive)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is additive
+    cache.seed_preconditioner(na_index, adaptive)
+    assert cache.lookup_preconditioner[na_index] is additive
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, diagonal)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is diagonal
 
 
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
@@ -543,8 +581,9 @@ def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
 @pytest.mark.parametrize(
     ("backend", "requested", "expected"),
     [
-        # within: supports additive, off, diagonal; auto -> additive
-        ("within", "auto", "additive"),
+        # within: supports adaptive, additive, off, diagonal; auto -> adaptive
+        ("within", "auto", "adaptive"),
+        ("within", "adaptive", "adaptive"),
         ("within", "additive", "additive"),
         ("within", "off", "off"),
         ("within", "diagonal", "diagonal"),
@@ -565,6 +604,7 @@ def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
 @pytest.mark.parametrize(
     ("backend", "requested", "fallback"),
     [
+        ("torch", "adaptive", "diagonal"),
         ("torch", "additive", "diagonal"),
         ("torch", "off", "diagonal"),
     ],
@@ -916,28 +956,36 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         )
 
 
-def test_feols_integration_maxiter():
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize(
+    "demeaner",
+    [MapDemeaner(), LsmrDemeaner(preconditioner="diagonal")],
+)
+def test_estimator_integration_maxiter(estimator, demeaner):
     """Integration test: Test fixef_maxiter flows from demeaner to demean."""
-    import pyfixest as pf
-
     N = 1000  # More observations
     rng = np.random.default_rng(42)
 
     # Create data with many (but not N) fixed effects
     data = pd.DataFrame(
         {
-            "y": rng.normal(0, 1, N),
+            "y": rng.poisson(2, N),
             "x": rng.normal(0, 1, N),
             "fe": rng.integers(0, 50, N),  # 50 fixed effects, not N
+            "fe2": rng.integers(0, 25, N),
         }
     )
 
     # Should fail with tiny maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-        pf.feols("y ~ x | fe", data=data, demeaner=MapDemeaner(fixef_maxiter=1))
+        estimator(
+            "y ~ x | fe + fe2",
+            data=data,
+            demeaner=replace(demeaner, fixef_maxiter=1),
+        )
 
     # Should work with default
-    model = pf.feols("y ~ x | fe", data=data)
+    model = estimator("y ~ x | fe + fe2", data=data, demeaner=demeaner)
     assert model is not None
 
 

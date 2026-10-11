@@ -12,7 +12,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
@@ -127,23 +127,17 @@ def _with_preconditioner(
 
 
 def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
-    """Replace a prebuilt LSMR `Preconditioner` by the name of its variant.
+    """Replace a prebuilt LSMR `Preconditioner` by its complete configuration.
 
     A prebuilt preconditioner is tied to the fixed-effect design it was built
-    on, so a refit on another sample must build its own. Variants without a
-    public name fall back to ``"auto"``, the `LsmrDemeaner` default.
+    on, so a refit on another sample must build its own.
     """
     if not (
         isinstance(demeaner, LsmrDemeaner)
         and isinstance(demeaner.preconditioner, Preconditioner)
     ):
         return demeaner
-    variant = demeaner.preconditioner.variant.lower()
-    preconditioner: LsmrPreconditioner = (
-        "additive"
-        if variant == "additive"
-        else "diagonal"
-        if variant == "diagonal"
-        else "auto"
+    return replace(
+        demeaner,
+        preconditioner=demeaner.preconditioner.config,
     )
-    return replace(demeaner, preconditioner=preconditioner)

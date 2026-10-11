@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, within_preconditioner_name
 from pyfixest.demeaners import AnyDemeaner
 
 
@@ -47,8 +47,8 @@ class DemeanCache:
     The index for both caches is the frozen set of `na_index` - as all fits
     operate on the same fixed effects / data structure.
 
-    Model classes call :meth:`demean_array` (IWLS) or :meth:`demean_yx`
-    (OLS/IV).
+    OLS/IV models call :meth:`demean_yx`. GLM working weights change between
+    IWLS solves, which build fresh preconditioners without using this cache.
     """
 
     def __init__(
@@ -68,30 +68,18 @@ class DemeanCache:
     ) -> None:
         """Store the first preconditioner observed for ``na_index``.
 
-        For IWLS (Poisson, GLM) the demeaner is called once per iteration
-        and returns a preconditioner each time; we keep the one from the
-        first call and ignore later ones.
+        Later OLS/IV models in the same cache block may introduce columns that
+        require another solve. If that solve escalates an adaptive
+        preconditioner, retain the additive Schwarz replacement.
         """
-        if (
-            used_preconditioner is not None
-            and na_index not in self.lookup_preconditioner
+        if used_preconditioner is None:
+            return
+        cached = self.lookup_preconditioner.get(na_index)
+        if cached is None or (
+            within_preconditioner_name(cached) == "adaptive"
+            and within_preconditioner_name(used_preconditioner) == "additive"
         ):
             self.lookup_preconditioner[na_index] = used_preconditioner
-
-    def demean_array(
-        self,
-        x: np.ndarray,
-        flist: np.ndarray,
-        weights: np.ndarray | None,
-        na_index: frozenset[int],
-        demeaner: AnyDemeaner,
-    ) -> np.ndarray:
-        """Demean `x`, reusing and seeding the cached preconditioner for `na_index`.
-
-        Raises `ValueError` if the demeaning algorithm does not converge.
-        """
-        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
-        return result
 
     def _run_or_raise(
         self,

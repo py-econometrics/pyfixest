@@ -7,6 +7,8 @@ all must see every non-default argument of the original fit: the weights of a
 `feols` fit, the offset of a `fepois` fit, and so on.
 """
 
+from __future__ import annotations
+
 from dataclasses import fields, replace
 from functools import partial
 from inspect import signature
@@ -14,6 +16,8 @@ from inspect import signature
 import numpy as np
 import pandas as pd
 import pytest
+from within import PreconditionerConfig, Solver
+from within.config import LocalSolverConfig, ReductionStrategy, Staleness
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
@@ -236,7 +240,7 @@ def test_refits_leave_data_untouched(data, case):
     pd.testing.assert_frame_equal(data, data_before)
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_rebuilds_prebuilt_preconditioner(variant):
     "A preconditioner built on the full sample is not reused on a refit sample."
     data = get_data().dropna()
@@ -251,7 +255,7 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
 
     refitted = refit(fit, data=subsample, vcov=IID)
 
-    assert refitted.options.demeaner == by_name
+    assert refitted.options.demeaner.preconditioner == prebuilt.preconditioner.config
     expected = fepois(fml, data=subsample, demeaner=by_name)
     # same preconditioner variant; the LSMR solves stop at their 1e-8 tolerance
     np.testing.assert_allclose(
@@ -262,7 +266,60 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
     )
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+def test_refit_preserves_custom_preconditioner_configuration():
+    """A short-budget refit needs the original early-escalation settings."""
+    rng = np.random.default_rng(427)
+    n_obs = 1000
+    fe = np.asfortranarray(rng.integers(0, 10, size=(n_obs, 2)), dtype=np.uint32)
+    x = rng.normal(size=n_obs)
+    data = pd.DataFrame(
+        {"Y": 2 * x + rng.normal(size=n_obs), "X": x, "f1": fe[:, 0], "f2": fe[:, 1]}
+    )
+    config = PreconditionerConfig.Adaptive(
+        local_solver=LocalSolverConfig(dense_threshold=64),
+        reduction=ReductionStrategy.AtomicScatter,
+        stall=Staleness(window=1, threshold=0.0),
+    )
+    demeaner = LsmrDemeaner(
+        preconditioner=Solver(fe, preconditioner=config).preconditioner,
+        fixef_atol=1e-10,
+        fixef_btol=1e-10,
+        # The tuned ladder escalates after one iteration; the default ladder
+        # cannot converge on this design within the same three-iteration budget.
+        fixef_maxiter=3,
+    )
+    fit = feols("Y ~ X | f1 + f2", data=data, demeaner=demeaner)
+    subsample = data.iloc[:800].copy()
+    subsample_fe = np.asfortranarray(
+        subsample[["f1", "f2"]].to_numpy(), dtype=np.uint32
+    )
+    expected = feols(
+        "Y ~ X | f1 + f2",
+        data=subsample,
+        demeaner=replace(
+            demeaner,
+            preconditioner=Solver(subsample_fe, preconditioner=config).preconditioner,
+        ),
+    )
+
+    refitted = refit(fit, data=subsample, vcov=IID)
+
+    assert refitted.options.demeaner.preconditioner == config
+    assert refitted.preconditioner.config.local_solver == config.local_solver
+    assert refitted.preconditioner.config.reduction == config.reduction
+    np.testing.assert_allclose(
+        refitted.coef(),
+        expected.coef(),
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="refit coefficients",
+    )
+    # CRV3 uses the same changed-sample refit path through the public API.
+    fit.vcov({"CRV3": "f1"})
+    assert np.isfinite(fit.se()).all()
+
+
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
     "A same-sample refit reuses the preconditioner the fit built."
     data = get_data().dropna()

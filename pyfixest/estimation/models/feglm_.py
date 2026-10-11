@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -101,6 +102,7 @@ class Feglm(Feols):
             lookup_preconditioner=lookup_preconditioner,
             sample_split=sample_split,
         )
+        self._preconditioner: Preconditioner | None = None
 
         _glm_input_checks(
             drop_singletons=options.drop_singletons,
@@ -305,19 +307,41 @@ class Feglm(Feols):
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        "Residualize v and X by flist using weights."
+        """Residualize v and X with a fresh preconditioner for these working weights."""
         if flist is None:
             return v, X
 
         effective_demeaner = self.options.demeaner.with_tol(tol)
-        vX_tilde = self._demean_cache.demean_array(
+        if isinstance(effective_demeaner, LsmrDemeaner) and isinstance(
+            effective_demeaner.preconditioner, Preconditioner
+        ):
+            # Preserve the complete recipe, but rebuild for each IWLS problem.
+            # Keep the configuration temporary: fitted options retain the handle.
+            effective_demeaner = replace(
+                effective_demeaner,
+                preconditioner=effective_demeaner.preconditioner.config,
+            )
+        vX_tilde, success, preconditioner = effective_demeaner.demean(
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
-            na_index=self.sample_info.dropped_row_index,
-            demeaner=effective_demeaner,
         )
+        if not success:
+            raise ValueError(
+                f"Demeaning failed after {effective_demeaner.fixef_maxiter} iterations."
+            )
+        self._preconditioner = preconditioner
         return vX_tilde[:, 0], vX_tilde[:, 1:]
+
+    @property
+    def preconditioner(self) -> Preconditioner | None:
+        """The preconditioner from this model's last successful IWLS demeaning.
+
+        Each IWLS solve builds for its current working weights, including when
+        the user supplied a prebuilt handle, whose configuration is preserved.
+        Returns ``None`` when no preconditioner participated in the solve.
+        """
+        return self._preconditioner
 
     def predict(
         self,

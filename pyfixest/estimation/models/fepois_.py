@@ -20,8 +20,8 @@ class Fepois(Feglm):
 
     Inherits from the Feglm class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    IRLS residualization is orchestrated by ``Feglm`` through the shared
-    ``DemeanCache`` supplied by the estimation runner.
+    IRLS residualization is orchestrated by ``Feglm``, which builds a fresh
+    preconditioner for each solve's working weights.
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
 
