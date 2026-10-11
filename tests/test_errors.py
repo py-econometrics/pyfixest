@@ -13,7 +13,7 @@ from pyfixest.errors import (
     EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
-    InstrumentsAsCovarsError,
+    IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
     UnderDeterminedIVError,
@@ -273,28 +273,32 @@ def test_dependent_and_endogenous_model_matrix_errors(
 
 
 @pytest.mark.parametrize(
-    "transform", ["center(X1)", "scale(X1)", "poly(X1, 2)", "X1.fillna(0)"]
-)
-@pytest.mark.parametrize(
-    "fml, error",
+    "fml, error, message",
     [
-        ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
-        ("Y ~ X1 + [X2 ~ Z1 + {transform}]", InstrumentsAsCovarsError),
+        ("Y ~ center(X1) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ scale(X1) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ X1 + [scale(X1) ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ X1 + [X1.fillna(0) ~ Z1]", IVIdentificationError, "fully explained"),
+        ("Y ~ X1 + [poly(X1, 2) ~ Z1]", TypeError, "exactly one endogenous"),
+        ("Y ~ center(X1) + [X2 ~ X1]", IVIdentificationError, "no explanatory power"),
     ],
 )
 @pytest.mark.parametrize("fixed_effects", ["", " | f1"])
-def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
-    """Transforms cannot hide dependencies shared with covariates."""
-    with pytest.raises(error, match="X1"):
-        feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())
+def test_iv_rejects_invalid_transformed_specifications(
+    fml, error, message, fixed_effects
+):
+    """Distinct transformed terms are parsed but invalid numerical models fail."""
+    with pytest.raises(error, match=message):
+        feols(fml=fml + fixed_effects, data=get_data().dropna())
 
 
 @pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-def test_iv_rejects_identical_instrument_covariate_terms(term):
-    with pytest.raises(InstrumentsAsCovarsError, match="Instruments specified"):
-        feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data())
+def test_iv_allows_identical_instrument_covariate_terms(term):
+    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
+    assert "X2" in fit.coef().index
 
 
 def test_iv_errors():
@@ -305,9 +309,6 @@ def test_iv_errors():
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
     with pytest.raises(UnderDeterminedIVError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
-    # instrument specified as covariate
-    with pytest.raises(InstrumentsAsCovarsError):
-        feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
     # endogenous variable specified as covariate
     with pytest.raises(EndogVarsAsCovarsError):
         feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
