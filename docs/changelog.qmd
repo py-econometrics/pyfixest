@@ -28,6 +28,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 Other things:
 
+- IV formulas preserve covariates named like generated fitted values, such as `X2_hat`, and support interacted endogenous terms such as `X2:Z2`. Nested IV blocks raise a clear formula error. Fixes [#1736](https://github.com/py-econometrics/pyfixest/issues/1736) and [#1808](https://github.com/py-econometrics/pyfixest/issues/1808).
+
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.

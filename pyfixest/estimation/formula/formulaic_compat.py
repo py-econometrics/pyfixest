@@ -11,12 +11,15 @@ import formulaic
 import formulaic.formula
 import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor
+from formulaic.parser import DefaultOperatorResolver
+from formulaic.parser.types import Factor, Operator, OrderedSet, Term, Token
 from formulaic.utils import variables as formulaic_variables
 from formulaic.utils.code import format_expr
 from formulaic.utils.stateful_transforms import _is_stateful_transform
+from formulaic.utils.structured import Structured
 from formulaic.utils.variables import Variable
 
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
     is_i_contrast_state_key,
@@ -93,6 +96,64 @@ class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
 
+def _iv_block(
+    lhs: OrderedSet[Term], rhs: OrderedSet[Term]
+) -> Structured[OrderedSet[Term]]:
+    """Preserve multistage formula terms without generating `_hat` placeholders."""
+    if isinstance(lhs, Structured) or isinstance(rhs, Structured):
+        raise FormulaSyntaxError(
+            "Nested instrumental-variable specifications are not supported. "
+            "Use a single `[endogenous ~ instruments]` block."
+        )
+    return Structured(OrderedSet(), deps=(Structured(lhs=lhs, rhs=rhs),))
+
+
+class PyfixestOperatorResolver(DefaultOperatorResolver):
+    """Let pyfixest construct IV stages from their original parsed terms."""
+
+    @staticmethod
+    def _is_multistage_formula_operator(operator: Operator) -> bool:
+        """Identify the `~` operator used inside `[endogenous ~ instruments]`."""
+        return (
+            operator.symbol == "~"
+            # A multistage `~` takes two arguments (endogenous ~ exogenous)
+            and operator.arity == 2
+            # A multistage `~` only accepts brackets as context
+            and operator.accepts_context([Token("[", kind=Token.Kind.CONTEXT)])
+            # A top-level `~` only accepts an empty context `[]`
+            and not operator.accepts_context([])
+        )
+
+    @property
+    def operators(self) -> list[Operator]:
+        """Replace only the bracketed IV operator, preserving Formulaic's grammar."""
+        operators = super().operators
+        multistage_operator_positions = [
+            position
+            for position, operator in enumerate(operators)
+            if self._is_multistage_formula_operator(operator)
+        ]
+        if len(multistage_operator_positions) != 1:
+            raise FormulaicCompatibilityError(
+                "Formulaic's operator definitions changed: expected exactly one "
+                "multistage '~' operator definition."
+            )
+        position = multistage_operator_positions[0]
+        operator = operators[position]
+        operators[position] = Operator(
+            operator.symbol,
+            arity=operator.arity,
+            precedence=operator.precedence,
+            associativity=operator.associativity,
+            fixity=operator.fixity,
+            to_terms=_iv_block,
+            accepts_context=operator.accepts_context,
+            structural=operator.structural,
+            disabled=operator.disabled,
+        )
+        return operators
+
+
 def get_fixed_effect_encoding(
     *, transform_state: Mapping[str, Any], column: str
 ) -> FixedEffectEncoding:
@@ -167,27 +228,6 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
             "expose `.lhs` and `.rhs` formulas."
         )
     return block
-
-
-def filter_multistage_endogenous_terms(
-    exogenous: formulaic.formula.Formula,
-    endogenous_terms: Iterable[Any],
-) -> formulaic.formula.SimpleFormula:
-    """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
-    # formulaic internal: MULTISTAGE renames each endogenous *term* to
-    # "<term>_hat" in the second-stage RHS -- `log(X2)` becomes `log(X2)_hat`,
-    # not `X2_hat`. If formulaic changes the suffix, compat tests catch it.
-    generated_endogenous = {f"{term}_hat" for term in endogenous_terms}
-    terms = list(exogenous.root)
-    missing = generated_endogenous - {str(term) for term in terms}
-    if missing:
-        raise FormulaicCompatibilityError(
-            "formulaic MULTISTAGE endogenous suffix changed: expected generated "
-            f"second-stage terms {sorted(missing)} to be present before filtering."
-        )
-    return formulaic.formula.SimpleFormula(
-        [term for term in terms if str(term) not in generated_endogenous]
-    )
 
 
 def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:

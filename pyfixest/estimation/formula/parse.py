@@ -20,8 +20,8 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
+    PyfixestOperatorResolver,
     count_multistage_blocks,
-    filter_multistage_endogenous_terms,
     formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
@@ -41,6 +41,7 @@ from pyfixest.estimation.formula.utils import (
 )
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
+    operator_resolver=PyfixestOperatorResolver(),
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
@@ -441,7 +442,7 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
+            exogenous = formulaic.formula.SimpleFormula(exogenous.root)
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.is_fixed_effects and exogenous_terms:
