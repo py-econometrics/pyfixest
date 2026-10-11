@@ -31,6 +31,10 @@ class UnderDeterminedIVError(Exception):  # noqa: D101
     pass
 
 
+class IVIdentificationError(Exception):  # noqa: D101
+    pass
+
+
 class UnsupportedMultipleEstimationSyntax(Exception):  # noqa: D101
     pass
 
@@ -86,6 +90,7 @@ __all__ = [
     "FixedEffectInteractionError",
     "FormulaSyntaxError",
     "InstrumentsAsCovarsError",
+    "IVIdentificationError",
     "MatrixNotFullRankError",
     "MissingModelDataError",
     "NanInClusterVarError",
