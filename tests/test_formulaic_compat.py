@@ -591,6 +591,8 @@ def test_formulaic_284_transform_state_reused(data):
         ("Q('my var')", {"my var"}),
         ("{X1 * X2}", {"X1", "X2"}),
         ("i(f1, X1)", {"f1", "X1"}),
+        ("my_fun(X1)", {"X1"}),
+        ("X1.fillna(0)", {"X1"}),
     ],
 )
 def test_required_variables_preserve_quoted_names(rhs, expected):
@@ -632,6 +634,20 @@ def test_iv_rejects_quoted_variable_overlap(fml, error):
     """Quoted transformations must not hide a variable used in both IV roles."""
     with pytest.raises(error, match="my var"):
         Formula.parse(fml)
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f1) + [X2 ~ i(f2)]",
+        "Y ~ my_fun(X1) + [X2 ~ my_fun(Z1)]",
+        "Y ~ my_fun(X1) + [my_fun(X2) ~ Z1]",
+    ],
+)
+def test_iv_allows_shared_callable_names(fml):
+    """A shared callable name does not constitute shared data dependencies."""
+    parsed = Formula.parse(fml)[0]
+    assert parsed.is_instrumental_variable
 
 
 @pytest.mark.parametrize(
