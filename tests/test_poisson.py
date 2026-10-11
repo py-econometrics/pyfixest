@@ -233,7 +233,7 @@ def test_separation_preserves_fitted_transform_state(regressor):
         separation_check=["ir"],
     )
     fit = pf.fepois(
-        f"y ~ {regressor} | np.floor(center(c))",
+        f"y ~ {regressor} | g",
         data=data,
         fixef_rm="none",
         separation_check=["ir"],
