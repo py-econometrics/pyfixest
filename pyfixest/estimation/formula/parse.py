@@ -541,8 +541,13 @@ class Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
+        instruments = (
+            self.instruments
+            if any(term == "1" for term in self.exogenous)
+            else terms_without_intercept(self.instruments)
+        )
         rhs = formulaic.formula.SimpleFormula(
-            itertools.chain(self.instruments, self.exogenous)
+            itertools.chain(instruments, self.exogenous)
         )
         return Formula(
             _formula=formulaic.formula.StructuredFormula(
