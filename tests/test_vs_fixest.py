@@ -2129,7 +2129,7 @@ def test_separation_retained_design_against_fixest(case):
         )
         data["g"] = np.floor(data.c - data.c.mean())
         data["transformed_x"] = np.sin(data.x - data.x.mean())
-        formula = "y ~ np.sin(center(x)) | np.floor(center(c))"
+        formula = "y ~ np.sin(center(x)) | g"
         reference_formula = "y ~ transformed_x | g"
         n_obs = 55
     else:
