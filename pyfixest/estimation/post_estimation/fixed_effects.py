@@ -309,6 +309,31 @@ def contrast_code_fixed_effects(
     Otherwise omit its smallest observed code, as for every subsequent FE.
     Gaps caused by missing-row or singleton removal stay absent.
     """
+
+    def get_observed_codes_and_positions(
+        codes: NDArray[np.int64],
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp]]:
+        # Get number of occurrences of each fixed-effect level code in ascending order
+        fixed_effect_level_counts = np.bincount(codes)
+        observed_codes = np.flatnonzero(fixed_effect_level_counts)
+        # Map each code to its position in the sorted observed-code array.
+        code_to_position = np.full(
+            fixed_effect_level_counts.shape[0], -1, dtype=np.intp
+        )
+        code_to_position[observed_codes] = np.arange(observed_codes.shape[0])
+        return observed_codes, code_to_position[codes]
+
+    def normalize_fixed_effect_levels(
+        observed_codes: NDArray[np.int64],
+        level_indices: NDArray[np.intp],
+        *,
+        keep_all: bool,
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp], int]:
+        first_coefficient = 0 if keep_all else 1
+        coefficient_codes = observed_codes[first_coefficient:]
+        retained_rows = np.flatnonzero(level_indices >= first_coefficient)
+        return coefficient_codes, retained_rows, first_coefficient
+
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     rows = []
     columns = []
@@ -317,14 +342,17 @@ def contrast_code_fixed_effects(
         zip(column_names, fixed_effects.columns, strict=True)
     ):
         codes = fixed_effects[column].to_numpy(dtype=np.int64)
-        observed_codes = np.unique(codes)
-        keep_all = position == 0 and not has_intercept
-        coefficient_codes = observed_codes if keep_all else observed_codes[1:]
-        retained = (
-            np.ones(len(codes), dtype=bool) if keep_all else codes != observed_codes[0]
+        observed_codes, level_indices = get_observed_codes_and_positions(codes)
+        # Apply normalization for fixed-effect levels
+        coefficient_codes, retained_rows, first_coefficient = (
+            normalize_fixed_effect_levels(
+                observed_codes,
+                level_indices,
+                keep_all=position == 0 and not has_intercept,
+            )
         )
-        rows.append(np.flatnonzero(retained))
-        columns.append(np.searchsorted(coefficient_codes, codes[retained]) + offset)
+        rows.append(retained_rows)
+        columns.append(level_indices[retained_rows] - first_coefficient + offset)
         coefficient_positions[name] = FixedEffectCoefficientPositions(
             observed_codes=observed_codes,
             coefficient_codes=coefficient_codes,
