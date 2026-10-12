@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 import formulaic
 import numpy as np
 import pandas as pd
-from formulaic import ModelSpec
-from formulaic.parser import DefaultFormulaParser
-from formulaic.parser.types import Term
 from numpy._typing import NDArray
 from scipy.sparse import csc_matrix
 
@@ -300,72 +297,84 @@ def get_fixed_effect_encoding_data(
     )
 
 
-def get_fixed_effect_coefficient_positions(
-    term: Term,
-    model_spec: ModelSpec,
-) -> FixedEffectCoefficientPositions:
-    """
-    Align one fixed-effect term's codes with positions in the coefficient vector.
-
-    Formulaic stores the coefficients for all fixed-effect terms in one model
-    matrix. The returned coefficient positions select the entries belonging to
-    `term`. The returned codes identify which encoded fixed-effect levels those
-    entries represent.
-
-    For a full-rank term, every encoded level observed in the estimation sample
-    has a coefficient. For a reduced-rank term, formulaic omits the reference
-    level, so its code is absent from `coefficient_codes` but remains in
-    `observed_codes`. Codes absent from `observed_codes`, such as singleton
-    levels removed before estimation, must not be treated as reference levels.
-
-    Returns
-    -------
-    FixedEffectCoefficientPositions
-        Observed codes, codes represented in the coefficient vector, and their
-        positions in that vector.
-    """
-    (factor,) = term.factors
-    contrasts_state = model_spec.factor_contrasts[factor]
-    coefficient_indices = model_spec.term_indices[term]
-    coefficient_codes = contrasts_state.contrasts.get_coding_column_names(
-        contrasts_state.levels,
-        reduced_rank=len(coefficient_indices) < len(contrasts_state.levels),
-    )
-    return FixedEffectCoefficientPositions(
-        observed_codes=np.asarray(contrasts_state.levels, dtype=np.int64),
-        coefficient_codes=np.asarray(coefficient_codes, dtype=np.int64),
-        coefficient_indices=np.asarray(coefficient_indices, dtype=np.int64),
-    )
-
-
 def contrast_code_fixed_effects(
-    fixed_effects: Iterable[Term],
-    fixed_effect_names: Iterable[str],
-    data: pd.DataFrame,
-    context: Mapping[str, Any],
-    transform_state: Mapping[str, Any],
+    *,
+    fixed_effects: pd.DataFrame,
+    column_names: Sequence[str],
 ) -> FixedEffectContrastCoding:
-    """Build the sparse FE dummy matrix and record its coefficient alignment."""
-    contrast_coding = formulaic.Formula(
-        [f"C({fixed_effect})" for fixed_effect in fixed_effects],
-        _parser=DefaultFormulaParser(include_intercept=False),
-    )
-    matrix = contrast_coding.get_model_matrix(
-        data,
-        output="sparse",
-        ensure_full_rank=True,
-        context=context,
-        transform_state=transform_state,
-    )
-    coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
-    for fixed_effect_name, term in zip(
-        fixed_effect_names, matrix.model_spec.terms, strict=True
-    ):
-        coefficient_positions[fixed_effect_name] = (
-            get_fixed_effect_coefficient_positions(term, matrix.model_spec)
-        )
+    """Build sparse dummies directly from retained estimation-sample codes.
 
+    Keep every observed level of the first FE. Omit the smallest observed code
+    of each subsequent FE.
+    Gaps caused by missing-row or singleton removal stay absent.
+    """
+
+    def index_observed_codes(
+        codes: NDArray[np.int64],
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp]]:
+        """Return sorted observed codes and each row's position among them.
+
+        Preserve original codes while assigning compact positions to observed levels.
+        """
+        # Get number of occurrences of each fixed-effect level code in ascending order
+        fixed_effect_level_counts = np.bincount(codes)
+        observed_codes = np.flatnonzero(fixed_effect_level_counts)
+        # Map each code to its position in the sorted observed-code array.
+        code_to_position = np.full(
+            fixed_effect_level_counts.shape[0], -1, dtype=np.intp
+        )
+        code_to_position[observed_codes] = np.arange(observed_codes.shape[0])
+        return observed_codes, code_to_position[codes]
+
+    def select_coefficient_levels(
+        observed_codes: NDArray[np.int64],
+        observed_positions: NDArray[np.intp],
+        *,
+        keep_all: bool,
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp], int]:
+        """Select coefficient codes and rows contributing dummy entries.
+
+        Unless keep_all is True, omit the smallest observed code as the reference.
+        """
+        first_coefficient_position = 0 if keep_all else 1
+        coefficient_codes = observed_codes[first_coefficient_position:]
+        dummy_rows = np.flatnonzero(observed_positions >= first_coefficient_position)
+        return coefficient_codes, dummy_rows, first_coefficient_position
+
+    coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
+    rows = []
+    columns = []
+    offset = 0
+    for position, (name, column) in enumerate(
+        zip(column_names, fixed_effects.columns, strict=True)
+    ):
+        codes = fixed_effects[column].to_numpy(dtype=np.int64)
+        observed_codes, observed_positions = index_observed_codes(codes)
+        # Apply normalization for fixed-effect levels
+        coefficient_codes, dummy_rows, first_coefficient_position = (
+            select_coefficient_levels(
+                observed_codes,
+                observed_positions,
+                keep_all=position == 0,
+            )
+        )
+        rows.append(dummy_rows)
+        columns.append(
+            observed_positions[dummy_rows] - first_coefficient_position + offset
+        )
+        coefficient_positions[name] = FixedEffectCoefficientPositions(
+            observed_codes=observed_codes,
+            coefficient_codes=coefficient_codes,
+            coefficient_indices=np.arange(offset, offset + len(coefficient_codes)),
+        )
+        offset += len(coefficient_codes)
+
+    row_indices = np.concatenate(rows)
+    column_indices = np.concatenate(columns)
+    matrix = csc_matrix(
+        (np.ones(len(row_indices)), (row_indices, column_indices)),
+        shape=(len(fixed_effects), offset),
+    )
     return FixedEffectContrastCoding(
-        matrix=cast(csc_matrix, matrix),
-        coefficient_positions=coefficient_positions,
+        matrix=matrix, coefficient_positions=coefficient_positions
     )
