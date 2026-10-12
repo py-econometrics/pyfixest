@@ -101,6 +101,7 @@ def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[
         for term in formula
         for factor in term.factors
         for variable in factor.required_variables
+        if Variable.Role.CALLABLE not in variable.roles  # ignore transforms
     }
 
 

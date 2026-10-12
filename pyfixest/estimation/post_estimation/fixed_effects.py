@@ -301,14 +301,46 @@ def contrast_code_fixed_effects(
     *,
     fixed_effects: pd.DataFrame,
     column_names: Sequence[str],
-    has_intercept: bool = False,
 ) -> FixedEffectContrastCoding:
     """Build sparse dummies directly from retained estimation-sample codes.
 
-    Without a separate intercept, keep every observed level of the first FE.
-    Otherwise omit its smallest observed code, as for every subsequent FE.
+    Keep every observed level of the first FE. Omit the smallest observed code
+    of each subsequent FE.
     Gaps caused by missing-row or singleton removal stay absent.
     """
+
+    def index_observed_codes(
+        codes: NDArray[np.int64],
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp]]:
+        """Return sorted observed codes and each row's position among them.
+
+        Preserve original codes while assigning compact positions to observed levels.
+        """
+        # Get number of occurrences of each fixed-effect level code in ascending order
+        fixed_effect_level_counts = np.bincount(codes)
+        observed_codes = np.flatnonzero(fixed_effect_level_counts)
+        # Map each code to its position in the sorted observed-code array.
+        code_to_position = np.full(
+            fixed_effect_level_counts.shape[0], -1, dtype=np.intp
+        )
+        code_to_position[observed_codes] = np.arange(observed_codes.shape[0])
+        return observed_codes, code_to_position[codes]
+
+    def select_coefficient_levels(
+        observed_codes: NDArray[np.int64],
+        observed_positions: NDArray[np.intp],
+        *,
+        keep_all: bool,
+    ) -> tuple[NDArray[np.int64], NDArray[np.intp], int]:
+        """Select coefficient codes and rows contributing dummy entries.
+
+        Unless keep_all is True, omit the smallest observed code as the reference.
+        """
+        first_coefficient_position = 0 if keep_all else 1
+        coefficient_codes = observed_codes[first_coefficient_position:]
+        dummy_rows = np.flatnonzero(observed_positions >= first_coefficient_position)
+        return coefficient_codes, dummy_rows, first_coefficient_position
+
     coefficient_positions: dict[str, FixedEffectCoefficientPositions] = {}
     rows = []
     columns = []
@@ -317,14 +349,19 @@ def contrast_code_fixed_effects(
         zip(column_names, fixed_effects.columns, strict=True)
     ):
         codes = fixed_effects[column].to_numpy(dtype=np.int64)
-        observed_codes = np.unique(codes)
-        keep_all = position == 0 and not has_intercept
-        coefficient_codes = observed_codes if keep_all else observed_codes[1:]
-        retained = (
-            np.ones(len(codes), dtype=bool) if keep_all else codes != observed_codes[0]
+        observed_codes, observed_positions = index_observed_codes(codes)
+        # Apply normalization for fixed-effect levels
+        coefficient_codes, dummy_rows, first_coefficient_position = (
+            select_coefficient_levels(
+                observed_codes,
+                observed_positions,
+                keep_all=position == 0,
+            )
         )
-        rows.append(np.flatnonzero(retained))
-        columns.append(np.searchsorted(coefficient_codes, codes[retained]) + offset)
+        rows.append(dummy_rows)
+        columns.append(
+            observed_positions[dummy_rows] - first_coefficient_position + offset
+        )
         coefficient_positions[name] = FixedEffectCoefficientPositions(
             observed_codes=observed_codes,
             coefficient_codes=coefficient_codes,

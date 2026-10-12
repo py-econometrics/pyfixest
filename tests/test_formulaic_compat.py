@@ -536,6 +536,7 @@ def test_formulaic_284_transform_state_reused(data):
         ("I(`my var`)", {"my var"}),
         ("Q('my var')", {"my var"}),
         ("{X1 * X2}", {"X1", "X2"}),
+        ("i(f1, X1)", {"f1", "X1"}),
     ],
 )
 def test_required_variables_preserve_quoted_names(rhs, expected):
