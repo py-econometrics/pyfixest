@@ -64,6 +64,7 @@ def test_integer_XY():
     np.testing.assert_allclose(fit1.coef().xs("X"), fit2.coef().xs("X"))
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("dtype", ["Float64", "Int64"])
 def test_log_nullable_dtype(dtype):
     # log() drops pd.NA rows like non-positive ones (#1807).
@@ -73,12 +74,33 @@ def test_log_nullable_dtype(dtype):
     x3 = data["X3"].to_numpy(dtype="float64", na_value=np.nan)
     data["log_X3"] = np.log(np.where(x3 > 0, x3, np.nan))
 
-    with pytest.warns(UserWarning, match="4 rows with infinite values detected"):
-        fit = feols("Y ~ log(X3)", data=data)
+    fit = feols("Y ~ log(X3)", data=data)
     expected = feols("Y ~ log_X3", data=data)
 
     np.testing.assert_allclose(fit.coef().to_numpy(), expected.coef().to_numpy())
     assert fit.sample_info.n_obs == expected.sample_info.n_obs
+
+
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+def test_log_drop_stages():
+    # log() is np.log: zero and inf rows drop as infinite, negative and NaN
+    # rows as missing, and predict() returns -inf/NaN like fixest (#1806).
+    data = get_data().dropna(subset=["Y", "X2"]).reset_index(drop=True)
+    data["Xp"] = data["X2"].abs() + 1
+    data.loc[[0, 1, 2], "Xp"] = 0.0
+    data.loc[[3, 4], "Xp"] = -1.0
+    data.loc[5, "Xp"] = np.nan
+    data.loc[6, "Xp"] = np.inf
+
+    fit = feols("Y ~ log(Xp)", data=data)
+
+    assert fit.sample_info.dropped_by_stage.missing == 3
+    assert fit.sample_info.dropped_by_stage.infinite == 4
+    assert fit.sample_info.n_obs == len(data) - 7
+
+    y_hat = fit.predict(newdata=data.head(7))
+    assert np.isinf(y_hat[[0, 1, 2, 6]]).all()
+    assert np.isnan(y_hat[[3, 4, 5]]).all()
 
 
 def test_coef_update():

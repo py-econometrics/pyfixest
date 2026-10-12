@@ -262,6 +262,31 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     assert fit.sample_info.dropped_by_stage == model_matrix.dropped_by_stage
 
 
+def test_zero_weight_rows_are_dropped_and_counted() -> None:
+    """Zero-weight rows are dropped before singletons and counted separately."""
+    data = pf.get_data().dropna()
+    data.loc[data.index[:5], "weights"] = 0.0
+    data.loc[data.index[5], "Y"] = np.nan
+
+    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+        fit = pf.feols("Y ~ X1 | f1", data=data, weights="weights")
+    expected = pf.feols(
+        "Y ~ X1 | f1", data=data[data["weights"] != 0], weights="weights"
+    )
+
+    assert fit.sample_info.dropped_by_stage == DroppedRowCounts(
+        missing=1, zero_weight=5
+    )
+    assert fit.sample_info.dropped_row_index == frozenset(range(6))
+    assert fit.sample_info.n_rows == expected.sample_info.n_rows
+    pd.testing.assert_series_equal(fit.coef(), expected.coef())
+    pd.testing.assert_series_equal(fit.se(), expected.se())
+
+    data.loc[data.index[6], "weights"] = -1.0
+    with pytest.raises(ValueError, match="must have only non-negative values"):
+        pf.feols("Y ~ X1 | f1", data=data, weights="weights")
+
+
 @pytest.mark.parametrize("stage", ["missing", "separation"])
 def test_model_matrix_without_rows_returns_filtered_copy(
     lifecycle_data: pd.DataFrame,
@@ -377,11 +402,13 @@ def test_gaussian_glm_performance_uses_explicit_response_domains(
     if observation_weights is None:
         ssu = np.sum(residuals**2)
         ssy = np.sum((response - np.mean(response)) ** 2)
+        sum_weights = fit.sample_info.n_obs
     else:
         ssu = np.sum(observation_weights * residuals**2)
         center = np.average(response, weights=observation_weights)
         ssy = np.sum(observation_weights * (response - center) ** 2)
-    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / fit.sample_info.n_obs))
+        sum_weights = np.sum(observation_weights)
+    np.testing.assert_allclose(fitstat.rmse, np.sqrt(ssu / sum_weights))
     np.testing.assert_allclose(fitstat.r2, 1 - ssu / ssy)
     if fit.model.has_fixef:
         assert observation_weights is not None

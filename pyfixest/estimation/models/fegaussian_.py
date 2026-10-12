@@ -1,22 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import replace
-from typing import Any
+from typing import ClassVar
 
-import pandas as pd
-
-from pyfixest.core.demean import Preconditioner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.families import GAUSSIAN
+from pyfixest.estimation.internals.families import GAUSSIAN, GlmFamily
 from pyfixest.estimation.internals.fit_statistics import (
     FitStatistics,
     linear_fit_statistics,
-)
-from pyfixest.estimation.internals.model_state import (
-    GlmEstimationOptions,
-    ModelDescription,
-    SampleSplit,
 )
 from pyfixest.estimation.internals.vcov_ import vcov_iid_ols
 from pyfixest.estimation.internals.vcov_utils import VcovTerm
@@ -26,29 +15,7 @@ from pyfixest.estimation.models.feglm_ import Feglm
 class Fegaussian(Feglm):
     "Class for the estimation of a fixed-effects GLM with normal errors."
 
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        *,
-        options: GlmEstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split: SampleSplit | None = None,
-    ):
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            options=options,
-            lookup_demeaned_data=lookup_demeaned_data,
-            lookup_preconditioner=lookup_preconditioner,
-            sample_split=sample_split,
-            family=GAUSSIAN,
-        )
-
-    def _describe_model(self, **kwargs: Any) -> ModelDescription:
-        """Name the Gaussian estimation function."""
-        return replace(super()._describe_model(**kwargs), method="feglm-gaussian")
+    _family: ClassVar[GlmFamily] = GAUSSIAN
 
     def _vcov_iid(self) -> VcovTerm:
         # we set gaussian glms to match pf.feols exactly

@@ -41,8 +41,8 @@ class Feglm(Feols):
     Returned by [feglm()](/reference/estimation.api.feglm.feglm.qmd). Fixed
     effects are handled via iteratively reweighted least squares with demeaning,
     following Stammann (2018),
-    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with
-    the `family` argument and implemented by a subclass. `poisson` dispatches to
+    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The `family` argument
+    selects a subclass that declares its `GlmFamily`. `poisson` dispatches to
     [Fepois](/reference/estimation.models.fepois_.Fepois.qmd).
 
     Examples
@@ -63,6 +63,8 @@ class Feglm(Feols):
     _n_fe_after_separation: int | None = None
     # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
+    # Link, variance, deviance, and method name; each subclass declares one.
+    _family: ClassVar[GlmFamily]
 
     # No CRV3: the inherited slow jackknife refits with the linear/Poisson
     # APIs and cannot yet preserve a generic GLM family's estimation contract.
@@ -87,14 +89,10 @@ class Feglm(Feols):
         data: pd.DataFrame,
         *,
         options: GlmEstimationOptions,
-        family: GlmFamily,
         lookup_demeaned_data: dict[frozenset[int], DemeanedData],
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
-        # `_describe_model()`, called by the base constructor, names the
-        # family's inference distribution.
-        self._family = family
         super().__init__(
             FixestFormula=FixestFormula,
             data=data,
@@ -111,10 +109,10 @@ class Feglm(Feols):
         )
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
-        """Describe a GLM fit and the inference distribution of its family."""
+        """Describe a GLM fit by its family's method and inference distribution."""
         return replace(
             super()._describe_model(**kwargs),
-            method="feglm",
+            method=self._family.method,
             inference_dist=self._family.inference_dist,
         )
 

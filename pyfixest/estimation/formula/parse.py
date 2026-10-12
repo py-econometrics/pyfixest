@@ -371,9 +371,8 @@ class Formula:
     def is_fixed_effects(self) -> bool:
         """Boolean indicating whether the formula is a fixed effects specification."""
         # A MULTIPART formula is a tuple of formulas on the right hand side
-        return (
-            isinstance(self._formula.rhs, tuple)
-            and str(self._formula.rhs[-1]) not in ["", "0", "1"]  # ignore intercept
+        return isinstance(self._formula.rhs, tuple) and any(
+            terms_without_intercept(self._formula.rhs[-1])
         )
 
     @property
@@ -442,19 +441,32 @@ class Formula:
         )
 
     @property
-    def second_stage(self) -> str:
-        """The second stage formula."""
-        right_hand_side = list(self.exogenous)
+    def second_stage(self) -> formulaic.formula.StructuredFormula:
+        """Parsed response and regressors for second-stage materialization."""
+        terms = list(self.exogenous)
         if self.is_instrumental_variable:
-            right_hand_side += list(self.endogenous)
-        return f"{self.dependent} ~ {formulaic.formula.SimpleFormula(right_hand_side)}"
+            terms.extend(self.endogenous)
+        # Preserve the existing reduced-rank categorical encoding for FE models.
+        # ModelMatrix removes this encoding intercept after materialization.
+        if self.is_fixed_effects and terms and not any(term == "1" for term in terms):
+            terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
+        return formulaic.formula.StructuredFormula(
+            lhs=self.dependent, rhs=formulaic.formula.SimpleFormula(terms)
+        )
 
-    @property
-    def first_stage(self) -> str:
-        """The first stage formula of an instrumental variable specification."""
+    def as_first_stage(self) -> Formula:
+        """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        return f"{self.endogenous} ~ {formulaic.formula.SimpleFormula([term for term in itertools.chain(self.instruments, self.exogenous)])}"
+        rhs = formulaic.formula.SimpleFormula(
+            itertools.chain(self.instruments, self.exogenous)
+        )
+        return Formula(
+            _formula=formulaic.formula.StructuredFormula(
+                lhs=self.endogenous,
+                rhs=(rhs, self.fixed_effects) if self.is_fixed_effects else rhs,
+            )
+        )
 
     @classmethod
     def parse(cls, formula: str) -> list[Formula]:
@@ -467,20 +479,6 @@ class Formula:
             Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
-
-    @classmethod
-    def parse_to_dict(cls, formula: str) -> dict[str | None, list[Formula]]:
-        """Group parsed formulas into dictionary keyed by fixed effects."""
-        formulas = cls.parse(formula)
-        result: dict[str | None, list[Formula]] = {}
-        for parsed_formula in formulas:
-            fixed_effects = (
-                str(parsed_formula.fixed_effects)
-                if parsed_formula.is_fixed_effects
-                else None
-            )
-            result.setdefault(fixed_effects, []).append(parsed_formula)
-        return result
 
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:

@@ -369,7 +369,7 @@ class TestParenthesisPair:
 
 
 class TestFormulaParse:
-    """Tests for Formula.parse() and Formula.parse_to_dict()."""
+    """Tests for Formula.parse()."""
 
     @pytest.mark.parametrize(
         "formula,expected_count",
@@ -415,7 +415,7 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 + X2")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ 1 + X1 + X2"
+        assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + X2")
         assert not f.is_fixed_effects
         assert not f.is_instrumental_variable
 
@@ -424,37 +424,23 @@ class TestFormulaParse:
         result = Formula.parse("Y ~ X1 | f1")
         assert len(result) == 1
         f = result[0]
-        assert f.second_stage == "Y ~ X1"
+        assert f.second_stage == formulaic.Formula("Y ~ X1")
         assert str(f.fixed_effects) == "f1"
 
     # def test_parse_iv(self):
     #     result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
     #     assert len(result) == 1
     #     f = result[0]
-    #     assert f.second_stage == "Y ~ X1 + Z1"
+    #     assert f.second_stage == formulaic.Formula("Y ~ X1 + Z1")
     #     assert f.fixed_effects == "f1"
-    #     assert f.first_stage == "Z1 ~ W1"
+    #     assert f.as_first_stage().second_stage == "Z1 ~ W1"
 
     def test_parse_multiple_dependents(self):
         """Y + Y2 ~ X1 is preprocessed to sw(Y, Y2) ~ X1."""
         result = Formula.parse("Y + Y2 ~ X1")
         assert len(result) == 2
-        assert result[0].second_stage == "Y ~ 1 + X1"
-        assert result[1].second_stage == "Y2 ~ 1 + X1"
-
-    def test_parse_to_dict_groups_by_fe(self):
-        """Test parsing of formulas into dictionary."""
-        result = Formula.parse_to_dict("Y ~ X1 | sw(f1, f2)")
-        assert "f1" in result
-        assert "f2" in result
-        assert len(result["f1"]) == 1
-        assert len(result["f2"]) == 1
-
-    def test_parse_to_dict_no_fe(self):
-        """Test parsing of formulas into dictionary without fixed effects."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-        assert len(result[None]) == 1
+        assert result[0].second_stage == formulaic.Formula("Y ~ 1 + X1")
+        assert result[1].second_stage == formulaic.Formula("Y2 ~ 1 + X1")
 
     def test_parse_sw_in_fe_and_independent(self):
         """Cross-product: sw in both independent and FE."""
@@ -468,14 +454,17 @@ class TestFormulaParse:
         second_stages = [f.second_stage for f in result]
         fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
-            "Y1 ~ X1",
-            "Y1 ~ X1",
-            "Y1 ~ X2",
-            "Y1 ~ X2",
-            "Y2 ~ X1",
-            "Y2 ~ X1",
-            "Y2 ~ X2",
-            "Y2 ~ X2",
+            formulaic.Formula(stage)
+            for stage in [
+                "Y1 ~ X1",
+                "Y1 ~ X1",
+                "Y1 ~ X2",
+                "Y1 ~ X2",
+                "Y2 ~ X1",
+                "Y2 ~ X1",
+                "Y2 ~ X2",
+                "Y2 ~ X2",
+            ]
         ]
         assert fixed_effects == [
             "f1",
@@ -511,14 +500,17 @@ class TestFormulaParse:
         second_stages = [f.second_stage for f in result]
         fixed_effects = [str(f.fixed_effects) for f in result]
         assert second_stages == [
-            "Y ~ 1",
-            "Y ~ 1",
-            "Y ~ X1",
-            "Y ~ X1",
-            "Y ~ X2",
-            "Y ~ X2",
-            "Y ~ X1 + X2",
-            "Y ~ X1 + X2",
+            formulaic.Formula(stage)
+            for stage in [
+                "Y ~ 1",
+                "Y ~ 1",
+                "Y ~ X1",
+                "Y ~ X1",
+                "Y ~ X2",
+                "Y ~ X2",
+                "Y ~ X1 + X2",
+                "Y ~ X1 + X2",
+            ]
         ]
         assert fixed_effects == [
             "f1",
@@ -530,13 +522,6 @@ class TestFormulaParse:
             "f1",
             "f1 + f2",
         ]
-
-    def test_parse_to_dict_csw0_fe_groups(self):
-        """parse_to_dict should group csw0 FE correctly, with None for zero-step."""
-        result = Formula.parse_to_dict("Y ~ X1 | csw0(f1, f2)")
-        assert None in result  # zero step
-        assert "f1" in result
-        assert "f1 + f2" in result
 
 
 class TestFixedEffectInteractions:
@@ -1036,17 +1021,7 @@ class TestEdgeCases:
         """Test intercept only."""
         result = Formula.parse("Y ~ 1")
         assert len(result) == 1
-        assert result[0].second_stage == "Y ~ 1"
-
-    def test_no_fe_in_dict(self):
-        """No fixed effects results in None key in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1")
-        assert None in result
-
-    def test_fe_key_in_dict(self):
-        """Fixed effects are used as keys in parse_to_dict."""
-        result = Formula.parse_to_dict("Y ~ X1 | f1")
-        assert "f1" in result
+        assert result[0].second_stage == formulaic.Formula("Y ~ 1")
 
     def test_multiple_dependent_variables(self):
         """Test multiple independent variables."""
@@ -1065,7 +1040,7 @@ class TestEdgeCases:
         """A `+` nested in a transform is not a multiple-dependent separator."""
         result = Formula.parse(formula)
         assert len(result) == 1
-        assert result[0].second_stage == expected_second_stage
+        assert result[0].second_stage == formulaic.Formula(expected_second_stage)
 
     def test_transformed_dependent_matches_precomputed_column(self, test_data):
         """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
@@ -1083,51 +1058,55 @@ class TestEdgeCases:
         """Endogenous variable should be added to second_stage covariates."""
         result = Formula.parse("Y ~ X1 | Z1 ~ W1")
         f = result[0]
-        assert "Z1" in f.second_stage
-        # assert f.first_stage == "Z1 ~ W1"
+        assert "Z1" in f.second_stage.rhs
+        # assert f.as_first_stage().second_stage == "Z1 ~ W1"
 
     def test_iv_transformed_endogenous_in_second_stage(self):
         """A transformed endogenous variable survives the _hat term filtering."""
         f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
-        assert f.second_stage == "Y ~ 1 + X1 + log(Z1)"
-        assert f.first_stage.startswith("log(Z1) ~")
+        assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
+        assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
 
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
         f = result[0]
-        assert "Z1" in f.second_stage
+        assert "Z1" in f.second_stage.rhs
         assert str(f.fixed_effects) == "f1"
-        assert str(f.first_stage) == "Z1 ~ 1 + W1 + X1"
+        first_stage = f.as_first_stage()
+        assert not first_stage.is_instrumental_variable
+        assert first_stage.fixed_effects == f.fixed_effects
+        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + W1 + X1")
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""
-        result_explicit = Formula.parse_to_dict("Y ~ X1 | 0")
-        result_implicit = Formula.parse_to_dict("Y ~ X1")
+        result_explicit = Formula.parse("Y ~ X1 | 0")
+        result_implicit = Formula.parse("Y ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects
 
     def test_explicit_no_fe_with_iv(self):
         """Y ~ 1 | 0 | Z1 ~ X1 and Y ~ 1 | Z1 ~ X1 should be equivalent."""
-        result_explicit = Formula.parse_to_dict("Y ~ 1 | 0 | Z1 ~ X1")
-        result_implicit = Formula.parse_to_dict("Y ~ 1 | Z1 ~ X1")
+        result_explicit = Formula.parse("Y ~ 1 | 0 | Z1 ~ X1")
+        result_implicit = Formula.parse("Y ~ 1 | Z1 ~ X1")
 
-        assert list(result_explicit.keys()) == [None]
-        assert list(result_implicit.keys()) == [None]
+        assert len(result_explicit) == len(result_implicit) == 1
 
-        f_explicit = result_explicit[None][0]
-        f_implicit = result_implicit[None][0]
+        f_explicit = result_explicit[0]
+        f_implicit = result_implicit[0]
         assert f_explicit.second_stage == f_implicit.second_stage
         assert not f_explicit.is_fixed_effects
         assert not f_implicit.is_fixed_effects
-        assert f_explicit.first_stage == f_implicit.first_stage
+        assert (
+            f_explicit.as_first_stage().second_stage
+            == f_implicit.as_first_stage().second_stage
+        )
 
     def test_formula_roundtrip(self):
         """Parsing a formula and reconstructing it should preserve structure."""
@@ -1153,4 +1132,7 @@ class TestEdgeCases:
                 == result[0].is_instrumental_variable
             )
             if result[0].is_instrumental_variable:
-                assert reparsed[0].first_stage == result[0].first_stage
+                assert (
+                    reparsed[0].as_first_stage().second_stage
+                    == result[0].as_first_stage().second_stage
+                )

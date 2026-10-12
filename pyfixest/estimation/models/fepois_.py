@@ -1,24 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import replace
-from typing import Any, ClassVar
+from typing import ClassVar
 
-import pandas as pd
-
-from pyfixest.core.demean import Preconditioner
-from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.families import POISSON
+from pyfixest.estimation.internals.families import POISSON, GlmFamily
 from pyfixest.estimation.internals.fit_statistics import (
     FitStatistics,
     poisson_fit_statistics,
 )
-from pyfixest.estimation.internals.model_state import (
-    Capabilities,
-    GlmEstimationOptions,
-    ModelDescription,
-    SampleSplit,
-)
+from pyfixest.estimation.internals.model_state import Capabilities
 from pyfixest.estimation.models.feglm_ import Feglm
 
 
@@ -74,6 +63,7 @@ class Fepois(Feglm):
     ```
     """
 
+    _family: ClassVar[GlmFamily] = POISSON
     _declared_capabilities: ClassVar[Capabilities] = Capabilities(
         covariance_update=True,
         crv3_inference=True,
@@ -88,30 +78,6 @@ class Fepois(Feglm):
         sherman_morrison_update=False,
         anytime_valid_inference=False,
     )
-
-    def __init__(
-        self,
-        FixestFormula: FixestFormula,
-        data: pd.DataFrame,
-        *,
-        options: GlmEstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
-        lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
-        sample_split: SampleSplit | None = None,
-    ) -> None:
-        super().__init__(
-            FixestFormula=FixestFormula,
-            data=data,
-            options=options,
-            lookup_demeaned_data=lookup_demeaned_data,
-            lookup_preconditioner=lookup_preconditioner,
-            sample_split=sample_split,
-            family=POISSON,
-        )
-
-    def _describe_model(self, **kwargs: Any) -> ModelDescription:
-        """Name the Poisson estimation function."""
-        return replace(super()._describe_model(**kwargs), method="fepois")
 
     def _fit_statistics(self) -> FitStatistics:
         "Add the Poisson likelihood measures to the deviance."

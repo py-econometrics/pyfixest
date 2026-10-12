@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -11,6 +13,9 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.internals.model_state import VcovSpec
+from pyfixest.estimation.post_estimation.ritest import _resample
+from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
     FEOLS_FORMULA_F3_CASES,
@@ -360,6 +365,10 @@ def test_single_fit_feols(
 
     check_absolute_diff(py_r2, r_r2, inference_tol, "py_r2 != r_r2")
     check_absolute_diff(py_adj_r2, r_adj_r2, inference_tol, "py_adj_r2 != r_adj_r2")
+
+    py_rmse = mod.fitstat.rmse
+    r_rmse = float(ro.r('fixest::fitstat(r_fixest, "rmse")$rmse')[0])
+    check_absolute_diff(py_rmse, r_rmse, inference_tol, "py_rmse != r_rmse")
 
     if not np.isnan(py_r2_within):
         check_absolute_diff(
@@ -1565,6 +1574,29 @@ def test_wls_na():
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1", "Y ~ X1 | f1"])
+def test_wls_zero_weights(fml):
+    """Zero-weight rows are dropped before estimation, as in R fixest."""
+    data = get_data().dropna()
+    data.loc[data.index[:5], "weights"] = 0.0
+
+    with pytest.warns(UserWarning, match="5 rows with zero weight dropped"):
+        fit_py = feols(fml, data=data, weights="weights", vcov="hetero")
+    fit_r = fixest.feols(
+        ro.Formula(fml),
+        data=data,
+        weights=ro.Formula("~ weights"),
+        vcov="hetero",
+        ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
+    )
+
+    assert fit_py.sample_info.n_obs == stats.nobs(fit_r)[0]
+    assert fit_py.sample_info.dropped_by_stage.zero_weight == 5
+    np.testing.assert_allclose(fit_py.coef(), stats.coef(fit_r), rtol=rtol, atol=atol)
+    np.testing.assert_allclose(fit_py.se(), fixest.se(fit_r), rtol=rtol, atol=atol)
+
+
 def _py_fml_to_r_fml(py_fml):
     """
     Covernt pyfixest formula.
@@ -1857,7 +1889,7 @@ def test_inf_dropping(fml, weights):
     n_zeros = (data.Y == 0).sum()
     with pytest.warns(
         UserWarning,
-        match=f"{n_zeros} rows with infinite values detected. These rows are dropped from the model.",
+        match=f"{n_zeros} rows with infinite values dropped from the model.",
     ):
         fit_py = feols(fml=fml, data=data, weights=weights, fixef_rm="none")
 
@@ -1900,3 +1932,408 @@ def _skip_f3_checks(fml, f3_type):
         pytest.skip(
             "No need to tests for different types of factor variable when not included in formula."
         )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Pending structural formula identity; regression from PR stack #1862",
+)
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_stepwise_fe_identity_against_fixest(data_feols, weights):
+    """#1776: colliding display formulas retain both distinct R partitions."""
+    data = data_feols.dropna().assign(fe_sum=lambda frame: frame.f1 + frame.f2)
+    fits = pf.feols(
+        "Y ~ X1 | sw({f1 + f2}, f1 + f2)",
+        data=data,
+        weights=weights,
+        vcov="iid",
+        fixef_rm="none",
+    ).to_list()
+    assert len(fits) == 2
+    for fit, fe_formula in zip(fits, ["fe_sum", "f1 + f2"], strict=True):
+        assert len(fit.model.fixed_effects) == fit.model_matrix.fixed_effects.shape[1]
+        fit.vcov({"CRV1": "f1"})
+        fit_r = fixest.feols(
+            ro.Formula(f"Y ~ X1 | {fe_formula}"),
+            data=data,
+            vcov=ro.Formula("~f1"),
+            fixef_rm="none",
+            **({"weights": ro.Formula("~weights")} if weights else {}),
+        )
+        np.testing.assert_allclose(
+            fit.coef()[["X1"]],
+            stats.coef(fit_r),
+            rtol=0,
+            atol=1e-8,
+            err_msg="stepwise FE coefficients != fixest",
+        )
+        np.testing.assert_allclose(
+            fit.se()[["X1"]],
+            fixest.se(fit_r),
+            rtol=0,
+            atol=1e-7,
+            err_msg="stepwise FE standard errors != fixest",
+        )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
+        ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
+        ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+    ],
+)
+def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
+    """Arithmetic factors retain their meaning through matrix construction."""
+    fit = pf.feols(fml, data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances for direct solves and inference.
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "vcov, fml, fml_r, renamed_terms",
+    [
+        pytest.param(
+            "iid",
+            "Y ~ X1 | `my fe`",
+            "Y ~ X1 | `my fe`",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            "iid",
+            "Y ~ X1 | firm.id",
+            "Y ~ X1 | firm.id",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param("iid", "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
+        pytest.param(
+            "iid",
+            "Y ~ X1 | `my fe`:f2",
+            "Y ~ X1 | `my fe`^f2",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param("iid", "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
+        pytest.param(
+            "iid",
+            "Y ~ X1 | I(f1 + f2)",
+            "Y ~ X1 | fe_sum",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            "iid",
+            "Y ~ X1 | f1:{f1 // 2}",
+            "Y ~ X1 | f1",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            "iid",
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
+            "Y ~ X2 | `my fe` | X1 ~ Z1",
+            {"X1": "my endog"},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X1 | `my fe`",
+            "Y ~ X1 | `my fe`",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X1 | firm.id",
+            "Y ~ X1 | firm.id",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X1 | `my fe`:f2",
+            "Y ~ X1 | `my fe`^f2",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param({"CRV1": "f1"}, "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X1 | I(f1 + f2)",
+            "Y ~ X1 | fe_sum",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X1 | f1:{f1 // 2}",
+            "Y ~ X1 | f1",
+            {},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+        pytest.param(
+            {"CRV1": "f1"},
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
+            "Y ~ X2 | `my fe` | X1 ~ Z1",
+            {"X1": "my endog"},
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+            ),
+        ),
+    ],
+)
+def test_quoted_fixed_effects_against_fixest(
+    data_feols, fml, fml_r, renamed_terms, vcov
+):
+    """#1735: quoted fixed-effect and IV names match fixest."""
+    data = data_feols.assign(
+        **{
+            "my outcome": data_feols.Y,
+            "my var": data_feols.X1,
+            "my endog": data_feols.X1,
+            "my instrument": data_feols.Z1,
+            "my fe": data_feols.f1,
+            "firm.id": data_feols.f1,
+            "a:b": data_feols.f1,
+            "fe_sum": data_feols.f1 + data_feols.f2,
+        }
+    )
+    fit = pf.feols(fml, data=data, vcov="iid")
+    # Reject misaligned FE labels before native cluster-nesting computation.
+    assert len(fit.model.fixed_effects) == fit.model_matrix.fixed_effects.shape[1]
+    fit.vcov(vcov)
+    fit_r = fixest.feols(
+        ro.Formula(fml_r),
+        data=data,
+        vcov="iid" if vcov == "iid" else ro.Formula("~f1"),
+    )
+    coef_r = stats.coef(fit_r)
+    names = [
+        renamed_terms.get(name, name)
+        for name in (
+            name.replace("(Intercept)", "Intercept")
+            .removeprefix("fit_")
+            .replace("`", "")
+            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+        )
+    ]
+    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    # Match the canonical linear-model tolerances: direct solves agree closely;
+    # FE projection and derived inference allow slightly more rounding error.
+    np.testing.assert_allclose(
+        fit.coef()[names], coef_r, rtol=0, atol=1e-8, err_msg="coefficients != fixest"
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(fit_r),
+        rtol=0,
+        atol=1e-7,
+        err_msg="standard errors != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+def test_parsed_no_intercept_refit_against_fixest(data_feols):
+    """#1759: replaying the parsed formula retains the absent intercept."""
+    fit = pf.feols("Y ~ X1 - 1", data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula("Y ~ X1 - 1"), data=data_feols, vcov="iid")
+    replay = refit(
+        fit,
+        data=fit._data,
+        vcov=VcovSpec(vcov_type="iid", vcov_type_detail="iid"),
+    )
+
+    assert list(fit.coef().index) == ["X1"]
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0])
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="no-intercept coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        replay.coef(),
+        fit.coef(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay added an intercept",
+    )
+    np.testing.assert_allclose(
+        replay.se(),
+        fit.se(),
+        rtol=0,
+        atol=1e-12,
+        err_msg="parsed formula replay changed standard errors",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_no_intercept_ritest_against_fixest(data_feols, statistic):
+    """Each no-intercept resample agrees with a live R fit of that sample."""
+    data = data_feols.dropna().assign(D=lambda frame: (frame.X1 > 0).astype(float))
+    fit = pf.feols("Y ~ D - 1", data=data)
+    expected = []
+    rng = np.random.default_rng(71)
+    for _ in range(5):
+        resampled = fit._data.copy(deep=False)
+        resampled["D"] = _resample(
+            resampvar_arr=fit._data.D.to_numpy(), rng=rng
+        ).flatten()
+        reference = fixest.feols(ro.Formula("Y ~ D - 1"), data=resampled, vcov="iid")
+        value = (
+            stats.coef(reference)[0]
+            if statistic == "randomization-c"
+            else np.asarray(fixest.coeftable(reference))[0, 2]
+        )
+        expected.append(value)
+    fit.ritest(
+        "D",
+        reps=5,
+        type=statistic,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(71),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+    )
+    if statistic == "randomization-c":
+        fit.ritest(
+            "D",
+            reps=5,
+            choose_algorithm="fast",
+            rng=np.random.default_rng(71),
+            store_ritest_statistics=True,
+        )
+        np.testing.assert_allclose(
+            fit.ritest_statistics.statistics, expected, rtol=0, atol=1e-8
+        )
+
+
+@pytest.mark.against_r_core
+def test_no_intercept_poisson_crv3_against_fixest():
+    """No-intercept CRV3 agrees with leave-cluster-out R Poisson fits."""
+    data = pf.get_data(N=300, seed=731, model="Fepois").dropna()
+    data["cluster"] = np.arange(len(data)) % 5
+    fit = pf.fepois(
+        "Y ~ X1 - 1",
+        data=data,
+        vcov={"CRV3": "cluster"},
+        ssc=ssc(k_adj=False, G_adj=False),
+        iwls_tol=1e-12,
+    )
+    reference = fixest.fepois(
+        ro.Formula("Y ~ X1 - 1"), data=data, vcov="iid", glm_tol=1e-12
+    )
+    coef = np.asarray(stats.coef(reference))
+    vcov = np.zeros((1, 1))
+    for cluster in data.cluster.unique():
+        jack = fixest.fepois(
+            ro.Formula("Y ~ X1 - 1"),
+            data=data[data.cluster != cluster],
+            vcov="iid",
+            glm_tol=1e-12,
+        )
+        difference = np.asarray(stats.coef(jack)) - coef
+        vcov += np.outer(difference, difference)
+    np.testing.assert_allclose(fit.coef(), coef, rtol=0, atol=1e-8)
+    np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
+
+
+@pytest.mark.xfail(
+    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
+)
+@pytest.mark.against_r_core
+def test_parsed_separation_against_fixest():
+    """IR uses the evaluated response and retains arithmetic regressors."""
+    data = pd.DataFrame(
+        {
+            "Y": [0, 0, 0, 1, 2, 3, 1, 2],
+            "X": [1, 2, 1, 2, 3, 4, 2, 3],
+            "fe": ["a", "a", "b", "b", "b", "b", "b", "b"],
+        }
+    )
+    fit = pf.fepois(
+        "{Y * 2} ~ {X ** 2} - 1 | fe",
+        data=data,
+        separation_check=["ir"],
+        iwls_tol=1e-12,
+        ssc=ssc(k_adj=False, G_adj=False),
+    )
+    reference = fixest.fepois(
+        ro.Formula("I(Y * 2) ~ I(X^2) - 1 | fe"),
+        data=data,
+        vcov="iid",
+        glm_tol=1e-12,
+        ssc=fixest.ssc(K_adj=False, G_adj=False),
+    )
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
+    np.testing.assert_allclose(fit.coef(), stats.coef(reference), rtol=0, atol=1e-8)
+    np.testing.assert_allclose(fit.se(), fixest.se(reference), rtol=0, atol=1e-7)

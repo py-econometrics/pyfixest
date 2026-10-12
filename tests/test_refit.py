@@ -17,6 +17,7 @@ import pytest
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
 from pyfixest.estimation.post_estimation.ritest import _get_ritest_stats_slow
@@ -79,16 +80,30 @@ def case(request):
     return CASES[request.param]
 
 
-def test_refit_replays_options(data, case):
+@pytest.mark.parametrize(
+    "fml", [FML, "Y ~ log1p_abs(X1) + X2 - 1", "Y ~ {X1 * X2} + X2"]
+)
+def test_refit_replays_options(data, case, fml, monkeypatch):
     "A refit on a subsample equals a public fit with the same options on it."
     estimator, options = case
-    fit = estimator(FML, data=data, **options)
+    fit = estimator(fml, data=data, **options)
     subsample = data[data[CLUSTER] != data[CLUSTER].iloc[0]]
+
+    expected_data = subsample.assign(product=subsample["X1"] * subsample["X2"])
+    expected_fml = fml.replace("{X1 * X2}", "product")
+    expected = estimator(expected_fml, data=expected_data, **options)
+
+    def fail_on_reparse(*args, **kwargs):
+        raise AssertionError("A refit must reuse the parsed formula.")
+
+    monkeypatch.setattr(Formula, "parse", fail_on_reparse)
+    monkeypatch.setattr(
+        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+    )
 
     refitted = refit(fit, data=subsample, vcov=IID)
 
     assert refitted.options == replace(fit.options, copy_data=False)
-    expected = estimator(FML, data=subsample, **options)
     np.testing.assert_allclose(
         refitted.coef().to_numpy(),
         expected.coef().to_numpy(),
@@ -123,15 +138,16 @@ def test_refit_on_the_fit_sample_keeps_every_row(data, case):
         refit(fit, data=fit._data.iloc[1:], vcov=IID, same_sample=True)
 
 
-def test_crv3_is_the_leave_one_cluster_out_jackknife(data, case):
+@pytest.mark.parametrize("fml", [FML, "Y ~ log1p_abs(X1) + X2 - 1"])
+def test_crv3_is_the_leave_one_cluster_out_jackknife(data, case, fml):
     "CRV3 sums the outer products of the leave-one-cluster-out deviations."
     estimator, options = case
-    fit = estimator(FML, data=data, vcov={"CRV3": CLUSTER}, **options)
+    fit = estimator(fml, data=data, vcov={"CRV3": CLUSTER}, **options)
     beta_hat = fit.coef().to_numpy()
 
     vcov_jack = np.zeros((len(beta_hat), len(beta_hat)))
     for g in data[CLUSTER].unique():
-        beta_g = estimator(FML, data=data[data[CLUSTER] != g], **options).coef()
+        beta_g = estimator(fml, data=data[data[CLUSTER] != g], **options).coef()
         deviation = beta_g.to_numpy() - beta_hat
         vcov_jack += np.outer(deviation, deviation)
 
@@ -158,8 +174,7 @@ def test_ritest_refits_replay_options(data, case):
     expected = _get_ritest_stats_slow(
         **ritest_kwargs,
         data=fit._data,
-        fml=FML,
-        fit_fn=partial(estimator, vcov="iid", **options),
+        fit_fn=partial(estimator, fml=FML, vcov="iid", **options),
         rng=np.random.default_rng(3),
     )
     np.testing.assert_allclose(
@@ -167,12 +182,15 @@ def test_ritest_refits_replay_options(data, case):
     )
 
 
-def test_ccv_refits_replay_options(data):
+@pytest.mark.parametrize("drop_intercept", [False, True])
+def test_ccv_refits_replay_options(data, drop_intercept):
     "The split and cluster refits of `ccv()` keep the fit's options."
     # ccv rejects fixed effects and weights; without an intercept, split
     # coefficients that ignored `drop_intercept` would not match the design
-    options = {**_COMMON_OPTIONS, "drop_intercept": True}
+    options = {**_COMMON_OPTIONS, "drop_intercept": drop_intercept}
     fml = "Y ~ D + log1p_abs(X1) + X2"
+    if not drop_intercept:
+        fml += " - 1"
     rng = np.random.default_rng(41)
     data["D"] = rng.integers(0, 2, size=len(data))
     # few large clusters, so every cluster's split subsample has full rank

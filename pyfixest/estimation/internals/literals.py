@@ -7,7 +7,9 @@ HeteroVcovTypeOptions = Literal["hetero", "HC1", "HC2", "HC3"]
 HacVcovTypeOptions = Literal["NW", "DK"]
 WeightsTypeOptions = Literal["aweights", "fweights"]
 FixedRmOptions = Literal["singleton", "none"]
-DropStageOptions = Literal["missing", "infinite", "singleton", "separation"]
+DropStageOptions = Literal[
+    "missing", "infinite", "zero_weight", "singleton", "separation"
+]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
 # Internal dispatch key for the model registry, not a user option; kept here so
 # config.py and plan_.py can share it without an import cycle.
