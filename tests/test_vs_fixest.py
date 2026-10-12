@@ -1951,12 +1951,19 @@ def _skip_f3_checks(fml, f3_type):
             "Y ~ X1 | scale(X2, scale = FALSE) ~ scale(Z1)",
             {"scale(X2, scale = FALSE)": "center(X2)"},
         ),
+        (
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | f1",
+            "Y ~ X2 | f1 | X1 ~ Z1",
+            {"X1": "my endog"},
+        ),
     ],
 )
 def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
-    """Expressions retain their meaning through matrix construction."""
+    """Expressions and quoted names retain their meaning through matrix construction."""
     # Stateful transforms calculate sample moments before missing rows are dropped.
-    data = data_feols.dropna()
+    data = data_feols.dropna().assign(
+        **{"my endog": data_feols.X1, "my instrument": data_feols.Z1}
+    )
     fit = pf.feols(fml, data=data, vcov="iid")
     fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
     names = [

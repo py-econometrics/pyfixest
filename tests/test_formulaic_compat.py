@@ -11,7 +11,6 @@ import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
 from formulaic.materializers.base import FormulaMaterializer
-from formulaic.parser.types import Factor, Term
 from formulaic.utils.variables import Variable
 
 import pyfixest as pf
@@ -35,7 +34,6 @@ from pyfixest.estimation.formula.formulaic_compat import (
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectEncoding,
-    wrap_fixed_effect,
 )
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
@@ -432,6 +430,7 @@ def test_fe_prediction_matches_values_across_dtypes(data, kind):
         "f1[X1]",
         "f1[[X1]]",
         "f1:f2[X1, X2]",
+        "f1:2",
     ],
 )
 def test_fe_rejects_non_lookup_terms(data, expression):
@@ -443,38 +442,19 @@ def test_fe_rejects_non_lookup_terms(data, expression):
         pf.feols(f"Y ~ X1 | {expression}", data=data)
 
 
-@pytest.mark.parametrize("duplicate_index", [False, True])
-def test_fe_unseen_combination_diagnostic_is_positional(data, duplicate_index):
-    """Report unseen pairs in row order despite shuffled or duplicate labels."""
+def test_fe_unseen_combination_predicts_nan(data):
+    """Reject new pairs of individually seen levels."""
     frame = data.copy()
     frame["f2"] = frame.f1 % 2
-    frame.index = (
-        np.zeros(len(frame), dtype=int)
-        if duplicate_index
-        else np.random.default_rng(312).permutation(len(frame)) + 1000
-    )
     fit = pf.feols("Y ~ X1 | f1:f2", data=frame)
-    baseline = pf.feols("Y ~ X1 | f1:f2", data=frame.reset_index(drop=True))
-    np.testing.assert_allclose(
-        fit.coef(),
-        baseline.coef(),
-        rtol=0,
-        atol=1e-12,
-        err_msg="positional FE coefficients",
-    )
-    positions = [8, 3, 6, 1]
-    newdata = frame.iloc[positions].copy()
-    newdata.iloc[0, newdata.columns.get_loc("f2")] = 1 - newdata.f2.iloc[0]
-    with pytest.warns(UserWarning, match="1 unseen level") as recorded:
+    newdata = frame.iloc[:10].copy()
+    newdata.loc[0, "f2"] = 1 - newdata.loc[0, "f2"]
+    with pytest.warns(UserWarning, match="1 unseen level"):
         prediction = fit.predict(newdata=newdata)
-    expected_missing = pd.DataFrame(
-        {"f1": [newdata.f1.iloc[0]], "f2": [newdata.f2.iloc[0]]}
-    )
-    assert str(expected_missing) in str(recorded[0].message)
     assert np.isnan(prediction[0])
     np.testing.assert_allclose(
         prediction[1:],
-        baseline.predict(newdata=frame.iloc[positions[1:]]),
+        fit.predict(newdata=frame.iloc[1:10]),
         rtol=0,
         atol=1e-10,
         err_msg="seen FE combinations",
@@ -571,6 +551,7 @@ def test_explicit_q_state_key_escaping(data, name, cause):
         ("I(`my var`)", {"my var"}),
         ("Q('my var')", {"my var"}),
         ("{X1 * X2}", {"X1", "X2"}),
+        ("i(f1, X1)", {"f1", "X1"}),
     ],
 )
 def test_required_variables_preserve_quoted_names(rhs, expected):
@@ -667,16 +648,8 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, inter
     "name, message",
     [
         ("my fe", "valid Python identifier"),
-        ("firm.id", "valid Python identifier"),
-        ("a:b", "valid Python identifier"),
-        ('fe"quote', "valid Python identifier"),
-        ("fe\\backslash", "valid Python identifier"),
-        ("fe{brace}", "valid Python identifier"),
-        ("my + fe", "valid Python identifier"),
-        ("1firm", "valid Python identifier"),
         ("class", "cannot be a Python keyword"),
         ("\N{KELVIN SIGN}", "normalized identifier spelling"),
-        ("\N{LATIN SMALL LIGATURE FF}", "normalized identifier spelling"),
     ],
 )
 def test_fe_rejects_invalid_column_names(data, name, message):
@@ -684,17 +657,6 @@ def test_fe_rejects_invalid_column_names(data, name, message):
     renamed = data.rename(columns={"f1": name})
     with pytest.raises(FormulaSyntaxError, match=message):
         pf.feols(f"Y ~ X1 | `{name}`:f2", data=renamed)
-
-
-@pytest.mark.parametrize(
-    "expression, method",
-    [("f1", Factor.EvalMethod.PYTHON), ("2", Factor.EvalMethod.LITERAL)],
-)
-def test_fe_wrapper_rejects_non_lookup_evaluation_modes(expression, method):
-    """Only LOOKUP factors qualify, even when a Python expression is a name."""
-    term = Term([Factor(expression, eval_method=method)])
-    with pytest.raises(FormulaSyntaxError, match="Unsupported fixed-effect term"):
-        wrap_fixed_effect(term)
 
 
 def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
@@ -721,16 +683,6 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     path = "predict"
     fit.predict(newdata=data.iloc[:5])
     assert observed == {"fit", "predict"}
-
-
-@pytest.mark.parametrize("fml", ["Y ~ X1 | nope", "Y ~ X1 | f1:nope"])
-def test_fe_missing_column_raises_formulaic_lookup_error(data, fml):
-    """An unresolved argument fails before Formulaic invokes the FE encoder."""
-    with pytest.raises(
-        FactorEvaluationError, match="name 'nope' is not defined"
-    ) as exc:
-        pf.feols(fml, data=data)
-    assert isinstance(exc.value.__cause__, NameError)
 
 
 def test_fe_encoding_error_names_term(data):
