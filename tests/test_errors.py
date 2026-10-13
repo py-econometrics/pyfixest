@@ -11,6 +11,7 @@ from formulaic.errors import FactorEvaluationError
 import pyfixest as pf
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
+    FixedEffectEvaluationError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
     MissingModelDataError,
@@ -485,8 +486,8 @@ def test_rwolf_error():
 def test_predict_fe_dtype_mismatch():
     """FE dtype handling in predict(newdata=...).
 
-    Compatible numeric values match across dtypes; unmatched values, including
-    numeric-vs-string differences, warn and predict NaN.
+    Numeric values match across dtypes; string values for a numeric fixed
+    effect raise; unmatched values warn and predict NaN.
     """
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
@@ -497,15 +498,14 @@ def test_predict_fe_dtype_mismatch():
     pred = fit.predict(newdata=newdata)
     assert np.isfinite(pred).any()
 
-    # numeric fit data vs string newdata: unmatched levels warn and predict NaN
+    # numeric fit data vs string newdata: different label kinds raise
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_str["f1"] = newdata_str["f1"].astype(str)
-    with pytest.warns(
-        UserWarning,
-        match=f"{newdata_str['f1'].nunique()} unseen level",
+    with pytest.raises(
+        FixedEffectEvaluationError,
+        match=r"contains string values .* fitted on numeric values",
     ):
-        pred_str = fit.predict(newdata=newdata_str)
-    assert np.all(np.isnan(pred_str))
+        fit.predict(newdata=newdata_str)
 
     # no matching FE level at all: warning + all-NaN predictions
     newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()

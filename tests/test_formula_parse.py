@@ -1000,7 +1000,7 @@ def test_explicit_no_fe_iv_coefficients_match(test_data):
 def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     """Interacted fixed effects match an explicitly constructed group."""
     data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
-    data["f1_f2"] = list(zip(data["f1"], data["f2"], strict=True))
+    data["f1_f2"] = data["f1"].astype(str) + "_" + data["f2"].astype(str)
 
     interacted = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
     manual = pf.feols("Y ~ X1 | f1_f2", data=data, fixef_rm="none")

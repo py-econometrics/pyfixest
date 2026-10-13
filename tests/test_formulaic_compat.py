@@ -330,7 +330,7 @@ def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> N
 
 
 @pytest.mark.parametrize("arity", [1, 2, 3])
-@pytest.mark.parametrize("kind", ["numeric", "string", "categorical", "mixed"])
+@pytest.mark.parametrize("kind", ["numeric", "string", "categorical"])
 def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     """Level indexes preserve fitted codes, including categorical reference order."""
     frame = data.copy()
@@ -341,8 +341,6 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
         frame["f1"] = pd.Categorical(
             frame.f1, categories=[4, 2, 0, 3, 1, 99], ordered=True
         )
-    elif kind == "mixed":
-        frame["f1"] = frame.f1.astype(object).where(frame.f1 < 3, "a")
     frame.loc[0, "f1"] = np.nan
     names = ["f1", "f2", "f3"][:arity]
     expected = frame.groupby(names).ngroup().dropna()
@@ -354,29 +352,272 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     )
 
 
-@pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
-def test_fe_prediction_matches_values_across_dtypes(data, kind):
-    """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
+@pytest.mark.parametrize("interaction", [False, True])
+@pytest.mark.parametrize(
+    "levels, queries, positions",
+    [
+        pytest.param(
+            pd.Series(["a", "b"]),
+            pd.Series(["b", "a", "c", None]).astype("category"),
+            [1, 0, -1, -1],
+            id="string-levels-categorical-query",
+        ),
+        pytest.param(
+            pd.Series([2**53, 2**53 + 1]),
+            pd.Series([2**53 + 1, 2**53, 2**53 + 2, None], dtype=object),
+            [1, 0, -1, -1],
+            id="large-integer-object-single-type-query",
+        ),
+        pytest.param(
+            pd.Series(pd.Categorical([0, 1], categories=[1, 0, 99], ordered=True)),
+            pd.Series([1.0, 0.0, 99.0, np.nan]),
+            [1, 0, -1, -1],
+            id="numeric-categorical",
+        ),
+        *[
+            pytest.param(
+                pd.Series([2**53, 2**53 + 1], dtype=dtype),
+                pd.Series([float(2**53), float(2**53 + 2), np.nan]),
+                [0, -1, -1],
+                id=f"large-integer-{dtype}-to-float",
+            )
+            for dtype in ["int64", "uint64", "Int64", "object", "category"]
+        ],
+        pytest.param(
+            pd.Series([float(2**53), float(2**53 + 2)]),
+            pd.Series([2**53 + 2, 2**53 + 1, 2**53], dtype="int64"),
+            [1, -1, 0],
+            id="large-float-to-integer",
+        ),
+        pytest.param(
+            pd.Series([2**53, 2**53 + 1]),
+            pd.Series(
+                [np.int64(2**53 + 1), np.float64(2**53), 2**53 + 2.0], dtype=object
+            ),
+            [1, 0, -1],
+            id="large-numpy-scalars-in-object",
+        ),
+        pytest.param(
+            pd.Series([0, 255], dtype="uint8"),
+            pd.Series([-1, 255, 0], dtype="int64"),
+            [-1, 1, 0],
+            id="negative-integer-to-unsigned",
+        ),
+        *[
+            pytest.param(
+                pd.Series([0, 1], dtype=dtype),
+                pd.Series([1.0, np.nan, 0.5, 0.0]),
+                [1, -1, -1, 0],
+                id=f"{dtype}-to-float-with-missing",
+            )
+            for dtype in ["int64", "Int64"]
+        ],
+        *[
+            pytest.param(
+                pd.Series([0, 1], dtype=dtype),
+                pd.Series([1, 0, 2], dtype=query_dtype),
+                [1, 0, -1],
+                id=f"{dtype}-to-{query_dtype}",
+            )
+            for dtype, query_dtype in [("int64", "int32"), ("int64", "Int64")]
+        ],
+        *[
+            pytest.param(
+                pd.Series(["a", "b"]),
+                pd.Series(["b", "a", "c", None], dtype=query_dtype),
+                [1, 0, -1, -1],
+                id=f"string-to-{query_dtype}",
+            )
+            for query_dtype in ["object", "string[python]"]
+        ],
+        pytest.param(
+            pd.Series(pd.Categorical(["a", "b"], categories=["b", "a"], ordered=True)),
+            pd.Series(pd.Categorical(["a", "c", None], categories=["c", "a"])),
+            [0, -1, -1],
+            id="categorical-other-categories-order-and-flag",
+        ),
+        pytest.param(
+            pd.Series(pd.to_datetime(["2020-01-01", "2020-01-02"]).as_unit("ns")),
+            pd.Series(pd.to_datetime(["2020-01-02", "2020-01-03", None]).as_unit("s")),
+            [1, -1, -1],
+            id="datetime-other-resolution",
+        ),
+        *[
+            pytest.param(
+                pd.Series(pd.to_datetime(["2020-01-01", "2020-01-02"])),
+                pd.Series(
+                    [
+                        np.datetime64("2020-01-02", unit),
+                        np.datetime64("2020-01-01", unit),
+                        np.datetime64("2020-01-03", unit),
+                        None,
+                    ],
+                    dtype=object,
+                ),
+                [1, 0, -1, -1],
+                id=f"numpy-datetime64-{unit}-in-object",
+            )
+            for unit in ["ns", "us", "D"]
+        ],
+        pytest.param(
+            pd.Series(pd.to_timedelta([1, 2], unit="D")),
+            pd.Series(
+                [np.timedelta64(2, "D"), np.timedelta64(1, "ns"), None], dtype=object
+            ),
+            [1, -1, -1],
+            id="numpy-timedelta64-in-object",
+        ),
+        *[
+            pytest.param(
+                pd.Series([pd.Interval(0, 2), pd.Interval(left, 4)], dtype=dtype),
+                pd.Series(
+                    [
+                        pd.Interval(left, 4),
+                        pd.Interval(0, 2),
+                        pd.Interval(5, 6),
+                        None,
+                    ],
+                    dtype=object,
+                ),
+                [1, 0, -1, -1],
+                id=f"interval-{'overlapping' if left == 1 else 'disjoint'}-{dtype}",
+            )
+            for left in [1, 3]
+            for dtype in [None, "category"]
+        ],
+        pytest.param(
+            pd.Series([pd.Interval(0, 2), pd.Interval(3, 4)]),
+            pd.Series([pd.Interval(0, 2, closed="left"), None]),
+            [-1, -1],
+            id="interval-other-closed-side",
+        ),
+    ],
+)
+def test_fe_prediction_matches_values_across_dtypes(
+    data, levels, queries, positions, interaction
+):
+    """FE labels match exactly, independently of storage dtype and index semantics."""
     frame = data.copy()
-    frame["f1"] = frame.f1 % 2
-    if kind == "categorical":
-        frame["f1"] = frame.f1.astype("category")
-    elif kind == "bool_to_numeric":
-        frame["f1"] = frame.f1.astype(bool)
-    fit = pf.feols("Y ~ X1 | f1", data=frame)
-    newdata = frame.iloc[:10].copy()
-    newdata["f1"] = newdata.f1.astype(bool if kind == "numeric_to_bool" else int)
-    if kind in {"bool_to_numeric", "numeric_to_bool"}:
-        with pytest.warns(UserWarning, match="unseen level"):
-            assert np.isnan(fit.predict(newdata=newdata)).all()
-        return
+    frame["f1"] = levels.iloc[np.arange(len(frame)) % len(levels)].array
+    term = "f1:f2" if interaction else "f1"
+    fit = pf.feols(f"Y ~ X1 | {term}", data=frame)
+    fit.fixef(atol=1e-12, btol=1e-12)
+
+    # Matching fitted rows must also work with overlapping interval levels.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        roundtrip = fit.predict(newdata=frame.iloc[:4])
     np.testing.assert_allclose(
-        fit.predict(newdata=newdata),
-        fit.predict()[:10],
+        roundtrip,
+        fit.predict()[:4],
         rtol=0,
         atol=1e-10,
-        err_msg="FE predictions across compatible dtypes",
+        err_msg="FE training-row roundtrip",
     )
+
+    positions = np.asarray(positions)
+    newdata = frame.iloc[np.maximum(positions, 0)].copy()
+    # Assign positionally and retain each query's dtype, including object scalars.
+    newdata["f1"] = queries.array
+    with pytest.warns(
+        UserWarning, match=f"unseen level\\(s\\) for fixed effect `{term}`"
+    ):
+        prediction = fit.predict(newdata=newdata)
+    assert np.array_equal(np.isnan(prediction), positions < 0)
+    np.testing.assert_allclose(
+        prediction[positions >= 0],
+        fit.predict()[positions[positions >= 0]],
+        rtol=0,
+        atol=1e-10,
+        err_msg="valid FE predictions in a mixed batch",
+    )
+    # Missing query codes must remain indexable even when there are no uniques.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        assert np.isnan(fit.predict(newdata=newdata.assign(f1=np.nan))).all()
+
+
+@pytest.mark.parametrize("term", ["g", "g:f2"])
+@pytest.mark.parametrize(
+    "labels, message",
+    [
+        pytest.param([1, True, 0, False], "mixes value types", id="python-bool-int"),
+        pytest.param(
+            [np.bool_(True), np.float64(1), np.bool_(False), np.float64(0)],
+            "mixes value types",
+            id="numpy-bool-float",
+        ),
+        pytest.param([1, "a", 0, "b"], "mixes value types", id="int-string"),
+        pytest.param(
+            [pd.Timestamp("2020-01-01"), pd.Timestamp("2020-01-02", tz="UTC")],
+            "mixes timezone-aware and timezone-naive",
+            id="naive-aware-datetime",
+        ),
+    ],
+)
+def test_fe_rejects_mixed_type_column(data, term, labels, message):
+    """Fitting must not merge labels of different kinds that prediction separates."""
+    frame = data.assign(
+        g=pd.Series(np.resize(np.array(labels, dtype=object), len(data)), dtype=object)
+    )
+    with pytest.raises(FixedEffectEvaluationError, match=f"`g` {message}"):
+        pf.feols(f"Y ~ X1 | {term}", data=frame)
+
+
+@pytest.mark.parametrize("interaction", [False, True])
+@pytest.mark.parametrize(
+    "levels, queries, message",
+    [
+        pytest.param(
+            pd.Series([False, True]),
+            pd.Series([0, 1]),
+            "contains numeric values .* fitted on boolean values",
+            id="boolean-to-integer",
+        ),
+        pytest.param(
+            pd.Series([0, 1]),
+            pd.Series([False, True]),
+            "contains boolean values .* fitted on numeric values",
+            id="integer-to-boolean",
+        ),
+        pytest.param(
+            pd.Series([0, 1]),
+            pd.Series(["0", "1"]),
+            "contains string values .* fitted on numeric values",
+            id="integer-to-string",
+        ),
+        pytest.param(
+            pd.Series(["0", "1"]),
+            pd.Series(pd.Categorical([0.0, 1.0])),
+            "contains numeric values .* fitted on string values",
+            id="string-to-numeric-categorical",
+        ),
+        pytest.param(
+            pd.Series(pd.to_datetime(["2020-01-01", "2020-01-02"])),
+            pd.Series(pd.to_datetime(["2020-01-01", "2020-01-02"]).tz_localize("UTC")),
+            "contains timezone-aware datetime values .* fitted on timezone-naive",
+            id="naive-to-aware-datetime",
+        ),
+        pytest.param(
+            pd.Series([0, 1]),
+            pd.Series([False, np.int64(0), None], dtype=object),
+            "mixes value types",
+            id="mixed-query",
+        ),
+    ],
+)
+def test_fe_prediction_rejects_other_label_kinds(
+    data, levels, queries, message, interaction
+):
+    """Prediction raises instead of matching labels across kinds."""
+    frame = data.copy()
+    frame["f1"] = levels.iloc[np.arange(len(frame)) % len(levels)].array
+    term = "f1:f2" if interaction else "f1"
+    fit = pf.feols(f"Y ~ X1 | {term}", data=frame)
+    newdata = frame.iloc[: len(queries)].copy()
+    newdata["f1"] = queries.array
+    with pytest.raises(FixedEffectEvaluationError, match=f"`f1` {message}"):
+        fit.predict(newdata=newdata)
 
 
 @pytest.mark.parametrize(
@@ -690,8 +931,11 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     assert observed == {"fit", "predict"}
 
 
-def test_fe_encoding_error_names_term(data):
-    data = data.assign(f1=[[value] for value in data.f1])
+def test_fe_encoding_error_names_term(data, monkeypatch):
+    def fail(cls, **kwargs):
+        raise TypeError("unhashable type")
+
+    monkeypatch.setattr(FixedEffectEncoding, "fit", classmethod(fail))
     with pytest.raises(
         FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
     ) as exc:
