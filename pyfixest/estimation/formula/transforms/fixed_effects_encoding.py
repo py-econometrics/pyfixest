@@ -143,6 +143,7 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
     state = cast(MutableMapping[str, Any], _state)
     metadata = cast(Mapping[str, Any], _metadata)
     term: Term = metadata["term"]
+    unseen_message: str | None = None
     try:
         columns = []
         for factor in term.factors:
@@ -181,12 +182,10 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
                     .iloc[unseen]
                     .drop_duplicates()
                 )
-                warnings.warn(
+                unseen_message = (
                     f"{missing.shape[0]} unseen level(s) for fixed effect "
                     f"`{encoding.variable}`: {missing.iloc[:20]}\n"
-                    "Predictions for affected observations will be NaN",
-                    UserWarning,
-                    stacklevel=_find_stack_level(),
+                    "Predictions for affected observations will be NaN"
                 )
     except FixedEffectEvaluationError:
         raise
@@ -194,4 +193,6 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
         raise FixedEffectEvaluationError(
             f"Unable to encode fixed effect `{term}`. [{type(exc).__name__}: {exc}]"
         ) from exc
+    if unseen_message is not None:
+        warnings.warn(unseen_message, UserWarning, stacklevel=_find_stack_level())
     return codes

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from types import SimpleNamespace
 
 import formulaic
@@ -452,6 +453,10 @@ def test_fe_unseen_combination_predicts_nan(data):
         atol=1e-10,
         err_msg="seen FE combinations",
     )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        with pytest.raises(UserWarning, match="1 unseen level"):
+            fit.predict(newdata=newdata)
 
 
 @pytest.mark.parametrize("expression", ["z", "z:f2"])
@@ -488,7 +493,7 @@ def test_fe_prediction_requires_data_columns(data, expression):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
+    reason="Pending retained one-hot design layer; regression from PR stack #1862",
 )
 @pytest.mark.parametrize("output", ["numpy", "sparse"])
 @pytest.mark.parametrize("interaction", [False, True])
