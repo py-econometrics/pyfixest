@@ -22,8 +22,9 @@ class FixedEffect:
     Attributes
     ----------
     fixed_effect : str
-        Internal encoded fixed-effect name used as the corresponding model-matrix
-        column. Its factor metadata retains the original parsed term.
+        Internal encoded column name in the Formulaic spec. Its factor metadata
+        retains the original parsed term; `ModelMatrix.fixed_effects` exposes
+        the original labels as column names.
     variable : str
         User-facing fixed-effect name. Interacted variables are joined with `:`,
         for example `firm:year`.

@@ -10,6 +10,7 @@ from typing import ClassVar, Literal, cast, overload
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.errors import FactorEvaluationError
 from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
@@ -1905,11 +1906,18 @@ class Feols(ResultAccessorMixin):
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
                 # na_action="ignore" keeps unseen-level rows as NaN codes
-                fe_mm = fe_spec.get_model_matrix(
-                    newdata,
-                    context=context,
-                    na_action="ignore",
-                )
+                try:
+                    fe_mm = fe_spec.get_model_matrix(
+                        newdata,
+                        context=context,
+                        na_action="ignore",
+                    )
+                except FactorEvaluationError as exc:
+                    # Formulaic wraps warnings promoted to errors. Preserve the
+                    # caller's warning policy instead of reporting an FE failure.
+                    if isinstance(exc.__cause__, UserWarning):
+                        raise exc.__cause__ from None
+                    raise
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):
