@@ -142,13 +142,13 @@ class ModelMatrix:
         self._fixed_effects_column_names = self._get_columns(
             model_matrix, _ModelMatrixKey.fixed_effects
         )
-        self._fixed_effects_labels = {
+        self._fixed_effect_names_by_column = {
             column: get_fixed_effect_encoding(
                 transform_state=self._model_spec[
                     _ModelMatrixKey.fixed_effects
                 ].transform_state,
                 column=column,
-            ).variable
+            ).name
             for column in self._fixed_effects_column_names or []
         }
         self._endogenous_column_names = self._get_columns(
@@ -321,7 +321,7 @@ class ModelMatrix:
         if self._fixed_effects_column_names is None:
             return None
         return self._data.loc[:, self._fixed_effects_column_names].rename(
-            columns=self._fixed_effects_labels
+            columns=self._fixed_effect_names_by_column
         )
 
     @property

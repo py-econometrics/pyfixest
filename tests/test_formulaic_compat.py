@@ -244,7 +244,7 @@ def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     fe_state = fe_spec.transform_state[factor.expr]
     encoding = fe_state["__fixed_effect_encoding__"]
     assert isinstance(encoding, FixedEffectEncoding)
-    assert encoding.levels[0].tolist() == sorted(data.f1.unique())
+    assert encoding.factor_levels[0].tolist() == sorted(data.f1.unique())
 
 
 def test_materializer_cache_contains_evaluated_factor_values(

@@ -21,10 +21,11 @@ class FixedEffect:
 
     Attributes
     ----------
-    fixed_effect : str
-        Internal encoded fixed-effect name used as the corresponding model-matrix
-        column. Its factor metadata retains the original parsed term.
-    variable : str
+    column : str
+        Internal encoded column name in the Formulaic spec. Its factor metadata
+        retains the original parsed term; `ModelMatrix.fixed_effects` exposes
+        the original labels as column names.
+    name : str
         User-facing fixed-effect name. Interacted variables are joined with `:`,
         for example `firm:year`.
     codes : NDArray[np.int64]
@@ -39,13 +40,13 @@ class FixedEffect:
         coefficient `NaN`.
     """
 
-    fixed_effect: str
-    variable: str
+    column: str
+    name: str
     codes: NDArray[np.int64]
     values: tuple[NDArray[Any], ...]
     coefficients: NDArray[np.float64]
 
-    def levels(self) -> pd.Series:
+    def level_labels(self) -> pd.Series:
         """Combine values of fixed effect levels into comma-separated string."""
         value_columns = pd.DataFrame(dict(enumerate(self.values))).astype("string")
         return value_columns.agg(",".join, axis="columns").astype("string")
@@ -63,13 +64,13 @@ class FixedEffectEstimates:
 
     Parameters
     ----------
-    coefficients : Mapping[str, FixedEffect]
-        Coefficient records keyed by encoded fixed-effect name. `fixef()`
-        returns their tidy frame with the original factor labels.
+    fixed_effects : Mapping[str, FixedEffect]
+        Coefficient records keyed by encoded column name. `fixef()` returns
+        their tidy frame with the original factor labels.
     alpha : NDArray[np.float64]
         Solution of the least-squares problem in the dummy-coded fixed
         effects, shape (n_fixed_effect_coefficients,), ordered as the columns
-        of the contrast-coded fixed-effect matrix.
+        of the fixed-effect dummy matrix.
     sumFE : NDArray[np.float64]
         Fixed-effect contribution of each observation, shape (n_rows,), in
         the units of the dependent variable. For GLMs it is on the scale of
@@ -90,7 +91,7 @@ class FixedEffectEstimates:
     ```
     """
 
-    coefficients: Mapping[str, FixedEffect]
+    fixed_effects: Mapping[str, FixedEffect]
     alpha: NDArray[np.float64]
     sumFE: NDArray[np.float64]
 
@@ -117,7 +118,7 @@ class FixedEffectCoefficientPositions:
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
-class FixedEffectContrastCoding:
+class FixedEffectDummies:
     """
     Sparse dummy matrix and coefficient alignment for fixed effects.
 
@@ -135,27 +136,25 @@ class FixedEffectContrastCoding:
 
 
 def build_fixed_effects(
-    fixed_effect_coefficients: np.ndarray,
-    contrast_coding: FixedEffectContrastCoding,
+    alpha: np.ndarray,
+    dummies: FixedEffectDummies,
     transform_state: Mapping[str, Any],
 ) -> dict[str, FixedEffect]:
-    """Build fixed-effect coefficient records keyed by encoded name."""
+    """Build fixed-effect coefficient records keyed by encoded column name."""
     fixed_effects: dict[str, FixedEffect] = {}
-    for name, positions in contrast_coding.coefficient_positions.items():
+    for column, positions in dummies.coefficient_positions.items():
         encoding = get_fixed_effect_encoding(
-            transform_state=transform_state, column=name
+            transform_state=transform_state, column=column
         )
-        coefficients = np.full(len(encoding.combinations), np.nan, dtype=np.float64)
+        coefficients = np.full(len(encoding.code_order), np.nan, dtype=np.float64)
         # Observed reference levels are zero; removed levels remain NaN.
         coefficients[positions.observed_codes] = 0.0
-        coefficients[positions.coefficient_codes] = fixed_effect_coefficients[
-            positions.coefficient_indices
-        ]
-        fixed_effects[name] = FixedEffect(
-            fixed_effect=name,
-            variable=encoding.variable,
+        coefficients[positions.coefficient_codes] = alpha[positions.coefficient_indices]
+        fixed_effects[column] = FixedEffect(
+            column=column,
+            name=encoding.name,
             codes=positions.observed_codes,
-            values=encoding.decoded_values(codes=positions.observed_codes),
+            values=encoding.decode(codes=positions.observed_codes),
             coefficients=coefficients,
         )
     return fixed_effects
@@ -170,9 +169,9 @@ def fixed_effects_to_frame(
         frames.append(
             pd.DataFrame(
                 {
-                    "variable": fixed_effect.variable,
+                    "variable": fixed_effect.name,
                     "code": fixed_effect.codes,
-                    "level": fixed_effect.levels(),
+                    "level": fixed_effect.level_labels(),
                     "coefficient": fixed_effect.coefficients[fixed_effect.codes],
                 }
             )
@@ -180,24 +179,24 @@ def fixed_effects_to_frame(
     return pd.concat(frames, ignore_index=True)
 
 
-def predict_fixed_effects(
-    model_matrix: pd.DataFrame,
-    coefficients: Mapping[str, FixedEffect],
+def sum_fixed_effects(
+    codes: pd.DataFrame,
+    fixed_effects: Mapping[str, FixedEffect],
 ) -> np.ndarray:
-    """Return summed fixed-effect contributions for each row."""
-    contributions = np.zeros(len(model_matrix), dtype=np.float64)
-    for fixed_effect in model_matrix.columns:
-        codes = model_matrix[fixed_effect].to_numpy(dtype=np.int64)
-        contributions += coefficients[str(fixed_effect)].coefficients[codes]
+    """Return summed fixed-effect contributions for each row of FE codes."""
+    contributions = np.zeros(len(codes), dtype=np.float64)
+    for column in codes.columns:
+        row_codes = codes[column].to_numpy(dtype=np.int64)
+        contributions += fixed_effects[str(column)].coefficients[row_codes]
 
     return contributions
 
 
-def contrast_code_fixed_effects(
+def build_fixed_effect_dummies(
     *,
     fixed_effects: pd.DataFrame,
     column_names: Sequence[str],
-) -> FixedEffectContrastCoding:
+) -> FixedEffectDummies:
     """Build sparse dummies directly from retained estimation-sample codes.
 
     Keep every observed level of the first FE. Omit the smallest observed code
@@ -271,6 +270,6 @@ def contrast_code_fixed_effects(
         (np.ones(len(row_indices)), (row_indices, column_indices)),
         shape=(len(fixed_effects), offset),
     )
-    return FixedEffectContrastCoding(
+    return FixedEffectDummies(
         matrix=matrix, coefficient_positions=coefficient_positions
     )

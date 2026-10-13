@@ -15,21 +15,34 @@ from formulaic.utils.stateful_transforms import stateful_transform
 from pyfixest.errors import FixedEffectEvaluationError, FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
 
-FIXED_EFFECT_ENCODING: Final[str] = "__fixed_effect_encoding__"
+FIXED_EFFECT_ENCODING_STATE_KEY: Final[str] = "__fixed_effect_encoding__"
 _FIXED_EFFECT_TRANSFORM: Final[str] = "__fixed_effect__"
 
 
 @dataclass(frozen=True, slots=True)
 class FixedEffectEncoding:
-    """Observed factor levels and combinations in fitted FE-code order."""
+    """Observed factor levels and their combinations in fitted FE-code order.
+
+    Attributes
+    ----------
+    term : Term
+        Original parsed fixed-effect term.
+    factor_levels : tuple[pd.Index, ...]
+        Sorted observed levels of each factor.
+    code_order : pd.RangeIndex | pd.MultiIndex
+        Fixed-effect codes in order. For interactions, entry `code` holds the
+        positions of that combination's levels in `factor_levels`.
+    factor_dtypes : tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
+        Dtype of each factor at fit time; prediction requires the same dtypes.
+    """
 
     term: Term
-    levels: tuple[pd.Index, ...]
-    combinations: pd.RangeIndex | pd.MultiIndex
-    dtypes: tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
+    factor_levels: tuple[pd.Index, ...]
+    code_order: pd.RangeIndex | pd.MultiIndex
+    factor_dtypes: tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
 
     @property
-    def variable(self) -> str:
+    def name(self) -> str:
         """Original factor labels used in fixed-effect output and diagnostics."""
         return ":".join(str(factor) for factor in self.term.factors)
 
@@ -42,30 +55,30 @@ class FixedEffectEncoding:
         # codes and observed levels together.
         factorized = [pd.factorize(column, sort=True) for column in values]
         per_factor = [codes for codes, _ in factorized]
-        levels = tuple(pd.Index(levels) for _, levels in factorized)
+        factor_levels = tuple(pd.Index(levels) for _, levels in factorized)
         if len(values) == 1:
             # The sorted level index already defines the complete code order.
-            combinations = pd.RangeIndex(len(levels[0]))
+            code_order = pd.RangeIndex(len(factor_levels[0]))
             codes = per_factor[0].astype(np.float64)
         else:
             valid = np.all(np.column_stack(per_factor) >= 0, axis=1)
             observed = pd.MultiIndex.from_arrays(per_factor)
-            combinations = observed[valid].unique().sort_values()
-            codes = combinations.get_indexer(observed).astype(np.float64)
+            code_order = observed[valid].unique().sort_values()
+            codes = code_order.get_indexer(observed).astype(np.float64)
         codes[codes < 0] = np.nan
         return (
             cls(
                 term=term,
-                levels=levels,
-                combinations=combinations,
-                dtypes=tuple(column.dtype for column in values),
+                factor_levels=factor_levels,
+                code_order=code_order,
+                factor_dtypes=tuple(column.dtype for column in values),
             ),
             pd.Series(codes, index=values[0].index),
         )
 
     def encode(self, *, values: tuple[pd.Series, ...]) -> pd.Series:
         """Use the fitted indexes for both training and prediction matching."""
-        for dtype, column in zip(self.dtypes, values, strict=True):
+        for dtype, column in zip(self.factor_dtypes, values, strict=True):
             if column.dtype != dtype:
                 raise FixedEffectEvaluationError(
                     f"Fixed-effect column `{column.name}` has dtype {column.dtype}, "
@@ -73,32 +86,32 @@ class FixedEffectEncoding:
                     "to the fitted dtype before calling predict()."
                 )
         per_factor = [
-            level.get_indexer(column)
-            for level, column in zip(self.levels, values, strict=True)
+            levels.get_indexer(column)
+            for levels, column in zip(self.factor_levels, values, strict=True)
         ]
         if len(values) == 1:
             codes = per_factor[0].astype(np.float64)
         else:
-            codes = self.combinations.get_indexer(
+            codes = self.code_order.get_indexer(
                 pd.MultiIndex.from_arrays(per_factor)
             ).astype(np.float64)
         codes[codes < 0] = np.nan
         return pd.Series(codes, index=values[0].index)
 
-    def decoded_values(self, *, codes: np.ndarray) -> tuple[np.ndarray, ...]:
+    def decode(self, *, codes: np.ndarray) -> tuple[np.ndarray, ...]:
         """Return original level values for the requested fitted FE codes."""
-        if len(self.levels) == 1:
-            return (self.levels[0].to_numpy()[codes],)
-        combinations = self.combinations[codes]
+        if len(self.factor_levels) == 1:
+            return (self.factor_levels[0].to_numpy()[codes],)
+        combinations = self.code_order[codes]
         return tuple(
-            level.to_numpy()[
+            levels.to_numpy()[
                 combinations.get_level_values(position).to_numpy(dtype=np.int64)
             ]
-            for position, level in enumerate(self.levels)
+            for position, levels in enumerate(self.factor_levels)
         )
 
 
-def wrap_fixed_effect(term: Term) -> Term:
+def as_encoded_fixed_effect_term(term: Term) -> Term:
     """Expose ordinary column lookups to Formulaic and retain the original term."""
     for factor in term.factors:
         if factor.eval_method is not Factor.EvalMethod.LOOKUP:
@@ -132,7 +145,7 @@ def wrap_fixed_effect(term: Term) -> Term:
 
 
 @stateful_transform
-def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any = None):
+def encode_fixed_effect(*_columns, _state=None, _metadata=None, _context: Any = None):
     """Look up data columns and code their observed level combinations.
 
     The column arguments expose dependencies to Formulaic. Read the columns
@@ -161,11 +174,11 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
                 )
             columns.append(column.rename(str(factor)))
         values = tuple(columns)
-        if FIXED_EFFECT_ENCODING not in state:
+        if FIXED_EFFECT_ENCODING_STATE_KEY not in state:
             encoding, codes = FixedEffectEncoding.fit(term=term, values=values)
-            state[FIXED_EFFECT_ENCODING] = encoding
+            state[FIXED_EFFECT_ENCODING_STATE_KEY] = encoding
         else:
-            encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING])
+            encoding = cast(FixedEffectEncoding, state[FIXED_EFFECT_ENCODING_STATE_KEY])
             codes = encoding.encode(values=values)
             unseen = codes.isna().to_numpy() & np.all(
                 np.column_stack([column.notna().to_numpy() for column in values]),
@@ -183,7 +196,7 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
                 )
                 warnings.warn(
                     f"{missing.shape[0]} unseen level(s) for fixed effect "
-                    f"`{encoding.variable}`: {missing.iloc[:20]}\n"
+                    f"`{encoding.name}`: {missing.iloc[:20]}\n"
                     "Predictions for affected observations will be NaN",
                     UserWarning,
                     stacklevel=_find_stack_level(),

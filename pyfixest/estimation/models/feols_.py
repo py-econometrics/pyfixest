@@ -86,10 +86,10 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
+    build_fixed_effect_dummies,
     build_fixed_effects,
-    contrast_code_fixed_effects,
     fixed_effects_to_frame,
-    predict_fixed_effects,
+    sum_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
@@ -1759,10 +1759,10 @@ class Feols(ResultAccessorMixin):
         # the second and subsequent FEs under treatment normalization.
         # has_fixef guarantees that the retained matrix contains FE codes.
         fixed_effects = cast(pd.DataFrame, self.model_matrix.fixed_effects)
-        contrast_coding = contrast_code_fixed_effects(
+        dummies = build_fixed_effect_dummies(
             fixed_effects=fixed_effects, column_names=fe_spec.column_names
         )
-        D = contrast_coding.matrix
+        D = dummies.matrix
         D_w = D
         observation_weights = self.observation_weights.values
         if observation_weights is not None:
@@ -1774,9 +1774,9 @@ class Feols(ResultAccessorMixin):
         alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
         self.fixef_estimates = FixedEffectEstimates(
-            coefficients=build_fixed_effects(
-                fixed_effect_coefficients=alpha,
-                contrast_coding=contrast_coding,
+            fixed_effects=build_fixed_effects(
+                alpha=alpha,
+                dummies=dummies,
                 transform_state=fe_spec.transform_state,
             ),
             alpha=alpha,
@@ -1784,7 +1784,7 @@ class Feols(ResultAccessorMixin):
             sumFE=D.dot(alpha),
         )
 
-        return fixed_effects_to_frame(self.fixef_estimates.coefficients)
+        return fixed_effects_to_frame(self.fixef_estimates.fixed_effects)
 
     def predict(
         self,
@@ -1915,9 +1915,9 @@ class Feols(ResultAccessorMixin):
                 if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
-                fe_hat = predict_fixed_effects(
-                    model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self.fixef_estimates.coefficients,
+                fe_hat = sum_fixed_effects(
+                    codes=fe_mm.loc[valid_idx],
+                    fixed_effects=self.fixef_estimates.fixed_effects,
                 )
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()
