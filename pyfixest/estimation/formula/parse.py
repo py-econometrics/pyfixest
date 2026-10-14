@@ -437,8 +437,8 @@ class Formula:
         )
 
     @property
-    def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
-        """Wrapped fixed effects for proper encoding."""
+    def encoded_fixed_effects(self) -> formulaic.formula.SimpleFormula:
+        """Fixed-effect terms routed through the encoding transform."""
         return formulaic.formula.SimpleFormula(
             as_encoded_fixed_effect_term(term=term) for term in self.fixed_effects
         )

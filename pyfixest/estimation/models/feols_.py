@@ -1758,9 +1758,9 @@ class Feols(ResultAccessorMixin):
         # Recover from retained codes, omitting the first observed level of
         # the second and subsequent FEs under treatment normalization.
         # has_fixef guarantees that the retained matrix contains FE codes.
-        fixed_effects = cast(pd.DataFrame, self.model_matrix.fixed_effects)
+        fixed_effect_codes = cast(pd.DataFrame, self.model_matrix.fixed_effects)
         dummies = build_fixed_effect_dummies(
-            fixed_effects=fixed_effects, column_names=fe_spec.column_names
+            codes=fixed_effect_codes, column_names=fe_spec.column_names
         )
         D = dummies.matrix
         D_w = D

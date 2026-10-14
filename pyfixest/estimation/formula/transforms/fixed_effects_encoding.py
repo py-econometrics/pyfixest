@@ -29,16 +29,18 @@ class FixedEffectEncoding:
         Original parsed fixed-effect term.
     factor_levels : tuple[pd.Index, ...]
         Sorted observed levels of each factor.
-    code_order : pd.RangeIndex | pd.MultiIndex
-        Fixed-effect codes in order. For interactions, entry `code` holds the
-        positions of that combination's levels in `factor_levels`.
+    code_index : pd.RangeIndex | pd.MultiIndex
+        Lookup between fixed-effect codes and level combinations. Entry `code`
+        holds that code's combination as positions in `factor_levels`, and
+        `get_indexer` maps combinations back to codes. A single factor's codes
+        are its level positions, so this is a `RangeIndex`.
     factor_dtypes : tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
         Dtype of each factor at fit time; prediction requires the same dtypes.
     """
 
     term: Term
     factor_levels: tuple[pd.Index, ...]
-    code_order: pd.RangeIndex | pd.MultiIndex
+    code_index: pd.RangeIndex | pd.MultiIndex
     factor_dtypes: tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
 
     @property
@@ -58,19 +60,19 @@ class FixedEffectEncoding:
         factor_levels = tuple(pd.Index(levels) for _, levels in factorized)
         if len(values) == 1:
             # The sorted level index already defines the complete code order.
-            code_order = pd.RangeIndex(len(factor_levels[0]))
+            code_index = pd.RangeIndex(len(factor_levels[0]))
             codes = per_factor[0].astype(np.float64)
         else:
             valid = np.all(np.column_stack(per_factor) >= 0, axis=1)
             observed = pd.MultiIndex.from_arrays(per_factor)
-            code_order = observed[valid].unique().sort_values()
-            codes = code_order.get_indexer(observed).astype(np.float64)
+            code_index = observed[valid].unique().sort_values()
+            codes = code_index.get_indexer(observed).astype(np.float64)
         codes[codes < 0] = np.nan
         return (
             cls(
                 term=term,
                 factor_levels=factor_levels,
-                code_order=code_order,
+                code_index=code_index,
                 factor_dtypes=tuple(column.dtype for column in values),
             ),
             pd.Series(codes, index=values[0].index),
@@ -92,7 +94,7 @@ class FixedEffectEncoding:
         if len(values) == 1:
             codes = per_factor[0].astype(np.float64)
         else:
-            codes = self.code_order.get_indexer(
+            codes = self.code_index.get_indexer(
                 pd.MultiIndex.from_arrays(per_factor)
             ).astype(np.float64)
         codes[codes < 0] = np.nan
@@ -102,7 +104,7 @@ class FixedEffectEncoding:
         """Return original level values for the requested fitted FE codes."""
         if len(self.factor_levels) == 1:
             return (self.factor_levels[0].to_numpy()[codes],)
-        combinations = self.code_order[codes]
+        combinations = self.code_index[codes]
         return tuple(
             levels.to_numpy()[
                 combinations.get_level_values(position).to_numpy(dtype=np.int64)

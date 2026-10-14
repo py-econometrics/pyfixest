@@ -21,34 +21,36 @@ class FixedEffect:
 
     Attributes
     ----------
-    column : str
+    encoded_column : str
         Internal encoded column name in the Formulaic spec. Its factor metadata
         retains the original parsed term; `ModelMatrix.fixed_effects` exposes
         the original labels as column names.
     name : str
         User-facing fixed-effect name. Interacted variables are joined with `:`,
         for example `firm:year`.
-    codes : NDArray[np.int64]
+    observed_codes : NDArray[np.int64]
         Integer codes identifying fixed-effect levels observed in the estimation
         sample after singleton removal.
-    values : tuple[NDArray[Any], ...]
+    level_values : tuple[NDArray[Any], ...]
         Original level values, stored as one array per fixed-effect component.
-        Every array is aligned with `codes`.
+        Every array is aligned with `observed_codes`.
     coefficients : NDArray[np.float64]
         Estimated coefficient indexed by fixed-effect code. Omitted reference
         levels have coefficient zero. Levels removed before estimation have
         coefficient `NaN`.
     """
 
-    column: str
+    encoded_column: str
     name: str
-    codes: NDArray[np.int64]
-    values: tuple[NDArray[Any], ...]
+    observed_codes: NDArray[np.int64]
+    level_values: tuple[NDArray[Any], ...]
     coefficients: NDArray[np.float64]
 
     def level_labels(self) -> pd.Series:
         """Combine values of fixed effect levels into comma-separated string."""
-        value_columns = pd.DataFrame(dict(enumerate(self.values))).astype("string")
+        value_columns = pd.DataFrame(dict(enumerate(self.level_values))).astype(
+            "string"
+        )
         return value_columns.agg(",".join, axis="columns").astype("string")
 
 
@@ -146,15 +148,15 @@ def build_fixed_effects(
         encoding = get_fixed_effect_encoding(
             transform_state=transform_state, column=column
         )
-        coefficients = np.full(len(encoding.code_order), np.nan, dtype=np.float64)
+        coefficients = np.full(len(encoding.code_index), np.nan, dtype=np.float64)
         # Observed reference levels are zero; removed levels remain NaN.
         coefficients[positions.observed_codes] = 0.0
         coefficients[positions.coefficient_codes] = alpha[positions.coefficient_indices]
         fixed_effects[column] = FixedEffect(
-            column=column,
+            encoded_column=column,
             name=encoding.name,
-            codes=positions.observed_codes,
-            values=encoding.decode(codes=positions.observed_codes),
+            observed_codes=positions.observed_codes,
+            level_values=encoding.decode(codes=positions.observed_codes),
             coefficients=coefficients,
         )
     return fixed_effects
@@ -170,9 +172,11 @@ def fixed_effects_to_frame(
             pd.DataFrame(
                 {
                     "variable": fixed_effect.name,
-                    "code": fixed_effect.codes,
+                    "code": fixed_effect.observed_codes,
                     "level": fixed_effect.level_labels(),
-                    "coefficient": fixed_effect.coefficients[fixed_effect.codes],
+                    "coefficient": fixed_effect.coefficients[
+                        fixed_effect.observed_codes
+                    ],
                 }
             )
         )
@@ -194,7 +198,7 @@ def sum_fixed_effects(
 
 def build_fixed_effect_dummies(
     *,
-    fixed_effects: pd.DataFrame,
+    codes: pd.DataFrame,
     column_names: Sequence[str],
 ) -> FixedEffectDummies:
     """Build sparse dummies directly from retained estimation-sample codes.
@@ -241,10 +245,10 @@ def build_fixed_effect_dummies(
     columns = []
     offset = 0
     for position, (name, column) in enumerate(
-        zip(column_names, fixed_effects.columns, strict=True)
+        zip(column_names, codes.columns, strict=True)
     ):
-        codes = fixed_effects[column].to_numpy(dtype=np.int64)
-        observed_codes, observed_positions = index_observed_codes(codes)
+        row_codes = codes[column].to_numpy(dtype=np.int64)
+        observed_codes, observed_positions = index_observed_codes(row_codes)
         # Apply normalization for fixed-effect levels
         coefficient_codes, dummy_rows, first_coefficient_position = (
             select_coefficient_levels(
@@ -268,7 +272,7 @@ def build_fixed_effect_dummies(
     column_indices = np.concatenate(columns)
     matrix = csc_matrix(
         (np.ones(len(row_indices)), (row_indices, column_indices)),
-        shape=(len(fixed_effects), offset),
+        shape=(len(codes), offset),
     )
     return FixedEffectDummies(
         matrix=matrix, coefficient_positions=coefficient_positions
