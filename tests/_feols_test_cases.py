@@ -160,7 +160,7 @@ def convert_f3(data: pd.DataFrame, f3_type: str) -> pd.DataFrame:
     elif f3_type == "int":
         data["f3"] = data["f3"].astype(float).astype(np.int32)
     elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
+        data["f3"] = data["f3"].astype("string")
     elif f3_type == "object":
         data["f3"] = data["f3"].astype(object)
     elif f3_type == "float":
