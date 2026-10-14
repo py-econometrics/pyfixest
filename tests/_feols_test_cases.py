@@ -147,6 +147,8 @@ FEOLS_FORMULA_F3_CASES = (
         for fml in FEOLS_FORMULAS
         if "f3" in fml
         for f3_type in ALL_F3_TYPES[1:]
+        # Object fixed effects are intentionally rejected; covariates still allow them.
+        if f3_type != "object" or "f3" not in fml.partition("|")[2]
     ),
 )
 
