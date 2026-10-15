@@ -17,12 +17,15 @@ from scipy.stats import t
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import (
+    ModelMatrix,
+    _ModelMatrixKey,
+    create_model_matrix,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
@@ -84,11 +87,9 @@ from pyfixest.estimation.post_estimation.decomposition import (
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
     build_fixed_effects,
-    check_fe_dtype_compatibility,
     contrast_code_fixed_effects,
     fixed_effects_to_frame,
     predict_fixed_effects,
-    warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
@@ -108,16 +109,15 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _fixed_effect_names(
-    model_matrix: ModelMatrix, fixest_formula: FixestFormula
-) -> tuple[str, ...]:
-    """Name the absorbed fixed effects in the order the formula writes them.
+def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
+    """Name each absorbed term in materialized fixed-effect column order.
 
     Empty when the materialized model matrix carries no fixed-effect block.
     """
-    if model_matrix.fixed_effects is None:
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(fixed_effects.columns)
 
 
 class Feols(ResultAccessorMixin):
@@ -325,7 +325,7 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
-        model_matrix = model_matrix_fixest.create_model_matrix(
+        model_matrix = create_model_matrix(
             formula=self.model.fixest_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
@@ -351,9 +351,7 @@ class Feols(ResultAccessorMixin):
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
-            fixed_effects=_fixed_effect_names(
-                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
-            ),
+            fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
                 tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
@@ -1906,12 +1904,12 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
-                check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
-                    newdata, context=context, na_action="ignore"
+                    newdata,
+                    context=context,
+                    na_action="ignore",
                 )
-                warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):

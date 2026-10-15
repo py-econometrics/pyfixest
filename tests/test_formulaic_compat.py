@@ -10,10 +10,13 @@ import numpy as np
 import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
+from formulaic.materializers.base import FormulaMaterializer
+from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
+    FixedEffectEvaluationError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
 )
@@ -29,6 +32,9 @@ from pyfixest.estimation.formula.formulaic_compat import (
     terms_without_intercept,
 )
 from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FixedEffectEncoding,
+)
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
 
@@ -227,15 +233,18 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
 
 
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
-    """FE transform_state stores __fixed_effect_encoding__ DataFrame."""
+    """FE transform_state stores the fitted level indexes and combinations."""
     fit = pf.feols("Y ~ X1 | f1", data=data)
 
     fe_spec = fit.model.model_spec["fe"]
-    fe_state = fe_spec.transform_state["__fixed_effect__(f1)"]
-    enc_df = fe_state["__fixed_effect_encoding__"]
-
-    assert isinstance(enc_df, pd.DataFrame)
-    assert "__fixed_effect_encoding__" in enc_df.columns
+    (factor,) = fe_spec.formula[0].factors
+    assert factor.metadata["term"].factors[0].expr == "f1"
+    assert factor.expr == "__fixed_effect__(f1)"
+    assert fe_spec.required_variables == {"f1"}
+    fe_state = fe_spec.transform_state[factor.expr]
+    encoding = fe_state["__fixed_effect_encoding__"]
+    assert isinstance(encoding, FixedEffectEncoding)
+    assert encoding.levels[0].tolist() == sorted(data.f1.unique())
 
 
 def test_materializer_cache_contains_evaluated_factor_values(
@@ -344,10 +353,6 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending indexed fixed-effect encoding; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
 def test_fe_prediction_matches_values_across_dtypes(data, kind):
     """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
@@ -414,6 +419,38 @@ def test_fe_unseen_combination_predicts_nan(data):
         atol=1e-10,
         err_msg="seen FE combinations",
     )
+
+
+@pytest.mark.parametrize("expression", ["z", "z:f2"])
+def test_fe_rejects_context_only_columns(data, expression):
+    """Fixed effects must read observation vectors from data, not context."""
+    frame = data.copy()
+    frame.index = np.random.default_rng(312).permutation(len(frame))
+    frame.iloc[0, frame.columns.get_loc("Y")] = np.nan
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
+        pf.feols(f"Y ~ X1 | {expression}", data=frame, context={"z": frame.f1})
+
+
+@pytest.mark.parametrize("expression", ["z", "z:f2"])
+def test_fe_split_rejects_full_sample_context_series(data, expression):
+    """A full-sample context vector cannot describe a shorter split."""
+    frame = data.copy()
+    frame.index = np.random.default_rng(312).permutation(len(frame))
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
+        pf.feols(
+            f"Y ~ X1 | {expression}",
+            data=frame,
+            context={"z": frame.f1},
+            split="f2",
+        )
+
+
+@pytest.mark.parametrize("expression", ["f1", "f1:f2"])
+def test_fe_prediction_requires_data_columns(data, expression):
+    """Prediction cannot substitute a captured training Series for newdata."""
+    fit = pf.feols(f"Y ~ X1 | {expression}", data=data, context={"f1": data.f1})
+    with pytest.raises(FixedEffectEvaluationError, match=r"Column `f1`.*is missing"):
+        fit.predict(newdata=data.iloc[:5].drop(columns="f1"))
 
 
 @pytest.mark.xfail(
@@ -559,6 +596,55 @@ def test_iv_rejects_quoted_variable_overlap(fml, error):
 
 
 @pytest.mark.parametrize(
+    "name, quoted",
+    [
+        ("firm", False),
+        ("_firm", False),
+        ("match", False),
+        ("fírma", False),
+        ("λ", False),
+        ("firm", True),
+    ],
+)
+@pytest.mark.parametrize("interaction", [False, True])
+def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, interaction):
+    """Normalized Python identifiers retain dependencies, codes, and labels."""
+    renamed = data.rename(columns={"f1": name})
+    renamed.loc[0, name] = np.nan
+    expression = f"`{name}`" if quoted else name
+    expression += ":f2" if interaction else ""
+    # A context vector with the same name cannot replace the actual data column.
+    fit = pf.feols(
+        f"Y ~ X1 | {expression}",
+        data=renamed,
+        context={name: renamed[name].iloc[::-1]},
+    )
+    spec = fit.model.model_spec["fe"]
+    assert spec.required_variables == ({name, "f2"} if interaction else {name})
+    (factor,) = spec.formula[0].factors
+    assert set(spec.transform_state) == {factor.expr}
+    assert factor.metadata["term"] == fit.model.fixest_formula.fixed_effects[0]
+    assert set(fit.fixef().variable) == {f"{name}:f2" if interaction else name}
+    baseline_data = renamed.rename(columns={name: "f1"})
+    baseline = pf.feols(
+        "Y ~ X1 | " + ("f1:f2" if interaction else "f1"), data=baseline_data
+    )
+    np.testing.assert_allclose(
+        fit.coef(), baseline.coef(), rtol=0, atol=1e-12, err_msg="FE coefficients"
+    )
+    positions = [8, 3, 0, 6]
+    prediction = fit.predict(newdata=renamed.iloc[positions])
+    assert np.isnan(prediction[2])
+    np.testing.assert_allclose(
+        prediction,
+        baseline.predict(newdata=baseline_data.iloc[positions]),
+        rtol=0,
+        atol=1e-10,
+        err_msg="FE predictions",
+    )
+
+
+@pytest.mark.parametrize(
     "name, message",
     [
         ("my fe", "valid Python identifier"),
@@ -571,3 +657,39 @@ def test_fe_rejects_invalid_column_names(data, name, message):
     renamed = data.rename(columns={"f1": name})
     with pytest.raises(FormulaSyntaxError, match=message):
         pf.feols(f"Y ~ X1 | `{name}`:f2", data=renamed)
+
+
+def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
+    evaluate = FormulaMaterializer._evaluate_factor
+    observed = set()
+    path = "fit"
+
+    def check_variables(self, factor, spec, drop_rows):
+        assert path != "fixef", "Use retained FE codes"
+        evaluated = evaluate(self, factor, spec, drop_rows)
+        if "term" in factor.metadata:
+            assert {
+                str(variable)
+                for variable in evaluated.variables
+                if Variable.Role.VALUE in variable.roles
+            } == {"f1", "f2"}
+            observed.add(path)
+        return evaluated
+
+    monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", check_variables)
+    fit = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    path = "fixef"
+    fit.fixef()
+    path = "predict"
+    fit.predict(newdata=data.iloc[:5])
+    assert observed == {"fit", "predict"}
+
+
+def test_fe_encoding_error_names_term(data):
+    data = data.assign(f1=[[value] for value in data.f1])
+    with pytest.raises(
+        FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
+    ) as exc:
+        pf.feols("Y ~ X1 | f1", data=data)
+    assert "__fixed_effect__" not in str(exc.value)
+    assert isinstance(exc.value.__cause__, TypeError)

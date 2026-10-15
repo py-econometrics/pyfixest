@@ -22,6 +22,10 @@ from pyfixest.estimation.formula.transforms.factor_interaction import (
     is_i_contrast_state_key,
     variable_from_contrast_state_key,
 )
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FIXED_EFFECT_ENCODING,
+    FixedEffectEncoding,
+)
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -87,6 +91,19 @@ if formulaic.__version__ == "1.2.2":
 
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
+
+
+def get_fixed_effect_encoding(
+    *, transform_state: Mapping[str, Any], column: str
+) -> FixedEffectEncoding:
+    """Read pyfixest's typed encoding from Formulaic's transform-state layout."""
+    try:
+        return cast(FixedEffectEncoding, transform_state[column][FIXED_EFFECT_ENCODING])
+    except KeyError as exc:
+        raise FormulaicCompatibilityError(
+            f"Fixed-effect encoding for `{column}` is missing from the "
+            "formulaic transform state."
+        ) from exc
 
 
 def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:

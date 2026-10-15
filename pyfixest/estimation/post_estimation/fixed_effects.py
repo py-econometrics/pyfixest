@@ -1,23 +1,17 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-import formulaic
 import numpy as np
 import pandas as pd
 from numpy._typing import NDArray
 from scipy.sparse import csc_matrix
 
 from pyfixest.estimation.formula.formulaic_compat import (
-    FormulaicCompatibilityError,
+    get_fixed_effect_encoding,
 )
-from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FIXED_EFFECT_ENCODING,
-)
-from pyfixest.utils.dev_utils import _find_stack_level
 
 
 @dataclass(kw_only=True, frozen=True, slots=True)
@@ -29,7 +23,7 @@ class FixedEffect:
     ----------
     fixed_effect : str
         Internal encoded fixed-effect name used as the corresponding model-matrix
-        column, for example `__fixed_effect__(firm)`.
+        column. Its factor metadata retains the original parsed term.
     variable : str
         User-facing fixed-effect name. Interacted variables are joined with `:`,
         for example `firm:year`.
@@ -70,8 +64,8 @@ class FixedEffectEstimates:
     Parameters
     ----------
     coefficients : Mapping[str, FixedEffect]
-        Coefficient records keyed by encoded fixed-effect name, for example
-        `__fixed_effect__(f1)`. `fixef()` returns their tidy frame.
+        Coefficient records keyed by encoded fixed-effect name. `fixef()`
+        returns their tidy frame with the original factor labels.
     alpha : NDArray[np.float64]
         Solution of the least-squares problem in the dummy-coded fixed
         effects, shape (n_fixed_effect_coefficients,), ordered as the columns
@@ -147,39 +141,24 @@ def build_fixed_effects(
 ) -> dict[str, FixedEffect]:
     """Build fixed-effect coefficient records keyed by encoded name."""
     fixed_effects: dict[str, FixedEffect] = {}
-    for fixed_effect_name, positions in contrast_coding.coefficient_positions.items():
-        fixed_effect = _build_fixed_effect(
-            name=fixed_effect_name,
-            coefficients=fixed_effect_coefficients,
-            positions=positions,
-            transform_state=transform_state,
+    for name, positions in contrast_coding.coefficient_positions.items():
+        encoding = get_fixed_effect_encoding(
+            transform_state=transform_state, column=name
         )
-        fixed_effects[fixed_effect.fixed_effect] = fixed_effect
-
+        coefficients = np.full(len(encoding.combinations), np.nan, dtype=np.float64)
+        # Observed reference levels are zero; removed levels remain NaN.
+        coefficients[positions.observed_codes] = 0.0
+        coefficients[positions.coefficient_codes] = fixed_effect_coefficients[
+            positions.coefficient_indices
+        ]
+        fixed_effects[name] = FixedEffect(
+            fixed_effect=name,
+            variable=encoding.variable,
+            codes=positions.observed_codes,
+            values=encoding.decoded_values(codes=positions.observed_codes),
+            coefficients=coefficients,
+        )
     return fixed_effects
-
-
-def _build_fixed_effect(
-    name: str,
-    coefficients: np.ndarray,
-    positions: FixedEffectCoefficientPositions,
-    transform_state: Mapping[str, Any],
-) -> FixedEffect:
-    """Build the coefficient record for one fixed effect."""
-    variable, codes, values = get_fixed_effect_encoding_data(name, transform_state)
-    coefficient_by_code = np.full(codes.max() + 1, np.nan, dtype=np.float64)
-    coefficient_by_code[positions.observed_codes] = 0.0
-    coefficient_by_code[positions.coefficient_codes] = coefficients[
-        positions.coefficient_indices
-    ]
-    observed = np.isin(codes, positions.observed_codes)
-    return FixedEffect(
-        fixed_effect=name,
-        variable=variable,
-        codes=codes[observed],
-        values=tuple(value[observed] for value in values),
-        coefficients=coefficient_by_code,
-    )
 
 
 def fixed_effects_to_frame(
@@ -201,33 +180,6 @@ def fixed_effects_to_frame(
     return pd.concat(frames, ignore_index=True)
 
 
-def check_fe_dtype_compatibility(
-    model_spec: formulaic.ModelSpec,
-    newdata: pd.DataFrame,
-) -> None:
-    """Raise if new fixed-effect dtypes cannot match the fitted encodings."""
-    checked_columns: set[str] = set()
-    for fixed_effect in model_spec.column_names:
-        encoding = get_fixed_effect_encoding(model_spec.transform_state, fixed_effect)
-        source_columns = [
-            column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
-        ]
-        for column in source_columns:
-            if column in checked_columns or column not in newdata.columns:
-                continue
-            checked_columns.add(column)
-            fit_is_numeric = pd.api.types.is_numeric_dtype(encoding[column])
-            new_is_numeric = pd.api.types.is_numeric_dtype(newdata[column])
-            if fit_is_numeric != new_is_numeric:
-                raise ValueError(
-                    f"Fixed effect column '{column}' has dtype "
-                    f"{newdata[column].dtype} in newdata but "
-                    f"{encoding[column].dtype} in the data used for fitting, "
-                    "so its levels cannot be matched. Convert the column to a "
-                    "matching type before calling predict()."
-                )
-
-
 def predict_fixed_effects(
     model_matrix: pd.DataFrame,
     coefficients: Mapping[str, FixedEffect],
@@ -239,62 +191,6 @@ def predict_fixed_effects(
         contributions += coefficients[str(fixed_effect)].coefficients[codes]
 
     return contributions
-
-
-def warn_on_unseen_fixed_effect_levels(
-    model_matrix: pd.DataFrame,
-    model_spec: formulaic.ModelSpec,
-    newdata: pd.DataFrame,
-) -> None:
-    """Warn about fixed-effect levels not observed during fitting."""
-    for fixed_effect in model_matrix.columns:
-        fixed_effect = str(fixed_effect)
-        encoding = get_fixed_effect_encoding(model_spec.transform_state, fixed_effect)
-        source_columns = [
-            column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
-        ]
-        unseen = (
-            model_matrix[fixed_effect].isna().to_numpy()
-            & newdata[source_columns].notna().all(axis=1).to_numpy()
-        )
-        if unseen.any():
-            missing = newdata.loc[unseen, source_columns].drop_duplicates()
-            warnings.warn(
-                f"{missing.shape[0]} unseen level(s) for fixed effect "
-                f"`{':'.join(source_columns)}`: {missing.iloc[:20]}\n"
-                "Predictions for affected observations will be NaN",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-
-
-def get_fixed_effect_encoding(
-    transform_state: Mapping[str, Any], column: str
-) -> pd.DataFrame:
-    """Return pyfixest's stored fixed-effect encoding DataFrame."""
-    try:
-        return transform_state[column][FIXED_EFFECT_ENCODING]
-    except KeyError as exc:
-        raise FormulaicCompatibilityError(
-            f"Fixed-effect encoding for `{column}` is missing from the "
-            "formulaic transform state."
-        ) from exc
-
-
-def get_fixed_effect_encoding_data(
-    fixed_effect_name: str,
-    transform_state: Mapping[str, Any],
-) -> tuple[str, NDArray[np.int64], tuple[NDArray[Any], ...]]:
-    """Return normalized encoding data for one fixed effect."""
-    encoding = get_fixed_effect_encoding(transform_state, fixed_effect_name)
-    value_columns = [
-        column for column in encoding.columns if column != FIXED_EFFECT_ENCODING
-    ]
-    return (
-        ":".join(value_columns),
-        encoding[FIXED_EFFECT_ENCODING].to_numpy(dtype=np.int64),
-        tuple(encoding[column].to_numpy(copy=True) for column in value_columns),
-    )
 
 
 def contrast_code_fixed_effects(
