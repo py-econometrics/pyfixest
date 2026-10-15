@@ -536,7 +536,7 @@ def _get_formulaic_formula(
     }
     if formula.is_fixed_effects:
         formula_kwargs.update(
-            {_ModelMatrixKey.fixed_effects: formula.encoded_fixed_effects}
+            {_ModelMatrixKey.fixed_effects: formula.formulaic_fixed_effects}
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(

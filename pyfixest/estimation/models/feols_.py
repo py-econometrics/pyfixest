@@ -1760,7 +1760,7 @@ class Feols(ResultAccessorMixin):
         # has_fixef guarantees that the retained matrix contains FE codes.
         fixed_effect_codes = cast(pd.DataFrame, self.model_matrix.fixed_effects)
         dummies = build_fixed_effect_dummies(
-            codes=fixed_effect_codes, column_names=fe_spec.column_names
+            codes=fixed_effect_codes, formulaic_columns=fe_spec.column_names
         )
         D = dummies.matrix
         D_w = D

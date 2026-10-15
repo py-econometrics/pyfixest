@@ -113,8 +113,8 @@ class FixedEffectEncoding:
         )
 
 
-def as_encoded_fixed_effect_term(term: Term) -> Term:
-    """Expose ordinary column lookups to Formulaic and retain the original term."""
+def as_formulaic_fixed_effect_term(term: Term) -> Term:
+    """Build a Formulaic transform term retaining the original FE lookups."""
     for factor in term.factors:
         if factor.eval_method is not Factor.EvalMethod.LOOKUP:
             raise FormulaSyntaxError(
