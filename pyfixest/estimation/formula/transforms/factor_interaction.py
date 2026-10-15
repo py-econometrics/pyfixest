@@ -254,6 +254,11 @@ def _encode_factor(
     if bins is not None:
         data = _apply_binning(data, bins, encoder_state)
     contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
+    if "levels" not in contrasts_state and isinstance(data.dtype, pd.CategoricalDtype):
+        # Like fixest, encode only the levels observed in the estimation sample.
+        # Unused categories would otherwise become all-zero columns, and an
+        # unused first category would be dropped as the reference level.
+        data = data.cat.remove_unused_categories()
     # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
     # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
     dummies = encode_contrasts_with_state(

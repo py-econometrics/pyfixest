@@ -12,6 +12,7 @@ Tests cover:
 """
 
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -408,6 +409,44 @@ def test_i_with_same_var_standalone(df_test):
     fml = "Y ~ X1 + i(f_str, X1)"
     py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
     assert_models_match(py_names, py_values, r_names, r_values, check_names=False)
+
+
+@pytest.fixture(scope="module")
+def df_unused_categories(df_test) -> pd.DataFrame:
+    """Categorical columns with categories absent from the data."""
+    df = df_test.copy()
+    # Unused first category: must not become the reference level.
+    df["f_cat"] = pd.Categorical(
+        df["f_str"], categories=["avocado", "apple", "banana", "cherry"]
+    )
+    # Unused last category: must not produce an all-zero column.
+    df["f_cat_last"] = pd.Categorical(
+        df["f_str"], categories=["apple", "banana", "cherry", "zucchini"]
+    )
+    df["g_cat"] = pd.Categorical(df["g"], categories=["W", "X", "Y", "Z"])
+    return df
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ X1 + i(f_cat)", None),
+        ("Y ~ X1 + i(f_cat) | fe1", None),
+        ("Y ~ X1 + i(f_cat_last)", None),
+        ("Y ~ X1 + i(f_cat, ref='banana')", None),
+        ("Y ~ X1 + i(f_cat, X2)", None),
+        ("Y ~ X1 + i(f_cat, i.g_cat)", "Y ~ X1 + i(f_cat, g_cat)"),
+    ],
+)
+def test_unused_categories(df_unused_categories, r_fml, py_fml):
+    """Unused categories of a categorical produce no columns, as in fixest."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=r"\s*\d+ variables dropped")
+        py_names, py_values, r_names, r_values = compare_with_r(
+            r_fml, df_unused_categories, py_fml
+        )
+    assert_models_match(py_names, py_values, r_names, r_values)
 
 
 # =============================================================================
