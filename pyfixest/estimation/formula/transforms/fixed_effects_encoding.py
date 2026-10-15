@@ -26,6 +26,7 @@ class FixedEffectEncoding:
     term: Term
     levels: tuple[pd.Index, ...]
     combinations: pd.RangeIndex | pd.MultiIndex
+    dtypes: tuple[np.dtype | pd.api.extensions.ExtensionDtype, ...]
 
     @property
     def variable(self) -> str:
@@ -37,8 +38,8 @@ class FixedEffectEncoding:
         cls, *, term: Term, values: tuple[pd.Series, ...]
     ) -> tuple[FixedEffectEncoding, pd.Series]:
         """Learn the level mappings and return the training codes."""
-        # Sorted factorization preserves declared categorical order and safely
-        # orders mixed numbers/strings, returning codes and observed levels together.
+        # Sorted factorization preserves declared categorical order, returning
+        # codes and observed levels together.
         factorized = [pd.factorize(column, sort=True) for column in values]
         per_factor = [codes for codes, _ in factorized]
         levels = tuple(pd.Index(levels) for _, levels in factorized)
@@ -53,12 +54,24 @@ class FixedEffectEncoding:
             codes = combinations.get_indexer(observed).astype(np.float64)
         codes[codes < 0] = np.nan
         return (
-            cls(term=term, levels=levels, combinations=combinations),
+            cls(
+                term=term,
+                levels=levels,
+                combinations=combinations,
+                dtypes=tuple(column.dtype for column in values),
+            ),
             pd.Series(codes, index=values[0].index),
         )
 
     def encode(self, *, values: tuple[pd.Series, ...]) -> pd.Series:
         """Use the fitted indexes for both training and prediction matching."""
+        for dtype, column in zip(self.dtypes, values, strict=True):
+            if column.dtype != dtype:
+                raise FixedEffectEvaluationError(
+                    f"Fixed-effect column `{column.name}` has dtype {column.dtype}, "
+                    f"but the model was fitted on dtype {dtype}. Convert the column "
+                    "to the fitted dtype before calling predict()."
+                )
         per_factor = [
             level.get_indexer(column)
             for level, column in zip(self.levels, values, strict=True)
@@ -140,6 +153,12 @@ def encode_fixed_effects(*_columns, _state=None, _metadata=None, _context: Any =
                     f"Column `{factor.expr}` required by fixed effect `{term}` "
                     "is missing."
                 ) from exc
+            if pd.api.types.is_object_dtype(column.dtype):
+                raise FixedEffectEvaluationError(  # noqa: TRY301
+                    f"Fixed-effect column `{factor}` has unsupported object dtype. "
+                    "Convert it to an explicit dtype, such as 'string', before "
+                    "fitting or prediction."
+                )
             columns.append(column.rename(str(factor)))
         values = tuple(columns)
         if FIXED_EFFECT_ENCODING not in state:

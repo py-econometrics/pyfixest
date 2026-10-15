@@ -54,7 +54,7 @@ def _frequency_weight_data() -> tuple[pd.DataFrame, pd.DataFrame]:
             "x": x,
             "d": d,
             "z": z,
-            "fe": fe,
+            "fe": pd.Series(fe, dtype="string"),
             "cluster": cluster,
             "count": rng.integers(1, 5, size=n_rows),
         }
@@ -221,7 +221,7 @@ def test_fweights_glm_sample_sizes_after_separation():
         {
             "y": [0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0],
             "x": [-1.2, -0.4, 0.7, -1.1, -0.2, 0.9, -0.8, 0.1, 1.2, -0.9, 0.4, 1.4],
-            "fe": np.repeat(list("abcd"), 3),
+            "fe": pd.Series(np.repeat(list("abcd"), 3), dtype="string"),
             "count": [1, 3, 2, 2, 1, 4, 1, 2, 3, 3, 2, 1],
         }
     )

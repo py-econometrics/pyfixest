@@ -64,7 +64,7 @@ def lifecycle_data() -> pd.DataFrame:
             "x2": second_covariate,
             "endog": endogenous,
             "z": instrument,
-            "fe": fixed_effect,
+            "fe": pd.Series(fixed_effect, dtype="string"),
             "weight": np.tile([1, 2, 4, 3, 1, 2], 4),
         }
     )
@@ -231,7 +231,7 @@ def test_glm_separation_replaces_formula_data_with_filtered_state() -> None:
     data = pd.DataFrame(
         {
             "y": [0, 0, 0, 1, 2, 3],
-            "fe": ["a", "a", "b", "b", "b", "c"],
+            "fe": pd.Series(["a", "a", "b", "b", "b", "c"], dtype="string"),
             "x": [-1.0, 0.5, 0.25, 1.0, -0.5, 1.5],
         }
     )

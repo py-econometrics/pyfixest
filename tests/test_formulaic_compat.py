@@ -329,19 +329,17 @@ def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> N
 
 
 @pytest.mark.parametrize("arity", [1, 2, 3])
-@pytest.mark.parametrize("kind", ["numeric", "string", "categorical", "mixed"])
+@pytest.mark.parametrize("kind", ["numeric", "string", "categorical"])
 def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     """Level indexes preserve fitted codes, including categorical reference order."""
     frame = data.copy()
     frame["f3"] = frame.f1 % 2
     if kind == "string":
-        frame["f1"] = frame.f1.astype(str)
+        frame["f1"] = frame.f1.astype("string")
     elif kind == "categorical":
         frame["f1"] = pd.Categorical(
             frame.f1, categories=[4, 2, 0, 3, 1, 99], ordered=True
         )
-    elif kind == "mixed":
-        frame["f1"] = frame.f1.astype(object).where(frame.f1 < 3, "a")
     frame.loc[0, "f1"] = np.nan
     names = ["f1", "f2", "f3"][:arity]
     expected = frame.groupby(names).ngroup().dropna()
@@ -353,29 +351,64 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     )
 
 
-@pytest.mark.parametrize("kind", ["categorical", "bool_to_numeric", "numeric_to_bool"])
-def test_fe_prediction_matches_values_across_dtypes(data, kind):
-    """Numeric categoricals match integers; bool/numeric coercion is disallowed."""
+@pytest.mark.parametrize("term", ["f1", "f1:f2"])
+@pytest.mark.parametrize(
+    "dtype, query_dtype",
+    [
+        ("float64", "int64"),
+        ("int64", "float64"),
+        ("int64", "int32"),
+        ("int64", "Int64"),
+        ("bool", "int64"),
+        ("int64", "bool"),
+        ("category", "int64"),
+        ("string", "category"),
+        (pd.CategoricalDtype([0, 1]), pd.CategoricalDtype([0, 1, 2])),
+        (pd.CategoricalDtype([0, 1]), pd.CategoricalDtype([0, 1], ordered=True)),
+    ],
+)
+def test_fe_prediction_requires_fitted_dtype(data, term, dtype, query_dtype):
+    """Equal label values do not bypass the fitted dtype contract."""
     frame = data.copy()
-    frame["f1"] = frame.f1 % 2
-    if kind == "categorical":
-        frame["f1"] = frame.f1.astype("category")
-    elif kind == "bool_to_numeric":
-        frame["f1"] = frame.f1.astype(bool)
-    fit = pf.feols("Y ~ X1 | f1", data=frame)
+    frame["f1"] = (frame.f1 % 2).astype(dtype)
+    fit = pf.feols(f"Y ~ X1 | {term}", data=frame)
     newdata = frame.iloc[:10].copy()
-    newdata["f1"] = newdata.f1.astype(bool if kind == "numeric_to_bool" else int)
-    if kind in {"bool_to_numeric", "numeric_to_bool"}:
-        with pytest.warns(UserWarning, match="unseen level"):
-            assert np.isnan(fit.predict(newdata=newdata)).all()
-        return
     np.testing.assert_allclose(
         fit.predict(newdata=newdata),
         fit.predict()[:10],
         rtol=0,
         atol=1e-10,
-        err_msg="FE predictions across compatible dtypes",
+        err_msg="FE predictions with the fitted dtype",
     )
+    newdata["f1"] = newdata.f1.astype(query_dtype)
+    with pytest.raises(
+        FixedEffectEvaluationError, match=r"`f1` has dtype .* fitted on dtype"
+    ):
+        fit.predict(newdata=newdata)
+
+
+@pytest.mark.parametrize("term", ["f1", "f1:f2"])
+@pytest.mark.parametrize("prediction", [False, True])
+@pytest.mark.parametrize("kind", ["numeric", "string", "mixed", "missing"])
+def test_fe_rejects_object_dtype(data, term, prediction, kind):
+    """Object columns are rejected before factorization or prediction lookup."""
+    frame = data.copy()
+    fit = pf.feols(f"Y ~ X1 | {term}", data=frame) if prediction else None
+    frame["f1"] = frame.f1.astype(object)
+    if kind == "string":
+        frame["f1"] = frame.f1.astype(str).astype(object)
+    elif kind == "mixed":
+        frame.loc[0, "f1"] = True
+    elif kind == "missing":
+        frame["f1"] = pd.Series(None, index=frame.index, dtype=object)
+    with pytest.raises(
+        FixedEffectEvaluationError,
+        match=r"`f1` has unsupported object dtype.*explicit dtype",
+    ):
+        if fit is not None:
+            fit.predict(newdata=frame.iloc[:10])
+        else:
+            pf.feols(f"Y ~ X1 | {term}", data=frame)
 
 
 @pytest.mark.parametrize(
@@ -685,8 +718,11 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
     assert observed == {"fit", "predict"}
 
 
-def test_fe_encoding_error_names_term(data):
-    data = data.assign(f1=[[value] for value in data.f1])
+def test_fe_encoding_error_names_term(data, monkeypatch):
+    def fail(cls, **kwargs):
+        raise TypeError("unhashable type")
+
+    monkeypatch.setattr(FixedEffectEncoding, "fit", classmethod(fail))
     with pytest.raises(
         FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
     ) as exc:
