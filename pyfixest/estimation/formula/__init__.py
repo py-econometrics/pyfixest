@@ -7,7 +7,7 @@ from formulaic.parser import DefaultFormulaParser
 
 from pyfixest.estimation.formula.transforms.factor_interaction import factor_interaction
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    encode_fixed_effects,
+    encode_fixed_effect,
 )
 
 FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
@@ -16,5 +16,5 @@ FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
 
 FORMULAIC_TRANSFORMS: Final[dict[str, Callable]] = {
     "i": factor_interaction,  # fixest::i()-style syntax
-    "__fixed_effect__": encode_fixed_effects,
+    "__fixed_effect__": encode_fixed_effect,
 }

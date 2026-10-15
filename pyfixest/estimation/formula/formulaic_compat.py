@@ -23,7 +23,7 @@ from pyfixest.estimation.formula.transforms.factor_interaction import (
     variable_from_contrast_state_key,
 )
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
-    FIXED_EFFECT_ENCODING,
+    FIXED_EFFECT_ENCODING_STATE_KEY,
     FixedEffectEncoding,
 )
 
@@ -98,7 +98,10 @@ def get_fixed_effect_encoding(
 ) -> FixedEffectEncoding:
     """Read pyfixest's typed encoding from Formulaic's transform-state layout."""
     try:
-        return cast(FixedEffectEncoding, transform_state[column][FIXED_EFFECT_ENCODING])
+        return cast(
+            FixedEffectEncoding,
+            transform_state[column][FIXED_EFFECT_ENCODING_STATE_KEY],
+        )
     except KeyError as exc:
         raise FormulaicCompatibilityError(
             f"Fixed-effect encoding for `{column}` is missing from the "
