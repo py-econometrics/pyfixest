@@ -290,6 +290,16 @@ def test_binning_with_continuous(df_test):
             "Y ~ i(f_str, i.g, ref='apple', ref2='X')",
             "Y ~ i(f_str, g, ref='apple', ref2='X')",
         ),
+        ("Y ~ i(f_str, i.g, ref2='X')", "Y ~ i(f_str, g, ref2='X')"),
+        # Without an intercept, every cell is kept (#1767)
+        ("Y ~ X1 + i(f_str, i.g) - 1", "Y ~ X1 + i(f_str, g) - 1"),
+        ("Y ~ 0 + X1 + i(f_str, i.g)", "Y ~ 0 + X1 + i(f_str, g)"),
+        ("Y ~ 0 + i(f_str, i.g, ref='apple')", "Y ~ 0 + i(f_str, g, ref='apple')"),
+        ("Y ~ 0 + i(f_str, i.g, ref2='X')", "Y ~ 0 + i(f_str, g, ref2='X')"),
+        (
+            "Y ~ 0 + i(f_str, i.g, ref='apple', ref2='X')",
+            "Y ~ 0 + i(f_str, g, ref='apple', ref2='X')",
+        ),
     ],
 )
 def test_factor_x_factor(df_test, r_fml, py_fml):
@@ -303,6 +313,8 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g) | fe1", "Y ~ i(f_str, g) | fe1"),
+        ("Y ~ i(f_str, i.g, ref='apple') | fe1", "Y ~ i(f_str, g, ref='apple') | fe1"),
+        ("Y ~ i(f_str, i.g, ref2='X') | fe1", "Y ~ i(f_str, g, ref2='X') | fe1"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X') | fe1",
             "Y ~ i(f_str, g, ref='apple', ref2='X') | fe1",
