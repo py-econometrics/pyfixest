@@ -249,10 +249,22 @@ def test_with_intercept_drop_level(df_test, fml):
 
 
 @pytest.mark.against_r_core
-def test_binning_simple(df_test):
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        (
+            "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))",
+            "Y ~ i(f_str, bin={'fruit': ['apple','banana']})",
+        ),
+        # A scalar old level bins that level instead of its characters.
+        (
+            "Y ~ i(f_str, bin=list(fruit='apple'))",
+            "Y ~ i(f_str, bin={'fruit': 'apple'})",
+        ),
+    ],
+)
+def test_binning_simple(df_test, r_fml, py_fml):
     """Test i() with bin parameter."""
-    r_fml = "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))"
-    py_fml = "Y ~ i(f_str, bin={'fruit': ['apple','banana']})"
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 

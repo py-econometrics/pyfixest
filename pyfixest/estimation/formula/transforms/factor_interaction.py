@@ -315,15 +315,37 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
     Values not in the mapping are kept unchanged (matches R fixest behavior).
-    The bin mapping is namespaced per variable to avoid collisions when
-    both sides of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
+    A scalar old level (``bin={'low': 'a'}``) is treated as a one-element list.
+    As in fixest, every old level must occur in the data and may belong to
+    only one bin; otherwise a ``ValueError`` names the offending values. The
+    mapping is validated once, when it is first built from the estimation
+    data, and is namespaced per variable to avoid collisions when both sides
+    of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
     """
     bin_key = bin_mapping_state_key(str(series.name))
     if bin_key not in state:
         mapping = {}
+        duplicated = []
         for new_level, old_levels in bins.items():
+            if isinstance(old_levels, str) or not isinstance(old_levels, Iterable):
+                old_levels = [old_levels]
             for old in old_levels:
+                if old in mapping and old not in duplicated:
+                    duplicated.append(old)
                 mapping[old] = new_level
+        if duplicated:
+            raise ValueError(
+                f"The argument `bin` of i() assigns the values {duplicated!r} of "
+                f"the variable `{series.name}` to more than one bin. Each value "
+                "may belong to only one bin."
+            )
+        observed = set(series.dropna().unique())
+        unmatched = [old for old in mapping if old not in observed]
+        if unmatched:
+            raise ValueError(
+                f"The argument `bin` of i() should contain values of the variable "
+                f"`{series.name}`. No match was found for {unmatched!r}."
+            )
         state[bin_key] = mapping
     return series.replace(state[bin_key])
 
