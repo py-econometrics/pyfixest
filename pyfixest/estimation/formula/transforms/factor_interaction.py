@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import sys
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Final
 
@@ -8,6 +10,7 @@ import pandas as pd
 from formulaic import FactorValues
 from formulaic.transforms import encode_contrasts
 from formulaic.transforms.contrasts import TreatmentContrasts
+from formulaic.utils.code import sanitize_variable_names
 from formulaic.utils.sentinels import UNSET
 
 if TYPE_CHECKING:
@@ -77,10 +80,17 @@ def factor_interaction(
         i(cyl, ref=4)     -> cyl::6, cyl::8
         i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+
+    Arguments are named after their expression in the formula, so
+    ``i(cyl, np.log(wt))`` yields ``cyl::4:np.log(wt)``.
     """
-    # Try to get variable names from Series.name attribute
-    factor_name = _get_series_name(data, default="factor")
-    var2_name = _get_series_name(var2, default="var") if var2 is not None else None
+    names = _argument_expressions(caller_locals=sys._getframe(1).f_locals)
+    if names is None:
+        # Called outside a formula: no expression text is available.
+        factor_name = _get_series_name(data, default="factor")
+        var2_name = _get_series_name(var2, default="var") if var2 is not None else None
+    else:
+        factor_name, var2_name = names
 
     def encoder(
         values: Any,
@@ -114,6 +124,61 @@ def factor_interaction(
         spans_intercept=var2 is None,
         encoder=encoder,
     )
+
+
+def _argument_expressions(
+    caller_locals: Mapping[str, Any],
+) -> tuple[str, str | None] | None:
+    """Return the source text of the `data` and `var2` arguments of an i() call.
+
+    Naming columns and contrast state by the expression rather than by the
+    evaluated `Series.name` keeps `i(a, X2)` and `i(a, np.square(X2))` apart:
+    `np.square` preserves the name `X2`. Returns None outside a formula.
+    """
+    # formulaic internal: `stateful_eval` evaluates a factor's expression with
+    # a locals mapping whose `__FORMULAIC_METADATA__` is `{factor.expr: ...}`.
+    # Making i() a stateful transform would expose the expression officially,
+    # but formulaic's stateful_eval fails on string literals containing `'`,
+    # such as `ref="Cote d'Ivoire"`.
+    metadata = caller_locals.get("__FORMULAIC_METADATA__")
+    if not isinstance(metadata, Mapping) or len(metadata) != 1:
+        return None
+    (factor_expr,) = metadata
+    # Backtick-quoted names such as `my f` are not Python; formulaic aliases
+    # them to identifiers, and the names are mapped back below.
+    aliases: dict[str, str] = {}
+    code = ast.parse(sanitize_variable_names(factor_expr, {}, aliases), mode="eval")
+    calls = [
+        node
+        for node in ast.walk(code)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "i"
+    ]
+    if len(calls) != 1:
+        return None
+    (call,) = calls
+    arguments = dict(zip(("data", "var2"), call.args, strict=False))
+    arguments.update(
+        (keyword.arg, keyword.value)
+        for keyword in call.keywords
+        if keyword.arg in ("data", "var2")
+    )
+    var2 = arguments.get("var2")
+    return (
+        _unparse_argument(arguments["data"], aliases=aliases),
+        _unparse_argument(var2, aliases=aliases) if var2 is not None else None,
+    )
+
+
+def _unparse_argument(node: ast.expr, *, aliases: Mapping[str, str]) -> str:
+    """Format an i() argument, restoring backtick-quoted column names."""
+    if isinstance(node, ast.Name):
+        return aliases.get(node.id, node.id)
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name) and child.id in aliases:
+            child.id = f"`{aliases[child.id]}`"
+    return ast.unparse(node)
 
 
 def _get_series_name(data: Any, default: str = "var") -> str:

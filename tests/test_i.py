@@ -592,6 +592,40 @@ def test_split_reference_validity(df_split_levels, split_arg):
         feols(fml, data=data, **{split_arg: "grp"})
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml,py_to_r",
+    [
+        # np.square keeps the Series name `X1`; both blocks must survive
+        (
+            "Y ~ i(f_str, X1) + i(f_str, X1^2)",
+            "Y ~ i(f_str, X1) + i(f_str, np.square(X1))",
+            {"np.square(X1)": "I(X1^2)"},
+        ),
+        # binary operations and log() return unnamed values
+        (
+            "Y ~ i(f_str, log(X1 + 10)) + i(f_str, log(X2 + 10))",
+            "Y ~ i(f_str, log(X1 + 10)) + i(f_str, log(X2 + 10))",
+            {},
+        ),
+        ("Y ~ i(f_str, X1 * X2) + i(f_str, X2 * fe2)", None, {}),
+        ("Y ~ i(f_int + 1)", None, {}),
+        # factor and var2 share the Series name `g`
+        (
+            "Y ~ i(g, tolower(g))",
+            "Y ~ i(g, g.str.lower())",
+            {"g.str.lower()": "tolower(g)"},
+        ),
+    ],
+)
+def test_i_names_from_expression(df_test, r_fml, py_fml, py_to_r):
+    """i() columns are named after the argument expressions, as in fixest."""
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
+    for py_expr, r_expr in py_to_r.items():
+        py_names = [name.replace(py_expr, r_expr) for name in py_names]
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
 # =============================================================================
 # Null Value Handling Tests
 # =============================================================================

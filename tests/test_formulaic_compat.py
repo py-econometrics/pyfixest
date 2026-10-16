@@ -249,6 +249,14 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
     assert any(k.startswith("__contrasts_") and k.endswith("__") for k in i_state)
 
 
+def test_i_reads_argument_expressions_from_formulaic(data: pd.DataFrame) -> None:
+    """i() finds its argument text in formulaic's evaluation locals."""
+    renamed = data.rename(columns={"f1": "my f"})
+    fit = pf.feols("Y ~ i(`my f`, np.square(X2), ref=1)", data=renamed)
+
+    assert fit._coefnames[1:3] == ["my f::0:np.square(X2)", "my f::2:np.square(X2)"]
+
+
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     """FE transform_state stores the fitted level indexes and combinations."""
     fit = pf.feols("Y ~ X1 | f1", data=data)
