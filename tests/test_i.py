@@ -275,6 +275,54 @@ def test_binning_with_continuous(df_test):
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        # The bin takes the place of its first listed value, so it is the reference.
+        ("Y ~ i(f_int, bin=list(low=c(1, 2)))", "Y ~ i(f_int, bin={'low': [1, 2]})"),
+        (
+            "Y ~ i(f_int, bin=list(low=c(1, 2)), ref=3)",
+            "Y ~ i(f_int, bin={'low': [1, 2]}, ref=3)",
+        ),
+        (
+            "Y ~ i(f_int, bin=list(mid=c(10, 2))) - 1",
+            "Y ~ i(f_int, bin={'mid': [10, 2]}) - 1",
+        ),
+        (
+            "Y ~ i(f_int, bin=list(a=c(1, 20), `0`=c(2, 3))) - 1",
+            "Y ~ i(f_int, bin={'a': [1, 20], 0: [2, 3]}) - 1",
+        ),
+        (
+            "Y ~ i(f_float, X1, bin=list(low=c(2, 1)))",
+            "Y ~ i(f_float, X1, bin={'low': [2, 1]})",
+        ),
+        (
+            "Y ~ i(f_str, i.f_int, bin2=list(mid=c(10, 2)))",
+            "Y ~ i(f_str, f_int, bin2={'mid': [10, 2]})",
+        ),
+    ],
+)
+def test_binning_numeric_with_label(df_test, r_fml, py_fml):
+    """A labelled bin of numeric levels keeps fixest's level order."""
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("ref", ["", ", ref=-1"])
+def test_binning_event_study_with_label(df_het, ref):
+    """A labelled pre-period bin sits before the later event times, as in fixest."""
+    df = df_het[np.isfinite(df_het["rel_year"])].reset_index(drop=True)
+    r_fml = f"dep_var ~ i(rel_year, bin=list(pre=-20:-6){ref}) | unit + year"
+    py_fml = (
+        f"dep_var ~ i(rel_year, bin={{'pre': {list(range(-20, -5))}}}{ref})"
+        " | unit + year"
+    )
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
 # =============================================================================
 # Factor x Factor Tests
 # =============================================================================
