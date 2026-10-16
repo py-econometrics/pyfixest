@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects.packages import importr
 
 from pyfixest.estimation import feols
@@ -415,13 +416,14 @@ def test_i_with_same_var_standalone(df_test):
 def df_unused_categories(df_test) -> pd.DataFrame:
     """Categorical columns with categories absent from the data."""
     df = df_test.copy()
-    # Unused first category: must not become the reference level.
+    # Unused first category must not become the reference level; unused last
+    # category must not produce an all-zero column.
     df["f_cat"] = pd.Categorical(
-        df["f_str"], categories=["avocado", "apple", "banana", "cherry"]
+        df["f_str"], categories=["avocado", "apple", "banana", "cherry", "zucchini"]
     )
-    # Unused last category: must not produce an all-zero column.
-    df["f_cat_last"] = pd.Categorical(
-        df["f_str"], categories=["apple", "banana", "cherry", "zucchini"]
+    # The first observed category, not the alphabetically first, is the reference.
+    df["f_cat_reordered"] = df["f_cat"].cat.reorder_categories(
+        ["avocado", "cherry", "apple", "banana", "zucchini"]
     )
     df["g_cat"] = pd.Categorical(df["g"], categories=["W", "X", "Y", "Z"])
     return df
@@ -432,9 +434,7 @@ def df_unused_categories(df_test) -> pd.DataFrame:
     "r_fml,py_fml",
     [
         ("Y ~ X1 + i(f_cat)", None),
-        ("Y ~ X1 + i(f_cat) | fe1", None),
-        ("Y ~ X1 + i(f_cat_last)", None),
-        ("Y ~ X1 + i(f_cat, ref='banana')", None),
+        ("Y ~ X1 + i(f_cat_reordered) | fe1", None),
         ("Y ~ X1 + i(f_cat, X2)", None),
         ("Y ~ X1 + i(f_cat, i.g_cat)", "Y ~ X1 + i(f_cat, g_cat)"),
     ],
@@ -446,6 +446,37 @@ def test_unused_categories(df_unused_categories, r_fml, py_fml):
         py_names, py_values, r_names, r_values = compare_with_r(
             r_fml, df_unused_categories, py_fml
         )
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_unused_category_reference(df_unused_categories):
+    """An unused category cannot be the reference, matching fixest."""
+    fml = "Y ~ i(f_cat, ref='avocado')"
+    with pytest.raises(ValueError, match=r"avocado.*not among the provided levels"):
+        feols(fml, data=df_unused_categories)
+    with pytest.raises(RRuntimeError, match="no match was found for 'avocado'"):
+        fixest.feols(ro.Formula(fml), df_unused_categories)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ X1 + i(f_str)", None),
+        ("Y ~ X1 + i(f_cat)", None),
+        (
+            "Y ~ X1 + i(f_cat, i.g_cat, ref2='X')",
+            "Y ~ X1 + i(f_cat, g_cat, ref2='X')",
+        ),
+    ],
+)
+def test_levels_fixed_before_missing_row_filter(df_unused_categories, r_fml, py_fml):
+    """Levels observed only on excluded rows still affect reference selection."""
+    df = df_unused_categories.copy()
+    df.loc[(df["f_str"] == "apple") | (df["g"] == "X"), "Y"] = np.nan
+    with pytest.warns(UserWarning, match="variables dropped"):
+        py_names, py_values, r_names, r_values = compare_with_r(r_fml, df, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
