@@ -179,6 +179,192 @@ def test_did2s(data, weights):
     )
 
 
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s_formula_encodings(data, weights):
+    """Interactions and quoted references preserve the fitted stage designs."""
+    data = data.assign(
+        region=data["state"] % 3,
+        year_region=data["year"] * 10 + data["state"] % 3,
+        treat_f=data["treat"].astype(float),
+    )
+    kwargs = dict(
+        data=data,
+        yname="dep_var",
+        second_stage="~ i(treat)",
+        treatment="treat",
+        cluster="state",
+        weights=weights,
+    )
+    expected = did2s_pyfixest(first_stage="~ X | unit + year_region", **kwargs)
+    for interaction in ("year^region", "year:region"):
+        fit = did2s_pyfixest(first_stage=f"~ X | unit + {interaction}", **kwargs)
+        np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-10, atol=1e-10)
+        np.testing.assert_allclose(
+            fit.variance_covariance.vcov,
+            expected.variance_covariance.vcov,
+            rtol=1e-8,
+            atol=1e-10,
+        )
+
+    # Include a distinct stripped label so whitespace loss can silently change
+    # the reference, rather than only raising a missing-level error.
+    data["group"] = data["group"].replace({"Group 1": "Group3"})
+    kwargs["second_stage"] = "~ i(group, treat_f, ref='Group 3')"
+    fit = did2s_pyfixest(first_stage="~ X | unit + year", **kwargs)
+    renamed = data.assign(group=data["group"].replace({"Group 3": "reference"}))
+    expected = did2s_pyfixest(
+        first_stage="~ X | unit + year",
+        **(
+            kwargs
+            | {"data": renamed, "second_stage": "~ i(group, treat_f, ref='reference')"}
+        ),
+    )
+    assert list(fit.coef().index) == list(expected.coef().index)
+    np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(fit.se(), expected.se(), rtol=1e-8, atol=1e-10)
+
+
+@pytest.mark.against_r_extended
+@pytest.mark.skipif(not import_check, reason="R package did2s is not installed.")
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "first_stage,second_stage,r_first_stage,r_second_stage",
+    [
+        (
+            f"~ X | unit + year{operator}region",
+            "~ i(treat)",
+            "~ X | unit + year^region",
+            "~ i(treat, ref=FALSE)",
+        )
+        for operator in ("^", ":")
+    ]
+    + [
+        (
+            "~ X | unit + year",
+            "~ i(group, treat_f, ref='Group 3')",
+            "~ X | unit + year",
+            "~ i(group, treat_f, ref='Group 3')",
+        ),
+    ],
+)
+def test_did2s_formula_encodings_vs_r(
+    data, weights, first_stage, second_stage, r_first_stage, r_second_stage
+):
+    """Compare formula encodings and corrected inference directly with R did2s."""
+    data = data.assign(
+        region=data["state"] % 3,
+        treat_f=data["treat"].astype(float),
+        group=data["group"].replace({"Group 1": "Group3"}),
+    )
+    fit = did2s_pyfixest(
+        data=data,
+        yname="dep_var",
+        first_stage=first_stage,
+        second_stage=second_stage,
+        treatment="treat",
+        cluster="state",
+        weights=weights,
+    )
+    r_weights = {} if weights is None else {"weights": weights}
+    reference = did2s.did2s(
+        data=data,
+        yname="dep_var",
+        first_stage=ro.Formula(r_first_stage),
+        second_stage=ro.Formula(r_second_stage),
+        treatment="treat",
+        cluster_var="state",
+        **r_weights,
+    )
+    r_names = list(ro.r("function(fit) names(coef(fit))")(reference))
+    r_names = [name.replace("::TRUE", "::True") for name in r_names]
+    names = fit.coef().index
+    assert set(names) == set(r_names)
+    estimates = pd.Series(np.asarray(stats.coef(reference)), index=r_names).loc[names]
+    errors = pd.Series(np.asarray(fixest.se(reference)), index=r_names).loc[names]
+    covariance = pd.DataFrame(
+        np.asarray(stats.vcov(reference)),
+        index=r_names,
+        columns=r_names,
+    ).loc[names, names]
+    # First-stage iterative FE recovery affects residualized outcomes at 1e-6.
+    np.testing.assert_allclose(
+        fit.coef(),
+        estimates,
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S coefficients differ from R did2s",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        errors,
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S standard errors differ from R did2s",
+    )
+    # Covariance is on a squared scale; allow accumulated FE-recovery error.
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        covariance,
+        rtol=1e-5,
+        atol=1e-6,
+        err_msg="DID2S covariance differs from R did2s",
+    )
+
+
+@pytest.mark.parametrize(
+    "first_stage,second_stage,message",
+    [
+        ("~ 0 | unit + year", ss, "must not remove the intercept")
+        for ss in (
+            "~ i(treat) + 0",
+            "~ 0 + i(treat)",
+            "~ i(treat) - 1",
+            "~ -1 + i(treat)",
+        )
+    ]
+    + [
+        ("0 | unit + year", "~ i(treat)", "first_stage must start"),
+        ("~ 0 | unit + year", "i(treat)", "second_stage must start"),
+        ("~ X", "~ i(treat)", "First stage formula must contain fixed effects"),
+        (
+            "~ 0 | unit + year",
+            "~ i(treat) | unit",
+            "Second stage formula must not contain fixed effects",
+        ),
+        (
+            "~ sw(X, weights) | unit + year",
+            "~ i(treat)",
+            "first_stage must specify a single model",
+        ),
+        (
+            "~ 0 | unit + year",
+            "~ sw(X, weights)",
+            "second_stage must specify a single model",
+        ),
+        (
+            "~ [X ~ weights] | unit + year",
+            "~ i(treat)",
+            "first_stage must not contain instrumental variables",
+        ),
+        (
+            "~ 0 | unit + year",
+            "~ [X ~ weights]",
+            "second_stage must not contain instrumental variables",
+        ),
+    ],
+)
+def test_did2s_formula_validation(data, first_stage, second_stage, message):
+    with pytest.raises(ValueError, match=message):
+        did2s_pyfixest(
+            data=data,
+            yname="dep_var",
+            first_stage=first_stage,
+            second_stage=second_stage,
+            treatment="treat",
+            cluster="state",
+        )
+
+
 def test_errors(data):
     # test expected errors: treatment
 
