@@ -550,15 +550,15 @@ def get_twin_data(N_pairs=500, seed=42):
     Parameters
     ----------
     N_pairs : int
-        Number of twin pairs.  Total observations = 2 * N_pairs.
+        Number of twin pairs.  Total observations = `2 * N_pairs`.
     seed : int
         Random seed for reproducibility.
 
     Returns
     -------
     pd.DataFrame
-        Columns: twin_pair_id, twin_id, ability, educ, age, experience,
-        log_wage.
+        Columns: `twin_pair_id`, `twin_id`, `ability`, `educ`, `age`, `experience`,
+        `log_wage`.
 
     Examples
     --------
@@ -636,8 +636,8 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
     Returns
     -------
     pd.DataFrame
-        Columns: worker_id, firm_id, year, female, experience, tenure,
-        log_wage, worker_fe, firm_fe.
+        Columns: `worker_id`, `firm_id`, `year`, `female`, `experience`, `tenure`,
+        `log_wage`, `worker_fe`, `firm_fe`.
 
     Examples
     --------
@@ -735,7 +735,7 @@ def get_motherhood_event_study_data(
     Returns
     -------
     pd.DataFrame
-        Columns: unit, country, region, year, g, treat, rel_year, log_earnings
+        Columns: `unit`, `country`, `region`, `year`, `g`, `treat`, `rel_year`, `log_earnings`
 
     Examples
     --------

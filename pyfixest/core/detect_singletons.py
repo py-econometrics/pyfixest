@@ -16,14 +16,14 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     Parameters
     ----------
     ids : np.ndarray
-        A 2D numpy array representing fixed effects, with a shape of (n_samples,
-        n_features).
+        A 2D numpy array representing fixed effects, with a shape of `(n_samples,
+        n_features)`.
         Elements should be non-negative integers representing fixed effect identifiers.
 
     Returns
     -------
     numpy.ndarray
-        A boolean array of shape (n_samples,), indicating which observations have
+        A boolean array of shape `(n_samples,)`, indicating which observations have
         a singleton fixed effect.
 
     Notes

@@ -64,7 +64,7 @@ _ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyTyp
 
 class ModelMatrix:
     """
-    A wrapper around formulaic.ModelMatrix for the specification of PyFixest models.
+    A wrapper around `formulaic.ModelMatrix` for the specification of PyFixest models.
 
     This class organizes and processes model matrices for econometric estimation,
     extracting dependent and independent variables, fixed effects, instrumental
@@ -307,7 +307,7 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the dependent variable(s) (left-hand side
+            `DataFrame` containing the dependent variable(s) (left-hand side
             of the main equation).
         """
         return self._data.loc[:, self._dependent_column_names or []]
@@ -320,7 +320,7 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the independent variable(s) (right-hand side
+            `DataFrame` containing the independent variable(s) (right-hand side
             of the main equation). Intercept columns are excluded when fixed
             effects are present.
         """
@@ -334,8 +334,8 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the fixed effects variables encoded as integers,
-            or None if no fixed effects are specified in the model.
+            `DataFrame` containing the fixed effects variables encoded as integers,
+            or `None` if no fixed effects are specified in the model.
         """
         if self._fixed_effects_column_names is None:
             return None
@@ -351,8 +351,8 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the endogenous variable(s) (left-hand side
-            of the first-stage equation in IV estimation), or None if not
+            `DataFrame` containing the endogenous variable(s) (left-hand side
+            of the first-stage equation in IV estimation), or `None` if not
             using instrumental variables.
         """
         if self._endogenous_column_names is None:
@@ -367,8 +367,8 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the instrumental variable(s) (right-hand side
-            of the first-stage equation in IV estimation), or None if not
+            `DataFrame` containing the instrumental variable(s) (right-hand side
+            of the first-stage equation in IV estimation), or `None` if not
             using instrumental variables. Intercept columns are excluded when
             fixed effects are present.
         """
@@ -408,8 +408,8 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the observation weights (must be non-negative
-            numeric values), or None if no weights are specified.
+            `DataFrame` containing the observation weights (must be non-negative
+            numeric values), or `None` if no weights are specified.
         """
         if self._weights_column_names is None:
             return None
@@ -423,9 +423,9 @@ class ModelMatrix:
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the evaluated offset expression, which is
+            `DataFrame` containing the evaluated offset expression, which is
             added to the linear predictor with a fixed coefficient of 1, or
-            None if no offset is specified.
+            `None` if no offset is specified.
         """
         if self._offset_column_names is None:
             return None
@@ -474,7 +474,7 @@ def create_model_matrix(
     context: int | Mapping[str, Any] = 0,
 ) -> ModelMatrix:
     """
-    Create a ModelMatrix from a formula and data.
+    Create a `ModelMatrix` from a formula and data.
 
     This function constructs model matrices for econometric estimation by parsing
     formulas and extracting the necessary components (dependent/independent variables,
@@ -483,28 +483,28 @@ def create_model_matrix(
     Parameters
     ----------
     formula : Formula
-        A Formula object specifying the model structure, including dependent and
+        A `Formula` object specifying the model structure, including dependent and
         independent variables, fixed effects, and instrumental variables.
     data : pd.DataFrame
         The input data containing all variables referenced in the formula.
         The index will be reset during processing.
     weights : str or None, default=None
-        Column name in data to use as observation weights. Weights must be
-        non-negative numeric values. If None, no weighting is applied.
+        Column name in `data` to use as observation weights. Weights must be
+        non-negative numeric values. If `None`, no weighting is applied.
     offset : str or None, default=None
         Formulaic expression that evaluates to one numeric offset column. The
         offset is added to the linear predictor with a fixed coefficient of 1.
         Rows with missing offset values are dropped together with missing rows
         in the rest of the formula.
     drop_singletons : bool, default=False
-        If True, observations that are singletons in any fixed effect category
+        If `True`, observations that are singletons in any fixed effect category
         are dropped from the model.
     drop_intercept : bool, default=False
-        If True, the intercept column is removed from the independent variables
+        If `True`, the intercept column is removed from the independent variables
         and instruments matrices. The intercept is always removed when fixed
         effects are present, regardless of this parameter.
     ensure_full_rank : bool, default=True
-        If True, formulaic will ensure the design matrix is full rank by
+        If `True`, formulaic will ensure the design matrix is full rank by
         dropping collinear columns.
     context : int or Mapping[str, Any], default=0
         Additional context variables for formulaic during model matrix creation.
@@ -514,7 +514,7 @@ def create_model_matrix(
     Returns
     -------
     ModelMatrix
-        A ModelMatrix object containing the processed dependent and independent
+        A `ModelMatrix` object containing the processed dependent and independent
         variables, fixed effects, instruments, weights, and metadata about
         dropped observations.
 

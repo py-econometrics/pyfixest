@@ -24,7 +24,7 @@ def factor_interaction(
     bin2: dict | None = None,
 ) -> FactorValues:
     """
-    Fixest-style i() operator for categorical encoding with interactions.
+    `Fixest`-style `i()` operator for categorical encoding with interactions.
 
     Parameters
     ----------

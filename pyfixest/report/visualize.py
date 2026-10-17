@@ -80,15 +80,15 @@ def iplot(
     seed: int | None = None,
 ):
     r"""
-    Plot model coefficients for variables interacted via "i()" syntax, with
+    Plot model coefficients for variables interacted via `i()` syntax, with
     confidence intervals.
 
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is used.
+        The size of the figure. If `None`, the default size is used.
     alpha : float
         The significance level for the confidence intervals.
     yintercept : int or None, optional
@@ -100,14 +100,14 @@ def iplot(
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
-        Whether to flip the coordinates of the plot. Default is True.
+        Whether to flip the coordinates of the plot. Default is `True`.
     keep: str or list of str, optional
         The pattern for retaining coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Default is keeping all coefficients.
         You should use regular expressions to select coefficients.
-            "age",            # would keep all coefficients containing age
-            r"^tr",           # would keep all coefficients starting with tr
-            r"\\d$",          # would keep all coefficients ending with number
+            `"age"`,            # would keep all coefficients containing age
+            `r"^tr"`,           # would keep all coefficients starting with tr
+            `r"\d$"`,          # would keep all coefficients ending with number
         Output will be in the order of the patterns.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
@@ -115,13 +115,13 @@ def iplot(
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
     exact_match: bool, optional
-        Whether to use exact match for `keep` and `drop`. Default is False.
-        If True, the pattern will be matched exactly to the coefficient name
+        Whether to use exact match for `keep` and `drop`. Default is `False`.
+        If `True`, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
-        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
-        to install it or use "matplotlib" instead.
+        The plotting backend to use. Options are `lets_plot` (default if installed) and `matplotlib`.
+        If `lets_plot` is specified but not installed, an `ImportError` will be raised with instructions
+        to install it or use `matplotlib` instead.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
@@ -129,17 +129,17 @@ def iplot(
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     cat_template: str, optional
-        Template to relabel categorical variables. None by default, which applies no relabeling.
-        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
-        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
+        Template to relabel categorical variables. `None` by default, which applies no relabeling.
+        Other options include combinations of `{variable}` and `{value}`, e.g. `{variable}::{value}`
+        to mimic fixest encoding. But `{variable}--{value}` or `{variable}{value}` or just `{value}`
         are also possible.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
-        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
-        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        Whether to plot simultaneous confidence bands for the coefficients. If `True`, simultaneous confidence bands
+        are plotted. If `False`, "standard" confidence intervals are plotted. If `both`, both are plotted in
+        one figure. Default is `None`, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed: int, optional
-        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+        The seed for the random number generator. Default is `None`. Only required / used when `joint` is `True`.
 
     Returns
     -------
@@ -274,28 +274,28 @@ def coefplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is used.
+        The size of the figure. If `None`, the default size is used.
     alpha : float
         The significance level for the confidence intervals.
     yintercept : float or None, optional
         The value at which to draw a horizontal line on the plot. Default is 0.
     xintercept : float or None, optional
-        The value at which to draw a vertical line on the plot. Default is None.
+        The value at which to draw a vertical line on the plot. Default is `None`.
     rotate_xticks : float, optional
         The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
-        Whether to flip the coordinates of the plot. Default is True.
+        Whether to flip the coordinates of the plot. Default is `True`.
     keep: str or list of str, optional
         The pattern for retaining coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Default is keeping all coefficients.
         You should use regular expressions to select coefficients.
-            "age",            # would keep all coefficients containing age
-            r"^tr",           # would keep all coefficients starting with tr
-            r"\\d$",          # would keep all coefficients ending with number
+            `"age"`,            # would keep all coefficients containing age
+            `r"^tr"`,           # would keep all coefficients starting with tr
+            `r"\d$"`,          # would keep all coefficients ending with number
         Output will be in the order of the patterns.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
@@ -303,13 +303,13 @@ def coefplot(
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
     exact_match: bool, optional
-        Whether to use exact match for `keep` and `drop`. Default is False.
-        If True, the pattern will be matched exactly to the coefficient name
+        Whether to use exact match for `keep` and `drop`. Default is `False`.
+        If `True`, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
-        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
-        to install it or use "matplotlib" instead.
+        The plotting backend to use. Options are `lets_plot` (default if installed) and `matplotlib`.
+        If `lets_plot` is specified but not installed, an `ImportError` will be raised with instructions
+        to install it or use `matplotlib` instead.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     labels: dict, optional
@@ -317,12 +317,12 @@ def coefplot(
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
-        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
-        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        Whether to plot simultaneous confidence bands for the coefficients. If `True`, simultaneous confidence bands
+        are plotted. If `False`, "standard" confidence intervals are plotted. If `both`, both are plotted in
+        one figure. Default is `None`, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed: int, optional
-        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+        The seed for the random number generator. Default is `None`. Only required / used when `joint` is `True`.
 
     Returns
     -------
@@ -426,15 +426,15 @@ def qplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is (10, 6).
+        The size of the figure. If `None`, the default size is `(10, 6)`.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
     ncol : int, optional
-        Number of columns of subplots. Default is None. Note: cannot be set jointly with nrow argument.
+        Number of columns of subplots. Default is `None`. Note: cannot be set jointly with `nrow` argument.
     nrow : int, optional
-        Number of rows of subplots. Default is None. Note: cannot be set jointly with ncol argument.
+        Number of rows of subplots. Default is `None`. Note: cannot be set jointly with `ncol` argument.
 
     Returns
     -------

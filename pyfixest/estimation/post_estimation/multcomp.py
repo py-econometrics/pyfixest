@@ -19,19 +19,19 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
     For each model, it is assumed that tests to adjust are of the form
-    "param = 0".
+    `param = 0`.
 
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
     param : str
         The parameter for which the p-values should be adjusted.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Bonferroni
+        A `DataFrame` containing estimation statistics, including the Bonferroni
         adjusted p-values.
 
     Examples
@@ -78,14 +78,14 @@ def rwolf(
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
     For each model, it is assumed that tests to adjust are of the form
-    "param = 0". This function uses the `wildboottest()` method for running the
+    `param = 0`. This function uses the `wildboottest()` method for running the
     bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
 
     Parameters
     ----------
     models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a
-        FixestMulti object.
+        `FixestMulti` object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
         The parameter for which the p-values should be computed.
@@ -95,13 +95,13 @@ def rwolf(
         The seed for the random number generator.
     sampling_method : str
         Sampling method for computing resampled statistics.
-        Users can choose either bootstrap('wild-bootstrap')
-        or randomization inference('ri')
+        Users can choose either bootstrap(`wild-bootstrap`)
+        or randomization inference(`ri`)
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Romano-Wolf
+        A `DataFrame` containing estimation statistics, including the Romano-Wolf
         adjusted p-values.
 
     Examples
@@ -191,14 +191,14 @@ def wyoung(
     Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
 
     For each model, it is assumed that tests to adjust are of the form
-    "param = 0". This function uses the `wildboottest()` method for running the
+    `param = 0`. This function uses the `wildboottest()` method for running the
     bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
 
     Parameters
     ----------
     models : list[Feols] or FixestMulti
         A list of models for which the p-values should be computed, or a
-        FixestMulti object.
+        `FixestMulti` object.
         Models of type `Feiv` or `Fepois` are not supported.
     param : str
         The parameter for which the p-values should be computed.
@@ -208,13 +208,13 @@ def wyoung(
         The seed for the random number generator.
     sampling_method: str
         Sampling method for computing resampled statistics.
-        Users can choose either bootstrap('wild-bootstrap')
-        or randomization inference('ri')
+        Users can choose either bootstrap(`wild-bootstrap`)
+        or randomization inference(`ri`)
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing estimation statistics, including the Westfall-Young
+        A `DataFrame` containing estimation statistics, including the Westfall-Young
         adjusted p-values.
 
     Examples

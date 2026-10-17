@@ -71,10 +71,10 @@ class FixedEffectEstimates:
         their tidy frame with the original factor labels.
     alpha : NDArray[np.float64]
         Solution of the least-squares problem in the dummy-coded fixed
-        effects, shape (n_fixed_effect_coefficients,), ordered as the columns
+        effects, shape `(n_fixed_effect_coefficients,)`, ordered as the columns
         of the fixed-effect dummy matrix.
     sumFE : NDArray[np.float64]
-        Fixed-effect contribution of each observation, shape (n_rows,), in
+        Fixed-effect contribution of each observation, shape `(n_rows,)`, in
         the units of the dependent variable. For GLMs it is on the scale of
         the linear predictor and excludes the offset. Named as in `fixest`.
 

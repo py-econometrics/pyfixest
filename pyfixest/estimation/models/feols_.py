@@ -171,7 +171,7 @@ class Feols(ResultAccessorMixin):
         Names of the coefficients (of the design matrix X).
     collinearity : CollinearityCheck
         Names and column mask of the regressors dropped by the rank check,
-        set in get_fit().
+        set in `get_fit()`.
     observation_weights : ObservationWeights
         User-scale weights and their analytic or frequency interpretation.
     sample_info : EstimationSample
@@ -181,7 +181,7 @@ class Feols(ResultAccessorMixin):
         counts derived from them for inference.
     sandwich : SandwichComponents
         Weighted scores, Hessian, and bread of the sandwich covariance, set in
-        get_fit().
+        `get_fit()`.
     _k : int
         Number of independent variables (or features).
     capabilities : Capabilities
@@ -192,7 +192,7 @@ class Feols(ResultAccessorMixin):
         Estimated regression coefficients.
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
-        get_fit().
+        `get_fit()`.
     _u_hat : np.ndarray
         Residuals of the regression model.
     variance_covariance : VarianceCovariance
@@ -210,22 +210,22 @@ class Feols(ResultAccessorMixin):
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
     _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
+        F-statistic for the model, set in `get_Ftest()`.
     fixef_estimates : FixedEffectEstimates
         Fixed-effect estimates published by `fixef()`: the coefficient records
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
         per-observation fixed-effect contribution `sumFE`.
     fitstat : FitStatistics
         Goodness-of-fit measures computed by `_fit_statistics()` and published
-        right after get_fit(); ``NaN`` where the estimator defines none.
+        right after `get_fit()`; ``NaN`` where the estimator defines none.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
+        The data frame used in the estimation. `None` if arguments `lean = True` or
         `store_data = False`.
     _model_name_plot: str
         The name of the model used when plotting and summarizing models. Usually identical to
-        `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
+        `model.model_name`. This might be different when `pf.summary()` or `pf.coefplot()` are called
         and models with identical model names are passed. In this case,
-        the _model_name_plot attribute will be modified.
+        the `_model_name_plot` attribute will be modified.
     """
 
     # Set in get_fit().
@@ -579,16 +579,16 @@ class Feols(ResultAccessorMixin):
         vcov : Union[str, dict[str, str]]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
-            If a dictionary, it should have the format {"CRV1": "clustervar"} for
-            CRV1 inference or {"CRV3": "clustervar"}
+            If a string, it can be one of `iid`, `hetero`, `HC1`, `HC2`, `HC3`, `NW`, `DK`.
+            If a dictionary, it should have the format `{"CRV1": "clustervar"}` for
+            CRV1 inference or `{"CRV3": "clustervar"}`
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+            The data used for estimation. If `None`, tries to fetch the data from the
+            model object. Defaults to `None`.
 
 
         Returns
@@ -904,7 +904,7 @@ class Feols(ResultAccessorMixin):
         """
         Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form R * beta = q.
+        Compute a Wald test for a linear hypothesis of the form `R * beta = q`.
         where R is m x k matrix, beta is a k x 1 vector of coefficients,
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
@@ -912,16 +912,16 @@ class Feols(ResultAccessorMixin):
         Parameters
         ----------
         R : array-like, optional
-            The matrix R of the linear hypothesis.
-            If None, defaults to an identity matrix.
+            The matrix `R` of the linear hypothesis.
+            If `None`, defaults to an identity matrix.
         q : array-like, optional
-            The vector q of the linear hypothesis.
-            If None, defaults to a vector of zeros.
+            The vector `q` of the linear hypothesis.
+            If `None`, defaults to a vector of zeros.
         distribution : str, optional
-            The distribution to use for the p-value. Can be either "F" or "chi2".
-            Defaults to "F". The F distribution is only used for the joint null
+            The distribution to use for the p-value. Can be either `F` or `chi2`.
+            Defaults to `F`. The F distribution is only used for the joint null
             that all coefficients are zero; any other restriction falls back to
-            "chi2" with a warning.
+            `chi2` with a warning.
 
         Returns
         -------
@@ -999,52 +999,52 @@ class Feols(ResultAccessorMixin):
         return_bootstrapped_t_stats=False,
     ):
         """
-        Run a wild cluster bootstrap based on an object of type "Feols".
+        Run a wild cluster bootstrap based on an object of type `Feols`.
 
         Parameters
         ----------
         reps : int
             The number of bootstrap iterations to run.
         cluster : Union[str, None], optional
-            The variable used for clustering. Defaults to None. If None, then
+            The variable used for clustering. Defaults to `None`. If `None`, then
             uses the variable specified in the model's `clustervar` attribute.
             If the model is not clustered, runs a heteroskedasticity-
             robust bootstrap.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
-            Defaults to None.
+            Defaults to `None`.
         weights_type : str, optional
-            The type of bootstrap weights. Options are 'rademacher', 'mammen',
-            'webb', or 'normal'. Defaults to 'rademacher'.
+            The type of bootstrap weights. Options are `rademacher`, `mammen`,
+            `webb`, or `normal`. Defaults to `rademacher`.
         impose_null : bool, optional
             Indicates whether to impose the null hypothesis on the bootstrap DGP.
-            Defaults to True.
+            Defaults to `True`.
         bootstrap_type : str, optional
             A string of length one to choose the bootstrap type.
-            Options are '11', '31', '13', or '33'. Defaults to '11'.
+            Options are `'11'`, `'31'`, `'13'`, or `'33'`. Defaults to `'11'`.
         seed : Union[int, None], optional
-            An option to provide a random seed. Defaults to None.
+            An option to provide a random seed. Defaults to `None`.
         k_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
-            of observations and covariates. Defaults to True.
+            of observations and covariates. Defaults to `True`.
         G_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
-            of clusters. Defaults to True.
+            of clusters. Defaults to `True`.
         parallel : bool, optional
-            Indicates whether to run the bootstrap in parallel. Defaults to False.
+            Indicates whether to run the bootstrap in parallel. Defaults to `False`.
         seed : Union[str, None], optional
-            An option to provide a random seed. Defaults to None.
+            An option to provide a random seed. Defaults to `None`.
         return_bootstrapped_t_stats : bool, optional:
-            If True, the method returns a tuple of the regular output and the
-            bootstrapped t-stats. Defaults to False.
+            If `True`, the method returns a tuple of the regular output and the
+            bootstrapped t-stats. Defaults to `False`.
 
         Returns
         -------
         pd.DataFrame
-            A DataFrame with the original, non-bootstrapped t-statistic and
+            A `DataFrame` with the original, non-bootstrapped t-statistic and
             bootstrapped p-value, along with the bootstrap type, inference type
             (HC vs CRV), and whether the null hypothesis was imposed on the
-            bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
+            bootstrap DGP. If `return_bootstrapped_t_stats` is `True`, the method
             returns a tuple of the regular output and the bootstrapped t-stats.
 
         Examples
@@ -1220,10 +1220,10 @@ class Feols(ResultAccessorMixin):
         treatment: str
             The name of the treatment variable.
         cluster : str
-            The name of the cluster variable. None by default.
-            If None, uses the cluster variable from the model fit.
+            The name of the cluster variable. `None` by default.
+            If `None`, uses the cluster variable from the model fit.
         seed : int, optional
-            An integer to set the random seed. Defaults to None.
+            An integer to set the random seed. Defaults to `None`.
         n_splits : int, optional
             The number of splits to use in the cross-fitting procedure. Defaults to 8.
         pk: float, optional
@@ -1237,7 +1237,7 @@ class Feols(ResultAccessorMixin):
         Returns
         -------
         pd.DataFrame
-            A DataFrame with inference based on the "Causal Cluster Variance"
+            A `DataFrame` with inference based on the "Causal Cluster Variance"
             and "regular" CRV1 inference.
 
         Examples
@@ -1490,7 +1490,7 @@ class Feols(ResultAccessorMixin):
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
         Compares a short model `depvar on param` with the long model
-        specified in the original feols() call.
+        specified in the original `feols()` call.
 
         For details, take a look at
         "When do covariates matter?" by Gelbach (2016, JoLe). You can find
@@ -1512,39 +1512,39 @@ class Feols(ResultAccessorMixin):
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         type : str, optional
-            The type of decomposition method to use. Defaults to "gelbach", which
+            The type of decomposition method to use. Defaults to `gelbach`, which
             currently is the only supported option.
         cluster: Optional
-            The name of the cluster variable for the bootstrap. If None, uses the
+            The name of the cluster variable for the bootstrap. If `None`, uses the
             cluster variable from the model fit. Only one-way clustering is
             supported; a fit with multiway clustering raises ``ValueError`` unless
-            a single cluster variable is passed here. Defaults to None.
+            a single cluster variable is passed here. Defaults to `None`.
         combine_covariates: Optional.
             A dictionary that specifies which covariates to combine into groups.
-            See the example for how to use this argument. Defaults to None.
+            See the example for how to use this argument. Defaults to `None`.
         reps : int, optional
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
-            An integer to set the random seed. Defaults to None.
+            An integer to set the random seed. Defaults to `None`.
         nthreads : int, optional
-            The number of threads to use for the bootstrap. Defaults to None.
-            If None, uses all available threads minus one.
+            The number of threads to use for the bootstrap. Defaults to `None`.
+            If `None`, uses all available threads minus one.
         agg_first : bool, optional
-            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
-            False by default, unless combine_covariates is provided.
-            Recommended to set to True if combine_covariates is argument is provided.
+            If `True`, use the 'aggregate first' algorithm described in Gelbach (2016).
+            `False` by default, unless `combine_covariates` is provided.
+            Recommended to set to `True` if `combine_covariates` is argument is provided.
             As a rule of thumb, the more covariates are combined, the larger the performance
             improvement.
         only_coef : bool, optional
-            Indicates whether to compute inference for the decomposition. Defaults to False.
-            If True, skips the inference step and only returns the decomposition results.
+            Indicates whether to compute inference for the decomposition. Defaults to `False`.
+            If `True`, skips the inference step and only returns the decomposition results.
         digits : int, optional
             The number of digits to round the results to. Defaults to 4.
 
         Returns
         -------
         GelbachDecomposition
-            A GelbachDecomposition object with the decomposition results.
+            A `GelbachDecomposition` object with the decomposition results.
             Use `tidy()` and `etable()` to access the estimation results.
 
         Examples
@@ -1717,18 +1717,18 @@ class Feols(ResultAccessorMixin):
         Parameters
         ----------
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
         Returns
         -------
         pd.DataFrame
-            A tidy DataFrame with columns `variable`, `code`, `level`, and
+            A tidy `DataFrame` with columns `variable`, `code`, `level`, and
             `coefficient` containing the estimated fixed effects.
 
         Examples
@@ -1802,46 +1802,46 @@ class Feols(ResultAccessorMixin):
         """
         Predict values of the model on new data.
 
-        Return a flat np.array with predicted values of the regression model.
+        Return a flat `np.array` with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations will be set to NaN.
+        for such observations will be set to `NaN`.
 
         Parameters
         ----------
         newdata : DataFrameType, optional
-            A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
-            If None (default), the data used for fitting the model is used.
+            A narwhals compatible `DataFrame` (polars, pandas, duckdb, etc).
+            If `None` (default), the data used for fitting the model is used.
         type : str, optional
             The type of prediction to be computed.
-            Can be either "response" (default) or "link". For linear models, both are
+            Can be either `response` (default) or `link`. For linear models, both are
             identical.
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type:
-            The type of prediction to be made. Can be either 'link' or 'response'.
-             Defaults to 'link'. 'link' and 'response' lead
+            The type of prediction to be made. Can be either `link` or `response`.
+             Defaults to `link`. `link` and `response` lead
             to identical results for linear models.
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            If `True`, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to `False`.
         interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
+            The type of interval to compute. Can be either `prediction` or `None`.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if interval = "prediction" is not None.
+            used if `interval = "prediction"` is not `None`.
 
         Returns
         -------
         Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+            Returns a `pd.Dataframe` with columns `fit`, `se_fit` and CIs if argument `interval=prediction`.
+            Otherwise, returns a `np.ndarray` with the predicted values of the model or the prediction
+            standard errors if argument `se_fit=True`.
 
         Examples
         --------
@@ -1983,27 +1983,27 @@ class Feols(ResultAccessorMixin):
         cluster : str, optional
             The name of the cluster variable in case of cluster random assignment.
             If provided, `resampvar` is held constant within each `cluster`.
-            Defaults to None.
+            Defaults to `None`.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
         type: str
             The type of the randomization inference test.
-            Can be "randomization-c" or "randomization-t". Note that
-            the "randomization-c" is much faster, while the
-            "randomization-t" is recommended by Wu & Ding (JASA, 2021).
+            Can be `randomization-c` or `randomization-t`. Note that
+            the `randomization-c` is much faster, while the
+            `randomization-t` is recommended by Wu & Ding (JASA, 2021).
         rng : np.random.Generator, optional
-            A random number generator. Defaults to None.
+            A random number generator. Defaults to `None`.
         choose_algorithm: str, optional
-            The algorithm to use for the computation. Defaults to "auto".
-            The alternatives are "fast" and "slow". The fast algorithm requires
+            The algorithm to use for the computation. Defaults to `auto`.
+            The alternatives are `fast` and `slow`. The fast algorithm requires
             the optional `numba` extra (install via `pip install pyfixest[numba]`);
             without it, the fast path raises an `ImportError`. The slow path
             does not require numba.
         include_plot: bool, optional
-            Whether to include a plot of the distribution p-values. Defaults to False.
+            Whether to include a plot of the distribution p-values. Defaults to `False`.
         store_ritest_statistics: bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, publishes the draws, the centered
+            Defaults to `False`. If `True`, publishes the draws, the centered
             sample statistic, and the p-value as a `RitestStatistics` value
             in the model's `ritest_statistics` attribute.
         level: float, optional
@@ -2012,7 +2012,7 @@ class Feols(ResultAccessorMixin):
 
         Returns
         -------
-        A pd.Series with the regression coefficient of `resampvar` and the p-value
+        A `pd.Series` with the regression coefficient of `resampvar` and the p-value
         of the RI test. Additionally, reports the standard error and the confidence
         interval of the p-value.
 
@@ -2207,12 +2207,12 @@ class Feols(ResultAccessorMixin):
         Parameters
         ----------
         plot_backend : str, optional
-            The plotting backend to use. Defaults to "lets_plot". Alternatively,
-            "matplotlib" is available.
+            The plotting backend to use. Defaults to `lets_plot`. Alternatively,
+            `matplotlib` is available.
 
         Returns
         -------
-        A lets_plot or matplotlib figure with the distribution of the Randomization
+        A `lets_plot` or `matplotlib` figure with the distribution of the Randomization
         Inference Statistics.
         """
         from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue

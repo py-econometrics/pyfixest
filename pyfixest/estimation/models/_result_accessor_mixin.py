@@ -37,7 +37,7 @@ class TidyColumnAccessors:
 
     def coef(self) -> pd.Series:
         """
-        Estimated coefficients as a pandas Series.
+        Estimated coefficients as a pandas `Series`.
 
         Returns the `Estimate` column of `tidy()`.
 
@@ -59,7 +59,7 @@ class TidyColumnAccessors:
 
     def se(self) -> pd.Series:
         """
-        Coefficient standard errors as a pandas Series.
+        Coefficient standard errors as a pandas `Series`.
 
         Returns the `Std. Error` column of `tidy()`. The values depend on the
         variance estimator of the model, which can be changed via `vcov()`.
@@ -82,7 +82,7 @@ class TidyColumnAccessors:
 
     def tstat(self) -> pd.Series:
         """
-        Coefficient t-statistics as a pandas Series.
+        Coefficient t-statistics as a pandas `Series`.
 
         Returns the `t value` column of `tidy()`, i.e. each estimate divided by
         its standard error.
@@ -105,7 +105,7 @@ class TidyColumnAccessors:
 
     def pvalue(self) -> pd.Series:
         """
-        Coefficient p-values as a pandas Series.
+        Coefficient p-values as a pandas `Series`.
 
         Returns the `Pr(>|t|)` column of `tidy()`, for the two-sided null that a
         coefficient is zero.
@@ -286,13 +286,13 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Tidy model outputs.
 
-        Return a tidy pd.DataFrame with the point estimates, standard errors,
+        Return a tidy `pd.DataFrame` with the point estimates, standard errors,
         t-statistics, and p-values.
 
         Parameters
         ----------
         alpha: Optional[float]
-            The significance level for the confidence intervals. If None,
+            The significance level for the confidence intervals. If `None`,
             computes a 95% confidence interval (`alpha = 0.05`).
         inference_type : {"regular"}, optional
             Type of coefficient-wise inference to report. Only `"regular"` is
@@ -301,7 +301,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         tidy_df : pd.DataFrame
-            A tidy pd.DataFrame containing the regression results, including point
+            A tidy `pd.DataFrame` containing the regression results, including point
             estimates, standard errors, t-statistics, and p-values.
 
         Examples
@@ -406,16 +406,16 @@ class ResultAccessorMixin(TidyColumnAccessors):
         joint : bool, optional
             Deprecated. Use `inference_type="simult"` instead. Whether to
             compute simultaneous confidence intervals for the joint null of the
-            parameters selected by `keep` and `drop`. Defaults to False. See
+            parameters selected by `keep` and `drop`. Defaults to `False`. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
             Remark 4.4.1 for details.
         keep: str or list of str, optional
             The pattern for retaining coefficient names. You can pass a string (one
             pattern) or a list (multiple patterns). Default is keeping all coefficients.
             You should use regular expressions to select coefficients.
-                "age",            # would keep all coefficients containing age
-                r"^tr",           # would keep all coefficients starting with tr
-                r"\\d$",          # would keep all coefficients ending with number
+                `"age"`,            # would keep all coefficients containing age
+                `r"^tr"`,           # would keep all coefficients starting with tr
+                `r"\d$"`,          # would keep all coefficients ending with number
             Output will be in the order of the patterns.
         drop: str or list of str, optional
             The pattern for excluding coefficient names. You can pass a string (one
@@ -423,21 +423,21 @@ class ResultAccessorMixin(TidyColumnAccessors):
             Default is keeping all coefficients. Parameter `keep` and `drop` can be
             used simultaneously.
         exact_match: bool, optional
-            Whether to use exact match for `keep` and `drop`. Default is False.
-            If True, the pattern will be matched exactly to the coefficient name
+            Whether to use exact match for `keep` and `drop`. Default is `False`.
+            If `True`, the pattern will be matched exactly to the coefficient name
             instead of using regular expressions.
         reps : int, optional
             The number of bootstrap iterations to run for joint confidence intervals.
-            Defaults to 10_000. Only used if `joint` is True.
+            Defaults to 10_000. Only used if `joint` is `True`.
         seed : int, optional
-            The seed for the random number generator. Defaults to None. Only used
+            The seed for the random number generator. Defaults to `None`. Only used
             when `inference_type="simult"`.
         inference_type : {"regular", "simult", "savi"}, optional
-            Type of confidence interval to compute. "regular" returns pointwise
-            intervals; "simult" returns simultaneous (joint) intervals for the
-            coefficients selected by `keep` and `drop`; "savi" returns
+            Type of confidence interval to compute. `regular` returns pointwise
+            intervals; `simult` returns simultaneous (joint) intervals for the
+            coefficients selected by `keep` and `drop`; `savi` returns
             coefficient-wise asymptotic SAVI confidence sequences. Defaults to
-            "regular". Supersedes the deprecated `joint` argument.
+            `regular`. Supersedes the deprecated `joint` argument.
         mixture_precision: float, optional
             Only relevant for `inference_type="savi"`. Controls the mixing weight of the
             prior in the SAVI e-value. Larger values produce wider confidence
@@ -448,7 +448,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         pd.DataFrame
-            A pd.DataFrame with confidence intervals of the estimated regression model
+            A `pd.DataFrame` with confidence intervals of the estimated regression model
             for the selected coefficients.
 
         Notes
@@ -537,7 +537,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         np.ndarray
-            A np.ndarray with the residuals of the estimated regression model.
+            A `np.ndarray` with the residuals of the estimated regression model.
 
         Examples
         --------

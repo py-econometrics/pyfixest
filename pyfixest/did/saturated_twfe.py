@@ -171,7 +171,7 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object. It carries the event-study design
+            The fitted `Feols` model object. It carries the event-study design
             as `event_study_design`.
         """
         self.mod, cohort_event_times = _saturated_event_study(
@@ -200,7 +200,7 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         pd.DataFrame
-            A DataFrame containing the covariance matrix.
+            A `DataFrame` containing the covariance matrix.
         """
         pass
 
@@ -249,8 +249,8 @@ class SaturatedEventStudy(DID):
         ----------
         by : str, optional
 
-                The type of test to perform. Can be either "cohort" or "time".
-                Default is "cohort". If "cohort", tests for treatment heterogeneity
+                The type of test to perform. Can be either `cohort` or `time`.
+                Default is `cohort`. If `cohort`, tests for treatment heterogeneity
                 across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
                 for details.
         """
@@ -266,19 +266,19 @@ class SaturatedEventStudy(DID):
         ----------
         agg : str, optional
 
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
+                The type of aggregation to perform. Can be either `att` or `cohort` or `period`.
+                Default is `att`. If `att`, computes the average treatment effect on the treated.
+                If `cohort`, computes the average treatment effect by cohort. If `period`,
                 computes the average treatment effect by period.
 
         weighting : str, optional
 
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+                    The type of weighting to use. Can be either `shares` or `variance`.
 
         Returns
         -------
         pd.Series
-            A Series containing the aggregated estimates.
+            A `Series` containing the aggregated estimates.
         """
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
@@ -347,13 +347,13 @@ class SaturatedEventStudy(DID):
         Parameters
         ----------
         agg : str, optional
-            The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-            Default is "att". If "att", computes the average treatment effect on the treated.
-            If "cohort", computes the average treatment effect by cohort. If "period",
+            The type of aggregation to perform. Can be either `att` or `cohort` or `period`.
+            Default is `att`. If `att`, computes the average treatment effect on the treated.
+            If `cohort`, computes the average treatment effect by cohort. If `period`,
             computes the average treatment effect by period.
 
         weighting : str, optional
-            The type of weighting to use. Can be either 'shares' or 'variance'.
+            The type of weighting to use. Can be either `shares` or `variance`.
 
         Returns
         -------

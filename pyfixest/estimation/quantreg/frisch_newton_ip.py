@@ -17,22 +17,22 @@ class QuantregSolution:
     Parameters
     ----------
     beta : NDArray[np.float64]
-        Coefficient estimates, shape (n_coefficients,); the negated ``y``.
+        Coefficient estimates, shape `(n_coefficients,)`; the negated ``y``.
     has_converged : bool
         Whether the duality gap fell below the tolerance within the iteration
         budget.
     iterations : int
         Index of the final interior point iteration, counted from zero.
     x : NDArray[np.float64]
-        Primal variable, shape (n_solver_rows,).
+        Primal variable, shape `(n_solver_rows,)`.
     s : NDArray[np.float64]
-        Primal slack of the upper bound, ``u - x``, shape (n_solver_rows,).
+        Primal slack of the upper bound, ``u - x``, shape `(n_solver_rows,)`.
     z : NDArray[np.float64]
-        Dual variable of ``x >= 0``, shape (n_solver_rows,).
+        Dual variable of ``x >= 0``, shape `(n_solver_rows,)`.
     w : NDArray[np.float64]
-        Dual variable of ``x <= u``, shape (n_solver_rows,).
+        Dual variable of ``x <= u``, shape `(n_solver_rows,)`.
     y : NDArray[np.float64]
-        Dual variable of ``A x = b``, shape (n_coefficients,).
+        Dual variable of ``A x = b``, shape `(n_coefficients,)`.
 
     Examples
     --------

@@ -173,7 +173,7 @@ class Quantreg(Feols):
     def drop_multicol_vars(self):
         """Remove collinear regressors using the same rank check as OLS.
 
-        Quantile models do not support fixed effects, so within_data holds
+        Quantile models do not support fixed effects, so `within_data` holds
         the original response and regressor arrays without demeaning.
         """
         self._set_within_data(self._drop_multicollinear_within_data(self.within_data))

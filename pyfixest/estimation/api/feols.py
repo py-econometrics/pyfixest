@@ -239,9 +239,9 @@ def feols(
     `fit.confint()` for the confidence intervals.
 
     The employed type of inference can be specified via the `vcov` argument. For compatibility
-    with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
-    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, `PyFixest`
-    would cluster by the first fixed effect if no vcov was provided.
+    with `fixest`, if `vcov` is not provided, `PyFixest` always employs `iid` inference by default
+    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if `vcov` was not provided, `PyFixest`
+    would cluster by the first fixed effect if no `vcov` was provided.
 
     ```{python}
     fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
@@ -249,8 +249,8 @@ def feols(
     fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
     ```
 
-    Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
-    "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
+    Supported inference types are `iid`, `hetero`, `HC1`, `HC2`, `HC3`, and
+    `CRV1`/`CRV3`. Clustered standard errors are specified via a dictionary,
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
     `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway
     clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}`

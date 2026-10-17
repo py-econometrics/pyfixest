@@ -100,7 +100,7 @@ class FixestMulti(TidyColumnAccessors):
         Returns
         -------
         list
-            A list of all fitted models of types Feols, Fepois, or Feiv.
+            A list of all fitted models of types `Feols`, `Fepois`, or `Feiv`.
         """
         return list(self.all_fitted_models.values())
 
@@ -112,8 +112,8 @@ class FixestMulti(TidyColumnAccessors):
         """
         Update regression inference "on the fly".
 
-        By calling vcov() on a "Fixest" object, all inference procedures applied
-        to the "Fixest" object are replaced with the variance-covariance matrix
+        By calling `vcov()` on a `Fixest` object, all inference procedures applied
+        to the `Fixest` object are replaced with the variance-covariance matrix
         specified via the method.
 
         Parameters
@@ -121,15 +121,15 @@ class FixestMulti(TidyColumnAccessors):
         vcov : Union[str, dict[str, str]])
             A string or dictionary specifying the type of variance-covariance
             matrix to use for inference.
-            - If a string, can be one of "iid", "hetero", "HC1", "HC2", "HC3".
-            - If a dictionary, it should have the format {"CRV1": "clustervar"}
-            for CRV1 inference or {"CRV3": "clustervar"} for CRV3 inference.
+            - If a string, can be one of `iid`, `hetero`, `HC1`, `HC2`, `HC3`.
+            - If a dictionary, it should have the format `{"CRV1": "clustervar"}`
+            for CRV1 inference or `{"CRV3": "clustervar"}` for CRV3 inference.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
 
         Returns
         -------
-            An instance of the "Fixest" class with updated inference.
+            An instance of the `Fixest` class with updated inference.
         """
         for fxst in self.all_fitted_models.values():
             fxst.vcov(vcov=vcov, vcov_kwargs=vcov_kwargs)
@@ -137,21 +137,21 @@ class FixestMulti(TidyColumnAccessors):
 
     def tidy(self) -> pd.DataFrame:
         """
-        Return the results of an estimation using `feols()` as a tidy Pandas DataFrame.
+        Return the results of an estimation using `feols()` as a tidy Pandas `DataFrame`.
 
         Returns
         -------
         pandas.DataFrame or str
-                A tidy DataFrame with the following columns:
-                - fml: the formula used to generate the results
-                - Coefficient: the names of the coefficients
-                - Estimate: the estimated coefficients
-                - Std. Error: the standard errors of the estimated coefficients
-                - t value: the t-values of the estimated coefficients
-                - Pr(>|t|): the p-values of the estimated coefficients
-                - 2.5%: the lower bound of the 95% confidence interval
-                - 97.5%: the upper bound of the 95% confidence interval
-                If `type` is set to "markdown", the resulting DataFrame will be
+                A tidy `DataFrame` with the following columns:
+                - `fml`: the formula used to generate the results
+                - `Coefficient`: the names of the coefficients
+                - `Estimate`: the estimated coefficients
+                - `Std. Error`: the standard errors of the estimated coefficients
+                - `t value`: the t-values of the estimated coefficients
+                - `Pr(>|t|)`: the p-values of the estimated coefficients
+                - `2.5%`: the lower bound of the 95% confidence interval
+                - `97.5%`: the upper bound of the 95% confidence interval
+                If `type` is set to `markdown`, the resulting `DataFrame` will be
                 returned as a markdown-formatted string with three decimal places.
         """
         res = []
@@ -173,7 +173,7 @@ class FixestMulti(TidyColumnAccessors):
         Returns
         -------
         pandas.Series
-            A pd.Series with coefficient names and confidence intervals.
+            A `pd.Series` with coefficient names and confidence intervals.
             The key indicates which models the estimated statistic derives from.
         """
         return self.tidy()[["2.5%", "97.5%"]]
@@ -191,7 +191,7 @@ class FixestMulti(TidyColumnAccessors):
         G_adj: bool = True,
     ) -> pd.DataFrame:
         """
-        Run a wild cluster bootstrap for all regressions in the Fixest object.
+        Run a wild cluster bootstrap for all regressions in the `Fixest` object.
 
         Parameters
         ----------
@@ -199,33 +199,33 @@ class FixestMulti(TidyColumnAccessors):
             The number of bootstrap iterations to run.
         param : Union[str, None], optional
             A string of length one, containing the test parameter of interest.
-            Default is None.
+            Default is `None`.
         cluster : Union[str, None], optional
-            The name of the cluster variable. Default is None. If None, uses
+            The name of the cluster variable. Default is `None`. If `None`, uses
             each model's cluster variables. If a model is not clustered, a
             heteroskedasticity-robust wild bootstrap is run.
         weights_type : str, optional
-            The type of bootstrap weights. Either 'rademacher', 'mammen', 'webb',
-            or 'normal'. Default is 'rademacher'.
+            The type of bootstrap weights. Either `rademacher`, `mammen`, `webb`,
+            or `normal`. Default is `rademacher`.
         impose_null : bool, optional
             Should the null hypothesis be imposed on the bootstrap dgp, or not?
-            Default is True.
+            Default is `True`.
         bootstrap_type : str, optional
             A string of length one. Allows choosing the bootstrap type to be run.
-            Either '11', '31', '13', or '33'. Default is '11'.
+            Either `'11'`, `'31'`, `'13'`, or `'33'`. Default is `'11'`.
         seed : Union[str, None], optional
-            Option to provide a random seed. Default is None.
+            Option to provide a random seed. Default is `None`.
         k_adj: bool, optional
             Whether to adjust the original coefficients with the bootstrap distribution.
-            Default is True.
+            Default is `True`.
         G_adj : bool, optional
             Whether to adjust standard errors for clustering in the bootstrap.
-            Default is True.
+            Default is `True`.
 
         Returns
         -------
         pandas.DataFrame
-            A pd.DataFrame with bootstrapped t-statistic and p-value.
+            A `pd.DataFrame` with bootstrapped t-statistic and p-value.
             The index indicates which model the estimated statistic derives from.
         """
         res_df = pd.DataFrame()
@@ -264,18 +264,18 @@ class FixestMulti(TidyColumnAccessors):
         self, i: int | str, print_fml: bool | None = True
     ) -> Feols | Fepois:
         """
-        Fetch a model of class Feols from the Fixest class.
+        Fetch a model of class `Feols` from the `Fixest` class.
 
         Parameters
         ----------
         i : int or str
             The index of the model to fetch.
         print_fml : bool, optional
-            Whether to print the formula of the model. Default is True.
+            Whether to print the formula of the model. Default is `True`.
 
         Returns
         -------
-            A Feols object.
+            A `Feols` object.
         """
         if isinstance(i, str):
             i = int(i)

@@ -219,7 +219,7 @@ class LsmrDemeaner(BaseDemeaner):
 
     Notes
     -----
-    The `within`` backend takes a single tolerance, so `fixef_atol` and
+    The `within` backend takes a single tolerance, so `fixef_atol` and
     `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
     backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
@@ -231,7 +231,7 @@ class LsmrDemeaner(BaseDemeaner):
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.
 
-    The `precision``, `device``, and `warn_on_cpu_fallback`` fields are
+    The `precision`, `device`, and `warn_on_cpu_fallback` fields are
     only relevant for the `torch` backend. The `within` backend always
     runs on CPU in float64 and ignores these fields.
 

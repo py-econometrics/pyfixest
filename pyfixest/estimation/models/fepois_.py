@@ -18,7 +18,7 @@ class Fepois(Feglm):
     Non user-facing class to estimate a Poisson regression model via Iterated
     Weighted Least Squares (IWLS).
 
-    Inherits from the Feglm class. Users should not directly instantiate this class,
+    Inherits from the `Feglm` class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
     IRLS residualization is orchestrated by ``Feglm`` through ``DemeanCache``,
     reusing preconditioners while projecting with each solve's current weights.
@@ -36,14 +36,14 @@ class Fepois(Feglm):
     fitted_values : FittedValues
         The linear predictor and the response mean of the final IRLS iteration.
     sandwich : SandwichComponents
-        IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
+        IRLS scores, the Hessian `X' W X` with the final working weights, and its inverse.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     options : GlmEstimationOptions
         The estimation options the model was built with, including the IRLS
         `maxiter` and `tol`, the separation check, and the offset.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
+        The data frame used in the estimation. `None` if arguments `lean = True` or
         `store_data = False`.
 
     Examples

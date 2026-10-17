@@ -42,35 +42,35 @@ def panelview(
     treat : str
         The column name representing the treatment variable.
     outcome : str, optional
-        The column name representing the outcome variable. If not None, an outcome plot is generated.
+        The column name representing the outcome variable. If not `None`, an outcome plot is generated.
     collapse_to_cohort : bool, optional
         Whether to collapse units into treatment cohorts.
     subsamp : int, optional
-        The number of samples to draw from data set for display (default is None).
+        The number of samples to draw from data set for display (default is `None`).
     sort_by_timing : bool, optional
         Whether to sort the treatment cohorts by the number of treated periods.
     xlab : str, optional
-        The label for the x-axis. Default is None, in which case default labels are used.
+        The label for the x-axis. Default is `None`, in which case default labels are used.
     ylab : str, optional
-        The label for the y-axis. Default is None, in which case default labels are used.
+        The label for the y-axis. Default is `None`, in which case default labels are used.
     figsize : tuple, optional
-        The figure size for the outcome plot. Default is (11, 3).
+        The figure size for the outcome plot. Default is `(11, 3)`.
     noticks : bool, optional
-        Whether to display ticks on the plot. Default is False.
+        Whether to display ticks on the plot. Default is `False`.
     title : str, optional
-        The title for the plot. Default is None, in which case no title is displayed.
+        The title for the plot. Default is `None`, in which case no title is displayed.
     legend : bool, optional
-        Whether to display a legend. Default is False (since binary treatments are
+        Whether to display a legend. Default is `False` (since binary treatments are
         self-explanatory).
     ax : matplotlib.pyplot.Axes, optional
-        The axes on which to draw the plot. Default is None, in which case a new figure
+        The axes on which to draw the plot. Default is `None`, in which case a new figure
         is created.
     xlim : tuple, optional
-        The limits for the x-axis of the plot. Default is None.
+        The limits for the x-axis of the plot. Default is `None`.
     ylim : tuple, optional
-        The limits for the y-axis of the plot. Default is None.
+        The limits for the y-axis of the plot. Default is `None`.
     units_to_plot : list, optional
-        A list of unit to include in the plot. If None, all units in the dataset are plotted.
+        A list of unit to include in the plot. If `None`, all units in the dataset are plotted.
 
     Returns
     -------

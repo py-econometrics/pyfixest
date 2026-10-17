@@ -29,14 +29,14 @@ def event_study(
     Estimate Event Study Model.
 
     This function allows for the estimation of treatment effects using different
-    estimators. It supports "twfe" for the two-way fixed effects estimator,
-    "did2s" for Gardner's two-step DID2S estimator, and "saturated" for a
+    estimators. It supports `twfe` for the two-way fixed effects estimator,
+    `did2s` for Gardner's two-step DID2S estimator, and `saturated` for a
     saturated event-study specification with cohort-specific effects.
 
     Parameters
     ----------
     data : DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     idname : str
@@ -46,17 +46,17 @@ def event_study(
     gname : str
         Unit-specific time of initial treatment.
     cluster: Optional[str]
-        The name of the cluster variable. If None, defaults to idname.
+        The name of the cluster variable. If `None`, defaults to `idname`.
         With ``estimator="did2s"``, inference is fixed at estimation time, and
         post-estimation ``vcov()`` updates are rejected.
     xfml : str
         The formula for the covariates.
     estimator : str
-        The estimator to use. Options are "did2s", "twfe", and "saturated".
+        The estimator to use. Options are `did2s`, `twfe`, and `saturated`.
     att : bool, optional
-        If True, estimates the average treatment effect on the treated (ATT).
-        If False, estimates the canonical event study design with all leads and
-        lags. Default is True.
+        If `True`, estimates the average treatment effect on the treated (ATT).
+        If `False`, estimates the canonical event study design with all leads and
+        lags. Default is `True`.
 
     Returns
     -------
@@ -221,13 +221,13 @@ def did2s(
     Parameters
     ----------
     data : pd.DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with `~`.
     second_stage : str
-        The formula for the second stage, starting with '~'.
+        The formula for the second stage, starting with `~`.
     treatment : str
         The name of the treatment variable.
     cluster : str
@@ -404,7 +404,7 @@ def lpdid(
     Parameters
     ----------
     data : DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     idname : str
@@ -414,8 +414,8 @@ def lpdid(
     gname : str
         Unit-specific time of initial treatment.
     vcov : str, dict, optional
-        The type of inference to employ. Defaults to {"CRV1": idname}.
-        Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
+        The type of inference to employ. Defaults to `{"CRV1": idname}`.
+        Options include `iid`, `hetero`, or a dictionary like `{"CRV1": idname}`.
     pre_window : int, optional
         The number of periods before the treatment to include in the estimation.
         Default is the minimum relative year in the data.
@@ -423,17 +423,17 @@ def lpdid(
         The number of periods after the treatment to include in the estimation.
         Default is the maximum relative year in the data.
     never_treated : int, optional
-        Value in gname indicating units never treated. Default is 0.
+        Value in `gname` indicating units never treated. Default is 0.
     att : bool, optional
-        If True, estimates the pooled average treatment effect on the treated (ATT).
-        Default is True.
+        If `True`, estimates the pooled average treatment effect on the treated (ATT).
+        Default is `True`.
     xfml : str, optional
         Formula for the covariates. Not yet supported.
 
     Returns
     -------
     DataFrame
-        A DataFrame with the estimated coefficients.
+        A `DataFrame` with the estimated coefficients.
 
     Examples
     --------

@@ -37,7 +37,7 @@ class Feiv(Feols):
     """
     Non user-facing class to estimate an IV model using a 2SLS estimator.
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
+    Inherits from the `Feols` class. Users should not directly instantiate this class,
     but rather use the [feols()](/reference/estimation.api.feols.feols.qmd)
     function. This class constructs the second-stage and instrument within
     arrays through the shared ``DemeanCache`` supplied by the estimation runner.
@@ -65,33 +65,33 @@ class Feiv(Feols):
     _Z : np.ndarray
         Processed instruments after handling multicollinearity.
     _weights_type_feiv : str
-        Type of the weights variable defined in Feiv class.
-        Either "aweights" for analytic weights or "fweights"
+        Type of the weights variable defined in `Feiv` class.
+        Either `aweights` for analytic weights or `fweights`
         for frequency weights.
     _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
         Names and column mask of the instruments dropped by the rank check,
-        set in get_fit().
+        set in `get_fit()`.
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
     sandwich : SandwichComponents
-        Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
-        X_hat' W X_hat, and its inverse, set in get_fit().
+        Weighted scores of the first-stage projection `X_hat`, the 2SLS Hessian
+        `X_hat' W X_hat`, and its inverse, set in `get_fit()`.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
-        get_fit().
+        `get_fit()`.
     _u_hat : np.ndarray
         Residuals of the regression model.
     first_stage : FirstStage
         First-stage regression fitted after second-stage inference: the
-        coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
+        coefficients `pi_hat`, the fitted values `X_hat`, the residuals `v_hat`, the
         fitted first-stage model, the excluded instruments, and the
         instrument-strength `diagnostics`.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
+        The data frame used in the estimation. `None` if arguments `lean = True` or
         `store_data = False`.
 
 
@@ -404,7 +404,7 @@ class Feiv(Feols):
 
         Notes
         -----
-        `f_stat` is adjusted to the specification of vcov.
+        `f_stat` is adjusted to the specification of `vcov`.
 
         Parameters
         ----------

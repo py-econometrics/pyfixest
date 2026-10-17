@@ -156,7 +156,7 @@ class Feglm(Feols):
         return replace(counts, n_fe=self._n_fe_after_separation)
 
     def get_fit(self) -> None:
-        "Fit the GLM via IRLS and write results onto self.* attributes."
+        "Fit the GLM via IRLS and write results onto `self.*` attributes."
         model_matrix = self.model_matrix
         response = model_matrix.dependent.to_numpy()
         design = model_matrix.independent.to_numpy()
@@ -280,8 +280,8 @@ class Feglm(Feols):
         Parameters
         ----------
         type : str, optional
-            The type of residuals to return. Either "response" (default) or
-            "working".
+            The type of residuals to return. Either `response` (default) or
+            `working`.
 
         Returns
         -------
@@ -330,52 +330,52 @@ class Feglm(Feols):
         """
         Return predicted values from regression model.
 
-        Return a flat np.array with predicted values of the regression model.
+        Return a flat `np.array` with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
         for such observations
-        will be set to NaN.
+        will be set to `NaN`.
 
         Parameters
         ----------
         newdata : Union[None, pd.DataFrame], optional
-            A pd.DataFrame with the new data, to be used for prediction.
-            If None (default), uses the data used for fitting the model.
+            A `pd.DataFrame` with the new data, to be used for prediction.
+            If `None` (default), uses the data used for fitting the model.
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/
                 scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type : str, optional
             The type of prediction to be computed.
-            Can be either "response" (default) or "link".
-            If type="response", the output is at the level of the response variable,
+            Can be either `response` (default) or `link`.
+            If `type="response"`, the output is at the level of the response variable,
             i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
-            i.e., the linear predictor X @ beta.
+            If `link`, the output is at the level of the explanatory variables,
+            i.e., the linear predictor `X @ beta`.
         atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            If `True`, the standard error of the prediction is computed. Only feasible
+            for models without fixed effects. GLMs are not supported. Defaults to `False`.
         interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
+            The type of interval to compute. Can be either `prediction` or `None`.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if interval = "prediction" is not None.
+            used if `interval = "prediction"` is not `None`.
 
         Returns
         -------
         Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+            Returns a `pd.Dataframe` with columns `fit`, `se_fit` and CIs if argument `interval=prediction`.
+            Otherwise, returns a `np.ndarray` with the predicted values of the model or the prediction
+            standard errors if argument `se_fit=True`.
         """
         if se_fit:
             raise NotImplementedError(

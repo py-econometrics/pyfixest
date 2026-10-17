@@ -541,10 +541,10 @@ class WithinLinearData:
     Parameters
     ----------
     response : NDArray[np.float64]
-        Demeaned response, shape (n_rows, 1).
+        Demeaned response, shape `(n_rows, 1)`.
     design : NDArray[np.float64]
         Demeaned regressors after removing collinear columns,
-        shape (n_rows, n_coefficients).
+        shape `(n_rows, n_coefficients)`.
 
     Examples
     --------
@@ -574,15 +574,15 @@ class WithinIvData(WithinLinearData):
     Parameters
     ----------
     response : NDArray[np.float64]
-        Demeaned response, shape (n_rows, 1).
+        Demeaned response, shape `(n_rows, 1)`.
     design : NDArray[np.float64]
         Demeaned regressors, including endogenous regressors, after removing
-        collinear columns, shape (n_rows, n_coefficients).
+        collinear columns, shape `(n_rows, n_coefficients)`.
     instruments : NDArray[np.float64]
         Demeaned instruments, including exogenous regressors, after removing
-        collinear columns, shape (n_rows, n_instruments).
+        collinear columns, shape `(n_rows, n_instruments)`.
     endogenous : NDArray[np.float64]
-        Demeaned endogenous regressor, shape (n_rows, 1).
+        Demeaned endogenous regressor, shape `(n_rows, 1)`.
 
     Examples
     --------
@@ -613,20 +613,20 @@ class GlmWorkingState:
     Parameters
     ----------
     working_response_within : NDArray[np.float64]
-        Final within-scale working response, shape (n_rows,).
+        Final within-scale working response, shape `(n_rows,)`.
     design_within : NDArray[np.float64]
         Demeaned working regressors after removing collinear columns,
-        shape (n_rows, n_coefficients).
+        shape `(n_rows, n_coefficients)`.
     working_weights : NDArray[np.float64]
-        Final IRLS weights including observation weights, shape (n_rows,).
+        Final IRLS weights including observation weights, shape `(n_rows,)`.
     eta : NDArray[np.float64]
-        Linear predictor including any offset, shape (n_rows,).
+        Linear predictor including any offset, shape `(n_rows,)`.
     mu : NDArray[np.float64]
-        Response mean, shape (n_rows,).
+        Response mean, shape `(n_rows,)`.
     response_residuals : NDArray[np.float64]
-        Observed response minus its mean, shape (n_rows,).
+        Observed response minus its mean, shape `(n_rows,)`.
     working_residuals : NDArray[np.float64]
-        Within working response minus design times coefficients, shape (n_rows,).
+        Within working response minus design times coefficients, shape `(n_rows,)`.
 
     Examples
     --------
@@ -655,10 +655,10 @@ class FittedValues:
     ----------
     link : NDArray[np.float64]
         Prediction on the scale of the linear predictor, including the
-        fixed-effect contribution and any offset, shape (n_rows,).
+        fixed-effect contribution and any offset, shape `(n_rows,)`.
     response : NDArray[np.float64]
         Prediction on the scale of the dependent variable, ``E(Y|X)``,
-        shape (n_rows,).
+        shape `(n_rows,)`.
 
     Examples
     --------
@@ -682,12 +682,12 @@ class SandwichComponents:
     Parameters
     ----------
     scores : NDArray[np.float64]
-        Weighted scores ``W X * u``, shape (n_rows, n_coefficients).
+        Weighted scores ``W X * u``, shape `(n_rows, n_coefficients)`.
     hessian : NDArray[np.float64]
-        Weighted cross-product ``X' W X``, shape (n_coefficients,
-        n_coefficients).
+        Weighted cross-product ``X' W X``, shape `(n_coefficients,
+        n_coefficients)`.
     bread : NDArray[np.float64]
-        Inverse of ``hessian``, shape (n_coefficients, n_coefficients).
+        Inverse of ``hessian``, shape `(n_coefficients, n_coefficients)`.
 
     Examples
     --------
@@ -855,11 +855,11 @@ class VarianceCovariance:
     Parameters
     ----------
     vcov : NDArray[np.float64]
-        Small-sample-adjusted covariance matrix, shape (n_coefficients,
-        n_coefficients).
+        Small-sample-adjusted covariance matrix, shape `(n_coefficients,
+        n_coefficients)`.
     meat : NDArray[np.float64] or None
-        Adjusted meat of the sandwich, shape (n_coefficients,
-        n_coefficients), so that ``vcov == bread @ meat @ bread`` with the
+        Adjusted meat of the sandwich, shape `(n_coefficients,
+        n_coefficients)`, so that ``vcov == bread @ meat @ bread`` with the
         bread of ``fit.sandwich``. For multiway clustering the per-dimension
         meats enter with their signs and adjustment factors. ``None`` where
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
@@ -949,11 +949,11 @@ class FirstStage:
     Parameters
     ----------
     coefficients : NDArray[np.float64]
-        First-stage coefficients pi_hat, one per first-stage regressor.
+        First-stage coefficients `pi_hat`, one per first-stage regressor.
     fitted_values : NDArray[np.float64]
-        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+        Within-scale fitted values ``design @ coefficients``, shape `(n_rows,)`.
     residuals : NDArray[np.float64]
-        First-stage residuals v_hat, shape (n_rows,).
+        First-stage residuals `v_hat`, shape `(n_rows,)`.
     model : Feols
         The fitted first-stage model. It follows the second stage's
         `store_data` and `lean` policy, so it drops the same state.
@@ -986,7 +986,7 @@ class FirstStage:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WaldTest:
-    """Wald test of a linear hypothesis R @ beta = q.
+    """Wald test of a linear hypothesis `R @ beta = q`.
 
     Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
     of the reference distribution actually used, `df1` and `df2` are its
@@ -1014,7 +1014,7 @@ class WaldTest:
         Covariance estimator the test was computed with, as
         `VarianceCovariance.vcov_type_detail`.
     wald_statistic : float
-        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+        Wald quadratic form `W = (R @ beta - q)' (R V R')^-1 (R @ beta - q)`.
     f_statistic : float
         F-scaled statistic W / `df1`, available under either distribution.
 
@@ -1136,7 +1136,7 @@ class RitestStatistics:
     Parameters
     ----------
     statistics : NDArray[np.float64]
-        Resampled test statistics, shape (reps + 1,). The first entry is the
+        Resampled test statistics, shape `(reps + 1,)`. The first entry is the
         observed statistic under the original assignment; the remaining
         ``reps`` entries are the randomization draws.
     sample_stat : float
@@ -1171,7 +1171,7 @@ class CoefficientTable:
     Parameters
     ----------
     estimate : NDArray[np.float64]
-        Coefficient estimates, shape (n_coefficients,).
+        Coefficient estimates, shape `(n_coefficients,)`.
     se : NDArray[np.float64]
         Standard errors, the square root of the covariance diagonal.
     tstat : NDArray[np.float64]
@@ -1180,7 +1180,7 @@ class CoefficientTable:
         Two-sided p-values from the model's reference distribution with
         ``variance_covariance.df_t`` degrees of freedom.
     conf_int : NDArray[np.float64]
-        Lower and upper confidence bounds, shape (2, n_coefficients), at
+        Lower and upper confidence bounds, shape `(2, n_coefficients)`, at
         level ``1 - alpha``.
     alpha : float
         Significance level of the bounds.

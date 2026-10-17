@@ -83,7 +83,7 @@ class DegreesOfFreedomCounts:
     Parameters
     ----------
     N : int or float
-        Number of observations (the frequency-weight sum under fweights).
+        Number of observations (the frequency-weight sum under `fweights`).
     k : int
         Number of estimated coefficients, excluding fixed effects.
     k_fe : int
@@ -140,22 +140,22 @@ def ssc(
     Parameters
     ----------
     k_adj : bool, default True
-        If True, applies a small sample correction of (N-1) / (N-k) where N
+        If `True`, applies a small sample correction of `(N-1) / (N-k)` where N
         is the number of observations and k is the number of estimated
         coefficients excluding any fixed effects projected out by either
         `feols()` or `fepois()`.
     k_fixef : str, default "none"
-        Equal to 'none': the fixed effects parameters are discarded when
-        calculating k in (N-1) / (N-k).
+        Equal to `none`: the fixed effects parameters are discarded when
+        calculating k in `(N-1) / (N-k)`.
     G_adj : bool, default True
-        If True, a cluster correction G/(G-1) is performed, with G the number
+        If `True`, a cluster correction `G/(G-1)` is performed, with G the number
         of clusters. This argument is only relevant for clustered errors.
     G_df : str, default "conventional"
-        Controls how "G" is computed for multiway clustering if G_adj = True.
+        Controls how `G` is computed for multiway clustering if `G_adj = True`.
         Note that the covariance matrix in the multiway clustering case is of
-        the form V = V_1 + V_2 - V_12. If "conventional", then each summand G_i
-        is multiplied with a small sample adjustment G_i / (G_i - 1). If "min",
-        all summands are multiplied with the same value, min(G) / (min(G) - 1).
+        the form `V = V_1 + V_2 - V_12`. If `conventional`, then each summand `G_i`
+        is multiplied with a small sample adjustment `G_i / (G_i - 1)`. If `min`,
+        all summands are multiplied with the same value, `min(G) / (min(G) - 1)`.
         This argument is only relevant for clustered errors.
 
     Details
@@ -163,42 +163,42 @@ def ssc(
     The small sample correction choices mimic fixest's behavior. For details, see
     https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
 
-    In general, if k_adj = True, we multiply the variance covariance matrix V with a
-    small sample correction factor of (N-1) / (N-k), where N is the number of
+    In general, if `k_adj = True`, we multiply the variance covariance matrix V with a
+    small sample correction factor of `(N-1) / (N-k)`, where N is the number of
     observations and k is the number of estimated coefficients.
 
-    If k_fixef = "none", the fixed effects parameters are discarded when
+    If `k_fixef = "none"`, the fixed effects parameters are discarded when
     calculating k. This is the default behavior and currently the only
     option. Note that it is not r-fixest's default behavior.
 
-    Hence if k_adj = True, the covariance matrix is computed as
-    V = V x (N-1) / (N-k) for iid and heteroskedastic errors.
+    Hence if `k_adj = True`, the covariance matrix is computed as
+    `V = V x (N-1) / (N-k)` for iid and heteroskedastic errors.
 
-    If k_adj = False, no small sample correction is applied of the type
+    If `k_adj = False`, no small sample correction is applied of the type
     above is applied.
 
-    If G_adj = True, a cluster correction of G/(G-1) is performed,
+    If `G_adj = True`, a cluster correction of `G/(G-1)` is performed,
     with G the number of clusters.
 
-    If k_adj = True and G_adj = True, V = V x (N - 1) / N - k) x G/(G-1)
+    If `k_adj = True` and `G_adj = True`, `V = V x (N - 1) / N - k) x G/(G-1)`
     for cluster robust errors where G is the number of clusters.
 
-    If k_adj = False and G_adj = True, V = V x G/(G-1) for cluster robust
-    errors, i.e. we drop the (N-1) / (N-k) factor. And if G_adj = False,
+    If `k_adj = False` and `G_adj = True`, `V = V x G/(G-1)` for cluster robust
+    errors, i.e. we drop the `(N-1) / (N-k)` factor. And if `G_adj = False`,
     no cluster correction is applied.
 
     Things are slightly more complicated for multiway clustering. In this
-    case, we compute the variance covariance matrix as V = V1 + V2 - V_12.
+    case, we compute the variance covariance matrix as `V = V1 + V2 - V_12`.
 
-    If G_adj = True and G_df = "conventional", then
-    V += [V x G_i / (G_i - 1) for i in [1, 2, 12]], i.e. each separate
-    covariance matrix G_i is multiplied with a small sample adjustment
-    G_i / (G_i - 1) corresponding to the number of clusters in the
+    If `G_adj = True` and `G_df = "conventional"`, then
+    `V += [V x G_i / (G_i - 1) for i in [1, 2, 12]]`, i.e. each separate
+    covariance matrix `G_i` is multiplied with a small sample adjustment
+    `G_i / (G_i - 1)` corresponding to the number of clusters in the
     respective covariance matrix. This is the default behavior
     for clustered errors.
 
-    If G_df = "min", then
-    V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]].
+    If `G_df = "min"`, then
+    `V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]]`.
 
     Returns
     -------
@@ -269,11 +269,11 @@ def get_ssc(
     Parameters
     ----------
     ssc_options : Ssc
-        The options created via the ssc() function.
+        The options created via the `ssc()` function.
     counts : DegreesOfFreedomCounts
         Observation, coefficient, fixed-effect, and cluster counts.
     vcov_type : str
-        The type of covariance matrix: "iid", "hetero", "HAC", or "CRV".
+        The type of covariance matrix: `iid`, `hetero`, `HAC`, or `CRV`.
 
     Returns
     -------
@@ -350,22 +350,22 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     seed : int, optional
         Seed for the random number generator. Default is 1234.
     beta_type : str, optional
-        Type of beta coefficients. Must be one of '1', '2', or '3'. Default is '1'.
+        Type of beta coefficients. Must be one of `'1'`, `'2'`, or `'3'`. Default is `'1'`.
     error_type : str, optional
-        Type of error term. Must be one of '1', '2', or '3'. Default is '1'.
+        Type of error term. Must be one of `'1'`, `'2'`, or `'3'`. Default is `'1'`.
     model : str, optional
-        Type of the DGP. Must be either 'Feols' or 'Fepois'. Default is 'Feols'.
+        Type of the DGP. Must be either `Feols` or `Fepois`. Default is `Feols`.
 
     Returns
     -------
     pandas.DataFrame
-        A pandas DataFrame with simulated data.
+        A pandas `DataFrame` with simulated data.
 
     Raises
     ------
     ValueError
-        If beta_type is not '1', '2', or '3', or if error_type is not '1', '2', or '3',
-        or if model is not 'Feols' or 'Fepois'.
+        If `beta_type` is not `'1'`, `'2'`, or `'3'`, or if `error_type` is not `'1'`, `'2'`, or `'3'`,
+        or if `model` is not `Feols` or `Fepois`.
 
     Examples
     --------

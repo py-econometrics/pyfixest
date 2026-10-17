@@ -55,12 +55,12 @@ def demean(
     Parameters
     ----------
     x : numpy.ndarray
-        Input array of shape (n_samples, n_features). Needs to be of type float.
+        Input array of shape `(n_samples, n_features)`. Needs to be of type `float`.
     flist : numpy.ndarray
-        Array of shape (n_samples, n_factors) specifying the fixed effects.
+        Array of shape `(n_samples, n_factors)` specifying the fixed effects.
         Needs to already be converted to integers.
     weights : numpy.ndarray
-        Array of shape (n_samples,) specifying the weights.
+        Array of shape `(n_samples,)` specifying the weights.
     tol : float, optional
         Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
@@ -69,7 +69,7 @@ def demean(
     Returns
     -------
     tuple[numpy.ndarray, bool]
-        A tuple containing the demeaned array of shape (n_samples, n_features)
+        A tuple containing the demeaned array of shape `(n_samples, n_features)`
         and a boolean indicating whether the algorithm converged successfully.
 
     Examples
