@@ -50,36 +50,36 @@ def fepois(
     ----------
     fml : str
         A two-sided formula string using fixest formula syntax.
-        Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed
+        Syntax: `Y ~ X1 + X2 | FE1 + FE2`. `|` separates left-hand side and fixed
         effects.
         Special syntax includes:
-        - Stepwise regressions (sw, sw0)
-        - Cumulative stepwise regression (csw, csw0)
-        - Multiple dependent variables (Y1 + Y2 ~ X)
-        - Interaction of variables (i(X1,X2))
-        - Interacted fixed effects (fe1:fe2)
+        - Stepwise regressions (`sw`, `sw0`)
+        - Cumulative stepwise regression (`csw`, `csw0`)
+        - Multiple dependent variables (`Y1 + Y2 ~ X`)
+        - Interaction of variables (`i(X1,X2)`)
+        - Interacted fixed effects (`fe1:fe2`)
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
-          "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
-        "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        Type of variance-covariance matrix for inference. Options include `iid`,
+          `hetero`, `HC1`, `HC2`, `HC3`, `NW` for Newey-West HAC standard errors,
+        `DK` for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the 'time_id' column. For panel-HAC, you need to add
-        pass both 'time_id' and 'panel_id'. See `vcov_kwargs` for details.
+        For time-series HAC, you need to pass the `time_id` column. For panel-HAC, you need to add
+        pass both `time_id` and `panel_id`. See `vcov_kwargs` for details.
 
     vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the vcov function. These keywoards include
-        "lag" for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        "time_id" for the time ID used for NW and DK standard errors, and "panel_id" for the panel
+         Additional keyword arguments to pass to the `vcov` function. These keywoards include
+        `lag` for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
+        `time_id` for the time ID used for NW and DK standard errors, and `panel_id` for the panel
          identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
          periods is always treated as 1. More flexible time-step selection is work in progress.
 
     weights : Union[None, str], optional.
-        Default is None. Weights for weighted Poisson regression. If None, all observations
+        Default is `None`. Weights for weighted Poisson regression. If `None`, all observations
         are weighted equally. If a string, the name of the column in `data` that
         contains the weights.
 
@@ -90,18 +90,18 @@ def fepois(
         For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
     offset : str | None, optional
-        Default is None. Formulaic expression that evaluates to one numeric
+        Default is `None`. Formulaic expression that evaluates to one numeric
         column in `data`. The offset is added to the linear predictor with its
         coefficient fixed at 1. This is useful for modeling rates when exposure
         differs across observations, e.g. `offset="log(population)"`.
 
     ssc : str
-        A ssc object specifying the small sample correction for inference.
+        A `ssc` object specifying the small sample correction for inference.
 
     fixef_rm : FixedRmOptions
         Specifies whether to drop singleton fixed effects.
-        Can be equal to "singletons" (default) or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
+        Can be equal to `singletons` (default) or `none`.
+        `singletons` will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
     iwls_tol : Optional[float], optional
@@ -115,29 +115,29 @@ def fepois(
 
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
-        Either "fe" or "ir". Executes "fe" by default (when None).
+        Either `fe` or `ir`. Executes `fe` by default (when `None`).
 
     solver : SolverOptions, optional.
-        The solver to use for the regression. Can be "np.linalg.lstsq",
-        "np.linalg.solve", "scipy.linalg.solve" and "scipy.sparse.linalg.lsqr".
-        Defaults to "scipy.linalg.solve".
+        The solver to use for the regression. Can be `np.linalg.lstsq`,
+        `np.linalg.solve`, `scipy.linalg.solve` and `scipy.sparse.linalg.lsqr`.
+        Defaults to `scipy.linalg.solve`.
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
-        maxiter=1_000).
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, `tol=1e-8`,
+        `maxiter=1_000`).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
 
     drop_intercept : bool, optional
-        Whether to drop the intercept from the model, by default False.
+        Whether to drop the intercept from the model, by default `False`.
 
     copy_data : bool, optional
-        Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
+        Whether to copy the data before estimation, by default `True`.
+        If set to `False`, the data is not copied, which can save memory but
         may lead to unintended changes in the input data outside of `fepois`.
         For example, the input data set is re-index within the function.
         As far as I know, the only other relevant case is
@@ -145,18 +145,18 @@ def fepois(
         a column with interacted fixed effects in the data set.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
+        Whether to store the data in the model object, by default `True`.
+        If set to `False`, the data is not stored in the model object, which can
         improve performance and save memory. However, it will no longer be possible
         to access the data via the `data` attribute of the model object. This has
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`. Such methods raise a `MissingModelDataError`.
 
     lean: bool, optional
-        False by default. If True, then all large objects are removed from the
+        `False` by default. If `True`, then all large objects are removed from the
         returned result: this will save memory but will block the possibility
         to use many methods, which raise `MissingModelDataError` when required
-        attributes were removed. It is recommended to use the argument vcov
+        attributes were removed. It is recommended to use the argument `vcov`
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
@@ -167,16 +167,16 @@ def fepois(
         variables that need to be available in the formula environment.
 
     split: Optional[str]
-        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+        A character string, i.e. `split = var`. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
-        to include the estimation for the full sample, use the argument fsplit instead.
+        to include the estimation for the full sample, use the argument `fsplit` instead.
 
     fsplit: Optional[str]
-        This argument is the same as split but also includes the full sample as the first estimation.
+        This argument is the same as `split` but also includes the full sample as the first estimation.
 
     accelerate: Optional[bool]
         Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
-        tolerance). Produces numerically identical results faster, so we recommend to always set it to True.
+        tolerance). Produces numerically identical results faster, so we recommend to always set it to `True`.
 
     Returns
     -------

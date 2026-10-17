@@ -6,6 +6,7 @@ and the sidebar, because they all read ``layout.Doc.name`` directly and there
 is no config option to change it. This subclass shortens those labels to the
 object name (``feols``), keeping the ``Class.method`` form for methods so they
 stay unambiguous. Anchors, cross-links, and signatures are left untouched.
+It also preserves literal pipes in inline code within documentation tables.
 
 Wired in via ``_quarto.yml``:
 
@@ -21,15 +22,27 @@ a class named exactly ``Renderer``.
 
 from __future__ import annotations
 
+import re
+
 from plum import dispatch
 from quartodoc import layout
 from quartodoc.renderers import MdRenderer
 
 
 class Renderer(MdRenderer):
-    """MdRenderer that displays short object names instead of import paths."""
+    """Markdown renderer for pyfixest object labels and documentation tables."""
 
     style = "pyfixest_short_name"
+
+    def _render_table(self, rows, headers, style) -> str:
+        table = super()._render_table(rows=rows, headers=headers, style=style)
+        # quartodoc escapes every pipe, but Pandoc already protects pipes in
+        # inline code and would display the added backslash literally.
+        return re.sub(
+            r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)",
+            lambda match: match.group(0).replace(r"\|", "|"),
+            table,
+        )
 
     def _short_name(self, el: layout.Doc) -> str:
         obj = el.obj

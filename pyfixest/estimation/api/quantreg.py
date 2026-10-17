@@ -90,11 +90,11 @@ def quantreg(
         quantile regression process. Each must be between 0 and 1.
 
     method : QuantregMethodOptions, optional
-        The method to use for the quantile regression. Currently, only "fn" is supported.
-        In the future, will be either "fn" or "pfn".
-        "fn" implements the Frisch-Newton interior point algorithm
+        The method to use for the quantile regression. Currently, only `fn` is supported.
+        In the future, will be either `fn` or `pfn`.
+        `fn` implements the Frisch-Newton interior point algorithm
         described in Portnoy and Koenker (1997).
-        The "pfn" method implements a variant of the
+        The `pfn` method implements a variant of the
         algorithm proposed by Portnoy and Koenker (1997) including preprocessing steps, which
         a) can speed up the algorithm if N is very large but b) assumes independent observations.
         For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
@@ -103,31 +103,31 @@ def quantreg(
     multi_method: QuantregMultiMethodOpitons, optional
         Controls the algorithm for running the quantile regression process.
         Only relevant if more than one quantile regression is fit in one `quantreg` call.
-        Options are 'cmf1', which is the default and implements algorithm 2 from Chernozhukov et al,
-        'cmf2', which implements their algorithm 3, and 'none', which just loops over separate model
+        Options are `cmf1`, which is the default and implements algorithm 2 from Chernozhukov et al,
+        `cmf2`, which implements their algorithm 3, and `none`, which just loops over separate model
         calls.
 
     tol : float, optional
         The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the
-        algorithm stops when the relative change in the duality gap is less than tol.
+        algorithm stops when the relative change in the duality gap is less than `tol`.
 
     maxiter : int, optional
-        The maximum number of iterations. If None, maxiter = the number of observations in the model
-        (as in R's quantreg package via nit(3) = n).
+        The maximum number of iterations. If `None`, `maxiter` = the number of observations in the model
+        (as in R's quantreg package via `nit(3) = n`).
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
         Type of variance-covariance matrix for inference. Currently supported are
-        "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
-        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
+        `iid`, `nid`, and cluster robust errors, `iid` by default.
+        All of `iid`, `hetero` and `cluster` robust error are based on a kernel-based estimator as in Powell (1991).
+        The `nid` method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
+        Any of `HC1` / `HC2` / `HC3` also works and is equivalent to `hetero`.
         Cluster robust inference
-        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
+        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys `type` and `cluster`.
         Only one-way clustering is supported.
 
     ssc : dict[str, Union[str, bool]], optional
         A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
+        If `None`, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
         small sample corrections. To match their behavior, set
         `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
@@ -138,26 +138,26 @@ def quantreg(
         Methods to identify and drop separated observations. Not used in quantile regression.
 
     drop_intercept : bool, optional
-        Whether to drop the intercept from the model, by default False.
+        Whether to drop the intercept from the model, by default `False`.
 
     copy_data : bool, optional
-        Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
+        Whether to copy the data before estimation, by default `True`.
+        If set to `False`, the data is not copied, which can save memory but
         may lead to unintended changes in the input data outside of `quantreg`.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
+        Whether to store the data in the model object, by default `True`.
+        If set to `False`, the data is not stored in the model object, which can
         improve performance and save memory. However, it will no longer be possible
         to access the data via the `data` attribute of the model object. This has
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
         or `vcov()`. Such methods raise a `MissingModelDataError`.
 
     lean: bool, optional
-        False by default. If True, then all large objects are removed from the
+        `False` by default. If `True`, then all large objects are removed from the
         returned result: this will save memory but will block the possibility
         to use many methods, which raise `MissingModelDataError` when required
-        attributes were removed. It is recommended to use the argument vcov
+        attributes were removed. It is recommended to use the argument `vcov`
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
@@ -168,17 +168,17 @@ def quantreg(
         variables that need to be available in the formula environment.
 
     split : str, optional
-        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+        A character string, i.e. `split = var`. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
-        to include the estimation for the full sample, use the argument fsplit instead.
+        to include the estimation for the full sample, use the argument `fsplit` instead.
 
     fsplit : str, optional
-        This argument is the same as split but also includes the full sample as the first estimation.
+        This argument is the same as `split` but also includes the full sample as the first estimation.
 
     seed: int, optional
-        A random seed for reproducibility. If None, no seed is set.
-        Only relevant for the "pfn" method.
-        The "fn" method is deterministic and does not require a seed.
+        A random seed for reproducibility. If `None`, no seed is set.
+        Only relevant for the `pfn` method.
+        The `fn` method is deterministic and does not require a seed.
 
     Returns
     -------
