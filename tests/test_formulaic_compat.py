@@ -316,6 +316,31 @@ def test_model_spec_get_model_matrix_prediction_roundtrip(
     np.testing.assert_allclose(pred, fit.predict()[:20], atol=1e-4)
 
 
+def test_prediction_preserves_fitted_reference() -> None:
+    """Prediction retains the fitted reference despite new category metadata."""
+    train = pd.DataFrame(
+        {
+            "Y": [9.0, 11.0, 19.0, 21.0, 29.0, 31.0],
+            "f": pd.Categorical(
+                ["a1", "a1", "a2", "a2", "a3", "a3"],
+                categories=["a0", "a1", "a2", "a3"],
+            ),
+        }
+    )
+    # Ignore unused a0 and fit with a1 as the reference.
+    fit = pf.feols("Y ~ i(f)", data=train)
+
+    # Omit fitted reference a1 and reverse the remaining category order.
+    newdata = pd.DataFrame({"f": pd.Categorical(["a2", "a3"], categories=["a3", "a2"])})
+    np.testing.assert_allclose(
+        fit.predict(newdata=newdata),
+        [20.0, 30.0],
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="Predictions must preserve the fitted group means",
+    )
+
+
 def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> None:
     """Only rows whose *evaluated* level is unseen are dropped to NaN."""
     fit = pf.feols("Y ~ C(np.floor(X2))", data=data)

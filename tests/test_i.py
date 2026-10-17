@@ -506,6 +506,92 @@ def test_levels_fixed_before_missing_row_filter(df_unused_categories, r_fml, py_
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
+@pytest.fixture(scope="module", params=["string", "category"])
+def df_split_levels(request) -> pd.DataFrame:
+    """Apple occurs only in g1; banana and cherry occur in both samples."""
+    cells = [
+        ("g1", "apple", 10.0),
+        ("g1", "banana", 20.0),
+        ("g1", "cherry", 30.0),
+        ("g2", "banana", 20.0),
+        ("g2", "cherry", 30.0),
+    ]
+    df = pd.DataFrame(
+        [
+            (group, level, mean + error)
+            for group, level, mean in cells
+            for error in [-1.5, -0.5, 0.5, 1.5]
+        ],
+        columns=["grp", "fc", "Y"],
+    )
+    df["fc"] = df["fc"].astype(request.param)
+    return df
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("split_arg", ["split", "fsplit"])
+def test_split_levels_choose_sample_reference(df_split_levels, split_arg):
+    """Split-local references intentionally differ from fixest 0.14.0."""
+    data = df_split_levels
+    fml = "Y ~ i(fc)"
+    py_models = feols(fml, data=data, **{split_arg: "grp"}).to_list()
+    r_models = fixest.feols(ro.Formula(fml), data, **{split_arg: ro.Formula("~grp")})
+    samples = [None, "g1", "g2"] if split_arg == "fsplit" else ["g1", "g2"]
+    assert [model.model.sample_split.value for model in py_models] == samples
+    assert len(r_models) == len(samples)
+
+    for i, (sample, fit_py) in enumerate(zip(samples, py_models, strict=True)):
+        fit_r = r_models.rx2(i + 1)
+        if sample == "g2":
+            # Pyfixest uses banana; fixest keeps full-data levels and drops
+            # cherry as collinear, giving an equivalent parameterization.
+            py_names = ["Intercept", "fc::cherry"]
+            py_values = [20.0, 10.0]
+            r_names = ["Intercept", "fc::banana"]
+            r_values = [30.0, -10.0]
+        else:
+            py_names = r_names = ["Intercept", "fc::banana", "fc::cherry"]
+            py_values = r_values = [10.0, 10.0, 20.0]
+        assert fit_py.coef().index.tolist() == py_names
+        assert get_r_coef_names(fit_r) == r_names
+        np.testing.assert_allclose(
+            fit_py.coef().values,
+            py_values,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Pyfixest coefficients for sample {sample}",
+        )
+        np.testing.assert_allclose(
+            get_r_coef_values(fit_r),
+            r_values,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"R fixest coefficients for sample {sample}",
+        )
+        sample_data = data if sample is None else data.loc[data["grp"] == sample]
+        newdata = sample_data.drop_duplicates(subset="fc")
+        np.testing.assert_allclose(
+            fit_py.predict(newdata=newdata),
+            np.asarray(stats.predict(fit_r, newdata=newdata)),
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Split predictions must match R fixest for sample {sample}",
+        )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("split_arg", ["split", "fsplit"])
+def test_split_reference_validity(df_split_levels, split_arg):
+    """Unlike fixest 0.14.0, references must exist in every split sample."""
+    data = df_split_levels
+    fml = "Y ~ i(fc, ref='apple')"
+    r_models = fixest.feols(ro.Formula(fml), data, **{split_arg: ro.Formula("~grp")})
+    # R accepts apple despite its absence from g2, for both split options.
+    assert len(r_models) == (3 if split_arg == "fsplit" else 2)
+    with pytest.raises(ValueError, match=r"apple.*not among the provided levels"):
+        feols(fml, data=data, **{split_arg: "grp"})
+
+
 # =============================================================================
 # Null Value Handling Tests
 # =============================================================================
