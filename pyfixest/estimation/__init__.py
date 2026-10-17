@@ -14,6 +14,7 @@ from pyfixest.estimation.api import (
     feglm,
     feols,
     fepois,
+    oriv,
     quantreg,
 )
 from pyfixest.estimation.FixestMulti_ import (
@@ -61,6 +62,7 @@ __all__ = [
     "fepois",
     "literals",
     "optimal_mixture_precision",
+    "oriv",
     "quantreg",
     "rwolf",
     "wyoung",

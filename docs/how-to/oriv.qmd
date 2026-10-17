@@ -1,0 +1,122 @@
+---
+title: "Correcting Measurement Error with ORIV"
+format:
+  html:
+    toc: true
+execute:
+  warning: false
+---
+
+## Overview
+
+When a variable in your regression is measured with error, OLS coefficients
+are biased. The coefficient on the noisy variable is attenuated toward zero,
+and other coefficients can be biased in either direction.
+
+**ORIV** (Obviously Related Instrumental Variables) from
+[Gillen, Snowberg, and Yariv (2019)](https://doi.org/10.1086/701681)
+fixes this when you have two or more noisy proxies for the same latent
+variable. The idea is simple: stack the data and use each proxy as an
+instrument for the others via 2SLS.
+
+## Setup
+
+```{python}
+import numpy as np
+import pandas as pd
+import pyfixest as pf
+```
+
+## Simulated Example
+
+Suppose we want to estimate the effect of a training program on sales.
+Sales also depend on worker ability, which we cannot observe directly.
+Instead, we have two noisy test scores that proxy for ability.
+
+```{python}
+np.random.seed(12345)
+n = 5000
+
+df = pd.DataFrame()
+df["ability"] = np.random.normal(100, 15, n)
+df["training"] = (df["ability"] + np.random.normal(0, 10, n) >= 100).astype(int)
+df["sales"] = (
+    40000
+    + df["training"] * 5000
+    + df["ability"] * 100
+    + np.random.normal(0, 4000, n)
+)
+df["test1"] = df["ability"] + np.random.normal(0, 8, n)
+df["test2"] = df["ability"] + np.random.normal(0, 8, n)
+```
+
+The true data generating process has:
+
+- Training effect = 5000
+- Ability effect = 100
+
+## The Problem: Attenuation Bias
+
+If we control for ability using a noisy proxy, the coefficient on the proxy
+is attenuated and the training coefficient is biased upward:
+
+```{python}
+ols_true = pf.feols("sales ~ training + ability", data=df)
+ols_noisy = pf.feols("sales ~ training + test1", data=df)
+
+pf.etable([ols_true, ols_noisy], labels={"(1)": "True Ability", "(2)": "Noisy Proxy"})
+```
+
+## The Fix: ORIV
+
+With two proxies for the same latent variable, we can use ORIV:
+
+```{python}
+result = pf.oriv("sales ~ training", ["test1", "test2"], df, "ability")
+result.summary()
+```
+
+The training coefficient is now close to the true value of 5000, and the
+ability coefficient is close to 100.
+
+## How It Works
+
+ORIV stacks the data K times (once per proxy). In each copy, one proxy
+serves as the endogenous variable and the remaining proxies serve as
+instruments. The stacked dataset is then estimated via 2SLS with
+cluster-robust standard errors at the original observation level to
+account for the within-observation correlation introduced by stacking.
+
+## Using More Than Two Proxies
+
+If you have three or more proxies, ORIV uses all of them. More proxies
+means more instruments, which improves efficiency:
+
+```{python}
+df["test3"] = df["ability"] + np.random.normal(0, 8, n)
+
+result_2 = pf.oriv("sales ~ training", ["test1", "test2"], df, "ability")
+result_3 = pf.oriv("sales ~ training", ["test1", "test2", "test3"], df, "ability")
+
+print(f"SE(ability) with 2 proxies: {result_2.se()['ability']:.4f}")
+print(f"SE(ability) with 3 proxies: {result_3.se()['ability']:.4f}")
+```
+
+## Custom Variance-Covariance Estimators
+
+By default, `oriv()` uses CRV1 standard errors clustered on the original
+observation ID. You can override this:
+
+```{python}
+# Heteroskedasticity-robust SEs
+result_hetero = pf.oriv(
+    "sales ~ training", ["test1", "test2"], df, "ability", vcov="hetero"
+)
+result_hetero.summary()
+```
+
+## References
+
+Gillen, B., Snowberg, E., & Yariv, L. (2019). Experimenting with
+Measurement Error: Techniques with Applications to the Caltech Cohort
+Study. *Journal of Political Economy*, 127(4), 1826-1863.
