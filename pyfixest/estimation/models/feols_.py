@@ -276,7 +276,7 @@ class Feols(ResultAccessorMixin):
     ) -> None:
         self.options = options
         self.model = self._describe_model(
-            fixest_formula=FixestFormula, sample_split=sample_split
+            parsed_formula=FixestFormula, sample_split=sample_split
         )
         self._model_name_plot = self.model.model_name
 
@@ -299,7 +299,7 @@ class Feols(ResultAccessorMixin):
     def _describe_model(
         self,
         *,
-        fixest_formula: FixestFormula,
+        parsed_formula: FixestFormula,
         sample_split: SampleSplit | None,
     ) -> ModelDescription:
         """Describe the model this class fits, before its model matrix exists.
@@ -309,16 +309,18 @@ class Feols(ResultAccessorMixin):
         `_publish_model_matrix()` republishes the description with them. An
         unsplit fit publishes ``None`` as its split variable and value.
         """
+        model_name = parsed_formula.render()
+        if sample_split is not None:
+            sample_label = (
+                "all" if sample_split.value is None else repr(sample_split.value)
+            )
+            model_name += f" (Sample: {sample_split.var} = {sample_label})"
+
         return ModelDescription(
-            fixest_formula=fixest_formula,
+            parsed_formula=parsed_formula,
             method="feols",
             is_iv=False,
-            model_name=(
-                fixest_formula.formula
-                if sample_split is None
-                else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
-                f"{'all' if sample_split.value is None else sample_split.value})"
-            ),
+            model_name=model_name,
             sample_split=sample_split,
             inference_dist=T_DIST,
         )
@@ -326,7 +328,7 @@ class Feols(ResultAccessorMixin):
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
         model_matrix = create_model_matrix(
-            formula=self.model.fixest_formula,
+            formula=self.model.parsed_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
             drop_intercept=self.options.drop_intercept,
