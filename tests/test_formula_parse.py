@@ -1068,6 +1068,42 @@ class TestEdgeCases:
         assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
         assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
 
+    @pytest.mark.parametrize(
+        "formula_template",
+        [
+            "Y ~ {exogenous} | X1 ~ {instruments}",
+            "Y ~ {exogenous} + [X1 ~ {instruments}]",
+        ],
+        ids=["pipe", "bracket"],
+    )
+    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize(
+        "exogenous, expected",
+        [
+            ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
+            ("0", "X1 ~ 0 + Z1"),
+        ],
+    )
+    def test_iv_first_stage_preserves_intercept_choice(
+        self, formula_template, instruments, exogenous, expected
+    ):
+        """The instrument block's implicit intercept follows the main equation."""
+        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
+        parsed = Formula.parse(formula)[0]
+        first_stage = parsed.as_first_stage().second_stage
+        expected_stage = formulaic.Formula(expected)
+        assert first_stage.lhs == expected_stage.lhs
+        # Both parsed blocks can contribute the same intercept term.
+        assert set(first_stage.rhs) == set(expected_stage.rhs)
+        reparsed = Formula.parse(parsed.render())[0]
+        assert (
+            reparsed.as_first_stage().second_stage
+            == parsed.as_first_stage().second_stage
+        )
+
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
