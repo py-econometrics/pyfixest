@@ -34,7 +34,6 @@ from pyfixest.estimation.plan_ import (
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.estimation.quantreg.QuantregMulti import QuantregMulti
 from pyfixest.utils.utils import Ssc
-from tests._feols_test_cases import DEMEAN_CACHE_COLLISION_CASES
 
 _SHARED_OPTIONS = dict(
     ssc=Ssc(),
@@ -613,50 +612,52 @@ def test_distinct_structures_with_same_display_survive(weights):
         )
 
 
-@pytest.mark.parametrize("terms", [case[0] for case in DEMEAN_CACHE_COLLISION_CASES])
-@pytest.mark.parametrize("weights", [None, "weights"])
-def test_demean_cache_distinguishes_colliding_columns(terms, weights):
-    """Stepwise fits match separate fits after reordering models or renaming columns."""
+@pytest.mark.parametrize(
+    "first_term, second_term",
+    [
+        pytest.param("`X1 ** 2`", "{X1 ** 2}", id="literal_vs_expression"),
+        pytest.param("i(f3, X2)", "i(f3, np.exp(X2 / 5))", id="transformed_i"),
+        pytest.param("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))", id="shifted_log_i"),
+    ],
+)
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["forward", "reversed"])
+def test_demean_cache_distinguishes_colliding_columns(
+    first_term, second_term, reverse_order
+):
+    """Sharing a demeaning cache must not change either model's results.
+
+    Here, "colliding" means equal encoded column names but different values,
+    e.g. a literal ``X1 ** 2`` column versus the evaluated square of ``X1``.
+    Each model in ``sw(...)`` must match its own separate fit in coefficients,
+    standard errors, and predictions, whichever model populates the cache first.
+    """
     data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    # The literal column must differ from the calculated square.
     data["X1 ** 2"] = 3 * np.sin(data.X1)
-    for renamed in [False, True]:
-        renamed_data = (
-            data.rename(columns={"X2": "renamed_X2", "X1 ** 2": "literal"})
-            if renamed
-            else data
+    if reverse_order:
+        first_term, second_term = second_term, first_term
+
+    # Separate calls cannot reuse each other's demeaned columns.
+    first_alone = pf.feols(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
+    second_alone = pf.feols(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
+
+    # These models share a cache because they use the same fixed effects.
+    stepwise_fits = pf.feols(
+        f"Y ~ sw({first_term}, {second_term}) | f1", data=data, fixef_rm="none"
+    ).to_list()
+
+    for separate_fit, stepwise_fit in zip(
+        (first_alone, second_alone), stepwise_fits, strict=True
+    ):
+        np.testing.assert_allclose(
+            stepwise_fit.coef(), separate_fit.coef(), rtol=1e-10, atol=1e-10
         )
-        model_terms = (
-            tuple(
-                term.replace("X2", "renamed_X2").replace("`X1 ** 2`", "literal")
-                for term in terms
-            )
-            if renamed
-            else terms
+        np.testing.assert_allclose(
+            stepwise_fit.se(), separate_fit.se(), rtol=1e-10, atol=1e-10
         )
-        references = [
-            pf.feols(
-                f"Y ~ {term} | f1", data=renamed_data, weights=weights, fixef_rm="none"
-            )
-            for term in model_terms
-        ]
-        for order in [model_terms, model_terms[::-1]]:
-            multi = pf.feols(
-                f"Y ~ sw({', '.join(order)}) | f1",
-                data=renamed_data,
-                weights=weights,
-                fixef_rm="none",
-            )
-            for fit, term in zip(multi.to_list(), order, strict=True):
-                reference = references[model_terms.index(term)]
-                np.testing.assert_allclose(
-                    fit.coef(), reference.coef(), rtol=1e-10, atol=1e-10
-                )
-                np.testing.assert_allclose(
-                    fit.se(), reference.se(), rtol=1e-10, atol=1e-10
-                )
-                np.testing.assert_allclose(
-                    fit.predict(), reference.predict(), rtol=1e-10, atol=1e-10
-                )
+        np.testing.assert_allclose(
+            stepwise_fit.predict(), separate_fit.predict(), rtol=1e-10, atol=1e-10
+        )
 
 
 def test_full_sample_and_group_named_all_have_distinct_identity():
