@@ -63,7 +63,7 @@ _ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyTyp
 
 
 class ModelMatrix:
-    """
+    r"""
     A wrapper around `formulaic.ModelMatrix` for the specification of PyFixest models.
 
     This class organizes and processes model matrices for econometric estimation,
@@ -71,7 +71,9 @@ class ModelMatrix:
     variables, and weights. It handles missing data, singleton observations,
     and ensures proper formatting for estimation procedures.
 
-    Obtain this component from ``fit.model_matrix``. Its properties expose
+    Access as `fit.model_matrix` when retained by the estimator
+    (storage options can remove it); import the class from
+    `pyfixest.estimation.formula.model_matrix` for advanced use. Its properties expose
     the model frames as pandas DataFrames for inspection and internal
     calculations. See the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd).
@@ -93,7 +95,7 @@ class ModelMatrix:
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X1 | f1", pf.get_data())
+    fit = pf.feols("Y ~ X1 | f1", pf.get_data(seed=1234))
     fit.model_matrix.dependent.head()
     ```
 
@@ -115,7 +117,9 @@ class ModelMatrix:
     instruments : pd.DataFrame or None
         Instrumental variables for IV estimation.
     weights : pd.DataFrame or None
-        Observation weights for weighted estimation.
+        Numeric observation weights for weighted estimation.
+    offset : pd.DataFrame or None
+        The evaluated numeric offset column, or `None` without an offset.
     model_spec : Mapping[str, formulaic.ModelSpec]
         The underlying formulaic model specifications keyed by role.
     n_rows : int
@@ -124,6 +128,12 @@ class ModelMatrix:
         Positions of the dropped rows in the frame the matrix was built from.
     dropped_by_stage : DroppedRowCounts
         Dropped rows counted by the filtering stage that removed them.
+
+    See Also
+    --------
+    [create_model_matrix()](/reference/estimation.formula.model_matrix.create_model_matrix.qmd) : Construct frames from a parsed formula.
+    [Fitted results](/reference-guide/fitted-results.qmd) : Inspect common returned state.
+    [Model storage](/reference-guide/model-storage.qmd) : Understand which state is retained.
     """
 
     _data: pd.DataFrame
@@ -473,7 +483,7 @@ def create_model_matrix(
     ensure_full_rank: bool = True,
     context: int | Mapping[str, Any] = 0,
 ) -> ModelMatrix:
-    """
+    r"""
     Create a `ModelMatrix` from a formula and data.
 
     This function constructs model matrices for econometric estimation by parsing
@@ -483,14 +493,17 @@ def create_model_matrix(
     Parameters
     ----------
     formula : Formula
-        A `Formula` object specifying the model structure, including dependent and
+        A Formula object specifying the model structure, including dependent and
         independent variables, fixed effects, and instrumental variables.
     data : pd.DataFrame
         The input data containing all variables referenced in the formula.
-        The index will be reset during processing.
+        Its index is reset in place to consecutive row positions. If weights
+        are specified, that column is converted to numeric in place. Pass
+        `data.copy()` to preserve the caller's index and weight-column dtype.
     weights : str or None, default=None
-        Column name in `data` to use as observation weights. Weights must be
-        non-negative numeric values. If `None`, no weighting is applied.
+        Column name for observation weights, converted with `pandas.to_numeric`.
+        Values must be nonnegative. Missing and zero-weight rows are removed;
+        negative or nonnumeric weights raise ValueError. `None` omits weights.
     offset : str or None, default=None
         Formulaic expression that evaluates to one numeric offset column. The
         offset is added to the linear predictor with a fixed coefficient of 1.
@@ -504,8 +517,11 @@ def create_model_matrix(
         and instruments matrices. The intercept is always removed when fixed
         effects are present, regardless of this parameter.
     ensure_full_rank : bool, default=True
-        If `True`, formulaic will ensure the design matrix is full rank by
-        dropping collinear columns.
+        If `True`, Formulaic selects contrast coding that avoids structural
+        redundancy, such as a complete set of category indicators plus an
+        intercept. It does not check empirical numerical rank: duplicate numeric
+        regressors or regressors absorbed by fixed effects can remain collinear.
+        Estimators perform their own numerical collinearity checks later.
     context : int or Mapping[str, Any], default=0
         Additional context variables for formulaic during model matrix creation.
         Can be an integer (stack frame depth) or a dictionary of variables to
@@ -514,9 +530,10 @@ def create_model_matrix(
     Returns
     -------
     ModelMatrix
-        A `ModelMatrix` object containing the processed dependent and independent
-        variables, fixed effects, instruments, weights, and metadata about
-        dropped observations.
+        Aligned model frames for response, regressors, fixed effects, instruments,
+        weights, and offset, with metadata on removed rows. Frame indices are
+        zero-based positions in the supplied data after its index reset. Rows
+        with missing or infinite values are removed; singleton removal is optional.
 
     Examples
     --------
@@ -525,10 +542,17 @@ def create_model_matrix(
     from pyfixest.estimation.formula.model_matrix import create_model_matrix
     from pyfixest.estimation.formula.parse import Formula
 
-    data = pf.get_data()
+    data = pf.get_data(seed=1234)
     formula = Formula.parse("Y ~ X1 + f1 + f2")[0]
-    model_matrix = create_model_matrix(formula=formula, data=data)
+    model_matrix = create_model_matrix(formula=formula, data=data.copy())
+    model_matrix.independent.head(), model_matrix.dropped_by_stage
     ```
+
+    See Also
+    --------
+    [Formula](/reference/estimation.formula.parse.Formula.qmd) : Parse a formula before constructing matrices.
+    [ModelMatrix](/reference/estimation.state.ModelMatrix.qmd) : Inspect frames, offsets, and dropped rows.
+    [Formula syntax](/tutorials/formula-syntax.qmd) : Public formula interface.
     """
     # Process input data
     data.reset_index(drop=True, inplace=True)  # Sanitise index

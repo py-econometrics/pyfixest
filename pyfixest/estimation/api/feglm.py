@@ -70,62 +70,52 @@ def feglm(
     accelerate: bool = True,
 ) -> Feols | Fepois | FixestMulti:
     """
-    Estimate GLM regression models with fixed effects.
+    Estimate generalized linear models with fixed effects.
+
+    Call as `pf.feglm(..., family=...)` after `import pyfixest as pf`.
 
     Supported families: `logit`, `probit`, and `gaussian` (see
     [Feglm](/reference/estimation.models.feglm_.Feglm.qmd)), and `poisson`
     (see [Fepois](/reference/estimation.models.fepois_.Fepois.qmd)).
 
-    References
-    ----------
-    - Bergé, L. (2018). Efficient estimation of maximum likelihood models with
-      multiple fixed-effects: the R package FENmlm.
-      [CREA Discussion Paper](https://ideas.repec.org/p/luc/wpaper/18-13.html).
-    - Correia, S., Guimaraes, P., & Zylkin, T. (2019). ppmlhdfe: Fast Poisson
-      Estimation with High-Dimensional Fixed Effects.
-      [The Stata Journal](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691).
-    - Stammann, A. (2018). Fast and Feasible Estimation of Generalized Linear
-      Models with High-Dimensional k-way Fixed Effects.
-      [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815).
-
     Parameters
     ----------
     fml : str
-        A two-sided formula string using fixest formula syntax.
-        Syntax: `Y ~ X1 + X2 | FE1 + FE2`. `|` separates left-hand side and fixed
-        effects.
-        Special syntax includes:
-        - Stepwise regressions (`sw`, `sw0`)
-        - Cumulative stepwise regression (`csw`, `csw0`)
-        - Multiple dependent variables (`Y1 + Y2 ~ X`)
-        - Interaction of variables (`i(X1,X2)`)
-        - Interacted fixed effects (`fe1:fe2`)
-        Compatible with formula parsing via the formulaic module.
+        A two-sided formula string using fixest formula syntax, e.g.
+        `"Y ~ X1 + X2 | FE1 + FE2"`. The optional part after `|` lists the
+        fixed effects. Special syntax includes stepwise regressions (`sw()`,
+        `sw0()`), cumulative stepwise regressions (`csw()`, `csw0()`), multiple
+        dependent variables (`sw(Y1, Y2) ~ X`), interaction of variables
+        (`i(X1, X2)`), and interacted fixed effects (`fe1:fe2`). See the
+        [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    family : str
-        The family of the GLM model. Options include `gaussian`, `logit`, `probit`,
-        and `poisson`. Passing `poisson` produces the same result as calling
-        `pyfixest.fepois()`.
+    family : FamilyOptions
+        The family of the GLM model. Options include "gaussian", "logit", "probit",
+        and "poisson". Passing "poisson" produces the same result as calling
+        `pf.fepois()` and returns a `Fepois` object.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
+    vcov : VcovTypeOptions | dict[str, str] | None, optional
         Type of variance-covariance matrix for inference. Options include `iid`,
-          `hetero`, `HC1`, `HC2`, `HC3`, `NW` for Newey-West HAC standard errors,
+        `hetero`, `HC1`, `HC2`, `HC3`, `NW` for Newey-West HAC standard errors,
         `DK` for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        `HC2` and `HC3` are only available for models without fixed effects.
+        CRV3 is only available for `family="poisson"`.
+        If `None`, `iid` is used.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the `time_id` column. For panel-HAC, you need to add
-        pass both `time_id` and `panel_id`. See `vcov_kwargs` for details.
+        For time-series HAC, you need to pass the '`time_id`' column. For panel-HAC, you need to
+        pass both '`time_id`' and '`panel_id`'. See `vcov_kwargs` for details.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the `vcov` function. These keywoards include
-        `lag` for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        `time_id` for the time ID used for NW and DK standard errors, and `panel_id` for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+    vcov_kwargs : dict[str, str | int] | None, optional
+        Additional keyword arguments to pass to the vcov function. These keywords include
+        "lag" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors,
+        "`time_id`" for the time ID used for NW and DK standard errors, and "`panel_id`" for the panel
+        identifier used for NW and DK standard errors. Currently, the time difference between consecutive time
+        periods is always treated as 1. More flexible time-step selection is work in progress.
 
-    weights : Union[None, str], optional
+    weights : str | None, optional
         Default is `None`. Name of the column in `data` to be used as observation
         weights. When supplied, IRLS minimizes the weighted deviance.
 
@@ -139,33 +129,41 @@ def feglm(
         `family='poisson'`. For exposure adjustments, use an expression such as
         `offset="log(population)"`.
 
-    ssc : str
-        A `ssc` object specifying the small sample correction for inference.
+    ssc : Ssc | Mapping[str, Any] | None, optional
+        Small sample correction for inference, created with
+        [ssc()](/reference/utils.utils.ssc.qmd). If `None`, uses the default
+        settings of `pf.ssc()`.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixedRmOptions, optional
         Specifies whether to drop singleton fixed effects.
-        Can be equal to `singleton` (default),
-        or `none`.
-        `singletons` will drop singleton fixed effects. This will not impact point
+        Can be equal to "singleton" (default) or `none`.
+        "singleton" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
-    iwls_tol : Optional[float], optional
+    iwls_tol : float, optional
         Tolerance for IWLS convergence, by default 1e-08.
 
-    iwls_maxiter : Optional[float], optional
+    iwls_maxiter : int, optional
         Maximum number of iterations for IWLS convergence, by default 25.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
-    separation_check: list[str], optional
-        Methods to identify and drop separated observations.
-        Either `fe` or `ir`. Executes `fe` by default (when `None`).
+    separation_check : list[str] | None, optional
+        Methods to identify and drop separated observations: "fe" (drop
+        observations in fixed-effect levels whose outcome is never positive)
+        and/or "ir" (iterative rectifier). Executes `["fe"]` by default (when
+        `None`). Pass an empty list to skip the check. The check only runs for
+        models with fixed effects. The "fe" rule is designed for Poisson models but currently
+        runs for every family: for `family="gaussian"` it can drop valid
+        observations (pass `separation_check=[]` to keep them, as `feols()`
+        does), and for `family="logit"`/`"probit"` it does not drop
+        fixed-effect levels whose outcome is always 1.
 
-    solver : SolverOptions, optional.
-        The solver to use for the regression. Can be `np.linalg.lstsq`,
-        `np.linalg.solve`, `scipy.linalg.solve` and `scipy.sparse.linalg.lsqr`.
-        Defaults to `scipy.linalg.solve`.
+    solver : SolverOptions, optional
+        The solver to use for the regression. Can be "`np.linalg.lstsq`",
+        "`np.linalg.solve`", "`scipy.linalg.solve`" and "`scipy.sparse.linalg.lsqr`".
+        Defaults to "`scipy.linalg.solve`".
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
@@ -175,7 +173,7 @@ def feglm(
         `maxiter=1_000`).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
-        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+        [Demeaner Backends vignette](/how-to/demeaner-backends.qmd).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default `False`.
@@ -183,112 +181,116 @@ def feglm(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default `True`.
         If set to `False`, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
-        For example, the input data set is re-index within the function.
-        As far as I know, the only other relevant case is
-        when using interacted fixed effects, in which case you'll find
-        a column with interacted fixed effects in the data set.
+        may lead to unintended changes in the input data outside of the
+        estimation function. For example, the input data set is re-indexed
+        within the function.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default `True`.
-        If set to `False`, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Keep the estimation data and model matrix on the fitted result. Defaults
+        to `True`. If `False`, operations that require them raise
+        `MissingModelDataError`; ordinary predictions on supplied `newdata` can
+        still work for supported models. See the
+        [storage guide](/reference-guide/model-storage.qmd) for operation-specific
+        requirements.
 
-    lean: bool, optional
-        `False` by default. If `True`, then all large objects are removed from the
-        returned result: this will save memory but will block the possibility
-        to use many methods, which raise `MissingModelDataError` when required
-        attributes were removed. It is recommended to use the argument `vcov`
-        to obtain the appropriate standard-errors at estimation time,
-        since obtaining different SEs won't be possible afterwards.
+    lean : bool, optional
+        Remove large retained arrays as well as the estimation data. Defaults to
+        `False`. Coefficients and their fitted inference remain available, but
+        residuals, in-sample predictions and covariance updates require omitted
+        state. Set `vcov` at estimation time. Ordinary predictions on supplied
+        `newdata` remain possible for supported models without absorbed fixed
+        effects; see the [storage guide](/reference-guide/model-storage.qmd).
 
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    context : int | Mapping[str, Any] | None, optional
+        Additional context variables to be used by formulaic during the
+        creation of the model matrix. This can include custom factorization
+        functions, transformations, or any other variables that need to be
+        available in the formula environment. An int is a frame offset
+        relative to the caller (`0` = the frame that calls `feglm()`); a
+        mapping supplies the names directly.
 
-    split: Optional[str]
-        A character string, i.e. `split = var`. If provided, the sample is split according to the
+    split : str | None, optional
+        A column name, e.g. `split="var"`. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
-        to include the estimation for the full sample, use the argument `fsplit` instead.
+        to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit: Optional[str]
-        This argument is the same as `split` but also includes the full sample as the first estimation.
+    fsplit : str | None, optional
+        This argument is the same as split but also includes the full sample as the first estimation.
 
-    accelerate: Optional[bool]
+    accelerate : bool, optional
         Whether to use acceleration tricks developed in the ppmlhdfe paper (warm start and adaptive fixed effects
-        tolerance) for models with fixed effects. Produces numerically identical results faster, so we
-        recommend to always set it to `True`.
-
+        tolerance) for models with fixed effects. Results agree with the unaccelerated fit up to the
+        convergence tolerance and are obtained faster, so we recommend to always set it to `True`.
 
     Returns
     -------
-    object
-        An instance of the [Feglm](/reference/estimation.models.feglm_.Feglm.qmd) class
-        (a family-specific subclass for `logit`, `probit`, or `gaussian`) or an
-        instance of class [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) for multiple models specified via `fml`.
+    `Feglm` | `Fepois` | `FixestMulti`
+        A family-specific [Feglm](/reference/estimation.models.feglm_.Feglm.qmd)
+        fitted result for `"logit"`, `"probit"` or `"gaussian"`, or
+        [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) for `"poisson"`.
+        Multiple specifications or sample splitting with `split`/`fsplit`
+        return [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd).
+        Use `fits.to_list()` to access the individual fits.
 
     Notes
     -----
-    `Feglm` inherits from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd). A GLM fit therefore
-    supports the same post-estimation methods as an OLS fit, among them
-    `vcov()`, `tidy()`, `coef()`, `confint()`, `predict()` (with
-    `type="response"` or `"link"`), `fixef()`, `wildboottest()` and `ritest()`.
-    See the Post-Estimation Methods section of the function reference for the
-    full list.
+    Logit, probit and Gaussian GLM fits support coefficient inference,
+    prediction and fixed-effect recovery. They do not support wild bootstrap,
+    randomization inference, causal cluster variance, decomposition, online
+    updates, SAVI or CRV3 inference. For the Poisson family, see
+    [pf.fepois()](/reference/estimation.api.fepois.fepois.qmd).
 
-    `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
-    link scale. For effects on the response scale, see the
-    [marginal effects guide](/how-to/marginaleffects.qmd).
+    Coefficients and predictions default to the link scale. Use
+    `fit.predict(type="response")` for predictions on the outcome scale.
+    Prediction standard errors and intervals are unsupported; the current
+    GLM path ignores `interval`. Use the
+    [marginal effects guide](/how-to/marginaleffects.qmd) for response-scale effects.
+
+    See [fitted results](/reference-guide/fitted-results.qmd) for common operations,
+    [model support](/reference-guide/model-support.qmd) for estimator restrictions,
+    and [model storage](/reference-guide/model-storage.qmd) for retained-data requirements.
 
     Examples
     --------
-    The example below fits a logit model with fixed effects. As in `feols()`,
-    fixed effects are specified after the `|` symbol.
+    Fit a binary-outcome model and inspect response-scale predictions:
 
     ```{python}
-    import pyfixest as pf
     import numpy as np
+    import pyfixest as pf
 
     data = pf.get_data()
     data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
-
-    fit_logit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
-    fit_logit.summary()
+    fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data=data, family="logit")
+    fit.tidy()
+    fit.predict(type="response")[:5]
     ```
 
-    To compare families with the same specification:
+    Compare logit and probit specifications:
 
     ```{python}
-    fit_probit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="probit")
-    fit_gaussian = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="gaussian")
-    pf.etable([fit_logit, fit_probit, fit_gaussian])
+    fit_probit = pf.feglm(
+        "Y_bin ~ X1 + X2 | f1", data=data, family="probit"
+    )
+    pf.etable([fit, fit_probit])
     ```
 
-    `PyFixest` also integrates with the [marginaleffects](https://marginaleffects.com/bonus/python.html) package.
-    To compute average marginal effects for the logit model above:
+    See Also
+    --------
+    [pf.fepois()](/reference/estimation.api.fepois.fepois.qmd) is the Poisson convenience function;
+    [pf.feols()](/reference/estimation.api.feols.feols.qmd) fits least-squares models.
+    See the [marginal effects guide](/how-to/marginaleffects.qmd) for applied workflows.
 
-    ```{python}
-    from marginaleffects import avg_slopes
-    avg_slopes(fit_logit, variables="X1")
-    ```
-
-    We can also compute marginal effects by group (group average marginal effects):
-
-    ```{python}
-    avg_slopes(fit_logit, variables="X1", by="f1")
-    ```
-
-    Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
-    work the same way as in `feols()`. See the [feols() reference](/reference/estimation.api.feols.feols.html)
-    for those details, and the [Marginal Effects guide](/how-to/marginaleffects.html)
-    for a compact post-estimation workflow.
-
+    References
+    ----------
+    - Bergé, L. (2018). Efficient estimation of maximum likelihood models with
+      multiple fixed-effects: the R package FENmlm.
+      [CREA Discussion Paper](https://ideas.repec.org/p/luc/wpaper/18-13.html).
+    - Correia, S., Guimaraes, P., & Zylkin, T. (2019). ppmlhdfe: Fast Poisson
+      Estimation with High-Dimensional Fixed Effects.
+      [The Stata Journal](https://journals.sagepub.com/doi/pdf/10.1177/1536867X20909691).
+    - Stammann, A. (2018). Fast and Feasible Estimation of Generalized Linear
+      Models with High-Dimensional k-way Fixed Effects.
+      [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815).
     """
     _validate_literal_argument(family, FamilyOptions)
     if offset is not None and family != "poisson":

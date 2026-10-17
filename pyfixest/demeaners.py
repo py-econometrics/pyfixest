@@ -95,7 +95,7 @@ def _import_torch() -> ModuleType:
 
 @dataclass(frozen=True, slots=True)
 class BaseDemeaner:
-    """
+    r"""
     Base configuration shared by all fixed-effects demeaners.
 
     Holds the settings shared by all backends, currently `fixef_maxiter`. This
@@ -106,6 +106,12 @@ class BaseDemeaner:
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
     comparison.
 
+    Parameters
+    ----------
+    fixef_maxiter : int, optional
+        Positive iteration limit shared by the concrete backends. Default is
+        10_000 here and for `MapDemeaner`; `LsmrDemeaner` defaults to 1_000.
+
     Examples
     --------
     ```{python}
@@ -113,6 +119,12 @@ class BaseDemeaner:
 
     pf.MapDemeaner(), pf.LsmrDemeaner()
     ```
+
+    See Also
+    --------
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd) : Alternating projections configuration.
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd) : Sparse least-squares configuration.
+    [Choosing a demeaner](/how-to/demeaner-backends.qmd) : Backend selection and optional dependencies.
     """
 
     fixef_maxiter: int = 10_000
@@ -124,7 +136,7 @@ class BaseDemeaner:
 
 @dataclass(frozen=True, slots=True)
 class MapDemeaner(BaseDemeaner):
-    """
+    r"""
     Method of Alternating Projections (MAP) demeaner.
 
     Projects out the fixed effects using the method of alternating
@@ -132,16 +144,32 @@ class MapDemeaner(BaseDemeaner):
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
     which backend.
 
+    Parameters
+    ----------
+    fixef_maxiter : int, optional
+        Positive maximum number of projection sweeps. Default is 10_000.
+    fixef_tol : float, optional
+        Convergence tolerance, strictly between zero and one. Default is 1e-6.
+    backend : {"rust", "numba"}, optional
+        Implementation of alternating projections. Default is `rust`.
+        `numba` requires `pip install pyfixest[numba]`.
+
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data()
+    data = pf.get_data(seed=1234)
 
     fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=pf.MapDemeaner(fixef_tol=1e-08))
     fit.tidy()
     ```
+
+    See Also
+    --------
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd) : Sparse least-squares alternative.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Pass the configuration as `demeaner=`.
+    [Choosing a demeaner](/how-to/demeaner-backends.qmd) : Compare backends.
     """
 
     fixef_tol: float = 1e-06
@@ -169,10 +197,11 @@ class MapDemeaner(BaseDemeaner):
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
-        """Demean `x` by the fixed effects in `flist` via MAP.
+        r"""
+        Demean `x` by the fixed effects in `flist` via MAP.
 
         `cached_preconditioner` is accepted for interface uniformity with
-        :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a
+        [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd) and ignored: MAP does not use a
         preconditioner, so the third return value is always `None`.
         """
         if weights is None:
@@ -199,73 +228,78 @@ class MapDemeaner(BaseDemeaner):
 
 @dataclass(frozen=True, slots=True)
 class LsmrDemeaner(BaseDemeaner):
-    """Sparse LSMR demeaner.
+    r"""
+    Configure sparse LSMR demeaning of fixed effects.
 
-    Solves the demeaning problem as a single sparse least squares system with
-    LSMR instead of alternating projections. See
-    [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
-    which backend.
+    Pass an instance as `demeaner=` to an estimator. The default `"within"`
+    backend solves a sparse least-squares problem with modified LSMR and adaptive
+    preconditioning, escalating from diagonal to additive Schwarz when needed. A single fixed-effect factor uses MAP instead.
+
+    Parameters
+    ----------
+    fixef_maxiter : int, optional
+        Positive maximum number of iterations. Default is 1_000.
+    backend : {"within", "torch"}, optional
+        Solver implementation. Default is `within`. The torch implementation
+        requires `pip install pyfixest[torch]`.
+    precision : {"float32", "float64"}, optional
+        Torch arithmetic precision; default is `float64`. Ignored by `within`,
+        which always uses float64. An explicit MPS device requires `float32`.
+    device : {"auto", "cpu", "mps", "cuda"}, optional
+        Torch device, default `auto`: prefer CUDA, then MPS when precision is
+        float32, otherwise CPU. Ignored by `within`, which runs on CPU.
+    fixef_atol : float, optional
+        Absolute-tolerance setting, strictly between zero and one; default 1e-8.
+        Both backends currently receive `max(fixef_atol, fixef_btol)` as one
+        tolerance; these are not independent stopping controls. The tolerance
+        controls solver convergence, not the error in each demeaned value or
+        derived statistic.
+    fixef_btol : float, optional
+        Relative-tolerance setting, strictly between zero and one; default 1e-8.
+        Combined with `fixef_atol` using their maximum on both backends.
+    warn_on_cpu_fallback : bool, optional
+        Default is `True`. Currently validated and stored but not passed to the
+        torch backend: changing this flag does not control its device warnings.
+    preconditioner : {"auto", "adaptive", "off", "additive", "diagonal"} or Preconditioner, optional
+        Default `auto` chooses `adaptive` for within and `diagonal` for torch.
+        Within supports adaptive, additive, off, and diagonal; torch supports only diagonal.
+        An incompatible string emits a warning at solve time and uses the
+        backend default. A prebuilt
+        [Preconditioner](/reference/core.demean.Preconditioner.qmd), obtained
+        from `fit.preconditioner`, can be reused only with within; pairing it
+        with torch raises ValueError. Reuse requires the same fixed-effect
+        design and observation weights. Single-factor MAP does not use one.
+        In `fepois` and `feglm`, IWLS reuses the first preconditioner while
+        solving each projection with its current working weights. If an
+        adaptive solve escalates, later iterations reuse the additive
+        replacement.
+    local_size : int or None, optional
+        Within-only reorthogonalization window; default `None` uses the solver's
+        default. A positive integer may help difficult convergence but retains
+        extra working vectors. Torch ignores this option.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data()
-
+    data = pf.get_data(seed=1234)
     fit = pf.feols("Y ~ X1 | f1 + f2", data, demeaner=pf.LsmrDemeaner())
     fit.tidy()
     ```
 
-    Notes
-    -----
-    The `within` backend takes a single tolerance, so `fixef_atol` and
-    `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
-    backend. The `torch` backend uses both tolerances independently
-    (SciPy LSMR convention).
+    Inspect the preconditioner built for this two-factor fit:
 
-    Both tolerances default to `1e-8`, matching `within`'s default. They
-    control solver convergence, not the error in each demeaned value or
-    derived statistic.
+    ```{python}
+    preconditioner = fit.preconditioner
+    preconditioner.config, preconditioner.nrows, preconditioner.ncols
+    ```
 
-    The `local_size` field only applies to `backend="within"`; the
-    `torch` backend ignores it.
-
-    The `precision`, `device`, and `warn_on_cpu_fallback` fields are
-    only relevant for the `torch` backend. The `within` backend always
-    runs on CPU in float64 and ignores these fields.
-
-    `preconditioner` selects the preconditioner. Supported values:
-
-    - `"auto"` (default): selects different preconditioners for different
-      backend implementations: `"adaptive"` for `"within"`; `"diagonal"`
-      for `"torch"`.
-    - `"off"`: disables preconditioning. Supported by `"within"`; not
-      supported by `"torch"`.
-    - `"adaptive"`: starts with the diagonal preconditioner and escalates to
-      additive Schwarz only when convergence stalls. Only supported by the
-      `"within"` backend.
-    - `"additive"`: additive Schwarz preconditioner. Only supported by the
-      `"within"` backend.
-    - `"diagonal"`: diagonal (Jacobi) preconditioner. Supported by
-      `"within"` and `"torch"`.
-    - A :class:`pyfixest.Preconditioner` instance: a previously built
-      preconditioner (typically obtained via `fit.preconditioner` or
-      pickled across sessions). Only supported by `backend='within'`;
-      preconditioners are only computed and applied for two or more
-      fixed-effect factors because single-factor problems run MAP as the within algo
-      provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
-      at construction time.
-
-    In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
-    solving each projection with its current working weights. If an adaptive
-    solve escalates, subsequent iterations reuse the additive replacement.
-
-    If a *string* value is incompatible with the chosen backend, a
-    `UserWarning` is emitted at solve time and the backend's default is
-    used. A `Preconditioner` paired with a non-`within` backend is
-    rejected eagerly with `ValueError` because there is no sensible
-    fallback for a prebuilt object.
+    See Also
+    --------
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd) : Alternating projections alternative.
+    [Preconditioner](/reference/core.demean.Preconditioner.qmd) : Inspect and reuse a built preconditioner.
+    [Choosing a demeaner](/how-to/demeaner-backends.qmd) : Backend performance, convergence, and reuse.
     """
 
     fixef_maxiter: int = 1_000

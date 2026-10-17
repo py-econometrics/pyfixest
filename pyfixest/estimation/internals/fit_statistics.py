@@ -11,6 +11,8 @@ from scipy.special import gammaln
 class FitStatistics:
     """Goodness-of-fit measures of a fitted model.
 
+    Access as ``fit.fitstat``. Retained with both ``store_data=False`` and ``lean=True``.
+
     Every field is a float, and ``NaN`` marks a measure the estimator does not
     define, as R ``fixest::fitstat()`` returns ``NA``. ``FitStatistics()`` is
     the all-``NaN`` value carried by IV and quantile regression fits.
@@ -54,6 +56,10 @@ class FitStatistics:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.fitstat.r2, fit.fitstat.r2_within
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     rmse: float = np.nan

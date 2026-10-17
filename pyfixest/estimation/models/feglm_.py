@@ -35,28 +35,62 @@ from pyfixest.utils.utils import DegreesOfFreedomCounts
 
 
 class Feglm(Feols):
-    """
-    Base class for the estimation of a fixed-effects GLM model.
+    """Fitted generalized-linear-model result returned by `pf.feglm()`.
 
-    Returned by [feglm()](/reference/estimation.api.feglm.feglm.qmd). Fixed
-    effects are handled via iteratively reweighted least squares with demeaning,
-    following Stammann (2018),
-    [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The `family` argument
-    selects a subclass that declares its `GlmFamily`. `poisson` dispatches to
-    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd).
+    Access as ``fit = pf.feglm(formula, data, family=...)``. The selected
+    family determines the concrete subclass: `Felogit`, `Feprobit`,
+    `Fegaussian`, or `Fepois`. Construct results with the estimation functions.
+
+    Attributes
+    ----------
+    options : GlmEstimationOptions
+        Access as ``fit.options``: shared estimation settings and the IRLS
+        tolerance, iteration limit, separation check, and acceleration option.
+    working_state : GlmWorkingState
+        Final IRLS response, design, working weights, and residuals.
+    fitted_values : FittedValues
+        Linear predictor (``link``) and fitted mean (``response``), in retained
+        estimation-row order.
+    sandwich : SandwichComponents
+        Final scores, weighted Hessian, and its inverse.
+    convergence : bool
+        Whether IRLS converged.
 
     Examples
     --------
     ```{python}
-    import numpy as np
     import pyfixest as pf
 
     data = pf.get_data()
-    data["Y_bin"] = np.where(data["Y"] > 0, 1, 0)
-
+    data["Y_bin"] = (data["Y"] > 0).astype(int)
     fit = pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit")
     fit.tidy()
+    fit.predict(type="response")[:3]
     ```
+
+    Notes
+    -----
+    Shared coefficient accessors and reporting methods are described in the
+    [fitted-result overview](/reference-guide/fitted-results.qmd). Logit,
+    probit, and Gaussian families reject wild bootstrap, randomization
+    inference, causal cluster variance, decomposition, coefficient updates,
+    and SAVI. They also reject CRV3 covariance. Poisson has its own support
+    contract. See [model support](/reference-guide/model-support.qmd).
+
+    Predictions default to the link scale; request ``type="response"`` for
+    means or probabilities. Recovered fixed effects are on the link scale.
+    Prediction standard errors are unsupported; interval arguments currently
+    have no effect. ``lean=True`` removes working arrays; see
+    [model storage](/reference-guide/model-storage.qmd).
+
+    Fixed effects are handled by IRLS with demeaning following Stammann
+    (2018), [arXiv:1707.01815](https://arxiv.org/abs/1707.01815).
+
+    See Also
+    --------
+    [feglm()](/reference/estimation.api.feglm.feglm.qmd),
+    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     options: GlmEstimationOptions
@@ -274,8 +308,7 @@ class Feglm(Feols):
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def resid(self, type: str = "response") -> np.ndarray:
-        """
-        Return residuals from a fitted GLM.
+        """Return residuals from a fitted GLM.
 
         Parameters
         ----------
@@ -286,7 +319,28 @@ class Feglm(Feols):
         Returns
         -------
         np.ndarray
-            A flat array with the requested residuals.
+            A flat array of length ``fit.sample_info.n_rows``, ordered by the
+            rows retained during estimation. Response residuals are ``Y - mu``;
+            working residuals use the final IRLS working response and design.
+
+        Notes
+        -----
+        Requires retained ``working_state`` and is unavailable after
+        ``lean=True``. It does not pad rows dropped before estimation.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.fepois("Y ~ X1", pf.get_data(model="Fepois"))
+        fit.resid(type="response")[:3]
+        ```
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         if type not in {"response", "working"}:
             raise ValueError("type must be one of 'response' or 'working'.")
@@ -327,55 +381,72 @@ class Feglm(Feols):
         interval: PredictionErrorOptions | None = None,
         alpha: float = 0.05,
     ) -> np.ndarray | pd.DataFrame:
-        """
-        Return predicted values from regression model.
+        """Return predicted values from a fitted GLM.
 
-        Return a flat `np.array` with predicted values of the regression model.
         If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations
-        will be set to `NaN`.
+        for such observations are set to `NaN`.
 
         Parameters
         ----------
-        newdata : Union[None, pd.DataFrame], optional
-            A `pd.DataFrame` with the new data, to be used for prediction.
-            If `None` (default), uses the data used for fitting the model.
-        atol : Float, default 1e-6
+        newdata : DataFrameType, optional
+            A Narwhals-compatible data frame with new data, to be used for
+            prediction. If `None` (default), uses the data used for fitting the
+            model.
+        atol : float, default 1e-6
             Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : float, default 1e-6
             Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type : str, optional
-            The type of prediction to be computed.
-            Can be either `response` (default) or `link`.
-            If `type="response"`, the output is at the level of the response variable,
-            i.e., it is the expected predictor E(Y|X).
-            If `link`, the output is at the level of the explanatory variables,
-            i.e., the linear predictor `X @ beta`.
-        atol : Float, default 1e-6
-            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
-            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        se_fit: Optional[bool], optional
-            If `True`, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to `False`.
-        interval: str, optional
-            The type of interval to compute. Can be either `prediction` or `None`.
-        alpha: float, optional
-            The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if `interval = "prediction"` is not `None`.
+            The type of prediction to be computed: `link` (default) or
+            `response`. With `link`, the output is the linear predictor
+            `X @ beta` (plus fixed effects and offset). With `response`, the
+            output is on the scale of the dependent variable, i.e. the inverse
+            link of the linear predictor, E(Y|X). Note that `fixest`'s
+            `predict()` defaults to `response`; pass `type="response"`
+            explicitly for predicted means or probabilities.
+        se_fit : bool, optional
+            Prediction standard errors are not implemented for GLMs: `True`
+            raises a `NotImplementedError`. Defaults to `False`.
+        interval : str, optional
+            Prediction intervals are not implemented for GLMs. The argument is
+            currently ignored, and the method returns the point predictions.
+        alpha : float, optional
+            Currently ignored, see `interval`.
 
         Returns
         -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a `pd.Dataframe` with columns `fit`, `se_fit` and CIs if argument `interval=prediction`.
-            Otherwise, returns a `np.ndarray` with the predicted values of the model or the prediction
-            standard errors if argument `se_fit=True`.
+        np.ndarray
+            A flat array in retained estimation-row order when ``newdata`` is
+            absent; otherwise one entry per supplied row, in its order. Missing
+            covariate/fixed-effect values and unseen categorical/fixed-effect
+            levels yield ``NaN``. An offset expression that evaluates to missing
+            values in ``newdata`` raises ``ValueError`` instead.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        data = pf.get_data()
+        data["Y_bin"] = (data["Y"] > 0).astype(int)
+        fit = pf.feglm("Y_bin ~ X1 + X2", data, family="logit")
+        fit.predict(type="response")[:3]
+        ```
+
+        Notes
+        -----
+        In-sample prediction requires retained working state and fitted values.
+        Fixed-effect prediction on supplied data requires retained recovery state
+        or a prior call to ``fixef()``. See
+        [model storage](/reference-guide/model-storage.qmd).
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd),
+        [model storage](/reference-guide/model-storage.qmd).
         """
         if se_fit:
             raise NotImplementedError(

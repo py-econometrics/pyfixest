@@ -23,7 +23,41 @@ PANEL_ALIASES = {
 
 @dataclass
 class GelbachResults:
-    """Container for all Gelbach decomposition results."""
+    """Coefficient decomposition and contributions returned by Gelbach estimation.
+
+    Access as ``gb.results`` after ``gb = fit.decompose(...)``. Field names
+    are historical: ``direct_effect`` is the focal coefficient in the short
+    regression, while ``full_effect`` is its coefficient in the long regression.
+
+    Attributes
+    ----------
+    direct_effect : float
+        Focal coefficient in the short model, including ``x1_vars`` if supplied.
+    full_effect : float
+        Focal coefficient in the long model with all covariates.
+    explained_effect : float
+        Sum of the selected mediator/group contributions. Equals the
+        short-minus-long coefficient change when all mediators are included.
+    unexplained_effect : float
+        ``direct_effect - explained_effect``. Equals the long-model coefficient
+        up to numerical tolerance only when all mediators are included.
+    mediator_effects : dict[str, float]
+        Contributions keyed by covariate or user-defined group name.
+    absolute : dict[str, float]
+        The four named effects followed by mediator contributions in their units.
+    relative_to_explained : dict[str, float]
+        All effects divided by ``explained_effect``; all ``NaN`` when it is zero.
+    relative_to_direct : dict[str, float]
+        All effects divided by the short-model coefficient ``direct_effect``;
+        all ``NaN`` when it is zero.
+    all_effect_names : list[str]
+        Core effect names followed by mediator names, in dictionary order.
+
+    See Also
+    --------
+    [GelbachDecomposition](/reference/estimation.post_estimation.decomposition.GelbachDecomposition.qmd),
+    [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd).
+    """
 
     direct_effect: float
     full_effect: float
@@ -41,7 +75,12 @@ class GelbachResults:
 
     @property
     def absolute(self) -> dict[str, float]:
-        """Absolute levels (backward compatibility with contribution_dict)."""
+        """Return core effects and mediator contributions in coefficient units.
+
+        Keys are ``direct_effect``, ``full_effect``, ``explained_effect``,
+        ``unexplained_effect``, followed by mediator names. A new dictionary is
+        returned; the stored result is unchanged.
+        """
         return {
             "direct_effect": self.direct_effect,
             "full_effect": self.full_effect,
@@ -52,7 +91,13 @@ class GelbachResults:
 
     @property
     def relative_to_explained(self) -> dict[str, float]:
-        """Relative to explained effect (backward compatibility)."""
+        """Return all effects divided by the sum of included contributions.
+
+        The denominator is ``explained_effect``, the sum of selected mediator/group
+        contributions. It equals the full coefficient change only when all
+        mediators are included.
+        Returns ``NaN`` for every entry when that denominator is zero.
+        """
         if self.explained_effect == 0:
             return {name: np.nan for name in self.absolute}
         return {
@@ -61,7 +106,11 @@ class GelbachResults:
 
     @property
     def relative_to_direct(self) -> dict[str, float]:
-        """Relative to direct effect (backward compatibility)."""
+        """Return all effects divided by the short-model focal coefficient.
+
+        The denominator is the historically named ``direct_effect`` field.
+        Returns ``NaN`` for every entry when that denominator is zero.
+        """
         if self.direct_effect == 0:
             return {name: np.nan for name in self.absolute}
         return {
@@ -70,19 +119,28 @@ class GelbachResults:
 
     @property
     def all_effect_names(self) -> list[str]:
-        """All effect names (core + mediators)."""
+        """Return core effect names followed by mediator names in storage order."""
         return list(self.absolute.keys())
 
     def to_dict(self, relative_to: str | None = None) -> dict[str, float]:
-        """
-        Convert to dictionary format.
+        """Return absolute or normalized decomposition effects as a dictionary.
 
         Parameters
         ----------
         relative_to : str, optional
-            If None, returns absolute values.
-            If "explained", returns values relative to explained effect.
-            If "direct", returns values relative to direct effect.
+            ``None`` returns absolute effects. ``"explained"`` divides by the
+            sum of included mediator/group contributions; ``"direct"`` divides
+            by the short-model coefficient. Other values raise ``ValueError``.
+
+        Returns
+        -------
+        dict[str, float]
+            Core effects and mediator contributions. Normalization by zero gives
+            ``NaN`` for every entry. The stored results are unchanged.
+
+        See Also
+        --------
+        [GelbachDecomposition.tidy()](/reference/estimation.post_estimation.decomposition.GelbachDecomposition.qmd#pyfixest.estimation.post_estimation.decomposition.GelbachDecomposition.tidy).
         """
         if relative_to is None:
             return self.absolute
@@ -98,57 +156,92 @@ class GelbachResults:
 
 @dataclass
 class GelbachDecomposition:
-    """
-    Gelbach Decomposition (equivalent to a Linear Mediation Model).
+    """Fitted Gelbach decomposition returned by `fit.decompose()`.
 
-    Implements the Gelbach (2016) decomposition method to decompose the effect of a
-    focal variable into explained and unexplained components. The method
-    compares coefficients from a "short" regression (outcome on treatment) with a
-    "long" regression (outcome on focal variable plus covariates).
+    Access as ``gb = fit.decompose(decomp_var="X", ...)`` on a supported
+    OLS result. The method compares the focal coefficient in a short model
+    with its coefficient in the original long model. Contributions sum to
+    the short-minus-long coefficient change when all mediators are included.
+    A partial ``combine_covariates`` mapping reports only the selected groups.
+    This algebraic decomposition does not by itself establish causal mediation.
 
-    Initial implementation by Apoorva Lal at
-    https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
-
-
-    This class performs the statistical decomposition and provides methods for
-    summarizing and displaying results via `tidy()`, `summary()`, and `etable()`.
+    Use ``gb.tidy()`` for numerical results, ``gb.etable()`` for a formatted
+    table, and ``gb.coefplot()`` for a waterfall plot. Construct this object
+    through ``fit.decompose()`` rather than fitting its internal arrays directly.
 
     Parameters
     ----------
     decomp_var : str
-        The focal variable whose effect is to be decomposed.
+        Focal coefficient to decompose.
     coefnames : list[str]
-        Names of all coefficients in the regression model.
+        Names of the long-model design columns, in their array order.
     depvarname : str
-        Name of the dependent variable.
+        Dependent-variable name for reporting.
     nthreads : int, optional
-        Number of threads for bootstrap inference, by default -1 (use all available).
+        Bootstrap workers. Default -1 uses all available cores.
     x1_vars : list[str], optional
-        Additional variables to include in both short and long regressions, by default None.
+        Other regressors retained in both short and long models; default `None`.
     cluster_df : pd.Series, optional
-        Cluster variable for bootstrap inference, by default None.
+        Bootstrap cluster identifiers aligned with retained rows; default `None`
+        uses independent-row resampling.
     combine_covariates : dict[str, list[str]], optional
-        Dictionary grouping mediator variables for analysis, by default None.
+        Mediator groups; default `None` treats covariates separately.
     agg_first : bool, optional
-        Whether to use aggregate-first algorithm for high-dimensional mediators, by default False.
+        Aggregate contributions before auxiliary regressions; default `False`.
     only_coef : bool, optional
-        If True, skip bootstrap inference and only compute point estimates, by default True.
+        Whether to skip inference. The internal constructor defaults to `True`;
+        ``fit.decompose()`` defaults to `False` and runs bootstrap inference.
     atol : float, optional
-        Absolute tolerance for linear solver, by default None.
+        Stopping tolerance passed to the short- and long-model least-squares
+        solves; default `None`. Auxiliary contribution regressions use the
+        solver defaults instead.
     btol : float, optional
-        Relative tolerance for linear solver, by default None.
+        Stopping tolerance passed to the short- and long-model least-squares
+        solves; default `None`. Auxiliary contribution regressions use the
+        solver defaults instead.
 
     Attributes
     ----------
     results : GelbachResults
-        Container with all decomposition results including direct, indirect, and total effects.
-        Provides access to absolute effects and relative effects via properties.
+        Access as ``gb.results``. ``direct_effect`` is the short-model coefficient,
+        ``full_effect`` is the long-model coefficient, and ``explained_effect``
+        sums the selected mediator/group contributions. If all mediators are
+        included, the explained effect equals short minus long and
+        ``unexplained_effect`` equals the long coefficient up to numerical
+        tolerance. For partial groups, unexplained is short minus the selected
+        contributions. These names are historical.
 
-    References
-    ----------
-    Gelbach, J. B. (2016). When do covariates matter? And which ones, and how much?
-    Journal of Labor Economics, 34(2), 509-543.
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils.dgps import gelbach_data
 
+    fit = pf.feols("y ~ x1 + x21 + x22 + x23", gelbach_data(nobs=200))
+    gb = fit.decompose(decomp_var="x1", only_coef=True)
+    gb.tidy(panels="levels")
+    ```
+
+    Notes
+    -----
+    The ``share_full`` panel divides by the short-model coefficient, despite
+    its label "Share of Full Effect". ``share_explained`` divides by the
+    sum of included mediator/group contributions. A zero denominator
+    produces ``NaN`` shares.
+    Inference uses percentile bootstrap intervals when the decomposition was
+    created with ``only_coef=False``. Small example replication counts only
+    illustrate usage; use more replications for analysis.
+
+    The method follows Gelbach (2016), "When do covariates matter? And which
+    ones, and how much?", Journal of Labor Economics 34(2), 509-543,
+    [doi:10.1086/683668](https://doi.org/10.1086/683668). Initial implementation
+    by [Apoorva Lal](https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4).
+
+    See Also
+    --------
+    [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd),
+    [regression decomposition guide](/how-to/regression_decomposition.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     # Core parameters
@@ -536,27 +629,46 @@ class GelbachDecomposition:
         ).set_index("effect")
 
     def tidy(self, alpha: float = 0.05, panels: str = "all") -> pd.DataFrame:
-        """
-        Tidy the Gelbach decomposition output into a DataFrame.
-
-        Return a tidy pd.DataFrame with the decomposition results, including
-        point estimates and confidence intervals.
+        """Return decomposition estimates and optional bootstrap intervals.
 
         Parameters
         ----------
         alpha : float, optional
-            The significance level for the confidence intervals, by default 0.05.
-            Computes a 95% percentile bootstrap confidence interval when
-            alpha = 0.05. Ignored when the decomposition was fit with
-            `only_coef=True`.
+            Significance level, default 0.05. With inference, must lie in (0, 1)
+            and yields percentile bootstrap bounds at level ``1 - alpha``.
+            Ignored for ``only_coef=True`` results.
         panels : str, optional
-            Which panels to include. One of 'all', 'levels', 'share_explained',
-            'share_full', by default "all". Also accepts full names for backward compatibility.
+            ``"all"`` (default), ``"levels"``, ``"share_full"``, or
+            ``"share_explained"``. Full panel labels are also accepted. The
+            ``share_full`` denominator is the short-model coefficient;
+            ``share_explained`` uses the sum of included mediator/group
+            contributions.
 
         Returns
         -------
-        pd.DataFrame
-            A tidy DataFrame with the decomposition results.
+        pandas.DataFrame
+            Index named ``effect`` contains four core effects and then mediators.
+            Columns are ``coefficients`` and ``panels``, plus ``ci_lower`` and
+            ``ci_upper`` when bootstrap inference was run. ``"all"`` stacks levels,
+            shares of the short-model coefficient, then shares of the included
+            contribution sum; the effect index repeats across panels. Shares are
+            fractions, not percentages. The stored result is unchanged.
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
+
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", gelbach_data(nobs=200))
+        gb = fit.decompose(decomp_var="x1", only_coef=True)
+        gb.tidy(panels="levels")
+        ```
+
+        See Also
+        --------
+        [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd),
+        [regression decomposition guide](/how-to/regression_decomposition.qmd).
         """
         absolute_df = self._dict_to_df(self.results.absolute)
         relative_explained_df = self._dict_to_df(self.results.relative_to_explained)
@@ -737,47 +849,66 @@ class GelbachDecomposition:
         add_notes: str | None = None,
         **kwargs,
     ) -> pd.DataFrame | str | None:
-        """
-        Generate a table summarizing the Gelbach decomposition results.
-
-        Supports various output formats including html (via great tables), markdown, and LaTeX.
+        """Create a formatted decomposition table with optional share panels.
 
         Parameters
         ----------
         panels : str, optional
-            Which panels to include. One of 'all', 'levels', 'share_full', 'share_explained'.
+            ``"all"`` (default), ``"levels"``, ``"share_full"``, or
+            ``"share_explained"``. A list of the short names is also accepted.
+            See ``tidy()`` for the share denominators.
         caption : str, optional
-            Caption for the table, by default None.
+            Table caption; default `None`.
         column_heads : list[str], optional
-            Column names for the table. Must be length 3 if provided, by default None.
+            Three display headings for short-model coefficient, long-model
+            coefficient, and included contribution sum, in that order. `None` uses
+            "Initial Difference", "Adjusted Difference", "Explained Difference".
         panel_heads : list[str], optional
-            Custom names for the panel sections. Length must match number of panels shown, by default None.
+            Replacement panel labels, one per displayed panel; default `None`.
         rgroup_sep : str, optional
-            Row group separator style. Options: 'tb', 't', 'b', '', by default "t".
+            Row-group separator passed to ``MTable``. `None` uses ``"t"``; choices
+            include ``"tb"``, ``"t"``, ``"b"``, and ``""``.
         add_notes : str, optional
-            Additional notes to append to the table, by default None.
-        **kwargs : dict, optional
-            Additional arguments passed to maketables.MTable (type, digits, etc.).
+            Text appended to the generated table notes; default `None`.
+        **kwargs
+            Formatting arguments passed to ``maketables.MTable``, such as ``digits``.
+            ``type`` selects output: ``"gt"`` (default), ``"df"``, ``"tex"``,
+            ``"html"``, or ``"md"``. Unrecognized types fall back to ``"gt"``.
 
         Returns
         -------
-        Union[pd.DataFrame, str, None]
-            Formatted table. Type depends on output format specified in kwargs.
+        object
+            ``"gt"`` returns a Great Tables object. ``"df"`` returns the formatted
+            `DataFrame`; ``"tex"`` and ``"html"`` return the corresponding MTable
+            output. ``"md"`` prints Markdown and returns `None`. Confidence intervals
+            use the default 95% level when bootstrap inference was run.
 
         Examples
         --------
         ```{python}
         import pyfixest as pf
-        data = pf.gelbach_data(nobs=500)
-        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-        gb = fit.decompose(decomp_var = "x1", x1_vars = ["x21"],reps = 10, nthreads = 1)
-        gb.etable()
+        from pyfixest.utils.dgps import gelbach_data
+
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", gelbach_data(nobs=200))
+        gb = fit.decompose(decomp_var="x1", only_coef=True)
+        gb.etable(type="df", panels="levels")
         ```
 
-        We can change the column headers:
-
         ```{python}
-        gb.etable(column_heads = ["Full Difference", "Unexplained Difference", "Explained Difference"])
+        gb.etable(type="df", column_heads=["Short model", "Long model", "Change"])
+        ```
+
+        Notes
+        -----
+        Share denominators follow ``tidy()``. The generated note for the
+        "Share of Explained Effect" panel currently names the long regression
+        although the values divide by the sum of included contributions; use the
+        numerical definition above when interpreting that panel.
+
+        See Also
+        --------
+        [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd),
+        [regression decomposition guide](/how-to/regression_decomposition.qmd).
         """
         from maketables import MTable
 
@@ -950,63 +1081,55 @@ class GelbachDecomposition:
         labels: dict | None = None,
         notes: str | None = None,
     ):
-        """
-        Create a waterfall chart showing Gelbach decomposition results.
-        The chart shows the transition from the initial difference (direct effect)
-        through individual mediator contributions to the full effect, with a spanner
-        showing the total explained effect above the mediator bars.
+        """Display a waterfall plot of the coefficient decomposition.
+
+        Displays the short- and long-model coefficients and selected mediator/group
+        contributions; a spanner shows their sum. Contributions explain the full
+        coefficient change only when all mediators are included.
 
         Parameters
         ----------
         annotate_shares : bool, optional
-            Whether to show percentage shares in parentheses. Default True.
-        title : Optional[str], optional
-            Chart title. If None, uses default title with decomposition variable.
-        figsize : Optional[tuple[int, int]], optional
-            Figure size (width, height) in inches. Default (12, 8).
-        keep : Optional[Union[list, str]], optional
-            The pattern for retaining mediator names. You can pass a string (one
-            pattern) or a list (multiple patterns). Default is keeping all mediators.
-            Uses regular expressions to select mediators. Note: is applied before the
-            labels argument.
-        drop : Optional[Union[list, str]], optional
-            The pattern for excluding mediator names. You can pass a string (one
-            pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
-            Default is keeping all mediators. Can be used simultaneously with `keep`.
-            Note: is applied after the labels argument.
+            Annotate percentage shares of the short-model coefficient and the
+            sum of included contributions, where defined; default `True`.
+        title : str, optional
+            Plot title; `None` derives a title from the decomposition variable.
+        figsize : tuple[int, int], optional
+            Matplotlib figure width and height in inches; `None` uses (12, 8).
+        keep : list[str] or str, optional
+            Patterns selecting mediator names before relabeling; default `None` keeps
+            all. Regular expressions are used unless ``exact_match=True``.
+        drop : list[str] or str, optional
+            Patterns excluding mediator names, after ``keep`` and before relabeling;
+            default `None` excludes none. Filtering changes the displayed bars.
         exact_match : bool, optional
-            Whether to use exact match for `keep` and `drop`. Default is False.
-            If True, patterns will be matched exactly instead of using regex.
-        labels : Optional[dict], optional
-            Dictionary to relabel mediator variables. Keys are original names,
-            values are new display names. Applied after `keep` and `drop`.
-        notes : Optional[str], optional
-            Custom notes to display below the chart. If None, shows default
-            decomposition information.
+            Use exact names for ``keep`` and ``drop`` instead of regex; default `False`.
+        labels : dict[str, str], optional
+            Display names keyed by original mediator names, applied after filtering.
+        notes : str, optional
+            Text below the chart; `None` supplies decomposition information.
+
+        Returns
+        -------
+        None
+            Displays a Matplotlib plot via ``plt.show()``. The current figure can
+            be obtained with ``matplotlib.pyplot.gcf()`` after the call.
 
         Examples
         --------
-        ```python
+        ```{python}
         import pyfixest as pf
+        from pyfixest.utils.dgps import gelbach_data
 
-        data = pf.gelbach_data(nobs=500)
-        fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+        fit = pf.feols("y ~ x1 + x21 + x22 + x23", gelbach_data(nobs=200))
         gb = fit.decompose(decomp_var="x1", only_coef=True)
-        # Basic waterfall chart
-        gb.coefplot()
-        # Custom labels and styling
-        gb.coefplot(
-            labels={"x21": "Education", "x22": "Experience", "x23": "Age"},
-            figsize=(14, 8),
-            notes="Custom decomposition analysis",
-        )
-        # With filtering
-        gb.coefplot(
-            keep=["x2.*"],  # Keep only variables starting with x2
-            drop=["x23"],  # But exclude x23
-            exact_match=False,
-        )
+        gb.coefplot(labels={"x21": "Education", "x22": "Experience", "x23": "Age"})
         ```
+
+        See Also
+        --------
+        [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd),
+        [regression decomposition guide](/how-to/regression_decomposition.qmd).
         """
         from pyfixest.report.visualize_decomposition import create_decomposition_plot
 

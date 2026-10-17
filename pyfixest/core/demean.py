@@ -46,7 +46,7 @@ def demean(
     tol: float = 1e-06,
     maxiter: int = 10_000,
 ) -> tuple[NDArray, bool]:
-    """
+    r"""
     Demean an array.
 
     Workhorse for demeaning an input array `x` based on the specified fixed
@@ -55,12 +55,13 @@ def demean(
     Parameters
     ----------
     x : numpy.ndarray
-        Input array of shape `(n_samples, n_features)`. Needs to be of type `float`.
+        Finite numeric array of shape `(n_samples, n_features)`, converted to float64.
     flist : numpy.ndarray
-        Array of shape `(n_samples, n_factors)` specifying the fixed effects.
-        Needs to already be converted to integers.
+        Nonnegative integer group identifiers, shape `(n_samples, n_factors)`.
+        Encode categories as integers before calling; missing values are unsupported.
     weights : numpy.ndarray
-        Array of shape `(n_samples,)` specifying the weights.
+        Finite, positive observation weights, shape `(n_samples,)`.
+        Use ones for unweighted demeaning; rows must align with x and flist.
     tol : float, optional
         Tolerance criterion for convergence. Defaults to 1e-06.
     maxiter : int, optional
@@ -76,34 +77,19 @@ def demean(
     --------
     ```{python}
     import numpy as np
-    import pyfixest as pf
-    from pyfixest.utils.dgps import get_blw
     from pyfixest.estimation import demean
-    from formulaic import model_matrix
 
-    fml = "y ~ treat | state + year"
-
-    data = get_blw()
-    data.head()
-
-    Y, rhs = model_matrix(fml, data)
-    X = rhs[0].drop(columns="Intercept")
-    fe = rhs[1].drop(columns="Intercept")
-    YX = np.concatenate([Y, X], axis=1)
-
-    # to numpy
-    Y = Y.to_numpy()
-    X = X.to_numpy()
-    YX = np.concatenate([Y, X], axis=1)
-    fe = fe.to_numpy().astype(int)  # demean requires fixed effects as ints!
-
-    YX_demeaned, success = demean(YX, fe, weights = np.ones(YX.shape[0]))
-    Y_demeaned = YX_demeaned[:, 0]
-    X_demeaned = YX_demeaned[:, 1:]
-
-    print(np.linalg.lstsq(X_demeaned, Y_demeaned, rcond=None)[0])
-    print(pf.feols(fml, data).coef())
+    x = np.array([[1.0, 2.0], [3.0, 4.0], [6.0, 8.0], [10.0, 12.0]])
+    groups = np.array([[0], [0], [1], [1]], dtype=np.uint64)
+    centered, converged = demean(x=x, flist=groups, weights=np.ones(4))
+    converged, centered
     ```
+
+    See Also
+    --------
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd) : Configure demeaning inside an estimator.
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd) : Sparse least-squares demeaning.
+    [Choosing a demeaner](/how-to/demeaner-backends.qmd) : Select a backend for estimation.
     """
     return _demean_rs(
         x.astype(np.float64, copy=False),
@@ -137,12 +123,13 @@ def demean_within(
     Parameters
     ----------
     x : numpy.ndarray
-        Input array of shape (n_samples, n_features).
+        Finite numeric array of shape `(n_samples, n_features)`, converted to float64.
     flist : numpy.ndarray
-        Array of shape (n_samples, n_factors) specifying the fixed effects
+        Array of shape `(n_samples, n_factors)` specifying the fixed effects
         (integer-encoded).
     weights : numpy.ndarray or None, optional
-        Array of shape (n_samples,) specifying observation weights.
+        Finite, positive observation weights of shape `(n_samples,)`, aligned
+        with x and flist. `None` weights every row equally.
     tol : float, optional
         Convergence tolerance. Defaults to 1e-08.
     maxiter : int, optional
@@ -168,7 +155,7 @@ def demean_within(
         Preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
         MAP and do not use a preconditioner. Alternatively, you can
-        pass a previously-built :class:`Preconditioner` and reuse it for
+        pass a previously-built [Preconditioner](/reference/core.demean.Preconditioner.qmd) and reuse it for
         the current problem.
         If the computation of the pre-conditioner takes a long time, this can
         speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
@@ -185,6 +172,11 @@ def demean_within(
         The preconditioner is ``None`` when none was constructed or applied —
         i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
         path was taken.
+
+    See Also
+    --------
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd) : Configure this backend through an estimator.
+    [Preconditioner](/reference/core.demean.Preconditioner.qmd) : Inspect and reuse solver setup.
     """
     _valid_names = get_args(WithinPreconditionerName)
     _valid_str = ", ".join(repr(n) for n in _valid_names)

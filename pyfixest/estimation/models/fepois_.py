@@ -12,55 +12,60 @@ from pyfixest.estimation.models.feglm_ import Feglm
 
 
 class Fepois(Feglm):
-    """
-    Estimate a Poisson regression model.
+    """Fitted Poisson-regression result returned by `pf.fepois()`.
 
-    Non user-facing class to estimate a Poisson regression model via Iterated
-    Weighted Least Squares (IWLS).
-
-    Inherits from the `Feglm` class. Users should not directly instantiate this class,
-    but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    IRLS residualization is orchestrated by ``Feglm`` through ``DemeanCache``,
-    reusing preconditioners while projecting with each solve's current weights.
-
-    The method implements the algorithm from Stata's `ppmlhdfe` module.
+    Access as ``fit = pf.fepois(formula, data)``. ``pf.feglm(...,
+    family="poisson")`` returns the same result type. Use those functions to
+    construct a fit. Estimation uses iteratively reweighted least squares.
 
     Attributes
     ----------
-    model_matrix : ModelMatrix
-        Model frames containing the response, regressors, and other model inputs.
-    observation_weights : ObservationWeights
-        User-scale observation weights.
-    working_state : GlmWorkingState
-        Final within-scale IRLS design, response, weights, predictors and residuals.
-    fitted_values : FittedValues
-        The linear predictor and the response mean of the final IRLS iteration.
-    sandwich : SandwichComponents
-        IRLS scores, the Hessian `X' W X` with the final working weights, and its inverse.
-    coefnames : list[str]
-        Names of the coefficients in the design matrix X.
     options : GlmEstimationOptions
-        The estimation options the model was built with, including the IRLS
-        `maxiter` and `tol`, the separation check, and the offset.
-    _data: pd.DataFrame
-        The data frame used in the estimation. `None` if arguments `lean = True` or
-        `store_data = False`.
+        Access as ``fit.options``: shared estimation settings, IRLS controls,
+        separation check, acceleration, and offset expression.
+    working_state : GlmWorkingState
+        Final IRLS design, response, weights, predictors, and residuals.
+    fitted_values : FittedValues
+        Linear predictor and response mean in retained estimation-row order.
+    sandwich : SandwichComponents
+        IRLS scores, weighted Hessian, and its inverse.
+    fitstat : FitStatistics
+        Deviance, likelihood measures, and Pearson statistic. Null likelihood
+        and pseudo R-squared are unavailable for weighted fits.
+    convergence : bool
+        Whether IRLS converged.
 
     Examples
     --------
-    `Fepois` is returned by
-    [fepois()](/reference/estimation.api.fepois.fepois.qmd) and is not
-    constructed directly. Post-estimation methods are inherited from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd).
-
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data(model="Fepois")
-    fit = pf.fepois("Y ~ X1 + X2 | f1", data)
-
+    fit = pf.fepois("Y ~ X1 + X2 | f1", pf.get_data(model="Fepois"))
     fit.tidy()
+    fit.predict(type="response")[:3]
     ```
+
+    Notes
+    -----
+    Use ``fit.coef().index`` for coefficient names. Shared result attributes and
+    methods are listed in the
+    [fitted-result overview](/reference-guide/fitted-results.qmd). Poisson
+    supports fixed-effect recovery and unweighted randomization inference,
+    but rejects wild bootstrap, causal cluster variance, decomposition,
+    coefficient updates, and SAVI. See
+    [model support](/reference-guide/model-support.qmd).
+
+    Predictions default to the link scale. Recovered fixed effects are on that
+    scale too. Prediction standard errors are unsupported, and interval
+    arguments currently have no effect. Storage options can remove the
+    arrays needed by later operations; see
+    [model storage](/reference-guide/model-storage.qmd).
+
+    See Also
+    --------
+    [fepois()](/reference/estimation.api.fepois.fepois.qmd),
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
+    [model support](/reference-guide/model-support.qmd).
     """
 
     _family: ClassVar[GlmFamily] = POISSON

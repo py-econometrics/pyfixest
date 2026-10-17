@@ -1,0 +1,75 @@
+---
+title: "Model support for post estimation"
+description: "Check model capabilities and the additional data, weight, and design restrictions of each operation."
+sidebar: reference
+---
+
+An inherited method is not necessarily supported by every estimator. Each fit
+publishes [`fit.capabilities`](/reference/estimation.state.Capabilities.qmd),
+which methods check before doing their work. The table below is generated
+from the current implementation for representative fits.
+
+```{python}
+#| echo: false
+#| results: asis
+from dataclasses import asdict
+
+import pandas as pd
+import pyfixest as pf
+
+data = pf.get_data(N=200, seed=1234)
+data["binary_outcome"] = (data["Y"] > 0).astype(int)
+fits = {
+    "OLS": pf.feols("Y ~ X1 + X2 | f1", data),
+    "IV": pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", data),
+    "Poisson": pf.fepois("Y ~ X1 | f1", pf.get_data(N=200, model="Fepois")),
+    "GLM logit": pf.feglm("binary_outcome ~ X1", data, family="logit"),
+    "Quantile": pf.quantreg("Y ~ X1", data),
+}
+labels = {
+    "covariance_update": "Change covariance after fitting",
+    "crv3_inference": "CRV3 covariance",
+    "hac_inference": "NW and DK covariance",
+    "multiway_clustering": "Multiway clustering",
+    "wildboottest": "Wild bootstrap",
+    "cluster_causal_variance": "Causal cluster variance",
+    "decomposition": "Gelbach decomposition",
+    "prediction": "Point prediction",
+    "fixed_effect_recovery": "Fixed-effect recovery",
+    "randomization_inference": "Randomization inference",
+    "sherman_morrison_update": "Coefficient update",
+    "anytime_valid_inference": "Anytime-valid inference",
+}
+support = pd.DataFrame({name: asdict(fit.capabilities) for name, fit in fits.items()})
+support = support.rename(index=labels).map(lambda value: "Yes" if value else "No")
+print(support.to_markdown())
+```
+
+These are model-class capabilities. A **Yes** still requires the applicable
+design and retained state:
+
+| Operation | Additional restrictions and interpretation |
+| --- | --- |
+| [`predict()`](/reference/estimation.models.feols_.Feols.predict.qmd) | Prediction errors and intervals require an unweighted OLS model without absorbed fixed effects. GLM point predictions default to link scale; GLM interval arguments are currently ignored. |
+| [`fixef()`](/reference/estimation.models.feols_.Feols.fixef.qmd) | Requires absorbed fixed effects and retained inputs. Individual levels depend on normalization; GLM effects are on link scale. |
+| [`wildboottest()`](/reference/estimation.models.feols_.Feols.wildboottest.qmd) | Unweighted OLS, with supported one-way clustering and the optional `wildboottest` dependency. |
+| [`ritest()`](/reference/estimation.models.feols_.Feols.ritest.qmd) | Supported OLS and Poisson paths reject observation weights; resampling and retained-data requirements apply. |
+| [`ccv()`](/reference/estimation.models.feols_.Feols.ccv.qmd) | Binary treatment, no absorbed fixed effects, and no observation weights. |
+| [`decompose()`](/reference/estimation.models.feols_.Feols.decompose.qmd) | Analytic weights are unsupported. Frequency weights require `only_coef=True`; clustered bootstrap supports one cluster variable. Retained-data requirements depend on fixed effects and clustering. |
+| [`update()`](/reference/estimation.models.feols_.Feols.update.qmd) | No absorbed fixed effects or observation weights. Returns new coefficients; it does not append observations to the fitted result. |
+| SAVI methods | No absorbed fixed effects or observation weights, with supported IID or heteroskedasticity-robust covariance. See [anytime-valid inference](/how-to/anytime-valid-inference.qmd). |
+| Covariance estimators | `HC2`/`HC3` require an eligible model without absorbed fixed effects. Quantile regression has its own inference choices and only one-way clustering. |
+
+Basic coefficient accessors and ordinary confidence intervals are available
+on the standard result classes. [Storage options](/reference-guide/model-storage.qmd)
+can remove state needed by residuals, prediction, refits, or covariance updates.
+
+Difference-in-differences results have additional contracts. DID2S covariance
+includes first-stage estimation, so change its cluster specification by
+refitting with `cluster=` rather than calling `.vcov()`. DID2S results also
+reject ordinary point prediction and resampling procedures that cannot replay
+the two-stage estimator. LPDID and saturated aggregation have their own result
+interfaces; see the [DiD tutorial](/tutorials/difference-in-differences.qmd).
+
+See also [fitted results](/reference-guide/fitted-results.qmd) and
+[errors and remedies](/reference-guide/errors.qmd).

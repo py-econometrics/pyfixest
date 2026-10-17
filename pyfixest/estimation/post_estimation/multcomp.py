@@ -18,34 +18,51 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     """
     Compute Bonferroni adjusted p-values for multiple hypothesis testing.
 
+    Call as `pf.bonferroni(models, param=...)` after `import pyfixest as pf`.
     For each model, it is assumed that tests to adjust are of the form
     `param = 0`.
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
+    models : Feols or FixestMulti or list
+        A fitted result with ordinary coefficient p-values, a list of such
+        results, or a `FixestMulti` container. Includes supported OLS, IV,
+        Poisson, other GLM and quantile fits. No resampling is performed.
+
     param : str
-        The parameter for which the p-values should be adjusted.
+        Coefficient name present in every model. Each hypothesis tests that
+        coefficient against zero; the family contains one test per model.
 
     Returns
     -------
     pd.DataFrame
-        A `DataFrame` containing estimation statistics, including the Bonferroni
-        adjusted p-values.
+        Statistics as rows and models as columns `est0`, `est1`, ... in input
+        order. Includes the ordinary coefficient-table rows and an additional
+        `Bonferroni Pr(>|t|)` row containing Bonferroni adjusted p-values.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.utils import get_data
 
-    data = get_data().dropna()
+    data = pf.get_data().dropna()
     fit1 = pf.feols("Y ~ X1", data=data)
     fit2 = pf.feols("Y ~ X1 + X2", data=data)
-    bonf_df = pf.bonferroni([fit1, fit2], param="X1")
-    bonf_df
+    pf.bonferroni([fit1, fit2], param="X1")
     ```
+
+    Notes
+    -----
+    Adjusted p-values equal `min(1, number_of_models * pvalue)`. This method
+    controls the family-wise error rate under arbitrary dependence between
+    tests, provided each model's underlying p-value is valid.
+
+    See Also
+    --------
+    Compare [pf.rwolf()](/reference/estimation.post_estimation.multcomp.rwolf.qmd) and
+    [pf.wyoung()](/reference/estimation.post_estimation.multcomp.wyoung.qmd).
+    [fit.wildboottest()](/reference/estimation.models.feols_.Feols.wildboottest.qmd)
+    and [fit.ritest()](/reference/estimation.models.feols_.Feols.ritest.qmd) document the resampling methods.
     """
     models = _post_processing_input_checks(models)
     all_model_stats = pd.DataFrame()
@@ -77,52 +94,79 @@ def rwolf(
     """
     Compute Romano-Wolf adjusted p-values for multiple hypothesis testing.
 
+    Call as `pf.rwolf(models, param=...)` after `import pyfixest as pf`.
     For each model, it is assumed that tests to adjust are of the form
-    `param = 0`. This function uses the `wildboottest()` method for running the
-    bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
+    `param = 0`. The resampled statistics come from the `wildboottest()`
+    method (`sampling_method="wild-bootstrap"`, the default) or from the
+    `ritest()` method (`sampling_method="ri"`), so each model must support
+    the chosen method:
+
+    - `"wild-bootstrap"`: unweighted `Feols` fits only. `Feiv`, `Fepois`,
+      `Feglm` and weighted `Feols` fits raise a `NotImplementedError`.
+    - `"ri"`: unweighted `Feols` fits without instruments and `Fepois` fits.
+      `Feiv`, `Feglm` and weighted fits raise a `NotImplementedError`.
 
     Parameters
     ----------
-    models : list[Feols] or FixestMulti
-        A list of models for which the p-values should be computed, or a
-        `FixestMulti` object.
-        Models of type `Feiv` or `Fepois` are not supported.
+    models : Feols, Fepois, list or FixestMulti
+        A fitted model, a list of fitted models, or a `FixestMulti` object.
     param : str
-        The parameter for which the p-values should be computed.
+        Coefficient name present in every model. Each hypothesis tests that
+        coefficient against zero; the family contains one test per model.
+
     reps : int
-        The number of bootstrap replications.
+        The number of bootstrap replications (`"wild-bootstrap"`) or random
+        permutations (`"ri"`). Use a common one-way cluster structure across
+        clustered models. If `reps` exceeds `2**G` for `G` clusters, wild
+        bootstrap uses all `2**G` sign vectors and warns. With
+        `sampling_method="ri"`, this case currently raises an error, so keep
+        `reps` at or below `2**G`.
     seed : int
         The seed for the random number generator.
-    sampling_method : str
-        Sampling method for computing resampled statistics.
-        Users can choose either bootstrap(`wild-bootstrap`)
-        or randomization inference(`ri`)
+    sampling_method : str, optional
+        Sampling method for computing resampled statistics: `"wild-bootstrap"`
+        (default) for a wild (cluster) bootstrap or `"ri"` for randomization
+        inference.
 
     Returns
     -------
     pd.DataFrame
-        A `DataFrame` containing estimation statistics, including the Romano-Wolf
-        adjusted p-values.
+        Statistics as rows and models as columns `est0`, `est1`, ... in input
+        order. Includes the ordinary coefficient-table rows and an additional
+        `RW Pr(>|t|)` row containing Romano-Wolf adjusted p-values.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
-    from pyfixest.utils import get_data
 
-    data = get_data().dropna()
-    fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
-    pf.rwolf(fit, "X1", reps=9999, seed=123)
-
+    data = pf.get_data().dropna()
     fit1 = pf.feols("Y ~ X1", data=data)
     fit2 = pf.feols("Y ~ X1 + X2", data=data)
-    rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123)
-
-    # use randomization inference - dontrun as too slow
-    # rwolf_df = pf.rwolf([fit1, fit2], "X1", reps=9999, seed=123, sampling_method = "ri")
-
-    rwolf_df
+    pf.rwolf([fit1, fit2], param="X1", reps=999, seed=123)
     ```
+
+    Notes
+    -----
+    Resampling uses the same seed across models to preserve dependence
+    between tests. Use compatible observations and row order across models;
+    the function does not align samples for you. Wild bootstrap requires
+    the optional `wildboottest` package and supports at most one cluster
+    dimension. With randomization inference, the supplied parameter is the
+    variable permuted by `fit.ritest()`; that assignment mechanism must be
+    appropriate for the application.
+
+    Methods may need retained model data; see the
+    [storage guide](/reference-guide/model-storage.qmd). RI writes each
+    fitted result's `ritest_statistics` state. These routines do not adjust
+    coefficients or their confidence intervals.
+
+    See Also
+    --------
+    Compare [pf.bonferroni()](/reference/estimation.post_estimation.multcomp.bonferroni.qmd) and
+    [pf.wyoung()](/reference/estimation.post_estimation.multcomp.wyoung.qmd).
+    [fit.wildboottest()](/reference/estimation.models.feols_.Feols.wildboottest.qmd)
+    and [fit.ritest()](/reference/estimation.models.feols_.Feols.ritest.qmd) document the resampling methods.
     """
     return _multcomp_resample("rwolf", models, param, reps, seed, sampling_method)
 
@@ -190,32 +234,46 @@ def wyoung(
     """
     Compute the Westfall-Young adjusted p-values for multiple hypothesis testing.
 
+    Call as `pf.wyoung(models, param=...)` after `import pyfixest as pf`.
     For each model, it is assumed that tests to adjust are of the form
-    `param = 0`. This function uses the `wildboottest()` method for running the
-    bootstrap, hence models of type `Feiv` or `Fepois` are not supported.
+    `param = 0`. The resampled statistics come from the `wildboottest()`
+    method (`sampling_method="wild-bootstrap"`, the default) or from the
+    `ritest()` method (`sampling_method="ri"`), so each model must support
+    the chosen method:
+
+    - `"wild-bootstrap"`: unweighted `Feols` fits only. `Feiv`, `Fepois`,
+      `Feglm` and weighted `Feols` fits raise a `NotImplementedError`.
+    - `"ri"`: unweighted `Feols` fits without instruments and `Fepois` fits.
+      `Feiv`, `Feglm` and weighted fits raise a `NotImplementedError`.
 
     Parameters
     ----------
-    models : list[Feols] or FixestMulti
-        A list of models for which the p-values should be computed, or a
-        `FixestMulti` object.
-        Models of type `Feiv` or `Fepois` are not supported.
+    models : Feols, Fepois, list or FixestMulti
+        A fitted model, a list of fitted models, or a `FixestMulti` object.
     param : str
-        The parameter for which the p-values should be computed.
+        Coefficient name present in every model. Each hypothesis tests that
+        coefficient against zero; the family contains one test per model.
+
     reps : int
-        The number of bootstrap replications.
+        The number of bootstrap replications (`"wild-bootstrap"`) or random
+        permutations (`"ri"`). Use a common one-way cluster structure across
+        clustered models. If `reps` exceeds `2**G` for `G` clusters, wild
+        bootstrap uses all `2**G` sign vectors and warns. With
+        `sampling_method="ri"`, this case currently raises an error, so keep
+        `reps` at or below `2**G`.
     seed : int
         The seed for the random number generator.
-    sampling_method: str
-        Sampling method for computing resampled statistics.
-        Users can choose either bootstrap(`wild-bootstrap`)
-        or randomization inference(`ri`)
+    sampling_method : str, optional
+        Sampling method for computing resampled statistics: `"wild-bootstrap"`
+        (default) for a wild (cluster) bootstrap or `"ri"` for randomization
+        inference.
 
     Returns
     -------
     pd.DataFrame
-        A `DataFrame` containing estimation statistics, including the Westfall-Young
-        adjusted p-values.
+        Statistics as rows and models as columns `est0`, `est1`, ... in input
+        order. Includes the ordinary coefficient-table rows and an additional
+        `WY Pr(>|t|)` row containing Westfall-Young adjusted p-values.
 
     Examples
     --------
@@ -223,14 +281,32 @@ def wyoung(
     import pyfixest as pf
 
     data = pf.get_data().dropna()
-    fit = pf.feols("Y ~ Y2 + X1 + X2", data=data)
-    pf.wyoung(fit, "X1", reps=9999, seed=123)
-
     fit1 = pf.feols("Y ~ X1", data=data)
     fit2 = pf.feols("Y ~ X1 + X2", data=data)
-    wyoung_df = pf.wyoung([fit1, fit2], "X1", reps=9999, seed=123)
-    wyoung_df
+    pf.wyoung([fit1, fit2], param="X1", reps=999, seed=123)
     ```
+
+    Notes
+    -----
+    Resampling uses the same seed across models to preserve dependence
+    between tests. Use compatible observations and row order across models;
+    the function does not align samples for you. Wild bootstrap requires
+    the optional `wildboottest` package and supports at most one cluster
+    dimension. With randomization inference, the supplied parameter is the
+    variable permuted by `fit.ritest()`; that assignment mechanism must be
+    appropriate for the application.
+
+    Methods may need retained model data; see the
+    [storage guide](/reference-guide/model-storage.qmd). RI writes each
+    fitted result's `ritest_statistics` state. These routines do not adjust
+    coefficients or their confidence intervals.
+
+    See Also
+    --------
+    Compare [pf.bonferroni()](/reference/estimation.post_estimation.multcomp.bonferroni.qmd) and
+    [pf.rwolf()](/reference/estimation.post_estimation.multcomp.rwolf.qmd).
+    [fit.wildboottest()](/reference/estimation.models.feols_.Feols.wildboottest.qmd)
+    and [fit.ritest()](/reference/estimation.models.feols_.Feols.ritest.qmd) document the resampling methods.
     """
     return _multcomp_resample("wyoung", models, param, reps, seed, sampling_method)
 

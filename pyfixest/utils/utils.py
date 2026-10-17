@@ -20,28 +20,42 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Ssc:
-    """Small-sample correction options.
+    r"""
+    Small-sample correction options.
 
     Parameters
     ----------
     k_adj : bool, default True
         Apply the ``(N - 1) / (N - k)`` adjustment (``N / (N - k)`` for
         heteroskedasticity-robust estimators).
-    k_fixef : {"none", "full", "nonnested"}, default "nonnested"
-        Which fixed-effect parameters count toward ``k``.
+    k_fixef : str, default "nonnested"
+        Which fixed-effect parameters count toward ``k``: `none` (no
+        fixed-effect parameters), "full" (all fixed-effect levels, minus one
+        for each fixed effect after the first) or "nonnested" (as "full", but
+        fixed effects nested within a cluster variable do not count).
     G_adj : bool, default True
-        Apply the ``G / (G - 1)`` cluster adjustment.
-    G_df : {"min", "conventional"}, default "min"
-        Whether multiway clustering adjusts every dimension with the smallest
-        cluster count or with its own.
+        Apply the ``G / (G - 1)`` adjustment for clustered and HAC errors,
+        where ``G`` is the number of clusters (the number of time periods for
+        HAC).
+    G_df : str, default "min"
+        For multiway clustering: `min` adjusts every dimension with the
+        smallest cluster count, `conventional` adjusts each dimension with
+        its own cluster count.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    pf.ssc(k_adj=False)
+    options = pf.ssc(k_adj=False)
+    options.k_adj, options.k_fixef, options.G_df
     ```
+
+    See Also
+    --------
+    [ssc()](/reference/utils.utils.ssc.qmd) : Configure estimator small-sample corrections.
+    [get_ssc()](/reference/utils.utils.get_ssc.qmd) : Compute a correction from model counts.
+    [Small-sample corrections](/explanation/ssc.qmd) : Formulas, defaults, and fixest compatibility.
     """
 
     k_adj: bool = True
@@ -78,12 +92,16 @@ class Ssc:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DegreesOfFreedomCounts:
-    """Model counts that enter the small-sample correction.
+    r"""
+    Model counts that enter the small-sample correction.
+
+    Counts passed to `get_ssc()`, usually computed by the estimator.
+    For direct calculations, import this class from `pyfixest.utils`.
 
     Parameters
     ----------
     N : int or float
-        Number of observations (the frequency-weight sum under `fweights`).
+        Number of observations (the frequency-weight sum under fweights).
     k : int
         Number of estimated coefficients, excluding fixed effects.
     k_fe : int
@@ -97,6 +115,22 @@ class DegreesOfFreedomCounts:
     G : int or float
         Number of clusters; the number of time periods for HAC and ``N``
         for heteroskedasticity-robust inference.
+
+    Examples
+    --------
+    ```{python}
+    from pyfixest.utils import DegreesOfFreedomCounts, get_ssc, ssc
+
+    counts = DegreesOfFreedomCounts(N=1000, k=3, k_fe=0, n_fe=0, G=20)
+    correction = get_ssc(ssc(), counts, vcov_type="CRV")
+    correction.adj, correction.df_t
+    ```
+
+    See Also
+    --------
+    [ssc()](/reference/utils.utils.ssc.qmd) : Configure estimator small-sample corrections.
+    [get_ssc()](/reference/utils.utils.get_ssc.qmd) : Compute a correction from model counts.
+    [Small-sample corrections](/explanation/ssc.qmd) : Formulas, defaults, and fixest compatibility.
     """
 
     N: int | float
@@ -110,7 +144,11 @@ class DegreesOfFreedomCounts:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SmallSampleCorrection:
-    """Result of ``get_ssc()``.
+    r"""
+    Result of ``get_ssc()``.
+
+    Returned by `pf.get_ssc()`; inspect `.adj`, `.df_k`, and `.df_t`.
+    It is not necessary to construct this result directly.
 
     Parameters
     ----------
@@ -120,6 +158,23 @@ class SmallSampleCorrection:
         Parameters counted by the ``k_adj`` adjustment.
     df_t : int or float
         Degrees of freedom of the t reference distribution.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+    from pyfixest.utils import DegreesOfFreedomCounts
+
+    counts = DegreesOfFreedomCounts(N=100, k=2, k_fe=0, n_fe=0, G=10)
+    correction = pf.get_ssc(pf.ssc(), counts, vcov_type="CRV")
+    correction.adj, correction.df_k, correction.df_t
+    ```
+
+    See Also
+    --------
+    [ssc()](/reference/utils.utils.ssc.qmd) : Configure estimator small-sample corrections.
+    [get_ssc()](/reference/utils.utils.get_ssc.qmd) : Compute a correction from model counts.
+    [Small-sample corrections](/explanation/ssc.qmd) : Formulas, defaults, and fixest compatibility.
     """
 
     adj: float
@@ -134,76 +189,59 @@ def ssc(
     G_df: GDfOptions = "min",
     **kwargs: Any,
 ) -> Ssc:
-    """
+    r"""
     Set the small sample correction factor applied in `get_ssc()`.
+
+    The defaults match those of `fixest::ssc()`.
 
     Parameters
     ----------
     k_adj : bool, default True
-        If `True`, applies a small sample correction of `(N-1) / (N-k)` where N
-        is the number of observations and k is the number of estimated
-        coefficients excluding any fixed effects projected out by either
-        `feols()` or `fepois()`.
-    k_fixef : str, default "none"
-        Equal to `none`: the fixed effects parameters are discarded when
-        calculating k in `(N-1) / (N-k)`.
+        If `True`, multiplies the covariance matrix by `(N-1) / (N-k)`, or by
+        N / (N-k) for heteroskedasticity-robust errors, where N is the number
+        of observations and k is the number of estimated coefficients plus the
+        fixed-effect parameters selected by `k_fixef`.
+    k_fixef : str, default "nonnested"
+        Which fixed-effect parameters count toward k. One of `none` (fixed
+        effects are not counted), "full" (all fixed-effect levels count,
+        minus one for each fixed effect after the first) or "nonnested" (as
+        "full", but fixed effects nested within a cluster variable are not
+        counted).
     G_adj : bool, default True
-        If `True`, a cluster correction `G/(G-1)` is performed, with G the number
-        of clusters. This argument is only relevant for clustered errors.
-    G_df : str, default "conventional"
-        Controls how `G` is computed for multiway clustering if `G_adj = True`.
-        Note that the covariance matrix in the multiway clustering case is of
-        the form `V = V_1 + V_2 - V_12`. If `conventional`, then each summand `G_i`
-        is multiplied with a small sample adjustment `G_i / (G_i - 1)`. If `min`,
-        all summands are multiplied with the same value, `min(G) / (min(G) - 1)`.
+        If `True`, a correction `G/(G-1)` is performed. This argument is only
+        relevant for clustered errors, where G is the number of clusters, and
+        HAC (NW/DK) errors, where G is the number of time periods.
+    G_df : str, default "min"
+        Controls how G is computed for multiway clustering if `G_adj = True`.
+        The covariance matrix in the two-way clustering case is of the form
+        $V = V_1 + V_2 - V_{12}$. If `conventional`, each term $V_i$ is
+        multiplied by its own adjustment $G_i / (G_i - 1)$. If `min`, all
+        terms are multiplied by the same value, $\min(G) / (\min(G) - 1)$.
         This argument is only relevant for clustered errors.
+    **kwargs
+        Deprecated aliases: `adj` (use `k_adj`), `fixef_k` (use `k_fixef`),
+        `cluster_df` (use `G_df`) and `cluster_adj` (use `G_adj`). They emit a
+        `DeprecationWarning`. Other keyword arguments are currently ignored
+        without a warning.
 
-    Details
-    -------
-    The small sample correction choices mimic fixest's behavior. For details, see
-    https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html.
+    Notes
+    -----
+    For cluster-robust errors with `k_adj = True` and `G_adj = True`, the
+    covariance matrix is computed as
 
-    In general, if `k_adj = True`, we multiply the variance covariance matrix V with a
-    small sample correction factor of `(N-1) / (N-k)`, where N is the number of
-    observations and k is the number of estimated coefficients.
+    $$
+    V \cdot \frac{N - 1}{N - k} \cdot \frac{G}{G - 1}.
+    $$
 
-    If `k_fixef = "none"`, the fixed effects parameters are discarded when
-    calculating k. This is the default behavior and currently the only
-    option. Note that it is not r-fixest's default behavior.
-
-    Hence if `k_adj = True`, the covariance matrix is computed as
-    `V = V x (N-1) / (N-k)` for iid and heteroskedastic errors.
-
-    If `k_adj = False`, no small sample correction is applied of the type
-    above is applied.
-
-    If `G_adj = True`, a cluster correction of `G/(G-1)` is performed,
-    with G the number of clusters.
-
-    If `k_adj = True` and `G_adj = True`, `V = V x (N - 1) / N - k) x G/(G-1)`
-    for cluster robust errors where G is the number of clusters.
-
-    If `k_adj = False` and `G_adj = True`, `V = V x G/(G-1)` for cluster robust
-    errors, i.e. we drop the `(N-1) / (N-k)` factor. And if `G_adj = False`,
-    no cluster correction is applied.
-
-    Things are slightly more complicated for multiway clustering. In this
-    case, we compute the variance covariance matrix as `V = V1 + V2 - V_12`.
-
-    If `G_adj = True` and `G_df = "conventional"`, then
-    `V += [V x G_i / (G_i - 1) for i in [1, 2, 12]]`, i.e. each separate
-    covariance matrix `G_i` is multiplied with a small sample adjustment
-    `G_i / (G_i - 1)` corresponding to the number of clusters in the
-    respective covariance matrix. This is the default behavior
-    for clustered errors.
-
-    If `G_df = "min"`, then
-    `V += [V x min(G) / (min(G) - 1) for i in [1, 2, 12]]`.
+    The small sample correction choices mimic fixest's behavior. See
+    [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas and
+    the [fixest vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html)
+    for background.
 
     Returns
     -------
     Ssc
-        The validated options; see [Ssc](/reference/utils.utils.Ssc.qmd).
+        The validated options; see [Ssc](/reference/utils.utils.ssc.qmd#pyfixest.utils.utils.Ssc).
 
     Examples
     --------
@@ -221,8 +259,10 @@ def ssc(
     pf.etable([fit, fit_no_adj])
     ```
 
-    Defaults follow `fixest`. See
-    [On Small Sample Corrections](/explanation/ssc.qmd) for details.
+    See Also
+    --------
+    [get_ssc()](/reference/utils.utils.get_ssc.qmd) : Compute a correction from model counts.
+    [Small-sample corrections](/explanation/ssc.qmd) : Formulas, defaults, and fixest compatibility.
     """
     deprecated_mapping = {
         "adj": "k_adj",
@@ -263,7 +303,7 @@ def get_ssc(
     *,
     vcov_type: str,
 ) -> SmallSampleCorrection:
-    """
+    r"""
     Compute the small sample adjustment factor and the degrees of freedom.
 
     Parameters
@@ -273,7 +313,10 @@ def get_ssc(
     counts : DegreesOfFreedomCounts
         Observation, coefficient, fixed-effect, and cluster counts.
     vcov_type : str
-        The type of covariance matrix: `iid`, `hetero`, `HAC`, or `CRV`.
+        Covariance kind: `iid`, `hetero`, `HAC`, "HAC-TS", or `CRV`.
+        "HAC-TS" uses `df_t = N - df_k` without a cluster adjustment. The
+        t distribution uses `df_t = N - df_k` for `iid` and `hetero`, and
+        `df_t = G - 1` for `CRV` (G clusters) and `HAC` (G time periods).
 
     Returns
     -------
@@ -298,6 +341,11 @@ def get_ssc(
 
     Configure the behaviour with [ssc()](/reference/utils.utils.ssc.qmd). See
     [On Small Sample Corrections](/explanation/ssc.qmd) for the formulas.
+
+    See Also
+    --------
+    [ssc()](/reference/utils.utils.ssc.qmd) : Configure estimator small-sample corrections.
+    [Small-sample corrections](/explanation/ssc.qmd) : Formulas, defaults, and fixest compatibility.
     """
     N, k, k_fe, n_fe = counts.N, counts.k, counts.k_fe, counts.n_fe
     k_fe_nested, n_fe_fully_nested = counts.k_fe_nested, counts.n_fe_fully_nested
@@ -340,7 +388,7 @@ def get_ssc(
 
 
 def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
-    """
+    r"""
     Create a random example data set.
 
     Parameters
@@ -350,22 +398,29 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     seed : int, optional
         Seed for the random number generator. Default is 1234.
     beta_type : str, optional
-        Type of beta coefficients. Must be one of `'1'`, `'2'`, or `'3'`. Default is `'1'`.
+        Distribution of the beta coefficients: `'1'` for N(0, 1), `'2'` for
+        N(0, 5) (standard deviation 5), or `'3'` for lognormal. Default is `'1'`.
     error_type : str, optional
-        Type of error term. Must be one of `'1'`, `'2'`, or `'3'`. Default is `'1'`.
+        Distribution of the error term: `'1'` for N(0, 1), `'2'` for N(0, 5)
+        (standard deviation 5), or `'3'` for lognormal. Default is `'1'`.
     model : str, optional
         Type of the DGP. Must be either `Feols` or `Fepois`. Default is `Feols`.
 
     Returns
     -------
     pandas.DataFrame
-        A pandas `DataFrame` with simulated data.
+        N rows with numeric outcomes `Y`, `Y2`; covariates `X1`, `X2`;
+        fixed-effect identifiers `f1`, `f2`, `f3`; cluster ID `group_id`;
+        instruments `Z1`, `Z2`; and positive observation `weights`.
+        The first three rows have one missing value each (Y, X1, or f1).
+        With `model="Fepois"`, Y is a count outcome and the design includes
+        separated fixed-effect levels for demonstrating Poisson estimation.
 
     Raises
     ------
     ValueError
         If `beta_type` is not `'1'`, `'2'`, or `'3'`, or if `error_type` is not `'1'`, `'2'`, or `'3'`,
-        or if `model` is not `Feols` or `Fepois`.
+        or if model is not `Feols` or `Fepois`.
 
     Examples
     --------
@@ -376,13 +431,20 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     data.head()
     ```
 
-    The data set contains a continuous outcome `Y`, covariates `X1` and `X2`,
-    fixed effects `f1`, `f2` and `f3`, an instrument `Z1`, and some missing
-    values. Set `model="Fepois"` for a count outcome.
+    The data set contains the outcomes `Y` and `Y2`, covariates `X1` and `X2`,
+    fixed effects `f1`, `f2` and `f3`, a cluster variable `group_id`, the
+    instruments `Z1` and `Z2`, observation `weights`, and some missing values.
+    Set `model="Fepois"` for count outcomes.
 
     ```{python}
     pf.get_data(model="Fepois")["Y"].head()
     ```
+
+    See Also
+    --------
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Fit the simulated linear outcome.
+    [fepois()](/reference/estimation.api.fepois.fepois.qmd) : Fit a count outcome.
+    [Example data](/reference-guide/example-data.qmd) : Choose data for a specific workflow.
     """
     rng = np.random.default_rng(seed)
     G = rng.choice(list(range(10, 20))).astype("int64")

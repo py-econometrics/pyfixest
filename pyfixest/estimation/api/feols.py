@@ -54,56 +54,65 @@ def feols(
     fsplit: str | None = None,
 ) -> Feols | FixestMulti:
     """
-    Estimate a linear regression model with fixed effects using fixest formula syntax.
+    Estimate ordinary or instrumental-variables least squares with fixed effects.
 
-    Returns an object of type [Feols](/reference/estimation.models.feols_.Feols.qmd) or
-    [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) (when using instrumental variables).
+    Call as `pf.feols(...)` after `import pyfixest as pf`. Put absorbed fixed
+    effects after `|` and an IV/2SLS instrument block inside `[D ~ Z]`.
 
     Parameters
     ----------
     fml : str
-        A formula string using fixest formula syntax.
-        Syntax: `Y ~ X1 + X2 + [X_endog ~ Z1] | FE1 + FE2`. `|` separates the model
-        from the fixed effects; instruments go into a `[endogenous ~ instruments]`
-        block on the right-hand side. Special syntax includes stepwise regressions,
-        cumulative stepwise regression, multiple dependent variables via `sw()`,
-        interaction of variables (`i(X1,X2)`), and interacted fixed effects (`fe1:fe2`).
+        A formula string using fixest formula syntax. The part before the
+        first `|` holds the dependent variable and the covariates; an optional
+        second part after `|` lists the fixed effects, e.g.
+        `"Y ~ X1 + X2 | FE1 + FE2"`. Instrumental variables are written in
+        brackets inside the covariate part, e.g. `"Y ~ X2 + [X1 ~ Z1] | FE1 + FE2"`,
+        where `X1` is the endogenous variable and `Z1` the instrument.
+        Special syntax includes stepwise regressions (`sw()`, `sw0()`),
+        cumulative stepwise regressions (`csw()`, `csw0()`), multiple
+        dependent variables (`sw(Y1, Y2) ~ X1`), interaction of variables
+        (`i(X1, X2)`), and interacted fixed effects (`fe1:fe2`). See the
+        [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
+    vcov : VcovTypeOptions | dict[str, str] | None, optional
         Type of variance-covariance matrix for inference. Options include `iid`,
-          `hetero`, `HC1`, `HC2`, `HC3`, `NW` for Newey-West HAC standard errors,
-        `DK` for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
+        `hetero`, `HC1`, `HC2`, `HC3`, `NW` for Newey-West HAC standard errors,
+        `DK` for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference,
+        e.g. `{"CRV1": "f1"}`. For multiway clustering, join the cluster variables
+        with `+`, e.g. `{"CRV1": "f1 + f2"}` or `{"CRV1": "f1 + f2 + f3"}`.
+        `HC2` and `HC3` are only available for models without fixed effects
+        and without instruments. `nid` is only supported by `quantreg()`. If `None`, `iid` is used.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
-        For time-series HAC, you need to pass the `time_id` column. For panel-HAC, you need to add
-        pass both `time_id` and `panel_id`. See `vcov_kwargs` for details.
+        For time-series HAC, you need to pass the '`time_id`' column. For panel-HAC, you need to
+        pass both '`time_id`' and '`panel_id`'. See `vcov_kwargs` for details.
 
-    vcov_kwargs : Optional[dict[str, any]]
-         Additional keyword arguments to pass to the `vcov` function. These keywoards include
-        `lag` for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors.
-        `time_id` for the time ID used for NW and DK standard errors, and `panel_id` for the panel
-         identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time
-         periods is always treated as 1. More flexible time-step selection is work in progress.
+    vcov_kwargs : dict[str, str | int] | None, optional
+        Additional keyword arguments to pass to the vcov function. These keywords include
+        "lag" for the number of lags to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors,
+        "`time_id`" for the time ID used for NW and DK standard errors, and "`panel_id`" for the panel
+        identifier used for NW and DK standard errors. Currently, the time difference between consecutive time
+        periods is always treated as 1. More flexible time-step selection is work in progress.
 
-    weights : Union[None, str], optional.
-        Default is `None`. Weights for WLS estimation. If `None`, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
+    weights : str | None, optional
+        Default is `None`. Name of the column in `data` that contains the
+        observation weights. If `None`, all observations are weighted equally.
 
-    ssc : str
-        A `ssc` object specifying the small sample correction for inference.
+    ssc : Ssc | Mapping[str, Any] | None, optional
+        Small sample correction for inference, created with
+        [ssc()](/reference/utils.utils.ssc.qmd). If `None`, uses the default
+        settings of `pf.ssc()`.
 
-    fixef_rm : FixedRmOptions
+    fixef_rm : FixedRmOptions, optional
         Specifies whether to drop singleton fixed effects.
-        Can be equal to `singleton` (default),
-        or `none`.
-        `singletons` will drop singleton fixed effects. This will not impact point
+        Can be equal to "singleton" (default) or `none`.
+        "singleton" will drop singleton fixed effects. This will not impact point
         estimates but it will impact standard errors.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default `False`.
@@ -111,37 +120,33 @@ def feols(
     copy_data : bool, optional
         Whether to copy the data before estimation, by default `True`.
         If set to `False`, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `fepois`.
-        For example, the input data set is re-index within the function.
-        As far as I know, the only other relevant case is
-        when using interacted fixed effects, in which case you'll find
-        a column with interacted fixed effects in the data set.
+        may lead to unintended changes in the input data outside of the
+        estimation function. For example, the input data set is re-indexed
+        within the function.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default `True`.
-        If set to `False`, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Keep the estimation data and model matrix on the fitted result. Defaults
+        to `True`. If `False`, operations that require them raise
+        `MissingModelDataError`; ordinary predictions on supplied `newdata` can
+        still work for supported models. See the
+        [storage guide](/reference-guide/model-storage.qmd) for operation-specific
+        requirements.
 
-    lean: bool, optional
-        `False` by default. If `True`, then all large objects are removed from the
-        returned result: this will save memory but will block the possibility
-        to use many methods, which raise `MissingModelDataError` when required
-        attributes were removed. It is recommended to use the argument `vcov`
-        to obtain the appropriate standard-errors at estimation time,
-        since obtaining different SEs won't be possible afterwards.
+    lean : bool, optional
+        Discard large estimation arrays, residuals, fitted values, and solver
+        state after fitting. Defaults to `False`. Coefficients and inference
+        remain available; operations requiring discarded state raise
+        `MissingModelDataError`. See the [storage guide](/reference-guide/model-storage.qmd).
 
-    weights_type: WeightsTypeOptions, optional
-        Options include `aweights` or `fweights`. `aweights` implement analytic or
+    weights_type : WeightsTypeOptions, optional
+        Options include `aweights` (the default) or `fweights`. `aweights` implement analytic or
         precision weights, while `fweights` implement frequency weights. For details
         see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/.
 
-    solver : SolverOptions, optional.
-        The solver to use for the regression. Can be `np.linalg.lstsq`,
-        `np.linalg.solve`, `scipy.linalg.solve` and `scipy.sparse.linalg.lsqr`.
-        Defaults to `scipy.linalg.solve`.
+    solver : SolverOptions, optional
+        The solver to use for the regression. Can be "`np.linalg.lstsq`",
+        "`np.linalg.solve`", "`scipy.linalg.solve`" and "`scipy.sparse.linalg.lsqr`".
+        Defaults to "`scipy.linalg.solve`".
 
     demeaner : AnyDemeaner | None, optional
         Typed demeaner configuration. Controls the fixed-effects demeaning
@@ -151,371 +156,100 @@ def feols(
         `maxiter=1_000`).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
-        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+        [Demeaner Backends vignette](/how-to/demeaner-backends.qmd).
 
-    use_compression: bool
-        .. deprecated::
-            ``use_compression`` is deprecated and no longer supported. Passing
-            ``use_compression=True`` raises a ``NotImplementedError``. For
-            out-of-memory regression on large datasets, consider using the
-            `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
+    use_compression : bool, optional
+        Deprecated and no longer supported. Passing `use_compression=True`
+        raises a `NotImplementedError`. For out-of-memory regression on large
+        datasets, consider using the
+        [duckreg](https://github.com/py-econometrics/duckreg) package instead.
 
-    reps: int
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    reps : int, optional
+        Deprecated legacy argument of the removed compressed regression. It is
+        still validated (a positive integer) but has no effect.
 
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    context : int | Mapping[str, Any] | None, optional
+        Additional context variables to be used by formulaic during the
+        creation of the model matrix. This can include custom factorization
+        functions, transformations, or any other variables that need to be
+        available in the formula environment. An int is a frame offset
+        relative to the caller (`0` = the frame that calls `feols()`, so
+        all names visible there are available); a mapping supplies the names
+        directly.
 
-    seed: Optional[int]
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    seed : int | None, optional
+        Deprecated legacy argument of the removed compressed regression. It is
+        still validated (an integer) but has no effect.
 
-    split: Optional[str]
-        A character string, i.e. `split = var`. If provided, the sample is split according to the
+    split : str | None, optional
+        A column name, e.g. `split="var"`. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
-        to include the estimation for the full sample, use the argument `fsplit` instead.
+        to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit: Optional[str]
-        This argument is the same as `split` but also includes the full sample as the first estimation.
+    fsplit : str | None, optional
+        This argument is the same as split but also includes the full sample as the first estimation.
 
     Returns
     -------
-    object
-        An instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd) class,
-        [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) class (when using instrumental variables), or
-        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+    `Feols` | `Feiv` | `FixestMulti`
+        A [Feols](/reference/estimation.models.feols_.Feols.qmd) fitted result
+        for a single OLS specification, or
+        [Feiv](/reference/estimation.models.feiv_.Feiv.qmd) for IV/2SLS.
+        Multiple specifications or sample splitting with `split`/`fsplit`
+        return [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd);
+        use `fits.to_list()` or `fits.fetch_model(0)` to access individual fits.
 
     Notes
     -----
-    Post-estimation methods are defined on
-    [Feols](/reference/estimation.models.feols_.Feols.qmd). All other model
-    classes inherit from it:
-    [Feiv](/reference/estimation.models.feiv_.Feiv.qmd),
-    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
-    [Fepois](/reference/estimation.models.fepois_.Fepois.qmd) and
-    [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd). The same
-    methods are therefore available independently of which estimation function
-    was called. Exceptions are documented with the respective function.
+    An OLS fit supports coefficient inference, prediction, fixed-effect
+    recovery and further post-estimation operations, subject to each
+    method's model and storage restrictions. Wild bootstrap requires
+    unweighted OLS. SAVI additionally requires no absorbed fixed effects.
+    IV fits do not support prediction, fixed-effect recovery, wild bootstrap,
+    randomization inference, decomposition, causal cluster variance,
+    online updates, SAVI, or CRV3/HC2/HC3 covariance.
 
-    See the Post-Estimation Methods section of the function reference for the
-    full list. Commonly used are `vcov()`, `tidy()`, `coef()`, `se()`,
-    `confint()`, `predict()`, `fixef()`, `wildboottest()`, `ritest()` and
-    `decompose()`.
+    See [fitted results](/reference-guide/fitted-results.qmd) for common operations,
+    [model support](/reference-guide/model-support.qmd) for estimator restrictions,
+    and [model storage](/reference-guide/model-storage.qmd) for retained-data requirements.
 
     Examples
     --------
-    As in `fixest`, the [feols()](/reference/estimation.api.feols.feols.qmd) function can be used to
-    estimate a simple linear regression model with fixed effects.
-    The following example regresses `Y` on `X1` and `X2` with fixed effects for
-    `f1` and `f2`: fixed effects are specified after the `|` symbol.
+    Fit a model and inspect its coefficient table:
 
     ```{python}
     import pyfixest as pf
-    import pandas as pd
-    import numpy as np
 
     data = pf.get_data()
-
-    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
-    fit.summary()
-    ```
-
-    Calling `feols()` returns an instance of the [Feols](/reference/estimation.models.feols_.Feols.qmd)
-    class. The `summary()` method can be used to print the results.
-
-    An alternative way to retrieve model results is via the `tidy()` method, which
-    returns a pandas dataframe with the estimated coefficients, standard errors,
-    t-statistics, and p-values.
-
-    ```{python}
+    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
     fit.tidy()
     ```
 
-    You can also access common outputs via dedicated methods,
-    e.g. `fit.coef()` for the coefficients, `fit.se()` for the standard errors,
-    `fit.tstat()` for the t-statistics, `fit.pvalue()` for the p-values, and
-    `fit.confint()` for the confidence intervals.
-
-    The employed type of inference can be specified via the `vcov` argument. For compatibility
-    with `fixest`, if `vcov` is not provided, `PyFixest` always employs `iid` inference by default
-    starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if `vcov` was not provided, `PyFixest`
-    would cluster by the first fixed effect if no `vcov` was provided.
+    Cluster standard errors by a column in the estimation data:
 
     ```{python}
-    fit1 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="iid")
-    fit2 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="hetero")
-    fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
-    ```
-
-    Supported inference types are `iid`, `hetero`, `HC1`, `HC2`, `HC3`, and
-    `CRV1`/`CRV3`. Clustered standard errors are specified via a dictionary,
-    e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
-    `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway
-    clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}`
-    for CRV1 inference with clustering by `f1` and `f2`, or
-    `{"CRV1": "f1 + f2 + f3"}` for three-way clustering.
-
-    ```{python}
-    fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
-    ```
-
-    Inference can be adjusted post estimation via the `vcov` method:
-
-    ```{python}
-    fit.summary()
-    fit.vcov("iid").summary()
-    ```
-
-    The `ssc` argument specifies the small sample correction for inference. In
-    general, `feols()` uses all of `fixest::feols()` defaults, but sets the
-    `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
-    See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
-
-    `feols()` supports a range of multiple estimation syntax, i.e. you can estimate
-    multiple models in one call. The following example estimates two models, one with
-    fixed effects for `f1` and one with fixed effects for `f2` using the `sw()` syntax.
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | sw(f1, f2)", data)
-    type(fit)
-    ```
-
-    The returned object is an instance of the `FixestMulti` class. You can access
-    the results of the first model via `fit.fetch_model(0)` and the results of
-    the second model via `fit.fetch_model(1)`. You can compare the model results
-    via the `etable()` function:
-
-    ```{python}
-    pf.etable(fit)
-    ```
-
-    Other supported multiple estimation syntax include `sw0()`, `csw()` and `csw0()`.
-    While `sw()` adds variables in a "stepwise" fashion, `csw()` does so cumulatively.
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | csw(f1, f2)", data)
-    pf.etable(fit)
-    ```
-
-    The `sw0()` and `csw0()` syntax are similar to `sw()` and `csw()`, but start
-    with a model that excludes the variables specified in `sw()` and `csw()`:
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | sw0(f1, f2)", data)
-    pf.etable(fit)
-    ```
-
-    The `feols()` function also supports multiple dependent variables. The following
-    example estimates two models, one with `Y1` as the dependent variable and one
-    with `Y2` as the dependent variable.
-
-    ```{python}
-    fit = pf.feols("sw(Y, Y2) ~ X1 | f1 + f2", data)
-    pf.etable(fit)
-    ```
-
-    It is possible to combine different multiple estimation operators:
-
-    ```{python}
-    fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
-    pf.etable(fit)
-    ```
-
-    As in `fixest`, the arguments of a multiple estimation operator may span
-    several lines, for example in a triple-quoted string with one argument per
-    line, and a space may separate the operator from its parenthesis, as in
-    `csw (X1, X2)`:
-
-    ```{python}
-    fml = '''
-    Y ~ csw (
-        X1,
-        X2
+    fit_cluster = pf.feols(
+        "Y ~ X1 + X2 | f1 + f2", data=data, vcov={"CRV1": "f1"}
     )
-    | f1
-    '''
-    fit = pf.feols(fml, data)
-    pf.etable(fit)
+    fit_cluster.confint()
     ```
 
-    In general, using muliple estimation syntax can improve the estimation time
-    as covariates that are demeaned in one model and are used in another model do
-    not need to be demeaned again: `feols()` implements a caching mechanism that
-    stores the demeaned covariates.
-
-    Additionally, you can fit models on different samples via the split and fsplit
-    arguments. The split argument splits the sample according to the variable
-    specified in the argument, while the fsplit argument also includes the full
-    sample in the estimation.
+    Use an instrument block for IV/2SLS, or stepwise syntax for several fits:
 
     ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data, split = "f1")
-    pf.etable(fit)
+    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
+    fit_iv.coef()
+    fits = pf.feols("Y ~ sw(X1, X2) | f1", data=data)
+    pf.etable(fits)
     ```
 
-    Besides OLS, `feols()` also supports IV estimation via an instrument block
-    `[endogenous ~ instruments]` on the right-hand side of the formula.
-    IV models return an instance of the [Feiv](/reference/estimation.models.feiv_.Feiv.qmd)
-    class (which inherits from [Feols](/reference/estimation.models.feols_.Feols.qmd)).
-
-    ```{python}
-    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
-    type(fit_iv)
-    ```
-
-    Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
-    are the fixed effects, as before. To estimate IV models without fixed effects,
-    simply omit the fixed effects:
-
-    ```{python}
-    fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
-    fit_iv2.tidy()
-    ```
-
-    You can compare OLS and IV estimates side by side via `etable()`:
-
-    ```{python}
-    fit_ols = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
-    pf.etable([fit_ols, fit_iv])
-    ```
-
-    To diagnose weak instruments, use the `IV_Diag()` method, which computes
-    the first-stage F-statistic and the effective F-statistic
-    (Olea and Pflueger, 2013):
-
-    ```{python}
-    fit_iv.IV_Diag()
-    diagnostics = fit_iv.first_stage.diagnostics
-    print("First-stage F-statistic:", round(diagnostics.f_stat, 3))
-    print("Effective F-statistic:", round(diagnostics.eff_f, 3))
-    ```
-
-    You can also access the first-stage regression as a `Feols` object via
-    `first_stage.model` and display both stages with `etable()`:
-
-    ```{python}
-    pf.etable([fit_iv.first_stage.model, fit_iv])
-    ```
-
-    Last, `feols()` supports interaction of variables via the `i()` syntax.
-    For a compact overview of formula features including `i()`, see the
-    [formula syntax tutorial](/tutorials/formula-syntax.html).
-
-    You can pass custom transforms via the `context` argument. If you set `context = 0`, all
-    functions from the level of the call to `feols()` will be available:
-
-    ```{python}
-    def _lspline(series: pd.Series, knots: list[float]) -> np.array:
-        'Generate a linear spline design matrix for the input series based on knots.'
-        vector = series.values
-        columns = []
-
-        for i, knot in enumerate(knots):
-            column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
-            columns.append(column)
-            vector = vector - column
-
-        # Add the remainder as the last column
-        columns.append(vector)
-
-        # Combine columns into a design matrix
-        return np.column_stack(columns)
-
-    spline_split = _lspline(data["X2"], [0, 1])
-    data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
-
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
-    # set context = 0 to make _lspline available for feols' internal call to Formulaic.model_matrix
-    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = 0)
-    # or provide it as a dict / mapping
-    context_captured_fit_map = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = {"_lspline":_lspline})
-
-    pf.etable([explicit_fit, context_captured_fit, context_captured_fit_map])
-    ```
-
-    After fitting a model via `feols()`, you can use the `predict()` method to
-    get the predicted values:
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
-    fit.predict()[0:5]
-    ```
-
-    The `predict()` method also supports a `newdata` argument to predict on new data,
-    which returns a numpy array of the predicted values:
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
-    fit.predict(newdata=data)[0:5]
-    ```
-
-    Last, you can plot the results of a model via the `coefplot()` method:
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
-    fit.coefplot()
-    ```
-
-    We can conduct a regression decomposition via the `decompose()` method, which implements
-    a regression decomposition following the method developed in Gelbach (2016):
-
-    ```{python}
-    import re
-    import pyfixest as pf
-    from pyfixest.utils.dgps import gelbach_data
-
-    data_gelbach = gelbach_data(nobs = 1000)
-    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data_gelbach)
-
-    # simple decomposition
-    res = fit.decompose(param = "x1")
-    res.etable()
-
-    # group covariates via "combine_covariates" argument
-    res = fit.decompose(param = "x1", combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]})
-    res.etable()
-
-    # group covariates via regex
-    res = fit.decompose(param="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
-    ```
-
-    Objects of type `Feols` support a range of other methods to conduct inference.
-    For example, you can run a wild (cluster) bootstrap via the `wildboottest()` method:
-
-    ```{python}
-    fit = pf.feols("Y ~ X1 + X2", data)
-    fit.wildboottest(param = "X1", reps=1000)
-    ```
-    would run a wild bootstrap test for the coefficient of `X1` with 1000
-    bootstrap repetitions.
-
-    For a wild cluster bootstrap, you can specify the cluster variable
-      via the `cluster` argument:
-
-    ```{python}
-    fit.wildboottest(param = "X1", reps=1000, cluster="group_id")
-    ```
-
-    The `ritest()` method can be used to conduct randomization inference:
-
-    ```{python}
-    fit.ritest(resampvar = "X1", reps=1000)
-    ```
-
-    Last, you can compute the cluster causal variance estimator by Athey et
-    al by using the `ccv()` method:
-
-    ```{python}
-    import numpy as np
-    rng = np.random.default_rng(1234)
-    data["D"] = rng.choice([0, 1], size = data.shape[0])
-    fit_D = pf.feols("Y ~ D", data = data)
-    fit_D.ccv(treatment = "D", cluster = "group_id")
-    ```
+    See Also
+    --------
+    [pf.fepois()](/reference/estimation.api.fepois.fepois.qmd) fits count models;
+    [pf.quantreg()](/reference/estimation.api.quantreg.quantreg.qmd) fits conditional quantiles.
+    See [formula syntax](/tutorials/formula-syntax.qmd) for multiple models and interactions,
+    and [estimation examples](/how-to/estimation-examples.qmd) for custom transforms,
+    prediction and post-estimation workflows.
     """
     ssc = _resolve_ssc(ssc)
     vcov_spec = _resolve_vcov(vcov, vcov_kwargs)

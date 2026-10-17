@@ -11,35 +11,42 @@ from pyfixest.report.visualize import _HAS_LETS_PLOT, _coefplot
 
 
 class LPDID(DID):
-    """
-    A class used to represent the Local Projections Diff-in-Diff Estimator.
+    r"""
+    Fitted local-projections difference-in-differences results.
 
-    Attributes
-    ----------
-    data : pandas.DataFrame
-        The DataFrame containing all variables.
-    yname : str
-        The name of the dependent variable.
-    idname : str
-        The name of the identifier variable.
-    tname : str
-        The name of the time variable.
-    gname : str
-        The name of the group variable.
-    xfml : str
-        The transformation to apply to the data.
-    att : str
-        The attribute to consider in the model.
-    cluster : str
-        The cluster to consider in the model.
-    vcov : str
-        The type of variance-covariance matrix to use.
-    pre_window : tuple
-        The pre-treatment window to consider in the model.
-    post_window : tuple
-        The post-treatment window to consider in the model.
-    never_treated : bool
-        Whether to consider never-treated units in the model.
+    Returned by [lpdid()](/reference/did.estimation.lpdid.qmd); use that
+    function to estimate a model. This result has its own small interface:
+    `fit.tidy()` returns the coefficient table, `fit.summary()` returns the
+    same table, and `fit.iplot()` plots it. It is not a `Feols` result.
+
+    Notes
+    -----
+    The coefficient table contains Estimate, Std. Error, t value, Pr(>|t|),
+    2.5%, 97.5%, and N (the observations used for each regression). For a
+    dynamic model its index names event times as `time_to_treatment::<h>`;
+    relative period -1 is the omitted reference. A pooled ATT has one row.
+
+    This result does not expose fitted-data attributes, predictions, covariance
+    updates, or the general `Feols` post-estimation interface. Its `vcov()`
+    estimator hook is not an operation for retrieving or changing inference.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
+    fit = pf.lpdid(
+        data, yname="log_earnings", idname="unit", tname="year", gname="g",
+        pre_window=-3, post_window=3, att=False,
+    )
+    fit.tidy()
+    ```
+
+    See Also
+    --------
+    [lpdid()](/reference/did.estimation.lpdid.qmd) : Arguments and pooled or dynamic examples.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Estimator selection and interpretation.
     """
 
     def __init__(
@@ -144,34 +151,46 @@ class LPDID(DID):
         coord_flip: bool = False,
         plot_backend: str = "lets_plot" if _HAS_LETS_PLOT else "matplotlib",
     ):
-        """
+        r"""
         Create coefficient plots.
 
         Parameters
         ----------
         alpha : float, optional
-            Significance level for visualization options. Defaults to 0.05.
+            Only 0.05 (the default) is currently supported. The stored coefficient
+            table contains fixed 95% limits named `2.5%` and `97.5%`; this method
+            does not recompute intervals. Other values request missing columns
+            and can raise KeyError.
         figsize : tuple[int, int], optional
-            Size of the plot (width, height) in inches. Defaults to (500, 300).
+            Size of the plot (width, height): in pixels for lets-plot, in
+            inches for matplotlib. Defaults to `None`, which uses (500, 300) for
+            lets-plot and `(10, 6)` for matplotlib.
         yintercept : float, optional
-            Value to set as the y-axis intercept (vertical line).
-            Defaults to None.
+            Value at which to draw a horizontal reference line on the y-axis.
+            Defaults to `None`.
         xintercept : float, optional
-            Value to set as the x-axis intercept (horizontal line).
-            Defaults to None.
+            Value at which to draw a vertical reference line on the x-axis.
+            Defaults to `None`.
         rotate_xticks : int, optional
             Rotation angle for x-axis tick labels. Defaults to 0.
         title : str, optional
             Title of the plot.
         coord_flip : bool, optional
-            Whether to flip the coordinates of the plot. Defaults to False.
+            Whether to flip the coordinates of the plot. Defaults to `False`.
         plot_backend: str, optional
-            The plotting backend to use between "lets_plot" (default) and "matplotlib".
+            `lets_plot` if installed, otherwise `matplotlib`.
 
         Returns
         -------
-        lets-plot figure
-            A lets-plot or matplotlib figure with coefficient estimates and confidence intervals.
+        matplotlib.figure.Figure or lets_plot.plot.core.PlotSpec
+            Figure for the matplotlib backend or plot specification for lets-plot,
+            showing coefficient estimates with confidence intervals. Save with
+            `fig.savefig(...)` or `lets_plot.ggsave(plot, ...)`, respectively.
+
+        See Also
+        --------
+        [LPDID](/reference/did.lpdid.LPDID.qmd) : Fitted coefficient table and example.
+        [iplot()](/reference/report.iplot.qmd) : Plot `i()` terms from `Feols` results.
         """
         df = self._coeftable.copy().reset_index()
         df["fml"] = "lpdid"
@@ -188,10 +207,38 @@ class LPDID(DID):
             flip_coord=coord_flip,
         )
 
-    def tidy(self):  # noqa: D102
+    def tidy(self):
+        r"""
+        Return the coefficient table as a pandas `DataFrame`.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Estimates, standard errors, t statistics, p values, 95% confidence
+            limits, and N; dynamic rows are indexed by relative period.
+            The stored table itself is returned, so copy it before changing it.
+
+        See Also
+        --------
+        [LPDID](/reference/did.lpdid.LPDID.qmd) : Result structure and executable example.
+        """
         return self._coeftable
 
-    def summary(self):  # noqa: D102
+    def summary(self):
+        r"""
+        Return the coefficient table as a pandas `DataFrame`.
+
+        Unlike `pf.summary()`, this method returns a table rather than printing.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The same stored coefficient table returned by `fit.tidy()`.
+
+        See Also
+        --------
+        [LPDID](/reference/did.lpdid.LPDID.qmd) : Result structure and executable example.
+        """
         return self._coeftable
 
 
@@ -207,12 +254,12 @@ def _lpdid_estimate(
     xfml: str | None = None,
 ) -> pd.DataFrame:
     """
-    Estimate a  Difference-in-Differences / Event Study Model via Linear Projections.
+    Estimate a  Difference-in-Differences / Event Study Model via Local Projections.
 
     Parameters
     ----------
     data: pandas.DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname: str
         The name of the dependent variable.
     idname: str
@@ -222,17 +269,17 @@ def _lpdid_estimate(
     gname:  str
         unit-specific time of initial treatment.
     vcov: VcovTypeOptions, dict[str, str], None
-        The name of the cluster variable. If None, then defaults to {"CRV1": idname}.
-        Either "iid", "hetero", or a dictionary, e.g. {"CRV1": idname} or
-        {"CRV3": "idname"}. You can pass anything that is accepted by the vcov
+        The name of the cluster variable. If `None`, then defaults to `{"CRV1": idname}`.
+        Either `iid`, `hetero`, or a dictionary, e.g. `{"CRV1": idname}` or
+        {`CRV3`: "idname"}. You can pass anything that is accepted by the vcov
         argument of feols.
     pre_window: int
         The number of periods before the treatment to include in the
-        estimation. Default is None, which means that the pre_window is set to
+        estimation. Default is `None`, which means that the `pre_window` is set to
         the minimum relative year in the data.
     post_window: int
         The number of periods after the treatment to include in the
-        estimation. Default is None, which means that the post_window is set to
+        estimation. Default is `None`, which means that the `post_window` is set to
         the maximum relative year in the data.
     never_treated: int
         Value in gname that indicates that a unit was never treated.
@@ -240,15 +287,15 @@ def _lpdid_estimate(
     att: bool
         Whether to estimate the average treatment effect on the treated (ATT)
         or a canonical event study design with all leads and lags.
-        Default is True.
+        Default is `True`.
     xfml: str
-        Optional formula for the covariates. Not yet supported.
-        E.g. "X1 + X2 + X3".
+        Optional formula for the covariates, e.g. "X1 + X2 + X3". Added to
+        every local projection regression.
 
     Returns
     -------
     pandas.DataFrame
-        A DataFrame with the estimated coefficients.
+        A `DataFrame` with the estimated coefficients.
     """
     # the implementation here is highly influenced by Alex Cardazzi's R
     # code for the lpdid package: https://github.com/alexCardazzi/lpdid

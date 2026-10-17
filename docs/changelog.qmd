@@ -17,6 +17,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Function Reference
+
+The function reference now groups operations by task, links shared methods to
+canonical pages, and includes fitted-result, model-support, storage, dataset,
+and troubleshooting guides.
+
 ### Word Regression Tables
 
 `pf.etable()` now supports `type="docx"` to return or save editable Word tables,

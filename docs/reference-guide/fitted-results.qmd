@@ -1,0 +1,118 @@
+---
+title: "Working with fitted results"
+description: "Choose an estimator, inspect its result, compare models, and find the next operation."
+sidebar: reference
+---
+
+An estimation function returns a fitted result. Use its methods to inspect or
+analyze the fit, and package functions such as `pf.etable()` to compare results.
+Each result's supported operations are described in the [model support table](/reference-guide/model-support.qmd).
+
+## Choose an estimator
+
+| Model | Function | Single-fit result |
+| --- | --- | --- |
+| Linear regression with optional absorbed fixed effects | [`pf.feols()`](/reference/estimation.api.feols.feols.qmd) | [`Feols`](/reference/estimation.models.feols_.Feols.qmd) |
+| Instrumental variables and 2SLS | [`pf.feols()`](/reference/estimation.api.feols.feols.qmd), using `[endogenous ~ instruments]` | [`Feiv`](/reference/estimation.models.feiv_.Feiv.qmd) |
+| Poisson regression | [`pf.fepois()`](/reference/estimation.api.fepois.fepois.qmd) | [`Fepois`](/reference/estimation.models.fepois_.Fepois.qmd) |
+| Logit, probit, Gaussian, or Poisson GLM | [`pf.feglm()`](/reference/estimation.api.feglm.feglm.qmd), with `family=` | A family-specific GLM result |
+| Conditional quantiles | [`pf.quantreg()`](/reference/estimation.api.quantreg.quantreg.qmd) | [`Quantreg`](/reference/estimation.quantreg.quantreg_.Quantreg.qmd); absorbed fixed effects are unsupported |
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data(N=200, seed=1234)
+fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
+fit.tidy()
+```
+
+## Inspect one fit
+
+| Task | Access |
+| --- | --- |
+| Coefficients and coefficient-level inference as a DataFrame | [`fit.tidy()`](/reference/estimation.models.feols_.Feols.tidy.qmd) |
+| Named estimates, standard errors, statistics, or p-values | [`fit.coef()`](/reference/estimation.models.feols_.Feols.coef.qmd), [`fit.se()`](/reference/estimation.models.feols_.Feols.se.qmd), [`fit.tstat()`](/reference/estimation.models.feols_.Feols.tstat.qmd), [`fit.pvalue()`](/reference/estimation.models.feols_.Feols.pvalue.qmd) |
+| Confidence intervals | [`fit.confint(alpha=0.05)`](/reference/estimation.models.feols_.Feols.confint.qmd); `alpha` is the significance level |
+| Goodness of fit | [`fit.fitstat`](/reference/estimation.state.FitStatistics.qmd); undefined measures are `NaN` |
+| Sample size and dropped observations | [`fit.sample_info`](/reference/estimation.state.EstimationSample.qmd) |
+| Formula and estimator description | [`fit.model`](/reference/estimation.state.ModelDescription.qmd) |
+| Estimation options | [`fit.options`](/reference/estimation.state.EstimationOptions.qmd) |
+| Covariance matrix and its specification | [`fit.variance_covariance`](/reference/estimation.state.VarianceCovariance.qmd) |
+| IV first-stage fit and diagnostics | [`fit.first_stage`](/reference/estimation.state.FirstStage.qmd); [`fit.IV_Diag()`](/reference/estimation.models.feiv_.Feiv.IV_Diag.qmd) |
+
+Methods have parentheses; attributes do not. For example, `fit.coef()` returns
+a Series, whereas `fit.fitstat` is a component whose fields include `rmse` and
+`r2`. The full [state reference](/reference/index.qmd#fitted-state) describes
+the more detailed components.
+
+```{python}
+fit.fitstat.rmse, fit.sample_info.n_rows, fit.model.formula
+```
+
+## Predict and change inference
+
+[`fit.predict()`](/reference/estimation.models.feols_.Feols.predict.qmd) returns
+in-sample predictions in retained estimation-row order. To align with a new
+frame, supply `newdata=`; missing covariate values and unsupported unseen levels
+produce missing predictions. GLM offsets have stricter validation: a missing
+offset value raises `ValueError`.
+For GLMs the current default is the linear predictor: use `type="response"`
+explicitly for response-scale means or probabilities.
+
+```{python}
+fit.predict(newdata=data.head())
+```
+
+[`fit.vcov()`](/reference/estimation.models.feols_.Feols.vcov.qmd) changes
+inference **in place** and returns the same result. It does not refit the
+coefficients. Check model and storage support before changing covariance.
+
+```{python}
+fit.vcov("HC1").tidy()
+```
+
+[`fit.fixef()`](/reference/estimation.models.feols_.Feols.fixef.qmd) recovers
+absorbed effects on supported fits and creates `fit.fixef_estimates`.
+Individual levels depend on the stated normalization; GLM effects are on the
+link scale.
+
+## Work with several fits
+
+Multiple formulas, sample splits, and quantile lists can return
+[`FixestMulti`](/reference/estimation.FixestMulti_.FixestMulti.qmd). Inspect its
+combined tables, extract one result, or pass the collection to reporting tools.
+
+```{python}
+models = pf.feols("Y ~ sw(X1, X2)", data)
+models.tidy()
+```
+
+```{python}
+first = models.fetch_model(0, print_fml=False)
+first.coef()
+```
+
+`models.to_list()` returns the fitted objects in container order. A container
+can hold different result subclasses; extraction does not turn them into OLS.
+
+## Tables and plots
+
+| Task | Function | Return and next step |
+| --- | --- | --- |
+| Print regression summaries | [`pf.summary()`](/reference/report.summary.qmd) or `fit.summary()` | Printed summary |
+| Compare estimates in a table | [`pf.etable()`](/reference/report.etable.qmd) | Choose `type=` for a table object, data, text, or a file format |
+| Compare selected coefficients across specifications | [`pf.coefplot()`](/reference/report.coefplot.qmd) | Matplotlib Figure or Lets-Plot object according to `plot_backend=` |
+| Plot terms generated by `i()` | [`pf.iplot()`](/reference/report.iplot.qmd) | Same backend choice; ordinary coefficients use `coefplot()` |
+| Plot coefficient paths across quantiles | [`pf.qplot()`](/reference/report.qplot.qmd) | `(figure, axes_array)`; unpack before saving |
+| Inspect treatment or outcome histories before estimation | [`pf.panelview()`](/reference/did.visualize.panelview.qmd) | Matplotlib axes |
+
+```{python}
+figure = pf.coefplot(models, plot_backend="matplotlib")
+```
+
+Save a Matplotlib figure with `figure.savefig("coefficients.png")`. For
+quantile paths, use `figure, axes = pf.qplot(quantile_models)`. See each plotting
+page for size units, labels, existing axes, and backend-specific customization.
+
+For additional runnable recipes, see [regression tables](/tutorials/regression-tables.qmd), and
+[model storage](/reference-guide/model-storage.qmd).

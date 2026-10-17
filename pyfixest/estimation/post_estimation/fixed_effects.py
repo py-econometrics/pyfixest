@@ -16,8 +16,9 @@ from pyfixest.estimation.formula.formulaic_compat import (
 
 @dataclass(kw_only=True, frozen=True, slots=True)
 class FixedEffect:
-    """
-    Columnar coefficient data belonging to one fixed effect.
+    """Columnar coefficient data belonging to one fixed effect.
+
+    Access as ``fit.fixef_estimates.fixed_effects[formulaic_name]``. Created by ``fit.fixef()``; keys are Formulaic column names.
 
     Attributes
     ----------
@@ -38,6 +39,11 @@ class FixedEffect:
         Estimated coefficient indexed by fixed-effect code. Omitted reference
         levels have coefficient zero. Levels removed before estimation have
         coefficient `NaN`.
+
+    See Also
+    --------
+    [fixef()](/reference/estimation.models.feols_.Feols.fixef.qmd),
+    [FixedEffectEstimates](/reference/estimation.state.FixedEffectEstimates.qmd).
     """
 
     formulaic_column: str
@@ -57,6 +63,8 @@ class FixedEffect:
 @dataclass(kw_only=True, frozen=True, slots=True)
 class FixedEffectEstimates:
     """Fixed-effect estimates recovered by `fixef()`.
+
+    Access as ``fit.fixef_estimates``. Created by ``fit.fixef()``.
 
     `fixef()` solves the least-squares problem in `alpha` under treatment
     coding, which drops a reference level of the second and every further
@@ -91,6 +99,11 @@ class FixedEffectEstimates:
     estimates = fit.fixef_estimates
     estimates.sumFE[:5]
     ```
+
+    See Also
+    --------
+    [fixef()](/reference/estimation.models.feols_.Feols.fixef.qmd),
+    [FixedEffect](/reference/estimation.state.FixedEffect.qmd).
     """
 
     fixed_effects: Mapping[str, FixedEffect]

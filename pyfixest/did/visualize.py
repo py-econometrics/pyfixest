@@ -28,7 +28,7 @@ def panelview(
     xlim: tuple | None = None,
     ylim: tuple | None = None,
 ) -> plt.Axes:
-    """
+    r"""
     Generate a panel view of the treatment variable over time for each unit.
 
     Parameters
@@ -40,23 +40,27 @@ def panelview(
     time : str
         The column name representing the time identifier.
     treat : str
-        The column name representing the treatment variable.
+        Column holding binary treatment status (bool or 0/1), with no missing values.
     outcome : str, optional
         The column name representing the outcome variable. If not `None`, an outcome plot is generated.
     collapse_to_cohort : bool, optional
-        Whether to collapse units into treatment cohorts.
+        Whether to collapse units into treatment cohorts. Cannot be combined
+        with `subsamp` or `units_to_plot`. Default is `False`.
     subsamp : int, optional
         The number of samples to draw from data set for display (default is `None`).
     sort_by_timing : bool, optional
         Whether to sort the treatment cohorts by the number of treated periods.
+        Only applies to the treatment plot; ignored when `outcome` is given.
     xlab : str, optional
         The label for the x-axis. Default is `None`, in which case default labels are used.
     ylab : str, optional
         The label for the y-axis. Default is `None`, in which case default labels are used.
     figsize : tuple, optional
-        The figure size for the outcome plot. Default is `(11, 3)`.
+        The figure size for the treatment or outcome plot, used when `ax` is
+        `None`. Default is `(11, 3)`.
     noticks : bool, optional
-        Whether to display ticks on the plot. Default is `False`.
+        Whether to hide the axis ticks of the treatment plot. Default is `False`,
+        which shows them.
     title : str, optional
         The title for the plot. Default is `None`, in which case no title is displayed.
     legend : bool, optional
@@ -66,11 +70,12 @@ def panelview(
         The axes on which to draw the plot. Default is `None`, in which case a new figure
         is created.
     xlim : tuple, optional
-        The limits for the x-axis of the plot. Default is `None`.
+        Limits for the outcome plot x-axis; ignored for the treatment plot.
     ylim : tuple, optional
-        The limits for the y-axis of the plot. Default is `None`.
+        Limits for the outcome plot y-axis; ignored for the treatment plot.
     units_to_plot : list, optional
-        A list of unit to include in the plot. If `None`, all units in the dataset are plotted.
+        Unit identifiers to include in the outcome plot; ignored for the
+        treatment plot. `None` uses all units, subject to `subsamp`.
 
     Returns
     -------
@@ -79,34 +84,30 @@ def panelview(
     Examples
     --------
     ```{python}
-    import pandas as pd
-    import numpy as np
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
-
-    # Inspect treatment assignment
-    pf.panelview(
-        data = df_het,
-        unit = "unit",
-        time = "year",
-        treat = "treat",
-        subsamp = 50,
-        title = "Treatment Assignment"
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
+    ax = pf.panelview(
+        data, unit="unit", time="year", treat="treat",
+        collapse_to_cohort=True, sort_by_timing=True, title="Treatment timing",
     )
+    ax
+    ```
 
-    # Outcome plot
+    To plot outcome histories for selected units:
+
+    ```{python}
     pf.panelview(
-        data = df_het,
-        unit = "unit",
-        time = "year",
-        outcome = "dep_var",
-        treat = "treat",
-        subsamp = 50,
-        title = "Outcome Plot"
+        data, unit="unit", time="year", treat="treat", outcome="log_earnings",
+        units_to_plot=[1, 2, 3], title="Outcome histories",
     )
     ```
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Estimate static or cohort-specific treatment effects.
+    [Example data](/reference-guide/example-data.qmd) : Choose a panel dataset.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Inspect timing before estimation.
     """
     # check if unit, time, treat and outcome are in the data
     for col in [unit, time, treat]:

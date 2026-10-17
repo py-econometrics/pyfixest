@@ -39,12 +39,14 @@ class TidyColumnAccessors:
         """
         Estimated coefficients as a pandas `Series`.
 
+        Access as `fit.coef()` on a supported fitted result.
         Returns the `Estimate` column of `tidy()`.
 
         Returns
         -------
         pandas.Series
-            Point estimates, indexed by coefficient name.
+            Point estimates, indexed by coefficient name. On a
+            `FixestMulti`, the index has the levels `fml` and `Coefficient`.
 
         Examples
         --------
@@ -54,6 +56,12 @@ class TidyColumnAccessors:
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
         fit.coef()
         ```
+
+        See Also
+        --------
+        [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) returns the full coefficient table;
+        [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) returns confidence intervals.
+        See [fitted results](/reference-guide/fitted-results.qmd) for other result accessors.
         """
         return self.tidy()["Estimate"]
 
@@ -61,13 +69,15 @@ class TidyColumnAccessors:
         """
         Coefficient standard errors as a pandas `Series`.
 
+        Access as `fit.se()` on a supported fitted result.
         Returns the `Std. Error` column of `tidy()`. The values depend on the
         variance estimator of the model, which can be changed via `vcov()`.
 
         Returns
         -------
         pandas.Series
-            Standard errors, indexed by coefficient name.
+            Standard errors, indexed by coefficient name. On a
+            `FixestMulti`, the index has the levels `fml` and `Coefficient`.
 
         Examples
         --------
@@ -77,6 +87,19 @@ class TidyColumnAccessors:
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
         fit.se()
         ```
+
+        See Also
+        --------
+        [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) returns the full coefficient table;
+        [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) returns confidence intervals.
+        See [fitted results](/reference-guide/fitted-results.qmd) for other result accessors.
+
+        Notes
+        -----
+        Values use the model's current covariance estimator. Calling
+        `fit.vcov(...)` changes subsequent inference; it updates the fitted
+        result in place. These coefficient summaries remain available with
+        `store_data=False` or `lean=True`.
         """
         return self.tidy()["Std. Error"]
 
@@ -84,13 +107,15 @@ class TidyColumnAccessors:
         """
         Coefficient t-statistics as a pandas `Series`.
 
+        Access as `fit.tstat()` on a supported fitted result.
         Returns the `t value` column of `tidy()`, i.e. each estimate divided by
         its standard error.
 
         Returns
         -------
         pandas.Series
-            t-statistics, indexed by coefficient name.
+            t-statistics, indexed by coefficient name. On a
+            `FixestMulti`, the index has the levels `fml` and `Coefficient`.
 
         Examples
         --------
@@ -100,6 +125,19 @@ class TidyColumnAccessors:
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
         fit.tstat()
         ```
+
+        See Also
+        --------
+        [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) returns the full coefficient table;
+        [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) returns confidence intervals.
+        See [fitted results](/reference-guide/fitted-results.qmd) for other result accessors.
+
+        Notes
+        -----
+        Values use the model's current covariance estimator. Calling
+        `fit.vcov(...)` changes subsequent inference; it updates the fitted
+        result in place. These coefficient summaries remain available with
+        `store_data=False` or `lean=True`.
         """
         return self.tidy()["t value"]
 
@@ -107,13 +145,15 @@ class TidyColumnAccessors:
         """
         Coefficient p-values as a pandas `Series`.
 
+        Access as `fit.pvalue()` on a supported fitted result.
         Returns the `Pr(>|t|)` column of `tidy()`, for the two-sided null that a
         coefficient is zero.
 
         Returns
         -------
         pandas.Series
-            p-values, indexed by coefficient name.
+            p-values, indexed by coefficient name. On a
+            `FixestMulti`, the index has the levels `fml` and `Coefficient`.
 
         Examples
         --------
@@ -123,6 +163,19 @@ class TidyColumnAccessors:
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
         fit.pvalue()
         ```
+
+        See Also
+        --------
+        [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) returns the full coefficient table;
+        [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) returns confidence intervals.
+        See [fitted results](/reference-guide/fitted-results.qmd) for other result accessors.
+
+        Notes
+        -----
+        Values use the model's current covariance estimator. Calling
+        `fit.vcov(...)` changes subsequent inference; it updates the fitted
+        result in place. These coefficient summaries remain available with
+        `store_data=False` or `lean=True`.
         """
         return self.tidy()["Pr(>|t|)"]
 
@@ -164,19 +217,23 @@ class ResultAccessorMixin(TidyColumnAccessors):
         self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
-        """Compute coefficient-wise SAVI e-values.
+        """
+        Compute coefficient-wise asymptotic SAVI e-values.
+
+        Access as `fit.evalue(...)` on a supported fitted result.
 
         Parameters
         ----------
         mixture_precision : float, optional
             Positive mixture precision fixed before sequential monitoring.
-            Defaults to 1. Use `pyfixest.optimal_mixture_precision()` to
+            Defaults to 1. Use `pf.optimal_mixture_precision()` to
             minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         pd.Series
-            One e-value per coefficient.
+            One e-value for each two-sided null that a coefficient equals zero,
+            indexed by coefficient name, with `Series` name `"e_value"`.
 
         Notes
         -----
@@ -185,7 +242,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
         heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
         for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
         variance by `n / (n - k)` while the R implementation in `avlm` does not.
-        Inference is pointwise / by coefficient.
+        Inference is coefficient-wise, without multiplicity adjustment. Fix
+            `mixture_precision` before monitoring. An e-value at least `1 / alpha`
+            is evidence against the corresponding null at level `alpha`; this uses
+            the asymptotic SAVI construction, not a finite-sample guarantee.
 
         Examples
         --------
@@ -196,6 +256,13 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
         fit.evalue()
         ```
+
+        See Also
+        --------
+        [fit.pvalue_savi()](/reference/estimation.models.feols_.Feols.pvalue_savi.qmd) reports `min(1, 1 / evalue)`.
+        [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) supports `inference_type="savi"`.
+        [pf.optimal_mixture_precision()](/reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd)
+        connects planning, tuning and inference in a working example.
         """
         from pyfixest.estimation.post_estimation.savi import (
             _evalue,
@@ -209,15 +276,26 @@ class ResultAccessorMixin(TidyColumnAccessors):
         self: "Feols",
         mixture_precision: float = 1.0,
     ) -> pd.Series:
-        """Compute coefficient-wise SAVI sequential p-values.
+        """
+        Compute coefficient-wise asymptotic SAVI sequential p-values.
 
-        The sequential-p-value analogue of `evalue`. See `evalue` for the
-        `mixture_precision` argument and the supported-model restrictions.
+        Access as `fit.pvalue_savi(...)` on a supported fitted result.
+        Returns `min(1, 1 / evalue)` for each two-sided zero-coefficient null.
+        See [fit.evalue()](/reference/estimation.models.feols_.Feols.evalue.qmd)
+        for the interpretation and supported-model restrictions.
+
+        Parameters
+        ----------
+        mixture_precision : float, optional
+            Positive mixture precision fixed before sequential monitoring.
+            Defaults to 1. Use `pf.optimal_mixture_precision()` to
+            minimize confidence-sequence width at a target sample size.
 
         Returns
         -------
         pd.Series
-            One sequential p-value per coefficient.
+            Sequential p-values indexed by coefficient name, with `Series` name
+            `"Pr(>|t|)"`. There is no adjustment across coefficients.
 
         Examples
         --------
@@ -228,6 +306,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
         fit.pvalue_savi()
         ```
+
+        Notes
+        -----
+        Supported only for unweighted, non-IV OLS without absorbed fixed
+        effects and with iid, hetero, HC1, HC2 or HC3 covariance. Mixture
+        precision must be fixed before monitoring. SAVI inference is asymptotic;
+        see `fit.evalue()` for the small-sample scaling convention.
+
+        See Also
+        --------
+        [fit.evalue()](/reference/estimation.models.feols_.Feols.evalue.qmd) returns the underlying e-values;
+        [fit.pvalue()](/reference/estimation.models.feols_.Feols.pvalue.qmd) returns ordinary fixed-sample p-values.
+        [pf.optimal_mixture_precision()](/reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd)
+        shows tuning at a planned sample size.
         """
         from pyfixest.estimation.post_estimation.savi import (
             _pvalue_savi,
@@ -286,14 +378,15 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Tidy model outputs.
 
-        Return a tidy `pd.DataFrame` with the point estimates, standard errors,
-        t-statistics, and p-values.
+        Access as `fit.tidy(...)` on a supported fitted result.
+        Return a pandas `DataFrame` with the point estimates, standard errors,
+        t-statistics, p-values and confidence intervals.
 
         Parameters
         ----------
-        alpha: Optional[float]
-            The significance level for the confidence intervals. If `None`,
-            computes a 95% confidence interval (`alpha = 0.05`).
+        alpha : float, optional
+            The significance level for the confidence intervals. Defaults to
+            0.05, which gives a 95% confidence interval.
         inference_type : {"regular"}, optional
             Type of coefficient-wise inference to report. Only `"regular"` is
             currently available. Defaults to `"regular"`.
@@ -301,8 +394,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Returns
         -------
         tidy_df : pd.DataFrame
-            A tidy `pd.DataFrame` containing the regression results, including point
-            estimates, standard errors, t-statistics, and p-values.
+            A data frame indexed by `Coefficient`, with the columns `Estimate`,
+            `Std. Error`, `t value`, `Pr(>|t|)` and the lower and upper
+            confidence bounds (e.g. `2.5%` and `97.5%` for `alpha=0.05`). Fits
+            estimated with `split` or `fsplit` add a `Sample` column.
 
         Examples
         --------
@@ -319,6 +414,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
         ```{python}
         fit.vcov("hetero").tidy()
         ```
+
+        Notes
+        -----
+        Uses the current covariance estimator and refreshes `fit.coeftable`
+        with the requested `alpha`. Coefficient summaries remain available with
+        `store_data=False` or `lean=True`. For simultaneous intervals or SAVI
+        confidence sequences, use `fit.confint(inference_type=...)` instead.
+
+        See Also
+        --------
+        [fit.coef()](/reference/estimation.models.feols_.Feols.coef.qmd) and
+        [fit.se()](/reference/estimation.models.feols_.Feols.se.qmd) extract individual columns.
+        [fit.vcov()](/reference/estimation.models.feols_.Feols.vcov.qmd) changes inference;
+        [pf.etable()](/reference/report.etable.qmd) compares fitted models.
         """
         inference_type = self._normalize_inference_type(inference_type)
         if inference_type == "simult":
@@ -396,39 +505,38 @@ class ResultAccessorMixin(TidyColumnAccessors):
         mixture_precision: float = 1.0,
     ) -> pd.DataFrame:
         r"""
-        Fitted model confidence intervals.
+        Compute pointwise, simultaneous or SAVI confidence intervals.
+
+        Access as `fit.confint(...)` on a supported fitted result.
 
         Parameters
         ----------
         alpha : float, optional
             The significance level for confidence intervals. Defaults to 0.05.
-            keep: str or list of str, optional
         joint : bool, optional
             Deprecated. Use `inference_type="simult"` instead. Whether to
             compute simultaneous confidence intervals for the joint null of the
             parameters selected by `keep` and `drop`. Defaults to `False`. See
             https://www.causalml-book.org/assets/chapters/CausalML_chap_4.pdf,
             Remark 4.4.1 for details.
-        keep: str or list of str, optional
+        keep : str or list of str, optional
             The pattern for retaining coefficient names. You can pass a string (one
             pattern) or a list (multiple patterns). Default is keeping all coefficients.
-            You should use regular expressions to select coefficients.
-                `"age"`,            # would keep all coefficients containing age
-                `r"^tr"`,           # would keep all coefficients starting with tr
-                `r"\d$"`,          # would keep all coefficients ending with number
+            Patterns are regular expressions; see the Notes for examples.
             Output will be in the order of the patterns.
-        drop: str or list of str, optional
+        drop : str or list of str, optional
             The pattern for excluding coefficient names. You can pass a string (one
             pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
             Default is keeping all coefficients. Parameter `keep` and `drop` can be
             used simultaneously.
-        exact_match: bool, optional
+        exact_match : bool, optional
             Whether to use exact match for `keep` and `drop`. Default is `False`.
             If `True`, the pattern will be matched exactly to the coefficient name
             instead of using regular expressions.
         reps : int, optional
-            The number of bootstrap iterations to run for joint confidence intervals.
-            Defaults to 10_000. Only used if `joint` is `True`.
+            The number of simulation draws for the simultaneous confidence
+            intervals. Defaults to 10_000. Only used when
+            `inference_type="simult"`.
         seed : int, optional
             The seed for the random number generator. Defaults to `None`. Only used
             when `inference_type="simult"`.
@@ -438,18 +546,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
             coefficients selected by `keep` and `drop`; `savi` returns
             coefficient-wise asymptotic SAVI confidence sequences. Defaults to
             `regular`. Supersedes the deprecated `joint` argument.
-        mixture_precision: float, optional
-            Only relevant for `inference_type="savi"`. Controls the mixing weight of the
-            prior in the SAVI e-value. Larger values produce wider confidence
-            sequences early on but narrow faster as the sample grows. Defaults to 1. Use
-            `pyfixest.optimal_mixture_precision()`
-            to minimize confidence-sequence width at a target sample size.
+        mixture_precision : float, optional
+            Positive mixture precision for `inference_type="savi"`, fixed before
+            monitoring begins. Defaults to 1. Choose it with
+            `pf.optimal_mixture_precision()` at a planned sample size;
+            do not retune it after inspecting the outcomes.
 
         Returns
         -------
         pd.DataFrame
-            A `pd.DataFrame` with confidence intervals of the estimated regression model
-            for the selected coefficients.
+            Lower and upper bounds, indexed by selected coefficient name.
+            Columns are labeled by the tail probabilities, e.g. `"2.5%"` and
+            `"97.5%"` at `alpha=0.05`. Selected coefficients follow `keep`
+            pattern order; `drop` then excludes matches. Simultaneous coverage
+            is for the selected family, while SAVI is coefficient-wise.
 
         Notes
         -----
@@ -460,24 +570,47 @@ class ResultAccessorMixin(TidyColumnAccessors):
         variance by `n / (n - k)`. You need to pass `ssc(k_adj=False)` to reproduce `avlm`,
         which applies no such correction.
 
+        `keep` and `drop` take regular expressions, for example:
+
+        ```python
+        "age"  # keeps all coefficients containing "age"
+
+        r"^tr"  # keeps all coefficients starting with "tr"
+        r"\d$"  # keeps all coefficients ending with a digit
+        ```
+
         Examples
         --------
         ```{python}
-        #| echo: true
-        #| results: asis
-        #| include: true
+        import pyfixest as pf
 
-        from pyfixest.utils import get_data
-        from pyfixest.estimation import feols
-
-        data = get_data()
-        fit = feols("Y ~ C(f1)", data=data)
-        fit.confint(alpha=0.10).head()
-        fit.confint(alpha=0.10, inference_type="simult", reps=9999).head()
-
-        savi_fit = feols("Y ~ X1 + X2", data=data, vcov="hetero")
-        savi_fit.confint(alpha=0.10, inference_type="savi").head()
+        data = pf.get_data()
+        fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+        fit.confint(alpha=0.10)
         ```
+
+        Simultaneous intervals for the two slopes:
+
+        ```{python}
+        fit.confint(
+            keep=["X1", "X2"], exact_match=True, inference_type="simult",
+            reps=999, seed=123,
+        )
+        ```
+
+        Asymptotic SAVI confidence sequences with a fixed mixture precision:
+
+        ```{python}
+        fit.confint(inference_type="savi", mixture_precision=1.0)
+        ```
+
+        See Also
+        --------
+        [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) returns regular inference in one table.
+        [fit.evalue()](/reference/estimation.models.feols_.Feols.evalue.qmd) and
+        [fit.pvalue_savi()](/reference/estimation.models.feols_.Feols.pvalue_savi.qmd)
+        report SAVI tests. [pf.optimal_mixture_precision()](/reference/estimation.post_estimation.savi.optimal_mixture_precision.qmd)
+        shows how to tune the confidence-sequence width before monitoring.
         """
         inference_type = self._normalize_inference_type(inference_type, joint=joint)
         if inference_type == "savi":
@@ -530,14 +663,20 @@ class ResultAccessorMixin(TidyColumnAccessors):
         """
         Fitted model residuals.
 
+        Access as `fit.resid()` on a supported fitted result.
         Residuals are stored and returned on the scale of the original dependent
         variable. Observation weights are applied only where an estimating
-        equation or diagnostic requires them.
+        equation or diagnostic requires them. GLM fits override this method
+        with a `type` argument (`"response"` or `"working"` residuals); see
+        [Feglm.resid()](/reference/estimation.models.feglm_.Feglm.qmd).
 
         Returns
         -------
         np.ndarray
-            A `np.ndarray` with the residuals of the estimated regression model.
+            A one-dimensional array of length `fit.sample_info.n_rows`, in
+            estimation-sample order after missing-row and singleton removal
+            (and separation removal for GLMs). It is not padded to the original
+            input length. Observation weights do not rescale these residuals.
 
         Examples
         --------
@@ -547,6 +686,19 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
         fit.resid()[:5]
         ```
+
+        Notes
+        -----
+        Residuals require retained arrays and are unavailable with `lean=True`.
+        `store_data=False` alone retains them. GLMs provide their own `type`
+        argument to choose response or working residuals; the default is
+        response residuals.
+
+        See Also
+        --------
+        [fit.predict()](/reference/estimation.models.feols_.Feols.predict.qmd) returns fitted or new-data predictions.
+        [EstimationSample](/reference/estimation.state.EstimationSample.qmd) records sample alignment.
+        See [model storage](/reference-guide/model-storage.qmd) for retained-state requirements.
         """
         require_retained(self, "resid", "_u_hat")
         return self._u_hat.flatten()

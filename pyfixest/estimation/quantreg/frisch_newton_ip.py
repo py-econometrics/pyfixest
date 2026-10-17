@@ -11,6 +11,9 @@ from scipy.linalg import lapack, solve_triangular
 class QuantregSolution:
     """Solution of the Frisch-Newton interior point solver.
 
+    Access as ``fit.solution``. Available on quantile results; removed by ``lean=True``. With
+    ``multi_method="cfm2"``, only the central quantile has a solver solution.
+
     Fields follow the notation of Portnoy and Koenker (1997), [Statistical
     Science](https://doi.org/10.1214/ss/1030037960).
 
@@ -42,6 +45,11 @@ class QuantregSolution:
     fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.5)
     fit.solution.has_converged, fit.solution.iterations
     ```
+
+    See Also
+    --------
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     beta: NDArray[np.float64]

@@ -73,27 +73,32 @@ def etable(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
+    models : Feols, Fepois, Feiv, Feglm, Quantreg, FixestMulti, or list
+        A fitted model, a list of fitted models, or the `FixestMulti`
+        result of multiple estimation. GLM and quantile results use the
+        same interface through their fitted-model classes.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either `df` for pandas `DataFrame`, `md` for markdown,
-        `gt` for `great_tables`, `tex` for LaTeX, `typst` for Typst, or `docx`
-        for an editable Word document. Default is `gt`.
+        `html` for an HTML string, `gt` for `great_tables`, `tex` for LaTeX,
+        `typst` for Typst, or `docx` for an editable Word document.
+        Default is `gt`.
     signif_code : list, optional
         Significance levels for the stars. Default is `None`, which sets
-        `[0.001, 0.01, 0.05]`. Note that stars are only rendered if `coef_fmt`
-        includes `*` on a statistic token, for example `b*` or `b:.3f*`.
+        `[0.001, 0.01, 0.05]`. Must be a list of three increasing values between
+        0 and 1; an empty list is not accepted. Note that stars are only
+        rendered if `coef_fmt` includes `*` on a statistic token, for example
+        `b*` or `b:.3f*`.
     coef_fmt : str, optional
-        The format of the coefficient (`b`), standard error (`se`), t-stats (`t`), and
-        p-value (`p`). Default is inherited from maketables.
+        The format of the coefficient (b), standard error (se), t-stats (t), and
+        p-value (p). Default is inherited from maketables.
         To render significance stars, include `*` on the relevant token, following
         maketables syntax, for example `"b:.3f* \n (se:.3f)"` with 3 decimal places.
         Spaces ` `, parentheses `()`, brackets `[]`, newlines `\n` are supported.
         For further available formatting rules, see `maketables.ETable`.
     custom_stats: dict, optional
         A dictionary of custom statistics that can be used in the `coef_fmt` string to be displayed
-        in the coefficuent cells analogously to `b`, `se` etc. The keys are the names of the custom
+        in the coefficient cells analogously to `b`, `se` etc. The keys are the names of the custom
         statistics, and the values are lists of lists, where each inner list contains the custom
         statistic values for all coefficients each model.
         Note that `b`, `se`, `t`, or `p` are reserved and cannot be used as keys.
@@ -101,14 +106,11 @@ def etable(
         A dictionary of custom model statistics or model information displayed in a new line in the
         bottom panel of the table. The keys are the names of the statistics (i.e. entry in the first column)
         and the values are a lists of the same length as the number of models. Default is `None`.
-    keep: str or list of str, optional
-        The pattern for retaining coefficient names. You can pass a string (one
-        pattern) or a list (multiple patterns). Default is keeping all coefficients.
-        You should use regular expressions to select coefficients.
-            `"age"`,            # would keep all coefficients containing age
-            `r"^tr"`,           # would keep all coefficients starting with tr
-            `r"\d$"`,          # would keep all coefficients ending with number
-        Output will be in the order of the patterns.
+    keep : str or list of str, optional
+        Coefficient names or regular-expression patterns to retain, in the
+        requested pattern order. For example, "X1" matches names containing
+        X1 and "^X" matches names starting with X. `None` retains all coefficients.
+        Use `exact_match=True` to match complete coefficient names.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
@@ -120,22 +122,23 @@ def etable(
         instead of using regular expressions.
     labels: dict, optional
         A dictionary to relabel the variables. The keys in this dictionary are the
-        original variable names, which correspond to the names stored in the `_coefnames`
-        attribute of the model. The values in the dictionary are the new names you want
-        to assign to these variables.
+        original coefficient names, available from `fit.coef().index`;
+        values are the names to display.
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The command is applied after the `keep` and `drop` commands.
     cat_template: str, optional
-        Template to relabel categorical variables. `None` by default, which applies no relabeling.
-        Other options include combinations of `{variable}` and `{value}`, e.g. `{variable}::{value}`
-        to mimic fixest encoding. But `{variable}--{value}` or `{variable}{value}` or just `{value}`
-        are also possible.
+        Template to relabel categorical variables. `None` by default, which uses
+        the maketables default "{variable}={value}" (e.g. `job[T.Admin]` is
+        shown as `job=Admin`). Other options include combinations of
+        `{variable}` and `{value}`, e.g. `{variable}::{value}` to mimic fixest
+        encoding. But `{variable}--{value}` or `{variable}{value}` or just
+        `{value}` are also possible.
     show_fe: bool, optional
         Whether to show the rows with fixed effects markers. Default is `True`.
     felabels: dict, optional
         A dictionary to relabel the fixed effects. Only needed if you want to relabel
-        the FE lines with a different label than the one specied for the respective
-        variable in the `labels` dictionary.
+        the FE lines with a different label than the one specified for the respective
+        variable in the labels dictionary.
         The command is applied after the `keep` and `drop` commands.
     fe_present: str, optional
         Symbol to use when a fixed effect is present in a model. Default is `x`.
@@ -143,36 +146,43 @@ def etable(
     fe_absent: str, optional
         Symbol to use when a fixed effect is absent from a model. Default is `-`.
         Common alternatives include `N`, `NO`, `✗`, `""`, or any custom string.
-    digits: int
-        The number of digits to round to.
-    thousands_sep: bool, optional
-        The thousands separator. Default is `False`.
-    scientific_notation: bool, optional
-        Whether to use scientific notation. Default is `True`.
-    scientific_notation_threshold: int, optional
-        The threshold for using scientific notation. Default is 10_000.
     notes: str, optional
         Custom table notes. Default shows the significance levels and the format of
         the coefficient cell.
     model_heads: list, optional
-        Add custom headlines to models when output as `df` or `latex`. Length of list
-        must correspond to number of models. Default is `None`.
+        Add custom headlines to models. Length of list must correspond to
+        number of models. Default is `None`.
     head_order: str, optional
-        String to determine the display of the table header when output as `df` or `latex`.
-        Allowed values are `dh`, `hd`, `d`, `h`, or `""`. When `head_order` is `dh`,
-        the dependent variable is displayed first, followed by the custom `model_heads`
-        (provided the user has specified them). With `hd` it is the other way around.
-        When `head_order` is `d`, only the dependent variable and model numbers are displayed
-        and with `""` only the model numbers. Default is `dh`.
+        String to determine the display of the table header. Allowed values
+        are `dh`, `hd`, `d`, `h`, or `""`. When `head_order` is `dh`, the dependent
+        variable is displayed first, followed by the custom `model_heads`
+        (provided the user has specified them). With `hd` it is the other way
+        around. When `head_order` is `d`, only the dependent variable and model
+        numbers are displayed, with `h` only the custom `model_heads` and model
+        numbers, and with `""` only the model numbers. Default is `dh`.
     file_name: str, optional
-        The name/path of the file to save when `type` is `gt`, `tex`, `typst`,
+        The name/path of the file to save when type is `gt`, `tex`, `typst`,
         or `docx`. Default is `None`, which returns the output without saving it.
     docx_style: dict, optional
-        Word style overrides, used only when `type` is `docx`. Passed to
+        Word style overrides, used only when type is `docx`. Passed to
         `maketables.MTable.make` as `docx_style`. For example,
         `{"font_name": "Arial", "font_size_pt": 12, "notes_font_size_pt": 9}`.
         See `maketables.MTable.DEFAULT_DOCX_STYLE` for supported options.
         Default is `None`, which uses maketables' Word style defaults.
+    **kwargs
+        Further keyword arguments forwarded to `maketables.ETable`. Commonly
+        used ones are `caption` (table caption), `tab_label` (label or anchor
+        for LaTeX and HTML output), `model_stats` (list of statistics shown in
+        the bottom panel, in order, e.g. `["N", "r2", "se_type"]`; include
+        `"se_type"` to show the type of standard errors), `model_stats_labels`
+        (dict of display labels for `model_stats` keys, e.g.
+        `{"N": "Observations"}`), and `order` (explicit coefficient order,
+        applied after `keep` and `drop`). `digits` (number of decimal places)
+        is only applied when `coef_fmt` has no format specifiers such as
+        `b:.3f`; the default `coef_fmt` has them, so `digits` is ignored with a
+        warning unless you also pass a `coef_fmt` without specifiers, e.g.
+        `"b \n (se)"`. Keyword arguments that maketables does not know are
+        silently ignored.
 
     Returns
     -------
@@ -206,6 +216,12 @@ def etable(
     # Save directly with file_name="results.docx", or edit the document first.
     document.add_paragraph("Additional discussion of the estimates.")
     ```
+
+    See Also
+    --------
+    [summary()](/reference/report.summary.qmd) : Print model summaries.
+    [coefplot()](/reference/report.coefplot.qmd) : Compare estimates graphically.
+    [Regression tables tutorial](/tutorials/regression-tables.qmd) : Formatting and export examples.
     """
     # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
@@ -318,7 +334,7 @@ def summary(
     digits: int = 3,
     inference_type: InferenceType = "regular",
 ) -> None:
-    """
+    r"""
     Print a summary of estimation results for each estimated model.
 
     For each model, this method prints a header indicating the fixed-effects and the
@@ -327,8 +343,10 @@ def summary(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of `Feols`, `Fepois`, and `Feiv` models.
+    models : Feols, Fepois, Feiv, Feglm, Quantreg, FixestMulti, or list
+        A fitted model, a list of fitted models, or the `FixestMulti`
+        result of multiple estimation. GLM and quantile results use the
+        same interface through their fitted-model classes.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type : {"regular"}, optional
@@ -338,6 +356,7 @@ def summary(
     Returns
     -------
     None
+        Prints each model summary; use `fit.tidy()` to obtain a `DataFrame`.
 
     Examples
     --------
@@ -352,6 +371,12 @@ def summary(
 
     pf.summary([fit1, fit2, fit3])
     ```
+
+    See Also
+    --------
+    [etable()](/reference/report.etable.qmd) : Return or export a formatted regression table.
+    [fit.tidy()](/reference/estimation.models.feols_.Feols.tidy.qmd) : Return the coefficient table as a `DataFrame`.
+    [Fitted results](/reference-guide/fitted-results.qmd) : Find the next operation on a fit.
     """
     models = _post_processing_input_checks(models)
 
