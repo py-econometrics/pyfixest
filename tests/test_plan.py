@@ -174,9 +174,7 @@ def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
     } == expected_groups
     for key, formulas in formula_dict.items():
         for formula in formulas:
-            assert (
-                str(formula.fixed_effects) if formula.is_fixed_effects else None
-            ) == key
+            assert formula.fixed_effects_key == key
 
 
 # ---------------------------------------------------------------------------
@@ -586,27 +584,17 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
     assert fit._X_is_empty is False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize(
-    "fml, references",
-    [
-        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
-        (
-            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
-            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-        ),
-        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
-    ],
-)
-def test_distinct_structures_with_same_display_survive(fml, references, weights):
+def test_distinct_structures_with_same_display_survive(weights):
     """#1776: model identity and demean-cache scopes use parsed semantics."""
     data = pf.get_data(N=400, seed=123).dropna()
-    data["f1 + f2"] = data.f2
-    multi = pf.feols(fml, data=data, weights=weights, fixef_rm="none")
+    references = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols(
+        "Y ~ sw({X1 + X2}, X1 + X2) | f1",
+        data=data,
+        weights=weights,
+        fixef_rm="none",
+    )
     fits = multi.to_list()
     assert list(multi.all_fitted_models) == [fit.model.model_name for fit in fits]
     assert all(multi.all_fitted_models[fit.model.model_name] is fit for fit in fits)
@@ -624,10 +612,54 @@ def test_distinct_structures_with_same_display_survive(fml, references, weights)
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
+@pytest.mark.parametrize(
+    "first_term, second_term",
+    [
+        pytest.param("`X1 ** 2`", "{X1 ** 2}", id="literal_vs_expression"),
+        pytest.param("i(f3, X2)", "i(f3, np.exp(X2 / 5))", id="transformed_i"),
+        pytest.param("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))", id="shifted_log_i"),
+    ],
 )
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["forward", "reversed"])
+def test_demean_cache_distinguishes_colliding_columns(
+    first_term, second_term, reverse_order
+):
+    """Sharing a demeaning cache must not change either model's results.
+
+    Here, "colliding" means equal encoded column names but different values,
+    e.g. a literal ``X1 ** 2`` column versus the evaluated square of ``X1``.
+    Each model in ``sw(...)`` must match its own separate fit in coefficients,
+    standard errors, and predictions, whichever model populates the cache first.
+    """
+    data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    # The literal column must differ from the calculated square.
+    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    if reverse_order:
+        first_term, second_term = second_term, first_term
+
+    # Separate calls cannot reuse each other's demeaned columns.
+    first_alone = pf.feols(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
+    second_alone = pf.feols(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
+
+    # These models share a cache because they use the same fixed effects.
+    stepwise_fits = pf.feols(
+        f"Y ~ sw({first_term}, {second_term}) | f1", data=data, fixef_rm="none"
+    ).to_list()
+
+    for separate_fit, stepwise_fit in zip(
+        (first_alone, second_alone), stepwise_fits, strict=True
+    ):
+        np.testing.assert_allclose(
+            stepwise_fit.coef(), separate_fit.coef(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.se(), separate_fit.se(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.predict(), separate_fit.predict(), rtol=1e-10, atol=1e-10
+        )
+
+
 def test_full_sample_and_group_named_all_have_distinct_identity():
     data = pf.get_data(N=300).dropna()
     data["group"] = np.resize(["all", "'all'", "rest"], len(data))
@@ -676,29 +708,16 @@ def test_quantile_models_support_name_lookup():
         assert fit.model.model_name.endswith(f"(q = {fit.options.quantile})")
 
 
-@pytest.mark.xfail(strict=True, reason="Pending unambiguous formula rendering")
-@pytest.mark.parametrize(
-    "fml, names",
-    [
-        ("Y ~ X1 | sw({f1 + f2}, f1 + f2)", ["Y ~ X1 | {f1 + f2}", "Y ~ X1 | f1 + f2"]),
-        (
-            "Y ~ X1 | sw(`f1 + f2`, {f1 + f2})",
-            ["Y ~ X1 | `f1 + f2`", "Y ~ X1 | {f1 + f2}"],
-        ),
-        ("Y ~ sw({X1 + X2}, X1 + X2) | f1", ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]),
-    ],
-)
-def test_expanded_models_have_unambiguous_string_keys(fml, names):
+def test_expanded_models_have_unambiguous_string_keys():
     data = pf.get_data(N=200, seed=17).dropna()
-    data["f1 + f2"] = data.f2
-    multi = pf.feols(fml, data=data, fixef_rm="none")
+    names = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols("Y ~ sw({X1 + X2}, X1 + X2) | f1", data=data, fixef_rm="none")
     assert list(multi.all_fitted_models) == names
     for fit, name in zip(multi.to_list(), names, strict=True):
         assert fit.model.model_name == name
         assert multi.all_fitted_models[name] is fit
 
 
-@pytest.mark.xfail(strict=True, reason="Pending faithful public formula rendering")
 @pytest.mark.parametrize(
     "estimator, fml, preserved",
     [
@@ -708,8 +727,6 @@ def test_expanded_models_have_unambiguous_string_keys(fml, names):
         (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
         (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
         (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
-        (pf.feols, "Y ~ X1 | `f1 + f2`", "`f1 + f2`"),
-        (pf.feols, "Y ~ X1 | {f1 + f2}", "{f1 + f2}"),
         (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ 0 + Z1]"),
         (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
     ],
@@ -719,7 +736,6 @@ def test_public_formula_roundtrip_preserves_estimation(estimator, fml, preserved
     data = pf.get_data(N=400, seed=8123).dropna()
     data["out come"] = data.Y
     data["X1 + X2"] = data.X1
-    data["f1 + f2"] = data.f2
     options = {"fixef_rm": "none"}
     if estimator is pf.quantreg:
         options = {}

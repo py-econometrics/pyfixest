@@ -17,12 +17,15 @@ from scipy.stats import t
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
-from pyfixest.estimation.formula import model_matrix as model_matrix_fixest
 from pyfixest.estimation.formula.formulaic_compat import (
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.model_matrix import ModelMatrix, _ModelMatrixKey
+from pyfixest.estimation.formula.model_matrix import (
+    ModelMatrix,
+    _ModelMatrixKey,
+    create_model_matrix,
+)
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
@@ -83,12 +86,10 @@ from pyfixest.estimation.post_estimation.decomposition import (
 )
 from pyfixest.estimation.post_estimation.fixed_effects import (
     FixedEffectEstimates,
+    build_fixed_effect_dummies,
     build_fixed_effects,
-    check_fe_dtype_compatibility,
-    contrast_code_fixed_effects,
     fixed_effects_to_frame,
-    predict_fixed_effects,
-    warn_on_unseen_fixed_effect_levels,
+    sum_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
 from pyfixest.estimation.post_estimation.wald import wald_test
@@ -108,16 +109,15 @@ decomposition_type = Literal["gelbach"]
 prediction_type = Literal["response", "link"]
 
 
-def _fixed_effect_names(
-    model_matrix: ModelMatrix, fixest_formula: FixestFormula
-) -> tuple[str, ...]:
-    """Name the absorbed fixed effects in the order the formula writes them.
+def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
+    """Name each absorbed term in materialized fixed-effect column order.
 
     Empty when the materialized model matrix carries no fixed-effect block.
     """
-    if model_matrix.fixed_effects is None:
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
         return ()
-    return tuple(str(fixest_formula.fixed_effects).replace(" ", "").split("+"))
+    return tuple(fixed_effects.columns)
 
 
 class Feols(ResultAccessorMixin):
@@ -276,7 +276,7 @@ class Feols(ResultAccessorMixin):
     ) -> None:
         self.options = options
         self.model = self._describe_model(
-            fixest_formula=FixestFormula, sample_split=sample_split
+            parsed_formula=FixestFormula, sample_split=sample_split
         )
         self._model_name_plot = self.model.model_name
 
@@ -299,7 +299,7 @@ class Feols(ResultAccessorMixin):
     def _describe_model(
         self,
         *,
-        fixest_formula: FixestFormula,
+        parsed_formula: FixestFormula,
         sample_split: SampleSplit | None,
     ) -> ModelDescription:
         """Describe the model this class fits, before its model matrix exists.
@@ -309,24 +309,26 @@ class Feols(ResultAccessorMixin):
         `_publish_model_matrix()` republishes the description with them. An
         unsplit fit publishes ``None`` as its split variable and value.
         """
+        model_name = parsed_formula.render()
+        if sample_split is not None:
+            sample_label = (
+                "all" if sample_split.value is None else repr(sample_split.value)
+            )
+            model_name += f" (Sample: {sample_split.var} = {sample_label})"
+
         return ModelDescription(
-            fixest_formula=fixest_formula,
+            parsed_formula=parsed_formula,
             method="feols",
             is_iv=False,
-            model_name=(
-                fixest_formula.formula
-                if sample_split is None
-                else f"{fixest_formula.formula} (Sample: {sample_split.var} = "
-                f"{'all' if sample_split.value is None else sample_split.value})"
-            ),
+            model_name=model_name,
             sample_split=sample_split,
             inference_dist=T_DIST,
         )
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
-        model_matrix = model_matrix_fixest.create_model_matrix(
-            formula=self.model.fixest_formula,
+        model_matrix = create_model_matrix(
+            formula=self.model.parsed_formula,
             data=self._data,
             drop_singletons=self.options.drop_singletons,
             drop_intercept=self.options.drop_intercept,
@@ -351,9 +353,7 @@ class Feols(ResultAccessorMixin):
         self.model = replace(
             self.model,
             depvar=model_matrix.dependent.columns[0],
-            fixed_effects=_fixed_effect_names(
-                model_matrix=model_matrix, fixest_formula=self.model.fixest_formula
-            ),
+            fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
                 tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
             ),
@@ -422,8 +422,8 @@ class Feols(ResultAccessorMixin):
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_names=tuple(response_frame.columns),
-                x_names=tuple(design_frame.columns),
+                y_keys=self.model_matrix.column_keys("dependent"),
+                x_keys=self.model_matrix.column_keys("independent"),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
@@ -1745,11 +1745,9 @@ class Feols(ResultAccessorMixin):
 
         self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
-        require_retained(self, "fixef", "_data", "model_matrix")
+        require_retained(self, "fixef", "model_matrix")
 
-        model_spec = self.model.model_spec
-        assert model_spec is not None, "fixef() runs after the model matrix is built"
-        fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
+        fe_spec = self.model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
 
         # flatten() copies: the weighting below scales uhat in place and must
         # not touch the fitted values the GLM hook may return.
@@ -1759,21 +1757,18 @@ class Feols(ResultAccessorMixin):
             # _coefnames names the estimated ones.
             X = self.model_matrix.independent[self._coefnames].to_numpy()
             uhat = uhat - X @ self._beta_hat
-        # one-hot encoding of fixed effects (treatment coding: reference level
-        # dropped for the second and subsequent FEs via ensure_full_rank=True).
-        contrast_coding = contrast_code_fixed_effects(
-            fixed_effects=self.model.fixest_formula.fixed_effects_wrapped,
-            fixed_effect_names=fe_spec.column_names,
-            data=self._data,
-            context=FORMULAIC_TRANSFORMS | {**self.options.context},
-            transform_state=fe_spec.transform_state,
+        # Recover from retained codes, omitting the first observed level of
+        # the second and subsequent FEs under treatment normalization.
+        # has_fixef guarantees that the retained matrix contains FE codes.
+        fixed_effect_codes = cast(pd.DataFrame, self.model_matrix.fixed_effects)
+        dummies = build_fixed_effect_dummies(
+            codes=fixed_effect_codes, formulaic_columns=fe_spec.column_names
         )
-        D = contrast_coding.matrix
+        D = dummies.matrix
         D_w = D
-        if self.options.has_weights:
+        observation_weights = self.observation_weights.values
+        if observation_weights is not None:
             # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
-            observation_weights = self.observation_weights.values
-            assert observation_weights is not None
             weights_sqrt = np.sqrt(observation_weights)
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
@@ -1781,9 +1776,9 @@ class Feols(ResultAccessorMixin):
         alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
         self.fixef_estimates = FixedEffectEstimates(
-            coefficients=build_fixed_effects(
-                fixed_effect_coefficients=alpha,
-                contrast_coding=contrast_coding,
+            fixed_effects=build_fixed_effects(
+                alpha=alpha,
+                dummies=dummies,
                 transform_state=fe_spec.transform_state,
             ),
             alpha=alpha,
@@ -1791,7 +1786,7 @@ class Feols(ResultAccessorMixin):
             sumFE=D.dot(alpha),
         )
 
-        return fixed_effects_to_frame(self.fixef_estimates.coefficients)
+        return fixed_effects_to_frame(self.fixef_estimates.fixed_effects)
 
     def predict(
         self,
@@ -1911,20 +1906,20 @@ class Feols(ResultAccessorMixin):
             valid_idx = valid_idx[~unseen[valid_idx]]
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
-                check_fe_dtype_compatibility(fe_spec, newdata)
                 # na_action="ignore" keeps unseen-level rows as NaN codes
                 fe_mm = fe_spec.get_model_matrix(
-                    newdata, context=context, na_action="ignore"
+                    newdata,
+                    context=context,
+                    na_action="ignore",
                 )
-                warn_on_unseen_fixed_effect_levels(fe_mm, fe_spec, newdata)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):
                     require_retained(self, "predict", "_data")
                     self.fixef(atol, btol)
-                fe_hat = predict_fixed_effects(
-                    model_matrix=fe_mm.loc[valid_idx],
-                    coefficients=self.fixef_estimates.coefficients,
+                fe_hat = sum_fixed_effects(
+                    codes=fe_mm.loc[valid_idx],
+                    fixed_effects=self.fixef_estimates.fixed_effects,
                 )
 
             X_coef = X_mm.loc[valid_idx, self._coefnames].to_numpy()

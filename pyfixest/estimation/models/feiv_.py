@@ -189,8 +189,8 @@ class Feiv(Feols):
             endogenous, instruments, _ = self._demean_cache.demean_yx(
                 endogenous,
                 instruments,
-                y_names=tuple(endogenous_frame.columns),
-                x_names=tuple(instrument_frame.columns),
+                y_keys=self.model_matrix.column_keys("endogenous"),
+                x_keys=self.model_matrix.column_keys("instruments"),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
@@ -258,7 +258,7 @@ class Feiv(Feols):
         # As in fixest, the first stage uses the second stage's rows and options.
         model1 = refit(
             self,
-            formula=self.model.fixest_formula.as_first_stage(),
+            formula=self.model.parsed_formula.as_first_stage(),
             data=self._data,
             vcov=self.variance_covariance.spec,
             same_sample=True,

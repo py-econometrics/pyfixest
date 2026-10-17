@@ -11,6 +11,7 @@ from formulaic.errors import FactorEvaluationError
 import pyfixest as pf
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
+    FixedEffectEvaluationError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
     MissingModelDataError,
@@ -483,25 +484,25 @@ def test_rwolf_error():
 
 
 def test_predict_fe_dtype_mismatch():
-    """FE dtype handling in predict(newdata=...).
-
-    Numeric-vs-non-numeric mismatches raise a clear pyfixest error (instead of
-    a cryptic FactorEvaluationError from the merge inside encode_fixed_effects);
-    numeric-numeric differences predict fine; fully unmatched FE levels warn.
-    """
+    """Prediction requires the fitted FE dtype; unseen labels still warn."""
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
 
-    # numeric-numeric dtype difference (float fit vs int newdata): no complaint
+    # Equal numeric labels still require the fitted dtype.
     newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata["f1"] = newdata["f1"].astype(int)
-    pred = fit.predict(newdata=newdata)
-    assert np.isfinite(pred).any()
+    with pytest.raises(
+        FixedEffectEvaluationError, match=r"`f1` has dtype .* fitted on dtype"
+    ):
+        fit.predict(newdata=newdata)
 
-    # numeric fit data vs string newdata: clear pyfixest error
+    # Explicit string dtype is also a mismatch.
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
-    newdata_str["f1"] = newdata_str["f1"].astype(str)
-    with pytest.raises(ValueError, match="Fixed effect column 'f1'"):
+    newdata_str["f1"] = newdata_str["f1"].astype("string")
+    with pytest.raises(
+        FixedEffectEvaluationError,
+        match=r"`f1` has dtype .* fitted on dtype",
+    ):
         fit.predict(newdata=newdata_str)
 
     # no matching FE level at all: warning + all-NaN predictions
@@ -1895,3 +1896,20 @@ def test_estimation_rejects_malformed_ssc():
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
     assert legacy.options.ssc == pf.ssc(k_adj=False)
+
+
+@pytest.mark.parametrize("transform", ["center(X1)", "scale(X1)", "poly(X1, 2)"])
+@pytest.mark.parametrize(
+    "fml, error",
+    [
+        ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
+        ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
+        ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
+        ("Y ~ X1 + [X2 ~ {transform}]", InstrumentsAsCovarsError),
+    ],
+)
+@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
+def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
+    """Stateful transforms cannot hide a variable shared by explicit IV roles."""
+    with pytest.raises(error, match="X1"):
+        feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())

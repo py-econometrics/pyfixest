@@ -533,7 +533,7 @@ class TestFixedEffectInteractions:
             parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
 
         assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
-        assert parsed.formula == "Y ~ X1 | f1:f2"
+        assert parsed.render() == "Y ~ X1 | f1:f2"
 
     def test_legacy_interaction_warns_once_and_is_canonical(self):
         canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
@@ -546,7 +546,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert legacy._formula.rhs[1] == canonical._formula.rhs[1]
-        assert legacy.formula == canonical.formula == "Y ~ X1 | f1:f2"
+        assert legacy.render() == canonical.render() == "Y ~ X1 | f1:f2"
 
     @pytest.mark.parametrize(
         "fixed_effects,expected",
@@ -561,7 +561,7 @@ class TestFixedEffectInteractions:
 
         assert len(caught) == 1
         assert set(str(parsed.fixed_effects).split(" + ")) == set(expected.split(" + "))
-        assert "^" not in parsed.formula
+        assert "^" not in parsed.render()
 
     def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
         formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
@@ -608,7 +608,7 @@ class TestInstrumentalVariableBoundaries:
             parsed = Formula.parse(formula)[0]
         assert len(caught) == 1
         reference = Formula.parse(canonical)[0]
-        assert parsed.formula == reference.formula
+        assert parsed.render() == reference.render()
         assert parsed.is_fixed_effects == reference.is_fixed_effects
         assert parsed.is_instrumental_variable
 
@@ -1001,6 +1001,7 @@ def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     """Interacted fixed effects match an explicitly constructed group."""
     data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
     data["f1_f2"] = list(zip(data["f1"], data["f2"], strict=True))
+    data["f1_f2"] = data["f1_f2"].astype("category")
 
     interacted = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
     manual = pf.feols("Y ~ X1 | f1_f2", data=data, fixef_rm="none")
@@ -1067,6 +1068,42 @@ class TestEdgeCases:
         assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
         assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
 
+    @pytest.mark.parametrize(
+        "formula_template",
+        [
+            "Y ~ {exogenous} | X1 ~ {instruments}",
+            "Y ~ {exogenous} + [X1 ~ {instruments}]",
+        ],
+        ids=["pipe", "bracket"],
+    )
+    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize(
+        "exogenous, expected",
+        [
+            ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
+            ("0", "X1 ~ 0 + Z1"),
+        ],
+    )
+    def test_iv_first_stage_preserves_intercept_choice(
+        self, formula_template, instruments, exogenous, expected
+    ):
+        """The instrument block's implicit intercept follows the main equation."""
+        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
+        parsed = Formula.parse(formula)[0]
+        first_stage = parsed.as_first_stage().second_stage
+        expected_stage = formulaic.Formula(expected)
+        assert first_stage.lhs == expected_stage.lhs
+        # Both parsed blocks can contribute the same intercept term.
+        assert set(first_stage.rhs) == set(expected_stage.rhs)
+        reparsed = Formula.parse(parsed.render())[0]
+        assert (
+            reparsed.as_first_stage().second_stage
+            == parsed.as_first_stage().second_stage
+        )
+
     def test_iv_with_fe_endogenous_in_second_stage(self):
         """Endogenous variable should be in second_stage even with FE."""
         result = Formula.parse("Y ~ X1 | f1 | Z1 ~ W1")
@@ -1120,7 +1157,7 @@ class TestEdgeCases:
             result = Formula.parse(fml)
             assert len(result) == 1
             # Reconstructed formula should re-parse to the same structure
-            reparsed = Formula.parse(result[0].formula)
+            reparsed = Formula.parse(result[0].render())
             assert len(reparsed) == 1
             assert reparsed[0].second_stage == result[0].second_stage
             assert reparsed[0].is_fixed_effects == result[0].is_fixed_effects
@@ -1136,3 +1173,68 @@ class TestEdgeCases:
                     reparsed[0].as_first_stage().second_stage
                     == result[0].as_first_stage().second_stage
                 )
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1",
+        "Y ~ X1 - 1",
+        "Y ~ 0",
+        "Y ~ X1:X2 | f1:f2",
+        "Y ~ {X1 + X2} | {f1 + f2}",
+        "Y ~ `X1 + X2` | `f1 + f2`",
+        'Y ~ log(X1) + np.log(X2) | Q("my fe")',
+        "Y ~ {X1 ** 2} + {np.pi} | f1",
+        "Y ~ X2 + [X1 ~ Z1] | f1",
+        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
+        "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
+        "Y ~ `tick\\`name` | f1",
+        "Y ~ X1 | f1[z]",
+        "Y ~ X1 | f1[[z1, z2]]",
+        "Y ~ `a\u0301`",
+        "Y ~ `℘`",
+        "Y ~ `a·b`",
+    ],
+)
+def test_rendered_formula_preserves_parsed_factors(fml):
+    (parsed,) = Formula.parse(fml)
+    assert repr(parsed) == str(parsed) == parsed.render()
+    (reparsed,) = Formula.parse(parsed.render())
+    for part in [
+        "dependent",
+        "exogenous",
+        "endogenous",
+        "instruments",
+        "fixed_effects",
+    ]:
+        if (
+            part in ("endogenous", "instruments")
+            and not parsed.is_instrumental_variable
+        ) or (part == "fixed_effects" and not parsed.is_fixed_effects):
+            continue
+
+        def factors(terms):
+            return [
+                [(factor.expr, factor.eval_method) for factor in term.factors]
+                for term in terms
+            ]
+
+        assert factors(getattr(reparsed, part)) == factors(getattr(parsed, part)), (
+            parsed.render()
+        )
+
+
+@pytest.mark.parametrize(
+    "fml, expected",
+    [
+        ("Y ~ X1 | {f1 + f2}", "Y ~ X1 | {f1 + f2}"),
+        ("Y ~ X1 | `f1 + f2`", "Y ~ X1 | `f1 + f2`"),
+        ("Y ~ X1 | f1 + f2", "Y ~ X1 | f1 + f2"),
+        ("Y ~ X1", "Y ~ 1 + X1"),
+        ("Y ~ X1 - 1", "Y ~ 0 + X1"),
+    ],
+)
+def test_rendered_formula_names(fml, expected):
+    (parsed,) = Formula.parse(fml)
+    assert parsed.render() == expected

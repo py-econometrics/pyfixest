@@ -131,11 +131,9 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
-                fml=self.model.formula,
-                data=self._data,
                 demeaner=self.options.demeaner,
+                collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
-                context=self.options.context,
             )
 
         if na_separation:

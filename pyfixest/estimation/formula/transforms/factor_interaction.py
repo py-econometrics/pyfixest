@@ -150,18 +150,21 @@ def _encode_i(
     unwrapped = unwrap_factor_values(values)
     data = unwrapped["__data__"] if var2_name is not None else unwrapped
     var2 = unwrapped.get("__var2__") if var2_name is not None else None
-    # Convert to pandas Series and drop specified rows
     data = pd.Series(data)
     data.name = factor_name
+    data = _observed_levels(data, bins=bin, encoder_state=encoder_state)
     data.drop(index=data.index[drop_rows], inplace=True)
+    var2_is_numeric = False
     if var2 is not None:
         var2 = pd.Series(var2)
         var2.name = var2_name
+        var2_is_numeric = ref2 is None and bin2 is None and _is_numeric(var2)
+        if not var2_is_numeric:
+            var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
         var2.drop(index=var2.index[drop_rows], inplace=True)
     dummies = _encode_factor(
-        pd.Series(data),
+        data,
         ref=ref,
-        bins=bin,
         reduced_rank=reduced_rank and var2 is None,
         encoder_state=encoder_state,
         model_spec=model_spec,
@@ -182,9 +185,9 @@ def _encode_i(
             column_names=tuple(dummies.columns),
             format="{field}",  # Use column names directly
         )
-    elif ref2 is None and bin2 is None and _is_numeric(var2):
+    elif var2_is_numeric:
         # (ii) interaction with continuous variable
-        result = dummies.multiply(var2.to_numpy(), axis=0)
+        result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
         result.rename(
             columns={
                 level: f"{factor_name}::{level}:{var2_name}"
@@ -205,7 +208,6 @@ def _encode_i(
         dummies2 = _encode_factor(
             data=var2,
             ref=ref2,
-            bins=bin2,
             reduced_rank=False,
             encoder_state=encoder_state,
             model_spec=model_spec,
@@ -242,17 +244,28 @@ def _encode_i(
         )
 
 
+def _observed_levels(
+    series: pd.Series, bins: dict | None, encoder_state: dict[str, Any]
+) -> pd.Series:
+    """
+    Bin a factor and restrict its levels to the values in the supplied data.
+
+    Like fixest, i() fixes the levels before the model drops rows with missing
+    values: a level seen only on dropped rows remains a level (and can be the
+    reference), while unused categories of a pandas Categorical are not levels.
+    """
+    if bins is not None:
+        series = _apply_binning(series, bins, encoder_state)
+    return series.astype("category").cat.remove_unused_categories()
+
+
 def _encode_factor(
     data: pd.Series,
     ref: Hashable | None,
-    bins: dict | None,
     reduced_rank: bool,
     encoder_state: dict[str, Any],
     model_spec: ModelSpec,
 ) -> pd.DataFrame:
-    # --- Binning (optional) ---
-    if bins is not None:
-        data = _apply_binning(data, bins, encoder_state)
     contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
     # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
     # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
@@ -286,9 +299,14 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
 
 
 def _is_numeric(series: pd.Series) -> bool:
-    """Check if series is numeric (not categorical/object)."""
-    return pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(
-        series
+    """Check whether a second variable encodes numeric slopes.
+
+    Booleans count as numeric: fixest interacts a logical second variable as a
+    0/1 slope, not as a factor, including object columns of booleans.
+    """
+    return pd.api.types.is_numeric_dtype(series) or (
+        pd.api.types.is_object_dtype(series)
+        and pd.api.types.infer_dtype(series, skipna=True) == "boolean"
     )
 
 

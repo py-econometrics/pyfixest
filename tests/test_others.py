@@ -408,8 +408,8 @@ def _fixef_test_data(n=500, with_nan=False, seed=11):
         {
             "Y": rng.normal(size=n),
             "X1": rng.normal(size=n),
-            "g": rng.choice(["north", "south", "east"], n),
-            "h": rng.choice(["u", "v", "w", "x"], n),
+            "g": pd.Series(rng.choice(["north", "south", "east"], n), dtype="string"),
+            "h": pd.Series(rng.choice(["u", "v", "w", "x"], n), dtype="string"),
         }
     )
     if with_nan:
@@ -504,8 +504,8 @@ def test_fixef_excludes_singleton_levels_from_prediction():
         {
             "Y": [1.0, 2.0, 2.0, 4.0, 3.0],
             "X1": [0.0, 1.0, 0.0, 1.0, 2.0],
-            "g": ["a", "a", "b", "b", "c"],
-            "h": ["u", "u", "v", "v", "w"],
+            "g": pd.Series(["a", "a", "b", "b", "c"], dtype="string"),
+            "h": pd.Series(["u", "u", "v", "v", "w"], dtype="string"),
         }
     )
 

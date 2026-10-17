@@ -225,7 +225,7 @@ class ModelDescription:
 
     Parameters
     ----------
-    fixest_formula : Formula
+    parsed_formula : Formula
         The parsed formula, with its stages, fixed effects, and instruments.
     method : str
         Name of the estimator: the estimation function that fitted the model
@@ -269,7 +269,7 @@ class ModelDescription:
     ```
     """
 
-    fixest_formula: Formula
+    parsed_formula: Formula
     method: str
     is_iv: bool
     model_name: str
@@ -282,8 +282,8 @@ class ModelDescription:
 
     @property
     def formula(self) -> str:
-        """Display text derived from the retained parsed specification."""
-        return self.fixest_formula.formula
+        """The expanded formula, preserving quoting, expressions, and intercepts."""
+        return self.parsed_formula.render()
 
     @property
     def has_fixef(self) -> bool:

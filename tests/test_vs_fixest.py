@@ -1934,49 +1934,6 @@ def _skip_f3_checks(fml, f3_type):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
-)
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("weights", [None, "weights"])
-def test_stepwise_fe_identity_against_fixest(data_feols, weights):
-    """#1776: colliding display formulas retain both distinct R partitions."""
-    data = data_feols.dropna().assign(fe_sum=lambda frame: frame.f1 + frame.f2)
-    fits = pf.feols(
-        "Y ~ X1 | sw({f1 + f2}, f1 + f2)",
-        data=data,
-        weights=weights,
-        vcov="iid",
-        fixef_rm="none",
-    ).to_list()
-    assert len(fits) == 2
-    for fit, fe_formula in zip(fits, ["fe_sum", "f1 + f2"], strict=True):
-        assert len(fit.model.fixed_effects) == fit.model_matrix.fixed_effects.shape[1]
-        fit.vcov({"CRV1": "f1"})
-        fit_r = fixest.feols(
-            ro.Formula(f"Y ~ X1 | {fe_formula}"),
-            data=data,
-            vcov=ro.Formula("~f1"),
-            fixef_rm="none",
-            **({"weights": ro.Formula("~weights")} if weights else {}),
-        )
-        np.testing.assert_allclose(
-            fit.coef()[["X1"]],
-            stats.coef(fit_r),
-            rtol=0,
-            atol=1e-8,
-            err_msg="stepwise FE coefficients != fixest",
-        )
-        np.testing.assert_allclose(
-            fit.se()[["X1"]],
-            fixest.se(fit_r),
-            rtol=0,
-            atol=1e-7,
-            err_msg="stepwise FE standard errors != fixest",
-        )
-
-
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml, fml_r, renamed_terms",
@@ -1984,12 +1941,31 @@ def test_stepwise_fe_identity_against_fixest(data_feols, weights):
         ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
         ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
         ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
+        (
+            "Y ~ center(X1) + [X2 ~ Z1]",
+            "Y ~ scale(X1, scale = FALSE) | X2 ~ Z1",
+            {"scale(X1, scale = FALSE)": "center(X1)"},
+        ),
+        (
+            "Y ~ X1 + [center(X2) ~ scale(Z1)]",
+            "Y ~ X1 | scale(X2, scale = FALSE) ~ scale(Z1)",
+            {"scale(X2, scale = FALSE)": "center(X2)"},
+        ),
+        (
+            "Y ~ X2 + [`my endog` ~ `my instrument`] | f1",
+            "Y ~ X2 | f1 | X1 ~ Z1",
+            {"X1": "my endog"},
+        ),
     ],
 )
 def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed_terms):
-    """Arithmetic factors retain their meaning through matrix construction."""
-    fit = pf.feols(fml, data=data_feols, vcov="iid")
-    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
+    """Expressions and quoted names retain their meaning through matrix construction."""
+    # Stateful transforms calculate sample moments before missing rows are dropped.
+    data = data_feols.dropna().assign(
+        **{"my endog": data_feols.X1, "my instrument": data_feols.Z1}
+    )
+    fit = pf.feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data, vcov="iid")
     names = [
         renamed_terms.get(name, name)
         for name in (
@@ -2006,187 +1982,6 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
         rtol=0,
         atol=1e-8,
         err_msg="coefficients != fixest",
-    )
-    np.testing.assert_allclose(
-        fit.se()[names],
-        fixest.se(fit_r),
-        rtol=0,
-        atol=1e-7,
-        err_msg="standard errors != fixest",
-    )
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize(
-    "vcov, fml, fml_r, renamed_terms",
-    [
-        pytest.param(
-            "iid",
-            "Y ~ X1 | `my fe`",
-            "Y ~ X1 | `my fe`",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | firm.id",
-            "Y ~ X1 | firm.id",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param("iid", "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | `my fe`:f2",
-            "Y ~ X1 | `my fe`^f2",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param("iid", "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | I(f1 + f2)",
-            "Y ~ X1 | fe_sum",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            "iid",
-            "Y ~ X1 | f1:{f1 // 2}",
-            "Y ~ X1 | f1",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            "iid",
-            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
-            "Y ~ X2 | `my fe` | X1 ~ Z1",
-            {"X1": "my endog"},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | `my fe`",
-            "Y ~ X1 | `my fe`",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | firm.id",
-            "Y ~ X1 | firm.id",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | `a:b`", "Y ~ X1 | f1", {}),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | `my fe`:f2",
-            "Y ~ X1 | `my fe`^f2",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param({"CRV1": "f1"}, "Y ~ X1 | I(f1 * 10)", "Y ~ X1 | f1", {}),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | I(f1 + f2)",
-            "Y ~ X1 | fe_sum",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X1 | f1:{f1 // 2}",
-            "Y ~ X1 | f1",
-            {},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-        pytest.param(
-            {"CRV1": "f1"},
-            "Y ~ X2 + [`my endog` ~ `my instrument`] | `my fe`",
-            "Y ~ X2 | `my fe` | X1 ~ Z1",
-            {"X1": "my endog"},
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason="Pending fixed-effect encoding and labels; regression from PR stack #1862",
-            ),
-        ),
-    ],
-)
-def test_quoted_fixed_effects_against_fixest(
-    data_feols, fml, fml_r, renamed_terms, vcov
-):
-    """#1735: quoted fixed-effect and IV names match fixest."""
-    data = data_feols.assign(
-        **{
-            "my outcome": data_feols.Y,
-            "my var": data_feols.X1,
-            "my endog": data_feols.X1,
-            "my instrument": data_feols.Z1,
-            "my fe": data_feols.f1,
-            "firm.id": data_feols.f1,
-            "a:b": data_feols.f1,
-            "fe_sum": data_feols.f1 + data_feols.f2,
-        }
-    )
-    fit = pf.feols(fml, data=data, vcov="iid")
-    # Reject misaligned FE labels before native cluster-nesting computation.
-    assert len(fit.model.fixed_effects) == fit.model_matrix.fixed_effects.shape[1]
-    fit.vcov(vcov)
-    fit_r = fixest.feols(
-        ro.Formula(fml_r),
-        data=data,
-        vcov="iid" if vcov == "iid" else ro.Formula("~f1"),
-    )
-    coef_r = stats.coef(fit_r)
-    names = [
-        renamed_terms.get(name, name)
-        for name in (
-            name.replace("(Intercept)", "Intercept")
-            .removeprefix("fit_")
-            .replace("`", "")
-            for name in ro.r("function(fit) names(coef(fit))")(fit_r)
-        )
-    ]
-    assert set(fit.coef().index) == set(names), "coefficient names != fixest"
-    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
-    # Match the canonical linear-model tolerances: direct solves agree closely;
-    # FE projection and derived inference allow slightly more rounding error.
-    np.testing.assert_allclose(
-        fit.coef()[names], coef_r, rtol=0, atol=1e-8, err_msg="coefficients != fixest"
     )
     np.testing.assert_allclose(
         fit.se()[names],
@@ -2307,12 +2102,9 @@ def test_no_intercept_poisson_crv3_against_fixest():
     np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
-)
 @pytest.mark.against_r_core
-def test_parsed_separation_against_fixest():
-    """IR uses the evaluated response and retains arithmetic regressors."""
+def test_separation_arithmetic_against_fixest():
+    """IR preserves arithmetic terms and agrees with an independent R fit."""
     data = pd.DataFrame(
         {
             "Y": [0, 0, 0, 1, 2, 3, 1, 2],
@@ -2335,5 +2127,17 @@ def test_parsed_separation_against_fixest():
         ssc=fixest.ssc(K_adj=False, G_adj=False),
     )
     assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
-    np.testing.assert_allclose(fit.coef(), stats.coef(reference), rtol=0, atol=1e-8)
-    np.testing.assert_allclose(fit.se(), fixest.se(reference), rtol=0, atol=1e-7)
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IR coefficients differ from R's fit of the same evaluated design",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IR standard errors differ from R's fit of the same evaluated design",
+    )

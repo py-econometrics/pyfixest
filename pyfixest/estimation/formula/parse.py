@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import ast
 import itertools
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Final
 
 import formulaic
 import formulaic.formula
 from formulaic.parser import DefaultFormulaParser
-from formulaic.parser.types import Factor, FormulaParser, Term
+from formulaic.parser.algos import tokenize
+from formulaic.parser.types import Factor, FormulaParser, Term, Token
 
 from pyfixest.errors import (
     EndogVarsAsCovarsError,
@@ -21,11 +22,15 @@ from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
     count_multistage_blocks,
     filter_multistage_endogenous_terms,
+    formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
     is_python_expression,
     is_structured_formula,
     terms_without_intercept,
+)
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    as_formulaic_fixed_effect_term,
 )
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
@@ -42,6 +47,50 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+
+
+def _render_factor(factor: Factor) -> str:
+    """Render one factor without confusing lookups with Python expressions."""
+    expression = factor.expr
+    if factor.eval_method is Factor.EvalMethod.LOOKUP:
+        # Python identifiers include Unicode characters that Formulaic's
+        # tokenizer cannot read unquoted. Retain backticks for those names.
+        safe_unquoted = expression.isascii() and all(
+            part.isidentifier() for part in expression.split(".")
+        )
+        return expression if safe_unquoted else f"`{expression}`"
+
+    if factor.eval_method is Factor.EvalMethod.PYTHON:
+        tokens = list(tokenize(expression))
+        if (
+            len(tokens) == 1
+            and tokens[0].kind is Token.Kind.PYTHON
+            and tokens[0].token == expression
+        ):
+            # Calls and subscripts already identify a single Python factor.
+            return expression
+        return "{" + expression + "}"
+
+    return expression
+
+
+def render_term(term: Term) -> str:
+    """Render one term; distinct parsed terms render to distinct strings."""
+    return ":".join(_render_factor(factor) for factor in term.factors)
+
+
+def _render_formula_part(
+    terms: Iterable[Term], *, explicit_no_intercept: bool = False
+) -> str:
+    terms = tuple(terms)
+    result = " + ".join(render_term(term) for term in terms) or "0"
+    if (
+        explicit_no_intercept
+        and result != "0"
+        and not any(str(term) == "1" for term in terms)
+    ):
+        result = "0 + " + result
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -316,37 +365,52 @@ class Formula:
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
-        endogenous_are_covariates = self.endogenous.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        endogenous_are_covariates = formula_required_variables(
+            formula=self.endogenous
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if endogenous_are_covariates:
             raise EndogVarsAsCovarsError(
                 f"Endogeneous variables specified as covariates: {endogenous_are_covariates}"
             )
-        instruments_are_covariates = self.instruments.required_variables.intersection(
-            self.exogenous.required_variables
-        )
+        instruments_are_covariates = formula_required_variables(
+            formula=self.instruments
+        ).intersection(formula_required_variables(formula=self.exogenous))
         if instruments_are_covariates:
             raise InstrumentsAsCovarsError(
                 f"Instruments specified as covariates: {instruments_are_covariates}"
             )
 
     def __repr__(self) -> str:
-        return self.formula
+        return self.render()
 
     @property
     def _max_parts(self) -> int:
         return 2
 
-    @property
-    def formula(self) -> str:
-        """The string representation of the formula."""
-        formula = f"{self.dependent} ~ {self.exogenous}"
+    def render(self) -> str:
+        """Render an expanded formula preserving lookup and expression semantics.
+
+        This is the readable public model name. Distinct parsed formulas render
+        to distinct strings, so the rendered text also identifies models and
+        fixed-effect groups internally. Materialization uses the retained
+        parsed stages.
+        """
+        exogenous = _render_formula_part(
+            self.exogenous, explicit_no_intercept=not self.is_fixed_effects
+        )
+        result = f"{_render_formula_part(self.dependent)} ~ {exogenous}"
         if self.is_instrumental_variable:
-            formula = f"{formula} + [{self.endogenous} ~ {self.instruments}]"
+            result += f" + [{_render_formula_part(self.endogenous)} ~ {_render_formula_part(self.instruments, explicit_no_intercept=True)}]"
         if self.is_fixed_effects:
-            formula = f"{formula} | {self.fixed_effects}"
-        return formula
+            result += " | " + _render_formula_part(self.fixed_effects)
+        return result
+
+    @property
+    def fixed_effects_key(self) -> str | None:
+        """Rendered fixed effects, grouping models that share demeaning caches."""
+        if not self.is_fixed_effects:
+            return None
+        return _render_formula_part(self.fixed_effects)
 
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:
@@ -433,11 +497,10 @@ class Formula:
         )
 
     @property
-    def fixed_effects_wrapped(self) -> formulaic.formula.SimpleFormula:
-        """Wrapped fixed effects for proper encoding."""
-        return formulaic.formula.Formula(
-            [f"__fixed_effect__{term.factors}" for term in self.fixed_effects],
-            _parser=_PARSER_NO_INTERCEPT,
+    def formulaic_fixed_effects(self) -> formulaic.formula.SimpleFormula:
+        """Symbolic fixed-effect terms in Formulaic's internal representation."""
+        return formulaic.formula.SimpleFormula(
+            as_formulaic_fixed_effect_term(term=term) for term in self.fixed_effects
         )
 
     @property
@@ -458,8 +521,13 @@ class Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
+        instruments = (
+            self.instruments
+            if any(term == "1" for term in self.exogenous)
+            else terms_without_intercept(self.instruments)
+        )
         rhs = formulaic.formula.SimpleFormula(
-            itertools.chain(self.instruments, self.exogenous)
+            itertools.chain(instruments, self.exogenous)
         )
         return Formula(
             _formula=formulaic.formula.StructuredFormula(
