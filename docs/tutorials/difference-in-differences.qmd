@@ -25,7 +25,6 @@ from importlib import resources
 import pandas as pd
 
 import pyfixest as pf
-from pyfixest.report.utils import rename_event_study_coefs
 from pyfixest.utils.dgps import get_sharkfin
 
 %load_ext watermark
@@ -191,7 +190,6 @@ fit_dynamic_twfe.iplot(
     figsize=[1200, 400],
     yintercept=0,
     xintercept=13.5,
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
 )
 ```
 
@@ -223,7 +221,6 @@ fit_dynamic_twfe.iplot(
     yintercept=0,
     xintercept=13.5,
     joint="both",
-    labels=rename_event_study_coefs(fit_dynamic_twfe._coefnames),
 )
 ```
 
@@ -353,7 +350,6 @@ fit_twfe.iplot(
     figsize=figsize,
     xintercept=18.5,
     yintercept=0,
-    labels=rename_event_study_coefs(fit_twfe._coefnames),  # rename coefficients
 ).show()
 ```
 
