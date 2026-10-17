@@ -139,11 +139,7 @@ class QuantregMulti:
                 kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
                 h_G = get_hall_sheather_bandwidth(q=q[i_prev], N=N)
                 delta = kappa * (norm.ppf(q[i_prev] + h_G) - norm.ppf(q[i_prev] - h_G))
-                # One-step update of Chernozhukov, Fernández-Val & Melly (2022),
-                # Algorithm 3: the Powell density-weighted Hessian
-                # J = sum_i 1{|u_i| <= delta} x_i x_i' / (2 N delta) and the
-                # score M = sum_i x_i (q_j - 1{u_i <= 0}) / N.
-                near_zero = np.abs(u_hat_prev) <= delta
+                near_zero = np.abs(u_hat_prev) < delta
                 X_near_zero = X[near_zero]
                 J = (X_near_zero.T @ X_near_zero) / (2 * N * delta)
 
