@@ -4,7 +4,8 @@ import copy
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any, Final, TypeAlias, cast
+from types import MappingProxyType
+from typing import Any, Final, Literal, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -20,13 +21,23 @@ from pyfixest.estimation.formula.formulaic_compat import (
     flatten_model_matrix,
     get_fixed_effect_encoding,
 )
-from pyfixest.estimation.formula.parse import Formula
+from pyfixest.estimation.formula.parse import Formula, render_term
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
+_ModelMatrixRole: TypeAlias = Literal[
+    "dependent",
+    "independent",
+    "fixed_effects",
+    "endogenous",
+    "instruments",
+    "weights",
+    "offset",
+]
+ColumnKey: TypeAlias = tuple[str, str]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,6 +47,19 @@ class _ModelMatrixKey:
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
+
+
+_ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyType(
+    {
+        "dependent": (_ModelMatrixKey.main, "lhs"),
+        "independent": (_ModelMatrixKey.main, "rhs"),
+        "fixed_effects": (_ModelMatrixKey.fixed_effects,),
+        "endogenous": (_ModelMatrixKey.instrumental_variable, "lhs"),
+        "instruments": (_ModelMatrixKey.instrumental_variable, "rhs"),
+        "weights": (_ModelMatrixKey.weights,),
+        "offset": (_ModelMatrixKey.offset,),
+    }
+)
 
 
 class ModelMatrix:
@@ -122,25 +146,24 @@ class ModelMatrix:
         self._process(drop_singletons=drop_singletons)
 
     @staticmethod
-    def _get_columns(mm: ModelMatrices, *keys: str) -> list[str] | None:
-        """Extract column names by traversing nested keys, or None if missing."""
+    def _get_columns(mm: ModelMatrices, *, role: _ModelMatrixRole) -> list[str] | None:
+        """Extract a role's column names, or None if its matrix is missing."""
+        path = _ROLE_PATHS[role]
         try:
             result = mm
-            for k in keys:
+            for k in path:
                 result = result[k]
             return result.columns.tolist()
         except KeyError:
             return None
 
     def _collect_columns(self, model_matrix: ModelMatrices) -> None:
-        self._dependent_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.main, "lhs"
-        )
+        self._dependent_column_names = self._get_columns(model_matrix, role="dependent")
         self._independent_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.main, "rhs"
+            model_matrix, role="independent"
         )
         self._fixed_effects_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.fixed_effects
+            model_matrix, role="fixed_effects"
         )
         self._fixed_effect_names_by_column = {
             column: get_fixed_effect_encoding(
@@ -152,17 +175,13 @@ class ModelMatrix:
             for column in self._fixed_effects_column_names or []
         }
         self._endogenous_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.instrumental_variable, "lhs"
+            model_matrix, role="endogenous"
         )
         self._instruments_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.instrumental_variable, "rhs"
+            model_matrix, role="instruments"
         )
-        self._weights_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.weights
-        )
-        self._offset_column_names = self._get_columns(
-            model_matrix, _ModelMatrixKey.offset
-        )
+        self._weights_column_names = self._get_columns(model_matrix, role="weights")
+        self._offset_column_names = self._get_columns(model_matrix, role="offset")
 
     def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
@@ -356,6 +375,30 @@ class ModelMatrix:
         if self._instruments_column_names is None:
             return None
         return self._data.loc[:, self._instruments_column_names]
+
+    def column_keys(
+        self, role: Literal["dependent", "independent", "endogenous", "instruments"]
+    ) -> tuple[ColumnKey, ...]:
+        """Key the columns of one frame by their rendered term and name.
+
+        Distinct terms can encode columns with equal names, e.g. ``i(f3, X2)``
+        and ``i(f3, np.exp(X2 / 5))``, so names alone cannot share cached
+        demeaned columns across models.
+        """
+        columns = {
+            "dependent": self._dependent_column_names,
+            "independent": self._independent_column_names,
+            "endogenous": self._endogenous_column_names,
+            "instruments": self._instruments_column_names,
+        }[role]
+        if columns is None:
+            return ()
+        stage, side = _ROLE_PATHS[role]
+        term_by_column: dict[str, str] = {}
+        for term, _, encoded_columns in self._model_spec[stage][side].structure:
+            for column in encoded_columns:
+                term_by_column[column] = render_term(term)
+        return tuple((term_by_column[column], column) for column in columns)
 
     @property
     def weights(self) -> pd.DataFrame | None:

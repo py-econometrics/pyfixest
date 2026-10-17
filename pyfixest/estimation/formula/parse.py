@@ -74,17 +74,16 @@ def _render_factor(factor: Factor) -> str:
     return expression
 
 
+def render_term(term: Term) -> str:
+    """Render one term; distinct parsed terms render to distinct strings."""
+    return ":".join(_render_factor(factor) for factor in term.factors)
+
+
 def _render_formula_part(
     terms: Iterable[Term], *, explicit_no_intercept: bool = False
 ) -> str:
     terms = tuple(terms)
-    result = (
-        " + ".join(
-            ":".join(_render_factor(factor) for factor in term.factors)
-            for term in terms
-        )
-        or "0"
-    )
+    result = " + ".join(render_term(term) for term in terms) or "0"
     if (
         explicit_no_intercept
         and result != "0"
@@ -391,8 +390,10 @@ class Formula:
     def render(self) -> str:
         """Render an expanded formula preserving lookup and expression semantics.
 
-        This is the readable public model name. Materialization uses the retained
-        parsed stages; display strings are never used as internal identities.
+        This is the readable public model name. Distinct parsed formulas render
+        to distinct strings, so the rendered text also identifies models and
+        fixed-effect groups internally. Materialization uses the retained
+        parsed stages.
         """
         exogenous = _render_formula_part(
             self.exogenous, explicit_no_intercept=not self.is_fixed_effects
@@ -403,6 +404,13 @@ class Formula:
         if self.is_fixed_effects:
             result += " | " + _render_formula_part(self.fixed_effects)
         return result
+
+    @property
+    def fixed_effects_key(self) -> str | None:
+        """Rendered fixed effects, grouping models that share demeaning caches."""
+        if not self.is_fixed_effects:
+            return None
+        return _render_formula_part(self.fixed_effects)
 
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:

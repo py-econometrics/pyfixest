@@ -174,9 +174,7 @@ def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
     } == expected_groups
     for key, formulas in formula_dict.items():
         for formula in formulas:
-            assert (
-                str(formula.fixed_effects) if formula.is_fixed_effects else None
-            ) == key
+            assert formula.fixed_effects_key == key
 
 
 # ---------------------------------------------------------------------------
@@ -611,6 +609,54 @@ def test_distinct_structures_with_same_display_survive(weights):
         )
         np.testing.assert_allclose(
             fit.se(), reference.se(), rtol=1e-10, err_msg="stepwise standard errors"
+        )
+
+
+@pytest.mark.parametrize(
+    "first_term, second_term",
+    [
+        pytest.param("`X1 ** 2`", "{X1 ** 2}", id="literal_vs_expression"),
+        pytest.param("i(f3, X2)", "i(f3, np.exp(X2 / 5))", id="transformed_i"),
+        pytest.param("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))", id="shifted_log_i"),
+    ],
+)
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["forward", "reversed"])
+def test_demean_cache_distinguishes_colliding_columns(
+    first_term, second_term, reverse_order
+):
+    """Sharing a demeaning cache must not change either model's results.
+
+    Here, "colliding" means equal encoded column names but different values,
+    e.g. a literal ``X1 ** 2`` column versus the evaluated square of ``X1``.
+    Each model in ``sw(...)`` must match its own separate fit in coefficients,
+    standard errors, and predictions, whichever model populates the cache first.
+    """
+    data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
+    # The literal column must differ from the calculated square.
+    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    if reverse_order:
+        first_term, second_term = second_term, first_term
+
+    # Separate calls cannot reuse each other's demeaned columns.
+    first_alone = pf.feols(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
+    second_alone = pf.feols(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
+
+    # These models share a cache because they use the same fixed effects.
+    stepwise_fits = pf.feols(
+        f"Y ~ sw({first_term}, {second_term}) | f1", data=data, fixef_rm="none"
+    ).to_list()
+
+    for separate_fit, stepwise_fit in zip(
+        (first_alone, second_alone), stepwise_fits, strict=True
+    ):
+        np.testing.assert_allclose(
+            stepwise_fit.coef(), separate_fit.coef(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.se(), separate_fit.se(), rtol=1e-10, atol=1e-10
+        )
+        np.testing.assert_allclose(
+            stepwise_fit.predict(), separate_fit.predict(), rtol=1e-10, atol=1e-10
         )
 
 

@@ -108,7 +108,7 @@ def estimation_method_of(model_cls: type) -> EstimationMethod:
 class ParsedFormula:
     """Stores the results from formula parsing = everything the runner needs to know.
 
-    `formula_dict` keys by the fixed-effects formula string (or
+    `formula_dict` keys by the rendered fixed-effects formula (or
     `None` when no FE) and maps to the list of `Formula`
     objects for that block.
     `is_iv` is true when any formula has a
@@ -126,7 +126,7 @@ def plan_formulas(config: EstimationConfig) -> ParsedFormula:
     run_split = config.split is not None or config.fsplit is not None
     formula_dictionary: dict[str | None, list[Formula]] = {}
     for formula in config.formulas:
-        key = str(formula.fixed_effects) if formula.is_fixed_effects else None
+        key = formula.fixed_effects_key
         formula_dictionary.setdefault(key, []).append(formula)
     process = config.quantile_process
     is_multiple_estimation = (

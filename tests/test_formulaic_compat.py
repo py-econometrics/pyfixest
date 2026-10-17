@@ -71,6 +71,17 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert [str(v) for v in rhs.deps[0].lhs.required_variables] == ["X2"]
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
+    matrix = fit.model_matrix
+    for role in ("dependent", "independent", "endogenous", "instruments"):
+        keys = matrix.column_keys(role)
+        assert tuple(name for _, name in keys) == tuple(getattr(matrix, role).columns)
+    # The same endogenous column can share demeaned values across both stages.
+    endogenous_position = matrix.independent.columns.get_loc("X2")
+    assert (
+        matrix.column_keys("independent")[endogenous_position]
+        == matrix.column_keys("endogenous")[0]
+    )
+
 
 @pytest.mark.parametrize(
     "formula, expected",
