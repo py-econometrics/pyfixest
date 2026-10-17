@@ -54,11 +54,11 @@ def vcov_hetero_qreg(
         )
 
     density = norm.pdf(u_hat / residual_bandwidth) / residual_bandwidth
-    bread = X.T @ (density[:, np.newaxis] * X)
-    bread_inv = np.linalg.inv(bread)
-    meat = X.T @ X
+    hessian = X.T @ (density[:, np.newaxis] * X)
+    bread = np.linalg.inv(hessian)
+    meat = q * (1 - q) * X.T @ X
 
-    return q * (1 - q) * bread_inv @ meat @ bread_inv
+    return bread @ meat @ bread
 
 
 def vcov_nid_qreg(
