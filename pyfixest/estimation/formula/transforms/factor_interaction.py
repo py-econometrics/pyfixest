@@ -184,7 +184,7 @@ def _encode_i(
         )
     elif ref2 is None and bin2 is None and _is_numeric(var2):
         # (ii) interaction with continuous variable
-        result = dummies.multiply(var2.to_numpy(), axis=0)
+        result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
         result.rename(
             columns={
                 level: f"{factor_name}::{level}:{var2_name}"
@@ -286,9 +286,14 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
 
 
 def _is_numeric(series: pd.Series) -> bool:
-    """Check if series is numeric (not categorical/object)."""
-    return pd.api.types.is_numeric_dtype(series) and not pd.api.types.is_bool_dtype(
-        series
+    """Check whether a second variable encodes numeric slopes.
+
+    Booleans count as numeric: fixest interacts a logical second variable as a
+    0/1 slope, not as a factor, including object columns of booleans.
+    """
+    return pd.api.types.is_numeric_dtype(series) or (
+        pd.api.types.is_object_dtype(series)
+        and pd.api.types.infer_dtype(series, skipna=True) == "boolean"
     )
 
 
