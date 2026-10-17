@@ -387,11 +387,10 @@ class ModelMatrix:
         }[role]
         if columns is None:
             return ()
-        term_by_column = {
-            column: render_term(term)
-            for term, _, encoded_columns in self._model_spec[stage][side].structure
-            for column in encoded_columns
-        }
+        term_by_column: dict[str, str] = {}
+        for term, _, encoded_columns in self._model_spec[stage][side].structure:
+            for column in encoded_columns:
+                term_by_column[column] = render_term(term)
         return tuple((term_by_column[column], column) for column in columns)
 
     @property
