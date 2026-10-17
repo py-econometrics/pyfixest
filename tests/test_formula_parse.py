@@ -1069,18 +1069,29 @@ class TestEdgeCases:
         assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
 
     @pytest.mark.parametrize(
-        "formula, expected",
+        "formula_template",
         [
-            ("Y ~ X2 | X1 ~ Z1", "X1 ~ 1 + Z1 + X2"),
-            ("Y ~ -1 + X2 | X1 ~ Z1", "X1 ~ 0 + Z1 + X2"),
-            ("Y ~ 0 + X2 | X1 ~ Z1", "X1 ~ 0 + Z1 + X2"),
-            ("Y ~ X2 - 1 | X1 ~ Z1", "X1 ~ 0 + Z1 + X2"),
-            ("Y ~ 0 | X1 ~ Z1", "X1 ~ 0 + Z1"),
-            ("Y ~ 0 + X2 + [X1 ~ Z1]", "X1 ~ 0 + Z1 + X2"),
+            "Y ~ {exogenous} | X1 ~ {instruments}",
+            "Y ~ {exogenous} + [X1 ~ {instruments}]",
+        ],
+        ids=["pipe", "bracket"],
+    )
+    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize(
+        "exogenous, expected",
+        [
+            ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
+            ("0", "X1 ~ 0 + Z1"),
         ],
     )
-    def test_iv_first_stage_preserves_intercept_choice(self, formula, expected):
+    def test_iv_first_stage_preserves_intercept_choice(
+        self, formula_template, instruments, exogenous, expected
+    ):
         """The instrument block's implicit intercept follows the main equation."""
+        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
         parsed = Formula.parse(formula)[0]
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)

@@ -217,6 +217,41 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         ("Y ~ 0 + X2 | X1 ~ Z1 + Z2", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
         ("Y ~ X2 - 1 | X1 ~ Z1 + Z2", "Y ~ X2 - 1 | X1 ~ Z1 + Z2", False),
         ("Y ~ 0 | X1 ~ Z1 + Z2", "Y ~ 0 | X1 ~ Z1 + Z2", False),
+        ("Y ~ -1 + X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + X2 + [X1 ~ Z1 + Z2]", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ X2 - 1 + [X1 ~ Z1 + Z2]", "Y ~ X2 - 1 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + [X1 ~ Z1 + Z2]", "Y ~ 0 | X1 ~ Z1 + Z2", False),
+        ("Y ~ X2 | X1 ~ Z1 + Z2", "Y ~ X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + X2 | X1 ~ 0 + Z1 + Z2", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + X2 + [X1 ~ 0 + Z1 + Z2]", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + X2 | f1 | X1 ~ Z1 + Z2", "Y ~ 0 + X2 | f1 | X1 ~ Z1 + Z2", False),
+        (
+            "Y ~ 0 + X2 + [X1 ~ Z1 + Z2] | f1",
+            "Y ~ 0 + X2 | f1 | X1 ~ Z1 + Z2",
+            False,
+        ),
+        (
+            "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
+            "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
+            False,
+        ),
+        (
+            "Y ~ 0 + i(category) + [X1 ~ Z1 + Z2]",
+            "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
+            False,
+        ),
+        # Explicit references align categorical instrument coding with fixest.
+        (
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
+            False,
+        ),
+        (
+            "Y ~ 0 + X2 + [X1 ~ Z1 + i(category, ref='a')]",
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
+            False,
+        ),
     ],
 )
 def test_first_stage_vs_fixest(
@@ -227,6 +262,7 @@ def test_first_stage_vs_fixest(
     # data keep missing values and add a complete singleton row, which
     # `fixef_rm="none"` keeps in both stages.
     data = get_data()
+    data["category"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
     complete_row = data[["Y", "X1", "X2", "Z1", "Z2", "f1"]].notna().all(axis=1)
     data.loc[complete_row.idxmax(), "f1"] = 999
     # a balanced panel of 50 units over 20 years for the HAC estimators
@@ -256,13 +292,70 @@ def test_first_stage_vs_fixest(
         fixef_rm="none",
         panel_time_step=1,
     )
+    _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="Pre-existing: default i() instrument coding differs from fixest without an intercept (#1917).",
+)
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
+        "Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]",
+    ],
+    ids=["pipe", "bracket"],
+)
+def test_no_intercept_iv_default_categorical_instrument_vs_fixest(fml):
+    """Without a reference, fixest omits a level that pyfixest retains."""
+    data = get_data()
+    data["category"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
+    fit = feols(fml, data=data, vcov="iid")
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ 0 + X2 | X1 ~ Z1 + i(category)"),
+        data=pandas2ri.py2rpy(data),
+        vcov="iid",
+    )
+    _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("vcov", ["iid", "hetero"])
+@pytest.mark.parametrize(
+    "fml",
+    ["Y ~ 0 + X2 | X1 ~ Z1 + Z2", "Y ~ 0 + X2 + [X1 ~ Z1 + Z2]"],
+    ids=["pipe", "bracket"],
+)
+def test_weighted_no_intercept_iv_vs_fixest(fml, vcov):
+    """Analytic weights preserve the absent intercept in both IV stages."""
+    data = get_data()
+    fit = feols(fml, data=data, weights="weights", vcov=vcov)
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ 0 + X2 | X1 ~ Z1 + Z2"),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.Formula("~weights"),
+        vcov=vcov,
+    )
+    _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
+
+
+def _assert_iv_stages_match_fixest(fit, fit_r):
+    """Compare both IV stages and instrument inference against the R reference."""
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model
 
-    assert "Intercept" not in fit.model_matrix.instruments.columns
-    assert "Intercept" not in first_stage.coef().index
+    names_r = list(ro.r("function(fit) names(coef(fit))")(first_stage_r))
+    has_intercept_r = "(Intercept)" in names_r
+    assert ("Intercept" in fit.model_matrix.instruments.columns) == has_intercept_r
+    assert ("Intercept" in first_stage.coef().index) == has_intercept_r
     second_stage_names_r = list(ro.r("function(fit) names(coef(fit))")(fit_r))
-    second_stage_names = [name.removeprefix("fit_") for name in second_stage_names_r]
+    second_stage_names = [
+        name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+        for name in second_stage_names_r
+    ]
     assert sorted(fit.coef().index) == sorted(second_stage_names)
     np.testing.assert_allclose(
         fit.coef()[second_stage_names],
@@ -276,7 +369,7 @@ def test_first_stage_vs_fixest(
     assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"
     assert first_stage.sample_info.n_obs == n_obs_r, "first-stage n_obs != fixest"
 
-    names_r = list(ro.r("function(fit) names(coef(fit))")(first_stage_r))
+    names_r = [name.replace("(Intercept)", "Intercept") for name in names_r]
     assert sorted(first_stage.coef().index) == sorted(names_r), "coefnames differ"
     np.testing.assert_allclose(
         first_stage.coef()[names_r],
