@@ -98,7 +98,7 @@ def test_refit_replays_options(data, case, fml, monkeypatch):
 
     monkeypatch.setattr(Formula, "parse", fail_on_reparse)
     monkeypatch.setattr(
-        Formula, "formula", property(lambda self: "descriptive text, not a formula")
+        Formula, "render", lambda self: "descriptive text, not a formula"
     )
 
     refitted = refit(fit, data=subsample, vcov=IID)

@@ -52,8 +52,8 @@ def normalize_coef_name(name: str) -> str:
             return f"{prefix}{int(num)}{suffix}"
         return match.group(0)
 
-    name = re.sub(r"(::)(\d+\.0)(\b|:)", normalize_float_level, name)
-    return name
+    name = re.sub(r"(::)(-?\d+\.0)(\b|:)", normalize_float_level, name)
+    return name.replace("::-Inf", "::-inf")
 
 
 def get_r_coef_names(fit_r) -> list[str]:
@@ -157,20 +157,18 @@ def df_test() -> pd.DataFrame:
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "formula,excluded_coef",
+    "formula",
     [
-        ("dep_var ~ i(rel_year, ref=1.0)", "rel_year::1"),
-        ("dep_var ~ i(rel_year, ref=-2.0)", "rel_year::-2"),
-        ("dep_var ~ i(rel_year, treat, ref=1.0)", "rel_year::1:treat"),
-        ("dep_var ~ i(rel_year, treat, ref=-2.0)", "rel_year::-2:treat"),
+        "dep_var ~ i(rel_year, ref=1.0)",
+        "dep_var ~ i(rel_year, ref=-2.0)",
+        "dep_var ~ i(rel_year, treat, ref=1.0)",
+        "dep_var ~ i(rel_year, treat, ref=-2.0)",
     ],
 )
-def test_i_reference_exclusion(df_het, formula, excluded_coef):
+def test_i_reference_exclusion(df_het, formula):
     """Test that reference levels are properly excluded."""
-    fit = feols(formula, df_het)
-    assert excluded_coef not in fit._coefnames, (
-        f"{excluded_coef} should not be in coefficient names"
-    )
+    py_names, py_values, r_names, r_values = compare_with_r(formula, df_het)
+    assert_models_match(py_names, py_values, r_names, r_values)
 
 
 @pytest.mark.against_r_core
@@ -387,6 +385,34 @@ def test_factor_types(df_test, fml):
 def test_factor_x_continuous(df_test, fml):
     """Test i(factor, continuous) with different factor types."""
     py_names, py_values, r_names, r_values = compare_with_r(fml, df_test)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("dtype", ["bool", "boolean", "object"])
+@pytest.mark.parametrize("fml", ["Y ~ i(f_str, flag)", "Y ~ i(f_str, flag) | fe1"])
+def test_factor_x_boolean(df_test, fml, dtype):
+    """Test that a boolean second variable is a 0/1 slope, as in fixest."""
+    rng = np.random.default_rng(1756)
+    flag = pd.Series(rng.choice([True, False], len(df_test)), dtype=dtype)
+    if dtype != "bool":
+        flag.iloc[[3, 30]] = np.nan
+    fit_py = feols(fml, df_test.assign(flag=flag))
+    # rpy2 converts object NaNs to TRUE; nullable booleans preserve R logical NAs.
+    fit_r = fixest.feols(ro.Formula(fml), df_test.assign(flag=flag.astype("boolean")))
+    assert_models_match(
+        [normalize_coef_name(str(n)) for n in fit_py.coef().index],
+        fit_py.coef().values,
+        get_r_coef_names(fit_r),
+        get_r_coef_values(fit_r),
+    )
+
+
+@pytest.mark.against_r_core
+def test_event_study_boolean_treatment(df_het):
+    """Test the event study with the boolean `treat` column of df_het."""
+    fml = "dep_var ~ i(rel_year, treat, ref=-1.0) | unit + year"
+    py_names, py_values, r_names, r_values = compare_with_r(fml, df_het)
     assert_models_match(py_names, py_values, r_names, r_values)
 
 

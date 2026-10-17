@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import contextlib
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -12,88 +11,88 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.demeaners import MapDemeaner
 from pyfixest.estimation import fepois
+from pyfixest.estimation.internals.separation import _check_for_separation_ir
 
 fixest = importr("fixest")
 
 
-def test_separation():
-    """Test separation detection."""
+@pytest.mark.parametrize(
+    "response, groups, expected",
+    [
+        pytest.param([1, 2, 3, 4], [0, 0, 1, 1], set(), id="positive-response"),
+        pytest.param([1, 2, 0, 0, 0], [0, 0, 0, 1, 1], {3, 4}, id="fixed-effects-only"),
+    ],
+)
+def test_separation_ir_without_regressors(response, groups, expected):
+    """Only all-zero FE groups are separated when there are no regressors."""
+    dependent = pd.DataFrame({"y": response})
+    assert (
+        _check_for_separation_ir(
+            Y=dependent,
+            X=pd.DataFrame(index=dependent.index),
+            fe=pd.DataFrame({"group": groups}),
+            demeaner=MapDemeaner(),
+            collin_tol=1e-9,
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_path",
+    sorted((Path(__file__).parent / "data/ppmlhdfe_separation_examples").glob("*.csv")),
+    ids=lambda path: path.name,
+)
+def test_separation_ir_datasets(dataset_path):
+    """IR recovers the exact separation masks from the ppmlhdfe fixtures."""
+    if dataset_path.name == "07.csv":
+        # Also excluded by ppmlhdfe's test/validate_tagsep.do.
+        pytest.skip("07.csv is excluded from the upstream separation validation.")
+
+    data = pd.read_csv(dataset_path)
+    regressors = data.filter(regex="^x")
+    if regressors.empty:
+        # Preserve the existing dataset test's FE-only exclusions.
+        pytest.skip("IR does not recover the multiway FE-only reference masks.")
+    fixed_effects = data.filter(regex="^id")
+    if fixed_effects.empty:
+        # One constant FE represents the intercept in the reference datasets.
+        fixed_effects = pd.DataFrame({"intercept": np.zeros(len(data), dtype=np.int64)})
+    else:
+        fixed_effects = fixed_effects.apply(lambda column: pd.factorize(column)[0])
+
+    arguments = {
+        "Y": data[["y"]],
+        "X": regressors,
+        "fe": fixed_effects,
+        "demeaner": MapDemeaner(),
+        "collin_tol": 1e-9,
+    }
+    expected = set(data.index[data.separated == 1])
+    if dataset_path.name == "15.csv":
+        assert expected
+        with pytest.warns(RuntimeWarning, match="maximum number of iterations"):
+            assert _check_for_separation_ir(**arguments, maxiter=1) == set()
+    assert _check_for_separation_ir(**arguments) == expected
+
+
+def test_separation_fe():
+    """The public Poisson fit removes observations in all-zero FE levels."""
+    rng = np.random.default_rng(0)
     example1 = pd.DataFrame.from_dict(
         {
             "Y": [0, 0, 0, 1, 2, 3],
             "fe1": ["a", "a", "b", "b", "b", "c"],
             "fe2": ["c", "c", "d", "d", "d", "e"],
-            "X": np.random.normal(0, 1, 6),
+            "X": rng.normal(0, 1, 6),
         }
     )
     with pytest.warns(
         UserWarning, match="2 observations removed because of separation."
     ):
         fepois("Y ~ X  | fe1", data=example1, vcov="hetero", separation_check=["fe"])
-
-    if False:
-        # this example is taken from ppmlhdfe's primer on separation https://github.com/sergiocorreia/ppmlhdfe/blob/master/guides/separation_primer.md
-        # disabled because we currently do not perform separation checks if no fixed effects are provided
-        # TODO: enable once separation checks without fixed effects are enabled
-        example2 = pd.DataFrame.from_dict(
-            {
-                "Y": [0, 0, 0, 1, 2, 3],
-                "X1": [2, -1, 0, 0, 5, 6],
-                "X2": [5, 10, 0, 0, -10, -12],
-            }
-        )
-
-        with pytest.warns(
-            UserWarning, match="2 observations removed because of separation."
-        ):
-            fepois("Y ~ X1 + X2", data=example2, vcov="hetero", separation_check=["ir"])
-
-    # ppmlhdfe test data sets (check readme in data/ppmlhdfe_separation_examples)
-    path = os.path.dirname(os.path.abspath(__file__))
-    folder = r"data/ppmlhdfe_separation_examples"
-    fns = sorted(
-        [fn for fn in os.listdir(os.path.join(path, folder)) if fn.endswith(".csv")]
-    )
-    for fn in fns:
-        if fn in ["07.csv"]:
-            # this case fails but is not tested in ppmlhdfe
-            # https://github.com/sergiocorreia/ppmlhdfe/blob/master/test/validate_tagsep.do#L27
-            continue
-        data = pd.read_csv(os.path.join(path, folder, fn))
-        # build formula dynamically from dataframe
-        # datasets have fixed structure of the form (y, x1, ..., xN, id1, ..., idM, separated)
-        fml = "y"  # dependent variable y
-        regressors = data.columns[
-            data.columns.str.startswith("x")
-        ]  # regressors x1,...,xN
-        fixed_effects = data.columns[
-            data.columns.str.startswith("id")
-        ]  # fixed effects id1,...,id2
-
-        if regressors.empty:
-            # TODO: formulae with just a constant term and fixed effects throw error in FIT.get_fit(), e.g., for 03.csv and Y ~ 1 | id1 + id2 + id3?
-            continue
-        fml += f" ~ {' + '.join(regressors)}"
-
-        if fixed_effects.empty:
-            # TODO: separation checks are currently disabled if no fixed effects are specified; enable tests once we run separation check without fixed effects
-            continue
-        else:
-            fml += f" | {' + '.join(fixed_effects)}"
-
-        with (
-            pytest.warns(
-                UserWarning,
-                match=f"{data.separated.sum()} observations removed because of separation.",
-            ) as record,
-            contextlib.suppress(Exception),
-        ):
-            pf.fepois(fml, data=data, separation_check=["ir"])
-
-        # if no separation, no warning is raised
-        if data.separated.sum() == 0:
-            assert len(record) == 0
 
 
 @pytest.mark.against_r_core
@@ -135,9 +134,6 @@ def test_against_fixest(fml):
     )
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
-)
 @pytest.mark.parametrize("lhs", ["`my outcome`", "{Y * 2}"])
 def test_separation_preserves_response_and_auxiliary_columns(lhs):
     data = pd.DataFrame(
@@ -155,7 +151,95 @@ def test_separation_preserves_response_and_auxiliary_columns(lhs):
     original = data.copy(deep=True)
     expected = pf.fepois("Y ~ X - 1 | fe", data=data, separation_check=["ir"])
     fit = pf.fepois(f"{lhs} ~ X - 1 | fe", data=data, separation_check=["ir"])
-    assert fit.sample_info.n_obs == expected.sample_info.n_obs == 6
+    retained_rows = [2, 3, 4, 5, 6, 7]
+    assert fit.model_matrix.dependent.index.tolist() == retained_rows
+    assert expected.model_matrix.dependent.index.tolist() == retained_rows
     # Scaling a Poisson response shifts the FE intercepts, leaving its slope.
     np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-6, atol=1e-8)
     pd.testing.assert_frame_equal(data, original)
+
+
+def test_separation_preserves_fitted_transform_state():
+    """IR uses the original transform state despite missing-response rows."""
+    rng = np.random.default_rng(4)
+    data = pd.DataFrame(
+        {
+            "c": np.repeat([-0.4, 0.4, 1.3, 3.8], [40, 10, 5, 10]),
+            "y": np.repeat([1.0, 0.0, 1.0, np.nan], [40, 10, 5, 10]),
+            "x": rng.normal(size=65),
+        }
+    )
+    data["g"] = np.floor(data.c - data.c.mean())
+    data["transformed_x"] = np.sin(data.x - data.x.mean())
+    expected = pf.fepois(
+        "y ~ transformed_x | g",
+        data=data,
+        fixef_rm="none",
+        separation_check=["ir"],
+    )
+    fit = pf.fepois(
+        "y ~ np.sin(center(x)) | g",
+        data=data,
+        fixef_rm="none",
+        separation_check=["ir"],
+    )
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs == 55
+    np.testing.assert_allclose(
+        fit.coef(),
+        expected.coef(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed the design learned before missing-response filtering",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        expected.se(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed standard errors for the fitted transform state",
+    )
+    np.testing.assert_allclose(
+        fit.predict(),
+        expected.predict(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed retained-row predictions",
+    )
+
+
+def test_separation_preserves_context_predictor():
+    """A context predictor gives the same fit as the corresponding data column."""
+    rng = np.random.default_rng(415)
+    data = pd.DataFrame(
+        {"y": rng.poisson(1, 100), "x": rng.normal(size=100), "f": np.arange(100) % 5}
+    )
+    expected = pf.fepois("y ~ x | f", data=data, separation_check=["ir"])
+    fit = pf.fepois(
+        "y ~ omega | f",
+        data=data,
+        context={"omega": data.x},
+        separation_check=["ir"],
+    )
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs == 100
+    np.testing.assert_allclose(
+        fit.coef(),
+        expected.coef(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed a context-supplied predictor",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        expected.se(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed standard errors for a context-supplied predictor",
+    )
+    rows = [0, 33, 66, 99]
+    np.testing.assert_allclose(
+        fit.predict()[rows],
+        expected.predict()[rows],
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="IR changed predictions for a context-supplied predictor",
+    )

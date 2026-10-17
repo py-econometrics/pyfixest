@@ -586,10 +586,6 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
     assert fit._X_is_empty is False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
-)
 @pytest.mark.parametrize("weights", [None, "weights"])
 def test_distinct_structures_with_same_display_survive(weights):
     """#1776: model identity and demean-cache scopes use parsed semantics."""
@@ -618,10 +614,6 @@ def test_distinct_structures_with_same_display_survive(weights):
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Pending structural formula identity; regression from PR stack #1862",
-)
 def test_full_sample_and_group_named_all_have_distinct_identity():
     data = pf.get_data(N=300).dropna()
     data["group"] = np.resize(["all", "'all'", "rest"], len(data))
@@ -670,7 +662,6 @@ def test_quantile_models_support_name_lookup():
         assert fit.model.model_name.endswith(f"(q = {fit.options.quantile})")
 
 
-@pytest.mark.xfail(strict=True, reason="Pending unambiguous formula rendering")
 def test_expanded_models_have_unambiguous_string_keys():
     data = pf.get_data(N=200, seed=17).dropna()
     names = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
@@ -681,7 +672,6 @@ def test_expanded_models_have_unambiguous_string_keys():
         assert multi.all_fitted_models[name] is fit
 
 
-@pytest.mark.xfail(strict=True, reason="Pending faithful public formula rendering")
 @pytest.mark.parametrize(
     "estimator, fml, preserved",
     [
