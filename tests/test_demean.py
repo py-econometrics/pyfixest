@@ -7,8 +7,11 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
+from within import PreconditionerConfig, Solver
+from within.config import Staleness
 
 import pyfixest as pf
+import pyfixest.demeaners as demeaners
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within, within_preconditioner_name
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
@@ -124,7 +127,15 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
     ("demeaner", "rtol", "atol"),
     [
         (
-            LsmrDemeaner(),
+            LsmrDemeaner(preconditioner="additive"),
+            1e-6,
+            1e-8,
+        ),
+        (
+            LsmrDemeaner(
+                fixef_atol=1e-10,
+                fixef_btol=1e-10,
+            ),
             1e-6,
             1e-8,
         ),
@@ -342,6 +353,7 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
 @pytest.mark.parametrize(
     "preconditioner",
     [
+        "adaptive",
         "additive",
         "diagonal",
     ],
@@ -484,6 +496,86 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     )
 
 
+def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
+    """An escalated preconditioner replaces a cached adaptive base, nothing else.
+
+    Reusing an adaptive base that has not escalated makes every later solve
+    escalate and rebuild additive Schwarz, so the cache keeps the escalated one.
+    """
+    x, flist, weights = demean_data
+    flist = flist.astype(np.uint32)
+    _, _, adaptive = demean_within(x, flist, weights, preconditioner="adaptive")
+    _, _, additive = demean_within(x, flist, weights, preconditioner="additive")
+    _, _, diagonal = demean_within(x, flist, weights, preconditioner="diagonal")
+    na_index = frozenset()
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, adaptive)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is additive
+    cache.seed_preconditioner(na_index, adaptive)
+    assert cache.lookup_preconditioner[na_index] is additive
+
+    cache = DemeanCache()
+    cache.seed_preconditioner(na_index, diagonal)
+    cache.seed_preconditioner(na_index, additive)
+    assert cache.lookup_preconditioner[na_index] is diagonal
+
+
+def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch):
+    """A later weighted solve upgrades the cache instead of restarting adaptive."""
+    x, flist, weights = demean_data
+    # A tuned ladder makes the adaptive handle escalate on its first iteration.
+    preconditioner = Solver(
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights=weights,
+        preconditioner=PreconditionerConfig.Adaptive(
+            stall=Staleness(window=1, threshold=0.0)
+        ),
+    ).preconditioner
+    demeaner = LsmrDemeaner(
+        preconditioner=preconditioner, fixef_atol=1e-10, fixef_btol=1e-10
+    )
+    calls = []
+    original = demeaners.demean_within
+
+    def record_solve(**kwargs):
+        result = original(**kwargs)
+        calls.append((kwargs["preconditioner"], result[2]))
+        return result
+
+    monkeypatch.setattr(demeaners, "demean_within", record_solve)
+    cache = DemeanCache()
+    sample = frozenset()
+    cache.demean_array(
+        x=np.zeros_like(x),
+        flist=flist,
+        weights=weights,
+        na_index=sample,
+        demeaner=demeaner,
+    )
+    assert within_preconditioner_name(cache.lookup_preconditioner[sample]) == "adaptive"
+
+    for shift in (0.25, 0.5):
+        current_weights = weights + shift
+        result = cache.demean_array(
+            x=x,
+            flist=flist,
+            weights=current_weights,
+            na_index=sample,
+            demeaner=demeaner,
+        )
+        expected = pyhdfe.create(flist).residualize(x, current_weights[:, None])
+        np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-8)
+
+    additive = calls[1][1]
+    assert within_preconditioner_name(additive) == "additive"
+    assert cache.lookup_preconditioner[sample] is additive
+    assert calls[2][0] is additive
+    assert calls[2][1].build_duration_seconds == additive.build_duration_seconds
+    assert not cache.lookup_demeaned_data
+
+
 def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
     """`LsmrDemeaner.demean` reports `None` whenever no preconditioner ran.
 
@@ -546,8 +638,9 @@ def test_lsmr_within_reports_no_preconditioner_when_unused(demean_data):
 @pytest.mark.parametrize(
     ("backend", "requested", "expected"),
     [
-        # within: supports additive, off, diagonal; auto -> additive
-        ("within", "auto", "additive"),
+        # within: supports adaptive, additive, off, diagonal; auto -> adaptive
+        ("within", "auto", "adaptive"),
+        ("within", "adaptive", "adaptive"),
         ("within", "additive", "additive"),
         ("within", "off", "off"),
         ("within", "diagonal", "diagonal"),
@@ -568,6 +661,7 @@ def test_resolve_preconditioner_compatible_silent(backend, requested, expected):
 @pytest.mark.parametrize(
     ("backend", "requested", "fallback"),
     [
+        ("torch", "adaptive", "diagonal"),
         ("torch", "additive", "diagonal"),
         ("torch", "off", "diagonal"),
     ],

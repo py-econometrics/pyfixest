@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
 
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner
+from pyfixest.core.demean import Preconditioner, within_preconditioner_name
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47,8 +47,8 @@ class DemeanCache:
     The index for both caches is the frozen set of `na_index` - as all fits
     operate on the same fixed effects / data structure.
 
-    Model classes call :meth:`demean_array` (IWLS) or :meth:`demean_yx`
-    (OLS/IV).
+    OLS/IV models call :meth:`demean_yx`. GLMs call :meth:`demean_array` to
+    recompute each weighted projection while reusing the preconditioner.
     """
 
     def __init__(
@@ -66,15 +66,18 @@ class DemeanCache:
     def seed_preconditioner(
         self, na_index: frozenset[int], used_preconditioner: Preconditioner | None
     ) -> None:
-        """Store the first preconditioner observed for ``na_index``.
+        """Store the preconditioner to reuse for ``na_index``.
 
-        For IWLS (Poisson, GLM) the demeaner is called once per iteration
-        and returns a preconditioner each time; we keep the one from the
-        first call and ignore later ones.
+        The first preconditioner observed is kept, unless a later solve
+        escalates an adaptive preconditioner. Retain that additive Schwarz
+        replacement for subsequent IWLS iterations and sibling models.
         """
-        if (
-            used_preconditioner is not None
-            and na_index not in self.lookup_preconditioner
+        if used_preconditioner is None:
+            return
+        cached = self.lookup_preconditioner.get(na_index)
+        if cached is None or (
+            within_preconditioner_name(cached) == "adaptive"
+            and within_preconditioner_name(used_preconditioner) == "additive"
         ):
             self.lookup_preconditioner[na_index] = used_preconditioner
 
@@ -86,11 +89,24 @@ class DemeanCache:
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> np.ndarray:
-        """Demean `x`, reusing and seeding the cached preconditioner for `na_index`.
+        """Recompute a projection with current weights and a cached preconditioner.
 
-        Raises `ValueError` if the demeaning algorithm does not converge.
+        Unlike :meth:`demean_yx`, this does not cache demeaned columns. Within
+        a cache block, keep using the first handle or its additive replacement
+        after adaptive escalation, including for an explicitly supplied handle.
         """
-        result, _ = self._run_or_raise(x, flist, weights, na_index, demeaner)
+        cached = self.lookup_preconditioner.get(na_index)
+        if (
+            cached is not None
+            and isinstance(demeaner, LsmrDemeaner)
+            and isinstance(demeaner.preconditioner, Preconditioner)
+        ):
+            # An explicit adaptive handle must not restart the ladder after
+            # an earlier solve has already built the additive preconditioner.
+            demeaner = replace(demeaner, preconditioner=cached)
+        result, _ = self._run_or_raise(
+            x=x, flist=flist, weights=weights, na_index=na_index, demeaner=demeaner
+        )
         return result
 
     def _run_or_raise(

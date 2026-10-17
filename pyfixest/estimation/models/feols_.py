@@ -438,7 +438,8 @@ class Feols(ResultAccessorMixin):
         ``None`` when no preconditioner participated in the solve —
         ``preconditioner='off'``, single-FE designs (MAP fallback), or any
         non-within backend. Otherwise the instance built on the first solve
-        for this model's row sample. Pass it back via
+        for this model's row sample, or the additive Schwarz preconditioner
+        that replaced it when a later adaptive solve escalated. Pass it back via
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
