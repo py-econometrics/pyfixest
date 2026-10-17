@@ -1,3 +1,9 @@
+---
+pagetitle: "PyFixest"
+body-classes: docs-home
+toc: false
+---
+
 ![](figures/pyfixest-logo.png)
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python

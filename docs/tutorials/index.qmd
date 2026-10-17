@@ -6,7 +6,8 @@ listing:
   contents:
     - ols-fixed-effects.qmd
     - formula-syntax.qmd
-    - standard-errors.qmd
+    # Excluded from the site in _quarto.yml until the draft is finished.
+    # - standard-errors.qmd
     - instrumental-variables.qmd
     - poisson-glm.qmd
     - difference-in-differences.qmd

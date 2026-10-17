@@ -4,7 +4,6 @@ aliases:
   - /compare-fixest-pyfixest.html
 toc: true
 toc-title: "On this page"
-toc-location: left
 ---
 
 This vignette compares estimation results from `fixest` with `pyfixest` via the `rpy2` package.
