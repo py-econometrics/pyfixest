@@ -422,8 +422,8 @@ class Feols(ResultAccessorMixin):
             response, design, _ = self._demean_cache.demean_yx(
                 response,
                 design,
-                y_keys=self.model_matrix.dependent_column_identifiers,
-                x_keys=self.model_matrix.independent_column_identifiers,
+                y_keys=self.model_matrix.column_keys("dependent"),
+                x_keys=self.model_matrix.column_keys("independent"),
                 fe=fixed_effects.to_numpy(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,

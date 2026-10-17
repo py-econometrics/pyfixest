@@ -168,12 +168,6 @@ def test_plan_formulas_groups_by_fixed_effects(fml, expected_groups):
     config = _config("feols", fml, pf.get_data())
     formula_dict = plan_formulas(config=config).formula_dict
 
-    expected_groups = {
-        Formula.parse(f"Y ~ X1 | {key}")[0].fixed_effects_key
-        if key is not None
-        else None: outcomes
-        for key, outcomes in expected_groups.items()
-    }
     assert list(formula_dict) == list(expected_groups)
     assert {
         key: [str(formula.dependent) for formula in formulas]
@@ -203,7 +197,7 @@ def test_single_formula_emits_one_spec():
     assert len(specs) == 1
     assert specs[0].method == "feols"
     assert specs[0].model_cls is Feols
-    assert specs[0].cache_key == (None, specs[0].formula.fixed_effects_key)
+    assert specs[0].cache_key == (None, "f1")
 
 
 def test_csw_emits_one_spec_per_fixef_step():

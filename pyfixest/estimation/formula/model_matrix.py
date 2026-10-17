@@ -4,7 +4,7 @@ import copy
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any, Final, TypeAlias, cast
+from typing import Any, Final, Literal, TypeAlias, cast
 
 import formulaic
 import numpy as np
@@ -17,17 +17,17 @@ from numpy.typing import NDArray
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
-    _model_spec_column_identifiers,
     flatten_model_matrix,
     get_fixed_effect_encoding,
 )
-from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.formula.utils import ColumnIdentifier, _get_weights
+from pyfixest.estimation.formula.parse import Formula, render_term
+from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
 from pyfixest.utils.utils import capture_context
 
 _ModelSpecMapping: TypeAlias = Mapping[str, formulaic.ModelSpec]
+ColumnKey: TypeAlias = tuple[str, str]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -358,41 +358,41 @@ class ModelMatrix:
             return None
         return self._data.loc[:, self._instruments_column_names]
 
-    @property
-    def dependent_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
-        """Column identifiers of ``dependent``."""
-        return _model_spec_column_identifiers(
-            model_spec=self._model_spec[_ModelMatrixKey.main].lhs,
-            columns=self._dependent_column_names or [],
-        )
+    def column_keys(
+        self, role: Literal["dependent", "independent", "endogenous", "instruments"]
+    ) -> tuple[ColumnKey, ...]:
+        """Key the columns of one frame by their rendered term and name.
 
-    @property
-    def independent_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
-        """Column identifiers of ``independent``."""
-        return _model_spec_column_identifiers(
-            model_spec=self._model_spec[_ModelMatrixKey.main].rhs,
-            columns=self._independent_column_names or [],
-        )
-
-    @property
-    def endogenous_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
-        """Column identifiers of ``endogenous``; empty without an IV specification."""
-        if self._endogenous_column_names is None:
+        Distinct terms can encode columns with equal names, e.g. ``i(f3, X2)``
+        and ``i(f3, np.exp(X2 / 5))``, so names alone cannot share cached
+        demeaned columns across models.
+        """
+        stage, side, columns = {
+            "dependent": (_ModelMatrixKey.main, "lhs", self._dependent_column_names),
+            "independent": (
+                _ModelMatrixKey.main,
+                "rhs",
+                self._independent_column_names,
+            ),
+            "endogenous": (
+                _ModelMatrixKey.instrumental_variable,
+                "lhs",
+                self._endogenous_column_names,
+            ),
+            "instruments": (
+                _ModelMatrixKey.instrumental_variable,
+                "rhs",
+                self._instruments_column_names,
+            ),
+        }[role]
+        if columns is None:
             return ()
-        return _model_spec_column_identifiers(
-            model_spec=self._model_spec[_ModelMatrixKey.instrumental_variable].lhs,
-            columns=self._endogenous_column_names,
-        )
-
-    @property
-    def instrument_column_identifiers(self) -> tuple[ColumnIdentifier, ...]:
-        """Column identifiers of ``instruments``; empty without an IV specification."""
-        if self._instruments_column_names is None:
-            return ()
-        return _model_spec_column_identifiers(
-            model_spec=self._model_spec[_ModelMatrixKey.instrumental_variable].rhs,
-            columns=self._instruments_column_names,
-        )
+        term_by_column = {
+            column: render_term(term)
+            for term, _, encoded_columns in self._model_spec[stage][side].structure
+            for column in encoded_columns
+        }
+        return tuple((term_by_column[column], column) for column in columns)
 
     @property
     def weights(self) -> pd.DataFrame | None:

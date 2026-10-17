@@ -4,7 +4,7 @@ import ast
 import itertools
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Final, TypeAlias
+from typing import Final
 
 import formulaic
 import formulaic.formula
@@ -34,12 +34,10 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 )
 from pyfixest.estimation.formula.utils import (
     _MULTIPLE_ESTIMATION_PATTERN,
-    TermKey,
     _get_position_of_first_parenthesis_pair,
     _MultipleEstimationType,
     _preprocess,
     _str_split_by_sep,
-    term_key,
 )
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
@@ -49,14 +47,6 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
-
-FormulaPartKey: TypeAlias = tuple[TermKey, ...]
-FormulaKey: TypeAlias = tuple[FormulaPartKey, ...]
-
-
-def _formula_part_key(terms: Iterable[Term]) -> FormulaPartKey:
-    """Preserve term boundaries and lookup/expression evaluation semantics."""
-    return tuple(term_key(term=term) for term in terms)
 
 
 def _render_factor(factor: Factor) -> str:
@@ -84,17 +74,16 @@ def _render_factor(factor: Factor) -> str:
     return expression
 
 
+def render_term(term: Term) -> str:
+    """Render one term; distinct parsed terms render to distinct strings."""
+    return ":".join(_render_factor(factor) for factor in term.factors)
+
+
 def _render_formula_part(
     terms: Iterable[Term], *, explicit_no_intercept: bool = False
 ) -> str:
     terms = tuple(terms)
-    result = (
-        " + ".join(
-            ":".join(_render_factor(factor) for factor in term.factors)
-            for term in terms
-        )
-        or "0"
-    )
+    result = " + ".join(render_term(term) for term in terms) or "0"
     if (
         explicit_no_intercept
         and result != "0"
@@ -401,8 +390,10 @@ class Formula:
     def render(self) -> str:
         """Render an expanded formula preserving lookup and expression semantics.
 
-        This is the readable public model name. Materialization uses the retained
-        parsed stages; display strings are never used as internal identities.
+        This is the readable public model name. Distinct parsed formulas render
+        to distinct strings, so the rendered text also identifies models and
+        fixed-effect groups internally. Materialization uses the retained
+        parsed stages.
         """
         exogenous = _render_formula_part(
             self.exogenous, explicit_no_intercept=not self.is_fixed_effects
@@ -415,22 +406,11 @@ class Formula:
         return result
 
     @property
-    def fixed_effects_key(self) -> FormulaPartKey | None:
-        """Structural identity of the absorbed terms for grouping and caching."""
-        return _formula_part_key(self.fixed_effects) if self.is_fixed_effects else None
-
-    @property
-    def identity(self) -> FormulaKey:
-        """Model identity independent of its potentially ambiguous display text."""
-        return (
-            _formula_part_key(self.dependent),
-            _formula_part_key(self.exogenous),
-            _formula_part_key(self.endogenous) if self.is_instrumental_variable else (),
-            _formula_part_key(self.instruments)
-            if self.is_instrumental_variable
-            else (),
-            self.fixed_effects_key or (),
-        )
+    def fixed_effects_key(self) -> str | None:
+        """Rendered fixed effects, grouping models that share demeaning caches."""
+        if not self.is_fixed_effects:
+            return None
+        return _render_formula_part(self.fixed_effects)
 
     @property
     def _left_hand_side(self) -> formulaic.formula.SimpleFormula:

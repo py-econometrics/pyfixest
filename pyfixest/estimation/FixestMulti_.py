@@ -6,7 +6,6 @@ from collections.abc import Mapping
 import pandas as pd
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.formula.parse import FormulaPartKey
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
@@ -44,13 +43,13 @@ class FixestMulti(TidyColumnAccessors):
     """
 
     def __init__(
-        self, *, formula_dict: Mapping[FormulaPartKey | None, list[FixestFormula]]
+        self, *, formula_dict: Mapping[str | None, list[FixestFormula]]
     ) -> None:
         """.
 
         Parameters
         ----------
-        formula_dict : Mapping[FormulaPartKey | None, list[FixestFormula]]
+        formula_dict : Mapping[str | None, list[FixestFormula]]
             The parsed formulas keyed by fixed-effects spec, kept only for the
             deprecated `FixestFormulaDict` attribute.
         """
@@ -59,7 +58,7 @@ class FixestMulti(TidyColumnAccessors):
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
     @property
-    def FixestFormulaDict(self) -> Mapping[FormulaPartKey | None, list[FixestFormula]]:
+    def FixestFormulaDict(self) -> Mapping[str | None, list[FixestFormula]]:
         """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
         warnings.warn(
             "`FixestFormulaDict` is deprecated and will be removed in a future "
@@ -285,7 +284,7 @@ class FixestMulti(TidyColumnAccessors):
         if i >= len(keys):
             raise IndexError(f"Index {i} is larger than the number of fitted models.")
         key = keys[i]
-        model = self.all_fitted_models[key]
         if print_fml:
-            print("Model: ", model.model.model_name)
+            print("Model: ", key)
+        model = self.all_fitted_models[key]
         return model

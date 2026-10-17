@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Hashable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -8,19 +8,18 @@ from numpy.typing import NDArray
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.formula.utils import ColumnIdentifier
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DemeanedData:
-    """Cache entry for demeaned columns and their identifiers.
+    """Cache entry for demeaned columns and their keys.
 
     Attributes
     ----------
     values : NDArray[np.float64]
-        Demeaned columns, shape ``(n_rows, len(column_identifiers))``.
-    column_identifiers : tuple[ColumnIdentifier, ...]
-        Column identifiers, in the insertion order of the columns in ``values``.
+        Demeaned columns, shape ``(n_rows, len(column_keys))``.
+    column_keys : tuple[Hashable, ...]
+        Column keys, in the insertion order of the columns in ``values``.
 
     Notes
     -----
@@ -33,7 +32,7 @@ class DemeanedData:
     """
 
     values: NDArray[np.float64]
-    column_identifiers: tuple[ColumnIdentifier, ...]
+    column_keys: tuple[Hashable, ...]
 
 
 class DemeanCache:
@@ -41,8 +40,7 @@ class DemeanCache:
 
     `Compute once, never forget`:
 
-    - `lookup_demeaned_data`: already-demeaned arrays keyed by column identifiers
-       from previous fits.
+    - `lookup_demeaned_data`: already-demeaned columns from previous fits.
     - `lookup_preconditioner`: the preconditioner from the first fit on a
        data set / na index combination.
 
@@ -119,8 +117,8 @@ class DemeanCache:
         Y: NDArray[np.float64],
         X: NDArray[np.float64],
         *,
-        y_keys: Sequence[ColumnIdentifier],
-        x_keys: Sequence[ColumnIdentifier],
+        y_keys: Sequence[Hashable],
+        x_keys: Sequence[Hashable],
         fe: np.ndarray | None,
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
@@ -130,7 +128,7 @@ class DemeanCache:
         NDArray[np.float64],
         Preconditioner | None,
     ]:
-        """Demean response and design arrays and cache missing column identities.
+        """Demean response and design arrays and cache missing columns.
 
         New columns are appended to the cache in their requested order. Returned
         arrays always follow ``y_keys`` and ``x_keys``, independently of the
@@ -142,10 +140,10 @@ class DemeanCache:
             Response array, shape ``(n_rows, n_responses)``.
         X : NDArray[np.float64]
             Design array, shape ``(n_rows, n_regressors)``.
-        y_keys : Sequence[ColumnIdentifier]
-            Ordered response identities corresponding to the columns of ``Y``.
-        x_keys : Sequence[ColumnIdentifier]
-            Ordered regressor identities corresponding to the columns of ``X``.
+        y_keys : Sequence[Hashable]
+            Ordered response keys corresponding to the columns of ``Y``.
+        x_keys : Sequence[Hashable]
+            Ordered regressor keys corresponding to the columns of ``X``.
         fe : np.ndarray or None
             Encoded fixed-effect identifiers, or ``None`` for no fixed effects.
         weights : NDArray[np.float64] or None
@@ -181,10 +179,10 @@ class DemeanCache:
             )
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
-            cached = DemeanedData(values=YX_demeaned, column_identifiers=yx_keys)
+            cached = DemeanedData(values=YX_demeaned, column_keys=yx_keys)
             self.lookup_demeaned_data[na_index] = cached
         else:
-            cached_keys = cached.column_identifiers
+            cached_keys = cached.column_keys
             cached_key_set = frozenset(cached_keys)
             uncached_positions = tuple(
                 index for index, key in enumerate(yx_keys) if key not in cached_key_set
@@ -201,7 +199,7 @@ class DemeanCache:
                 cached_demeaned.setflags(write=False)
                 cached = DemeanedData(
                     values=cached_demeaned,
-                    column_identifiers=cached_keys + uncached_keys,
+                    column_keys=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
             # Every requested column is demeaned and cached at this point.
@@ -216,10 +214,10 @@ class DemeanCache:
     @staticmethod
     def _select_columns(
         cached: DemeanedData,
-        yx_keys: tuple[ColumnIdentifier, ...],
+        yx_keys: tuple[Hashable, ...],
     ) -> NDArray[np.float64]:
         cached_position_by_key = {
-            key: position for position, key in enumerate(cached.column_identifiers)
+            key: position for position, key in enumerate(cached.column_keys)
         }
         positions = tuple(cached_position_by_key[key] for key in yx_keys)
         selects_cached_prefix = positions == tuple(range(len(positions)))

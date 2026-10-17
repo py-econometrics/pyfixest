@@ -72,20 +72,14 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
     matrix = fit.model_matrix
-    for frame, identifiers in (
-        (matrix.dependent, matrix.dependent_column_identifiers),
-        (matrix.independent, matrix.independent_column_identifiers),
-        (matrix.endogenous, matrix.endogenous_column_identifiers),
-        (matrix.instruments, matrix.instrument_column_identifiers),
-    ):
-        assert tuple(identifier.name for identifier in identifiers) == tuple(
-            frame.columns
-        )
+    for role in ("dependent", "independent", "endogenous", "instruments"):
+        keys = matrix.column_keys(role)
+        assert tuple(name for _, name in keys) == tuple(getattr(matrix, role).columns)
     # The same endogenous column can share demeaned values across both stages.
     endogenous_position = matrix.independent.columns.get_loc("X2")
     assert (
-        matrix.independent_column_identifiers[endogenous_position]
-        == matrix.endogenous_column_identifiers[0]
+        matrix.column_keys("independent")[endogenous_position]
+        == matrix.column_keys("endogenous")[0]
     )
 
 

@@ -34,7 +34,7 @@ Other things:
 
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 
-- Multiple-estimation model identities and shared demeaned columns use parsed term semantics, including lookup versus Python evaluation. Stepwise fits no longer reuse another expression's values merely because its encoded columns have the same display names, including transformed `i()` terms. Equivalent columns still share cached values. Fixes [#1762](https://github.com/py-econometrics/pyfixest/issues/1762).
+- Multiple estimation no longer reuses another expression's demeaned values merely because its encoded columns have the same names, as with transformed `i()` terms or a literal column named like an expression. Cached columns are keyed by their rendered term and name, so equivalent columns still share values. Fixes [#1762](https://github.com/py-econometrics/pyfixest/issues/1762).
 
 - Multiple-estimation dictionaries remain keyed by readable model-name strings. Expanded names preserve expression braces and literal-column quoting, so distinct specifications do not overwrite each other. Names without an intercept explicitly include `0`; string sample-group values are consistently quoted, while the full-sample sentinel displays as unquoted `all`. Update name-based dictionary lookups and `rename_models` mappings for these names.
 
@@ -129,7 +129,7 @@ Other things:
   result expansion through a structural lifecycle protocol. This keeps formula
   roles stable while the later within- and weight-scale cleanup proceeds
   independently.
-- The internal demeaning cache now stores `float64` arrays with column identifiers
+- The internal demeaning cache now stores `float64` arrays keyed by column
   instead of a `DataFrame`, so cached columns are selected by position rather than rebuilt
   as a frame on every fit, and the returned response and regressor columns
   follow the order the model asked for regardless of the order the cache
