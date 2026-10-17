@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
+from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -207,16 +209,66 @@ class Feiv(Feols):
         self, within_data: WithinLinearData
     ) -> WithinLinearData:
         """Drop collinear columns from the second-stage design and the instruments."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
         assert isinstance(within_data, WithinIvData)
         instruments, collinearity = drop_multicollinear_variables(
-            within_data.instruments,
-            self._coefnames_z,
-            self.options.collin_tol,
+            X=within_data.instruments,
+            names=self._coefnames_z,
+            collin_tol=self.options.collin_tol,
         )
+        self._validate_iv_identification(
+            within_data=within_data,
+            instruments=instruments,
+        )
+        structural_data = super()._drop_multicollinear_within_data(within_data)
+        assert isinstance(structural_data, WithinIvData)
         self.collinearity_instruments = collinearity
         self._coefnames_z = list(collinearity.coefnames)
-        return replace(within_data, instruments=instruments)
+        return replace(structural_data, instruments=instruments)
+
+    def _validate_iv_identification(
+        self,
+        within_data: WithinIvData,
+        *,
+        instruments: NDArray[np.float64],
+    ) -> None:
+        """Check first-stage SSRs before structural column selection."""
+        exogenous_mask = [
+            column not in set(self.model_matrix.endogenous_column_identifiers)
+            for column in self.model_matrix.independent_column_identifiers
+        ]
+        exogenous = within_data.design[:, exogenous_mask]
+        # Check collinearity of instruments (exogenous) only
+        collinear, _, _ = find_collinear_variables(
+            np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
+            self.options.collin_tol,
+        )
+        exogenous = exogenous[:, ~np.asarray(collinear, dtype=bool)]
+        endogenous = within_data.endogenous
+
+        weights = self.observation_weights.values
+        if weights is not None:
+            sqrt_weights = np.sqrt(weights)[:, None]
+            endogenous = endogenous * sqrt_weights
+            exogenous = exogenous * sqrt_weights
+            instruments = instruments * sqrt_weights
+
+        def residual_ssr(design: NDArray[np.float64]) -> np.float64:
+            coefficients = np.linalg.lstsq(design, endogenous, rcond=None)[0]
+            residuals = endogenous - design @ coefficients
+            return np.sum(residuals**2)
+
+        ssr = residual_ssr(design=instruments)
+        ssr_without_instruments = residual_ssr(design=exogenous)
+        # fixest::feols uses these absolute thresholds on first-stage SSRs.
+        if ssr < 1e-10:
+            raise IVIdentificationError(
+                "The endogenous variable is fully explained by the "
+                "exogenous variables and instruments."
+            )
+        if abs(ssr_without_instruments - ssr) < 1e-10:
+            raise IVIdentificationError(
+                "The instruments add no explanatory power for the endogenous variable."
+            )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
