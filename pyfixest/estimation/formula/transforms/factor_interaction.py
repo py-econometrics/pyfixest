@@ -286,12 +286,15 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
 
 
 def _is_numeric(series: pd.Series) -> bool:
-    """Check if series is numeric (not categorical/object).
+    """Check whether a second variable encodes numeric slopes.
 
     Booleans count as numeric: fixest interacts a logical second variable as a
-    0/1 slope, not as a factor.
+    0/1 slope, not as a factor, including object columns of booleans.
     """
-    return pd.api.types.is_numeric_dtype(series)
+    return pd.api.types.is_numeric_dtype(series) or (
+        pd.api.types.is_object_dtype(series)
+        and pd.api.types.infer_dtype(series, skipna=True) == "boolean"
+    )
 
 
 def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
