@@ -20,6 +20,7 @@ def check_for_separation(
     X: pd.DataFrame,
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
+    collin_tol: float,
     methods: list[str] | None = None,
 ) -> list[int]:
     """
@@ -38,6 +39,8 @@ def check_for_separation(
         Fixed effects.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
+    collin_tol : float
+        Collinearity tolerance used by the estimated model.
     methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
@@ -49,7 +52,9 @@ def check_for_separation(
     """
     valid_methods: dict[str, _SeparationMethod] = {
         "fe": _check_for_separation_fe,
-        "ir": partial(_check_for_separation_ir, demeaner=demeaner),
+        "ir": partial(
+            _check_for_separation_ir, demeaner=demeaner, collin_tol=collin_tol
+        ),
     }
     if methods is None:
         methods = list(valid_methods)
@@ -131,6 +136,7 @@ def _check_for_separation_ir(
     X: pd.DataFrame,
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
+    collin_tol: float,
     tol: float = 1e-4,
     maxiter: int = 100,
 ) -> set[int]:
@@ -153,6 +159,8 @@ def _check_for_separation_ir(
         Fixed effects.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
+    collin_tol : float
+        Collinearity tolerance used by the estimated model.
     tol : float
         Tolerance to detect separated observation. Defaults to 1e-4.
     maxiter : int
@@ -176,7 +184,8 @@ def _check_for_separation_ir(
     cache = DemeanCache()
     sample = frozenset()
     design = X.to_numpy(dtype=np.float64)
-    if design.shape[1]:
+    has_regressors = design.shape[1] > 0
+    if has_regressors:
         design = cache.demean_array(
             x=design,
             flist=fixed_effects,
@@ -187,7 +196,7 @@ def _check_for_separation_ir(
         design, _ = drop_multicollinear_variables(
             X=design,
             names=X.columns.tolist(),
-            collin_tol=1e-9,
+            collin_tol=collin_tol,
         )
     hessian = design.T @ (weights[:, None] * design)
 
@@ -204,7 +213,7 @@ def _check_for_separation_ir(
             na_index=sample,
             demeaner=demeaner,
         )
-        if design.shape[1]:
+        if has_regressors:
             beta = solve_ols(
                 tZX=hessian,
                 tZY=design.T @ (weights[:, None] * response_demeaned),

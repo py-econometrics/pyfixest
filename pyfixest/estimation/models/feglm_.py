@@ -132,6 +132,7 @@ class Feglm(Feols):
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
                 demeaner=self.options.demeaner,
+                collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
             )
 
