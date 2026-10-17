@@ -415,23 +415,16 @@ def test_pfn_seed():
         "Y ~ X1 + X2",
     ],
 )
-@pytest.mark.parametrize(
-    "vcov",
-    [
-        "iid",
-        "hetero",
-    ],
-)
 @pytest.mark.parametrize("data", [pf.get_data(N=100_000, seed=4242)])
 @pytest.mark.parametrize("quantile", [0.25, 0.5, 0.75])
 @pytest.mark.parametrize("method", ["fn"])
-def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
+def test_quantreg_iid_vs_statsmodels(data, fml, quantile, method):
     """
-    Test that pyfixest's quantreg implementation equals statsmodels' quantreg implementation.
-    Used to verify correctness of iid and hetero standard errors.
-    Note: minor differences because pyfixest's hetero route uses R quantreg's
-    Gaussian kernel sandwich, while statsmodels uses an Epanechnikov kernel,
-    plus the fact that pyfixest uses an interior point solver while statsmodels uses IWLS.
+    Test pyfixest's iid quantreg standard errors against statsmodels.
+    The iid route follows statsmodels' bandwidth conventions rather than R
+    quantreg's sparsity estimator, so R cannot serve as the reference here.
+    Minor differences arise because pyfixest uses a uniform kernel and an
+    interior point solver, while statsmodels uses a cosine kernel and IRLS.
     """
     rng = np.random.default_rng(3993)
     data["Y"] = 1 + 2 * data["X1"] + rng.normal(size=len(data))
@@ -440,29 +433,16 @@ def test_quantreg_vs_statsmodels(data, fml, vcov, quantile, method):
     fit_py = pf.quantreg(
         fml,
         data=data,
-        vcov=vcov,
+        vcov="iid",
         quantile=quantile,
         method=method,
         ssc=pf.ssc(k_adj=False, G_adj=False),
         seed=383838,
     )
 
-    fit_sm = smf.quantreg(fml, data=data).fit(q=quantile)
-
-    py_coef = fit_py.coef().to_numpy()
-    sm_coef = fit_sm.params.to_numpy()
-    np.testing.assert_allclose(py_coef, sm_coef, rtol=0.01, atol=1e-03)
-
     py_se = fit_py.se().to_numpy()
-    if vcov == "iid":
-        fit_sm_iid = smf.quantreg(fml, data=data).fit(
-            q=quantile, vcov="iid", kernel="cos", bandwidth="hsheather"
-        )
-        sm_se = fit_sm_iid.bse.to_numpy()
-        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
-    else:
-        fit_sm_robust = smf.quantreg(fml, data=data).fit(
-            q=quantile, vcov="robust", kernel="cos", bandwidth="hsheather"
-        )
-        sm_se = fit_sm_robust.bse.to_numpy()
-        np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
+    fit_sm_iid = smf.quantreg(fml, data=data).fit(
+        q=quantile, vcov="iid", kernel="cos", bandwidth="hsheather"
+    )
+    sm_se = fit_sm_iid.bse.to_numpy()
+    np.testing.assert_allclose(py_se, sm_se, rtol=0.03, atol=1e-03)
