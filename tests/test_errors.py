@@ -10,7 +10,6 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
-    EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
     IVIdentificationError,

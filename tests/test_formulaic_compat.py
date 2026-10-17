@@ -16,7 +16,6 @@ from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.errors import (
-    EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
     IVIdentificationError,

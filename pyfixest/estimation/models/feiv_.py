@@ -232,10 +232,11 @@ class Feiv(Feols):
         instruments: NDArray[np.float64],
     ) -> None:
         """Check first-stage SSRs before structural column selection."""
-        exogenous_mask = [
-            column not in set(self.model_matrix.endogenous_column_identifiers)
-            for column in self.model_matrix.independent_column_identifiers
-        ]
+        endogenous_frame = self.model_matrix.endogenous
+        assert endogenous_frame is not None
+        exogenous_mask = ~self.model_matrix.independent.columns.isin(
+            endogenous_frame.columns
+        )
         exogenous = within_data.design[:, exogenous_mask]
         # Check collinearity of instruments (exogenous) only
         collinear, _, _ = find_collinear_variables(
