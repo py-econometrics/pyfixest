@@ -138,7 +138,7 @@ def event_study(
         )
 
         fit, did2s._first_u, did2s._second_u = did2s.estimate()
-        vcov, _G = did2s.vcov()
+        vcov, _G = did2s.vcov(coefnames=fit._coefnames)
         fit.variance_covariance = _did2s_covariance(
             fit=fit, vcov=vcov, G=_G, cluster=cluster
         )
@@ -326,6 +326,7 @@ def did2s(
         second_u=second_u,
         cluster=cluster,
         weights=weights,
+        coefnames=fit._coefnames,
     )
 
     fit.variance_covariance = _did2s_covariance(
