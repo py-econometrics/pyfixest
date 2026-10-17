@@ -31,7 +31,7 @@ import pyfixest as pf
 # Read in data
 dt = Mroz.load_pandas().data
 # Keep just working women
-dt = dt.query("lfp")
+dt = dt.query("lfp").copy()
 # Create unlogged earnings
 dt.loc[:, "earn"] = dt["lwg"].apply("exp")
 

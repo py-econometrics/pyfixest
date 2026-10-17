@@ -17,11 +17,7 @@ are the other, and each employment spell is an edge. Movers - workers who change
 firms - are the workers whose edges connect different parts of the graph. Without movers,
 worker and firm effects are not separately identified.
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bipartite_graph.png" width="85%">
-</p>
-
-*A dense graph (left) has many movers connecting all firms, making worker and firm effects easy to separate. A sparse graph (right) has a single mover bridging two clusters - demeaning must propagate information through that thin bridge, which is slow.*
+![A dense graph has many movers connecting all firms. A sparse graph has one mover bridging two clusters, so demeaning must propagate information through that thin bridge.](figures/akm-benchmarks/bipartite_graph.png){width=85% fig-align="center"}
 
 This bipartite structure is ubiquitous in applied economics. In AKM
 wage decompositions, workers and firms are the two sides of the graph,
@@ -258,11 +254,7 @@ baseline: when the bipartite graph is dense, the MAP algorithm converges really 
 
 In this initial scenario, we hold the graph structure fixed at the defaults and - to spice up the benchmarks a bit - increase the number of workers $N$ from 10K to 10M.
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bench_scale.png" width="85%">
-</p>
-
-*Benchmark: scale sweep. Runtime as a function of dataset size on a well-connected graph with default parameters.*
+![Scale-sweep benchmark: runtime as dataset size increases on a well-connected graph.](figures/akm-benchmarks/bench_scale.png){width=85% fig-align="center"}
 
 On this easy problem, the standard worker + firm + year specification is solved routinely well by both algorithms because each sweep already removes most of the variation. `MapDemeaner(backend="rust")` will not look this good in any other of the benchmarks to follow, which all reduce the level of connectivity between workers and firms.
 
@@ -291,11 +283,7 @@ is low, most workers sit at a single firm, and the graph thins out to
 a near-nested structure where worker and firm effects are almost
 collinear.
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bench_mobility.png" width="85%">
-</p>
-
-*Benchmark: mobility sweep. `MapDemeaner(backend="rust")` degrades sharply as mobility decreases, while `LsmrDemeaner()` with the `within` backend remains stable.*
+![Mobility-sweep benchmark: MAP runtime degrades as mobility decreases, while within LSMR remains stable.](figures/akm-benchmarks/bench_mobility.png){width=85% fig-align="center"}
 
 ### (b) Progressive freezing
 
@@ -305,14 +293,7 @@ mobility one industry at a time. Active industries keep the baseline
 separation rate ($\delta = 0.1$), while frozen industries drop to
 $\delta = 0.005$.
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bench_freeze.png" width="85%">
-</p>
-
-*Benchmark: progressive freezing. As more industries switch from the
-baseline mobility rate ($\delta = 0.1$) to the frozen regime
-($\delta = 0.005$), MAP runtimes rise progressively, while `within` LSMR
-remains stable throughout.*
+![Progressive-freezing benchmark: MAP runtime rises as more industries enter the low-mobility regime, while within LSMR remains stable.](figures/akm-benchmarks/bench_freeze.png){width=85% fig-align="center"}
 
 ### (c) Strong assortative matching $\rho$
 
@@ -333,11 +314,7 @@ subgraph. The cross-tabulation blocks become sparse because there are
 few edges between quality bands - great workers never work in poor firms and vice versa -  making worker and firm effect columns
 nearly collinear.
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bench_sorting.png" width="85%">
-</p>
-
-*Benchmark: sorting sweep. Increasing sorting ($\rho$) increases MAP runtime while `within` LSMR runtime remains stable.*
+![Sorting-sweep benchmark: increasing assortative matching raises MAP runtime while within LSMR remains stable.](figures/akm-benchmarks/bench_sorting.png){width=85% fig-align="center"}
 
 
 ### (d) 99 Problems
@@ -348,11 +325,7 @@ difficulty" simultaneously. The sorting $\times$ mobility factorial
 benchmark tests this by crossing two levels of sorting ($\rho \in
 \{0, 20\}$) with two levels of mobility ($\delta \in \{0.5, 0.02\}$).
 
-<p align="center">
-  <img src="figures/akm-benchmarks/bench_interaction.png" width="85%">
-</p>
-
-*Benchmark: sorting x mobility interaction.*
+![Sorting-by-mobility benchmark: strong sorting and low mobility together create the slowest MAP convergence.](figures/akm-benchmarks/bench_interaction.png){width=85% fig-align="center"}
 
 The combination of $\rho = 20$ and $\delta = 0.02$ produces runtimes far
 exceeding what either factor alone would predict. Sorting thins out the
@@ -433,11 +406,7 @@ occupation becomes much closer to a deterministic function of firm
 identity. Compatible movers can still carry an old non-primary
 occupation because `occ_delta` is held fixed above zero.
 
-<p align="center">
-  <img src="figures/akm-occupation-benchmarks/bench_occlambda.png" width="85%">
-</p>
-
-*Benchmark: firm–occupation concentration benchmarks. This family varies only `occ_lambda`, making occupations progressively more nested within firms.*
+![Firm-occupation concentration benchmark: increasing occ_lambda makes occupations progressively more nested within firms.](figures/akm-occupation-benchmarks/bench_occlambda.png){width=85% fig-align="center"}
 
 ### (b) Occupation dimensionality (`n_occupations`)
 
@@ -447,11 +416,7 @@ many workers, so the occupation cross-tabulation blocks are dense and
 well-conditioned. With 5,000 occupations, each level appears in far
 fewer observations, and the cross-tabulation blocks become sparse. This is the same graph-thinning mechanism that makes low mobility hard, just in the occupation dimension. The bencmark varies `n_occupations` from 10 to 5,000 while holding all other parameters at their defaults.
 
-<p align="center">
-  <img src="figures/akm-occupation-benchmarks/bench_occsize.png" width="85%">
-</p>
-
-*Benchmark: occupation dimensionality benchmark. This family varies only the number of occupation levels from 10 to 5,000.*
+![Occupation-dimensionality benchmark: the number of occupation levels increases from 10 to 5,000.](figures/akm-occupation-benchmarks/bench_occsize.png){width=85% fig-align="center"}
 
 
 ## Conclusion
@@ -467,14 +432,6 @@ combination thereof - vanilla MAP as in `MapDemeaner(backend="rust")` reveals po
 
 We conclude by showing two benchmarks from the `fixest` package that are designed to be simple and very challenging for the MAP algorithm. On the "simple" problem, the graph is dense and both PyFixest demeaners perform well; here, `within` LSMR tends to lose because its setup overhead does not amortize. On the "difficult" sparse problem, vanilla MAP degrades sharply, while `within` LSMR performs much better. In the checked-in results, `LsmrDemeaner()` is substantially faster than `MapDemeaner(backend="rust")` on the hard three-way specification.
 
-<p align="center">
-  <img src="figures/base-benchmarks/bench_simple.png" width="85%">
-</p>
+![Simple-DGP benchmark: both PyFixest solvers perform well on a connected graph, while within LSMR pays extra preconditioner setup cost.](figures/base-benchmarks/bench_simple.png){width=85% fig-align="center"}
 
-*Benchmark: "simple" DGP. A well-connected graph where both PyFixest solvers perform well, except `within` LSMR whose preconditioner setup cost does not amortize.*
-
-<p align="center">
-  <img src="figures/base-benchmarks/bench_difficult.png" width="85%">
-</p>
-
-*Benchmark: "difficult" DGP. A sparse graph where vanilla MAP degrades dramatically, while `within` LSMR remains fast.*
+![Difficult-DGP benchmark: vanilla MAP degrades on a sparse graph, while within LSMR remains fast.](figures/base-benchmarks/bench_difficult.png){width=85% fig-align="center"}
