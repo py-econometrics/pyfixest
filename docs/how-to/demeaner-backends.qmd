@@ -130,6 +130,8 @@ build (`pre.build_duration_seconds`). It is a `within.Preconditioner`, which
 `pyfixest` re-exports as `pf.Preconditioner`. An adaptive preconditioner that
 escalated during the solve is returned as the additive Schwarz preconditioner.
 
+You can also pass a `within.PreconditionerConfig` object to `LsmrDemeaner(preconditioner=...)` to build a preconditioner with custom settings. Refits on a different sample rebuild prebuilt preconditioners from their complete configuration, preserving custom factorization and adaptive escalation settings.
+
 After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
 fit to skip the setup phase:
 

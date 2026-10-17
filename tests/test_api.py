@@ -3,11 +3,16 @@ from __future__ import annotations
 import duckdb
 import numpy as np
 import pandas as pd
+import pyhdfe
 import pytest
 from formulaic.errors import FactorEvaluationError
+from within import PreconditionerConfig, Solver
+from within.config import LocalSolverConfig, Staleness
 
 import pyfixest as pf
+import pyfixest.demeaners as demeaners
 from pyfixest.estimation.internals.retention import RetentionPolicy
+from pyfixest.estimation.models.feglm_ import Feglm
 from pyfixest.utils.utils import get_data
 
 
@@ -152,10 +157,21 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
 
 
 @pytest.mark.parametrize(
-    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
+    "requested",
+    [
+        "auto",
+        "off",
+        "adaptive",
+        "additive",
+        "diagonal",
+        PreconditionerConfig.Off(),
+        PreconditionerConfig.Diagonal(),
+        PreconditionerConfig.Additive(),
+        PreconditionerConfig.Adaptive(),
+    ],
 )
-def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
-    """All documented string options round-trip through ``LsmrDemeaner``."""
+def test_lsmr_demeaner_accepts_within_preconditioner_options(requested):
+    """String and upstream configuration options round-trip through the demeaner."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested
@@ -207,28 +223,86 @@ _REUSE_ESTIMATORS = [
 
 
 @pytest.mark.parametrize(("data_fn", "fit_fn"), _REUSE_ESTIMATORS)
-def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
-    """Every Feols-family estimator exposes a Preconditioner that round-trips.
-
-    Pinned down for ``feols``, ``fepois`` (IWLS), and ``feglm`` (IWLS):
-    - the fit exposes a non-None ``Preconditioner`` after a 2-FE solve, and
-    - feeding it back via ``LsmrDemeaner(preconditioner=...)`` reproduces the
-      original coefficients to machine precision.
-    """
+@pytest.mark.parametrize(
+    "config",
+    [
+        PreconditionerConfig.Adaptive(
+            local_solver=LocalSolverConfig(dense_threshold=64),
+            stall=Staleness(window=1, threshold=0.0),
+        ),
+        PreconditionerConfig.Additive(
+            local_solver=LocalSolverConfig(dense_threshold=64)
+        ),
+        PreconditionerConfig.Diagonal(),
+    ],
+)
+def test_within_preconditioner_reuse_across_estimators(
+    data_fn, fit_fn, config, monkeypatch
+):
+    """IWLS reuses explicit handles under changed weights and retains escalation."""
     data = data_fn()
-    fit = fit_fn(data, pf.LsmrDemeaner(backend="within"))
+    fit = fit_fn(
+        data,
+        pf.LsmrDemeaner(preconditioner=config, fixef_atol=1e-10, fixef_btol=1e-10),
+    )
 
-    pre = fit.preconditioner
-    assert isinstance(pre, pf.Preconditioner)
+    # Preserve the original adaptive recipe, even if the fitted solve escalated.
+    pre = Solver(
+        np.asfortranarray(fit.model_matrix.fixed_effects, dtype=np.uint32),
+        preconditioner=config,
+    ).preconditioner
+    calls = []
+    original = demeaners.demean_within
 
-    fit_reused = fit_fn(data, pf.LsmrDemeaner(backend="within", preconditioner=pre))
+    def record_solve(**kwargs):
+        expected_preconditioner = (
+            calls[0][1] if calls and isinstance(fit, Feglm) else pre
+        )
+        assert kwargs["preconditioner"] is expected_preconditioner
+        result, success, used = original(**kwargs)
+        if isinstance(fit, Feglm):
+            if calls:
+                assert used.config == calls[0][1].config
+                assert used.build_duration_seconds == calls[0][1].build_duration_seconds
+            # A stale preconditioner must still project with the current weights.
+            expected = pyhdfe.create(kwargs["flist"]).residualize(
+                kwargs["x"], kwargs["weights"][:, None]
+            )
+            np.testing.assert_allclose(
+                result,
+                expected,
+                rtol=1e-6,
+                atol=1e-8,
+                err_msg="IWLS within values differ from pyhdfe",
+            )
+        weights = kwargs["weights"]
+        calls.append((None if weights is None else weights.copy(), used))
+        return result, success, used
 
-    # Load-bearing correctness check: the reused factorization must produce
-    # the same solve as the original.
-    np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
+    monkeypatch.setattr(demeaners, "demean_within", record_solve)
+    demeaner = pf.LsmrDemeaner(preconditioner=pre, fixef_atol=1e-10, fixef_btol=1e-10)
+    fit_reused = fit_fn(data, demeaner)
+
+    np.testing.assert_allclose(
+        fit_reused.coef(),
+        fit.coef(),
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="coefficients with a prebuilt preconditioner",
+    )
     assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
-    assert fit_reused.preconditioner.config == pre.config
     assert fit_reused.preconditioner.nrows == pre.nrows
+    assert fit_reused.options.demeaner is demeaner
+    assert fit_reused.preconditioner is calls[0][1]
+    if isinstance(fit, Feglm):
+        assert len(calls) > 1
+        assert any(not np.array_equal(calls[0][0], weights) for weights, _ in calls[1:])
+        assert len(fit_reused._demean_cache.lookup_preconditioner) == 1
+        assert not fit_reused._demean_cache.lookup_demeaned_data
+        if isinstance(config, PreconditionerConfig.Adaptive):
+            assert isinstance(
+                fit_reused.preconditioner.config, PreconditionerConfig.Additive
+            )
 
 
 @pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
@@ -273,8 +347,9 @@ def test_within_preconditioner_off_yields_no_cached_preconditioner(data_fn, fit_
 
 
 @pytest.mark.parametrize("backend", ["torch"])
-def test_preconditioner_rejected_on_non_within_backend(backend):
-    """A built ``Preconditioner`` is only valid for ``backend='within'``."""
+@pytest.mark.parametrize("use_config", [False, True])
+def test_preconditioner_rejected_on_non_within_backend(backend, use_config):
+    """Built preconditioners and configuration objects require the within backend."""
     data = pf.get_data()
     pre = pf.feols(
         "Y ~ X1 | f1 + f2",
@@ -282,6 +357,8 @@ def test_preconditioner_rejected_on_non_within_backend(backend):
         demeaner=pf.LsmrDemeaner(backend="within"),
     ).preconditioner
     assert pre is not None
+    if use_config:
+        pre = pre.config
     with pytest.raises(ValueError, match="Preconditioner"):
         pf.LsmrDemeaner(backend=backend, preconditioner=pre)
 

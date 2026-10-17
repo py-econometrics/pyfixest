@@ -37,6 +37,8 @@ Breaking changes:
 - `preconditioner="auto"` selects the adaptive preconditioner instead of additive Schwarz. Request it explicitly with `preconditioner="adaptive"`; `preconditioner="additive"` restores the previous default. On problems where the adaptive solve does not escalate, the default `fixef_atol` and `fixef_btol` of `1e-8` give the accuracy of the diagonal preconditioner, so demeaned values and coefficients can differ from the previous default at that order.
 - `pf.Preconditioner` is now `within.Preconditioner`. Its `variant` string is replaced by `config`, a `within.PreconditionerConfig`, and `build_time_seconds` is renamed `build_duration_seconds`. Preconditioners pickled by earlier pyfixest versions can no longer be loaded.
 
+Changed-sample refits preserve the full configuration of prebuilt preconditioners, including custom adaptive escalation settings. `LsmrDemeaner` also accepts `within.PreconditionerConfig` objects to build a preconditioner from those settings.
+
 `fepois` and `feglm` retain preconditioner reuse across IWLS iterations while solving each projection with its current working weights. If an adaptive solve escalates, the cache keeps its additive Schwarz replacement for subsequent iterations and sibling models. `fit.preconditioner` exposes this shared cached handle, as it does for OLS/IV.
 
 Other things:

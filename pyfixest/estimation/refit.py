@@ -11,10 +11,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from within import PreconditionerConfig
-
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
+from pyfixest.demeaners import (
+    AnyDemeaner,
+    LsmrDemeaner,
+    with_fresh_preconditioner,
+)
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
@@ -90,7 +92,8 @@ def refit(
     else:
         options = replace(
             fit.options,
-            demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
+            # a prebuilt preconditioner does not fit the new sample
+            demeaner=with_fresh_preconditioner(fit.options.demeaner),
         )
     formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(
@@ -126,26 +129,3 @@ def _with_preconditioner(
     if isinstance(demeaner, LsmrDemeaner) and preconditioner is not None:
         return replace(demeaner, preconditioner=preconditioner)
     return demeaner
-
-
-def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
-    """Replace a prebuilt LSMR `Preconditioner` by the name of its configuration.
-
-    A prebuilt preconditioner is tied to the fixed-effect design it was built
-    on, so a refit on another sample must build its own. Variants without a
-    public name fall back to ``"auto"``, the `LsmrDemeaner` default.
-    """
-    if not (
-        isinstance(demeaner, LsmrDemeaner)
-        and isinstance(demeaner.preconditioner, Preconditioner)
-    ):
-        return demeaner
-    config = demeaner.preconditioner.config
-    preconditioner: LsmrPreconditioner = (
-        "additive"
-        if isinstance(config, PreconditionerConfig.Additive)
-        else "diagonal"
-        if isinstance(config, PreconditionerConfig.Diagonal)
-        else "auto"
-    )
-    return replace(demeaner, preconditioner=preconditioner)
