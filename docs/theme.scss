@@ -113,10 +113,14 @@ summary { color: $headings-color; font-weight: 600; cursor: pointer; }
 }
 .doc-section-parameters > .table,
 .doc-section-parameters > section > .table {
-  th:nth-child(1) { width: 19%; }
-  th:nth-child(2) { width: 23%; }
-  th:nth-child(3) { width: 43%; }
-  th:nth-child(4) { width: 15%; }
+  > :not(caption) > * > * { padding-inline: .55rem; }
+  th:nth-child(1) { width: 15%; }
+  th:nth-child(2) { width: 17%; }
+  // Let descriptions take the remaining space; defaults need a stable width.
+  th:nth-child(3) { width: auto; }
+  th:nth-child(4) { width: 5.5rem; }
+  td:nth-child(3) { overflow-wrap: break-word; }
+  td:nth-child(4) > em { white-space: nowrap; }
 }
 
 .quarto-grid-item {
