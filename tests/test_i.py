@@ -397,19 +397,10 @@ def test_factor_x_boolean(df_test, fml, dtype):
     flag = pd.Series(rng.choice([True, False], len(df_test)), dtype=dtype)
     if dtype == "boolean":
         flag.iloc[[3, 30]] = pd.NA
-    df_py = df_test.assign(flag=flag)
-    # fixest fits a logical and a 0/1 numeric second variable identically.
-    df_r = df_test.assign(flag=flag.astype("float64"))
-
-    fit_py = feols(fml, df_py)
-    py_names = [normalize_coef_name(str(n)) for n in fit_py._coefnames]
-    fit_r = fixest.feols(ro.Formula(fml), df_r)
-    assert_models_match(
-        py_names,
-        fit_py.coef().values,
-        get_r_coef_names(fit_r),
-        get_r_coef_values(fit_r),
+    py_names, py_values, r_names, r_values = compare_with_r(
+        fml, df_test.assign(flag=flag)
     )
+    assert_models_match(py_names, py_values, r_names, r_values)
 
 
 @pytest.mark.against_r_core
