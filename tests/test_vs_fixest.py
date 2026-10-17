@@ -2102,12 +2102,9 @@ def test_no_intercept_poisson_crv3_against_fixest():
     np.testing.assert_allclose(fit.se(), np.sqrt(np.diag(vcov)), rtol=0, atol=1e-7)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="Pending parsed separation; regression from PR stack #1862"
-)
 @pytest.mark.against_r_core
-def test_parsed_separation_against_fixest():
-    """IR uses the evaluated response and retains arithmetic regressors."""
+def test_separation_arithmetic_against_fixest():
+    """IR preserves arithmetic terms and agrees with an independent R fit."""
     data = pd.DataFrame(
         {
             "Y": [0, 0, 0, 1, 2, 3, 1, 2],
@@ -2130,5 +2127,17 @@ def test_parsed_separation_against_fixest():
         ssc=fixest.ssc(K_adj=False, G_adj=False),
     )
     assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == 6
-    np.testing.assert_allclose(fit.coef(), stats.coef(reference), rtol=0, atol=1e-8)
-    np.testing.assert_allclose(fit.se(), fixest.se(reference), rtol=0, atol=1e-7)
+    np.testing.assert_allclose(
+        fit.coef(),
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IR coefficients differ from R's fit of the same evaluated design",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IR standard errors differ from R's fit of the same evaluated design",
+    )
