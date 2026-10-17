@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 from formulaic.errors import FactorEvaluationError
 from formulaic.materializers.base import FormulaMaterializer
+from formulaic.parser import DefaultOperatorResolver
 from formulaic.utils.variables import Variable
 
 import pyfixest as pf
@@ -23,7 +24,7 @@ from pyfixest.errors import (
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
-    filter_multistage_endogenous_terms,
+    PyfixestOperatorResolver,
     formula_required_variables,
     get_first_multistage_lhs,
     i_term_columns,
@@ -68,6 +69,7 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert fit.model.is_iv
     assert isinstance(rhs, formulaic.formula.StructuredFormula)
     assert len(rhs.deps) == 1
+    assert {str(term) for term in rhs.root} == {"1", "X1"}
     assert [str(v) for v in rhs.deps[0].lhs.required_variables] == ["X2"]
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
@@ -100,8 +102,8 @@ def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
     assert [str(term) for term in terms] == expected
 
 
-def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
-    """The _hat suffix from formulaic MULTISTAGE is filtered from exogenous."""
+def test_multistage_excludes_endogenous_placeholders(data: pd.DataFrame) -> None:
+    """The IV block contributes dependencies but no generated covariates."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
 
     exog_vars = {str(v) for v in fit.model.parsed_formula.exogenous.required_variables}
@@ -111,13 +113,12 @@ def test_hat_suffix_filtering(data: pd.DataFrame) -> None:
     assert "X2_hat" not in exog_vars
 
 
-def test_hat_suffix_filtering_with_transformed_endogenous(data: pd.DataFrame) -> None:
-    """Formulaic names generated terms after the endogenous term, not its variables."""
+def test_multistage_preserves_transformed_endogenous(data: pd.DataFrame) -> None:
+    """The original endogenous term is appended when constructing the second stage."""
     fit = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
 
     exog_terms = {str(term) for term in fit.model.parsed_formula.exogenous}
 
-    # `np.exp(X2)` generates `np.exp(X2)_hat`, never `X2_hat`.
     assert exog_terms == {"1", "X1"}
     assert fit.model.parsed_formula.second_stage == formulaic.Formula(
         "Y ~ 1 + X1 + np.exp(X2)"
@@ -157,12 +158,17 @@ def test_multistage_access_guard_raises_loudly() -> None:
         get_first_multistage_lhs(malformed_rhs)
 
 
-def test_hat_suffix_guard_raises_loudly() -> None:
-    """Missing formulaic _hat terms must fail before endogenous leakage."""
-    exogenous = SimpleNamespace(root=["1", "X1"])
-
-    with pytest.raises(FormulaicCompatibilityError, match="endogenous suffix"):
-        filter_multistage_endogenous_terms(exogenous, ["X2"])
+@pytest.mark.parametrize("count", [0, 2])
+def test_multistage_operator_guard_raises_loudly(monkeypatch, count) -> None:
+    """Operator drift must fail before falling back to generated-name collisions."""
+    operators = DefaultOperatorResolver().operators * count
+    monkeypatch.setattr(
+        DefaultOperatorResolver, "operators", property(lambda self: operators)
+    )
+    with pytest.raises(
+        FormulaicCompatibilityError, match="multistage '~' operator definition"
+    ):
+        _ = PyfixestOperatorResolver().operators
 
 
 def test_encoder_state_tuple_shape(data: pd.DataFrame) -> None:
