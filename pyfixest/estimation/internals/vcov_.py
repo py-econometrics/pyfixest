@@ -151,6 +151,11 @@ def meat_crv1(
     cluster_col: np.ndarray,
 ) -> np.ndarray:
     "Unscaled CRV1 cluster-robust meat, shape (k, k)."
+    # The Rust kernel indexes by position and panics on mismatched lengths.
+    if cluster_col.shape[0] != scores.shape[0]:
+        raise ValueError(
+            "Cluster column and scores must have one entry per observation."
+        )
     return crv1_meat_loop(
         scores=scores.astype(np.float64),
         clustid=clustid.astype(np.uintp),

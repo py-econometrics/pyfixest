@@ -207,6 +207,59 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
         )
 
 
+def _align_data_to_sample(data: pd.DataFrame, sample: pd.DataFrame) -> pd.DataFrame:
+    """
+    Return the rows of `data` in the order of the estimation `sample`.
+
+    The model stores its sample with a positional index, so rows are matched
+    by content: each row of `sample` takes a row of `data` with identical
+    values (repeated rows are matched in turn). Any row order of the same rows
+    gives the same result. A different row count, a missing column, or any
+    unmatched row raises ValueError, so cluster ids can never be paired with
+    the wrong score rows.
+    """
+    columns = list(sample.columns)
+    if len(data) != len(sample) or any(c not in data.columns for c in columns):
+        raise ValueError(
+            "The `data` passed to vcov() must contain exactly the rows of the "
+            f"estimation sample ({len(sample)} rows, with its columns). "
+            f"Received {len(data)} rows. Drop missing or excluded rows first."
+        )
+
+    sample_hash = pd.util.hash_pandas_object(sample, index=False).to_numpy()
+    data_hash = pd.util.hash_pandas_object(data[columns], index=False).to_numpy()
+    sample_keys = pd.DataFrame(
+        {
+            "h": sample_hash,
+            "k": pd.Series(sample_hash).groupby(sample_hash).cumcount().to_numpy(),
+        }
+    )
+    data_keys = pd.DataFrame(
+        {
+            "h": data_hash,
+            "k": pd.Series(data_hash).groupby(data_hash).cumcount().to_numpy(),
+            "pos": np.arange(len(data)),
+        }
+    )
+    matched = sample_keys.merge(data_keys, on=["h", "k"], how="left")
+    if matched["pos"].isna().any():
+        raise ValueError(
+            "The `data` passed to vcov() does not match the estimation sample."
+        )
+    aligned = data.iloc[matched["pos"].to_numpy(dtype=np.intp)]
+
+    # Guard against hash collisions: the aligned rows must equal the sample.
+    if (
+        not aligned[columns]
+        .reset_index(drop=True)
+        .equals(sample.reset_index(drop=True))
+    ):
+        raise ValueError(
+            "The `data` passed to vcov() does not match the estimation sample."
+        )
+    return aligned
+
+
 def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int]:
     G = []
     for col in cluster_df.columns:
