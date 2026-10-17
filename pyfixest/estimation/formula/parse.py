@@ -53,12 +53,13 @@ def _render_factor(factor: Factor) -> str:
     """Render one factor without confusing lookups with Python expressions."""
     expression = factor.expr
     if factor.eval_method is Factor.EvalMethod.LOOKUP:
-        # Backticks retain literal characters, including quotes and backslashes.
-        return (
-            expression
-            if all(part.isidentifier() for part in expression.split("."))
-            else f"`{expression}`"
+        # Python identifiers include Unicode characters that Formulaic's
+        # tokenizer cannot read unquoted. Retain backticks for those names.
+        safe_unquoted = expression.isascii() and all(
+            part.isidentifier() for part in expression.split(".")
         )
+        return expression if safe_unquoted else f"`{expression}`"
+
     if factor.eval_method is Factor.EvalMethod.PYTHON:
         tokens = list(tokenize(expression))
         if (
@@ -69,6 +70,7 @@ def _render_factor(factor: Factor) -> str:
             # Calls and subscripts already identify a single Python factor.
             return expression
         return "{" + expression + "}"
+
     return expression
 
 

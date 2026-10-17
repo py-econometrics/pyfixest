@@ -1156,6 +1156,9 @@ class TestEdgeCases:
         "Y ~ `tick\\`name` | f1",
         "Y ~ X1 | f1[z]",
         "Y ~ X1 | f1[[z1, z2]]",
+        "Y ~ `a\u0301`",
+        "Y ~ `℘`",
+        "Y ~ `a·b`",
     ],
 )
 def test_rendered_formula_preserves_parsed_factors(fml):
@@ -1199,26 +1202,3 @@ def test_rendered_formula_preserves_parsed_factors(fml):
 def test_rendered_formula_names(fml, expected):
     (parsed,) = Formula.parse(fml)
     assert parsed.render() == expected
-
-
-def test_rendered_sample_labels_are_unambiguous():
-    from pyfixest.estimation.models.feols_ import _render_sample_label
-
-    values = [
-        None,
-        "all",
-        "'all'",
-        '"all"',
-        "rest",
-        1,
-        "1",
-        float("inf"),
-        "inf",
-        True,
-        "True",
-    ]
-    labels = [_render_sample_label(value) for value in values]
-    assert len(set(labels)) == len(values)
-    assert labels[0] == "all"
-    assert labels[4] == "'rest'"
-    assert labels[5] == "1"

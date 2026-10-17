@@ -120,13 +120,6 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
     return tuple(fixed_effects.columns)
 
 
-def _render_sample_label(value: object) -> str:
-    """Distinguish string group values from the full sample and scalar values."""
-    if value is None:
-        return "all"
-    return repr(value) if isinstance(value, str) else str(value)
-
-
 class Feols(ResultAccessorMixin):
     """
     Non user-facing class to estimate a linear regression via OLS.
@@ -318,8 +311,11 @@ class Feols(ResultAccessorMixin):
         """
         model_name = parsed_formula.render()
         if sample_split is not None:
-            sample_label = _render_sample_label(sample_split.value)
+            sample_label = (
+                "all" if sample_split.value is None else repr(sample_split.value)
+            )
             model_name += f" (Sample: {sample_split.var} = {sample_label})"
+
         return ModelDescription(
             parsed_formula=parsed_formula,
             method="feols",
