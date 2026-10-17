@@ -213,6 +213,10 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         # fixest has no `drop_intercept`; `-1` removes the intercept from both
         # stages.
         ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", True),
+        ("Y ~ -1 + X2 | X1 ~ Z1 + Z2", "Y ~ -1 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 + X2 | X1 ~ Z1 + Z2", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
+        ("Y ~ X2 - 1 | X1 ~ Z1 + Z2", "Y ~ X2 - 1 | X1 ~ Z1 + Z2", False),
+        ("Y ~ 0 | X1 ~ Z1 + Z2", "Y ~ 0 | X1 ~ Z1 + Z2", False),
     ],
 )
 def test_first_stage_vs_fixest(
@@ -254,6 +258,19 @@ def test_first_stage_vs_fixest(
     )
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model
+
+    assert "Intercept" not in fit.model_matrix.instruments.columns
+    assert "Intercept" not in first_stage.coef().index
+    second_stage_names_r = list(ro.r("function(fit) names(coef(fit))")(fit_r))
+    second_stage_names = [name.removeprefix("fit_") for name in second_stage_names_r]
+    assert sorted(fit.coef().index) == sorted(second_stage_names)
+    np.testing.assert_allclose(
+        fit.coef()[second_stage_names],
+        np.asarray(stats.coef(fit_r)),
+        rtol=0,
+        atol=1e-8,
+        err_msg="second-stage coefficients != fixest",
+    )
 
     n_obs_r = int(stats.nobs(fit_r)[0])
     assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"
