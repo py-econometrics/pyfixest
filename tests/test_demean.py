@@ -497,10 +497,15 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
 
 
 def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
-    """An escalated preconditioner replaces a cached adaptive base, nothing else.
+    """Keep the additive preconditioner once it replaces a cached adaptive one.
 
-    Reusing an adaptive base that has not escalated makes every later solve
-    escalate and rebuild additive Schwarz, so the cache keeps the escalated one.
+    Build the preconditioners separately and check three cache rules: additive
+    replaces adaptive, adaptive cannot replace additive, and additive cannot
+    replace an explicitly diagonal preconditioner.
+
+    This checks which object is saved, without making a solver switch from
+    adaptive to additive. Saving the additive object lets later solves reuse
+    its expensive setup if they need it; some solves need only diagonal.
     """
     x, flist, weights = demean_data
     flist = flist.astype(np.uint32)
@@ -523,7 +528,20 @@ def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
 
 
 def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch):
-    """A later weighted solve upgrades the cache instead of restarting adaptive."""
+    """Reuse additive Schwarz after an adaptive solve builds it, as weights change.
+
+    Simulate the weighted demeaning steps used in iteratively reweighted least
+    squares (IWLS), without running a full Poisson or GLM fit. First, demeaning
+    all-zero data leaves the initial adaptive preconditioner in the cache.
+    Next, demeaning nonzero data with changed weights forces the solver to
+    build additive Schwarz and save it in the cache. A third solve changes
+    the weights again and must reuse that saved object without rebuilding it.
+
+    Compare both nonzero results with pyhdfe using each solve's current weights.
+    This checks that reusing the preconditioner still gives the correct weighted
+    projection. Also check that no demeaned values are cached: these projections
+    must be recomputed when the weights change.
+    """
     x, flist, weights = demean_data
     # A tuned ladder makes the adaptive handle escalate on its first iteration.
     preconditioner = Solver(
