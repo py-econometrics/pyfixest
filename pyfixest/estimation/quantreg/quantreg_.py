@@ -178,6 +178,9 @@ class Quantreg(Feols):
         """
         self._set_within_data(self._drop_multicollinear_within_data(self.within_data))
 
+    def _check_varying_slopes_support(self) -> None:
+        """Defer to the rejection of every fixed effect in `prepare_model_matrix`."""
+
     def prepare_model_matrix(self):
         "Prepare model inputs for estimation."
         super().prepare_model_matrix()

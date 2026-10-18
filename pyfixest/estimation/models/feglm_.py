@@ -116,6 +116,11 @@ class Feglm(Feols):
             inference_dist=self._family.inference_dist,
         )
 
+    def _check_varying_slopes_support(self) -> None:
+        raise NotImplementedError(
+            "Varying slopes such as `f1[z]` are not yet supported for GLMs."
+        )
+
     def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()

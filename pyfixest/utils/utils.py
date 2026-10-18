@@ -87,13 +87,16 @@ class DegreesOfFreedomCounts:
     k : int
         Number of estimated coefficients, excluding fixed effects.
     k_fe : int
-        Number of fixed-effect levels across all fixed effects.
+        Number of levels across the fixed effects with intercepts.
     n_fe : int
-        Number of fixed effects; ``Y ~ X | f1 + f2`` has two.
+        Number of fixed effects with intercepts; ``Y ~ X | f1 + f2`` has two.
     k_fe_nested : int
         Fixed-effect levels nested within the cluster variables.
     n_fe_fully_nested : int
         Fixed effects fully nested within the cluster variables.
+    k_slopes : int
+        Number of varying-slope coefficients. As in fixest, they count under
+        every ``k_fixef`` option, including ``"none"``.
     G : int or float
         Number of clusters; the number of time periods for HAC and ``N``
         for heteroskedasticity-robust inference.
@@ -105,6 +108,7 @@ class DegreesOfFreedomCounts:
     n_fe: int
     k_fe_nested: int = 0
     n_fe_fully_nested: int = 0
+    k_slopes: int = 0
     G: int | float
 
 
@@ -321,6 +325,7 @@ def get_ssc(
     else:
         # "full": add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
+    df_k += counts.k_slopes
 
     if ssc_options.k_adj:
         adj_value = (N - 1) / (N - df_k) if vcov_type != "hetero" else N / (N - df_k)
