@@ -458,7 +458,8 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            # An exact endogenous term is a redundant declaration, not a control.
+            # IV blocks add their endogenous terms to the root. Exclude those
+            # terms here so the first stage does not regress them on themselves.
             exogenous = formulaic.formula.SimpleFormula(
                 term for term in exogenous.root if term not in self.endogenous
             )
