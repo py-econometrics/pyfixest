@@ -594,8 +594,9 @@ def create_model_matrix(
         are dropped from the model.
     drop_intercept : bool, default=False
         If True, the intercept column is removed from the independent variables
-        and instruments matrices. The intercept is always removed when fixed
-        effects are present, regardless of this parameter.
+        and instruments matrices. The intercept is always removed when a fixed
+        effect has level-specific intercepts, regardless of this parameter;
+        slope-only effects such as `f1[[z]]` keep it.
     ensure_full_rank : bool, default=True
         If True, formulaic will ensure the design matrix is full rank by
         dropping collinear columns.
