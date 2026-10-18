@@ -28,6 +28,8 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 ### `within` LSMR Backend via `within-py`
 
+Omitting `demeaner` now selects `LsmrDemeaner(backend="within", preconditioner="auto")` instead of Rust MAP. LSMR now defaults to `fixef_atol=fixef_btol=1e-10` to preserve inference accuracy. Pass `MapDemeaner()` to keep the previous algorithm.
+
 `LsmrDemeaner(backend="within")` now calls the [`within`](https://github.com/py-econometrics/within) Python package (`within-py>=0.4.0,<0.5.0`, a new required dependency) instead of the `within` Rust crate compiled into pyfixest.
 
 The default `preconditioner="auto"` now selects the adaptive preconditioner introduced in `within` 0.4.0. Building the additive Schwarz preconditioner is the expensive setup step of the `within` solver, and on well-connected fixed effects it often does not pay off: the extra iterations that the cheap diagonal preconditioner needs cost less than building Schwarz. The adaptive preconditioner starts with the diagonal one and builds additive Schwarz only when convergence stalls. It skips the setup cost where Schwarz does not help and recovers its speed-up on sparse, weakly connected designs where it does.

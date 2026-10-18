@@ -76,7 +76,7 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
         raise ImportError(
             "The Numba MAP backend requires the optional `numba` extra. "
             "Install it with `pip install pyfixest[numba]`, or use the default "
-            "`MapDemeaner(backend='rust')` backend."
+            "`LsmrDemeaner(backend='within')` backend."
         ) from exc
 
     return cast(Callable[..., tuple[np.ndarray, bool]], demean_nb)
@@ -101,8 +101,8 @@ class BaseDemeaner:
     Holds the settings shared by all backends, currently `fixef_maxiter`. This
     class is not passed to an estimation function directly. Use one of the
     concrete demeaners instead:
-    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd), the default, or
-    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd). See
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd), the default, or
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd). See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
     comparison.
 
@@ -127,7 +127,7 @@ class MapDemeaner(BaseDemeaner):
     """
     Method of Alternating Projections (MAP) demeaner.
 
-    The default backend. Sweeps out the fixed effects by alternately projecting
+    Sweeps out the fixed effects by alternately projecting
     on each of them until convergence. See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
     which backend.
@@ -268,8 +268,8 @@ class LsmrDemeaner(BaseDemeaner):
     backend: LsmrBackend = "within"
     precision: LsmrPrecision = "float64"
     device: TorchDevice = "auto"
-    fixef_atol: float = 1e-8
-    fixef_btol: float = 1e-8
+    fixef_atol: float = 1e-10
+    fixef_btol: float = 1e-10
     warn_on_cpu_fallback: bool = True
     preconditioner: LsmrPreconditioner | Preconditioner = "auto"
     local_size: int | None = None
