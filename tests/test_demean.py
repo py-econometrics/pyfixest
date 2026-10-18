@@ -126,6 +126,12 @@ def test_torch_device_backends_match_pyhdfe(backend_name, rtol, atol, demean_dat
 @pytest.mark.parametrize(
     ("demeaner", "rtol", "atol"),
     [
+        pytest.param(
+            LsmrDemeaner(),
+            1e-6,
+            1e-7,
+            id="within-default",
+        ),
         (
             LsmrDemeaner(preconditioner="additive"),
             1e-6,
@@ -162,8 +168,16 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
         weights=np.ones(x.shape[0]),
     )
     assert success
+    # On this unit-scale fixture, adaptive's default stopping tolerance (1e-8)
+    # leaves maximum absolute errors of about 8e-8 unweighted and 6e-8 weighted.
+    # It is not an elementwise error bound: allow 1e-7 near zero for the default
+    # case, retaining rtol=1e-6. The tighter adaptive solve still uses atol=1e-8.
     np.testing.assert_allclose(
-        result_unweighted, expected_unweighted, rtol=rtol, atol=atol
+        result_unweighted,
+        expected_unweighted,
+        rtol=rtol,
+        atol=atol,
+        err_msg="Unweighted demeaned values differ from pyhdfe",
     )
 
     expected_weighted = algorithm.residualize(x, weights.reshape((x.shape[0], 1)))
@@ -173,7 +187,13 @@ def test_within_solver_variants_match_pyhdfe(demeaner, rtol, atol, demean_data):
         weights=weights,
     )
     assert success
-    np.testing.assert_allclose(result_weighted, expected_weighted, rtol=rtol, atol=atol)
+    np.testing.assert_allclose(
+        result_weighted,
+        expected_weighted,
+        rtol=rtol,
+        atol=atol,
+        err_msg="Weighted demeaned values differ from pyhdfe",
+    )
 
 
 def test_demean_within_returns_preconditioner_for_reuse(demean_data):
