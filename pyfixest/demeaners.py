@@ -224,9 +224,9 @@ class LsmrDemeaner(BaseDemeaner):
     backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
 
-    Both tolerances default to `1e-10`, tighter than `within`'s `1e-8`,
-    because demeaning errors can propagate into t-statistics beyond the
-    tolerances used in our comparisons with R `fixest`.
+    Both tolerances default to `1e-8`, matching `within`'s default. They
+    control solver convergence, not the error in each demeaned value or
+    derived statistic.
 
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.
@@ -272,8 +272,8 @@ class LsmrDemeaner(BaseDemeaner):
     backend: LsmrBackend = "within"
     precision: LsmrPrecision = "float64"
     device: TorchDevice = "auto"
-    fixef_atol: float = 1e-10
-    fixef_btol: float = 1e-10
+    fixef_atol: float = 1e-8
+    fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
     preconditioner: LsmrPreconditioner | Preconditioner = "auto"
     local_size: int | None = None

@@ -92,11 +92,10 @@ convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
 `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);
 `torch` uses both independently (SciPy LSMR convention).
 
-Both LSMR tolerances default to `1e-10`, tighter than `within`'s default of
-`1e-8`. Small errors in demeaning can propagate into inference: at `1e-8`,
-one of our clustered-inference comparisons with R `fixest` exceeds its
-absolute tolerance of `1e-6` for t-statistics. The tighter stopping tolerance
-keeps that comparison within its bound.
+Both LSMR tolerances default to `1e-8`, matching `within`'s default.
+They control solver convergence, not the error in each demeaned value or
+derived statistic. Small demeaning errors can be amplified in quantities
+such as large t-statistics. Lower both tolerances if you need a tighter solve.
 
 ```{python}
 fit = pf.feols(

@@ -147,7 +147,7 @@ def feols(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-10,
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
         maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the

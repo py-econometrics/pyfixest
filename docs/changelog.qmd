@@ -30,7 +30,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 
 We now use the LSMR demeaner from the `within` package as the default backend, with adaptive preconditioning. Rust MAP remains available through `MapDemeaner()`.
 
-We also tightened the LSMR stopping tolerances to `fixef_atol=fixef_btol=1e-10`. With `within`'s default of `1e-8`, small demeaning errors can propagate into t-statistics beyond the tolerances used in our comparisons with R `fixest`.
+The LSMR stopping tolerances remain `fixef_atol=fixef_btol=1e-8`, matching `within`'s default. These control solver convergence, not the error in each demeaned value or derived statistic.
 
 `LsmrDemeaner(backend="within")` now calls the [`within`](https://github.com/py-econometrics/within) Python package (`within-py>=0.4.0,<0.5.0`, a new required dependency) instead of the `within` Rust crate compiled into pyfixest.
 
