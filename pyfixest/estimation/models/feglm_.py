@@ -5,6 +5,7 @@ from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
+from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -117,11 +118,6 @@ class Feglm(Feols):
             inference_dist=self._family.inference_dist,
         )
 
-    def _check_varying_slopes_support(self) -> None:
-        raise NotImplementedError(
-            "Varying slopes such as `f1[z]` are not yet supported for GLMs."
-        )
-
     def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
@@ -138,7 +134,14 @@ class Feglm(Feols):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
-                fe=model_matrix.fixed_effects,
+                fe=model_matrix.fixed_effects.loc[
+                    :,
+                    [
+                        spec.intercept
+                        for spec in model_matrix.fixed_effect_specifications
+                    ],
+                ],
+                effects=self._fixed_effects_for_demeaning(),
                 outcome_bounds=self._family.outcome_bounds,
                 demeaner=self.options.demeaner,
                 collin_tol=self.options.collin_tol,
@@ -151,8 +154,12 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe_after_separation = int(
-                np.sum(np.asarray(self.fixef_counts.n_levels_by_fe) > 1)
+            counts = self.fixef_counts
+            self._n_fe_after_separation = sum(
+                n_levels > 1 and has_intercept
+                for n_levels, has_intercept in zip(
+                    counts.n_levels_by_fe, counts.has_intercept_by_fe, strict=True
+                )
             )
 
         return model_matrix
@@ -172,7 +179,7 @@ class Feglm(Feols):
         fixed_effect_frame = model_matrix.fixed_effects
         offset_frame = model_matrix.offset
         fixed_effects = (
-            None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
+            None if fixed_effect_frame is None else self._fixed_effects_for_demeaning()
         )
         offset = (
             None if offset_frame is None else offset_frame.to_numpy().reshape((-1, 1))
@@ -308,7 +315,7 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray | None,
+        flist: np.ndarray | list[Effect] | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
