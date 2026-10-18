@@ -20,6 +20,10 @@ class DemeanedData:
         Demeaned columns, shape ``(n_rows, len(column_keys))``.
     column_keys : tuple[Hashable, ...]
         Column keys, in the insertion order of the columns in ``values``.
+    fixed_effects : NDArray[np.float64] or None
+        Within projection coefficients, shape ``(n_dummy_columns, len(column_keys))``,
+        in treatment-coded dummy order. Read-only, like ``values``; absent for
+        backends that do not return coefficients.
 
     Notes
     -----
@@ -33,6 +37,7 @@ class DemeanedData:
 
     values: NDArray[np.float64]
     column_keys: tuple[Hashable, ...]
+    fixed_effects: NDArray[np.float64] | None = None
 
 
 class DemeanCache:
@@ -95,6 +100,19 @@ class DemeanCache:
         a cache block, keep using the first handle or its additive replacement
         after adaptive escalation, including for an explicitly supplied handle.
         """
+        return self.demean_array_with_fixef(
+            x=x, flist=flist, weights=weights, na_index=na_index, demeaner=demeaner
+        )[0]
+
+    def demean_array_with_fixef(
+        self,
+        x: np.ndarray,
+        flist: np.ndarray,
+        weights: np.ndarray | None,
+        na_index: frozenset[int],
+        demeaner: AnyDemeaner,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Return a fresh projection and its within fixed-effect coefficients."""
         cached = self.lookup_preconditioner.get(na_index)
         if (
             cached is not None
@@ -104,10 +122,10 @@ class DemeanCache:
             # An explicit adaptive handle must not restart the ladder after
             # an earlier solve has already built the additive preconditioner.
             demeaner = replace(demeaner, preconditioner=cached)
-        result, _ = self._run_or_raise(
+        result, _, fixed_effects = self._run_or_raise(
             x=x, flist=flist, weights=weights, na_index=na_index, demeaner=demeaner
         )
-        return result
+        return result, fixed_effects
 
     def _run_or_raise(
         self,
@@ -116,17 +134,31 @@ class DemeanCache:
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
-    ) -> tuple[np.ndarray, Preconditioner | None]:
+    ) -> tuple[np.ndarray, Preconditioner | None, np.ndarray | None]:
         cached_preconditioner = self.lookup_preconditioner.get(na_index)
-        result, success, used_preconditioner = demeaner.demean(
-            x, flist, weights, cached_preconditioner=cached_preconditioner
-        )
+        fixed_effects = None
+        if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "within":
+            result, success, used_preconditioner, fixed_effects = (
+                demeaner._demean_within(
+                    x=x,
+                    flist=flist,
+                    weights=weights,
+                    cached_preconditioner=cached_preconditioner,
+                )
+            )
+        else:
+            result, success, used_preconditioner = demeaner.demean(
+                x=x,
+                flist=flist,
+                weights=weights,
+                cached_preconditioner=cached_preconditioner,
+            )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
             raise ValueError(
                 f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
             )
-        return result, used_preconditioner
+        return result, used_preconditioner, fixed_effects
 
     def demean_yx(
         self,
@@ -190,12 +222,16 @@ class DemeanCache:
         used_preconditioner: Preconditioner | None = None
         if cached is None:
             YX = np.concatenate((Y_array, X_array), axis=1)
-            YX_demeaned, used_preconditioner = self._run_or_raise(
+            YX_demeaned, used_preconditioner, fixed_effects = self._run_or_raise(
                 YX, fe, weights, na_index, demeaner
             )
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
-            cached = DemeanedData(values=YX_demeaned, column_keys=yx_keys)
+            if fixed_effects is not None:
+                fixed_effects.setflags(write=False)
+            cached = DemeanedData(
+                values=YX_demeaned, column_keys=yx_keys, fixed_effects=fixed_effects
+            )
             self.lookup_demeaned_data[na_index] = cached
         else:
             cached_keys = cached.column_keys
@@ -205,17 +241,27 @@ class DemeanCache:
             )
             if uncached_positions:
                 YX = np.concatenate((Y_array, X_array), axis=1)
-                uncached_demeaned, used_preconditioner = self._run_or_raise(
-                    YX[:, uncached_positions], fe, weights, na_index, demeaner
+                uncached_demeaned, used_preconditioner, fixed_effects = (
+                    self._run_or_raise(
+                        YX[:, uncached_positions], fe, weights, na_index, demeaner
+                    )
                 )
                 uncached_keys = tuple(yx_keys[index] for index in uncached_positions)
                 cached_demeaned = np.concatenate(
                     (cached.values, uncached_demeaned), axis=1
                 )
                 cached_demeaned.setflags(write=False)
+                if fixed_effects is not None and cached.fixed_effects is not None:
+                    fixed_effects = np.concatenate(
+                        (cached.fixed_effects, fixed_effects), axis=1
+                    )
+                    fixed_effects.setflags(write=False)
+                else:
+                    fixed_effects = None
                 cached = DemeanedData(
                     values=cached_demeaned,
                     column_keys=cached_keys + uncached_keys,
+                    fixed_effects=fixed_effects,
                 )
                 self.lookup_demeaned_data[na_index] = cached
             # Every requested column is demeaned and cached at this point.

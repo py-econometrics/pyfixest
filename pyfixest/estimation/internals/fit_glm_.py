@@ -18,7 +18,7 @@ from pyfixest.estimation.internals.solvers import solve_ols
 
 DemeanFn = Callable[
     [np.ndarray, np.ndarray, np.ndarray, float],
-    tuple[np.ndarray, np.ndarray],
+    tuple[np.ndarray, np.ndarray, np.ndarray | None],
 ]
 
 
@@ -45,6 +45,10 @@ class GlmFit:
     collinearity : CollinearityCheck
         Names and column mask of the regressors dropped by the rank check,
         together with the coefficient names it retained.
+    fixed_effects : np.ndarray or None
+        Final fixed-effect coefficients, shape (n_dummy_columns,), in treatment
+        normalization on link scale, excluding the offset. Absent when the
+        demeaner does not return projection coefficients.
     """
 
     beta: np.ndarray
@@ -54,6 +58,7 @@ class GlmFit:
     converged: bool
     n_iter: int
     collinearity: CollinearityCheck
+    fixed_effects: np.ndarray | None
 
 
 def _rel_dev_change(deviance: float, deviance_old: float) -> float:
@@ -144,7 +149,7 @@ def fit_glm_irls(
         Family providing link / inverse link / gprime / variance / deviance /
         initial mu.
     demean : Callable
-        ``demean(v, X, weights, tol) -> (v_tilde, X_tilde)``. The caller is
+        ``demean(v, X, weights, tol) -> (v_tilde, X_tilde, fixed_effects)``. The caller is
         responsible for capturing the fixed-effects list and any caching state.
         For no fixed effects, pass an identity function.
     coefnames : list[str]
@@ -182,6 +187,7 @@ def fit_glm_irls(
         mask=tuple(False for _ in coefnames),
         coefnames=tuple(coefnames),
     )
+    fixed_effects = None
     converged = False
     step_halved_prev = False
 
@@ -226,7 +232,7 @@ def fit_glm_irls(
             z_input = z
             X_input = X_eff
 
-        z_tilde, X_tilde = demean(
+        z_tilde, X_tilde, projection = demean(
             z_input,
             X_input,
             working_weights.flatten(),
@@ -238,6 +244,19 @@ def fit_glm_irls(
                 X_tilde, coefnames, collin_tol
             )
             X_eff = collinearity.select(X_eff)
+            if projection is not None:
+                projection = np.column_stack(
+                    (projection[:, 0], collinearity.select(projection[:, 1:]))
+                )
+
+        if projection is not None:
+            # Warm starts remove only the *remaining* FE contribution from
+            # z_tilde_prev + delta_z and X_tilde_prev (Stammann, 2018).
+            if accelerate and r > 0:
+                assert fixed_effects is not None
+                fixed_effects = fixed_effects + projection
+            else:
+                fixed_effects = projection
 
         design_solver = sqrt_working_weights.flatten()[:, None] * X_tilde
         response_solver = sqrt_working_weights.flatten() * z_tilde
@@ -320,4 +339,9 @@ def fit_glm_irls(
         converged=converged,
         n_iter=r,
         collinearity=collinearity,
+        fixed_effects=(
+            fixed_effects[:, 0] - fixed_effects[:, 1:] @ beta_final
+            if fixed_effects is not None
+            else None
+        ),
     )

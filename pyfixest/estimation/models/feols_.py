@@ -274,6 +274,7 @@ class Feols(ResultAccessorMixin):
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
+        self._within_fixef: np.ndarray | None = None
         self.options = options
         self.model = self._describe_model(
             parsed_formula=FixestFormula, sample_split=sample_split
@@ -523,6 +524,19 @@ class Feols(ResultAccessorMixin):
             self._beta_hat = fit.beta
             self._u_hat = fit.residuals
             self.sandwich = fit.sandwich
+
+        cached = self._demean_cache.lookup_demeaned_data.get(
+            self.sample_info.dropped_row_index
+        )
+        if cached is not None and cached.fixed_effects is not None:
+            keys = self.model_matrix.column_keys(
+                "dependent"
+            ) + self.model_matrix.column_keys("independent")
+            positions = [cached.column_keys.index(key) for key in keys]
+            projection = cached.fixed_effects[:, positions]
+            design_projection = self.collinearity.select(projection[:, 1:])
+            self._within_fixef = projection[:, 0] - design_projection @ self._beta_hat
+            self._within_fixef.setflags(write=False)
 
         # The response minus the residual carries the fixed-effect
         # contribution, which `design @ beta_hat` alone would omit.
@@ -1713,6 +1727,9 @@ class Feols(ResultAccessorMixin):
         Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates`
         value holding the coefficient records, the dummy-coded solution
         `alpha`, and the per-observation contribution `sumFE`.
+        Multi-factor within LSMR fits reuse their estimation-time coefficients
+        and tolerances. Other demeaners, including the single-factor MAP
+        fallback, recover coefficients with LSQR using `atol` and `btol`.
 
         Parameters
         ----------
@@ -1750,31 +1767,25 @@ class Feols(ResultAccessorMixin):
 
         fe_spec = self.model_matrix.model_spec[_ModelMatrixKey.fixed_effects]
 
-        # flatten() copies: the weighting below scales uhat in place and must
-        # not touch the fitted values the GLM hook may return.
-        uhat = self._fixef_dependent().flatten()
-        if not self._X_is_empty:
-            # model_matrix keeps the columns the collinearity check dropped;
-            # _coefnames names the estimated ones.
-            X = self.model_matrix.independent[self._coefnames].to_numpy()
-            uhat = uhat - X @ self._beta_hat
-        # Recover from retained codes, omitting the first observed level of
-        # the second and subsequent FEs under treatment normalization.
-        # has_fixef guarantees that the retained matrix contains FE codes.
         fixed_effect_codes = cast(pd.DataFrame, self.model_matrix.fixed_effects)
         dummies = build_fixed_effect_dummies(
             codes=fixed_effect_codes, formulaic_columns=fe_spec.column_names
         )
         D = dummies.matrix
-        D_w = D
-        observation_weights = self.observation_weights.values
-        if observation_weights is not None:
-            # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
-            weights_sqrt = np.sqrt(observation_weights)
-            uhat *= weights_sqrt
-            D_w = diags(weights_sqrt, 0).dot(D)
-
-        alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
+        alpha = self._within_fixef
+        if alpha is None:
+            # MAP, torch, and the single-factor fallback retain LSQR recovery.
+            uhat = self._fixef_dependent().flatten()
+            if not self._X_is_empty:
+                X = self.model_matrix.independent[self._coefnames].to_numpy()
+                uhat = uhat - X @ self._beta_hat
+            D_w = D
+            observation_weights = self.observation_weights.values
+            if observation_weights is not None:
+                weights_sqrt = np.sqrt(observation_weights)
+                uhat *= weights_sqrt
+                D_w = diags(weights_sqrt, 0).dot(D)
+            alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
 
         self.fixef_estimates = FixedEffectEstimates(
             fixed_effects=build_fixed_effects(

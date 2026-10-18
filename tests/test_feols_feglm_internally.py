@@ -256,7 +256,7 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
     def _identity_demean(v, X, weights, tol):
         nonlocal demean_calls
         demean_calls += 1
-        return v, X
+        return v, X, None
 
     step_calls = 0
 
@@ -341,7 +341,7 @@ def test_glm_raises_after_iwls_maxiter_without_convergence():
     )
 
     def _identity_demean(v, X, weights, tol):
-        return v, X
+        return v, X, None
 
     with pytest.raises(NonConvergenceError, match="did not converge"):
         fit_glm_module.fit_glm_irls(
