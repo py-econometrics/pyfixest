@@ -130,9 +130,7 @@ build (`pre.build_duration_seconds`). It is a `within.Preconditioner`, which
 `pyfixest` re-exports as `pf.Preconditioner`. An adaptive preconditioner that
 escalated during the solve is returned as the additive Schwarz preconditioner.
 
-You can also pass a `within.PreconditionerConfig` object to `LsmrDemeaner(preconditioner=...)` to build a preconditioner with custom settings. A demeaner that holds a configuration object cannot be deep-copied, pickled or hashed, because `within` does not support these operations on `PreconditionerConfig`. A demeaner that holds a built `Preconditioner` supports all three.
-
-A refit on a different sample cannot reuse a prebuilt preconditioner. It rebuilds one from the handle's configuration and stores that configuration on the refitted demeaner, which keeps custom factorization settings but means the refitted demeaner cannot be pickled. Custom adaptive escalation settings carry over only from a handle that never escalated: an escalated handle reports the additive Schwarz configuration, so the refit uses additive Schwarz from the start.
+A refit on a different sample rebuilds a prebuilt preconditioner from the handle's configuration, preserving custom factorization settings. It retains a built handle as the configuration source, so the refitted demeaner still supports pickling, deep-copying and hashing. Custom adaptive escalation settings carry over only from a handle that never escalated: an escalated handle reports the additive Schwarz configuration, so the refit uses additive Schwarz from the start. Same-sample refits continue to reuse the fitted model's handle.
 
 After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later
 fit to skip the setup phase:

@@ -8,13 +8,14 @@ options of the fit it starts from.
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 from typing import TYPE_CHECKING
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrDemeaner,
+    _FreshLsmrDemeaner,
     _with_fresh_preconditioner,
 )
 from pyfixest.estimation.config import EstimationConfig
@@ -127,5 +128,14 @@ def _with_preconditioner(
     the weights, and the rows, which a same-sample refit keeps.
     """
     if isinstance(demeaner, LsmrDemeaner) and preconditioner is not None:
+        if isinstance(demeaner, _FreshLsmrDemeaner):
+            # A same-sample refit must reuse the fitted handle, even when its
+            # parent was itself a changed-sample refit.
+            options = {
+                field.name: getattr(demeaner, field.name)
+                for field in fields(LsmrDemeaner)
+            }
+            options["preconditioner"] = preconditioner
+            return LsmrDemeaner(**options)
         return replace(demeaner, preconditioner=preconditioner)
     return demeaner

@@ -121,9 +121,7 @@ def demean_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: WithinPreconditionerName
-    | Preconditioner
-    | PreconditionerConfig = "adaptive",
+    preconditioner: WithinPreconditionerName | Preconditioner = "adaptive",
 ) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
@@ -161,14 +159,12 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"adaptive", "additive", "off", "diagonal"} or Preconditioner or PreconditionerConfig, optional
+    preconditioner : {"adaptive", "additive", "off", "diagonal"} or Preconditioner, optional
         Preconditioner choice for `within`'s LSMR solver. ``"adaptive"``
         (default) starts with a diagonal preconditioner and escalates to
         additive Schwarz only when convergence stalls; ``"additive"`` uses
         additive Schwarz preconditioning from the start; ``"off"`` disables
         preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
-        A ``within.PreconditionerConfig`` builds a new preconditioner while
-        preserving its complete solver and escalation settings.
         Preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
         MAP and do not use a preconditioner. Alternatively, you can
@@ -192,20 +188,45 @@ def demean_within(
     """
     _valid_names = get_args(WithinPreconditionerName)
     _valid_str = ", ".join(repr(n) for n in _valid_names)
-    if isinstance(preconditioner, (Preconditioner, PreconditionerConfig)):
+    if isinstance(preconditioner, Preconditioner):
         pass
     elif not isinstance(preconditioner, str):
         raise TypeError(
-            f"`preconditioner` must be {_valid_str}, a Preconditioner, "
-            "or a PreconditionerConfig instance."
+            f"`preconditioner` must be {_valid_str}, or a Preconditioner instance."
         )
     elif preconditioner not in _valid_names:
         raise ValueError(
             f"preconditioner={preconditioner!r} is not supported by the 'within' "
-            f"LSMR backend; use {_valid_str}, a Preconditioner, "
-            "or a PreconditionerConfig instance."
+            f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
+    config = (
+        preconditioner
+        if isinstance(preconditioner, Preconditioner)
+        else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
+    )
+    return _demean_within(
+        x=x,
+        flist=flist,
+        weights=weights,
+        tol=tol,
+        maxiter=maxiter,
+        local_size=local_size,
+        preconditioner=config,
+    )
+
+
+def _demean_within(
+    *,
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint32],
+    weights: NDArray[np.float64] | None,
+    tol: float,
+    maxiter: int,
+    local_size: int | None,
+    preconditioner: Preconditioner | PreconditionerConfig,
+) -> tuple[NDArray, bool, Preconditioner | None]:
+    """Solve with a built handle or a transient internal rebuild configuration."""
     if flist.ndim == 1 or flist.shape[1] == 1:
         flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
         demeaned, success = _demean_rs(
@@ -219,15 +240,10 @@ def demean_within(
         )
         return demeaned, success, None
 
-    config = (
-        preconditioner
-        if isinstance(preconditioner, (Preconditioner, PreconditionerConfig))
-        else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
-    )
     solver = Solver(
         np.asfortranarray(flist, dtype=np.uint32),
         weights=weights.astype(np.float64, copy=False) if weights is not None else None,
-        preconditioner=config,
+        preconditioner=preconditioner,
     )
     result = solver.solve_batch(
         np.asfortranarray(x, dtype=np.float64),

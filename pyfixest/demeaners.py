@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from importlib import import_module
 from numbers import Integral, Real
 from types import ModuleType
 from typing import ClassVar, Literal, cast, get_args
 
 import numpy as np
-from within import PreconditionerConfig
 
 from pyfixest.core.demean import (
     Preconditioner,
     WithinPreconditionerName,
+    _demean_within,
     demean_within,
     within_preconditioner_name,
 )
@@ -253,11 +253,6 @@ class LsmrDemeaner(BaseDemeaner):
       fixed-effect factors because single-factor problems run MAP as the within algo
       provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
-    - A ``within.PreconditionerConfig`` instance: build a new preconditioner
-      using its complete configuration, including custom factorization and
-      adaptive escalation settings. Only supported by ``backend='within'``.
-      The demeaner then cannot be deep-copied, pickled or hashed, because
-      ``within`` does not support these operations on ``PreconditionerConfig``.
 
     In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
     solving each projection with its current working weights. If an adaptive
@@ -277,7 +272,7 @@ class LsmrDemeaner(BaseDemeaner):
     fixef_atol: float = 1e-8
     fixef_btol: float = 1e-8
     warn_on_cpu_fallback: bool = True
-    preconditioner: LsmrPreconditioner | Preconditioner | PreconditionerConfig = "auto"
+    preconditioner: LsmrPreconditioner | Preconditioner = "auto"
     local_size: int | None = None
     kind: ClassVar[str] = "lsmr"
 
@@ -302,21 +297,17 @@ class LsmrDemeaner(BaseDemeaner):
 
         if not isinstance(self.warn_on_cpu_fallback, bool):
             raise TypeError("`warn_on_cpu_fallback` must be a bool.")
-        if isinstance(self.preconditioner, (Preconditioner, PreconditionerConfig)):
+        if isinstance(self.preconditioner, Preconditioner):
             if self.backend != "within":
                 raise ValueError(
-                    "A Preconditioner or PreconditionerConfig can only be used "
-                    "with `backend='within'`."
+                    "A Preconditioner can only be reused with `backend='within'`."
                 )
         elif not isinstance(self.preconditioner, str):
-            raise TypeError(
-                "`preconditioner` must be a string, a Preconditioner, "
-                "or a PreconditionerConfig."
-            )
+            raise TypeError("`preconditioner` must be a string or a Preconditioner.")
         elif self.preconditioner not in get_args(LsmrPreconditioner):
             raise ValueError(
-                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)}, "
-                "a Preconditioner, or a PreconditionerConfig."
+                f"`preconditioner` must be one of {get_args(LsmrPreconditioner)} "
+                "or a Preconditioner."
             )
 
         if self.local_size is not None:
@@ -356,9 +347,6 @@ class LsmrDemeaner(BaseDemeaner):
             built with the same configuration (``"additive"`` or
             ``"diagonal"``); an ``"adaptive"`` request also reuses an
             escalated additive Schwarz preconditioner. If the
-            request is a ``within.PreconditionerConfig``, all configuration
-            settings must match; adaptive requests may reuse the additive
-            configuration with the same factorization settings. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
 
@@ -393,8 +381,8 @@ class LsmrDemeaner(BaseDemeaner):
         cached_preconditioner: Preconditioner | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean via `within`, reusing a matching cached preconditioner."""
-        preconditioner: WithinPreconditionerName | Preconditioner | PreconditionerConfig
-        if isinstance(self.preconditioner, (Preconditioner, PreconditionerConfig)):
+        preconditioner: WithinPreconditionerName | Preconditioner
+        if isinstance(self.preconditioner, Preconditioner):
             preconditioner = self.preconditioner
         else:
             preconditioner = cast(
@@ -409,21 +397,6 @@ class LsmrDemeaner(BaseDemeaner):
                 preconditioner == "adaptive" and cached_name == "additive"
             )
             if same_kind or already_escalated:
-                preconditioner = cached_preconditioner
-        elif cached_preconditioner is not None and isinstance(
-            preconditioner, PreconditionerConfig
-        ):
-            config = preconditioner
-            cached_config = cached_preconditioner.config
-            if isinstance(config, PreconditionerConfig.Adaptive) and isinstance(
-                cached_config, PreconditionerConfig.Additive
-            ):
-                # Escalation retains the factorization settings but consumes
-                # the adaptive stall policy, so compare the resulting recipe.
-                config = PreconditionerConfig.Additive(
-                    local_solver=config.local_solver, reduction=config.reduction
-                )
-            if cached_config == config:
                 preconditioner = cached_preconditioner
 
         return demean_within(
@@ -496,19 +469,53 @@ class LsmrDemeaner(BaseDemeaner):
 AnyDemeaner = MapDemeaner | LsmrDemeaner
 
 
+@dataclass(frozen=True, slots=True)
+class _FreshLsmrDemeaner(LsmrDemeaner):
+    """Rebuild for each new sample, retaining only a picklable source handle.
+
+    The configuration is read at solve time, after row filtering and weight
+    construction. It never becomes fitted state: ``within`` configuration
+    objects cannot be pickled or deep-copied. Each cache block owns the fresh
+    handle and any subsequent adaptive escalation, including under IWLS.
+    """
+
+    def _demean_within(
+        self,
+        x: np.ndarray,
+        flist: np.ndarray,
+        weights: np.ndarray | None,
+        cached_preconditioner: Preconditioner | None,
+    ) -> tuple[np.ndarray, bool, Preconditioner | None]:
+        assert isinstance(self.preconditioner, Preconditioner)
+        return _demean_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            tol=max(self.fixef_atol, self.fixef_btol),
+            maxiter=self.fixef_maxiter,
+            local_size=self.local_size,
+            preconditioner=(
+                cached_preconditioner
+                if cached_preconditioner is not None
+                else self.preconditioner.config
+            ),
+        )
+
+
 def _with_fresh_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
     """Make the next solve build a fresh preconditioner with the same settings.
 
-    Replace a prebuilt handle by its complete configuration so the next solve
-    builds for its own design and weights. Callers use this for changed samples
-    or auxiliary projections while preserving custom factorization settings.
+    Retain a prebuilt handle as the configuration source for changed samples
+    or auxiliary projections, without storing an unpicklable configuration.
     """
     if not (
         isinstance(demeaner, LsmrDemeaner)
         and isinstance(demeaner.preconditioner, Preconditioner)
     ):
         return demeaner
-    return replace(demeaner, preconditioner=demeaner.preconditioner.config)
+    return _FreshLsmrDemeaner(
+        **{field.name: getattr(demeaner, field.name) for field in fields(LsmrDemeaner)}
+    )
 
 
 __all__ = [

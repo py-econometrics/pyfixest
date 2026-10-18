@@ -7,14 +7,19 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
-from within import PreconditionerConfig
-from within.config import LocalSolverConfig, Staleness
+from within import PreconditionerConfig, Solver
+from within.config import Staleness
 
 import pyfixest as pf
 import pyfixest.demeaners as demeaners
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within, within_preconditioner_name
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
+from pyfixest.demeaners import (
+    LsmrDemeaner,
+    MapDemeaner,
+    _resolve_preconditioner,
+    _with_fresh_preconditioner,
+)
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
@@ -305,7 +310,8 @@ def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
 
 
-def test_demean_within_rejects_invalid_preconditioner():
+@pytest.mark.parametrize("invalid", [object(), PreconditionerConfig.Adaptive()])
+def test_demean_within_rejects_invalid_preconditioner(invalid):
     rng = np.random.default_rng(0)
     x = rng.normal(size=(20, 2))
     flist = np.column_stack(
@@ -313,12 +319,12 @@ def test_demean_within_rejects_invalid_preconditioner():
     ).astype(np.uint32)
     weights = np.ones(20)
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Preconditioner"):
         demean_within(
             x=x,
             flist=flist,
             weights=weights,
-            preconditioner=object(),  # type: ignore[arg-type]
+            preconditioner=invalid,  # type: ignore[arg-type]
         )
 
 
@@ -376,10 +382,6 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
         "adaptive",
         "additive",
         "diagonal",
-        PreconditionerConfig.Additive(
-            local_solver=LocalSolverConfig(dense_threshold=64)
-        ),
-        PreconditionerConfig.Adaptive(stall=Staleness(window=1, threshold=0.0)),
     ],
 )
 def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
@@ -458,15 +460,7 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
-    if isinstance(preconditioner, PreconditionerConfig.Adaptive):
-        assert built.config == PreconditionerConfig.Additive(
-            local_solver=preconditioner.local_solver,
-            reduction=preconditioner.reduction,
-        )
-    elif isinstance(preconditioner, PreconditionerConfig):
-        assert built.config == preconditioner
-    else:
-        assert within_preconditioner_name(built) == preconditioner
+    assert within_preconditioner_name(built) == preconditioner
 
     # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
     # an IWLS iteration where only the working weights moved. The method
@@ -528,42 +522,6 @@ def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     )
 
 
-@pytest.mark.parametrize("adaptive", [False, True])
-def test_lsmr_within_rebuilds_mismatched_preconditioner_config(adaptive, demean_data):
-    """Matching variant names cannot override different factorization settings."""
-    x, flist, weights = demean_data
-    previous = PreconditionerConfig.Additive(
-        local_solver=LocalSolverConfig(dense_threshold=64)
-    )
-    _, _, cached = demean_within(x, flist, weights, preconditioner=previous)
-    requested_additive = PreconditionerConfig.Additive(
-        local_solver=LocalSolverConfig(dense_threshold=32)
-    )
-    requested = (
-        PreconditionerConfig.Adaptive(
-            local_solver=requested_additive.local_solver,
-            stall=Staleness(window=1, threshold=0.0),
-        )
-        if adaptive
-        else requested_additive
-    )
-
-    result, success, used = LsmrDemeaner(
-        preconditioner=requested, fixef_atol=1e-10, fixef_btol=1e-10
-    ).demean(x=x, flist=flist, weights=weights, cached_preconditioner=cached)
-
-    assert success
-    assert used.config == requested_additive
-    expected = pyhdfe.create(flist).residualize(x, weights.reshape((-1, 1)))
-    np.testing.assert_allclose(
-        result,
-        expected,
-        rtol=1e-6,
-        atol=1e-8,
-        err_msg="demeaned values with the requested preconditioner configuration",
-    )
-
-
 def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
     """Keep the additive preconditioner once it replaces a cached adaptive one.
 
@@ -595,14 +553,13 @@ def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
     assert cache.lookup_preconditioner[na_index] is diagonal
 
 
-@pytest.mark.parametrize("prebuilt", [False, True])
-def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, prebuilt, monkeypatch):
+@pytest.mark.parametrize("rebuild", [False, True])
+def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch, rebuild):
     """Reuse additive Schwarz after an adaptive solve builds it, as weights change.
 
     Simulate the weighted demeaning steps used in iteratively reweighted least
     squares (IWLS), without running a full Poisson or GLM fit. First, demeaning
-    all-zero data leaves the initial adaptive preconditioner in the cache, from
-    either a config or a prebuilt adaptive handle.
+    all-zero data leaves the initial adaptive preconditioner in the cache.
     Next, demeaning nonzero data with changed weights forces the solver to
     build additive Schwarz and save it in the cache. A third solve changes
     the weights again and must reuse that saved object without rebuilding it.
@@ -613,24 +570,29 @@ def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, prebuilt, monke
     must be recomputed when the weights change.
     """
     x, flist, weights = demean_data
-    config = PreconditionerConfig.Adaptive(stall=Staleness(window=1, threshold=0.0))
-    preconditioner = config
-    if prebuilt:
-        _, _, preconditioner = demean_within(
-            x=np.zeros_like(x), flist=flist, weights=weights, preconditioner=config
-        )
+    # A tuned ladder makes the adaptive handle escalate on its first iteration.
+    preconditioner = Solver(
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights=weights,
+        preconditioner=PreconditionerConfig.Adaptive(
+            stall=Staleness(window=1, threshold=0.0)
+        ),
+    ).preconditioner
     demeaner = LsmrDemeaner(
         preconditioner=preconditioner, fixef_atol=1e-10, fixef_btol=1e-10
     )
+    if rebuild:
+        demeaner = _with_fresh_preconditioner(demeaner)
     calls = []
-    original = demeaners.demean_within
+    solve_name = "_demean_within" if rebuild else "demean_within"
+    original = getattr(demeaners, solve_name)
 
     def record_solve(**kwargs):
         result = original(**kwargs)
         calls.append((kwargs["preconditioner"], result[2]))
         return result
 
-    monkeypatch.setattr(demeaners, "demean_within", record_solve)
+    monkeypatch.setattr(demeaners, solve_name, record_solve)
     cache = DemeanCache()
     sample = frozenset()
     cache.demean_array(

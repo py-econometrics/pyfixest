@@ -157,21 +157,10 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
 
 
 @pytest.mark.parametrize(
-    "requested",
-    [
-        "auto",
-        "off",
-        "adaptive",
-        "additive",
-        "diagonal",
-        PreconditionerConfig.Off(),
-        PreconditionerConfig.Diagonal(),
-        PreconditionerConfig.Additive(),
-        PreconditionerConfig.Adaptive(),
-    ],
+    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
 )
-def test_lsmr_demeaner_accepts_within_preconditioner_options(requested):
-    """String and upstream configuration options round-trip through the demeaner."""
+def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
+    """All documented string options round-trip through ``LsmrDemeaner``."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested
@@ -183,6 +172,10 @@ def test_lsmr_demeaner_accepts_within_preconditioner_options(requested):
         ("bogus", ValueError, "`preconditioner`"),
         (42, TypeError, "Preconditioner"),
         (object(), TypeError, "Preconditioner"),
+        (PreconditionerConfig.Off(), TypeError, "Preconditioner"),
+        (PreconditionerConfig.Diagonal(), TypeError, "Preconditioner"),
+        (PreconditionerConfig.Additive(), TypeError, "Preconditioner"),
+        (PreconditionerConfig.Adaptive(), TypeError, "Preconditioner"),
     ],
 )
 def test_lsmr_demeaner_rejects_invalid_preconditioner(bad, exc, match):
@@ -243,7 +236,7 @@ def test_within_preconditioner_reuse_across_estimators(
     data = data_fn()
     fit = fit_fn(
         data,
-        pf.LsmrDemeaner(preconditioner=config, fixef_atol=1e-10, fixef_btol=1e-10),
+        pf.LsmrDemeaner(fixef_atol=1e-10, fixef_btol=1e-10),
     )
 
     # Preserve the original adaptive recipe, even if the fitted solve escalated.
@@ -347,9 +340,8 @@ def test_within_preconditioner_off_yields_no_cached_preconditioner(data_fn, fit_
 
 
 @pytest.mark.parametrize("backend", ["torch"])
-@pytest.mark.parametrize("use_config", [False, True])
-def test_preconditioner_rejected_on_non_within_backend(backend, use_config):
-    """Built preconditioners and configuration objects require the within backend."""
+def test_preconditioner_rejected_on_non_within_backend(backend):
+    """A built ``Preconditioner`` is only valid for ``backend='within'``."""
     data = pf.get_data()
     pre = pf.feols(
         "Y ~ X1 | f1 + f2",
@@ -357,8 +349,6 @@ def test_preconditioner_rejected_on_non_within_backend(backend, use_config):
         demeaner=pf.LsmrDemeaner(backend="within"),
     ).preconditioner
     assert pre is not None
-    if use_config:
-        pre = pre.config
     with pytest.raises(ValueError, match="Preconditioner"):
         pf.LsmrDemeaner(backend=backend, preconditioner=pre)
 
