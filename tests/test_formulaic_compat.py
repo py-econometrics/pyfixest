@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from types import SimpleNamespace
 
 import formulaic
@@ -31,6 +32,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
+from pyfixest.estimation.formula.model_matrix import create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectEncoding,
@@ -456,19 +458,84 @@ def test_fe_rejects_object_dtype(data, term, prediction, kind):
         "C(f1)",
         "Q('f1')",
         "f1:relabel(f2)",
-        "f1[X1]",
-        "f1[[X1]]",
-        "f1:f2[X1, X2]",
         "f1:2",
     ],
 )
 def test_fe_rejects_non_lookup_terms(data, expression):
-    """Estimation rejects transforms and varying slopes before materialization."""
+    """Estimation rejects fixed-effect transforms before materialization."""
     with pytest.raises(
         FormulaSyntaxError,
         match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",
     ):
         pf.feols(f"Y ~ X1 | {expression}", data=data)
+
+
+def test_varying_slopes_materialize_with_level_codes(data):
+    """Slope columns align with level codes; rows missing a slope drop jointly."""
+    frame = data.copy()
+    frame.loc[3, "Z1"] = np.nan
+    model_matrix = create_model_matrix(
+        Formula.parse("Y ~ X1 | f1[Z1] + f2[[X2, Z1**2]]")[0], frame
+    )
+    kept = frame.drop(index=3)
+    slopes = model_matrix.varying_slopes
+
+    assert model_matrix.dropped_row_index == frozenset({3})
+    assert model_matrix.fixed_effects.columns.tolist() == [
+        "f1[Z1]",
+        "f2[[X2, Z1 ** 2]]",
+    ]
+    assert slopes is not None
+    assert slopes.intercepts == (True, False)
+    np.testing.assert_array_equal(slopes.values[0], kept[["Z1"]].to_numpy())
+    np.testing.assert_array_equal(
+        slopes.values[1], np.column_stack([kept.X2, kept.Z1**2])
+    )
+
+
+@pytest.mark.parametrize(
+    "fml,expected",
+    [
+        ("Y ~ X1 | f1[[Z1]]", ["Intercept", "X1"]),
+        ("Y ~ 0 + X1 | f1[[Z1]]", ["X1"]),
+        ("Y ~ X1 | f1[Z1]", ["X1"]),
+        ("Y ~ X1 | f1[[Z1]] + f2", ["X1"]),
+    ],
+)
+def test_slope_only_effects_keep_the_intercept(data, fml, expected):
+    """Like fixest, only effects with intercepts absorb the model constant."""
+    model_matrix = create_model_matrix(Formula.parse(fml)[0], data.copy())
+
+    assert model_matrix.independent.columns.tolist() == expected
+
+
+@pytest.mark.parametrize(
+    "fixed_effects,n_singletons", [("f1[[Z1]]", 0), ("f1[Z1]", 1), ("f1", 1)]
+)
+def test_singletons_ignore_slope_only_effects(data, fixed_effects, n_singletons):
+    """A level-specific slope alone does not perfectly fit a singleton row."""
+    frame = data.copy()
+    frame.loc[0, "f1"] = 99
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "1 singleton", UserWarning)
+        model_matrix = create_model_matrix(
+            Formula.parse(f"Y ~ X1 | {fixed_effects}")[0],
+            frame,
+            drop_singletons=True,
+        )
+
+    assert model_matrix.dropped_by_stage.singleton == n_singletons
+
+
+def test_varying_slopes_reject_categorical_slopes(data):
+    with pytest.raises(FormulaSyntaxError, match=r"`C\(f2\)` must evaluate to one"):
+        create_model_matrix(Formula.parse("Y ~ X1 | f1[C(f2)]")[0], data.copy())
+
+
+def test_estimation_rejects_varying_slopes(data):
+    with pytest.raises(NotImplementedError, match="Varying slopes"):
+        pf.feols("Y ~ X1 | f1[Z1]", data=data)
 
 
 def test_fe_unseen_combination_predicts_nan(data):

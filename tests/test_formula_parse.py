@@ -686,21 +686,53 @@ class TestVaryingSlopeParsing:
             for spec in parsed.fixed_effect_specifications
         ] == expected
 
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f2:f3", ["f1", "f2:f3"]),
+            ("f1[z]", ["f1[z]"]),
+            ("f1:f2[[z1, z2**2]]", ["f1:f2[[z1, z2 ** 2]]"]),
+            ("f1 + f1[[z]] + f2", ["f1[z]", "f2"]),
+        ],
+    )
+    def test_effect_names_use_fixest_syntax(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert [spec.name for spec in parsed.fixed_effect_specifications] == expected
+
+    @pytest.mark.parametrize(
+        "formula,expected",
+        [
+            ("Y ~ X1 | f1[[z]]", "Y ~ 1 + X1 | f1[[z]]"),
+            ("Y ~ 0 + X1 | f1[[z]]", "Y ~ 0 + X1 | f1[[z]]"),
+            ("Y ~ X1 | f1[z]", "Y ~ X1 | f1[z]"),
+        ],
+    )
+    def test_slope_only_models_render_their_intercept(self, formula, expected):
+        """Slope-only effects absorb no constant, so the name shows the choice."""
+        assert Formula.parse(formula)[0].render() == expected
+
     def test_no_fixed_effects_have_no_specs(self):
         parsed = Formula.parse("Y ~ X1")[0]
 
         assert parsed.fixed_effect_specifications == ()
 
-    def test_distinct_terms_with_shared_levels_remain_distinct(self):
-        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f1[[z]]", [("f1", True, ("z",)), ("f2", True, ())]),
+            ("f1[[z2]] + f1[z1, z2]", [("f1", True, ("z2", "z1")), ("f2", True, ())]),
+            ("f1:f2[[z]] + f2:f1", [("f2", True, ()), ("f1:f2", True, ("z",))]),
+        ],
+    )
+    def test_effects_on_shared_levels_merge(self, fixed_effects, expected):
+        """Like fixest, `f1 + f1[[z]]` is `f1[z]`; slopes keep first-mention order."""
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects} + f2")[0]
 
         assert [
             (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
             for spec in parsed.fixed_effect_specifications
-        ] == [
-            ("f1", True, ()),
-            ("f1", False, ("z",)),
-        ]
+        ] == expected
 
     @pytest.mark.parametrize(
         "fixed_effects",
