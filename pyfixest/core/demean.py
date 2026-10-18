@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from typing import Literal, get_args
 
 import numpy as np
 from numpy.typing import NDArray
+from within import LsmrOptions, Preconditioner, PreconditionerConfig, Solver
 
-from ._core_impl import Preconditioner, _demean_rs, _demean_within_rs
+from ._core_impl import _demean_rs
 
 WithinPreconditionerName = Literal["additive", "off", "diagonal"]
 
@@ -12,7 +15,27 @@ __all__ = [
     "WithinPreconditionerName",
     "demean",
     "demean_within",
+    "within_preconditioner_name",
 ]
+
+_WITHIN_PRECONDITIONER_CONFIGS: dict[
+    WithinPreconditionerName, type[PreconditionerConfig]
+] = {
+    "additive": PreconditionerConfig.Additive,
+    "off": PreconditionerConfig.Off,
+    "diagonal": PreconditionerConfig.Diagonal,
+}
+
+
+def within_preconditioner_name(
+    preconditioner: Preconditioner,
+) -> WithinPreconditionerName:
+    """Return the name of the configuration a `within` preconditioner was built with."""
+    config = preconditioner.config
+    for name, config_class in _WITHIN_PRECONDITIONER_CONFIGS.items():
+        if isinstance(config, config_class):
+            return name
+    raise TypeError(f"Unknown `within` preconditioner configuration: {config!r}.")
 
 
 def demean(
@@ -102,7 +125,8 @@ def demean_within(
     """
     Demean an array using modified LSMR via `within`.
 
-    Uses `within`'s modified LSMR solver with additive Schwarz preconditioning.
+    Uses the LSMR solver of the `within` Python package (`within-py`), by
+    default with additive Schwarz preconditioning.
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
@@ -185,12 +209,18 @@ def demean_within(
         )
         return demeaned, success, None
 
-    return _demean_within_rs(
-        x.astype(np.float64, copy=False),
-        np.asfortranarray(flist, dtype=np.uint32),
-        weights.astype(np.float64, copy=False) if weights is not None else None,
-        tol,
-        maxiter,
-        local_size,
-        preconditioner,
+    config = (
+        preconditioner
+        if isinstance(preconditioner, Preconditioner)
+        else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
     )
+    solver = Solver(
+        np.asfortranarray(flist, dtype=np.uint32),
+        weights=weights.astype(np.float64, copy=False) if weights is not None else None,
+        preconditioner=config,
+    )
+    result = solver.solve_batch(
+        np.asfortranarray(x, dtype=np.float64),
+        options=LsmrOptions(tol=tol, maxiter=maxiter, local_size=local_size),
+    )
+    return result.demeaned, all(result.converged), solver.preconditioner

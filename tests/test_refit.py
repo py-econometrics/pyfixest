@@ -274,6 +274,11 @@ def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
 
     assert fit.preconditioner is not None
     assert refitted.options.demeaner.preconditioner is fit.preconditioner
+    assert refitted.preconditioner.config == fit.preconditioner.config
+    assert (
+        refitted.preconditioner.build_duration_seconds
+        == fit.preconditioner.build_duration_seconds
+    )
 
 
 # estimation arguments that are not options of a single fit: the caller of a

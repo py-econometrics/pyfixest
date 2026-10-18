@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import pickle
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -7,7 +10,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within
+from pyfixest.core.demean import demean_within, within_preconditioner_name
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
@@ -187,10 +190,13 @@ def test_demean_within_returns_preconditioner_for_reuse(demean_data):
     # (same variant and DOF count) but not the same Python object — pyo3
     # round-trips produce fresh wrappers, matching upstream's value semantics.
     assert preconditioner_reused is not preconditioner
-    assert preconditioner_reused.variant == preconditioner.variant
+    assert preconditioner_reused.config == preconditioner.config
     assert preconditioner_reused.nrows == preconditioner.nrows
     assert preconditioner_reused.ncols == preconditioner.ncols
-    assert preconditioner_reused.build_time_seconds == preconditioner.build_time_seconds
+    assert (
+        preconditioner_reused.build_duration_seconds
+        == preconditioner.build_duration_seconds
+    )
     # Solve-equivalence is the load-bearing correctness check: same factorization
     # applied to the same data must yield bitwise-identical demeaned output.
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
@@ -211,10 +217,9 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     assert success
     assert preconditioner is not None
 
-    build_time = preconditioner.build_time_seconds
+    build_time = preconditioner.build_duration_seconds
     assert isinstance(build_time, float)
     assert build_time >= 0.0
-    assert f"build_time_seconds={build_time:.2f}" in repr(preconditioner)
 
     # the build time survives preconditioner reuse unchagned
     # 1) directly feed preconditioner
@@ -226,12 +231,12 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
+    assert preconditioner_reused.build_duration_seconds == build_time
 
     # 2) load cached preconditioner
     # The build cost survives serialization unchanged.
     restored = pickle.loads(pickle.dumps(preconditioner))
-    assert restored.build_time_seconds == build_time
+    assert restored.build_duration_seconds == build_time
     _, success_reused, preconditioner_reused = demean_within(
         x=x,
         flist=flist.astype(np.uint32, copy=False),
@@ -240,7 +245,7 @@ def test_demean_within_preconditioner_reports_build_time(demean_data):
     )
     assert success_reused
     assert preconditioner_reused is not None
-    assert preconditioner_reused.build_time_seconds == build_time
+    assert preconditioner_reused.build_duration_seconds == build_time
 
 
 def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
@@ -335,15 +340,13 @@ def test_demean_within_rejects_mismatched_preconditioner(demean_data):
 
 
 @pytest.mark.parametrize(
-    ("preconditioner", "expected_variant"),
+    "preconditioner",
     [
-        ("additive", "Additive"),
-        ("diagonal", "Diagonal"),
+        "additive",
+        "diagonal",
     ],
 )
-def test_lsmr_within_reuses_cached_preconditioner(
-    preconditioner, expected_variant, demean_data
-):
+def test_lsmr_within_reuses_cached_preconditioner(preconditioner, demean_data):
     """End-to-end coverage of ``LsmrDemeaner.demean``'s preconditioner-reuse policy.
 
     Context
@@ -419,7 +422,7 @@ def test_lsmr_within_reuses_cached_preconditioner(
     assert isinstance(built, pf.Preconditioner), (
         "first call must report the freshly built preconditioner"
     )
-    assert built.variant == expected_variant
+    assert within_preconditioner_name(built) == preconditioner
 
     # ----- Leg 2: changed weights, cached preconditioner supplied. Mimics
     # an IWLS iteration where only the working weights moved. The method
@@ -435,10 +438,10 @@ def test_lsmr_within_reuses_cached_preconditioner(
     )
     assert success
     assert isinstance(reused, pf.Preconditioner)
-    assert reused.variant == built.variant
+    assert reused.config == built.config
     assert reused.nrows == built.nrows
     assert reused.ncols == built.ncols
-    assert reused.build_time_seconds == built.build_time_seconds
+    assert reused.build_duration_seconds == built.build_duration_seconds
 
     # Independent ground truth: pyhdfe residualizes the same design+weights
     # via its own MAP solver. Matching it proves the stale-preconditioner
@@ -916,28 +919,36 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
         )
 
 
-def test_feols_integration_maxiter():
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize(
+    "demeaner",
+    [MapDemeaner(), LsmrDemeaner(preconditioner="diagonal")],
+)
+def test_estimator_integration_maxiter(estimator, demeaner):
     """Integration test: Test fixef_maxiter flows from demeaner to demean."""
-    import pyfixest as pf
-
     N = 1000  # More observations
     rng = np.random.default_rng(42)
 
     # Create data with many (but not N) fixed effects
     data = pd.DataFrame(
         {
-            "y": rng.normal(0, 1, N),
+            "y": rng.poisson(2, N),
             "x": rng.normal(0, 1, N),
             "fe": rng.integers(0, 50, N),  # 50 fixed effects, not N
+            "fe2": rng.integers(0, 25, N),
         }
     )
 
     # Should fail with tiny maxiter
     with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
-        pf.feols("y ~ x | fe", data=data, demeaner=MapDemeaner(fixef_maxiter=1))
+        estimator(
+            "y ~ x | fe + fe2",
+            data=data,
+            demeaner=replace(demeaner, fixef_maxiter=1),
+        )
 
     # Should work with default
-    model = pf.feols("y ~ x | fe", data=data)
+    model = estimator("y ~ x | fe + fe2", data=data, demeaner=demeaner)
     assert model is not None
 
 
