@@ -7,6 +7,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
+from pyfixest.core.demean import VaryingSlopes
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
@@ -22,6 +23,7 @@ def check_for_separation(
     demeaner: AnyDemeaner,
     collin_tol: float,
     methods: list[str] | None = None,
+    slopes: VaryingSlopes | None = None,
 ) -> list[int]:
     """
     Check for separation.
@@ -44,6 +46,9 @@ def check_for_separation(
     methods: list[str], optional
         Methods used to check for separation. One of fixed effects ("fe") or
         iterative rectifier ("ir"). Executes all methods by default.
+    slopes : VaryingSlopes or None, optional
+        Intercepts and varying slopes of the columns of `fe`, or None for
+        plain fixed effects.
 
     Returns
     -------
@@ -51,9 +56,20 @@ def check_for_separation(
         List of indices of observations that are removed due to separation.
     """
     valid_methods: dict[str, _SeparationMethod] = {
-        "fe": _check_for_separation_fe,
+        # Only level intercepts can diverge to fit a level of zero outcomes:
+        # with slopes of both signs, `f[[z]]` has a finite estimate (#1741).
+        "fe": partial(
+            _check_for_separation_fe,
+            fe=fe
+            if slopes is None
+            else fe.loc[:, [bool(has) for has in slopes.intercepts]],
+        ),
         "ir": partial(
-            _check_for_separation_ir, demeaner=demeaner, collin_tol=collin_tol
+            _check_for_separation_ir,
+            fe=fe,
+            demeaner=demeaner,
+            collin_tol=collin_tol,
+            slopes=slopes,
         ),
     }
     if methods is None:
@@ -67,7 +83,7 @@ def check_for_separation(
 
     separation_na: set[int] = set()
     for method in methods:
-        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X, fe=fe))
+        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X))
 
     if separation_na:
         warnings.warn(
@@ -80,9 +96,7 @@ def check_for_separation(
 
 
 class _SeparationMethod(Protocol):
-    def __call__(
-        self, *, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
-    ) -> set[int]: ...
+    def __call__(self, *, Y: pd.DataFrame, X: pd.DataFrame) -> set[int]: ...
 
 
 def _check_for_separation_fe(
@@ -137,6 +151,7 @@ def _check_for_separation_ir(
     fe: pd.DataFrame,
     demeaner: AnyDemeaner,
     collin_tol: float,
+    slopes: VaryingSlopes | None = None,
     tol: float = 1e-4,
     maxiter: int = 100,
 ) -> set[int]:
@@ -161,6 +176,8 @@ def _check_for_separation_ir(
         Demeaner configuration used by the estimated model.
     collin_tol : float
         Collinearity tolerance used by the estimated model.
+    slopes : VaryingSlopes or None
+        Intercepts and varying slopes of the columns of `fe`.
     tol : float
         Tolerance to detect separated observation. Defaults to 1e-4.
     maxiter : int
@@ -192,6 +209,7 @@ def _check_for_separation_ir(
             weights=weights,
             na_index=sample,
             demeaner=demeaner,
+            slopes=slopes,
         )
         design, _ = drop_multicollinear_variables(
             X=design,
@@ -212,6 +230,7 @@ def _check_for_separation_ir(
             weights=weights,
             na_index=sample,
             demeaner=demeaner,
+            slopes=slopes,
         )
         if has_regressors:
             beta = solve_ols(

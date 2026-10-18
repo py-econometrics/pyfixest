@@ -6,7 +6,7 @@ from typing import Any, ClassVar, cast
 import numpy as np
 import pandas as pd
 
-from pyfixest.core.demean import Preconditioner
+from pyfixest.core.demean import Preconditioner, VaryingSlopes
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -116,11 +116,6 @@ class Feglm(Feols):
             inference_dist=self._family.inference_dist,
         )
 
-    def _check_varying_slopes_support(self) -> None:
-        raise NotImplementedError(
-            "Varying slopes such as `f1[z]` are not yet supported for GLMs."
-        )
-
     def prepare_model_matrix(self) -> ModelMatrix:
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
@@ -136,6 +131,7 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
+                slopes=model_matrix.varying_slopes,
                 demeaner=self.options.demeaner,
                 collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
@@ -147,8 +143,12 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe_after_separation = int(
-                np.sum(np.asarray(self.fixef_counts.n_levels_by_fe) > 1)
+            counts = self.fixef_counts
+            self._n_fe_after_separation = sum(
+                n_levels > 1 and has_intercept
+                for n_levels, has_intercept in zip(
+                    counts.n_levels_by_fe, counts.has_intercept_by_fe, strict=True
+                )
             )
 
         return model_matrix
@@ -170,6 +170,7 @@ class Feglm(Feols):
         fixed_effects = (
             None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
         )
+        slopes = model_matrix.varying_slopes
         offset = (
             None if offset_frame is None else offset_frame.to_numpy().reshape((-1, 1))
         )
@@ -183,6 +184,7 @@ class Feglm(Feols):
                 flist=fixed_effects,
                 weights=weights,
                 tol=tol,
+                slopes=slopes,
             )
 
         fit = fit_glm_irls(
@@ -307,6 +309,7 @@ class Feglm(Feols):
         flist: np.ndarray | None,
         weights: np.ndarray,
         tol: float,
+        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Residualize v and X with current working weights and a reused preconditioner."""
         if flist is None:
@@ -319,6 +322,7 @@ class Feglm(Feols):
             weights=weights.flatten(),
             na_index=self.sample_info.dropped_row_index,
             demeaner=effective_demeaner,
+            slopes=slopes,
         )
         return vX_tilde[:, 0], vX_tilde[:, 1:]
 
