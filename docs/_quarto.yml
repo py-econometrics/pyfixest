@@ -16,6 +16,8 @@ project:
     # to publish one. Complete-but-unlinked pages are left to render normally.
     - "!tutorials/standard-errors.qmd"
     - "!how-to/surrogate-indices-experimental-selection.qmd"
+    # Held back for now; delete this line to publish it again.
+    - "!tutorials/poisson-glm.qmd"
 
 execute:
   freeze: auto
