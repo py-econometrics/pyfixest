@@ -214,23 +214,50 @@ class FixedEffectSpecification:
         )
 
 
-def _merge_fixed_effect_specifications(
+def _normalize_fixed_effect_specifications(
     specifications: Iterable[FixedEffectSpecification],
 ) -> tuple[FixedEffectSpecification, ...]:
-    """Merge effects on the same levels, as fixest reads `f + f[[z]]` as `f[z]`.
+    """Normalize fixed effects by merging groups and deduplicating slopes.
 
-    The merged effect keeps the first occurrence's position, has an intercept
-    if any merged effect has one, and keeps slopes in order of first mention.
+    Normalization follows these rules:
+
+    1. Combine specifications whose grouping levels compare equal as Formulaic
+       terms, including equivalent interactions such as `f1:f2` and `f2:f1`.
+    2. Keep each distinct slope once, removing duplicates both within a
+       specification and across specifications on the same levels.
+    3. Include group-specific intercepts if any component requests them: a
+       plain `firm` or single-bracket `firm[...]` does; `firm[[...]]` does not.
+       Combining only slope-only specifications keeps the result slope-only.
+    4. Preserve the first occurrence's position for each grouping and each
+       slope within it. This is the order received from the formula parser,
+       which may already have normalized or reordered the original formula.
+    5. Keep different grouping terms separate, even when they share a slope.
+       Equality is symbolic: no data values are compared and no algebraic
+       simplification of slope expressions is performed.
+
+    For example:
+
+    - `firm[z, z]` resolves to `firm[z]`.
+    - `firm[[z, z]]` resolves to `firm[[z]]`.
+    - `firm[[z]] + firm[w, w]` resolves to `firm[z, w]`.
+    - `firm[[z]] + firm[w, z]` resolves to `firm[z, w]`.
+    - `firm + firm[[z]]` resolves to `firm[z]`.
+    - `firm[[z]] + firm[[w]]` resolves to `firm[[z, w]]`.
+    - `firm[z] + firm[[w]]` resolves to `firm[z, w]`.
+    - `firm[z] + firm[w]` resolves to `firm[z, w]`.
+    - `firm[[z]] + region[[z]]` remains two separate slope-only effects.
     """
     merged: dict[Term, FixedEffectSpecification] = {}
     for specification in specifications:
         existing = merged.get(specification.levels)
         if existing is None:
-            merged[specification.levels] = specification
+            merged[specification.levels] = FixedEffectSpecification(
+                levels=specification.levels,
+                intercept=specification.intercept,
+                slopes=tuple(dict.fromkeys(specification.slopes)),
+            )
             continue
-        slopes = existing.slopes + tuple(
-            slope for slope in specification.slopes if slope not in existing.slopes
-        )
+        slopes = tuple(dict.fromkeys(existing.slopes + specification.slopes))
         merged[specification.levels] = FixedEffectSpecification(
             levels=existing.levels,
             intercept=existing.intercept or specification.intercept,
@@ -475,10 +502,16 @@ class Formula:
 
     @property
     def absorbs_intercept(self) -> bool:
-        """Whether a fixed effect with an intercept absorbs the model constant.
+        """Whether any fixed effect supplies group-specific intercepts.
 
-        Slope-only effects such as `f1[[z]]` absorb no constant, so these
-        models keep the intercept unless the formula removes it.
+        Ordinary fixed effects such as `firm` absorb the model constant
+        through their group-specific intercepts. Effects with varying slopes
+        and intercepts, such as `firm[z]`, do so as well.
+
+        Returns False when there are no fixed effects or all effects are
+        slope-only, such as `firm[[z]]`. This describes the declared fixed
+        effects independently of whether the structural formula requests an
+        intercept; it does not inspect numerical values or matrix rank.
         """
         return any(
             specification.intercept
@@ -548,7 +581,7 @@ class Formula:
         """
         if not self.is_fixed_effects:
             return ()
-        return _merge_fixed_effect_specifications(
+        return _normalize_fixed_effect_specifications(
             FixedEffectSpecification.from_term(term) for term in self.fixed_effects
         )
 
@@ -562,7 +595,15 @@ class Formula:
 
     @property
     def fixed_effect_slopes(self) -> formulaic.formula.SimpleFormula:
-        """Distinct varying-slope terms of all fixed effects, in order of mention."""
+        """Distinct varying-slope terms in normalized specification order.
+
+        Visit normalized fixed-effect specifications in their stored order,
+        then each specification's slopes in order, keeping only the first
+        occurrence of each slope term across all specifications. This can
+        differ from textual order: `firm[[z]] + region[[w]] + firm[[v]]`
+        normalizes to firm slopes `(z, v)` followed by region slope `(w,)`,
+        so the returned formula contains `(z, v, w)`.
+        """
         slopes: list[Term] = []
         for specification in self.fixed_effect_specifications:
             slopes.extend(
