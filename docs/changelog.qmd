@@ -34,7 +34,7 @@ The default `preconditioner="auto"` now selects the adaptive preconditioner intr
 
 Breaking changes:
 
-- `preconditioner="auto"` selects the adaptive preconditioner instead of additive Schwarz. Request it explicitly with `preconditioner="adaptive"`; `preconditioner="additive"` restores the previous default. On problems where the adaptive solve does not escalate, the default `fixef_atol` and `fixef_btol` of `1e-8` give the accuracy of the diagonal preconditioner, so demeaned values and coefficients can differ from the previous default at that order.
+- `preconditioner="auto"` selects the adaptive preconditioner instead of additive Schwarz. Request it explicitly with `preconditioner="adaptive"`; `preconditioner="additive"` restores the previous default. The default solver tolerances remain unchanged. Because adaptive preconditioning can finish using only the diagonal preconditioner, numerical results may differ from the previous default. These tolerances control solver convergence, rather than directly bounding errors in demeaned values or estimated coefficients.
 - `pf.Preconditioner` is now `within.Preconditioner`. Its `variant` string is replaced by `config`, a `within.PreconditionerConfig`, and `build_time_seconds` is renamed `build_duration_seconds`. Preconditioners pickled by earlier pyfixest versions can no longer be loaded.
 
 Changed-sample refits preserve the full configuration of prebuilt preconditioners, including custom adaptive escalation settings. `LsmrDemeaner` also accepts `within.PreconditionerConfig` objects to build a preconditioner from those settings.
