@@ -7,7 +7,7 @@ from typing import Protocol
 import numpy as np
 import pandas as pd
 
-from pyfixest.demeaners import AnyDemeaner, with_fresh_preconditioner
+from pyfixest.demeaners import AnyDemeaner, _with_fresh_preconditioner
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanCache
 from pyfixest.estimation.internals.solvers import solve_ols
@@ -182,7 +182,7 @@ def _check_for_separation_ir(
     weights = np.where(is_interior, is_interior.sum() / tol**2, 1.0)
     fixed_effects = fe.to_numpy()
     # A prebuilt handle matches the model's weights, not these fixed weights.
-    demeaner = with_fresh_preconditioner(demeaner)
+    demeaner = _with_fresh_preconditioner(demeaner)
     cache = DemeanCache()
     sample = frozenset()
     design = X.to_numpy(dtype=np.float64)

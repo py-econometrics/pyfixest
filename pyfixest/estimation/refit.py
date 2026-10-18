@@ -15,7 +15,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrDemeaner,
-    with_fresh_preconditioner,
+    _with_fresh_preconditioner,
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
@@ -93,7 +93,7 @@ def refit(
         options = replace(
             fit.options,
             # a prebuilt preconditioner does not fit the new sample
-            demeaner=with_fresh_preconditioner(fit.options.demeaner),
+            demeaner=_with_fresh_preconditioner(fit.options.demeaner),
         )
     formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(

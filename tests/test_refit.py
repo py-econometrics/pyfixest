@@ -255,7 +255,9 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
 
     refitted = refit(fit, data=subsample, vcov=IID)
 
-    assert refitted.options.demeaner.preconditioner == prebuilt.preconditioner.config
+    assert refitted.options.demeaner == replace(
+        prebuilt, preconditioner=prebuilt.preconditioner.config
+    )
     expected = fepois(fml, data=subsample, demeaner=by_name)
     # same preconditioner variant; the LSMR solves stop at their 1e-8 tolerance
     np.testing.assert_allclose(

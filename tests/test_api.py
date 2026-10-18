@@ -385,6 +385,38 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 
+def test_separation_ir_rebuilds_prebuilt_preconditioner():
+    """The IR separation check builds its own preconditioner.
+
+    The prebuilt handle comes from the retained sample, which lacks the all-zero
+    `f1` level, so the IR projection on the full sample cannot reuse it.
+    """
+    rng = np.random.default_rng(3)
+    n_obs = 300
+    data = pd.DataFrame(
+        {
+            "f1": rng.integers(0, 10, n_obs),
+            "f2": rng.integers(0, 8, n_obs),
+            "X": rng.normal(size=n_obs),
+        }
+    )
+    data["Y"] = rng.poisson(np.exp(0.3 * data["X"]))
+    data.loc[data["f1"] == 0, "Y"] = 0
+    fml = "Y ~ X | f1 + f2"
+    with pytest.warns(UserWarning, match="removed because of separation"):
+        expected = pf.fepois(
+            fml, data=data, demeaner=pf.LsmrDemeaner(), separation_check=["ir"]
+        )
+    prebuilt = pf.LsmrDemeaner(preconditioner=expected.preconditioner)
+
+    with pytest.warns(UserWarning, match="removed because of separation"):
+        fit = pf.fepois(fml, data=data, demeaner=prebuilt, separation_check=["ir"])
+
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs
+    # same preconditioner; the LSMR solves stop at their 1e-8 tolerance
+    np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-6, err_msg="coef")
+
+
 @pytest.mark.parametrize(
     "estimator,kwargs",
     [

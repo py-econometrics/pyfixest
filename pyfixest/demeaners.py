@@ -256,6 +256,8 @@ class LsmrDemeaner(BaseDemeaner):
     - A ``within.PreconditionerConfig`` instance: build a new preconditioner
       using its complete configuration, including custom factorization and
       adaptive escalation settings. Only supported by ``backend='within'``.
+      The demeaner then cannot be deep-copied, pickled or hashed, because
+      ``within`` does not support these operations on ``PreconditionerConfig``.
 
     In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
     solving each projection with its current working weights. If an adaptive
@@ -494,7 +496,7 @@ class LsmrDemeaner(BaseDemeaner):
 AnyDemeaner = MapDemeaner | LsmrDemeaner
 
 
-def with_fresh_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
+def _with_fresh_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
     """Make the next solve build a fresh preconditioner with the same settings.
 
     Replace a prebuilt handle by its complete configuration so the next solve
