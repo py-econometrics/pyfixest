@@ -69,7 +69,7 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert fit.model.is_iv
     assert isinstance(rhs, formulaic.formula.StructuredFormula)
     assert len(rhs.deps) == 1
-    assert {str(term) for term in rhs.root} == {"1", "X1"}
+    assert {str(term) for term in rhs.root} == {"1", "X1", "X2"}
     assert [str(v) for v in rhs.deps[0].lhs.required_variables] == ["X2"]
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
@@ -97,7 +97,7 @@ def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
 
 
 def test_multistage_excludes_endogenous_placeholders(data: pd.DataFrame) -> None:
-    """The IV block contributes dependencies but no generated covariates."""
+    """The endogenous term is excluded from controls without generated covariates."""
     fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
 
     exog_vars = {str(v) for v in fit.model.parsed_formula.exogenous.required_variables}

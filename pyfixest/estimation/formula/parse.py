@@ -358,6 +358,14 @@ class Formula:
                 "Multiple endogenous variables are currently not supported. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
             )
+        missing_endogenous = [
+            term for term in self.endogenous if term not in self._right_hand_side.root
+        ]
+        if missing_endogenous:
+            raise FormulaSyntaxError(
+                "Formula operations removed or transformed the endogenous terms "
+                f"{missing_endogenous}, but their IV specification remains."
+            )
         underdetermined = len(self.endogenous) > len(
             tuple(terms_without_intercept(self.instruments))
         )
@@ -450,7 +458,10 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            exogenous = formulaic.formula.SimpleFormula(exogenous.root)
+            # An exact endogenous term is a redundant declaration, not a control.
+            exogenous = formulaic.formula.SimpleFormula(
+                term for term in exogenous.root if term not in self.endogenous
+            )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.is_fixed_effects and exogenous_terms:

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
+from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
@@ -398,15 +399,24 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
 
 
 @pytest.mark.against_r_core
+def test_fixest_rejects_redundant_endogenous():
+    """Unlike pyfixest's term deduplication, fixest rejects redundant declarations."""
+    with pytest.raises(
+        RRuntimeError, match="Endogenous variables should not be used as exogenous"
+    ):
+        fixest.feols(ro.Formula("Y ~ X2 | X2 ~ Z1"), data=pandas2ri.py2rpy(get_data()))
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "formula, reference_formula, weights",
     [
         ("Y ~ X1 + X2_hat | X2 ~ Z1", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
-        ("Y ~ X1 + X2_hat + [X2 ~ Z1]", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
-        ("Y ~ [X2 ~ Z1] + X1 + X2_hat", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
+        ("Y ~ X1 + X2_hat + X2 + [X2 ~ Z1]", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
+        ("Y ~ [X2 ~ Z1] + X1 + X2_hat + X2", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
         ("Y ~ X1 + X2_hat + [X2:Z2 ~ Z1]", "Y ~ X1 + X2_hat | X2:Z2 ~ Z1", None),
         (
-            "Y ~ X1 + X2_hat + [X2 ~ Z1] | f1",
+            "Y ~ X1 + X2_hat + X2 + [X2 ~ Z1] | f1",
             "Y ~ X1 + X2_hat | f1 | X2 ~ Z1",
             "weights",
         ),
@@ -428,7 +438,7 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
 def test_iv_generated_name_collision_against_fixest(
     formula, reference_formula, weights
 ):
-    """User covariates survive names formerly used for endogenous placeholders."""
+    """User covariates survive placeholder names and redundant endogenous terms."""
     data = get_data().dropna().assign(X2_hat=lambda frame: frame.Z2)
     fit = feols(formula, data=data, weights=weights, vcov="iid")
     reference = fixest.feols(

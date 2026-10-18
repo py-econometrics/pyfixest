@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import FormulaSyntaxError
+from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -1074,6 +1074,65 @@ class TestEdgeCases:
         """An IV block cannot contain another IV block on either side."""
         with pytest.raises(FormulaSyntaxError, match="Nested instrumental-variable"):
             Formula.parse(formula)
+
+    @pytest.mark.parametrize(
+        "rhs, error, match",
+        [
+            (
+                "X1 : [X2 ~ Z1]",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            (
+                "X1 - [X2 ~ Z1]",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            (
+                "-([X2 ~ Z1])",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            ("X1 * [X2 ~ Z1]", EndogVarsAsCovarsError, "X2"),
+        ],
+    )
+    def test_reject_unsupported_iv_second_stage(self, rhs, error, match):
+        """Algebra must preserve the endogenous term without creating invalid controls."""
+        with pytest.raises(error, match=match):
+            Formula.parse(f"Y ~ {rhs}")
+
+    @pytest.mark.parametrize(
+        "formula, expected",
+        [
+            ("Y ~ X2 + [X2 ~ Z1]", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ [X2 ~ Z1] + X2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X2 | X2 ~ Z1", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
+            ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
+            ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
+            (
+                "Y ~ (X1 * X3 - X1:X3) + [X2:Z2 ~ (Z1 + Z3)^2]",
+                "Y ~ X1 + X3 + [X2:Z2 ~ Z1 + Z3 + Z1:Z3]",
+            ),
+            (
+                "Y ~ [X2 ~ Z1 / Z3] + (X1 + X3)^2 | f1:f2",
+                "Y ~ X1 + X3 + X1:X3 + [X2 ~ Z1 + Z1:Z3] | f1:f2",
+            ),
+        ],
+    )
+    def test_iv_semantic_deduplication(self, formula, expected):
+        """Equivalent evaluated terms define the same IV stages, controls and intercept."""
+        parsed = Formula.parse(formula)[0]
+        reference = Formula.parse(expected)[0]
+        assert parsed.second_stage == reference.second_stage
+        assert (
+            parsed.as_first_stage().second_stage
+            == reference.as_first_stage().second_stage
+        )
+        assert parsed.instruments == reference.instruments
+        assert parsed.render() == reference.render()
 
     def test_iv_transformed_endogenous_in_second_stage(self):
         """A transformed endogenous variable is retained in the second stage."""

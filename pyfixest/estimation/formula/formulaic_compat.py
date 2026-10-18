@@ -105,11 +105,15 @@ def _iv_block(
             "Nested instrumental-variable specifications are not supported. "
             "Use a single `[endogenous ~ instruments]` block."
         )
-    return Structured(OrderedSet(), deps=(Structured(lhs=lhs, rhs=rhs),))
+    return Structured(lhs, deps=(Structured(lhs=lhs, rhs=rhs),))
 
 
 class PyfixestOperatorResolver(DefaultOperatorResolver):
-    """Let pyfixest construct IV stages from their original parsed terms."""
+    """Keep IV terms in dependencies without generating placeholder covariates.
+
+    The root contains the original endogenous terms, allowing ordinary formula
+    deduplication and validation of the resulting second-stage specification.
+    """
 
     @staticmethod
     def _is_multistage_formula_operator(operator: Operator) -> bool:
