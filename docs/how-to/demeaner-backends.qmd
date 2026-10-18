@@ -28,14 +28,14 @@ The typical example for "dense" fixed effects is a balanced panel - each unit ap
 
 | Backend | When to use |
 |---|---|
-| `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
+| `MapDemeaner(backend="rust")` | Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `LsmrDemeaner()` | Uses modified LSMR via the [`within`](https://github.com/py-econometrics/within) Python package (`within-py`), by default with its adaptive preconditioner: diagonal first, escalating to additive Schwarz when convergence stalls. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Also supports additive Schwarz from the start, a diagonal preconditioner, which can be a good choice for dense fixed effects, and no preconditioner - which we never recommend.|
+| `LsmrDemeaner()` | **Default.** Uses modified LSMR from the [`within`](https://github.com/py-econometrics/within) Python package (`within-py`). Its adaptive preconditioner starts with diagonal preconditioning and switches to additive Schwarz if convergence stalls. Well suited to **sparse** fixed-effect structures (e.g. matched employer-employee data). You can also use additive Schwarz from the start or keep diagonal preconditioning throughout, which can work well for dense fixed effects. Disabling preconditioning is rarely useful outside benchmarking. |
 | `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`.|
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we'd love to hear about differing experiences! Requires `pytorch`. |
 
-Since release `0.60.0`, `pyfixest` defaults to the Rust-backed MAP demeaner.
+`pyfixest` defaults to `LsmrDemeaner(backend="within", preconditioner="auto")`.
 Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]`
 if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path.
 The torch-based LSMR backends require `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. For GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
@@ -46,7 +46,7 @@ To select a demeaner backend, you need to pass an instance of the desired demean
 the `demeaner` argument of `feols`:
 
 ```{python}
-# Default (Rust MAP): best for dense FE / well-connected graphs
+# Default: within LSMR with adaptive preconditioning
 fit = pf.feols("Y ~ X1 | f1", data=df)
 
 # Rust MAP – explicit
@@ -91,6 +91,11 @@ convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the
 `within` backend the two tolerances are collapsed to
 `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance);
 `torch` uses both independently (SciPy LSMR convention).
+
+Both LSMR tolerances default to `1e-8`, matching `within`'s default.
+They control solver convergence, not the error in each demeaned value or
+derived statistic. Small demeaning errors can be amplified in quantities
+such as large t-statistics. Lower both tolerances if you need a tighter solve.
 
 ```{python}
 fit = pf.feols(

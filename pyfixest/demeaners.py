@@ -75,8 +75,8 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
     except ImportError as exc:
         raise ImportError(
             "The Numba MAP backend requires the optional `numba` extra. "
-            "Install it with `pip install pyfixest[numba]`, or use the default "
-            "`MapDemeaner(backend='rust')` backend."
+            "Install it with `pip install pyfixest[numba]`, or use the Rust "
+            "MAP backend with `MapDemeaner(backend='rust')`."
         ) from exc
 
     return cast(Callable[..., tuple[np.ndarray, bool]], demean_nb)
@@ -101,8 +101,8 @@ class BaseDemeaner:
     Holds the settings shared by all backends, currently `fixef_maxiter`. This
     class is not passed to an estimation function directly. Use one of the
     concrete demeaners instead:
-    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd), the default, or
-    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd). See
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd), the default, or
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd). See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
     comparison.
 
@@ -127,8 +127,8 @@ class MapDemeaner(BaseDemeaner):
     """
     Method of Alternating Projections (MAP) demeaner.
 
-    The default backend. Sweeps out the fixed effects by alternately projecting
-    on each of them until convergence. See
+    Projects out the fixed effects using the method of alternating
+    projections until convergence. See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
     which backend.
 
@@ -223,6 +223,10 @@ class LsmrDemeaner(BaseDemeaner):
     `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
     backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
+
+    Both tolerances default to `1e-8`, matching `within`'s default. They
+    control solver convergence, not the error in each demeaned value or
+    derived statistic.
 
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.

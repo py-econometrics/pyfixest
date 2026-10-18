@@ -105,17 +105,6 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
-def test_map_demeaner_defaults_to_rust():
-    data = pf.get_data()
-
-    assert pf.MapDemeaner().backend == "rust"
-
-    fit = pf.feols("Y ~ X1 | f1", data=data)
-
-    assert isinstance(fit.options.demeaner, pf.MapDemeaner)
-    assert fit.options.demeaner.backend == "rust"
-
-
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
     if estimator_name == "feols":
         return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)

@@ -5,14 +5,13 @@ import warnings
 from pyfixest.demeaners import (
     AnyDemeaner,
     LsmrDemeaner,
-    MapDemeaner,
 )
 from pyfixest.utils.dev_utils import _find_stack_level
 
 
 def _resolve_demeaner(demeaner: AnyDemeaner | None) -> AnyDemeaner:
-    """Return the typed demeaner configuration, defaulting to MapDemeaner."""
-    return demeaner if demeaner is not None else MapDemeaner()
+    """Return the typed demeaner configuration, defaulting to within LSMR."""
+    return demeaner if demeaner is not None else LsmrDemeaner()
 
 
 def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:

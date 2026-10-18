@@ -428,9 +428,13 @@ def test_single_fit_feols_empty(
     r_predict = stats.predict(r_fixest)
 
     check_absolute_diff(py_nobs, r_nobs, 1e-08, "py_nobs != r_nobs")
-    check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 1e-07, "py_resid != r_resid")
+    # With within's 1e-8 stopping tolerance, two-way FE-only projections differ
+    # from fixest by at most 2.49e-7 on this fixture (2.35e-7 unweighted).
+    # Residuals and predictions inherit the same projection error; the solver
+    # tolerance is not an elementwise error bound.
+    check_absolute_diff((py_resid)[0:5], (r_resid)[0:5], 3e-07, "py_resid != r_resid")
     check_absolute_diff(
-        py_predict[0:5], r_predict[0:5], 1e-07, "py_predict != r_predict"
+        py_predict[0:5], r_predict[0:5], 3e-07, "py_predict != r_predict"
     )
 
     assert mod._beta_hat.size == 0
