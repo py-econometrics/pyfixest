@@ -151,9 +151,11 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-@pytest.mark.parametrize("requested", ["auto", "off", "additive", "diagonal"])
+@pytest.mark.parametrize(
+    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
+)
 def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
-    """All four documented string options round-trip through ``LsmrDemeaner``."""
+    """All documented string options round-trip through ``LsmrDemeaner``."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested

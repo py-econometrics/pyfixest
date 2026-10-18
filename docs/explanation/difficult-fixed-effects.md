@@ -71,7 +71,9 @@ PyFixest's `pf.LsmrDemeaner(backend="within")` through its Python package
 `within-py`, takes a different approach: it
 explicitly builds and exploits the block structure of the normal
 equations to form a high-quality preconditioner for the linear problem.
-PyFixest defaults to modified LSMR with additive Schwarz preconditioning.
+PyFixest defaults to modified LSMR with `within`'s adaptive preconditioner,
+which starts with a diagonal preconditioner and escalates to additive Schwarz
+preconditioning when convergence stalls.
 
 ## The Normal Equations and Their Block Structure
 

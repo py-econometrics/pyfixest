@@ -8,7 +8,7 @@ from within import LsmrOptions, Preconditioner, PreconditionerConfig, Solver
 
 from ._core_impl import _demean_rs
 
-WithinPreconditionerName = Literal["additive", "off", "diagonal"]
+WithinPreconditionerName = Literal["adaptive", "additive", "off", "diagonal"]
 
 __all__ = [
     "Preconditioner",
@@ -21,6 +21,7 @@ __all__ = [
 _WITHIN_PRECONDITIONER_CONFIGS: dict[
     WithinPreconditionerName, type[PreconditionerConfig]
 ] = {
+    "adaptive": PreconditionerConfig.Adaptive,
     "additive": PreconditionerConfig.Additive,
     "off": PreconditionerConfig.Off,
     "diagonal": PreconditionerConfig.Diagonal,
@@ -120,13 +121,13 @@ def demean_within(
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
-    preconditioner: WithinPreconditionerName | Preconditioner = "additive",
+    preconditioner: WithinPreconditionerName | Preconditioner = "adaptive",
 ) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
 
     Uses the LSMR solver of the `within` Python package (`within-py`), by
-    default with additive Schwarz preconditioning.
+    default with its adaptive preconditioner.
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
@@ -158,9 +159,11 @@ def demean_within(
         and twice that many when a preconditioner is active. Under the
         hood this enables windowed Gram-Schmidt reorthogonalization
         inside LSMR's bidiagonalization.
-    preconditioner : {"additive", "off", "diagonal"} or Preconditioner, optional
-        Preconditioner choice for `within`'s LSMR solver. ``"additive"``
-        (default) uses additive Schwarz preconditioning; ``"off"`` disables
+    preconditioner : {"adaptive", "additive", "off", "diagonal"} or Preconditioner, optional
+        Preconditioner choice for `within`'s LSMR solver. ``"adaptive"``
+        (default) starts with a diagonal preconditioner and escalates to
+        additive Schwarz only when convergence stalls; ``"additive"`` uses
+        additive Schwarz preconditioning from the start; ``"off"`` disables
         preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
         Preconditioners are only computed and applied
         for two or more fixed-effect factors; single-factor problems use
@@ -175,7 +178,8 @@ def demean_within(
     tuple[numpy.ndarray, bool, Preconditioner | None]
         The demeaned array, a convergence flag, and the preconditioner used
         during the solve (additive Schwarz for ``preconditioner="additive"``,
-        diagonal for ``"diagonal"``, or an equivalent object for a
+        diagonal for ``"diagonal"``, the diagonal base or its additive Schwarz
+        escalation for ``"adaptive"``, or an equivalent object for a
         user-supplied preconditioner). This low-level helper does not
         preserve Python object identity for user-supplied preconditioners.
         The preconditioner is ``None`` when none was constructed or applied —

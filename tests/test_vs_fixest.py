@@ -798,7 +798,7 @@ def test_feglm_gaussian_reference_behavior():
             pf.LsmrDemeaner(preconditioner=preconditioner),
             id=f"within-{preconditioner}",
         )
-        for preconditioner in ["additive"]
+        for preconditioner in ["additive", "adaptive"]
     ],
 )
 def test_fepois_transformed_offset_against_fixest(data_fepois, fml, demeaner):
@@ -1085,7 +1085,7 @@ def test_single_fit_iv(
             weights,
             id=f"within-{preconditioner}-{weights or 'unweighted'}",
         )
-        for preconditioner in ["additive"]
+        for preconditioner in ["additive", "adaptive"]
         for weights in [None, "weights"]
     ],
 )
