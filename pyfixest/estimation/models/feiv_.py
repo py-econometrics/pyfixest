@@ -199,6 +199,7 @@ class Feiv(Feols):
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
+                slopes=self.model_matrix.varying_slopes,
             )
         return WithinIvData(
             response=linear_data.response,
