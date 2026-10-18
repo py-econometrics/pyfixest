@@ -213,9 +213,7 @@ def _r_ssc():
     return fixest.ssc(True, "nonnested", False, True, "min", "min")
 
 
-def _assert_fixest_contract(
-    py_fit, r_fit, *, inference_atol, derived_atol, tstat_rtol
-):
+def _assert_fixest_contract(py_fit, r_fit, *, inference_atol, derived_atol, tstat_rtol):
     r_names = _r_coefficient_names(r_fit)
     r_table = np.asarray(r_fit.rx2("coeftable"))
     py_positions = [py_fit.coef().index.get_loc(name) for name in r_names]
