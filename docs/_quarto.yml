@@ -93,6 +93,8 @@ website:
           file: how-to/stata-2-pyfixest.qmd
         - text: "Variance Reduction in AB Tests"
           file: how-to/panel_variance_reduction.qmd
+        - text: "Correcting Measurement Error with ORIV"
+          file: how-to/oriv.qmd
         #- text: "Surrogate Indices & Experimental Selection"
         #  file: how-to/surrogate-indices-experimental-selection.qmd
       - text: "Explanation"
@@ -146,6 +148,7 @@ quartodoc:
         - estimation.api.fepois.fepois
         - estimation.api.feglm.feglm
         - estimation.api.quantreg.quantreg
+        - estimation.api.oriv.oriv
     - title: Difference-in-Differences
       desc: |
         Difference-in-differences and event-study estimators, plus panel
