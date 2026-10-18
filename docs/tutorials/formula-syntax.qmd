@@ -86,6 +86,32 @@ are unsupported; create the transformed column in `data` first.
 Outcome, covariate, and instrument names can still be quoted with backticks,
 for example ``"Y ~ `my covariate` | firm"``.
 
+### Varying slopes
+
+As in `fixest`, square brackets after a fixed effect add slopes that vary by
+its levels. `f1[X2]` absorbs an intercept and a slope on `X2` for every level
+of `f1`; `f1[[X2]]` absorbs only the slopes. Separate several slopes with
+commas, as in `f1[X2, Z1]`, and attach slopes to interacted fixed effects as in
+`f1:f2[X2]`. Slopes can be arithmetic expressions such as `f1[X2**2]`.
+
+```{python}
+fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
+fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
+pf.etable([fit_slopes, fit_slopes_only])
+```
+
+A slope-only effect such as `f1[[X2]]` absorbs no constant, so the model keeps
+its intercept unless the formula removes it with `0 +`. Effects on the same
+levels are combined: `f1 + f1[[X2]]` is `f1[X2]`. Because brackets in the
+fixed-effect part always denote varying slopes, a Python subscript such as
+`frame["f1"]` cannot name a fixed effect there; add the column to `data`
+instead.
+
+Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`,
+and require the default `within` demeaner. `predict()`, `fixef()`,
+`wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not
+yet supported for these models.
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
