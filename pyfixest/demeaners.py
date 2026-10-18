@@ -75,8 +75,8 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
     except ImportError as exc:
         raise ImportError(
             "The Numba MAP backend requires the optional `numba` extra. "
-            "Install it with `pip install pyfixest[numba]`, or use the default "
-            "`LsmrDemeaner(backend='within')` backend."
+            "Install it with `pip install pyfixest[numba]`, or use the Rust "
+            "MAP backend with `MapDemeaner(backend='rust')`."
         ) from exc
 
     return cast(Callable[..., tuple[np.ndarray, bool]], demean_nb)
@@ -127,8 +127,8 @@ class MapDemeaner(BaseDemeaner):
     """
     Method of Alternating Projections (MAP) demeaner.
 
-    Sweeps out the fixed effects by alternately projecting
-    on each of them until convergence. See
+    Projects out the fixed effects using the method of alternating
+    projections until convergence. See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
     which backend.
 
@@ -223,6 +223,10 @@ class LsmrDemeaner(BaseDemeaner):
     `fixef_btol` are collapsed to `max(fixef_atol, fixef_btol)` for that
     backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
+
+    Both tolerances default to `1e-10`, tighter than `within`'s `1e-8`,
+    because demeaning errors can propagate into t-statistics beyond the
+    tolerances used in our comparisons with R `fixest`.
 
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.

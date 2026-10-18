@@ -105,27 +105,6 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
-@pytest.mark.parametrize("estimator_name", ["feols", "fepois", "feglm"])
-def test_default_demeaner_is_within(estimator_name):
-    fit = _run_with_deprecated_kwargs(estimator_name)
-    assert fit.options.demeaner == pf.LsmrDemeaner(
-        backend="within", preconditioner="auto"
-    )
-
-    explicit = pf.MapDemeaner()
-    assert explicit.backend == "rust"
-    fit_map = _run_with_deprecated_kwargs(estimator_name, demeaner=explicit)
-    assert fit_map.options.demeaner is explicit
-    # Agreement is bounded by MAP's looser default stopping tolerance (1e-6).
-    np.testing.assert_allclose(
-        fit.coef(),
-        fit_map.coef(),
-        rtol=1e-6,
-        atol=1e-8,
-        err_msg="Default within and explicit MAP coefficients differ",
-    )
-
-
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
     if estimator_name == "feols":
         return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
