@@ -102,8 +102,16 @@ class DID2S(DID):
         )
 
     def vcov(self):
-        """Estimate both stages and return their corrected covariance."""
-        return self.estimate().variance_covariance
+        """
+        Variance-covariance matrix.
+
+        The vcov matrix is calculated via the [Feols](/reference/estimation.models.feols_.Feols.qmd) object.
+
+        Notes
+        -----
+        Method not needed.
+        """
+        pass
 
     def iplot(
         self,
@@ -333,12 +341,18 @@ def _did2s_vcov(
     dummies = build_fixed_effect_dummies(
         codes=fe_codes, formulaic_columns=fe_codes.columns
     )
-    covariates = model_spec["second_stage"].rhs.get_model_matrix(data, context=context)
-    covariates = covariates[first_stage._coefnames]
-    X1 = hstack([csr_matrix(covariates.to_numpy()), dummies.matrix], format="csr")
-    X1 = X1.multiply(weights_array[:, None]).tocsr()
-    X2 = second_stage.model_matrix.independent[second_stage._coefnames]
-    X2 = csr_matrix(X2.to_numpy() * weights_array[:, None])
+    covariates = model_spec["second_stage"].rhs.get_model_matrix(data, context=context)[
+        first_stage._coefnames
+    ]
+    X1 = (
+        hstack([csr_matrix(covariates.to_numpy()), dummies.matrix], format="csr")
+        .multiply(weights_array[:, None])
+        .tocsr()
+    )
+    X2 = csr_matrix(
+        second_stage.model_matrix.independent[second_stage._coefnames].to_numpy()
+        * weights_array[:, None]
+    )
 
     # Weight first and second stage residuals
     first_u *= weights_array

@@ -47,7 +47,10 @@ def test_event_study_twfe(data):
     # ), "TWFE confidence intervals are not the same."
 
 
-def test_event_study_did2s(data):
+@pytest.mark.parametrize("xfml", [None, "C(band)"])
+def test_event_study_did2s(data, xfml):
+    if xfml is not None:
+        data = data.assign(band=pd.Categorical((data["unit"] + data["year"]) % 3))
     event_study_did2s = event_study(
         data=data,
         yname="dep_var",
@@ -56,13 +59,14 @@ def test_event_study_did2s(data):
         gname="g",
         att=True,
         estimator="did2s",
+        xfml=xfml,
     )
 
     fit_did2s = did2s(
         data=data,
         yname="dep_var",
-        first_stage="~ 0 | state + year",
-        second_stage="~treat",
+        first_stage=f"~ {xfml or '0'} | state + year",
+        second_stage=f"~ treat + {xfml}" if xfml is not None else "~ treat",
         treatment="treat",
         cluster="state",
     )
@@ -81,6 +85,13 @@ def test_event_study_did2s(data):
     ), "DID2S confidence intervals are not the same."
 
     for fit in (event_study_did2s, fit_did2s):
+        if xfml is not None:
+            assert [
+                name for name in fit.coef().index if name.startswith("C(band)")
+            ] == [
+                "C(band)[T.1]",
+                "C(band)[T.2]",
+            ]
         covariance = fit.variance_covariance
         inference = fit.tidy().copy()
         for vcov in (
@@ -98,6 +109,83 @@ def test_event_study_did2s(data):
                 fit.vcov(vcov)
             assert fit.variance_covariance is covariance
             pd.testing.assert_frame_equal(fit.tidy(), inference)
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s_formula_encodings(data, weights):
+    """Interacted fixed effects match an explicit combined column."""
+    rng = np.random.default_rng(1243)
+    data = data.assign(
+        weights=rng.uniform(0, 10, size=len(data)),
+        X=rng.normal(size=len(data)),
+        region=data["state"] % 3,
+        year_region=data["year"] * 10 + data["state"] % 3,
+    )
+    kwargs = dict(
+        data=data,
+        yname="dep_var",
+        second_stage="~ i(treat)",
+        treatment="treat",
+        cluster="state",
+        weights=weights,
+    )
+    expected = did2s(first_stage="~ X | unit + year_region", **kwargs)
+    for interaction in ("year^region", "year:region"):
+        fit = did2s(first_stage=f"~ X | unit + {interaction}", **kwargs)
+        np.testing.assert_allclose(fit.coef(), expected.coef(), rtol=1e-10, atol=1e-10)
+        np.testing.assert_allclose(
+            fit.variance_covariance.vcov,
+            expected.variance_covariance.vcov,
+            rtol=1e-8,
+            atol=1e-10,
+        )
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("stage", ["first_stage", "second_stage"])
+def test_did2s_quoted_reference(data, weights, stage):
+    """Quoted references in either stage match an explicit relabeling."""
+    rng = np.random.default_rng(1243)
+    data = data.assign(
+        weights=rng.uniform(0, 10, size=len(data)),
+        X=rng.normal(size=len(data)),
+        treat_f=data["treat"].astype(float),
+    )
+    stages = dict(first_stage="~ X | unit + year", second_stage="~ i(treat)")
+    if stage == "first_stage":
+        # Vary within units and years so the categorical control is not absorbed.
+        data["group"] = np.where(data["X"] > 0, "Group 3", "Group 2")
+        stages[stage] = "~ X + i(group, ref='Group 3') | unit + year"
+    else:
+        # A colliding stripped label also catches silently changed references.
+        data["group"] = data["group"].replace({"Group 1": "Group3"})
+        stages[stage] = "~ i(group, treat_f, ref='Group 3')"
+    kwargs = dict(yname="dep_var", treatment="treat", cluster="state", weights=weights)
+    fit = did2s(data=data, **stages, **kwargs)
+    renamed = data.assign(group=data["group"].replace({"Group 3": "reference"}))
+    expected = did2s(
+        data=renamed,
+        **{
+            key: value.replace("'Group 3'", "'reference'")
+            for key, value in stages.items()
+        },
+        **kwargs,
+    )
+    assert list(fit.coef().index) == list(expected.coef().index)
+    np.testing.assert_allclose(
+        fit.coef(),
+        expected.coef(),
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="Relabeling the quoted reference changed DID2S coefficients",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        expected.se(),
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="Relabeling the quoted reference changed DID2S standard errors",
+    )
 
 
 # ---------------------------------------------------------------------------------
@@ -229,9 +317,39 @@ def test_event_study_invalid_cluster_type(data):
     [
         ({"first_stage": "0 | state + year"}, "first_stage must start with '~'"),
         ({"second_stage": "i(treat)"}, "second_stage must start with '~'"),
+        *[
+            ({"second_stage": stage}, "must not remove the intercept")
+            for stage in (
+                "~ i(treat) + 0",
+                "~ 0 + i(treat)",
+                "~ i(treat) - 1",
+                "~ -1 + i(treat)",
+            )
+        ],
+        ({"first_stage": "~ X"}, "First stage formula must contain fixed effects"),
+        (
+            {"second_stage": "~ i(treat) | unit"},
+            "Second stage formula must not contain fixed effects",
+        ),
+        (
+            {"first_stage": "~ sw(X, weights) | unit + year"},
+            "first_stage must specify a single model",
+        ),
+        (
+            {"second_stage": "~ sw(X, weights)"},
+            "second_stage must specify a single model",
+        ),
+        (
+            {"first_stage": "~ [X ~ weights] | unit + year"},
+            "first_stage must not contain instrumental variables",
+        ),
+        (
+            {"second_stage": "~ [X ~ weights]"},
+            "second_stage must not contain instrumental variables",
+        ),
     ],
 )
-def test_did2s_formula_must_start_with_tilde(data, stages, match):
+def test_did2s_formula_validation(data, stages, match):
     with pytest.raises(ValueError, match=match):
         did2s(
             data,
