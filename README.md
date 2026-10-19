@@ -270,6 +270,9 @@ Thanks goes to these wonderful people:
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/raashish1601"><img src="https://avatars.githubusercontent.com/u/94279692?v=4?s=40" width="40px;" alt="Raashish Aggarwal"/><br /><sub><b>Raashish Aggarwal</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=raashish1601" title="Code">💻</a></td>
       <td align="center" valign="top" width="12.5%"><a href="http://zhiyulu.org"><img src="https://avatars.githubusercontent.com/u/188999074?v=4?s=40" width="40px;" alt="Zhiyu Lu"/><br /><sub><b>Zhiyu Lu</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=luzhiyu-econ" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="12.5%"><a href="https://github.com/mayuriphad"><img src="https://avatars.githubusercontent.com/u/163738104?v=4?s=40" width="40px;" alt="Mayuri"/><br /><sub><b>Mayuri</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mayuriphad" title="Code">💻</a></td>
+    </tr>
   </tbody>
 </table>
 
