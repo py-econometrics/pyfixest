@@ -231,6 +231,12 @@ def ssc(
         "cluster_adj": "G_adj",
     }
 
+    unknown = set(kwargs) - set(deprecated_mapping)
+    if unknown:
+        raise ValueError(
+            f"ssc accepts the keys k_adj, k_fixef, G_adj, and G_df; got {sorted(unknown)}."
+        )
+
     for old_name, new_name in deprecated_mapping.items():
         if old_name in kwargs:
             warnings.warn(
