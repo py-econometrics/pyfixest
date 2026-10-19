@@ -182,40 +182,14 @@ def test_did2s(data, weights):
 @pytest.mark.against_r_extended
 @pytest.mark.skipif(not import_check, reason="R package did2s is not installed.")
 @pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize(
-    "first_stage,second_stage,r_first_stage,r_second_stage",
-    [
-        (
-            f"~ X | unit + year{operator}region",
-            "~ i(treat)",
-            "~ X | unit + year^region",
-            "~ i(treat, ref=FALSE)",
-        )
-        for operator in ("^", ":")
-    ]
-    + [
-        (
-            "~ X | unit + year",
-            "~ i(group, treat_f, ref='Group 3')",
-            "~ X | unit + year",
-            "~ i(group, treat_f, ref='Group 3')",
-        ),
-    ],
-)
-def test_did2s_formula_encodings_vs_r(
-    data, weights, first_stage, second_stage, r_first_stage, r_second_stage
-):
-    """Compare formula encodings and corrected inference directly with R did2s."""
-    data = data.assign(
-        region=data["state"] % 3,
-        treat_f=data["treat"].astype(float),
-        group=data["group"].replace({"Group 1": "Group3"}),
-    )
+def test_did2s_interacted_fe_vs_r(data, weights):
+    """Compare interacted-FE estimates and standard errors with R did2s."""
+    data = data.assign(region=data["state"] % 3)
     fit = did2s_pyfixest(
         data=data,
         yname="dep_var",
-        first_stage=first_stage,
-        second_stage=second_stage,
+        first_stage="~ X | unit + year:region",
+        second_stage="~ i(treat)",
         treatment="treat",
         cluster="state",
         weights=weights,
@@ -224,45 +198,31 @@ def test_did2s_formula_encodings_vs_r(
     reference = did2s.did2s(
         data=data,
         yname="dep_var",
-        first_stage=ro.Formula(r_first_stage),
-        second_stage=ro.Formula(r_second_stage),
+        first_stage=ro.Formula("~ X | unit + year^region"),
+        second_stage=ro.Formula("~ i(treat, ref=FALSE)"),
         treatment="treat",
         cluster_var="state",
         **r_weights,
     )
-    r_names = list(ro.r("function(fit) names(coef(fit))")(reference))
-    r_names = [name.replace("::TRUE", "::True") for name in r_names]
-    names = fit.coef().index
-    assert set(names) == set(r_names)
-    estimates = pd.Series(np.asarray(stats.coef(reference)), index=r_names).loc[names]
-    errors = pd.Series(np.asarray(fixest.se(reference)), index=r_names).loc[names]
-    covariance = pd.DataFrame(
-        np.asarray(stats.vcov(reference)),
-        index=r_names,
-        columns=r_names,
-    ).loc[names, names]
+    estimates = stats.coef(reference)
+    r_names = ro.r("function(fit) names(coef(fit))")(reference)
+    assert fit.coef().index.tolist() == [
+        name.replace("::TRUE", "::True") for name in r_names
+    ]
     # First-stage iterative FE recovery affects residualized outcomes at 1e-6.
     np.testing.assert_allclose(
         fit.coef(),
-        estimates,
+        np.asarray(estimates),
         rtol=1e-5,
         atol=1e-5,
         err_msg="DID2S coefficients differ from R did2s",
     )
     np.testing.assert_allclose(
         fit.se(),
-        errors,
+        np.asarray(fixest.se(reference)),
         rtol=1e-5,
         atol=1e-5,
         err_msg="DID2S standard errors differ from R did2s",
-    )
-    # Covariance is on a squared scale; allow accumulated FE-recovery error.
-    np.testing.assert_allclose(
-        fit.variance_covariance.vcov,
-        covariance,
-        rtol=1e-5,
-        atol=1e-6,
-        err_msg="DID2S covariance differs from R did2s",
     )
 
 

@@ -259,17 +259,12 @@ def _did2s_estimate(
             weights=weights,
         ),
     )
-    _second_u = fit2.resid()
-
     vcov, G = _did2s_vcov(
         data=data,
         first_stage=fit1,
         second_stage=fit2,
         treatment=treatment,
-        first_u=_first_u,
-        second_u=_second_u,
         cluster=cluster,
-        weights=weights,
     )
     fit2.variance_covariance = _did2s_covariance(
         fit=fit2, vcov=vcov, G=G, cluster=cluster
@@ -278,14 +273,12 @@ def _did2s_estimate(
 
 
 def _did2s_vcov(
-    data: pd.DataFrame,
+    *,
     first_stage: Feols,
     second_stage: Feols,
+    data: pd.DataFrame,
     treatment: str,
-    first_u: np.ndarray,
-    second_u: np.ndarray,
     cluster: str,
-    weights: str | None = None,
 ):
     """
     Variance-Covariance matrix for DID2S.
@@ -295,24 +288,18 @@ def _did2s_vcov(
 
     Parameters
     ----------
-    data: pandas.DataFrame
-        The DataFrame containing all variables.
     first_stage: Feols
         The fitted first-stage model on not-yet-treated observations.
     second_stage: Feols
-        The fitted second-stage model on the full sample.
+        The fitted second-stage model on the full sample. Its dependent
+        variable contains the first-stage residualized outcome; residuals
+        and observation weights are read from this fit.
+    data: pandas.DataFrame
+        The DataFrame containing all variables, aligned with the second-stage fit.
     treatment: str
         The name of the treatment variable.
-    first_u: np.ndarray
-        The first stage residuals.
-    second_u: np.ndarray
-        The second stage residuals.
     cluster: str
         The name of the cluster variable.
-    weights : Optional[str].
-        Default is None. Weights for WLS estimation. If None, all observations
-        are weighted equally. If a string, the name of the column in `data` that
-        contains the weights.
 
     Returns
     -------
@@ -325,10 +312,14 @@ def _did2s_vcov(
     # pandas stubs also allow `ndarray`, which lacks `.nunique()`.
     _G = cast(pd.Index, clustid).nunique()
 
-    if weights is None:
+    # Work on copies: square-root weighting must not mutate the fitted state.
+    first_u = second_stage.model_matrix.dependent.to_numpy().flatten()
+    second_u = second_stage.resid().copy()
+    observation_weights = second_stage.observation_weights.values
+    if observation_weights is None:
         weights_array = np.repeat(1.0, data.shape[0])
     else:
-        weights_array = np.sqrt(data[weights].to_numpy())
+        weights_array = np.sqrt(observation_weights)
 
     # Replay fitted encodings on the full sample: raw FE expressions must never
     # be evaluated as Python (in particular, `a^b` is not a bitwise XOR).
