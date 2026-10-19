@@ -32,7 +32,6 @@ pyfixest's user-facing deprecations now all emit `pyfixest.errors.PyfixestDeprec
 
 `etable()` again shows the dependent-variable names, fixed-effect rows, observation counts, and R², which the in-development typed-state refactor had dropped; there is no change relative to 0.60.
 
-
 ### `within` LSMR Backend via `within-py`
 
 We now use the LSMR demeaner from the `within` package as the default backend, with adaptive preconditioning. Rust MAP remains available through `MapDemeaner()`.
