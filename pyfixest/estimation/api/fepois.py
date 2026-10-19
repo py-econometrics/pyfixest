@@ -243,7 +243,6 @@ def fepois(
 
     Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
-    For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
     # Thin wrapper: fepois is exactly feglm(family="poisson"). Capture the
     # context here, as an integer frame offset passed on to feglm would resolve

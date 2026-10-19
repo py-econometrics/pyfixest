@@ -1,3 +1,9 @@
+---
+pagetitle: "PyFixest"
+body-classes: docs-home
+toc: false
+---
+
 ![](figures/pyfixest-logo.png)
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
@@ -123,7 +129,7 @@ fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_
 fit.etable()
 ```
 
-For more examples, see the [quickstart](https://pyfixest.org/getting-started.html), the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/tutorials/poisson-glm.html).
+For more examples, see the [quickstart](https://pyfixest.org/getting-started.html) and the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html).
 
 ## Benchmarks
 
