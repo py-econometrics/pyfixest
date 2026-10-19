@@ -27,6 +27,8 @@ website:
     contents:
     - text: All Guides
       file: how-to/index.qmd
+    - text: Estimation & Post-Estimation Examples
+      file: how-to/estimation-examples.qmd
     - text: Choosing a Demeaner Backend
       file: how-to/demeaner-backends.qmd
     - text: Marginal Effects & Hypothesis Testing
