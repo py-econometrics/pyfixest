@@ -1156,12 +1156,22 @@ class TestEdgeCases:
                 "Y ~ [X2 ~ Z1 / Z3] + (X1 + X3)^2 | f1:f2",
                 "Y ~ X1 + X3 + X1:X3 + [X2 ~ Z1 + Z1:Z3] | f1:f2",
             ),
+            ("Y ~ [`X2` ~ Z1] + X2", "Y ~ 1 + [X2 ~ Z1]"),
+            # Formulaic terms compare factors as a set, so `X2:X1` is `X1:X2`.
+            ("Y ~ X2:X1 + [X1:X2 ~ Z1]", "Y ~ 1 + [X1:X2 ~ Z1]"),
+            ("Y ~ center(X2) + [center(X2) ~ Z1]", "Y ~ 1 + [center(X2) ~ Z1]"),
+            # Pins current behaviour: subtraction removes X2 from the second
+            # stage, the IV block survives as a dependency, and `+ X2` restores
+            # the endogenous term. `-[X2 ~ Z1]` alone is rejected above.
+            ("Y ~ -[X2 ~ Z1] + X2", "Y ~ 1 + [X2 ~ Z1]"),
         ],
     )
     def test_iv_semantic_deduplication(self, formula, expected):
         """Equivalent evaluated terms define the same IV stages, controls and intercept."""
         parsed = Formula.parse(formula)[0]
         reference = Formula.parse(expected)[0]
+        assert parsed.endogenous == reference.endogenous
+        assert parsed.exogenous == reference.exogenous
         assert parsed.second_stage == reference.second_stage
         assert (
             parsed.as_first_stage().second_stage
@@ -1169,6 +1179,36 @@ class TestEdgeCases:
         )
         assert parsed.instruments == reference.instruments
         assert parsed.render() == reference.render()
+
+    @pytest.mark.parametrize(
+        "formula, reference",
+        [
+            ("Y ~ [`X2` ~ Z1] + X2", "Y ~ [X2 ~ Z1]"),
+            ("Y ~ [{X2} ~ Z1] + X2", "Y ~ [X2 ~ Z1]"),
+            ("Y ~ X2:X1 + [X1:X2 ~ Z1]", "Y ~ [X1:X2 ~ Z1]"),
+            ("Y ~ center(X2) + [center(X2) ~ Z1]", "Y ~ [center(X2) ~ Z1]"),
+        ],
+        ids=["backtick", "python-expression", "reordered-interaction", "center"],
+    )
+    def test_iv_repeated_endogenous_fits_single_coefficient(
+        self, test_data, formula, reference
+    ):
+        """A control repeating the endogenous term fits the plain IV model in both stages."""
+        parsed = Formula.parse(formula)[0]
+        parsed_reference = Formula.parse(reference)[0]
+        assert parsed.endogenous == parsed_reference.endogenous
+        assert parsed.exogenous == parsed_reference.exogenous
+
+        fit = pf.feols(formula, data=test_data)
+        fit_reference = pf.feols(reference, data=test_data)
+        for model, model_reference in (
+            (fit, fit_reference),
+            (fit.first_stage.model, fit_reference.first_stage.model),
+        ):
+            assert list(model.coef().index) == list(model_reference.coef().index)
+            np.testing.assert_allclose(
+                model.coef(), model_reference.coef(), rtol=0, atol=1e-12
+            )
 
     def test_iv_transformed_endogenous_in_second_stage(self):
         """A transformed endogenous variable is retained in the second stage."""
