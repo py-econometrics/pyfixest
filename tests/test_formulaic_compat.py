@@ -333,6 +333,53 @@ def test_model_spec_get_model_matrix_prediction_roundtrip(
     np.testing.assert_allclose(pred, fit.predict()[:20], atol=1e-4)
 
 
+@pytest.mark.parametrize("levels", [[0, 1, 2, 3, 4], [4, 3, 2, 1, 0]])
+def test_explicit_categorical_levels_match_treatment_encoding(data, levels):
+    """Explicit level order must preserve the corresponding dummy regression."""
+    term = f"C(f1, levels={levels})"
+    fit = pf.feols(f"Y ~ X1 + {term}", data=data, vcov="iid")
+    dummy_names = [f"level_{level}" for level in levels[1:]]
+    explicit_data = data.assign(
+        **{
+            name: (data["f1"] == level).astype(float)
+            for name, level in zip(dummy_names, levels[1:], strict=True)
+        }
+    )
+    reference = pf.feols(
+        f"Y ~ X1 + {' + '.join(dummy_names)}", data=explicit_data, vcov="iid"
+    )
+    renamed = {
+        f"{term}[T.{level}]": name
+        for level, name in zip(levels[1:], dummy_names, strict=True)
+    }
+    coefficients = fit.coef().rename(index=renamed)
+    standard_errors = fit.se().rename(index=renamed)
+    assert set(coefficients.index) == set(reference.coef().index)
+    assert fit.sample_info.n_obs == reference.sample_info.n_obs
+    # Both fits solve the same dummy regression; only summation order can differ.
+    np.testing.assert_allclose(
+        coefficients[reference.coef().index],
+        reference.coef(),
+        atol=1e-12,
+        rtol=1e-12,
+        err_msg="explicit categorical-level coefficients differ from dummy regression",
+    )
+    np.testing.assert_allclose(
+        standard_errors[reference.se().index],
+        reference.se(),
+        atol=1e-12,
+        rtol=1e-12,
+        err_msg="explicit categorical-level standard errors differ from dummy regression",
+    )
+    np.testing.assert_allclose(
+        fit.predict(newdata=data.iloc[:10]),
+        reference.predict(newdata=explicit_data.iloc[:10]),
+        atol=1e-12,
+        rtol=1e-12,
+        err_msg="explicit categorical-level predictions differ from dummy regression",
+    )
+
+
 def test_prediction_preserves_fitted_reference() -> None:
     """Prediction retains the fitted reference despite new category metadata."""
     train = pd.DataFrame(

@@ -1,0 +1,73 @@
+name: Dependency compatibility
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-compatibility-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  supported-dependencies:
+    name: "Supported dependencies (${{ matrix.lane }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Acceptance depends on #1946 raising pandas/narwhals floors to 1.5/1.17;
+          # this lane does not qualify the older, unresolvable advertised floors.
+          - lane: minimum
+            environment: py310-r
+          - lane: formulaic-minimum
+            environment: py312-r
+          - lane: latest
+            environment: py312-r
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+          frozen: true
+          environments: ${{ matrix.environment }}
+
+      - name: Set up the checkout extension
+        run: pixi run -e ${{ matrix.environment }} _setup
+
+      - name: Resolve and test ${{ matrix.lane }} dependencies
+        run: pixi run -e ${{ matrix.environment }} python scripts/run_dependency_compat.py ${{ matrix.lane }}
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+
+  formulaic-main:
+    name: "Upstream formulaic main (diagnostic)"
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          cache-write: false
+          frozen: true
+          environments: py312-r
+
+      - name: Set up the checkout extension
+        run: pixi run -e py312-r _setup
+
+      - name: Resolve and test upstream formulaic
+        run: pixi run -e py312-r python scripts/run_dependency_compat.py main
+        env:
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
