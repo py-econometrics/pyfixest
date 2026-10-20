@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation import feols
 from pyfixest.utils.utils import get_data
 
@@ -43,7 +44,7 @@ def test_confint():
     assert np.all(confint1 != confint3)
 
     # Preserve the legacy positional seed and reps arguments.
-    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+    with pytest.warns(PyfixestDeprecationWarning, match="joint.*deprecated"):
         legacy_positional = fit.confint(0.05, None, None, False, True, 1, 100)
     keyword_args = fit.confint(
         alpha=0.05,
@@ -77,7 +78,7 @@ def test_confint_joint_maps_to_simult():
     """The deprecated `joint=True` path matches `inference_type="simult"`."""
     fit = feols("Y ~ X1 + X2 + C(f1)", data=get_data())
 
-    with pytest.warns(FutureWarning, match="joint.*deprecated"):
+    with pytest.warns(PyfixestDeprecationWarning, match="joint.*deprecated"):
         deprecated = fit.confint(joint=True, seed=1)
     simult = fit.confint(inference_type="simult", seed=1)
     pd.testing.assert_frame_equal(deprecated, simult)

@@ -62,12 +62,10 @@ class Feiv(Feols):
 
     Attributes
     ----------
-    _Z : np.ndarray
-        Processed instruments after handling multicollinearity.
-    _weights_type_feiv : str
-        Type of the weights variable defined in Feiv class.
-        Either "aweights" for analytic weights or "fweights"
-        for frequency weights.
+    within_data : WithinIvData
+        Response, second-stage design, instruments, and endogenous regressors
+        after demeaning by fixed effects and removing collinear columns,
+        without multiplication by square-root weights.
     _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
@@ -91,9 +89,8 @@ class Feiv(Feols):
         fitted first-stage model, the excluded instruments, and the
         instrument-strength `diagnostics`.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
-
+        The data frame used in the estimation. Absent when the fit was built
+        with `lean=True` or `store_data=False`.
 
     Raises
     ------

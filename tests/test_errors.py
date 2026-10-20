@@ -16,6 +16,7 @@ from pyfixest.errors import (
     InstrumentsAsCovarsError,
     MissingModelDataError,
     NanInClusterVarError,
+    PyfixestDeprecationWarning,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
@@ -328,7 +329,7 @@ def test_misplaced_iv_syntax_errors(estimator, fml, reason):
     # Missing formula columns ensure validation precedes materialization.
     data = pd.DataFrame({"unused": [1.0, 2.0]})
     with warnings.catch_warnings():
-        warnings.simplefilter("error", DeprecationWarning)
+        warnings.simplefilter("error", PyfixestDeprecationWarning)
         with pytest.raises(FormulaSyntaxError, match=reason) as caught:
             estimator(fml=fml, data=data)
     assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
@@ -933,7 +934,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         ),
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),
-            DeprecationWarning,
+            PyfixestDeprecationWarning,
             "Specifiying multiple dependent variables",
         ),
         (
@@ -1914,3 +1915,10 @@ def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_ef
     """Stateful transforms cannot hide a variable shared by explicit IV roles."""
     with pytest.raises(error, match="X1"):
         feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())
+
+
+def test_fixest_formula_dict_is_deprecated():
+    fits = pf.feols("Y ~ sw(X1, X2)", data=pf.get_data())
+    with pytest.warns(PyfixestDeprecationWarning, match="`FixestFormulaDict`"):
+        formula_dict = fits.FixestFormulaDict
+    assert len(next(iter(formula_dict.values()))) == 2
