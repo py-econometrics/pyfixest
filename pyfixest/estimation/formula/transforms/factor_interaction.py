@@ -229,9 +229,9 @@ def _encode_i(
             ],
             index=dummies.index,
         )
-        # Without ref/ref2 the cells span the intercept. Like fixest, drop the
-        # first cell only when the model already spans it (intercept or an
-        # earlier full-rank term); otherwise keep every cell.
+        # Without ref/ref2 the cells span the intercept. Drop the first cell
+        # only when the model already spans it (intercept or an earlier
+        # full-rank term); otherwise keep every cell.
         spans_intercept = ref is None and ref2 is None
         if spans_intercept and reduced_rank:
             first = get_contrast_levels(encoder_state, factor_name)[0]
