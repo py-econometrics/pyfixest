@@ -666,8 +666,57 @@ def test_iv_identification_identical_instrument_covariate_against_fixest(
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("weights", [None, "weights"])
-def test_iv_identification_with_absorbed_covariate_against_fixest(weights):
-    """An empty covariates-only within design need not invalidate the IV model."""
+@pytest.mark.parametrize("control_scale", [1.0, 1e14], ids=["original", "rescaled"])
+def test_iv_control_rescaling_against_fixest(
+    iv_identification_data, weights, control_scale
+):
+    """Control units must not trigger a different rank cutoff in IV validation."""
+    data = iv_identification_data
+    data["C"] *= control_scale
+    fit = feols("Y ~ C + [D ~ Z]", data=data, weights=weights, vcov="iid")
+    reference = fixest.feols(
+        ro.Formula("Y ~ C | D ~ Z"),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.NULL if weights is None else ro.Formula("~weights"),
+        vcov="iid",
+    )
+    names_r = list(ro.r("function(fit) names(coef(fit))")(reference))
+    names = [
+        name.removeprefix("fit_").replace("(Intercept)", "Intercept")
+        for name in names_r
+    ]
+    assert sorted(fit.coef().index) == sorted(names)
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0])
+    # Compare C in its original units so absolute tolerances do not mask errors
+    # in its tiny coefficient or standard error after rescaling.
+    original_units = np.array([control_scale if name == "C" else 1.0 for name in names])
+    np.testing.assert_allclose(
+        fit.coef()[names] * original_units,
+        np.asarray(stats.coef(reference)) * original_units,
+        rtol=0,
+        atol=1e-8,
+        err_msg="IV coefficients with a rescaled control != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names] * original_units,
+        np.asarray(fixest.se(reference)) * original_units,
+        rtol=0,
+        atol=1e-7,
+        err_msg="IV standard errors with a rescaled control != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "covariates, reference_covariates",
+    [("C", "1"), ("C + X2", "X2")],
+    ids=["all-controls-absorbed", "one-control-retained"],
+)
+def test_iv_identification_with_absorbed_covariate_against_fixest(
+    weights, covariates, reference_covariates
+):
+    """Dropping an absorbed control keeps the second-stage projection aligned."""
     data = (
         get_data()
         .dropna()
@@ -676,25 +725,34 @@ def test_iv_identification_with_absorbed_covariate_against_fixest(weights):
         )
     )
     with pytest.warns(UserWarning, match="dropped due to multicollinearity"):
-        fit = feols("Y ~ C + [D ~ Z] | f1", data=data, weights=weights, vcov="iid")
+        fit = feols(
+            f"Y ~ {covariates} + [D ~ Z] | f1",
+            data=data,
+            weights=weights,
+            vcov="iid",
+        )
     # C is fully absorbed. fixest 0.14.0 fails internally when every weighted
     # covariate is absorbed, so compare the equivalent design with C omitted.
     reference = fixest.feols(
-        ro.Formula("Y ~ 1 | f1 | D ~ Z"),
+        ro.Formula(f"Y ~ {reference_covariates} | f1 | D ~ Z"),
         data=pandas2ri.py2rpy(data),
         weights=ro.NULL if weights is None else ro.Formula("~weights"),
         vcov="iid",
     )
-    assert list(fit.coef().index) == ["D"]
+    names_r = list(ro.r("function(fit) names(coef(fit))")(reference))
+    names = [name.removeprefix("fit_") for name in names_r]
+    assert sorted(fit.coef().index) == sorted(names)
+    assert "C" in fit.collinearity.dropped_coef_names
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0])
     np.testing.assert_allclose(
-        fit.coef(),
+        fit.coef()[names],
         stats.coef(reference),
         rtol=0,
         atol=1e-8,
         err_msg="IV coefficients with an absorbed covariate != fixest",
     )
     np.testing.assert_allclose(
-        fit.se(),
+        fit.se()[names],
         fixest.se(reference),
         rtol=0,
         atol=1e-7,
