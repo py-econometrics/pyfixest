@@ -8,8 +8,8 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
 
-# Each CRAN reference must contribute passing comparisons. Other skips remain
-# visible in the report without making unrelated, deliberately skipped cases fail.
+# Each CRAN reference must contribute passing comparisons without skipped cases.
+# Skips outside the required groups remain visible without failing qualification.
 REQUIRED_COMPARISONS = {
     "avlm": "tests.test_savi_vs_avlm",
     "did2s": "tests.test_did",
@@ -28,6 +28,7 @@ def main(report: Path) -> int:
         counts: Counter[str] = Counter()
         passed: Counter[str] = Counter()
         skipped = []
+        skipped_modules = set()
         for case in root.iter("testcase"):
             outcome = next(
                 (
@@ -42,6 +43,7 @@ def main(report: Path) -> int:
                 passed[case.get("classname", "")] += 1
             elif outcome == "skipped":
                 skipped.append(f"{case.get('classname')}.{case.get('name')}")
+                skipped_modules.add(case.get("classname", ""))
         missing = [
             package
             for package, module in REQUIRED_COMPARISONS.items()
@@ -62,7 +64,18 @@ def main(report: Path) -> int:
             )
         if missing:
             summary += f"Required comparisons did not pass: {', '.join(missing)}.\n"
-        failed = bool(missing or counts["failure"] or counts["error"])
+        skipped_required = [
+            package
+            for package, module in REQUIRED_COMPARISONS.items()
+            if module in skipped_modules
+        ]
+        if skipped_required:
+            summary += (
+                f"Required comparisons were skipped: {', '.join(skipped_required)}.\n"
+            )
+        failed = bool(
+            missing or skipped_required or counts["failure"] or counts["error"]
+        )
     print(summary, end="")
     if summary_file := os.environ.get("GITHUB_STEP_SUMMARY"):
         with Path(summary_file).open("a") as output:

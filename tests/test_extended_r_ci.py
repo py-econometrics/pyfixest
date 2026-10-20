@@ -25,6 +25,7 @@ _SPEC.loader.exec_module(_REPORT)
         ("failure", 1, "3 passed, 0 skipped, 1 failed, 0 errors"),
         ("error", 1, "3 passed, 0 skipped, 0 failed, 1 errors"),
         ("unrelated_skip", 0, "4 passed, 1 skipped, 0 failed, 0 errors"),
+        ("required_partial_skip", 1, "Required comparisons were skipped: avlm"),
         ("missing", 1, "no test report; qualification failed"),
         (
             "empty",
@@ -49,6 +50,14 @@ def test_extended_reference_report_gate(
         if outcome == "unrelated_skip":
             case = ET.SubElement(
                 suite, "testcase", classname="tests.other", name="intentional_skip"
+            )
+            ET.SubElement(case, "skipped")
+        if outcome == "required_partial_skip":
+            case = ET.SubElement(
+                suite,
+                "testcase",
+                classname="tests.test_savi_vs_avlm",
+                name="missing_comparison",
             )
             ET.SubElement(case, "skipped")
     if outcome != "missing":
