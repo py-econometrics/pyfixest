@@ -68,6 +68,8 @@ jobs:
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/.r-library
     strategy:
       fail-fast: false
       matrix:
@@ -83,6 +85,17 @@ jobs:
           frozen: true
           environments: py312-r
 
+      - name: Cache extended R reference packages
+        if: matrix.test-task == 'test-r-extended'
+        uses: actions/cache@v5
+        with:
+          path: .r-library
+          key: r-extended-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pixi.lock', 'r_test_requirements.R') }}
+
+      - name: Install and check required extended R references
+        if: matrix.test-task == 'test-r-extended'
+        run: pixi run -e py312-r Rscript r_test_requirements.R --extended-only
+
       - name: Run fast R preflight
         if: matrix.test-task == 'test-r-fixest'
         run: pixi run -e py312-r test-r-fixest-fast
@@ -91,6 +104,11 @@ jobs:
         run: pixi run -e py312-r ${{ matrix.test-task }}
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+          PYTEST_ADDOPTS: ${{ matrix.test-task == 'test-r-extended' && '--junitxml=r-extended-results.xml' || '' }}
+
+      - name: Report required extended comparisons
+        if: always() && matrix.test-task == 'test-r-extended'
+        run: pixi run -e py312-r python scripts/check_extended_r_results.py r-extended-results.xml
 
       - name: Run Python tests in R-dependent modules
         if: matrix.test-task == 'test-r-core-other'
