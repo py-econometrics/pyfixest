@@ -316,8 +316,8 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
 
     Values not in the mapping are kept unchanged (matches R fixest behavior).
     A scalar old level (``bin={'low': 'a'}``) is treated as a one-element list.
-    As in fixest, every old level must occur in the data and may belong to
-    only one bin; otherwise a ``ValueError`` names the offending values. The
+    Every old level must occur in the data and may belong to only one bin;
+    otherwise a ``ValueError`` names the offending values. The
     mapping is validated once, when it is first built from the estimation
     data, and is namespaced per variable to avoid collisions when both sides
     of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
