@@ -68,8 +68,6 @@ jobs:
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest
-    env:
-      R_LIBS_USER: ${{ github.workspace }}/.r-library
     strategy:
       fail-fast: false
       matrix:
@@ -95,16 +93,26 @@ jobs:
       - name: Install and check required extended R references
         if: matrix.test-task == 'test-r-extended'
         run: pixi run -e py312-r Rscript r_test_requirements.R --extended-only
+        env:
+          R_LIBS_USER: ${{ github.workspace }}/.r-library
 
       - name: Run fast R preflight
         if: matrix.test-task == 'test-r-fixest'
         run: pixi run -e py312-r test-r-fixest-fast
 
       - name: Run ${{ matrix.test-task }}
+        if: matrix.test-task != 'test-r-extended'
         run: pixi run -e py312-r ${{ matrix.test-task }}
         env:
           PYTEST_XDIST_AUTO_NUM_WORKERS: 4
-          PYTEST_ADDOPTS: ${{ matrix.test-task == 'test-r-extended' && '--junitxml=r-extended-results.xml' || '' }}
+
+      - name: Run required extended comparisons
+        if: matrix.test-task == 'test-r-extended'
+        run: pixi run -e py312-r test-r-extended
+        env:
+          R_LIBS_USER: ${{ github.workspace }}/.r-library
+          PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+          PYTEST_ADDOPTS: --junitxml=r-extended-results.xml
 
       - name: Report required extended comparisons
         if: always() && matrix.test-task == 'test-r-extended'
