@@ -955,6 +955,42 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     )
 
 
+@pytest.mark.parametrize(
+    "formula,expected_n_models",
+    [
+        ("Y ~ csw(X1, X1)", 1),
+        ("Y ~ X1 + sw0(X1, X2)", 2),
+        ("Y ~ csw(X1, X2) | X2 ~ Z1", 1),
+        ("Y ~ csw0(X2, X1) | X2 ~ Z1", 2),
+        ("Y ~ X1 + [X2 ~ Z1] + sw0(Z2, X2)", 2),
+    ],
+)
+def test_duplicate_stepwise_models_warn(
+    test_data, formula: str, expected_n_models: int
+):
+    """Steps that parse to the same model warn instead of silently collapsing."""
+    with pytest.warns(UserWarning, match="parse to the same model"):
+        fit = pf.feols(formula, data=test_data)
+
+    assert len(fit.to_list()) == expected_n_models
+
+
+@pytest.mark.parametrize(
+    "formula,kwargs",
+    [
+        ("Y ~ X1 + csw(X1, X2)", {}),
+        ("Y ~ csw(X1, Z2) + [X2 ~ Z1]", {}),
+        ("Y ~ X1", {"fsplit": "f1"}),
+    ],
+)
+def test_distinct_stepwise_models_do_not_warn(test_data, formula: str, kwargs):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "error", message=".*parse to the same model", category=UserWarning
+        )
+        pf.feols(formula, data=test_data, **kwargs)
+
+
 def test_stepwise_call_over_several_lines_matches_single_line(test_data):
     """A triple-quoted formula with one stepwise argument per line fits the same models."""
     multiline = """

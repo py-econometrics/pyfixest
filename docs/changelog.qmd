@@ -49,7 +49,7 @@ Other things:
 
 - Iterative-rectifier separation checks use the retained response, regressors and fixed-effect codes, and respect the configured `collin_tol`. Stateful terms keep their fitted values after sample filtering, and predictors supplied through formula context cannot be shadowed by auxiliary columns.
 
-- IV formulas preserve covariates named like generated fitted values, such as `X2_hat`, and support interacted endogenous terms such as `X2:Z2`. Redundant declarations of the same endogenous term are deduplicated. Nested IV blocks and operations yielding unsupported IV specifications are rejected. Fixes [#1736](https://github.com/py-econometrics/pyfixest/issues/1736) and [#1808](https://github.com/py-econometrics/pyfixest/issues/1808).
+- IV formulas preserve covariates named like generated fitted values, such as `X2_hat`, and support interacted endogenous terms such as `X2:Z2`. Redundant declarations of the same endogenous term are deduplicated. Multiple estimation warns when several steps parse to the same model, as in `Y ~ csw(X1, X2) | X2 ~ Z1` or `Y ~ csw(X1, X1)`, because only one model is returned for them. Nested IV blocks and operations yielding unsupported IV specifications are rejected. Fixes [#1736](https://github.com/py-econometrics/pyfixest/issues/1736) and [#1808](https://github.com/py-econometrics/pyfixest/issues/1808).
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
