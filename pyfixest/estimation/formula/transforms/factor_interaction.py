@@ -294,13 +294,13 @@ def _encode_factor(
 
 def _binned_numeric_levels(data: pd.Series, bins: dict) -> list[Any] | None:
     """
-    Return fixest's level order for a numeric variable binned under a label.
+    Return the level order for a numeric variable binned under a label.
 
-    When a bin label is not a number, fixest turns the binned numeric variable
-    into a factor whose levels keep the sorted original values, with each bin
-    label at the position of the bin's first listed value. Returns None when
-    the default order already matches fixest: for non-numeric variables and
-    when every label is a number, so the binned values stay numeric.
+    When a bin label is not a number, the binned variable becomes a factor
+    whose levels keep the sorted original values, with each bin label at the
+    position of the bin's first listed value. Returns None when the default
+    order is already correct: for non-numeric variables and when every label
+    is a number, so the binned values stay numeric.
     """
     if not _is_numeric(data) or all(
         isinstance(label, (int, float, np.number)) and not isinstance(label, bool)

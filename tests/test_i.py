@@ -304,7 +304,7 @@ def test_binning_with_continuous(df_test):
     ],
 )
 def test_binning_numeric_with_label(df_test, r_fml, py_fml):
-    """A labelled bin of numeric levels keeps fixest's level order."""
+    """A labelled bin takes the position of its first listed value."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 
@@ -312,7 +312,7 @@ def test_binning_numeric_with_label(df_test, r_fml, py_fml):
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("ref", ["", ", ref=-1"])
 def test_binning_event_study_with_label(df_het, ref):
-    """A labelled pre-period bin sits before the later event times, as in fixest."""
+    """A labelled pre-period bin sits before the later event times."""
     df = df_het[np.isfinite(df_het["rel_year"])].reset_index(drop=True)
     r_fml = f"dep_var ~ i(rel_year, bin=list(pre=-20:-6){ref}) | unit + year"
     py_fml = (
