@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from pyfixest.estimation.internals.literals import SolverOptions
 from pyfixest.estimation.internals.model_state import SandwichComponents
@@ -100,12 +101,56 @@ def fit_ols(
     )
 
 
-def fit_iv(
-    X: np.ndarray,
-    Z: np.ndarray,
-    Y: np.ndarray,
+def project_onto_design(
     *,
-    weights: np.ndarray | None = None,
+    response: NDArray[np.float64],
+    design: NDArray[np.float64],
+    sqrt_weights: NDArray[np.float64] | None,
+    solver: SolverOptions,
+) -> NDArray[np.float64]:
+    """Return least-squares fitted values of response on design.
+
+    Parameters
+    ----------
+    response : NDArray[np.float64]
+        One or more response columns, shape (N, k), without square-root
+        weight premultiplication.
+    design : NDArray[np.float64]
+        Nonempty regressor matrix, shape (N, q), after removing collinear
+        columns and without square-root weight premultiplication.
+    sqrt_weights : NDArray[np.float64] or None
+        Square roots of observation weights, shape (N, 1). ``None`` applies
+        no weights. Both response and design are premultiplied internally.
+    solver : SolverOptions
+        Solver passed through to ``solve_ols`` for the normal equations.
+
+    Returns
+    -------
+    NDArray[np.float64]
+        Fitted values, shape (N, k), on the scale of response without
+        square-root weight premultiplication. Inputs are not mutated.
+    """
+    response_solver = response
+    design_solver = design
+    if sqrt_weights is not None:
+        response_solver = response * sqrt_weights
+        design_solver = design * sqrt_weights
+
+    coefficients = solve_ols(
+        tZX=design_solver.T @ design_solver,
+        tZY=design_solver.T @ response_solver,
+        solver=solver,
+    ).reshape(design.shape[1], response.shape[1])
+
+    return design @ coefficients
+
+
+def fit_iv(
+    X: NDArray[np.float64],
+    X_hat: NDArray[np.float64],
+    Y: NDArray[np.float64],
+    *,
+    weights: NDArray[np.float64] | None = None,
     solver: SolverOptions = "np.linalg.solve",
 ) -> IvFit:
     """Fit 2SLS while keeping inputs and residuals in response scale.
@@ -115,9 +160,10 @@ def fit_iv(
     X : np.ndarray
         Design matrix (incl. endogenous regressors), shape (N, k).
         Demeaned but not WLS-transformed.
-    Z : np.ndarray
-        Full instrument matrix, including exogenous regressors that instrument
-        themselves, shape (N, k_z). Demeaned but not WLS-transformed.
+    X_hat : np.ndarray
+        First-stage fitted values of X, shape (N, k), computed with the same
+        observation weights. Demeaned but not WLS-transformed, with columns
+        in the same order as X.
     Y : np.ndarray
         Dependent variable, shape (N, 1). Demeaned but not WLS-transformed.
     weights : np.ndarray or None
@@ -127,25 +173,13 @@ def fit_iv(
     solver : SolverOptions
         Solver passed through to ``solve_ols``.
     """
-    if weights is None:
-        X_solver = X
-        Z_solver = Z
-        Y_solver = Y
-        weight_values = None
-    else:
-        weight_values = weights.reshape(-1)
-        sqrt_weights = np.sqrt(weight_values)[:, None]
-        X_solver = X * sqrt_weights
-        Z_solver = Z * sqrt_weights
-        Y_solver = Y * sqrt_weights
+    weight_values = None if weights is None else weights.reshape(-1)
+    sqrt_weights = None if weight_values is None else np.sqrt(weight_values)[:, None]
 
-    tZX = Z_solver.T @ X_solver
-    tZZ = Z_solver.T @ Z_solver
-
-    first_stage_coefs = solve_ols(tZZ, tZX, solver).reshape(tZX.shape)
-    X_hat = Z @ first_stage_coefs
-    X_hat_solver = X_hat if weight_values is None else X_hat * sqrt_weights
+    X_hat_solver = X_hat if sqrt_weights is None else X_hat * sqrt_weights
     hessian = X_hat_solver.T @ X_hat_solver
+
+    Y_solver = Y if sqrt_weights is None else Y * sqrt_weights
     beta = solve_ols(hessian, X_hat_solver.T @ Y_solver, solver)
     residuals = Y.flatten() - (X @ beta).flatten()
     if weight_values is None:
