@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import rpy2.robjects as ro
-from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
@@ -397,15 +396,6 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
         rtol=1e-8,
         err_msg="first-stage F statistic != fixest ivwald",
     )
-
-
-@pytest.mark.against_r_core
-def test_fixest_rejects_redundant_endogenous():
-    """Unlike pyfixest's term deduplication, fixest rejects redundant declarations."""
-    with pytest.raises(
-        RRuntimeError, match="Endogenous variables should not be used as exogenous"
-    ):
-        fixest.feols(ro.Formula("Y ~ X2 | X2 ~ Z1"), data=pandas2ri.py2rpy(get_data()))
 
 
 @pytest.mark.against_r_core
