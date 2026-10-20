@@ -619,7 +619,7 @@ def test_split_reference_validity(df_split_levels, split_arg):
     ],
 )
 def test_i_names_from_expression(df_test, r_fml, py_fml, py_to_r):
-    """i() columns are named after the argument expressions, as in fixest."""
+    """i() columns are named after the argument expressions."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     for py_expr, r_expr in py_to_r.items():
         py_names = [name.replace(py_expr, r_expr) for name in py_names]
