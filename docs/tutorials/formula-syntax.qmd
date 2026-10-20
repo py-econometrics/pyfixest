@@ -139,8 +139,8 @@ fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 
 A numeric second variable enters as a continuous slope. Wrap it in `C()` to
-interact two factors (fixest's `i(f1, i.f2)`), and set reference levels for both
-via the `ref` and `ref2` arguments.
+interact two factors, and set reference levels for both via the `ref` and
+`ref2` arguments.
 
 ```{python}
 # set 1 and 2 as reference levels

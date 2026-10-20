@@ -342,7 +342,7 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     ],
 )
 def test_factor_x_numeric_factor(df_test, r_fml, py_fml):
-    """C() marks a numeric second variable as a factor, like fixest's `i.` prefix."""
+    """C() marks a numeric second variable as a factor."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 

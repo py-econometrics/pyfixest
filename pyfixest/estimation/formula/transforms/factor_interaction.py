@@ -37,8 +37,7 @@ def factor_interaction(
     var2 : array-like, optional
         Optional second variable to interact with. A numeric `var2` is
         continuous; a non-numeric `var2` is a factor. Wrap a numeric `var2` in
-        `C()`, as in `i(f, C(k))`, to treat it as a factor, like fixest's
-        `i(f, i.k)`.
+        `C()`, as in `i(f, C(k))`, to treat it as a factor.
     ref : Hashable, optional
         Reference level to drop from `data`.
     ref2 : Hashable, optional
@@ -199,8 +198,8 @@ def _encode_i(
             format="{field}",  # Use column names directly
         )
     elif var2_is_numeric:
-        # (ii) interaction with continuous variable. As in fixest, `ref2` and
-        # `bin2` do not turn a numeric `var2` into a factor; they are ignored.
+        # (ii) interaction with continuous variable. `ref2` and `bin2` do not
+        # turn a numeric `var2` into a factor; they are ignored.
         if ref2 is not None or bin2 is not None:
             warnings.warn(
                 f"`ref2` and `bin2` apply only to a factor second variable and "
@@ -325,7 +324,7 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
 def _is_factor_interaction(var2: Any) -> bool:
     """Return whether `i(f, var2)` interacts two factors rather than a slope.
 
-    Like fixest's `i.var2`, `C(var2)` marks a numeric second variable as a factor.
+    `C(var2)` marks a numeric second variable as a factor.
     """
     marked_factor = (
         isinstance(var2, FactorValues)
