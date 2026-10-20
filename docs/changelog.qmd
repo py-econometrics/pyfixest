@@ -45,6 +45,8 @@ Breaking changes:
 
 Other things:
 
+- `did2s()` standard errors now use the fitted first-stage fixed-effect encoding, so `year^region` and `year:region` match an explicit combined column. Stage validation preserves spaces in quoted labels and consistently rejects second-stage intercept removal, IV and multiple models. See [#1758](https://github.com/py-econometrics/pyfixest/issues/1758) and [#1812](https://github.com/py-econometrics/pyfixest/issues/1812).
+
 - Iterative-rectifier separation checks use the retained response, regressors and fixed-effect codes, and respect the configured `collin_tol`. Stateful terms keep their fitted values after sample filtering, and predictors supplied through formula context cannot be shadowed by auxiliary columns.
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
