@@ -27,6 +27,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_first_multistage_rhs,
     is_python_expression,
     is_structured_formula,
+    parse_formula_keeping_rhs_part_order,
     terms_without_intercept,
 )
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
@@ -48,6 +49,8 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+# The fixed-effects part of `X | FE` keeps source order, unlike the covariates.
+_FIXED_EFFECTS_PART: Final = 1
 
 
 def _render_factor(factor: Factor) -> str:
@@ -493,11 +496,12 @@ class Formula:
 
     @property
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
-        """The fixed effects of a formula."""
+        """Fixed effects in written order, preserving fixest's normalization order."""
         if not self.is_fixed_effects:
             raise AttributeError("Not a fixed effects specification")
         return formulaic.formula.SimpleFormula(
-            terms_without_intercept(self._formula.rhs[1])
+            terms_without_intercept(self._formula.rhs[_FIXED_EFFECTS_PART]),
+            _ordering="none",
         )
 
     @property
@@ -557,7 +561,11 @@ class Formula:
         """
         formula = _preprocess(formula)
         return [
-            Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
+            Formula(
+                _formula=parse_formula_keeping_rhs_part_order(
+                    formulaic_compliant, parser=_PARSER, part=_FIXED_EFFECTS_PART
+                )
+            )
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
 

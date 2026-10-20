@@ -32,6 +32,7 @@ from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
+    from formulaic.parser.types import FormulaParser
 
 
 # Adapted from Formulaic 1.2.2.
@@ -232,6 +233,24 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
             "expose `.lhs` and `.rhs` formulas."
         )
     return block
+
+
+def parse_formula_keeping_rhs_part_order(
+    formula: str, *, parser: FormulaParser, part: int
+) -> formulaic.formula.Formula:
+    """Keep written term order in one RHS part and degree order elsewhere."""
+    # Formulaic's parsed term sets retain source order before Formula.from_spec
+    # applies degree ordering. It preserves parts already wrapped as formulas,
+    # so only the selected part opts out of that ordering.
+    terms = parser.get_terms(formula)._simplify()
+    rhs = getattr(terms, "rhs", None)
+    if isinstance(rhs, tuple) and len(rhs) > part:
+        parts = list(rhs)
+        parts[part] = formulaic.formula.SimpleFormula(
+            list(parts[part]), _ordering="none"
+        )
+        terms = terms._update(rhs=tuple(parts))
+    return formulaic.Formula.from_spec(terms, parser=parser)
 
 
 def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:

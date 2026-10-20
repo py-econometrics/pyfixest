@@ -1046,6 +1046,66 @@ def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     np.testing.assert_allclose(interacted.se(), manual.se())
 
 
+@pytest.mark.parametrize(
+    "fixed_effects,expected",
+    [
+        ("f1:f2 + f3", [("f1:f2", "f3")]),
+        ("f3 + f1:f2", [("f3", "f1:f2")]),
+        ("(f1 + f2):f3 + f4 + f1:f3", [("f1:f3", "f2:f3", "f4")]),
+        ("sw(f1:f2 + f3, f3 + f1:f2)", [("f1:f2", "f3"), ("f3", "f1:f2")]),
+        ("csw0(f1:f2, f3)", [(), ("f1:f2",), ("f1:f2", "f3")]),
+        ("f2:f3[[z]] + f1", [("f2:f3[[z]]", "f1")]),
+    ],
+)
+@pytest.mark.parametrize("rhs", ["X1:X3 + X1", "X1:X3 + X1 + [X2 ~ Z1:Z2 + Z1]"])
+def test_fixed_effect_source_order(fixed_effects, expected, rhs):
+    """Only FE terms opt out of Formulaic's degree ordering (#1787)."""
+    parsed = Formula.parse(f"Y ~ {rhs} | {fixed_effects}")
+    assert [
+        tuple(map(str, formula.fixed_effects)) if formula.is_fixed_effects else ()
+        for formula in parsed
+    ] == expected
+    for formula, names in zip(parsed, expected, strict=True):
+        if names:
+            assert formula.fixed_effects_key == " + ".join(names)
+            reparsed = Formula.parse(formula.render())[0]
+            assert tuple(reparsed.fixed_effects) == tuple(formula.fixed_effects)
+        # Covariates and instruments retain degree ordering in both IV stages.
+        covariates = [str(term) for term in formula.exogenous if str(term) != "1"]
+        assert covariates == ["X1", "X1:X3"]
+        if formula.is_instrumental_variable:
+            assert list(map(str, formula.instruments)) == ["1", "Z1", "Z1:Z2"]
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_fixed_effect_order_keeps_estimates(test_data, weights):
+    """Order changes reporting and normalization, not the fitted projection."""
+    fits = [
+        pf.feols(
+            f"Y ~ X1 + X2 | {order}",
+            data=test_data,
+            weights=weights,
+            vcov={"CRV1": "f3"},
+            demeaner=pf.MapDemeaner(fixef_tol=1e-12),
+        )
+        for order in ("f1:f2 + f3", "f3 + f1:f2")
+    ]
+    for fit, expected in zip(fits, [("f1:f2", "f3"), ("f3", "f1:f2")], strict=True):
+        assert fit.model.fixed_effects == expected
+        assert tuple(fit.fixef()["variable"].unique()) == expected
+    assert fits[0].sample_info.n_obs == fits[1].sample_info.n_obs
+    assert fits[0].fixef_counts.fixef_dof == fits[1].fixef_counts.fixef_dof
+    # Different projection sweep orders stop at fixef_tol=1e-12.
+    for quantity in ("coef", "se", "tstat", "pvalue", "predict", "resid"):
+        np.testing.assert_allclose(
+            getattr(fits[0], quantity)()[:5],
+            getattr(fits[1], quantity)()[:5],
+            rtol=1e-8,
+            atol=1e-10,
+            err_msg=f"{quantity} changed with FE order",
+        )
+
+
 # =============================================================================
 # Part 3: Edge Case Tests
 # =============================================================================

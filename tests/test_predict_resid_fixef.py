@@ -21,6 +21,63 @@ def data():
     return data
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml", ["Y ~ X1 | f1:f2 + f3", "Y ~ X1 | f3 + f1:f2"])
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_fixef_source_order_vs_fixest(data, fml, weights):
+    """FE names and the normalized effect follow fixest's source order (#1787)."""
+    fit = pf.feols(
+        fml,
+        data=data,
+        weights=weights,
+        demeaner=MapDemeaner(fixef_tol=1e-10),
+    )
+    fixed_effects = fit.fixef(atol=1e-12, btol=1e-12)
+    r_weights = {"weights": ro.Formula(f"~{weights}")} if weights else {}
+    fit_r = fixest.feols(
+        ro.Formula(fml.replace(":", "^")),
+        data=data,
+        **{"fixef.tol": 1e-10},
+        **r_weights,
+    )
+    effects_r = ro.r("fixef")(fit_r)
+    names_r = tuple(name.replace("^", ":") for name in effects_r.names)
+    assert fit.model.formula == fml
+    assert fit.model.fixed_effects == names_r
+    assert tuple(fixed_effects["variable"].unique()) == names_r
+    for position, name in enumerate(names_r):
+        effect = fixed_effects.loc[fixed_effects["variable"] == name]
+        # fixest spells interaction labels `13_5`, pyfixest spells `13.0,5.0`.
+        by_level = pd.Series(
+            effect["coefficient"].to_numpy(),
+            index=[
+                "_".join(f"{float(v):g}" for v in level.split(","))
+                for level in effect["level"]
+            ],
+        ).sort_index()
+        with ro.conversion.localconverter(ro.default_converter):
+            r_effect = effects_r[position]
+        r_by_level = pd.Series(
+            np.asarray(r_effect), index=list(r_effect.names)
+        ).sort_index()
+        assert list(by_level.index) == list(r_by_level.index)
+        assert (
+            (by_level.abs() < 1e-12).any()
+            == (r_by_level.abs() < 1e-12).any()
+            == (position > 0)
+        )
+        # Reference levels can differ (#1788). Contrasts within an effect are
+        # identified; tight recovery tolerances leave <1e-6 projection error.
+        shift = by_level - r_by_level
+        np.testing.assert_allclose(
+            shift,
+            shift.iloc[0],
+            rtol=0,
+            atol=1e-6,
+            err_msg=f"{name} fixed-effect contrasts differ from fixest",
+        )
+
+
 @pytest.mark.parametrize(
     "fml",
     [
