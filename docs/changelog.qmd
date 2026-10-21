@@ -17,6 +17,21 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+### Varying Slopes
+
+`feols()`, including IV, `fepois()`, and `feglm()` now estimate fixed effects
+with varying slopes in `fixest` syntax: `f1[X2]` absorbs an intercept and a
+slope on `X2` for every level of `f1`, and `f1[[X2]]` only the slopes. As in
+`fixest`, slope coefficients count in the small-sample degrees of freedom,
+singletons and the Poisson separation check only consider effects with
+intercepts, and slope-only models keep their intercept. Varying slopes require
+the default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`,
+`ritest()`, `decompose()`, and CRV3 or HAC inference raise for these models.
+
+```{python}
+pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()
+```
+
 ### Word Regression Tables
 
 `pf.etable()` now supports `type="docx"` to return or save editable Word tables,
@@ -56,7 +71,7 @@ Other things:
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
-- Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
+- Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
 
 - pandas 1.5 and narwhals 1.17 are now the minimum supported versions. The old floors, `pandas>=1.1.0` and `narwhals>=1.13.3`, could not be installed alongside formulaic 1.2.x, which requires `pandas>=1.3` and `narwhals>=1.17`. On pandas older than 1.4, the slow `ritest()` algorithm overwrote the resampled column in the fit's stored data. See [#1785](https://github.com/py-econometrics/pyfixest/issues/1785).
 
