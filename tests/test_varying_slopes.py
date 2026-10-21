@@ -24,9 +24,11 @@ def data() -> pd.DataFrame:
     [pf.MapDemeaner(), pf.LsmrDemeaner(backend="torch")],
     ids=["map", "torch"],
 )
-def test_varying_slopes_require_within_demeaner(data, demeaner):
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_varying_slopes_require_within_demeaner(data, demeaner, estimator):
+    count_data = data.assign(Y=data.Y.abs().round())
     with pytest.raises(ValueError, match=r"require `LsmrDemeaner\(backend='within'\)`"):
-        pf.feols("Y ~ X1 | f1[X2]", data=data, demeaner=demeaner)
+        estimator("Y ~ X1 | f1[X2]", data=count_data, demeaner=demeaner)
 
 
 @pytest.mark.parametrize(
@@ -86,8 +88,3 @@ def test_varying_slopes_with_reduced_retention(data, retention):
 
     np.testing.assert_allclose(reduced.coef(), full.coef(), rtol=0, atol=1e-12)
     np.testing.assert_allclose(reduced.se(), full.se(), rtol=0, atol=1e-12)
-
-
-def test_glm_rejects_varying_slopes(data):
-    with pytest.raises(NotImplementedError, match="not yet supported for GLMs"):
-        pf.fepois("Y ~ X1 | f1[X2]", data=data.assign(Y=data.Y.abs().round()))
