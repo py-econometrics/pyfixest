@@ -47,7 +47,7 @@ Breaking changes:
 
 Other things:
 
-- The `data` argument of a fitted model's `vcov()` is deprecated, ignored, and will be removed in a future release. The covariance matrix always uses the estimation sample stored on the model, so reordered, shorter, or longer frames no longer give wrong cluster-robust standard errors or abort Python. Models fitted with `store_data=False` or `lean=True` keep no sample: choose `vcov` when fitting them. See [#1825](https://github.com/py-econometrics/pyfixest/issues/1825).
+- Passing `data` to a fitted model's `vcov()` now raises `ValueError`; the argument will be removed in a future release. It paired the frame's rows with the fit by position, so reordered, shorter, or longer frames gave wrong cluster-robust standard errors or aborted Python. The covariance matrix uses the estimation sample stored on the model, which holds every column of the input data. Models fitted with `store_data=False` or `lean=True` keep no sample: choose `vcov` when fitting them. See [#1825](https://github.com/py-econometrics/pyfixest/issues/1825).
 
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).

@@ -211,23 +211,12 @@ def test_missing_unrelated_to_retention_remains_attribute_error():
         fit.vcov("iid")
 
 
-@pytest.mark.parametrize(
-    "frame",
-    [
-        lambda d: d.sample(frac=1, random_state=9),
-        lambda d: d.iloc[:100],
-        lambda d: pd.concat([d, d]),
-    ],
-    ids=["reordered", "shorter", "longer"],
-)
-def test_vcov_ignores_deprecated_data(frame):
-    """`vcov(data=...)` warns and keeps the stored estimation sample (#1825)."""
+def test_vcov_rejects_data():
+    """`vcov(data=...)` raises instead of pairing rows by position (#1825)."""
     data = get_data().dropna()
     fit = feols("Y ~ X1 + X2", data=data)
-    expected = fit.vcov({"CRV1": "f1"}).se()
-    with pytest.warns(FutureWarning, match=r"`data` argument of `vcov\(\)`"):
-        fit.vcov({"CRV1": "f1"}, data=frame(data))
-    pd.testing.assert_series_equal(fit.se(), expected)
+    with pytest.raises(ValueError, match=r"`data` argument of `vcov\(\)`"):
+        fit.vcov({"CRV1": "f1"}, data=data)
 
 
 def test_error_hc23_fe():
@@ -966,11 +955,6 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             ),
             FutureWarning,
             "The 'param' argument is deprecated",
-        ),
-        (
-            lambda d: feols("Y ~ X1", data=d).vcov("hetero", data=d),
-            FutureWarning,
-            r"The `data` argument of `vcov\(\)` is deprecated",
         ),
         (
             lambda d: feols("Y ~ 1 | f1", data=d.dropna()).tidy(),

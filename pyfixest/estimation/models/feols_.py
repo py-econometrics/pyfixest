@@ -587,9 +587,9 @@ class Feols(ResultAccessorMixin):
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
         data : Optional[DataFrameType], optional
-            Deprecated and ignored. The covariance matrix always uses the
-            estimation sample stored on the model. This argument will be
-            removed in a future release.
+            No longer supported; passing a frame raises `ValueError`. The
+            covariance matrix uses the estimation sample stored on the model.
+            This argument will be removed in a future release.
 
         Notes
         -----
@@ -624,12 +624,11 @@ class Feols(ResultAccessorMixin):
         `ssc` adjustments interact with each estimator.
         """
         if data is not None:
-            warnings.warn(
-                "The `data` argument of `vcov()` is deprecated and ignored: the "
-                "covariance matrix always uses the estimation sample stored on "
-                "the model. It will be removed in a future release.",
-                FutureWarning,
-                stacklevel=_find_stack_level(),
+            raise ValueError(
+                "The `data` argument of `vcov()` is no longer supported: the "
+                "covariance matrix uses the estimation sample stored on the "
+                "model. Call `vcov()` without `data`. To cluster on a variable "
+                "missing from the estimation data, refit with it included."
             )
         self._require_capability(
             capability="covariance_update",
