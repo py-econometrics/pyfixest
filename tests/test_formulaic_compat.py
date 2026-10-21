@@ -197,10 +197,39 @@ def test_encoder_state_guard_raises_loudly() -> None:
     [
         ("Y ~ X1 + C(f1)", []),
         ("Y ~ i(f1, ref=1) + X1", ["f1::0", "f1::2", "f1::3", "f1::4"]),
+        ("Y ~ i(f1, None, ref=1) + X1", ["f1::0", "f1::2", "f1::3", "f1::4"]),
+        ("Y ~ i(data=f1, var2=None, ref=1) + X1", ["f1::0", "f1::2", "f1::3", "f1::4"]),
         ("Y ~ X1 + i(f1, X2, ref=1)", ["f1::0:X2", "f1::2:X2", "f1::3:X2", "f1::4:X2"]),
+        (
+            "Y ~ X1 + i(f1, **dict(var2=X2, ref=1))",
+            ["f1::0:X2", "f1::2:X2", "f1::3:X2", "f1::4:X2"],
+        ),
+        (
+            "Y ~ X1 + i(*(f1, X2), ref=1)",
+            ["f1::0:X2", "f1::2:X2", "f1::3:X2", "f1::4:X2"],
+        ),
+        (
+            "Y ~ i(f1, np.square(X2), **dict(ref=1))",
+            [f"f1::{level}:np.square(X2)" for level in [0, 2, 3, 4]],
+        ),
+        (
+            "Y ~ i(**dict(data=f1, var2=X2, ref=1))",
+            ["f1::0:X2", "f1::2:X2", "f1::3:X2", "f1::4:X2"],
+        ),
         ("Y ~ i(f1, ref=1):X1 + X1", ["f1::0:X1", "f1::2:X1", "f1::3:X1", "f1::4:X1"]),
     ],
-    ids=["no_i", "i", "i_continuous", "i_in_interaction"],
+    ids=[
+        "no_i",
+        "i",
+        "i_none",
+        "i_keyword_none",
+        "i_continuous",
+        "i_unpacked",
+        "i_starred",
+        "i_unpacked_options",
+        "i_all_unpacked",
+        "i_in_interaction",
+    ],
 )
 def test_i_term_columns(data: pd.DataFrame, fml: str, expected: list[str]) -> None:
     """i_term_columns returns exactly the columns produced by i() terms."""
@@ -247,6 +276,14 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
 
     assert i_state is not None
     assert any(k.startswith("__contrasts_") and k.endswith("__") for k in i_state)
+
+
+def test_i_reads_argument_expressions_from_formulaic(data: pd.DataFrame) -> None:
+    """i() finds its argument text in formulaic's evaluation locals."""
+    renamed = data.rename(columns={"f1": "my f"})
+    fit = pf.feols("Y ~ i(`my f`, np.square(X2), ref=1)", data=renamed)
+
+    assert fit._coefnames[1:3] == ["my f::0:np.square(X2)", "my f::2:np.square(X2)"]
 
 
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
