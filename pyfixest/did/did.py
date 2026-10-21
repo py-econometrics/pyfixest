@@ -5,33 +5,23 @@ import pandas as pd
 
 
 class DID(ABC):
-    """
-    A class used to represent the DID (Differences-in-Differences) model.
+    r"""
+    Internal base class for difference-in-differences estimator wrappers.
 
-    Attributes
-    ----------
-    data : pandas.DataFrame
-        The DataFrame containing all variables.
-    yname : str
-        The name of the dependent variable.
-    idname : str
-        The name of the identifier variable.
-    tname : str
-        Variable name for calendar period. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted.
-    gname : str
-        unit-specific time of initial treatment. Must be an integer in the format
-        YYYYMMDDHHMMSS, i.e. it must be possible to compare two dates via '>'.
-        Datetime variables are currently not accepted. Never treated units must
-        have a value of 0.
-    xfml : str
-        The formula for the covariates.
-    att : str
-        Whether to estimate the average treatment effect on the treated (ATT) or
-        the canonical event study design with all leads and lags. Default is True.
-    cluster : str
-        The name of the cluster variable.
+    Use [event_study()](/reference/did.estimation.event_study.qmd) to fit a
+    model through the supported public entry point. These wrappers retain
+    constructor inputs in private state; they are not the fitted results that
+    users receive. Their plotting and summary hooks are estimator plumbing,
+    not the supported fitted-result interface.
+
+    The `att` argument is retained but does not change the static TWFE/DID2S
+    specification. For a dynamic DID2S formula, use
+    [did2s()](/reference/did.estimation.did2s.qmd) directly.
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Public estimation arguments and returned results.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Static and dynamic workflows.
     """
 
     @abstractmethod

@@ -38,46 +38,59 @@ from pyfixest.utils.dev_utils import _find_stack_level
 
 
 class Quantreg(Feols):
-    """
-    Quantile regression model.
+    """Fitted conditional-quantile result returned by `pf.quantreg()`.
 
-    Returned by
-    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd). Fits the
-    conditional quantile of the outcome instead of the conditional mean, which
-    allows the effect of a covariate to differ across the outcome distribution.
-    Estimated via the interior point algorithm of Portnoy and Koenker (1997),
-    [Statistical Science](https://doi.org/10.1214/ss/1030037960).
+    Access as ``fit = pf.quantreg(formula, data, quantile=...)``. A list of
+    quantiles returns a `FixestMulti` container. Construct results with the
+    estimation function rather than this class.
+
+    Attributes
+    ----------
+    options : QuantregEstimationOptions
+        Access as ``fit.options``: fitted quantile, solver method, tolerance,
+        iteration limit, seed, and shared estimation settings.
+    solution : QuantregSolution
+        Solver coefficients, convergence flag, iteration index, and primal/dual
+        iterates. With ``multi_method="cfm2"``, only the central quantile has
+        a solver solution. Removed by ``lean=True``.
+    fitted_values : FittedValues
+        Fitted conditional quantiles in retained estimation-row order. The
+        ``link`` and ``response`` arrays are identical.
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data()
-
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
+    fit = pf.quantreg("Y ~ X1 + X2", pf.get_data(), quantile=0.5)
     fit.tidy()
     ```
 
-    Several quantiles can be estimated in one call.
-    [qplot()](/reference/report.qplot.qmd) plots the resulting coefficients.
-
     ```{python}
-    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.25, 0.5, 0.75])
+    fits = pf.quantreg("Y ~ X1 + X2", pf.get_data(), quantile=[0.25, 0.5, 0.75])
     pf.etable(fits)
     ```
 
-    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
-    for details.
+    Notes
+    -----
+    Use the shared coefficient, prediction, and reporting methods from the
+    [fitted-result overview](/reference-guide/fitted-results.qmd). Fixed
+    effects, weights, CRV3, HAC, multiway clustering, wild bootstrap,
+    randomization inference, decomposition, fixed-effect recovery, coefficient
+    updates, and SAVI are unsupported. Covariance choices are ``"nid"``,
+    ``"iid"``, ``"hetero"`` (including the HC aliases), and one-way CRV1.
+    There is no ``sandwich`` attribute; covariance ``meat`` is ``None``.
+    See [model support](/reference-guide/model-support.qmd) and
+    [model storage](/reference-guide/model-storage.qmd).
 
-    Attributes
-    ----------
-    solution : QuantregSolution
-        Output of the interior point solver: coefficients, convergence flag,
-        number of iterations, and final primal and dual iterates. With
-        `multi_method="cfm2"`, the solver runs only for the central quantile;
-        the other quantiles get a single Newton step and have no solution.
-        Dropped by `lean=True`.
+    The interior-point algorithm follows Portnoy and Koenker (1997),
+    [Statistical Science](https://doi.org/10.1214/ss/1030037960).
+
+    See Also
+    --------
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd),
+    [qplot()](/reference/report.qplot.qmd),
+    [quantile regression tutorial](/tutorials/quantile-regression.qmd).
     """
 
     options: QuantregEstimationOptions
@@ -173,7 +186,7 @@ class Quantreg(Feols):
     def drop_multicol_vars(self):
         """Remove collinear regressors using the same rank check as OLS.
 
-        Quantile models do not support fixed effects, so within_data holds
+        Quantile models do not support fixed effects, so `within_data` holds
         the original response and regressor arrays without demeaning.
         """
         self._set_within_data(self._drop_multicollinear_within_data(self.within_data))
@@ -432,6 +445,21 @@ class Quantreg(Feols):
 
     @property
     def objective_value(self):
-        "Compute the total loss of the quantile regression model."
+        """Return the current residual-based diagnostic scalar.
+
+        This experimental property currently uses an expression that differs from
+        conventional quantile check loss. Do not use it as a quantile-regression
+        objective or to compare optimization quality. It requires retained
+        residuals and is unavailable after ``lean=True``.
+
+        Returns
+        -------
+        float
+            The implementation's diagnostic scalar, which can be negative.
+
+        See Also
+        --------
+        [QuantregSolution](/reference/estimation.state.QuantregSolution.qmd).
+        """
         require_retained(self, "objective_value", "_u_hat")
         return np.sum(np.abs(self._u_hat) * (self.options.quantile - (self._u_hat < 0)))

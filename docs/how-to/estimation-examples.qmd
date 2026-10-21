@@ -1,0 +1,153 @@
+---
+title: "Estimation and post-estimation examples"
+description: "Short recipes from a fitted model to comparisons, predictions, custom transforms, and inference."
+categories: [estimation, post-estimation]
+format: html
+jupyter: python3
+---
+
+Use these examples to move from a fitted model to comparisons, predictions,
+custom formula transforms and inference. The [function reference](/reference/index.qmd)
+gives the exact parameters; the [fitted-result overview](/reference-guide/fitted-results.qmd)
+explains the objects returned by estimation.
+
+## Fit and compare specifications
+
+```{python}
+import numpy as np
+import pyfixest as pf
+
+# Synthetic data include regressors, instruments and fixed-effect identifiers.
+data = pf.get_data(seed=1234)
+fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data, vcov={"CRV1": "f1"})
+fit.tidy()
+```
+
+`fit.coef()`, `fit.se()`, `fit.tstat()` and `fit.pvalue()` extract individual
+columns. `fit.confint()` returns confidence intervals. Tables can compare
+several separately fitted results or a `FixestMulti` result:
+
+```{python}
+fits = pf.feols("Y ~ sw(X1, X2) | f1 + f2", data=data)
+pf.etable(fits)
+```
+
+Use `fits.to_list()` for all individual results or `fits.fetch_model(0)` for
+one. See [formula syntax](/tutorials/formula-syntax.qmd) for cumulative stepwise
+models, multiple outcomes, sample splitting and interactions.
+
+## Supply a custom formula transform
+
+Pass functions explicitly through `context`, or use `context=0` to capture
+names visible where you call the estimator. This continuous linear spline
+has a knot at zero and separate slopes on either side:
+
+```{python}
+def linear_spline(x):
+    return np.column_stack([np.minimum(x, 0), np.maximum(x, 0)])
+
+
+spline_fit = pf.feols(
+    "Y ~ linear_spline(X2) | f1 + f2",
+    data=data,
+    context={"linear_spline": linear_spline},
+)
+spline_fit.coef()
+```
+
+Compare it with explicitly created columns:
+
+```{python}
+spline_data = data.assign(X2_below=np.minimum(data["X2"], 0), X2_above=np.maximum(data["X2"], 0))
+explicit_fit = pf.feols("Y ~ X2_below + X2_above | f1 + f2", data=spline_data)
+pf.etable([spline_fit, explicit_fit])
+```
+
+## Fit an instrumental-variables model
+
+Put endogenous variables and instruments inside `[endogenous ~ instruments]`.
+An IV/2SLS call returns a `Feiv` result. Compute first-stage diagnostics and
+inspect the first-stage regression through public state:
+
+```{python}
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
+fit_iv.IV_Diag()
+fit_iv.first_stage.diagnostics
+```
+
+```{python}
+pf.etable([fit_iv.first_stage.model, fit_iv])
+```
+
+See the [IV result reference](/reference/estimation.models.feiv_.Feiv.qmd) for
+supported diagnostics. Prediction and fixed-effect recovery are unavailable
+for IV fits; the [support table](/reference-guide/model-support.qmd) lists
+other estimator restrictions.
+
+## Predict and recover fixed effects
+
+```{python}
+fit.predict()[:5]
+fit.predict(newdata=data.head())
+```
+
+In-sample predictions follow the retained estimation sample. New-data
+predictions follow the supplied rows, returning `NaN` for missing covariate or
+fixed-effect inputs and unseen categorical/fixed-effect levels. Poisson offset
+expressions that evaluate to missing values in `newdata` raise `ValueError`.
+For GLMs, request `type="response"` for outcome-scale predictions; the default
+is the link scale.
+
+Recover a tidy table of fixed-effect coefficients:
+
+```{python}
+fixed_effects = fit.fixef()
+fixed_effects.head()
+```
+
+`fit.fixef()` also creates `fit.fixef_estimates`; its `sumFE` array is the
+fixed-effect contribution for each estimation-sample row. Individual levels
+depend on the normalization described in the
+[fixed-effect reference](/reference/estimation.models.feols_.Feols.fixef.qmd).
+
+## Change inference after fitting
+
+`fit.vcov()` updates the fitted result in place and returns that same result.
+The next coefficient table uses the new covariance estimate:
+
+```{python}
+fit.vcov("hetero").tidy()
+```
+
+For simultaneous intervals on selected coefficients, use `inference_type="simult"`:
+
+```{python}
+fit.confint(keep=["X1", "X2"], exact_match=True, inference_type="simult", reps=999, seed=123)
+```
+
+See [wild bootstrap](/reference/estimation.models.feols_.Feols.wildboottest.qmd),
+[randomization inference](/reference/estimation.models.feols_.Feols.ritest.qmd),
+[multiple testing](/reference/estimation.post_estimation.multcomp.rwolf.qmd)
+and [sequential inference](/reference/estimation.models.feols_.Feols.evalue.qmd)
+for methods with additional sampling and model requirements. Choose the
+covariance at estimation time when using `lean=True`; the
+[storage guide](/reference-guide/model-storage.qmd) explains which operations
+need retained data.
+
+## Decompose a coefficient difference
+
+The Gelbach decomposition explains the change between a short-regression
+coefficient and the coefficient after adding covariates. This example computes
+point estimates; leave `only_coef=False` to include bootstrap inference.
+
+```{python}
+from pyfixest.utils.dgps import gelbach_data
+
+mediation_data = gelbach_data(nobs=500)
+mediation_fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=mediation_data)
+decomposition = mediation_fit.decompose(decomp_var="x1", only_coef=True)
+decomposition.tidy(panels="levels")
+```
+
+See [decompose()](/reference/estimation.models.feols_.Feols.decompose.qmd) for
+grouping covariates, clustering and the returned object's tables and plots.

@@ -73,8 +73,10 @@ def quantreg(
     seed: int | None = None,
 ):
     """
-    Fit a quantile regression model using the interior point algorithm from Portnoy and Koenker (1997).
-    Note that the interior point algorithm assumes independent observations.
+    Estimate conditional quantiles using the interior-point algorithm of Portnoy and Koenker (1997).
+
+    Call as `pf.quantreg(...)` after `import pyfixest as pf`. The default
+    quantile is the conditional median (`quantile=0.5`).
 
     Parameters
     ----------
@@ -85,13 +87,25 @@ def quantreg(
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
 
+    vcov : VcovTypeOptions | dict[str, str] | None, optional
+        Type of variance-covariance matrix for inference, `nid` by default.
+        Supported are `iid`, `hetero` (`HC1`, `HC2` and `HC3` are aliases for
+        `hetero`), `nid`, and one-way cluster robust errors via a dictionary,
+        e.g. `{"CRV1": "cluster_var"}`.
+        The `iid`, `hetero` and cluster robust estimators are based on a
+        kernel-based estimator as in Powell (1991). The `nid` method implements
+        the robust sandwich estimator proposed in Hendricks and Koenker (1992).
+        Cluster robust inference follows Parente and Santos Silva (2016).
+        CRV3, multiway clustering and HAC (`NW`, `DK`) inference are not
+        supported.
+
     quantile : float or list[float]
         The quantile to estimate, or a list of quantiles fitted jointly as a
         quantile regression process. Each must be between 0 and 1.
 
     method : QuantregMethodOptions, optional
-        The method to use for the quantile regression. Currently, only "fn" is supported.
-        In the future, will be either "fn" or "pfn".
+        The method to use for the quantile regression, either "fn" (the
+        default) or "pfn".
         "fn" implements the Frisch-Newton interior point algorithm
         described in Portnoy and Koenker (1997).
         The "pfn" method implements a variant of the
@@ -100,128 +114,132 @@ def quantreg(
         For details, you can either take a look at the Portnoy and Koenker paper, or "Fast Algorithms for the Quantile Regression Process"
         by Chernozhukov, Fernández-Val, and Melly (2019).
 
-    multi_method: QuantregMultiMethodOpitons, optional
+    multi_method : QuantregMultiOptions, optional
         Controls the algorithm for running the quantile regression process.
         Only relevant if more than one quantile regression is fit in one `quantreg` call.
-        Options are 'cmf1', which is the default and implements algorithm 2 from Chernozhukov et al,
-        'cmf2', which implements their algorithm 3, and 'none', which just loops over separate model
-        calls.
+        Options are 'cfm1' (the default), which implements Algorithm 2 of
+        Chernozhukov, Fernández-Val and Melly (2019), and 'cfm2', which
+        implements their Algorithm 3.
 
     tol : float, optional
         The tolerance for the algorithm. Defaults to 1e-06. As in R's quantreg package, the
-        algorithm stops when the relative change in the duality gap is less than tol.
+        algorithm stops when the duality gap falls below `tol`.
 
     maxiter : int, optional
-        The maximum number of iterations. If None, maxiter = the number of observations in the model
+        The maximum number of iterations. If `None`, maxiter = the number of observations in the model
         (as in R's quantreg package via nit(3) = n).
 
-    vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Currently supported are
-        "iid", "nid", and cluster robust errors, "iid" by default.
-        All of "iid", "hetero"and "cluster" robust error are based on a kernel-based estimator as in Powell (1991).
-        The "nid" method implements the robust sandwich estimator proposed in Hendricks and Koenker (1993).
-        Any of "HC1 / HC2 / HC3 also works and is equivalent to "hetero".
-        Cluster robust inference
-        following Parente and Santos Silva (2016) can be specified via a dictionary with the keys "type" and "cluster".
-        Only one-way clustering is supported.
-
-    ssc : dict[str, Union[str, bool]], optional
-        A dictionary specifying the small sample correction for inference.
-        If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set
+    ssc : Ssc | Mapping[str, Any] | None, optional
+        Small sample correction for inference, created with
+        [ssc()](/reference/utils.utils.ssc.qmd). If `None`, uses the default
+        settings of `pf.ssc()`. Note that by default, R's quantreg and Stata's
+        qreg2 do not use small sample corrections. To match their behavior, set
         `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
-        Tolerance for collinearity check, by default 1e-10.
+        Tolerance for collinearity check, by default 1e-09.
 
-    separation_check : list[str], optional
-        Methods to identify and drop separated observations. Not used in quantile regression.
+    separation_check : list[str] | None, optional
+        Not used in quantile regression. The value is validated as in
+        `feglm()` but has no effect.
 
     drop_intercept : bool, optional
-        Whether to drop the intercept from the model, by default False.
+        Whether to drop the intercept from the model, by default `False`.
 
     copy_data : bool, optional
-        Whether to copy the data before estimation, by default True.
-        If set to False, the data is not copied, which can save memory but
-        may lead to unintended changes in the input data outside of `quantreg`.
+        Whether to copy the data before estimation, by default `True`.
+        If set to `False`, the data is not copied, which can save memory but
+        may lead to unintended changes in the input data outside of the
+        estimation function. For example, the input data set is re-indexed
+        within the function.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Keep the estimation data and model matrix on the fitted result. Defaults
+        to `True`. If `False`, operations that require them raise
+        `MissingModelDataError`; ordinary predictions on supplied `newdata` can
+        still work for supported models. See the
+        [storage guide](/reference-guide/model-storage.qmd) for operation-specific
+        requirements.
 
-    lean: bool, optional
-        False by default. If True, then all large objects are removed from the
-        returned result: this will save memory but will block the possibility
-        to use many methods, which raise `MissingModelDataError` when required
-        attributes were removed. It is recommended to use the argument vcov
-        to obtain the appropriate standard-errors at estimation time,
-        since obtaining different SEs won't be possible afterwards.
+    lean : bool, optional
+        Remove large retained arrays as well as the estimation data. Defaults to
+        `False`. Coefficients and their fitted inference remain available, but
+        residuals, in-sample predictions and covariance updates require omitted
+        state. Set `vcov` at estimation time. Ordinary predictions on supplied
+        `newdata` remain possible for supported models without absorbed fixed
+        effects; see the [storage guide](/reference-guide/model-storage.qmd).
 
-    context : int or Mapping[str, Any], optional
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    context : int | Mapping[str, Any] | None, optional
+        Additional context variables to be used by formulaic during the
+        creation of the model matrix. This can include custom factorization
+        functions, transformations, or any other variables that need to be
+        available in the formula environment. An int is a frame offset
+        relative to the caller (`0` = the frame that calls `quantreg()`); a
+        mapping supplies the names directly.
 
-    split : str, optional
-        A character string, i.e. 'split = var'. If provided, the sample is split according to the
+    split : str | None, optional
+        A column name, e.g. `split="var"`. If provided, the sample is split according to the
         variable and one estimation is performed for each value of that variable. If you also want
         to include the estimation for the full sample, use the argument fsplit instead.
 
-    fsplit : str, optional
+    fsplit : str | None, optional
         This argument is the same as split but also includes the full sample as the first estimation.
 
-    seed: int, optional
-        A random seed for reproducibility. If None, no seed is set.
+    seed : int | None, optional
+        A random seed for reproducibility. If `None`, no seed is set.
         Only relevant for the "pfn" method.
         The "fn" method is deterministic and does not require a seed.
 
     Returns
     -------
-    object
-        An instance of the [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd) class or [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd) class for multiple models specified via `fml`.
+    Quantreg | `FixestMulti`
+        A [Quantreg](/reference/estimation.quantreg.quantreg_.Quantreg.qmd)
+        fitted result for a single specification and quantile. A list of
+        quantiles, multiple specifications, or sample splitting with
+        `split`/`fsplit` returns
+        [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd).
+        Use `fits.to_list()` to access individual fits.
 
     Notes
     -----
-    `Quantreg` inherits from
-    [Feols](/reference/estimation.models.feols_.Feols.qmd). A quantile
-    regression fit therefore supports the same post-estimation methods as an OLS
-    fit, among them `vcov()`, `tidy()`, `coef()`, `confint()` and `predict()`.
-    See the Post-Estimation Methods section of the function reference for the
-    full list.
+    Quantile fits support coefficient inference and point prediction, but
+    not absorbed fixed effects, weights, IV, fixed-effect recovery, wild
+    bootstrap, randomization inference, causal cluster variance,
+    decomposition, online updates or SAVI. CRV3, multiway clustering and
+    HAC covariance are unsupported. Predictions are fitted conditional
+    quantiles, not conditional means.
 
-    Fixed effects are not yet supported. Multiway clustering is not supported
-    for the cluster-robust variance estimator.
+    See [fitted results](/reference-guide/fitted-results.qmd) for common operations,
+    [model support](/reference-guide/model-support.qmd) for estimator restrictions,
+    and [model storage](/reference-guide/model-storage.qmd) for retained-data requirements.
 
     Examples
     --------
-    The following example regresses `Y` on `X1` and `X2` at the median (0.5 quantile):
+    Fit a conditional median with the default `"nid"` covariance estimator:
 
     ```{python}
     import pyfixest as pf
 
     data = pf.get_data()
-
-    fit = pf.quantreg("Y ~ X1 + X2", data, quantile=0.5)
-    fit.summary()
+    fit = pf.quantreg("Y ~ X1 + X2", data=data, quantile=0.5)
+    fit.tidy()
     ```
 
-    To fit multiple quantiles in one call:
+    Fit several quantiles and plot their coefficients:
 
     ```{python}
-    fits = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.5, 0.9])
-    pf.qplot(fits)
+    fits = pf.quantreg(
+        "Y ~ X1 + X2", data=data, quantile=[0.1, 0.5, 0.9]
+    )
+    figure, axes = pf.qplot(fits)
     ```
 
-    Arguments such as `split`, `fsplit`, `context`, `lean`, and `copy_data`
-    behave as in `feols()`, but quantile regression does not support fixed-effects
-    formula syntax. For details around inference, fast fitting, and visualization
-    of the full quantile regression process, see the
-    [quantile regression tutorial](/tutorials/quantile-regression.html).
+    See Also
+    --------
+    [pf.qplot()](/reference/report.qplot.qmd) plots quantile regression paths;
+    [pf.feols()](/reference/estimation.api.feols.feols.qmd) fits conditional means.
+    See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
+    for fast fitting, inference and visualization.
     """
     # WLS currently not supported for quantile regression
     weights = None

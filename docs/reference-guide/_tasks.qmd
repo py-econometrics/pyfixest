@@ -1,0 +1,19 @@
+Find an operation by task below, browse the grouped reference, or jump to
+[all functions and methods](/reference/index.qmd#all-functions-and-methods) if you know a name.
+Examples use `import pyfixest as pf`, `fit` for one fitted model, and `models`
+for a collection of fits.
+
+| I want to | Start here |
+| --- | --- |
+| Fit OLS, IV, Poisson, a GLM, or quantile regression | [Choose an estimator](/reference-guide/fitted-results.qmd#choose-an-estimator) |
+| Write fixed effects, instruments, interactions, or multiple-model formulas | [Formula syntax](/tutorials/formula-syntax.qmd); [`i()`](/reference/estimation.formula.transforms.factor_interaction.factor_interaction.qmd) |
+| Inspect coefficients, sample information, or fit statistics | [Working with fitted results](/reference-guide/fitted-results.qmd) |
+| Cluster standard errors or configure small-sample corrections | [`vcov()`](/reference/estimation.models.feols_.Feols.vcov.qmd); [`ssc()`](/reference/utils.utils.ssc.qmd) |
+| Check which models support a method | [Model support](/reference-guide/model-support.qmd) |
+| Predict outcomes or recover fixed effects | [`fit.predict()`](/reference/estimation.models.feols_.Feols.predict.qmd); [`fit.fixef()`](/reference/estimation.models.feols_.Feols.fixef.qmd) |
+| Compare specifications or save a plot | [Tables and plots](/reference-guide/fitted-results.qmd#tables-and-plots) |
+| Estimate or plot a difference-in-differences design | [DiD tutorial](/tutorials/difference-in-differences.qmd); [`panelview()`](/reference/did.visualize.panelview.qmd) |
+| Decompose a coefficient difference | [Decomposition guide](/how-to/regression_decomposition.qmd); [`fit.decompose()`](/reference/estimation.models.feols_.Feols.decompose.qmd) |
+| Monitor evidence sequentially | [Anytime-valid inference](/how-to/anytime-valid-inference.qmd) |
+| Choose a backend or retain less model data | [Demeaner guide](/how-to/demeaner-backends.qmd); [storage options](/reference-guide/model-storage.qmd) |
+| Find example data or understand an error | [Dataset chooser](/reference-guide/example-data.qmd); [errors and remedies](/reference-guide/errors.qmd) |

@@ -121,111 +121,89 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
 
 
 class Feols(ResultAccessorMixin):
-    """
-    Non user-facing class to estimate a linear regression via OLS.
+    """Fitted linear-regression result returned by `pf.feols()`.
 
-    Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd)
-    function. This class constructs within-scale arrays through a shared
-    ``DemeanCache``; the estimation runner supplies that cache for reuse across
-    multiple fits.
+    Access this object as ``fit = pf.feols(formula, data)``. Use the estimation
+    function to construct it. Fit several specifications in one call to obtain a
+    `FixestMulti` container instead. An IV formula returns the `Feiv` subclass.
 
-    Parameters
-    ----------
-    FixestFormula : Formula
-        Parsed fixest formula of the model to fit.
-    data : pd.DataFrame
-        Estimation data, already converted to pandas and reindexed.
-    options : EstimationOptions
-        Every estimation option the fit is built with, as built by the
-        estimation function.
-    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
-        Demeaning cache shared across the models of one cache block.
-    lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
-        Preconditioner cache shared across the models of one cache block.
-    sample_split : SampleSplit or None
-        The variable and value by which the estimation sample was split.
-        ``None`` if the model was fit on the entire input data set (minus
-        dropping of missings etc). For all model classes.
+    Use ``fit.tidy()`` for labeled coefficient results, ``fit.predict()`` for
+    predictions, and ``fit.fitstat`` for goodness-of-fit statistics. The
+    [fitted-result overview](/reference-guide/fitted-results.qmd) groups the
+    available operations by task.
 
     Attributes
     ----------
     model : ModelDescription
-        What the model estimates: its formula, the estimation function and its
-        inference distribution, the sample split, the dependent variable, the
-        absorbed fixed effects, the `i()` interaction coefficients, and the
-        formulaic model specification.
-    model_matrix : ModelMatrix
-        Model frames containing the response, regressors, and other model inputs.
-    within_data : WithinLinearData
-        Response and regressors after demeaning by fixed effects and removing
-        collinear regressor columns, without multiplication by square-root weights.
-    _X_is_empty : bool
-        Indicates whether the X array is empty.
+        Access as ``fit.model``: formula, estimator, dependent variable,
+        absorbed fixed effects, interaction names, and sample-split metadata.
     options : EstimationOptions
-        The estimation options the model was built with: the small-sample
-        correction, the sample, weight, and offset options, the collinearity
-        tolerance, the solver, the demeaner, the storage policy, and the
-        formulaic context.
-    _coefnames : list
-        Names of the coefficients (of the design matrix X).
-    collinearity : CollinearityCheck
-        Names and column mask of the regressors dropped by the rank check,
-        set in get_fit().
-    observation_weights : ObservationWeights
-        User-scale weights and their analytic or frequency interpretation.
-    sample_info : EstimationSample
-        Observation counts and the dropped rows, by position and by stage.
-    fixef_counts : FixedEffectCounts
-        Level counts of the fixed effects in the estimation sample and the
-        counts derived from them for inference.
-    sandwich : SandwichComponents
-        Weighted scores, Hessian, and bread of the sandwich covariance, set in
-        get_fit().
-    _k : int
-        Number of independent variables (or features).
-    capabilities : Capabilities
-        Inference and post-estimation features this model class supports.
-    _data : Any
-        Data used in the regression, to be enriched outside of the class.
-    _beta_hat : np.ndarray
-        Estimated regression coefficients.
-    fitted_values : FittedValues
-        In-sample predictions on the link and the response scale, set in
-        get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
-    variance_covariance : VarianceCovariance
-        Covariance estimate published by `vcov()`: the adjusted matrix, the
-        meat where a sandwich exists, small-sample factors, degrees of
-        freedom, and the requested estimator with its cluster variables.
-    wald : WaldTest
-        Wald test published by `wald_test()`: the statistic of the reference
-        distribution used, its p-value, both scalings of the quadratic form,
-        and the degrees of freedom.
-    ritest_statistics : RitestStatistics
-        Randomization-inference draws, the centered sample statistic, and the
-        p-value, set by `ritest(store_ritest_statistics=True)`.
+        Access as ``fit.options``: estimation settings and storage policy.
     coeftable : CoefficientTable
-        Coefficient table published by `get_inference()`: estimates, standard
-        errors, t-statistics, p-values, and confidence bounds.
-    _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
-    fixef_estimates : FixedEffectEstimates
-        Fixed-effect estimates published by `fixef()`: the coefficient records
-        grouped by fixed effect, the dummy-coded solution `alpha`, and the
-        per-observation fixed-effect contribution `sumFE`.
+        Coefficient arrays and confidence bounds, refreshed during estimation,
+        by ``vcov()``, and by ``tidy()``. Prefer ``tidy()`` for labeled output.
     fitstat : FitStatistics
-        Goodness-of-fit measures computed by `_fit_statistics()` and published
-        right after get_fit(); ``NaN`` where the estimator defines none.
-    _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
-    _model_name_plot: str
-        The name of the model used when plotting and summarizing models. Usually identical to
-        `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
-        and models with identical model names are passed. In this case,
-        the _model_name_plot attribute will be modified.
+        Goodness-of-fit measures; unavailable measures are ``NaN``.
+    sample_info : EstimationSample
+        Retained observation counts and dropped row positions/counts.
+    collinearity : CollinearityCheck
+        Retained coefficient names and columns removed by the rank check.
+    fixef_counts : FixedEffectCounts
+        Counts of absorbed fixed-effect levels used in inference.
+    variance_covariance : VarianceCovariance
+        Current coefficient covariance matrix, its specification, adjustments,
+        and degrees of freedom. Published during estimation and by ``vcov()``.
+    capabilities : Capabilities
+        Features supported by this estimator. Individual operations can also
+        require particular weights, fixed effects, or retained data.
+    fitted_values : FittedValues
+        In-sample fitted values, in retained-row order. Removed by ``lean=True``.
+    model_matrix : ModelMatrix
+        Formula-derived model frames. Removed by ``store_data=False`` or
+        ``lean=True``.
+    within_data : WithinLinearData
+        Demeaned response and regressors after collinear columns are removed;
+        not multiplied by square-root weights. Removed by ``lean=True``.
+    observation_weights : ObservationWeights
+        User-scale weights and their interpretation. Removed by ``lean=True``.
+    sandwich : SandwichComponents
+        Scores, Hessian, and bread for covariance construction. Not available
+        for a fixed-effects-only fit; removed by ``lean=True``.
+    wald : WaldTest
+        Latest Wald test. Non-IV OLS fits with coefficients run the joint test
+        automatically; ``wald_test()`` publishes a new value.
+    fixef_estimates : FixedEffectEstimates
+        Created by ``fixef()``: recovered fixed effects and their contribution
+        to each observation.
+    ritest_statistics : RitestStatistics
+        Created by ``ritest(store_ritest_statistics=True)`` for later plotting.
+    preconditioner : Preconditioner or None
+        Within-backend preconditioner used in demeaning, when available. It can
+        be reused on a later fit over the same design.
+
+    Examples
+    --------
+    ```{python}
+    import pyfixest as pf
+
+    fit = pf.feols("Y ~ X1 + X2 | f1", pf.get_data())
+    fit.tidy()
+    fit.fitstat.r2_within
+    ```
+
+    Notes
+    -----
+    Storage options remove attributes rather than replacing them with ``None``.
+    See [model storage](/reference-guide/model-storage.qmd) before discarding
+    state needed by a later operation. Subclasses share result methods but do
+    not support every operation; see
+    [model support](/reference-guide/model-support.qmd).
+
+    See Also
+    --------
+    [feols()](/reference/estimation.api.feols.feols.qmd),
+    [FixestMulti](/reference/estimation.FixestMulti_.FixestMulti.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     # Set in get_fit().
@@ -442,6 +420,11 @@ class Feols(ResultAccessorMixin):
         that replaced it when a later adaptive solve escalated. Pass it back via
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         return self._demean_cache.lookup_preconditioner.get(
             self.sample_info.dropped_row_index
@@ -571,30 +554,42 @@ class Feols(ResultAccessorMixin):
         vcov_kwargs: dict[str, str | int] | None = None,
         data: DataFrameType | None = None,
     ) -> Feols:
-        """
-        Compute covariance matrices for an estimated regression model.
+        """Update a fitted model's covariance estimate and inference in place.
+
+        The same fitted result is returned, without refitting the coefficients.
+        The update refreshes ``variance_covariance`` and ``coeftable``.
 
         Parameters
         ----------
-        vcov : Union[str, dict[str, str]]
+        vcov : str or dict[str, str]
             A string or dictionary specifying the type of variance-covariance matrix
             to use for inference.
-            If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
-            If a dictionary, it should have the format {"CRV1": "clustervar"} for
-            CRV1 inference or {"CRV3": "clustervar"}
-            for CRV3 inference. Note that CRV3 inference is currently not supported
-            for IV estimation.
-        vcov_kwargs : Optional[dict[str, any]]
-             Additional keyword arguments for the variance-covariance matrix.
-        data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+            If a string, it can be one of `iid`, `hetero`, `HC1`, `HC2`, `HC3`,
+            `NW` (Newey-West) or `DK` (Driscoll-Kraay); quantile regression
+            fits also accept `nid`.
+            If a dictionary, it should have the format `{"CRV1": "clustervar"}` for
+            CRV1 inference or `{"CRV3": "clustervar"}` for CRV3 inference. Use
+            "f1 + f2" for two-way clustering.
+            Not every model supports every estimator; unsupported choices raise
+            an error. `HC2` and `HC3` are rejected for models with fixed effects
+            and for IV models. `CRV3` is rejected for IV, non-Poisson GLM and
+            quantile regression fits. HAC is rejected for quantile regression
+            and with `weights_type="fweights"`. See `fit.capabilities`.
+        vcov_kwargs : dict[str, str | int], optional
+            Additional arguments for the HAC estimators: "lag" (the number of
+            lags; time-series Newey-West currently requires it), "`time_id`" (the
+            time variable, required for NW and DK) and "`panel_id`" (the panel
+            identifier, required for DK and for panel Newey-West).
+        data : DataFrameType, optional
+            The data used for estimation. If `None`, tries to fetch the data from the
+            model object. Defaults to `None`.
 
 
         Returns
         -------
         Feols
-            An instance of class [Feols](/reference/estimation.models.feols_.Feols.qmd) with updated inference.
+            The same fitted result (including its estimator-specific subclass),
+            with updated inference.
 
         Examples
         --------
@@ -615,6 +610,19 @@ class Feols(ResultAccessorMixin):
 
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
+
+        Notes
+        -----
+        Requires retained estimation data even when ``data`` is supplied.
+        Refit with ``store_data=True, lean=False`` if needed; see
+        [model storage](/reference-guide/model-storage.qmd) and
+        [model support](/reference-guide/model-support.qmd).
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd),
+        [model storage](/reference-guide/model-storage.qmd).
         """
         self._require_capability(
             capability="covariance_update",
@@ -901,10 +909,9 @@ class Feols(ResultAccessorMixin):
         q: float | np.ndarray | None = None,
         distribution: WaldDistributionOptions = "F",
     ) -> WaldTest:
-        """
-        Conduct Wald test.
+        """Conduct Wald test.
 
-        Compute a Wald test for a linear hypothesis of the form R * beta = q.
+        Compute a Wald test for a linear hypothesis of the form `R * beta = q`.
         where R is m x k matrix, beta is a k x 1 vector of coefficients,
         and q is m x 1 vector.
         By default, tests the joint null hypothesis that all coefficients are zero.
@@ -913,15 +920,15 @@ class Feols(ResultAccessorMixin):
         ----------
         R : array-like, optional
             The matrix R of the linear hypothesis.
-            If None, defaults to an identity matrix.
+            If `None`, defaults to an identity matrix.
         q : array-like, optional
             The vector q of the linear hypothesis.
-            If None, defaults to a vector of zeros.
+            If `None`, defaults to a vector of zeros.
         distribution : str, optional
-            The distribution to use for the p-value. Can be either "F" or "chi2".
-            Defaults to "F". The F distribution is only used for the joint null
+            The distribution to use for the p-value. Can be either `F` or `chi2`.
+            Defaults to `F`. The F distribution is only used for the joint null
             that all coefficients are zero; any other restriction falls back to
-            "chi2" with a warning.
+            `chi2` with a warning.
 
         Returns
         -------
@@ -948,6 +955,17 @@ class Feols(ResultAccessorMixin):
         print(f"Python statistic: {wald.stat}")
         print(f"Python p-value: {wald.pvalue}")
         ```
+
+        Notes
+        -----
+        Returns the test and stores it as ``fit.wald``. Restrictions must use the
+        same coefficient order as ``fit.coef().index``. This operation uses the
+        current coefficient covariance and does not refit the model.
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         _validate_literal_argument(distribution, WaldDistributionOptions)
 
@@ -998,82 +1016,93 @@ class Feols(ResultAccessorMixin):
         parallel: bool = False,
         return_bootstrapped_t_stats=False,
     ):
-        """
-        Run a wild cluster bootstrap based on an object of type "Feols".
+        """Run a wild (cluster) bootstrap test for one coefficient.
+
+        Requires the optional `wildboottest` package. Only unweighted OLS fits
+        support the wild bootstrap; IV, GLM, Poisson, quantile regression and
+        weighted fits raise a `NotImplementedError`.
 
         Parameters
         ----------
         reps : int
             The number of bootstrap iterations to run.
-        cluster : Union[str, None], optional
-            The variable used for clustering. Defaults to None. If None, then
-            uses the variable specified in the model's `clustervar` attribute.
-            If the model is not clustered, runs a heteroskedasticity-
-            robust bootstrap.
-        param : Union[str, None], optional
-            A string of length one, containing the test parameter of interest.
-            Defaults to None.
+        cluster : str or list[str], optional
+            The cluster variable. Defaults to `None`. If `None` and the model's
+            covariance is clustered, uses the model's cluster variable
+            (`fit.variance_covariance.spec.clustervar`). If the model is not
+            clustered either, runs a heteroskedasticity-robust bootstrap. Only
+            one cluster variable is supported.
+        param : str
+            The name of the coefficient to test (null: the coefficient is zero).
+            Although it defaults to `None`, it is required: with `None`, the
+            method returns a `NaN` t-statistic and a meaningless p-value.
         weights_type : str, optional
-            The type of bootstrap weights. Options are 'rademacher', 'mammen',
-            'webb', or 'normal'. Defaults to 'rademacher'.
+            The type of bootstrap weights: `rademacher`, `mammen`, `webb` or
+            'norm'. The heteroskedastic (unclustered) bootstrap supports only
+            `rademacher` and 'norm'. Defaults to `rademacher`.
         impose_null : bool, optional
             Indicates whether to impose the null hypothesis on the bootstrap DGP.
-            Defaults to True.
+            Defaults to `True`.
         bootstrap_type : str, optional
-            A string of length one to choose the bootstrap type.
-            Options are '11', '31', '13', or '33'. Defaults to '11'.
-        seed : Union[int, None], optional
-            An option to provide a random seed. Defaults to None.
+            The bootstrap type, following MacKinnon, Nielsen and Webb (2023):
+            `'11'` or `'31'`; the heteroskedastic bootstrap also accepts '21'.
+            Defaults to `'11'`.
+        seed : int, optional
+            An option to provide a random seed. Defaults to `None`.
         k_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
-            of observations and covariates. Defaults to True.
+            of observations and covariates. Defaults to `True`. Only used by the
+            cluster bootstrap.
         G_adj : bool, optional
             Indicates whether to apply a small sample adjustment for the number
-            of clusters. Defaults to True.
+            of clusters. Defaults to `True`. Only used by the cluster bootstrap.
         parallel : bool, optional
-            Indicates whether to run the bootstrap in parallel. Defaults to False.
-        seed : Union[str, None], optional
-            An option to provide a random seed. Defaults to None.
-        return_bootstrapped_t_stats : bool, optional:
-            If True, the method returns a tuple of the regular output and the
-            bootstrapped t-stats. Defaults to False.
+            Indicates whether to run the bootstrap in parallel. Defaults to `False`.
+        return_bootstrapped_t_stats : bool, optional
+            If `True`, the method returns a tuple of the regular output and the
+            bootstrapped t-stats. Defaults to `False`.
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame with the original, non-bootstrapped t-statistic and
-            bootstrapped p-value, along with the bootstrap type, inference type
-            (HC vs CRV), and whether the null hypothesis was imposed on the
-            bootstrap DGP. If `return_bootstrapped_t_stats` is True, the method
-            returns a tuple of the regular output and the bootstrapped t-stats.
+        pd.Series
+            A `Series` with the entries `param`, `t value` (the original,
+            non-bootstrapped t-statistic), `Pr(>|t|)` (the bootstrapped
+            p-value), `bootstrap_type`, `inference` (`"HC"` or
+            `"CRV(<cluster>)"`), `impose_null` and `ssc`. If
+            `return_bootstrapped_t_stats` is `True`, the method returns a tuple
+            of this `Series` and the bootstrapped t-statistics.
 
         Examples
         --------
         ```{python}
-        #| echo: true
-        #| results: asis
-        #| include: true
-
-        import re
         import pyfixest as pf
 
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2 | f1", data)
 
-        fit.wildboottest(
-            param = "X1",
-            reps=1000,
-            seed = 822
-        )
-
-        fit.wildboottest(
-            param = "X1",
-            reps=1000,
-            seed = 822,
-            bootstrap_type = "31"
-        )
-
+        fit.wildboottest(param="X1", reps=99, seed=822)
         ```
+
+        A wild cluster bootstrap with the WCR31 bootstrap type:
+
+        ```{python}
+        fit.wildboottest(
+            param="X1", reps=99, seed=822, cluster="group_id", bootstrap_type="31"
+        )
+        ```
+
+        Notes
+        -----
+        Only unweighted OLS fits are supported, with at most one cluster
+        variable. Install the optional package with ``pip install wildboottest``.
+        The procedure requires retained data for clustered or fixed-effect fits,
+        and retained within-scale arrays otherwise. The fitted result is not
+        replaced; see [model support](/reference-guide/model-support.qmd).
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         if param is not None and param not in self._coefnames:
             raise ValueError(
@@ -1212,18 +1241,17 @@ class Feols(ResultAccessorMixin):
         pk: float = 1,
         qk: float = 1,
     ) -> pd.DataFrame:
-        """
-        Compute the Causal Cluster Variance following Abadie et al (QJE 2023).
+        """Compute the Causal Cluster Variance following Abadie et al (QJE 2023).
 
         Parameters
         ----------
         treatment: str
             The name of the treatment variable.
         cluster : str
-            The name of the cluster variable. None by default.
-            If None, uses the cluster variable from the model fit.
+            The name of the cluster variable. `None` by default.
+            If `None`, uses the cluster variable from the model fit.
         seed : int, optional
-            An integer to set the random seed. Defaults to None.
+            An integer to set the random seed. Defaults to `None`.
         n_splits : int, optional
             The number of splits to use in the cross-fitting procedure. Defaults to 8.
         pk: float, optional
@@ -1237,8 +1265,8 @@ class Feols(ResultAccessorMixin):
         Returns
         -------
         pd.DataFrame
-            A DataFrame with inference based on the "Causal Cluster Variance"
-            and "regular" CRV1 inference.
+            A `DataFrame` with inference based on the "Causal Cluster Variance"
+            and `regular` CRV1 inference.
 
         Examples
         --------
@@ -1247,11 +1275,26 @@ class Feols(ResultAccessorMixin):
         import numpy as np
 
         data = pf.get_data()
-        data["D"] = np.random.choice([0, 1], size=data.shape[0])
+        rng = np.random.default_rng(123)
+        data["D"] = rng.choice([0, 1], size=data.shape[0])
 
         fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
         ```
+
+        Notes
+        -----
+        Supported for unweighted OLS without absorbed fixed effects. The
+        treatment must be a coefficient in the model and have only values 0 and 1.
+        Requires retained estimation data and within-scale arrays. For an
+        initially unclustered model, this method stores CRV1 inference on the fit.
+        The returned `DataFrame` has rows ``CCV`` and ``CRV1`` with coefficient,
+        standard-error, test, and confidence-bound columns.
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
@@ -1486,65 +1529,67 @@ class Feols(ResultAccessorMixin):
         only_coef: bool = False,
         digits=4,
     ) -> GelbachDecomposition:
-        """
-        Implement the Gelbach (2016) decomposition method for mediation analysis.
+        """Implement the Gelbach (2016) decomposition method for mediation analysis.
 
-        Compares a short model `depvar on param` with the long model
-        specified in the original feols() call.
+        Compares a short model of the dependent variable on `decomp_var` (and
+        `x1_vars`) with the long model specified in the original `feols()` call.
 
         For details, take a look at
         "When do covariates matter?" by Gelbach (2016, JoLe). You can find
         an ungated version of the paper on SSRN under the following link:
         https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737 .
 
-        When the initial regression is weighted, weights are interpreted as frequency
-        weights. Inference is not yet supported for weighted models.
+        Weighted fits are supported only with frequency weights
+        (`weights_type="fweights"`) and only with `only_coef=True`; analytic
+        weights raise a `NotImplementedError`.
 
         Parameters
         ----------
-        param : str
-            The name of the focal covariate whose effect is to be decomposed into direct
-            and indirect components with respect to the rest of the right-hand side.
-        x1_vars : list[str]
-            A list of covariates that are included in both the baseline and the full
-            regressions.
+        param : str, optional
+            Deprecated alias of `decomp_var`; passing it emits a
+            `FutureWarning`. Use `decomp_var` instead.
+        x1_vars : list[str] or str, optional
+            Covariates that are included in both the short and the long
+            regression, as a list or as a `"+"`-separated string.
         decomp_var : str
             The name of the focal covariate whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
+            Required unless the deprecated `param` is passed.
         type : str, optional
-            The type of decomposition method to use. Defaults to "gelbach", which
+            The type of decomposition method to use. Defaults to `gelbach`, which
             currently is the only supported option.
-        cluster: Optional
-            The name of the cluster variable for the bootstrap. If None, uses the
+        cluster : str, optional
+            The name of the cluster variable for the bootstrap. If `None`, uses the
             cluster variable from the model fit. Only one-way clustering is
             supported; a fit with multiway clustering raises ``ValueError`` unless
-            a single cluster variable is passed here. Defaults to None.
-        combine_covariates: Optional.
-            A dictionary that specifies which covariates to combine into groups.
-            See the example for how to use this argument. Defaults to None.
+            a single cluster variable is passed here. Defaults to `None`.
+        combine_covariates : dict[str, list[str] | re.Pattern], optional
+            A dictionary that maps group names to the covariates combined into
+            that group, given as a list of names or as a compiled regular
+            expression. See the examples. Defaults to `None`.
         reps : int, optional
             The number of bootstrap iterations to run. Defaults to 1000.
         seed : int, optional
-            An integer to set the random seed. Defaults to None.
+            An integer to set the random seed. Defaults to `None`.
         nthreads : int, optional
-            The number of threads to use for the bootstrap. Defaults to None.
-            If None, uses all available threads minus one.
+            The number of threads to use for the bootstrap. Defaults to `None`,
+            which uses all available cores.
         agg_first : bool, optional
-            If True, use the 'aggregate first' algorithm described in Gelbach (2016).
-            False by default, unless combine_covariates is provided.
-            Recommended to set to True if combine_covariates is argument is provided.
+            If `True`, use the 'aggregate first' algorithm described in Gelbach (2016).
+            `False` by default, unless `combine_covariates` is provided.
+            Recommended to set to `True` if `combine_covariates` is argument is provided.
             As a rule of thumb, the more covariates are combined, the larger the performance
             improvement.
         only_coef : bool, optional
-            Indicates whether to compute inference for the decomposition. Defaults to False.
-            If True, skips the inference step and only returns the decomposition results.
+            Indicates whether to compute inference for the decomposition. Defaults to `False`.
+            If `True`, skips the inference step and only returns the decomposition results.
         digits : int, optional
-            The number of digits to round the results to. Defaults to 4.
+            Currently unused: the results are not rounded. Defaults to 4.
 
         Returns
         -------
         GelbachDecomposition
-            A GelbachDecomposition object with the decomposition results.
+            A `GelbachDecomposition` object with the decomposition results.
             Use `tidy()` and `etable()` to access the estimation results.
 
         Examples
@@ -1554,25 +1599,62 @@ class Feols(ResultAccessorMixin):
         import pyfixest as pf
         from pyfixest.utils.dgps import gelbach_data
 
-        data = gelbach_data(nobs = 1000)
+        data = gelbach_data(nobs=200)
         fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
-        # simple decomposition
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1)
-        type(gb)
-
+        gb = fit.decompose(decomp_var="x1", reps=10, nthreads=1, seed=1)
         gb.tidy()
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, x1_vars = ["x21"])
-        # combine covariates
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]})
-        # supress inference
-        gb = fit.decompose(decomp_var = "x1", reps = 10, nthreads = 1, combine_covariates = {"g1": ["x21", "x22"], "g2": ["x23"]}, only_coef = True)
-        # print results
-        gb.etable()
-
-        # group covariates via regex
-        res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
         ```
+
+        Keep `x21` in both the short and the long model:
+
+        ```{python}
+        gb = fit.decompose(decomp_var="x1", x1_vars=["x21"], reps=10, nthreads=1, seed=1)
+        gb.tidy()
+        ```
+
+        Combine covariates into groups, and skip inference:
+
+        ```{python}
+        gb = fit.decompose(
+            decomp_var="x1",
+            combine_covariates={"g1": ["x21", "x22"], "g2": ["x23"]},
+            only_coef=True,
+        )
+        gb.etable(type="df")
+        ```
+
+        Groups can also be given as regular expressions:
+
+        ```{python}
+        gb = fit.decompose(
+            decomp_var="x1",
+            combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")},
+            reps=10,
+            nthreads=1,
+            seed=1,
+        )
+        gb.tidy()
+        ```
+
+        Notes
+        -----
+        Pass exactly one of ``decomp_var`` and the deprecated ``param``.
+        Requires supported OLS and retained within-scale arrays and weight state.
+        Original estimation data is also required for models with fixed effects
+        or clustering, including a cluster supplied here. Unclustered models
+        without fixed effects can use bootstrap inference with
+        ``store_data=False``. A partial ``combine_covariates`` mapping reports
+        only the named groups, so their sum need not equal the full coefficient
+        change. Returns a separate decomposition result without replacing the
+        regression fit. Small
+        bootstrap examples illustrate syntax; use more repetitions for analysis.
+
+        See Also
+        --------
+        [GelbachDecomposition](/reference/estimation.post_estimation.decomposition.GelbachDecomposition.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         self._require_capability(capability="decomposition", method="decompose")
 
@@ -1683,53 +1765,128 @@ class Feols(ResultAccessorMixin):
         return med
 
     def summary(self, **kwargs):
-        """Print a summary of this model. See [`pyfixest.summary`](report.summary.qmd) for the arguments."""
+        """Print a model summary.
+
+        Parameters
+        ----------
+        **kwargs
+            Arguments forwarded to ``pf.summary()`` with this result as ``models``.
+
+        Returns
+        -------
+        None
+            Prints the summary to standard output.
+
+        See Also
+        --------
+        [summary()](/reference/report.summary.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd).
+        """
         from pyfixest.report import summary
 
         return summary(models=self, **kwargs)
 
     def etable(self, **kwargs):
-        """Create a regression table. See [`pyfixest.etable`](report.etable.qmd) for the arguments."""
+        """Create a regression table.
+
+        Parameters
+        ----------
+        **kwargs
+            Arguments forwarded to ``pf.etable()`` with this result as ``models``.
+
+        Returns
+        -------
+        pandas.DataFrame, GT, Document, str, or None
+            Output selected by ``type``: table, formatted `DataFrame`, document,
+            or text. Markdown output is printed and returns `None`. See the
+            canonical ``pf.etable()`` page for formats and forwarded options.
+
+        See Also
+        --------
+        [etable()](/reference/report.etable.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd).
+        """
         from pyfixest.report import etable
 
         return etable(models=self, **kwargs)
 
     def coefplot(self, **kwargs):
-        """Plot the coefficients. See [`pyfixest.coefplot`](report.coefplot.qmd) for the arguments."""
+        """Plot model coefficients.
+
+        Parameters
+        ----------
+        **kwargs
+            Arguments forwarded to ``pf.coefplot()`` with this result as ``models``.
+
+        Returns
+        -------
+        matplotlib.figure.Figure or lets_plot.plot.core.PlotSpec
+            Plot object from the selected backend. See the canonical plotting
+            page for arguments and save examples.
+
+        See Also
+        --------
+        [coefplot()](/reference/report.coefplot.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd).
+        """
         from pyfixest.report import coefplot
 
         return coefplot(models=self, **kwargs)
 
     def iplot(self, **kwargs):
-        """Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](report.iplot.qmd) for the arguments."""
+        """Plot coefficients generated by `i()` terms.
+
+        Parameters
+        ----------
+        **kwargs
+            Arguments forwarded to ``pf.iplot()`` with this result as ``models``.
+
+        Returns
+        -------
+        matplotlib.figure.Figure or lets_plot.plot.core.PlotSpec
+            Plot object from the selected backend. See the canonical plotting
+            page for arguments and save examples.
+
+        See Also
+        --------
+        [iplot()](/reference/report.iplot.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd).
+        """
         from pyfixest.report import iplot
 
         return iplot(models=self, **kwargs)
 
     def fixef(self, atol: float = 1e-06, btol: float = 1e-06) -> pd.DataFrame:
-        """
-        Compute the coefficients of (swept out) fixed effects for a regression model.
+        """Compute the coefficients of (swept out) fixed effects for a regression model.
 
         Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates`
         value holding the coefficient records, the dummy-coded solution
         `alpha`, and the per-observation contribution `sumFE`.
 
+        For GLM and Poisson fits, the fixed effects are on the link scale.
+
         Parameters
         ----------
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        atol : float, default 1e-6
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : float, default 1e-6
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
 
         Returns
         -------
         pd.DataFrame
-            A tidy DataFrame with columns `variable`, `code`, `level`, and
+            A tidy `DataFrame` with columns `variable`, `code`, `level`, and
             `coefficient` containing the estimated fixed effects.
+
+        Raises
+        ------
+        ValueError
+            If the model has no fixed effects.
+        NotImplementedError
+            For model classes that cannot recover fixed effects, such as IV
+            fits.
 
         Examples
         --------
@@ -1740,6 +1897,21 @@ class Feols(ResultAccessorMixin):
         fixed_effects = fit.fixef()
         fixed_effects.head()
         ```
+
+        Notes
+        -----
+        Requires absorbed fixed effects and retained model frames. IV, quantile,
+        and DID2S fits do not support recovery. The solution uses treatment
+        normalization: the first observed level of the second and each later
+        fixed effect is omitted. Individual coefficients depend on normalization;
+        their per-observation sum does not. See
+        [FixedEffectEstimates](/reference/estimation.state.FixedEffectEstimates.qmd).
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd),
+        [model storage](/reference-guide/model-storage.qmd).
         """
         if not self.model.has_fixef:
             raise ValueError("The regression model does not have fixed effects.")
@@ -1799,49 +1971,49 @@ class Feols(ResultAccessorMixin):
         interval: PredictionErrorOptions | None = None,
         alpha: float = 0.05,
     ) -> np.ndarray | pd.DataFrame:
-        """
-        Predict values of the model on new data.
+        """Predict values of the model on new data.
 
-        Return a flat np.array with predicted values of the regression model.
-        If new fixed effect levels are introduced in `newdata`, predicted values
-        for such observations will be set to NaN.
+        Without ``newdata``, returns values only for rows retained during
+        estimation, in their retained order. With ``newdata``, output follows its
+        row order and length. Missing covariate or fixed-effect values and unseen
+        categorical or fixed-effect levels produce ``NaN``. For a GLM with an
+        offset, an offset expression that evaluates to missing values in
+        ``newdata`` raises ``ValueError`` instead.
 
         Parameters
         ----------
         newdata : DataFrameType, optional
-            A narwhals compatible DataFrame (polars, pandas, duckdb, etc).
-            If None (default), the data used for fitting the model is used.
+            A narwhals compatible `DataFrame` (polars, pandas, duckdb, etc).
+            If `None` (default), the data used for fitting the model is used.
+        atol : float, default 1e-6
+            Stopping tolerance for `scipy.sparse.linalg.lsqr()`.
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
+        btol : float, default 1e-6
+            Another stopping tolerance for `scipy.sparse.linalg.lsqr()`.
+            See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         type : str, optional
-            The type of prediction to be computed.
-            Can be either "response" (default) or "link". For linear models, both are
-            identical.
-        atol : Float, default 1e-6
-            Stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        btol : Float, default 1e-6
-            Another stopping tolerance for scipy.sparse.linalg.lsqr().
-            See https://docs.scipy.org/doc/
-                scipy/reference/generated/scipy.sparse.linalg.lsqr.html
-        type:
-            The type of prediction to be made. Can be either 'link' or 'response'.
-             Defaults to 'link'. 'link' and 'response' lead
-            to identical results for linear models.
-        se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
-        interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
-        alpha: float, optional
-            The alpha level for the confidence interval. Defaults to 0.05. Only
-            used if interval = "prediction" is not None.
+            The type of prediction: `link` (default) or `response`. Both are
+            identical for linear models. For GLM and Poisson fits, `link`
+            returns the linear predictor and `response` the predicted mean;
+            note that `fixest`'s `predict()` defaults to `response`.
+        se_fit : bool, optional
+            If `True`, return the standard errors of the predictions instead of
+            the predictions. Not available for models with fixed effects, for
+            weighted models, or for GLMs. Defaults to `False`.
+        interval : str, optional
+            The type of interval to compute: `prediction` or `None` (default).
+            Prediction intervals are not available for models with fixed
+            effects or for weighted models.
+        alpha : float, optional
+            The significance level of the prediction interval. Defaults to
+            0.05. Only used if `interval="prediction"`.
 
         Returns
         -------
         Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+            With ``interval="prediction"``, a `DataFrame` containing ``fit``,
+            ``se_fit``, ``ci_low``, and ``ci_high``. Otherwise a flat array
+            of predictions, or of standard errors when ``se_fit=True``.
 
         Examples
         --------
@@ -1861,6 +2033,23 @@ class Feols(ResultAccessorMixin):
         ```{python}
         fit.predict(newdata=data.head())
         ```
+
+        Notes
+        -----
+        IV and DID2S results reject prediction. Prediction standard errors and
+        intervals require an unweighted model without absorbed fixed effects;
+        GLM prediction intervals are currently ignored by the GLM override.
+        In-sample predictions require retained fitted arrays. Predictions on
+        supplied data can use the retained formula specification without the
+        original data; fixed-effect prediction additionally needs recovered
+        fixed effects or the data to recover them. See
+        [model storage](/reference-guide/model-storage.qmd).
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd),
+        [model storage](/reference-guide/model-storage.qmd).
         """
         self._require_capability(capability="prediction", method="predict")
 
@@ -1972,71 +2161,93 @@ class Feols(ResultAccessorMixin):
         store_ritest_statistics: bool = False,
         level: float = 0.95,
     ) -> pd.Series:
-        """
-        Conduct Randomization Inference (RI) test against a null hypothesis of
-        `resampvar = 0`.
+        """Conduct a randomization inference (RI) test for one coefficient.
+
+        Supported for unweighted `feols()` fits without instruments and for
+        `fepois()` fits; weighted fits raise a `NotImplementedError`.
 
         Parameters
         ----------
         resampvar : str
-            The name of the variable to be resampled.
+            The name of the variable to be resampled, optionally with a null
+            hypothesis: `"X1"` tests `X1 = 0`, `"X1=0.5"` tests `X1 = 0.5`
+            (two-sided), and `"X1>0"` or `"X1<0"` run one-sided tests.
         cluster : str, optional
             The name of the cluster variable in case of cluster random assignment.
             If provided, `resampvar` is held constant within each `cluster`.
-            Defaults to None.
+            Defaults to `None`.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
-        type: str
+        type : str, optional
             The type of the randomization inference test.
-            Can be "randomization-c" or "randomization-t". Note that
-            the "randomization-c" is much faster, while the
-            "randomization-t" is recommended by Wu & Ding (JASA, 2021).
+            Can be `randomization-c` (default) or `randomization-t`. Note that
+            the `randomization-c` is much faster, while the
+            `randomization-t` is recommended by Wu & Ding (JASA, 2021).
         rng : np.random.Generator, optional
-            A random number generator. Defaults to None.
-        choose_algorithm: str, optional
-            The algorithm to use for the computation. Defaults to "auto".
-            The alternatives are "fast" and "slow". The fast algorithm requires
-            the optional `numba` extra (install via `pip install pyfixest[numba]`);
-            without it, the fast path raises an `ImportError`. The slow path
-            does not require numba.
-        include_plot: bool, optional
-            Whether to include a plot of the distribution p-values. Defaults to False.
-        store_ritest_statistics: bool, optional
+            A random number generator. Defaults to `None`.
+        choose_algorithm : str, optional
+            The algorithm to use for the computation: `auto` (default), `fast`
+            or `slow`. `auto` picks the fast algorithm when the optional
+            `numba` extra is installed (`pip install pyfixest[numba]`) and the
+            slow one otherwise; `fast` without numba raises an `ImportError`.
+            `randomization-t` tests and non-OLS fits such as `fepois()` always
+            use the slow algorithm.
+        store_ritest_statistics : bool, optional
             Whether to store the simulated statistics of the RI procedure.
-            Defaults to False. If True, publishes the draws, the centered
+            Defaults to `False`. If `True`, publishes the draws, the centered
             sample statistic, and the p-value as a `RitestStatistics` value
-            in the model's `ritest_statistics` attribute.
-        level: float, optional
+            in the model's `ritest_statistics` attribute, which
+            `plot_ritest()` plots.
+        level : float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.
 
         Returns
         -------
-        A pd.Series with the regression coefficient of `resampvar` and the p-value
-        of the RI test. Additionally, reports the standard error and the confidence
-        interval of the p-value.
+        pd.Series
+            The null hypothesis (`H0`), the test type, the regression
+            coefficient of `resampvar`, the RI p-value, its standard error and
+            confidence interval, and the cluster variable if one was given.
 
         Examples
         --------
         ```{python}
-
-        #| echo: true
-        #| results: asis
-        #| include: true
-
+        import numpy as np
         import pyfixest as pf
+
         data = pf.get_data()
         fit = pf.feols("Y ~ X1 + X2", data=data)
 
-        # Conduct a randomization inference test for the coefficient of X1
-        fit.ritest("X1", reps=1000)
-
-        # use randomization-t instead of randomization-c
-        fit.ritest("X1", reps=1000, type="randomization-t")
-
-        # store statistics for plotting
-        fit.ritest("X1", reps=1000, store_ritest_statistics=True)
+        fit.ritest("X1", reps=99, rng=np.random.default_rng(1))
         ```
+
+        Use randomization-t instead of randomization-c:
+
+        ```{python}
+        fit.ritest("X1", reps=99, type="randomization-t", rng=np.random.default_rng(1))
+        ```
+
+        Store the statistics for `plot_ritest()`:
+
+        ```{python}
+        fit.ritest(
+            "X1", reps=99, store_ritest_statistics=True, rng=np.random.default_rng(1)
+        )
+        fit.ritest_statistics.pvalue
+        ```
+
+        Notes
+        -----
+        Requires retained estimation data. When ``cluster`` is supplied for an
+        initially unclustered fit, CRV1 inference is computed and stored on the
+        fitted result. Setting ``store_ritest_statistics=True`` publishes draws
+        for ``plot_ritest()``; it does not change the return type.
+
+        See Also
+        --------
+        [plot_ritest()](/reference/estimation.models.feols_.Feols.plot_ritest.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         from pyfixest.estimation.post_estimation.ritest import (
             _HAS_NUMBA,
@@ -2201,19 +2412,41 @@ class Feols(ResultAccessorMixin):
         return res
 
     def plot_ritest(self, plot_backend="lets_plot"):
-        """
-        Plot the distribution of the Randomization Inference Statistics.
+        """Plot the distribution of the Randomization Inference Statistics.
 
         Parameters
         ----------
         plot_backend : str, optional
-            The plotting backend to use. Defaults to "lets_plot". Alternatively,
-            "matplotlib" is available.
+            The plotting backend to use. Defaults to `lets_plot`. Alternatively,
+            `matplotlib` is available.
 
         Returns
         -------
-        A lets_plot or matplotlib figure with the distribution of the Randomization
+        A `lets_plot` or matplotlib figure with the distribution of the Randomization
         Inference Statistics.
+
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pyfixest as pf
+
+        fit = pf.feols("Y ~ X1 + X2", pf.get_data(N=100))
+        fit.ritest("X1", reps=99, rng=np.random.default_rng(1),
+                   store_ritest_statistics=True)
+        fit.plot_ritest(plot_backend="matplotlib")
+        ```
+
+        Notes
+        -----
+        Run ``ritest(store_ritest_statistics=True)`` first; otherwise this method
+        raises ``ValueError``. It uses the stored draws without refitting.
+
+        See Also
+        --------
+        [ritest()](/reference/estimation.models.feols_.Feols.ritest.qmd),
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
 
@@ -2237,8 +2470,7 @@ class Feols(ResultAccessorMixin):
     def update(
         self, X_new: np.ndarray, y_new: np.ndarray, inplace: bool = False
     ) -> np.ndarray:
-        """
-        Update coefficients for new observations using Sherman-Morrison formula.
+        """Update coefficients for new observations using Sherman-Morrison formula.
 
         Parameters
         ----------
@@ -2258,6 +2490,10 @@ class Feols(ResultAccessorMixin):
 
         Notes
         -----
+        Only unweighted OLS without absorbed fixed effects is supported.
+        Requires retained within-scale arrays. The coefficient order follows
+        ``fit.coef().index``; use that order for ``X_new``.
+
         Updates the coefficients in closed form via the Sherman-Morrison
         identity instead of refitting on the full sample. `X_new` has to include
         the intercept column. The returned coefficients do not mutate the fitted
@@ -2282,6 +2518,12 @@ class Feols(ResultAccessorMixin):
 
         fit.update(X_new, y_new)
         ```
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd),
+        [model storage](/reference-guide/model-storage.qmd).
         """
         if self.model.has_fixef:
             raise NotImplementedError(

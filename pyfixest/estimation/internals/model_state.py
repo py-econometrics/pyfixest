@@ -33,7 +33,9 @@ _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
 class EstimationOptions:
     """Estimation options a fitted model was built with.
 
-    Every model class publishes one value in its constructor as
+    Access as ``fit.options``. Retained with both ``store_data=False`` and ``lean=True``.
+
+    Every model class publishes one value as
     ``fit.options``, so the options a result was produced with can be read
     back from the result itself. GLM and quantile fits publish the
     estimator-specific extensions below. The value survives
@@ -53,10 +55,13 @@ class EstimationOptions:
     weights : str or None
         Name of the observation-weight column, or ``None`` for an unweighted
         fit.
-    weights_type : {"aweights", "fweights"} or None
-        Interpretation of `weights`: analytic or frequency weights.
+    weights_type : str or None
+        Configured weight interpretation: ``"aweights"`` (analytic) or
+        ``"fweights"`` (frequency). An unweighted fit can still retain
+        ``"aweights"`` here; check ``weights`` or ``has_weights`` to determine
+        whether observation weights were supplied.
     offset : str or None
-        Name of the offset column of a GLM fit, or ``None``.
+        Offset column name or expression for a GLM fit, or ``None``.
     collin_tol : float
         Tolerance of the rank check that drops collinear columns.
     solver : str
@@ -66,13 +71,13 @@ class EstimationOptions:
     store_data : bool
         Whether the estimation data and formula state were retained.
     copy_data : bool
-        Whether the estimation data was copied before the fit, the documented
-        exception to never mutating user input.
+        Whether input data was copied before fitting. ``False`` allows
+        estimation to modify the caller's data.
     lean : bool
         Whether the large fit products were dropped after estimation.
     context : Mapping[str, Any]
-        Variables made available to formulaic when materializing the model
-        matrix, as captured by `capture_context`.
+        Variables available to Formulaic when materializing the model
+        matrix, resolved from the public ``context`` argument.
 
     Examples
     --------
@@ -82,6 +87,11 @@ class EstimationOptions:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data(), weights="weights")
     fit.options.weights, fit.options.weights_type, fit.options.demeaner
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     ssc: Ssc
@@ -125,6 +135,8 @@ class EstimationOptions:
 class GlmEstimationOptions(EstimationOptions):
     """Estimation options of a GLM fit, including the IRLS options.
 
+    Access as ``fit.options``. Includes the shared fields described by ``EstimationOptions``.
+
     Published as ``fit.options`` by `feglm()` and `fepois()` fits. The family
     itself is not an option and is not carried here.
 
@@ -148,6 +160,11 @@ class GlmEstimationOptions(EstimationOptions):
     fit = pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois"))
     fit.options.maxiter, fit.options.tol
     ```
+
+    See Also
+    --------
+    [EstimationOptions](/reference/estimation.state.EstimationOptions.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     maxiter: int
@@ -160,14 +177,16 @@ class GlmEstimationOptions(EstimationOptions):
 class QuantregEstimationOptions(EstimationOptions):
     """Estimation options of a quantile-regression fit.
 
+    Access as ``fit.options``. Includes the shared fields described by ``EstimationOptions``.
+
     Published as ``fit.options`` by `quantreg()` fits.
 
     Parameters
     ----------
     quantile : float
         The quantile of the conditional distribution that was fitted.
-    method : {"fn", "pfn"}
-        Frisch-Newton interior point solver, with or without preprocessing.
+    method : str
+        ``"fn"`` for Frisch-Newton, or ``"pfn"`` for its preprocessed variant.
     quantile_tol : float
         Convergence tolerance of the interior point solver.
     quantile_maxiter : int or None
@@ -184,6 +203,11 @@ class QuantregEstimationOptions(EstimationOptions):
     fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.25)
     fit.options.quantile, fit.options.method
     ```
+
+    See Also
+    --------
+    [EstimationOptions](/reference/estimation.state.EstimationOptions.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     quantile: float
@@ -197,6 +221,8 @@ class QuantregEstimationOptions(EstimationOptions):
 class SampleSplit:
     """The sample one model of a `split` or `fsplit` estimation is fitted on.
 
+    Access as ``fit.model.sample_split``. The value is ``None`` on an unsplit result.
+
     Parameters
     ----------
     var : str
@@ -206,6 +232,10 @@ class SampleSplit:
         Value of `var` the model was fit on. ``None`` for the full-sample
         fit of an `fsplit` estimation, which keeps every row where `var`
         is not missing.
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     var: str
@@ -215,6 +245,8 @@ class SampleSplit:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelDescription:
     """What a fitted model estimates: its formula, estimator, and design names.
+
+    Access as ``fit.model``. Retained with both ``store_data=False`` and ``lean=True``.
 
     Every fitted model publishes one value as ``fit.model``. The formula-time
     fields are known when the model object is built. The matrix-time fields
@@ -267,6 +299,10 @@ class ModelDescription:
     fit = pf.feols("Y ~ X1 + i(f2) | f1", pf.get_data())
     fit.model.method, fit.model.depvar, fit.model.fixed_effects
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     parsed_formula: Formula
@@ -303,6 +339,8 @@ class ModelDescription:
 class ObservationWeights:
     """Canonical observation weights retained by a fitted model.
 
+    Access as ``fit.observation_weights``. Removed by ``lean=True``.
+
     ``values`` are always user-scale weights; ``None`` means no weights.
     Observation counts, including the frequency-weight sum, live in
     ``EstimationSample``.
@@ -311,8 +349,9 @@ class ObservationWeights:
     ----------
     values : NDArray[np.float64] or None
         Flat, user-scale observation weights. ``None`` for an unweighted fit.
-    weights_type : {"aweights", "fweights"} or None
-        Weight type. ``None`` for an unweighted fit.
+    weights_type : str or None
+        ``"aweights"`` (analytic), ``"fweights"`` (frequency), or ``None``
+        for an unweighted fit.
 
     Examples
     --------
@@ -322,6 +361,11 @@ class ObservationWeights:
     fit = pf.feols("Y ~ X1", pf.get_data(), weights="weights")
     fit.observation_weights.values[:3]
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     values: NDArray[np.float64] | None
@@ -359,6 +403,8 @@ class ObservationWeights:
 class DroppedRowCounts:
     """Counts of rows removed at each sample-filtering stage.
 
+    Access as ``fit.sample_info.dropped_by_stage``. Retained with both storage options.
+
     Counts are mutually exclusive and stages run in field order, matching
     ``DropStageOptions``. Sample splitting is not a filtering stage.
 
@@ -383,6 +429,10 @@ class DroppedRowCounts:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.sample_info.dropped_by_stage
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     missing: int = 0
@@ -407,6 +457,8 @@ class DroppedRowCounts:
 class EstimationSample:
     """Summary of the sample used to fit a model.
 
+    Access as ``fit.sample_info``. Retained with both storage options.
+
     ``dropped_row_index`` holds zero-based row positions within the estimator
     input after sample splitting.
 
@@ -430,6 +482,10 @@ class EstimationSample:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.sample_info.n_rows, fit.sample_info.n_obs, fit.sample_info.dropped_by_stage.missing
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     dropped_row_index: frozenset[int]
@@ -448,6 +504,8 @@ class EstimationSample:
 class FixedEffectCounts:
     """Level counts of the absorbed fixed effects in the estimation sample.
 
+    Access as ``fit.fixef_counts``. Retained with both storage options.
+
     Parameters
     ----------
     n_levels_by_fe : tuple[int, ...]
@@ -464,6 +522,10 @@ class FixedEffectCounts:
     counts = fit.fixef_counts
     counts.n_levels_by_fe, counts.n_fixef, counts.n_levels, counts.fixef_dof
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     n_levels_by_fe: tuple[int, ...] = ()
@@ -488,6 +550,8 @@ class FixedEffectCounts:
 class CollinearityCheck:
     """Outcome of one rank check that removes collinear design columns.
 
+    Access as ``fit.collinearity``. IV fits also expose ``fit.collinearity_instruments``.
+
     Parameters
     ----------
     dropped_coef_names : tuple[str, ...]
@@ -507,6 +571,10 @@ class CollinearityCheck:
     fit = pf.feols("Y ~ X1 + f1 | f1", data)
     fit.collinearity.dropped_coef_names, fit.collinearity.coefnames
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     dropped_coef_names: tuple[str, ...]
@@ -534,6 +602,8 @@ class CollinearityCheck:
 class WithinLinearData:
     """Response and regressors after demeaning by the fixed effects.
 
+    Access as ``fit.within_data``. Used by OLS and quantile results; removed by ``lean=True``.
+
     Without fixed effects, the arrays retain their original values. When
     observation weights are supplied, demeaning uses those weights.
     These arrays have not been multiplied by square-root observation weights.
@@ -541,10 +611,10 @@ class WithinLinearData:
     Parameters
     ----------
     response : NDArray[np.float64]
-        Demeaned response, shape (n_rows, 1).
+        Demeaned response, shape `(n_rows, 1)`.
     design : NDArray[np.float64]
         Demeaned regressors after removing collinear columns,
-        shape (n_rows, n_coefficients).
+        shape `(n_rows, n_coefficients)`.
 
     Examples
     --------
@@ -554,6 +624,11 @@ class WithinLinearData:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.within_data.design.shape
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     response: NDArray[np.float64]
@@ -563,6 +638,8 @@ class WithinLinearData:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WithinIvData(WithinLinearData):
     """Response, regressors, and instruments after demeaning by the fixed effects.
+
+    Access as ``fit.within_data``. Available on IV results; removed by ``lean=True``.
 
     ``design`` is the full structural regressor matrix, including the
     endogenous regressors. ``instruments`` is the full instrument matrix,
@@ -574,15 +651,15 @@ class WithinIvData(WithinLinearData):
     Parameters
     ----------
     response : NDArray[np.float64]
-        Demeaned response, shape (n_rows, 1).
+        Demeaned response, shape `(n_rows, 1)`.
     design : NDArray[np.float64]
         Demeaned regressors, including endogenous regressors, after removing
-        collinear columns, shape (n_rows, n_coefficients).
+        collinear columns, shape `(n_rows, n_coefficients)`.
     instruments : NDArray[np.float64]
         Demeaned instruments, including exogenous regressors, after removing
-        collinear columns, shape (n_rows, n_instruments).
+        collinear columns, shape `(n_rows, n_instruments)`.
     endogenous : NDArray[np.float64]
-        Demeaned endogenous regressor, shape (n_rows, 1).
+        Demeaned endogenous regressor, shape `(n_rows, 1)`.
 
     Examples
     --------
@@ -592,6 +669,11 @@ class WithinIvData(WithinLinearData):
     fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.within_data.instruments.shape
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     instruments: NDArray[np.float64]
@@ -601,6 +683,8 @@ class WithinIvData(WithinLinearData):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmWorkingState:
     """Final GLM IRLS state in within scale.
+
+    Access as ``fit.working_state``. Available on GLM and Poisson results; removed by ``lean=True``.
 
     ``working_weights`` are the IRLS weights of the last iteration,
     ``W_i = w_i / (g'(mu_i)^2 V(mu_i))``, where ``w_i`` is the user-supplied
@@ -613,20 +697,20 @@ class GlmWorkingState:
     Parameters
     ----------
     working_response_within : NDArray[np.float64]
-        Final within-scale working response, shape (n_rows,).
+        Final within-scale working response, shape `(n_rows,)`.
     design_within : NDArray[np.float64]
         Demeaned working regressors after removing collinear columns,
-        shape (n_rows, n_coefficients).
+        shape `(n_rows, n_coefficients)`.
     working_weights : NDArray[np.float64]
-        Final IRLS weights including observation weights, shape (n_rows,).
+        Final IRLS weights including observation weights, shape `(n_rows,)`.
     eta : NDArray[np.float64]
-        Linear predictor including any offset, shape (n_rows,).
+        Linear predictor including any offset, shape `(n_rows,)`.
     mu : NDArray[np.float64]
-        Response mean, shape (n_rows,).
+        Response mean, shape `(n_rows,)`.
     response_residuals : NDArray[np.float64]
-        Observed response minus its mean, shape (n_rows,).
+        Observed response minus its mean, shape `(n_rows,)`.
     working_residuals : NDArray[np.float64]
-        Within working response minus design times coefficients, shape (n_rows,).
+        Within working response minus design times coefficients, shape `(n_rows,)`.
 
     Examples
     --------
@@ -636,6 +720,11 @@ class GlmWorkingState:
     fit = pf.feglm("Y ~ X1", pf.get_data(), family="gaussian")
     fit.working_state.mu[:3]
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     working_response_within: NDArray[np.float64]
@@ -649,16 +738,19 @@ class GlmWorkingState:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FittedValues:
-    """In-sample predictions / fitted values on link and the response scale.
+    """In-sample fitted values on the link and response scales.
+
+    Access as ``fit.fitted_values``. Removed by ``lean=True``; arrays follow retained estimation-row order.
 
     Parameters
     ----------
     link : NDArray[np.float64]
         Prediction on the scale of the linear predictor, including the
-        fixed-effect contribution and any offset, shape (n_rows,).
+        fixed-effect contribution and any offset, shape `(n_rows,)`.
     response : NDArray[np.float64]
-        Prediction on the scale of the dependent variable, ``E(Y|X)``,
-        shape (n_rows,).
+        Prediction on the dependent-variable scale, shape `(n_rows,)`.
+        Represents a fitted conditional mean for linear/GLM estimators
+        and a conditional quantile for quantile regression.
 
     Examples
     --------
@@ -668,6 +760,11 @@ class FittedValues:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.fitted_values.response[:3]
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     link: NDArray[np.float64]
@@ -678,16 +775,18 @@ class FittedValues:
 class SandwichComponents:
     """Scores, Hessian, and bread of a fitted model's sandwich covariance.
 
+    Access as ``fit.sandwich``. Removed by ``lean=True``; absent on quantile and fixed-effects-only OLS fits.
+
 
     Parameters
     ----------
     scores : NDArray[np.float64]
-        Weighted scores ``W X * u``, shape (n_rows, n_coefficients).
+        Weighted scores ``W X * u``, shape `(n_rows, n_coefficients)`.
     hessian : NDArray[np.float64]
-        Weighted cross-product ``X' W X``, shape (n_coefficients,
-        n_coefficients).
+        Weighted cross-product ``X' W X``, shape `(n_coefficients,
+        n_coefficients)`.
     bread : NDArray[np.float64]
-        Inverse of ``hessian``, shape (n_coefficients, n_coefficients).
+        Inverse of ``hessian``, shape `(n_coefficients, n_coefficients)`.
 
     Examples
     --------
@@ -697,6 +796,11 @@ class SandwichComponents:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data())
     fit.sandwich.bread
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     scores: NDArray[np.float64]
@@ -707,6 +811,8 @@ class SandwichComponents:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VcovSpec:
     """The requested covariance estimator, parsed from the ``vcov`` argument.
+
+    Access as ``fit.variance_covariance.spec``. Retained with both storage options.
 
     Parameters
     ----------
@@ -732,6 +838,10 @@ class VcovSpec:
     fit = pf.feols("Y ~ X1 | f1", pf.get_data(), vcov={"CRV1": "f1+f2"})
     fit.variance_covariance.spec
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     vcov_type: VcovFamilyOptions
@@ -852,14 +962,16 @@ def _parse_vcov_kwargs(
 class VarianceCovariance:
     """Variance-covariance estimate of the coefficients and its building blocks.
 
+    Access as ``fit.variance_covariance``. Published by estimation and ``vcov()``; retained with both storage options.
+
     Parameters
     ----------
     vcov : NDArray[np.float64]
-        Small-sample-adjusted covariance matrix, shape (n_coefficients,
-        n_coefficients).
+        Small-sample-adjusted covariance matrix, shape `(n_coefficients,
+        n_coefficients)`.
     meat : NDArray[np.float64] or None
-        Adjusted meat of the sandwich, shape (n_coefficients,
-        n_coefficients), so that ``vcov == bread @ meat @ bread`` with the
+        Adjusted meat of the sandwich, shape `(n_coefficients,
+        n_coefficients)`, so that ``vcov == bread @ meat @ bread`` with the
         bread of ``fit.sandwich``. For multiway clustering the per-dimension
         meats enter with their signs and adjustment factors. ``None`` where
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
@@ -892,6 +1004,10 @@ class VarianceCovariance:
     bread = fit.sandwich.bread
     np.allclose(cov.vcov, bread @ cov.meat @ bread)
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     vcov: NDArray[np.float64]
@@ -907,6 +1023,8 @@ class VarianceCovariance:
 class FirstStageDiagnostics:
     """Instrument-strength diagnostics of a 2SLS first stage.
 
+    Access as ``fit.first_stage.diagnostics``. Available on IV results; effective F is computed on request.
+
     Parameters
     ----------
     f_stat : float
@@ -919,7 +1037,8 @@ class FirstStageDiagnostics:
     eff_f : float or None
         Effective F statistic of
         [Olea and Pflueger (2013)](https://doi.org/10.1080/00401706.2013.806694),
-        computed against a heteroskedasticity-robust first stage. ``None``
+        computed with heteroskedasticity-robust covariance for an iid fit
+        and with the current first-stage covariance otherwise. ``None``
         until `IV_Diag()` or `eff_F()` computes it.
 
     Examples
@@ -927,9 +1046,14 @@ class FirstStageDiagnostics:
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.first_stage.diagnostics
     ```
+
+    See Also
+    --------
+    [IV_Diag()](/reference/estimation.models.feiv_.Feiv.IV_Diag.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     f_stat: float
@@ -941,6 +1065,8 @@ class FirstStageDiagnostics:
 class FirstStage:
     """First-stage regression retained by a fitted 2SLS model.
 
+    Access as ``fit.first_stage``. Available on IV results. The nested model follows the fit's storage policy.
+
     The first stage regresses the endogenous regressor on the exogenous
     regressors and the excluded instruments, on the second stage's retained
     rows and with its fixed effects, weights, covariance estimator, and
@@ -949,11 +1075,11 @@ class FirstStage:
     Parameters
     ----------
     coefficients : NDArray[np.float64]
-        First-stage coefficients pi_hat, one per first-stage regressor.
+        First-stage coefficients `pi_hat`, one per first-stage regressor.
     fitted_values : NDArray[np.float64]
-        Within-scale fitted values ``design @ coefficients``, shape (n_rows,).
+        Within-scale fitted values ``design @ coefficients``, shape `(n_rows,)`.
     residuals : NDArray[np.float64]
-        First-stage residuals v_hat, shape (n_rows,).
+        First-stage residuals `v_hat`, shape `(n_rows,)`.
     model : Feols
         The fitted first-stage model. It follows the second stage's
         `store_data` and `lean` policy, so it drops the same state.
@@ -967,13 +1093,17 @@ class FirstStage:
     ```{python}
     import pyfixest as pf
 
-    fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+    fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.first_stage.instruments
     ```
 
     ```{python}
     fit.first_stage.model.tidy()
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     coefficients: NDArray[np.float64]
@@ -986,7 +1116,9 @@ class FirstStage:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class WaldTest:
-    """Wald test of a linear hypothesis R @ beta = q.
+    """Wald test of a linear hypothesis `R @ beta = q`.
+
+    Access as ``fit.wald``. Created by ``wald_test()``; automatic only for non-IV OLS fits with coefficients.
 
     Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
     of the reference distribution actually used, `df1` and `df2` are its
@@ -1006,15 +1138,15 @@ class WaldTest:
         Denominator degrees of freedom: the number of clusters minus one
         under clustered inference, otherwise the number of observations minus
         the number of estimated coefficients and fixed effects.
-    distribution : {"F", "chi2"}
-        Reference distribution. ``"F"`` is only used for the joint null that
+    distribution : str
+        Reference distribution: ``"F"`` or ``"chi2"``. ``"F"`` is only used for the joint null that
         every coefficient is zero; any other restriction falls back to
         ``"chi2"``.
     vcov_type : str
         Covariance estimator the test was computed with, as
-        `VarianceCovariance.vcov_type_detail`.
+        `VarianceCovariance.spec.vcov_type_detail`.
     wald_statistic : float
-        Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
+        Wald quadratic form `W = (R @ beta - q)' (R V R')^-1 (R @ beta - q)`.
     f_statistic : float
         F-scaled statistic W / `df1`, available under either distribution.
 
@@ -1027,14 +1159,19 @@ class WaldTest:
     fit.wald
     ```
 
-    `feols()` fits run the joint test on all coefficients automatically; other
-    estimators publish `fit.wald` once `wald_test()` is called.
+    Non-IV `feols()` fits with coefficients run the joint test automatically;
+    IV fits and other estimators publish `fit.wald` after `wald_test()`.
 
     ```{python}
     import numpy as np
 
     fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
     ```
+
+    See Also
+    --------
+    [wald_test()](/reference/estimation.models.feols_.Feols.wald_test.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     stat: float
@@ -1050,6 +1187,8 @@ class WaldTest:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Capabilities:
     """Inference and post-estimation features a fitted model supports.
+
+    Access as ``fit.capabilities``. Describes estimator support, separately from retained-state availability.
 
     Each model class declares one value, so a method can reject an
     unsupported estimator before it reads any estimation state rather than
@@ -1110,6 +1249,11 @@ class Capabilities:
     ```{python}
     pf.fepois("Y ~ X1 | f1", pf.get_data(model="Fepois")).capabilities
     ```
+
+    See Also
+    --------
+    [model support](/reference-guide/model-support.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     covariance_update: bool
@@ -1130,13 +1274,15 @@ class Capabilities:
 class RitestStatistics:
     """Randomization-inference draws, the sample statistic, and the p-value.
 
+    Access as ``fit.ritest_statistics``. Created by ``ritest(store_ritest_statistics=True)`` for later plotting.
+
     ``ritest(store_ritest_statistics=True)`` publishes one value as
     ``fit.ritest_statistics``.
 
     Parameters
     ----------
     statistics : NDArray[np.float64]
-        Resampled test statistics, shape (reps + 1,). The first entry is the
+        Resampled test statistics, shape `(reps + 1,)`. The first entry is the
         observed statistic under the original assignment; the remaining
         ``reps`` entries are the randomization draws.
     sample_stat : float
@@ -1153,6 +1299,11 @@ class RitestStatistics:
     fit.ritest("X1", reps=100, store_ritest_statistics=True)
     fit.ritest_statistics.pvalue
     ```
+
+    See Also
+    --------
+    [ritest()](/reference/estimation.models.feols_.Feols.ritest.qmd),
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     statistics: NDArray[np.float64]
@@ -1164,14 +1315,16 @@ class RitestStatistics:
 class CoefficientTable:
     """Coefficient estimates with their standard errors, statistics, and bounds.
 
-    ``get_inference()`` publishes one value as ``fit.coeftable`` from the
+    Access as ``fit.coeftable``. Refreshed during estimation, by ``vcov()``, and by ``tidy()``.
+
+    Fitting, ``vcov()`` and ``tidy()`` refresh ``fit.coeftable`` from the
     current ``fit.variance_covariance``; it is the table that fixest's
     ``coeftable()`` prints, plus the confidence bounds of ``confint()``.
 
     Parameters
     ----------
     estimate : NDArray[np.float64]
-        Coefficient estimates, shape (n_coefficients,).
+        Coefficient estimates, shape `(n_coefficients,)`.
     se : NDArray[np.float64]
         Standard errors, the square root of the covariance diagonal.
     tstat : NDArray[np.float64]
@@ -1180,7 +1333,7 @@ class CoefficientTable:
         Two-sided p-values from the model's reference distribution with
         ``variance_covariance.df_t`` degrees of freedom.
     conf_int : NDArray[np.float64]
-        Lower and upper confidence bounds, shape (2, n_coefficients), at
+        Lower and upper confidence bounds, shape `(2, n_coefficients)`, at
         level ``1 - alpha``.
     alpha : float
         Significance level of the bounds.
@@ -1194,6 +1347,10 @@ class CoefficientTable:
     table = fit.coeftable
     table.estimate, table.se, table.conf_int
     ```
+
+    See Also
+    --------
+    [fitted-result overview](/reference-guide/fitted-results.qmd).
     """
 
     estimate: NDArray[np.float64]

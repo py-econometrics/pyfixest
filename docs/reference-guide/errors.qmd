@@ -1,0 +1,42 @@
+---
+title: "Errors and remedies"
+description: "Understand formula, inference, convergence, and retained-data failures."
+sidebar: reference
+---
+
+PyFixest validates options at the API boundary and raises domain errors for
+failures during estimation. Read the message first: it identifies the invalid
+value, unsupported combination, or missing state. Domain exception classes are
+importable from `pyfixest.errors`.
+
+| Error or symptom | What to check | Next step |
+| --- | --- | --- |
+| `FormulaSyntaxError`, `UnsupportedMultipleEstimationSyntax` | Formula parts, stepwise operators, and the placement of an IV block | [Formula syntax](/tutorials/formula-syntax.qmd) |
+| `EndogVarsAsCovarsError`, `InstrumentsAsCovarsError`, `UnderDeterminedIVError` | Endogenous variables, excluded instruments, and identification | [Instrumental variables](/tutorials/instrumental-variables.qmd) |
+| `FixedEffectEvaluationError`, `FixedEffectInteractionError`, `CovariateInteractionError` | Column names, supported fixed-effect syntax, dtypes, and interactions | [Formula syntax](/tutorials/formula-syntax.qmd); the error's named term |
+| `DepvarIsNotNumericError` | Numeric dependent variable and family-appropriate support | The estimator's `data`, formula, and family parameters |
+| `MatrixNotFullRankError`, `EmptyDesignMatrixError` | Collinear or absorbed regressors, empty samples, and filters | Inspect `fit.collinearity` on a completed fit; simplify the formula or inspect the input sample |
+| `VcovTypeNotSupportedError`, `EmptyVcovError` | Covariance type and estimator/design support | [Model support](/reference-guide/model-support.qmd); [`fit.vcov()`](/reference/estimation.models.feols_.Feols.vcov.qmd) |
+| `NanInClusterVarError` | Missing cluster identifiers in the estimation sample | Clean the relevant cluster column before fitting |
+| `NonConvergenceError` | Solver convergence, separation, scaling, and iteration/tolerance settings | The estimator's computation parameters and [demeaner guide](/how-to/demeaner-backends.qmd) |
+| `MissingModelDataError` | State removed by `store_data=False` or `lean=True` | Refit with the storage options named by the error; see [model storage](/reference-guide/model-storage.qmd) |
+| `FeatureDeprecationError` | Removed or unsupported compatibility features | The named replacement and [changelog](/changelog.qmd) |
+| `NotImplementedError` from a method | An estimator, weighting, or design combination is unsupported | [Model support](/reference-guide/model-support.qmd) |
+| `ValueError` for an option | Allowed values, spelling, type, and required companion options | The called function's Parameters section |
+
+Catch an error only when the application can take a useful next step. For
+example, a stripped-data failure usually requires refitting, not retrying the
+same operation on the same object.
+
+```{python}
+import pyfixest as pf
+from pyfixest.errors import MissingModelDataError
+
+fit = pf.feols("Y ~ X1", pf.get_data(N=100), lean=True)
+try:
+    fit.resid()
+except MissingModelDataError as error:
+    print(error)
+```
+
+See also [working with fitted results](/reference-guide/fitted-results.qmd).

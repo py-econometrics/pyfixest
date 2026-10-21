@@ -1,0 +1,32 @@
+---
+title: "Choose an example dataset"
+description: "Synthetic data for fixed effects, instrumental variables, panels, and event studies."
+sidebar: reference
+---
+
+These generators return synthetic data, not observations from the named
+applications. Their reference pages describe arguments, column schemas, and
+simulation assumptions. Pass `seed=` explicitly for reproducibility.
+
+| Application | Generator | Useful variables and next step |
+| --- | --- | --- |
+| OLS, fixed effects, IV, and Poisson examples | [`pf.get_data()`](/reference/utils.utils.get_data.qmd) | `Y`, regressors `X1`/`X2`, fixed effects `f1`/`f2`, instruments, and weights; `model="Fepois"` supplies a Poisson outcome. Start with [OLS with fixed effects](/tutorials/ols-fixed-effects.qmd). |
+| IVF instrument and motherhood penalties | [`pf.get_ivf_data()`](/reference/utils.dgps.get_ivf_data.qmd) | `earnings`, endogenous `num_children`, and the `ivf_success` instrument; see the [IV tutorial](/tutorials/instrumental-variables.qmd). |
+| Bartik or shift-share applications | [`pf.get_bartik_data()`](/reference/utils.dgps.get_bartik_data.qmd) | A stylized synthetic instrument and local outcomes for the application; the generator does not construct an instrument from observed shares and shocks. |
+| Encouragement design and treatment take-up | [`pf.get_encouragement_data()`](/reference/utils.dgps.get_encouragement_data.qmd) | Assignment, received treatment, outcome, and controls; population identities need not hold exactly in a finite sample. |
+| Twin fixed effects and schooling | [`pf.get_twin_data()`](/reference/utils.dgps.get_twin_data.qmd) | Family identifiers, education, experience, and earnings; account for the controls used in the DGP when interpreting coefficients. |
+| Worker panel with fixed effects | [`pf.get_worker_panel()`](/reference/utils.dgps.get_worker_panel.qmd) | Worker/time structure and covariates for within-worker comparisons. |
+| Motherhood event study | [`pf.get_motherhood_event_study_data()`](/reference/utils.dgps.get_motherhood_event_study_data.qmd) | Unit, calendar period, treatment cohort, and event time. Never-treated units use `g=0` and `rel_year=-999`; see [difference in differences](/tutorials/difference-in-differences.qmd). |
+
+```{python}
+import pyfixest as pf
+
+data = pf.get_data(N=100, seed=1234)
+data.head()
+```
+
+Missing values and singleton groups can reduce a fitted model's sample.
+Inspect `fit.sample_info` when comparing the input rows with estimation output.
+
+See also [fitted results](/reference-guide/fitted-results.qmd) and the
+[full function reference](/reference/index.qmd).

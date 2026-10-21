@@ -13,7 +13,17 @@ from pyfixest.estimation.models.feglm_ import Feglm
 
 
 class Fegaussian(Feglm):
-    "Class for the estimation of a fixed-effects GLM with normal errors."
+    """Fitted gaussian GLM result returned by `pf.feglm()`.
+
+    Access as ``fit = pf.feglm(formula, data, family="gaussian")``.
+    Public operations and state are inherited from `Feglm`.
+
+    See Also
+    --------
+    [feglm()](/reference/estimation.api.feglm.feglm.qmd),
+    [Feglm](/reference/estimation.models.feglm_.Feglm.qmd),
+    [model support](/reference-guide/model-support.qmd).
+    """
 
     _family: ClassVar[GlmFamily] = GAUSSIAN
 

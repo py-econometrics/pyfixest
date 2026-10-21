@@ -80,17 +80,19 @@ def iplot(
     seed: int | None = None,
 ):
     r"""
-    Plot model coefficients for variables interacted via "i()" syntax, with
-    confidence intervals.
+    Plot coefficients created by `i()` with confidence intervals.
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : Feols, Fepois, Feiv, Feglm, Quantreg, FixestMulti, or list
+        A fitted model, a list of fitted models, or the `FixestMulti`
+        result of multiple estimation. GLM and quantile results use the
+        same interface through their fitted-model classes.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is used.
+        Width and height: pixels for lets-plot, inches for matplotlib.
+        `None` uses (500, 300) for lets-plot and `(10, 6)` for matplotlib.
     alpha : float
-        The significance level for the confidence intervals.
+        Significance level; the default 0.05 gives 95% confidence intervals.
     yintercept : int or None, optional
         The value at which to draw a horizontal line on the plot.
     xintercept : int or None, optional
@@ -100,86 +102,80 @@ def iplot(
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
-        Whether to flip the coordinates of the plot. Default is True.
-    keep: str or list of str, optional
-        The pattern for retaining coefficient names. You can pass a string (one
-        pattern) or a list (multiple patterns). Default is keeping all coefficients.
-        You should use regular expressions to select coefficients.
-            "age",            # would keep all coefficients containing age
-            r"^tr",           # would keep all coefficients starting with tr
-            r"\\d$",          # would keep all coefficients ending with number
-        Output will be in the order of the patterns.
+        Whether to flip the coordinates of the plot. Default is `True`.
+    keep : str or list of str, optional
+        Coefficient names or regular-expression patterns to retain, in the
+        requested pattern order. For example, "X1" matches names containing
+        X1 and "^X" matches names starting with X. `None` retains all coefficients.
+        Use `exact_match=True` to match complete coefficient names.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
     exact_match: bool, optional
-        Whether to use exact match for `keep` and `drop`. Default is False.
-        If True, the pattern will be matched exactly to the coefficient name
+        Whether to use exact match for `keep` and `drop`. Default is `False`.
+        If `True`, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
-        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
-        to install it or use "matplotlib" instead.
+        The plotting backend to use. Options are `lets_plot` (default if installed) and `matplotlib`.
+        If `lets_plot` is specified but not installed, an `ImportError` will be raised with instructions
+        to install it or use `matplotlib` instead.
     rename_models : dict, optional
-        A dictionary to rename the models. The keys are the original model names and the values the new names.
+        Map original model names (`fit.model.model_name`) to display names.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `_coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
+        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, as returned by `fit.coef().index`. The values in the dictionary are the new  names you want to assign to these variables.
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     cat_template: str, optional
-        Template to relabel categorical variables. None by default, which applies no relabeling.
-        Other options include combinations of "{variable}" and "{value}", e.g. "{variable}::{value}"
-        to mimic fixest encoding. But "{variable}--{value}" or "{variable}{value}" or just "{value}"
+        Template to relabel categorical variables. `None` by default, which applies no relabeling.
+        Other options include combinations of `{variable}` and `{value}`, e.g. `{variable}::{value}`
+        to mimic fixest encoding. But `{variable}--{value}` or `{variable}{value}` or just `{value}`
         are also possible.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
-        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
-        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
-        not available for objects of type `FixestMulti`, i.e. multiple estimation.
+        Whether to plot simultaneous confidence bands for the coefficients. If `True`, simultaneous confidence bands
+        are plotted. If `False`, "standard" confidence intervals are plotted. If `both`, both are plotted in
+        one figure. `None` uses pointwise confidence intervals. Joint bands
+        require exactly one fitted model, including a list or `FixestMulti`
+        containing one model.
     seed: int, optional
-        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+        The seed for the random number generator. Default is `None`. Only used when `joint` is `True` or `both`.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes for the matplotlib backend; ignored by lets-plot.
+        If `None`, creates a new figure and axes.
 
     Returns
     -------
-    object
-        A plot figure from the specified backend.
+    matplotlib.figure.Figure or lets_plot.plot.core.PlotSpec
+        A matplotlib Figure for `plot_backend="matplotlib"`, or a lets-plot
+        plot specification for `plot_backend="lets_plot"`. Save a matplotlib
+        result with `fig.savefig(...)`; use `lets_plot.ggsave(plot, ...)`
+        for a lets-plot result.
 
     Examples
     --------
     ```{python}
+    import io
     import pyfixest as pf
-    from pyfixest.report.utils import rename_categoricals
 
-    df = pf.get_data()
-    fit1 = pf.feols("Y ~ i(f1)", data = df)
-    fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
-    fit3 = pf.feols("Y ~ i(f1) + X2 | f2", data = df)
-
-    pf.iplot([fit1, fit2, fit3], labels = rename_categoricals(fit1._coefnames))
-    pf.iplot(
-        models = [fit1, fit2, fit3],
-        labels = rename_categoricals(fit1._coefnames)
-    )
-    pf.iplot(
-        models = [fit1, fit2, fit3],
-        rename_models = {
-            fit1._model_name_plot: "Model 1",
-            fit2._model_name_plot: "Model 2",
-            fit3._model_name_plot: "Model 3"
-        },
-    )
-    pf.iplot(
-        models = [fit1, fit2, fit3],
-        rename_models = {
-            "Y~i(f1)": "Model 1",
-            "Y~i(f1)+X2": "Model 2",
-            "Y~i(f1)+X2|f2": "Model 3"
-        },
-    )
-    pf.iplot([fit1], joint = "both")
+    data = pf.get_data(seed=1234)
+    fit = pf.feols("Y ~ i(f1) + X2 | f2", data)
+    fig = pf.iplot(fit, plot_backend="matplotlib", figsize=(8, 4))
+    fig.savefig(io.BytesIO(), format="png")
+    fig
     ```
+
+    Use `cat_template` to display category values without the variable name:
+
+    ```{python}
+    pf.iplot(fit, cat_template="{value}", plot_backend="matplotlib")
+    ```
+
+    See Also
+    --------
+    [coefplot()](/reference/report.coefplot.qmd) : Plot all or selected coefficients.
+    [qplot()](/reference/report.qplot.qmd) : Plot coefficient paths across quantiles.
+    [Fitted results](/reference-guide/fitted-results.qmd) : Inspect and compare model results.
     """
     models = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
@@ -273,92 +269,101 @@ def coefplot(
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : Feols, Fepois, Feiv, Feglm, Quantreg, FixestMulti, or list
+        A fitted model, a list of fitted models, or the `FixestMulti`
+        result of multiple estimation. GLM and quantile results use the
+        same interface through their fitted-model classes.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is used.
+        Width and height: pixels for lets-plot, inches for matplotlib.
+        `None` uses (500, 300) for lets-plot and `(10, 6)` for matplotlib.
     alpha : float
-        The significance level for the confidence intervals.
+        Significance level; the default 0.05 gives 95% confidence intervals.
     yintercept : float or None, optional
         The value at which to draw a horizontal line on the plot. Default is 0.
     xintercept : float or None, optional
-        The value at which to draw a vertical line on the plot. Default is None.
+        The value at which to draw a vertical line on the plot. Default is `None`.
     rotate_xticks : float, optional
         The angle in degrees to rotate the xticks labels. Default is 0 (no rotation).
     title : str, optional
         The title of the plot.
     coord_flip : bool, optional
-        Whether to flip the coordinates of the plot. Default is True.
-    keep: str or list of str, optional
-        The pattern for retaining coefficient names. You can pass a string (one
-        pattern) or a list (multiple patterns). Default is keeping all coefficients.
-        You should use regular expressions to select coefficients.
-            "age",            # would keep all coefficients containing age
-            r"^tr",           # would keep all coefficients starting with tr
-            r"\\d$",          # would keep all coefficients ending with number
-        Output will be in the order of the patterns.
+        Whether to flip the coordinates of the plot. Default is `True`.
+    keep : str or list of str, optional
+        Coefficient names or regular-expression patterns to retain, in the
+        requested pattern order. For example, "X1" matches names containing
+        X1 and "^X" matches names starting with X. `None` retains all coefficients.
+        Use `exact_match=True` to match complete coefficient names.
     drop: str or list of str, optional
         The pattern for excluding coefficient names. You can pass a string (one
         pattern) or a list (multiple patterns). Syntax is the same as for `keep`.
         Default is keeping all coefficients. Parameter `keep` and `drop` can be
         used simultaneously.
     exact_match: bool, optional
-        Whether to use exact match for `keep` and `drop`. Default is False.
-        If True, the pattern will be matched exactly to the coefficient name
+        Whether to use exact match for `keep` and `drop`. Default is `False`.
+        If `True`, the pattern will be matched exactly to the coefficient name
         instead of using regular expressions.
     plot_backend: str, optional
-        The plotting backend to use. Options are "lets_plot" (default if installed) and "matplotlib".
-        If "lets_plot" is specified but not installed, an ImportError will be raised with instructions
-        to install it or use "matplotlib" instead.
+        The plotting backend to use. Options are `lets_plot` (default if installed) and `matplotlib`.
+        If `lets_plot` is specified but not installed, an `ImportError` will be raised with instructions
+        to install it or use `matplotlib` instead.
     rename_models : dict, optional
-        A dictionary to rename the models. The keys are the original model names and the values the new names.
+        Map original model names (`fit.model.model_name`) to display names.
     labels: dict, optional
-        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, which correspond to the names stored in the `_coefnames` attribute of the model. The values in the dictionary are the new  names you want to assign to these variables.
+        A dictionary to relabel the variables. The keys in this dictionary are the original variable names, as returned by `fit.coef().index`. The values in the dictionary are the new  names you want to assign to these variables.
         Note that interaction terms will also be relabeled using the labels of the individual variables.
         The renaming is applied after the selection of the coefficients via `keep` and `drop`.
     joint: str or bool, optional
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
-        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
-        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
-        not available for objects of type `FixestMulti`, i.e. multiple estimation.
+        Whether to plot simultaneous confidence bands for the coefficients. If `True`, simultaneous confidence bands
+        are plotted. If `False`, "standard" confidence intervals are plotted. If `both`, both are plotted in
+        one figure. `None` uses pointwise confidence intervals. Joint bands
+        require exactly one fitted model, including a list or `FixestMulti`
+        containing one model.
     seed: int, optional
-        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+        The seed for the random number generator. Default is `None`. Only used when `joint` is `True` or `both`.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes for the matplotlib backend; ignored by lets-plot.
+        If `None`, creates a new figure and axes.
 
     Returns
     -------
-    object
-        A plot figure from the specified backend.
+    matplotlib.figure.Figure or lets_plot.plot.core.PlotSpec
+        A matplotlib Figure for `plot_backend="matplotlib"`, or a lets-plot
+        plot specification for `plot_backend="lets_plot"`. Save a matplotlib
+        result with `fig.savefig(...)`; use `lets_plot.ggsave(plot, ...)`
+        for a lets-plot result.
 
     Examples
     --------
     ```{python}
+    import io
     import pyfixest as pf
 
-    df = pf.get_data()
-    fit1 = pf.feols("Y ~ i(f1)", data = df)
-    fit2 = pf.feols("Y ~ i(f1) + X2", data = df)
-    fit3 = pf.feols("Y ~ i(f1) + X2 | f1", data = df)
-
-    pf.iplot([fit1, fit2, fit3])
-    pf.iplot(
-        models = [fit1, fit2, fit3],
-        rename_models = {
-            fit1._model_name_plot: "Model 1",
-            fit2._model_name_plot: "Model 2",
-            fit3._model_name_plot: "Model 3"
-        },
+    data = pf.get_data(seed=1234)
+    fit1 = pf.feols("Y ~ X1 + X2", data)
+    fit2 = pf.feols("Y ~ X1 + X2 | f1", data)
+    fig = pf.coefplot(
+        [fit1, fit2],
+        keep=["X1", "X2"],
+        rename_models={fit1.model.model_name: "OLS", fit2.model.model_name: "With FE"},
+        plot_backend="matplotlib",
+        figsize=(8, 4),
     )
-    pf.iplot(
-        models = [fit1, fit2, fit3],
-        rename_models = {
-            "Y~i(f1)": "Model 1",
-            "Y~i(f1)+X2": "Model 2",
-            "Y~i(f1)+X2|f1": "Model 3"
-        },
-    )
-    pf.iplot([fit1], joint = "both")
-
+    # A file path such as "coefficients.png" can replace this in-memory buffer.
+    fig.savefig(io.BytesIO(), format="png")
+    fig
     ```
+
+    For simultaneous confidence bands, plot one fitted model and set a seed:
+
+    ```{python}
+    pf.coefplot(fit1, joint="both", seed=1234, plot_backend="matplotlib")
+    ```
+
+    See Also
+    --------
+    [iplot()](/reference/report.iplot.qmd) : Plot only coefficients created by `i()`.
+    [qplot()](/reference/report.qplot.qmd) : Plot coefficient paths across quantiles.
+    [Fitted results](/reference-guide/fitted-results.qmd) : Inspect and compare model results.
     """
     models = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
@@ -420,26 +425,33 @@ def qplot(
     ncol: int | None = None,
     nrow: int | None = None,
 ):
-    """
-    Plot regression quantiles.
+    r"""
+    Plot coefficient estimates and 95% intervals across fitted quantiles.
 
     Parameters
     ----------
-    models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+    models : Quantreg, FixestMulti, or list
+        A fitted quantile regression (`quantreg()`), a list of them, or a
+        `FixestMulti` of quantile regressions. Other model types raise a
+        `TypeError`.
     figsize : tuple or None, optional
-        The size of the figure. If None, the default size is (10, 6).
+        The size of the figure. If `None`, the default size is `(10, 6)`.
     rename_models : dict, optional
-        A dictionary to rename the models. The keys are the original model names and the values the new names.
+        Mapping of original model names to display names. Currently does not
+        change the panels: the plot pools coefficients by coefficient name.
+        Pass quantiles from a single specification to obtain one curve per panel.
     ncol : int, optional
-        Number of columns of subplots. Default is None. Note: cannot be set jointly with nrow argument.
+        Number of columns of subplots. Default is `None`. Note: cannot be set jointly with nrow argument.
     nrow : int, optional
-        Number of rows of subplots. Default is None. Note: cannot be set jointly with ncol argument.
+        Number of rows of subplots. Default is `None`. Note: cannot be set jointly with ncol argument.
 
     Returns
     -------
-    object
-        A matplotplit figure.
+    tuple[matplotlib.figure.Figure, numpy.ndarray]
+        The figure and a flat array of matplotlib Axes, one panel per
+        coefficient (including the intercept when estimated). Any unused axes
+        in the requested grid are hidden. Each panel shows estimates and 95%
+        confidence intervals across fitted quantiles.
 
     Examples
     --------
@@ -452,11 +464,19 @@ def qplot(
     data = pf.get_data()
     fit = pf.quantreg("Y ~ X1 + X2", data, quantile=[0.1, 0.25, 0.5, 0.75, 0.9])
 
-    pf.qplot(fit)
+    fig, axes = pf.qplot(fit)
+    axes[0].set_title("Intercept across quantiles")
+    fig
     ```
 
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
+
+    See Also
+    --------
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd) : Fit regression quantiles.
+    [coefplot()](/reference/report.coefplot.qmd) : Compare coefficients across specifications.
+    [Quantile regression tutorial](/tutorials/quantile-regression.qmd) : Estimation and inference examples.
     """
     if rename_models is None:
         rename_models = {}
@@ -864,12 +884,12 @@ def _get_model_df(
     alpha : float
         The significance level for the confidence intervals.
     joint : Optional[Union[str, bool]]
-        Whether to plot simultaneous confidence bands for the coefficients. If True, simultaneous confidence bands
-        are plotted. If False, "standard" confidence intervals are plotted. If "both", both are plotted in
-        one figure. Default is None, which returns the standard confidence intervals. Note that this option is
+        Whether to plot simultaneous confidence bands for the coefficients. If `True`, simultaneous confidence bands
+        are plotted. If `False`, "standard" confidence intervals are plotted. If `both`, both are plotted in
+        one figure. Default is `None`, which returns the standard confidence intervals. Note that this option is
         not available for objects of type `FixestMulti`, i.e. multiple estimation.
     seed : int, optional
-        The seed for the random number generator. Default is None. Only required / used when `joint` is True.
+        The seed for the random number generator. Default is `None`. Only used when `joint` is `True` or `both`.
     rename_models : dict, optional
         A dictionary to rename the models. The keys are the original model names and the values the new names.
 

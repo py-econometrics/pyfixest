@@ -34,94 +34,59 @@ from pyfixest.utils.utils import get_ssc
 
 
 class Feiv(Feols):
-    """
-    Non user-facing class to estimate an IV model using a 2SLS estimator.
+    """Fitted instrumental-variables result returned by `pf.feols()`.
 
-    Inherits from the Feols class. Users should not directly instantiate this class,
-    but rather use the [feols()](/reference/estimation.api.feols.feols.qmd)
-    function. This class constructs the second-stage and instrument within
-    arrays through the shared ``DemeanCache`` supplied by the estimation runner.
-
-    Parameters
-    ----------
-    FixestFormula : Formula
-        Parsed fixest formula, including the first stage.
-    data : pd.DataFrame
-        Estimation data, already converted to pandas and reindexed.
-    options : EstimationOptions
-        Every estimation option the fit is built with, as built by the
-        estimation function.
-    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
-        Demeaning cache shared across the models of one cache block.
-    lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
-        Preconditioner cache shared across the models of one cache block.
-    sample_split : SampleSplit or None
-        The variable and value by which the estimation sample was split.
-        ``None`` if the model was fit on the entire input data set (minus
-        dropping of missings etc). For all model classes.
+    Access as ``fit = pf.feols("Y ~ X + [D ~ Z] | fe", data)``. The
+    instrument block selects two-stage least squares instead of OLS. Construct
+    this result through ``feols()``.
 
     Attributes
     ----------
-    _Z : np.ndarray
-        Processed instruments after handling multicollinearity.
-    _weights_type_feiv : str
-        Type of the weights variable defined in Feiv class.
-        Either "aweights" for analytic weights or "fweights"
-        for frequency weights.
-    _coefnames_z : list[str]
-        Names of coefficients for Z after handling multicollinearity.
-    collinearity_instruments : CollinearityCheck
-        Names and column mask of the instruments dropped by the rank check,
-        set in get_fit().
-    capabilities : Capabilities
-        Inference and post-estimation features this model class supports.
-    sandwich : SandwichComponents
-        Weighted scores of the first-stage projection X_hat, the 2SLS Hessian
-        X_hat' W X_hat, and its inverse, set in get_fit().
-    _beta_hat : np.ndarray
-        Estimated regression coefficients.
-    fitted_values : FittedValues
-        In-sample predictions on the link and the response scale, set in
-        get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
     first_stage : FirstStage
-        First-stage regression fitted after second-stage inference: the
-        coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
-        fitted first-stage model, the excluded instruments, and the
-        instrument-strength `diagnostics`.
-    _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
-
-
-    Raises
-    ------
-    ValueError
-        If Z is not a two-dimensional array.
+        Access as ``fit.first_stage``: first-stage coefficients, within-scale
+        predictions and residuals, fitted first-stage model, excluded-instrument
+        names, and instrument-strength diagnostics.
+    collinearity_instruments : CollinearityCheck
+        Instrument columns retained or dropped by the rank check.
+    within_data : WithinIvData
+        Demeaned structural regressors, instruments, endogenous regressor, and
+        response. Arrays are not multiplied by square-root observation weights.
+    sandwich : SandwichComponents
+        Weighted scores from the first-stage projection, 2SLS Hessian, and bread.
+    capabilities : Capabilities
+        Supported inference and post-estimation features.
 
     Examples
     --------
-    `Feiv` is returned by [feols()](/reference/estimation.api.feols.feols.qmd)
-    when the formula includes an instrument block, i.e.
-    `depvar ~ exog + [endog ~ instruments] | fe`.
-
     ```{python}
     import pyfixest as pf
 
     fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
     fit.tidy()
-    ```
-
-    The first stage F-statistic is stored on the fitted object.
-
-    ```{python}
     fit.first_stage.diagnostics.f_stat
     ```
 
-    See the
-    [instrumental variables tutorial](/tutorials/instrumental-variables.qmd) for
-    details.
+    Inspect the first-stage regression with ``fit.first_stage.model.tidy()``.
+    Run ``fit.IV_Diag()`` to publish additional instrument-strength diagnostics.
+
+    Notes
+    -----
+    Shared result attributes and coefficient/reporting operations are described
+    in the [fitted-result overview](/reference-guide/fitted-results.qmd).
+    IV fits do not support prediction, fixed-effect recovery, CRV3, wild
+    bootstrap, randomization inference, causal cluster variance, decomposition,
+    coefficient updates, or SAVI. See
+    [model support](/reference-guide/model-support.qmd).
+
+    The first-stage model follows the same storage policy as the second stage;
+    ``lean=True`` removes arrays needed to recompute effective F statistics.
+    See [model storage](/reference-guide/model-storage.qmd).
+
+    See Also
+    --------
+    [feols()](/reference/estimation.api.feols.feols.qmd),
+    [FirstStage](/reference/estimation.state.FirstStage.qmd),
+    [instrumental variables tutorial](/tutorials/instrumental-variables.qmd).
     """
 
     # Set in _fit_first_stage().
@@ -292,83 +257,53 @@ class Feiv(Feols):
         super()._clear_attributes()
 
     def IV_Diag(self, statistics: list[str] | None = None):
-        """Implement IV diagnostic tests.
+        """Compute weak-instrument diagnostics for the first stage.
 
-        Notes
-        -----
-        This method covers diagnostic tests related with IV regression.
-        We currently have IV weak tests only. More test will be updated
-        in future updates!
+        Recomputes the first-stage F-statistic and the effective F-statistic
+        (Olea and Pflueger, 2013) and stores them in
+        `fit.first_stage.diagnostics`. The method returns `None`.
 
         Parameters
         ----------
         statistics : list[str], optional
-            List of IV diagnostic statistics
+            Diagnostic statistics to compute, out of `"f_stat"` and
+            `"effective_f"`. Currently the argument is only validated: both
+            statistics are always computed, and other values raise a
+            `ValueError`.
 
-        Example
-        -------
-        The following is an example usage of this method:
+        Notes
+        -----
+        Effective F recomputation needs retained first-stage within-scale data
+        and weights. Refit with ``lean=False`` if those arrays were discarded.
 
-            ```{python}
+        The first-stage F-statistic is adjusted to the model's vcov
+        specification.
 
-            import numpy as np
-            import pandas as pd
-            from pyfixest.estimation import feols
+        Examples
+        --------
+        ```{python}
+        import numpy as np
+        import pandas as pd
+        import pyfixest as pf
 
-            # Set random seed for reproducibility
-            np.random.seed(1)
+        rng = np.random.default_rng(1)
+        n = 1000
 
-            # Number of observations
-            n = 1000
+        z = rng.binomial(1, 0.5, size=n)
+        d = 0.5 * z + rng.normal(size=n)
+        c1 = rng.normal(size=n)
+        y = 1.0 + 1.5 * d + 0.8 * c1 + rng.normal(size=n)
+        data = pd.DataFrame({"y": y, "d": d, "z": z, "c1": c1})
 
-            # Simulate the data
-            # Instrumental variable
-            z = np.random.binomial(1, 0.5, size=n)
-            z2 = np.random.binomial(1, 0.5, size=n)
+        fit_iv = pf.feols("y ~ c1 + [d ~ z]", data=data, vcov="hetero")
+        fit_iv.IV_Diag()
+        fit_iv.first_stage.diagnostics
+        ```
 
-            # Endogenous variable
-            d = 0.5 * z + 1.5 * z2 + np.random.normal(size=n)
-
-            # Control variables
-            c1 = np.random.normal(size=n)
-            c2 = np.random.normal(size=n)
-
-            # Outcome variable
-            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + np.random.normal(size=n)
-
-            # Cluster variable
-            cluster = np.random.randint(1, 50, size=n)
-            weights = np.random.uniform(1, 3, size=n)
-
-            # Create a DataFrame
-            data = pd.DataFrame({
-                'd': d,
-                'y': y,
-                'z': z,
-                'z2': z2,
-                'c1': c1,
-                'c2': c2,
-                'cluster': cluster,
-                'weights': weights
-            })
-
-            vcov_detail = "iid"
-
-            # Fit OLS model
-            fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
-
-            # Fit IV model
-            fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
-                     vcov=vcov_detail,
-                     weights="weights")
-            F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
-            fit_iv.IV_Diag()
-            F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
-
-            print("(Unadjusted) F stat :", F_stat_pf)
-            print("Effective F stat :", F_stat_eff_pf)
-
-            ```
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
@@ -409,8 +344,18 @@ class Feiv(Feols):
         Parameters
         ----------
         iv_diag_statistics : list, optional
-            List of IV weakness statistics
+            Names to recompute: ``"f_stat"`` and/or ``"effective_f"``.
+            The default ``None`` performs no update. Unknown names are ignored.
 
+        Returns
+        -------
+        None
+            Republishes the selected fields in ``fit.first_stage.diagnostics``.
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
         """
         iv_diag_statistics = iv_diag_statistics or []
 
@@ -431,7 +376,28 @@ class Feiv(Feols):
             self.eff_F()
 
     def eff_F(self) -> None:
-        """Compute Effective F stat (Olea and Pflueger 2013)."""
+        """Compute and store the effective first-stage F statistic.
+
+        Uses Olea and Pflueger (2013),
+        [Journal of Business & Economic Statistics](https://doi.org/10.1080/00401706.2013.806694).
+        For an iid fit, computes a heteroskedasticity-robust instrument covariance;
+        otherwise uses the first-stage model's current covariance.
+
+        Returns
+        -------
+        None
+            Updates ``fit.first_stage.diagnostics.eff_f``.
+
+        Notes
+        -----
+        Requires retained first-stage within-scale arrays, observation weights,
+        and sandwich components. Refit with ``lean=False`` when needed.
+
+        See Also
+        --------
+        [fitted-result overview](/reference-guide/fitted-results.qmd),
+        [model support](/reference-guide/model-support.qmd).
+        """
         published = self.first_stage
         model = published.model
         require_retained(model, "eff_F", "within_data", "observation_weights")

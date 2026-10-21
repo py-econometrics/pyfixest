@@ -16,8 +16,9 @@ from pyfixest.estimation.formula.formulaic_compat import (
 
 @dataclass(kw_only=True, frozen=True, slots=True)
 class FixedEffect:
-    """
-    Columnar coefficient data belonging to one fixed effect.
+    """Columnar coefficient data belonging to one fixed effect.
+
+    Access as ``fit.fixef_estimates.fixed_effects[formulaic_name]``. Created by ``fit.fixef()``; keys are Formulaic column names.
 
     Attributes
     ----------
@@ -38,6 +39,11 @@ class FixedEffect:
         Estimated coefficient indexed by fixed-effect code. Omitted reference
         levels have coefficient zero. Levels removed before estimation have
         coefficient `NaN`.
+
+    See Also
+    --------
+    [fixef()](/reference/estimation.models.feols_.Feols.fixef.qmd),
+    [FixedEffectEstimates](/reference/estimation.state.FixedEffectEstimates.qmd).
     """
 
     formulaic_column: str
@@ -58,6 +64,8 @@ class FixedEffect:
 class FixedEffectEstimates:
     """Fixed-effect estimates recovered by `fixef()`.
 
+    Access as ``fit.fixef_estimates``. Created by ``fit.fixef()``.
+
     `fixef()` solves the least-squares problem in `alpha` under treatment
     coding, which drops a reference level of the second and every further
     fixed effect. With more than one fixed effect the individual levels are
@@ -71,10 +79,10 @@ class FixedEffectEstimates:
         their tidy frame with the original factor labels.
     alpha : NDArray[np.float64]
         Solution of the least-squares problem in the dummy-coded fixed
-        effects, shape (n_fixed_effect_coefficients,), ordered as the columns
+        effects, shape `(n_fixed_effect_coefficients,)`, ordered as the columns
         of the fixed-effect dummy matrix.
     sumFE : NDArray[np.float64]
-        Fixed-effect contribution of each observation, shape (n_rows,), in
+        Fixed-effect contribution of each observation, shape `(n_rows,)`, in
         the units of the dependent variable. For GLMs it is on the scale of
         the linear predictor and excludes the offset. Named as in `fixest`.
 
@@ -91,6 +99,11 @@ class FixedEffectEstimates:
     estimates = fit.fixef_estimates
     estimates.sumFE[:5]
     ```
+
+    See Also
+    --------
+    [fixef()](/reference/estimation.models.feols_.Feols.fixef.qmd),
+    [FixedEffect](/reference/estimation.state.FixedEffect.qmd).
     """
 
     fixed_effects: Mapping[str, FixedEffect]

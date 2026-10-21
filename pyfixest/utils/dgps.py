@@ -3,11 +3,29 @@ import pandas as pd
 
 
 def get_ivf_data(N=2000, seed=1234):
-    """
+    r"""
     Synthetic data for the motherhood penalty IV application (IVF instrument).
 
-    DGP
-    ---
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations. Default is 2000.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        N rows: `earnings` is a continuous outcome, `num_children` is the
+        endogenous (continuous, nonnegative) regressor, and `ivf_success` is
+        a binary instrument. The structural effect is -0.15; finite-sample
+        estimates vary with the random draws.
+
+    Notes
+    -----
+    The data-generating process:
+
+    ```text
     Unobserved confounder: career_ambition ~ N(0, 1)
 
     First stage (num_children on ivf_success):
@@ -23,18 +41,7 @@ def get_ivf_data(N=2000, seed=1234):
              ≈ 0.6 * (-0.4) / 0.57 ≈ -0.42
         beta_OLS ≈ -0.15 + (-0.42) ≈ -0.57   (overstates the penalty)
         beta_IV  ≈ -0.15                        (recovers the true effect)
-
-    Parameters
-    ----------
-    N : int, optional
-        Number of observations. Default is 2000.
-    seed : int, optional
-        Random seed. Default is 1234.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Columns: ``earnings``, ``num_children``, ``ivf_success``.
+    ```
 
     Examples
     --------
@@ -43,7 +50,7 @@ def get_ivf_data(N=2000, seed=1234):
 
     data = pf.get_ivf_data()
 
-    # OLS is biased by unobserved career ambition, IV recovers the true -0.15
+    # Compare OLS with IV; the structural effect in the simulation is -0.15.
     pf.etable(
         [
             pf.feols("earnings ~ num_children", data),
@@ -51,6 +58,12 @@ def get_ivf_data(N=2000, seed=1234):
         ]
     )
     ```
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Fit an instrumental-variable model.
+    [Instrumental variables tutorial](/tutorials/instrumental-variables.qmd) : Formula syntax and diagnostics.
     """
     # --- DGP parameters ---
     true_effect = -0.15  # causal effect of num_children on earnings
@@ -85,11 +98,28 @@ def get_ivf_data(N=2000, seed=1234):
 
 
 def get_bartik_data(N=300, seed=1234):
-    """
+    r"""
     Synthetic data for a Bartik (shift-share) IV application on immigration and wages.
 
-    DGP
-    ---
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations (regions). Default is 300.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        N region-level rows: continuous outcome `wages`, endogenous
+        `immigration`, control `log_population`, and continuous instrument
+        `bartik_instrument`. The structural effect of immigration is -0.3.
+
+    Notes
+    -----
+    The data-generating process:
+
+    ```text
     Unobserved confounder: local_demand ~ N(0, 1)
 
     First stage (immigration on bartik_instrument, conditional on log_population):
@@ -104,18 +134,7 @@ def get_bartik_data(N=300, seed=1234):
         Partial bias from local_demand ≈ 0.5 * 0.9/Var(immigration|log_pop) > 0
         β_OLS on immigration ≈ -0.3 + positive_bias → attenuated (less negative or positive)
         β_IV  on immigration ≈ -0.3  (recovers the true effect)
-
-    Parameters
-    ----------
-    N : int, optional
-        Number of observations (regions). Default is 300.
-    seed : int, optional
-        Random seed. Default is 1234.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Columns: ``wages``, ``immigration``, ``log_population``, ``bartik_instrument``.
+    ```
 
     Examples
     --------
@@ -124,7 +143,7 @@ def get_bartik_data(N=300, seed=1234):
 
     data = pf.get_bartik_data()
 
-    # OLS is attenuated by unobserved local demand, IV recovers the true -0.3
+    # Compare OLS with IV; the structural effect in the simulation is -0.3.
     pf.etable(
         [
             pf.feols("wages ~ immigration + log_population", data),
@@ -132,6 +151,12 @@ def get_bartik_data(N=300, seed=1234):
         ]
     )
     ```
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Fit an instrumental-variable model.
+    [Instrumental variables tutorial](/tutorials/instrumental-variables.qmd) : Formula syntax and diagnostics.
     """
     # --- DGP parameters ---
     true_effect = -0.3  # causal effect of immigration on wages
@@ -167,11 +192,29 @@ def get_bartik_data(N=300, seed=1234):
 
 
 def get_encouragement_data(N=4000, seed=1234):
-    """
+    r"""
     Synthetic data for an A/B encouragement design IV application.
 
-    DGP
-    ---
+    Parameters
+    ----------
+    N : int, optional
+        Number of observations (users). Default is 4000.
+    seed : int, optional
+        Random seed. Default is 1234.
+
+    Returns
+    -------
+    pandas.DataFrame
+        N user-level rows: continuous outcome `revenue`, randomized binary
+        instrument `assigned_treatment`, binary take-up `adopted_feature`,
+        and categorical fixed-effect identifier `user_type`. The structural
+        effect of adoption is 2.0.
+
+    Notes
+    -----
+    The data-generating process:
+
+    ```text
     Instrument: assigned_treatment ~ Bernoulli(0.5)  [randomized, exogenous]
     Fixed effect: user_type ∈ {0, 1, 2}
 
@@ -184,21 +227,10 @@ def get_encouragement_data(N=4000, seed=1234):
         revenue = 5 + user_type_FE + TRUE_LATE*adopted_feature + N(0, 1)
         TRUE_LATE = 2.0  (effect on compliers)
 
-    Wald identity (exact by construction):
+    Wald identity in the population (finite-sample estimates vary):
         ITT  = E[Y|Z=1] - E[Y|Z=0] = 2.0 * 0.55 = 1.10
         LATE = ITT / first_stage   = 1.10 / 0.55 = 2.0  ✓
-
-    Parameters
-    ----------
-    N : int, optional
-        Number of observations (users). Default is 4000.
-    seed : int, optional
-        Random seed. Default is 1234.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Columns: ``revenue``, ``assigned_treatment``, ``adopted_feature``, ``user_type``.
+    ```
 
     Examples
     --------
@@ -213,6 +245,12 @@ def get_encouragement_data(N=4000, seed=1234):
     )
     fit.summary()
     ```
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Fit an instrumental-variable model.
+    [Instrumental variables tutorial](/tutorials/instrumental-variables.qmd) : Formula syntax and diagnostics.
     """
     # --- DGP parameters ---
     true_late = 2.0  # LATE: causal effect of adoption on revenue for compliers
@@ -299,20 +337,53 @@ def get_sharkfin(
 ):
     """Sharkfin panel data DGP with heterogeneous treatment effects and effect reversal.
 
-    Args:
-        num_units (int, optional): Defaults to 100.
-        num_periods (int, optional): Defaults to 30.
-        num_treated (int, optional): Defaults to 50.
-        treatment_start (int, optional): Defaults to 15.
-        hetfx (bool, optional): Heterogeneous effects. Defaults to True.
-        base_treatment_effect (_type_, optional): _description_. Defaults to 0.1*np.log(np.arange(1, 30 - 15 + 1)).
-        return_dataframe (bool, optional): _description_. Defaults to True.
-        sigma_unit (int, optional): _description_. Defaults to 1.
-        sigma_time (float, optional): _description_. Defaults to 0.5.
-        sigma_epsilon (float, optional): _description_. Defaults to 0.5.
-        het_AR (bool, optional): _description_. Defaults to False.
-        seed (int or None, optional): Seed for `numpy.random.default_rng`.
-            `None` draws fresh entropy from the operating system. Defaults to 42.
+    Parameters
+    ----------
+    num_units : int, optional
+        Number of units. Defaults to 1000.
+    num_periods : int, optional
+        Number of periods. Defaults to 30.
+    num_treated : int, optional
+        Number of randomly chosen treated units. Defaults to 200.
+    treatment_start : int, optional
+        First treated period; all treated units are treated from then on.
+        Defaults to 15.
+    hetfx : bool, optional
+        Whether to scale each unit's treatment effect by a uniform draw from
+        [0.5, 1.5] (heterogeneous effects). Defaults to `False`.
+    base_treatment_effect : numpy.ndarray, optional
+        Treatment effect for each treated period, of length
+        `num_periods - treatment_start`. Defaults to `None`, which uses
+        `0.2 * log(2 * k)` for the first 8 treated periods k = 1, ..., 8 and 0
+        afterwards (effect reversal). The default has length 15, so it only fits
+        `num_periods - treatment_start == 15`.
+    sigma_unit : float, optional
+        Standard deviation of the unit intercepts. Defaults to 2.
+    sigma_time : float, optional
+        Standard deviation of the innovations of the AR(1) time intercepts.
+        Defaults to 1.
+    sigma_epsilon : float, optional
+        Standard deviation of the innovations of the AR(1) idiosyncratic errors.
+        Defaults to 0.5.
+    ar_coef : float, optional
+        AR(1) coefficient of the idiosyncratic errors. Defaults to 0.8.
+    het_AR : bool, optional
+        Whether to draw a unit-specific AR(1) coefficient from a normal
+        distribution with mean `ar_coef` and standard deviation 0.1. Defaults
+        to `False`.
+    return_dataframe : bool, optional
+        Whether to return a long `DataFrame` with the columns `unit`, `year`,
+        `treat`, `Y` and `ever_treated`. If `False`, returns a dict with the
+        potential outcome matrices `Y1` and `Y0`, the treatment matrix `W`,
+        and the `unit_intercepts` and `time_intercepts`. Defaults to `True`.
+    seed : int or None, optional
+        Seed for `numpy.random.default_rng`. `None` draws fresh entropy from
+        the operating system. Defaults to 42.
+
+    Returns
+    -------
+    pandas.DataFrame or dict
+        The simulated panel, see `return_dataframe`.
     """
     rng = np.random.default_rng(seed)
     if base_treatment_effect is None:
@@ -540,7 +611,8 @@ def get_panel_dgp_stagg(
 
 
 def get_twin_data(N_pairs=500, seed=42):
-    """Generate twin study data for returns to education.
+    r"""
+    Generate twin study data for returns to education.
 
     Inspired by Ashenfelter & Krueger (1994). Each twin pair shares an
     unobserved ``ability`` component. The true return to education is 0.08
@@ -549,16 +621,18 @@ def get_twin_data(N_pairs=500, seed=42):
 
     Parameters
     ----------
-    N_pairs : int
-        Number of twin pairs.  Total observations = 2 * N_pairs.
-    seed : int
-        Random seed for reproducibility.
+    N_pairs : int, optional
+        Number of twin pairs. Total observations = 2 * `N_pairs`. Default is 500.
+    seed : int, optional
+        Random seed for reproducibility. Default is 42.
 
     Returns
     -------
     pd.DataFrame
-        Columns: twin_pair_id, twin_id, ability, educ, age, experience,
-        log_wage.
+        2 * `N_pairs` rows: `twin_pair_id` groups each pair; `twin_id` is 1 or 2.
+        `log_wage` is the outcome, `educ` the regressor of interest, and
+        `experience` and `age` are controls. `ability` is shared within pairs
+        and included for inspecting the simulation; its omission confounds OLS.
 
     Examples
     --------
@@ -567,14 +641,22 @@ def get_twin_data(N_pairs=500, seed=42):
 
     data = pf.get_twin_data()
 
-    # OLS is biased upward by ability, twin-pair FE recover the true 0.08
+    # OLS is biased upward by ability; twin-pair FE remove the shared ability,
+    # and controlling for experience brings the estimate close to the true 0.08
     pf.etable(
         [
             pf.feols("log_wage ~ educ", data),
             pf.feols("log_wage ~ educ | twin_pair_id", data),
+            pf.feols("log_wage ~ educ + experience | twin_pair_id", data),
         ]
     )
     ```
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Estimate fixed-effect models.
+    [OLS and fixed effects tutorial](/tutorials/ols-fixed-effects.qmd) : Estimation and interpretation.
     """
     rng = np.random.default_rng(seed)
 
@@ -616,7 +698,8 @@ def get_twin_data(N_pairs=500, seed=42):
 
 
 def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
-    """Generate a worker-firm panel dataset with two-way fixed effects.
+    r"""
+    Generate a worker-firm panel dataset with two-way fixed effects.
 
     Inspired by Abowd, Kramarz & Margolis (1999).  Workers switch firms
     with ~20 % probability each year.  Both worker and firm fixed effects
@@ -624,27 +707,30 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
 
     Parameters
     ----------
-    N_workers : int
-        Number of workers.
-    N_firms : int
-        Number of firms.
-    N_years : int
-        Number of years in the panel (starting from 2000).
-    seed : int
-        Random seed for reproducibility.
+    N_workers : int, optional
+        Number of workers. Default is 500.
+    N_firms : int, optional
+        Number of firms. Default is 50.
+    N_years : int, optional
+        Number of years in the panel (starting from 2000). Default is 11.
+    seed : int, optional
+        Random seed for reproducibility. Default is 42.
 
     Returns
     -------
     pd.DataFrame
-        Columns: worker_id, firm_id, year, female, experience, tenure,
-        log_wage, worker_fe, firm_fe.
+        `N_workers` * `N_years` rows: identifiers `worker_id`, `firm_id`, `year`;
+        continuous outcome `log_wage`; worker characteristic `female`;
+        regressors `experience`, `tenure`; and true simulated worker and firm
+        effects `worker_fe`, `firm_fe` (which can be compared with recovered
+        effects after accounting for normalization).
 
     Examples
     --------
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_worker_panel()
+    data = pf.get_worker_panel(N_workers=80, N_firms=15, N_years=6, seed=42)
 
     # two-way worker and firm fixed effects, as in AKM
     fit = pf.feols("log_wage ~ experience + tenure | worker_id + firm_id", data)
@@ -653,6 +739,12 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
 
     The true effects are returned as the columns `worker_fe` and `firm_fe`, so
     estimates can be compared against them.
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Estimate fixed-effect models.
+    [OLS and fixed effects tutorial](/tutorials/ols-fixed-effects.qmd) : Estimation and interpretation.
     """
     rng = np.random.default_rng(seed)
 
@@ -714,7 +806,8 @@ def get_motherhood_event_study_data(
     end_year=2020,
     seed=2026,
 ):
-    """Generate a fertility-timing panel for motherhood-penalty event studies.
+    r"""
+    Generate a fertility-timing panel for motherhood-penalty event studies.
 
     The DGP encodes:
     - stronger post-birth penalties in DACH than in Scandinavia
@@ -723,19 +816,25 @@ def get_motherhood_event_study_data(
 
     Parameters
     ----------
-    n_per_country : int
-        Number of units per country.
-    start_year : int
-        First year in the panel.
-    end_year : int
-        Last year in the panel (inclusive).
-    seed : int
-        Random seed for reproducibility.
+    n_per_country : int, optional
+        Number of units per country. Default is 280.
+    start_year : int, optional
+        First year in the panel. Default is 2000.
+    end_year : int, optional
+        Last year in the panel (inclusive). Default is 2020.
+    seed : int, optional
+        Random seed for reproducibility. Default is 2026.
 
     Returns
     -------
     pd.DataFrame
-        Columns: unit, country, region, year, g, treat, rel_year, log_earnings
+        6 * `n_per_country` * (`end_year` - `start_year` + 1) rows. `unit` identifies
+        individuals, `country` the six countries, and `region` DACH or
+        Scandinavia. `year` is calendar time; `g` is first-birth year (0 if
+        never treated); binary `treat` indicates post-birth observations;
+        `rel_year = year - g` for treated units and -999 otherwise.
+        `log_earnings` is the outcome. Fertility timing is endogenous, so this
+        illustration does not guarantee parallel trends or causal identification.
 
     Examples
     --------
@@ -746,7 +845,14 @@ def get_motherhood_event_study_data(
     data.head()
     ```
 
-    `g` is the year of first birth and `rel_year` the event time.
+    `g` is the year of first birth and `rel_year` the event time. Never-treated
+    units (no birth in the panel) are coded `g = 0` and `rel_year = -999`.
+
+    See Also
+    --------
+    [Example data](/reference-guide/example-data.qmd) : Dataset chooser and key variables.
+    [panelview()](/reference/did.visualize.panelview.qmd) : Inspect the panel and treatment timing.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Estimate and compare event-study models.
     """
     rng = np.random.default_rng(seed)
 

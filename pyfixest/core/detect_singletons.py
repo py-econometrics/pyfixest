@@ -5,7 +5,7 @@ from pyfixest.core._core_impl import _detect_singletons_rs
 
 
 def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
-    """
+    r"""
     Detect singleton fixed effects in a dataset.
 
     This function iterates over the columns of a 2D numpy array representing
@@ -16,14 +16,14 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     Parameters
     ----------
     ids : np.ndarray
-        A 2D numpy array representing fixed effects, with a shape of (n_samples,
-        n_features).
+        A 2D numpy array representing fixed effects, with a shape of `(n_samples,
+        n_features)`.
         Elements should be non-negative integers representing fixed effect identifiers.
 
     Returns
     -------
     numpy.ndarray
-        A boolean array of shape (n_samples,), indicating which observations have
+        A boolean array of shape `(n_samples,)`, indicating which observations have
         a singleton fixed effect.
 
     Notes
@@ -33,8 +33,9 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     accounts for the possibility that removing an observation in one column can
     lead to the emergence of new singletons in subsequent columns.
 
-    For performance reasons, the input array should be in column-major order.
-    Operating on a row-major array can lead to significant performance losses.
+    The wrapper converts integer inputs to a column-major uint32 working
+    array internally. Callers do not need to choose an input memory layout.
+    Use nonnegative identifiers representable as uint32.
 
     Examples
     --------
@@ -55,6 +56,11 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     ```{python}
     detect_singletons(np.array([[0, 0], [0, 1], [1, 2], [2, 2]]))
     ```
+
+    See Also
+    --------
+    [feols()](/reference/estimation.api.feols.feols.qmd) : Control singleton removal with `fixef_rm`.
+    [ModelMatrix](/reference/estimation.state.ModelMatrix.qmd) : Inspect retained rows and dropped-row counts.
     """
     if not np.issubdtype(ids.dtype, np.integer):
         raise TypeError("Fixed effects must be integers")

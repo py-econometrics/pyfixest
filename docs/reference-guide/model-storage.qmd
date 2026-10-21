@@ -1,0 +1,82 @@
+---
+title: "Retaining data in fitted models"
+description: "Choose store_data and lean without losing the operations your analysis needs."
+sidebar: reference
+---
+
+`store_data=False` discards the retained estimation data and model frames.
+`lean=True` additionally discards large estimation arrays, residuals, fitted
+values, and solver state. The result keeps coefficients, inference, model and
+sample descriptions, and its estimation options. Removed attributes are
+absent rather than set to `None`.
+
+The table below demonstrates ordinary unweighted OLS **without absorbed fixed
+effects**. Other estimators, designs, and inference modes can need more state.
+
+```{python}
+#| results: asis
+import pandas as pd
+import pyfixest as pf
+from pyfixest.errors import MissingModelDataError
+
+data = pf.get_data(N=100, seed=1234)
+storage_modes = {
+    "Default": {},
+    "store_data=False": {"store_data": False},
+    "lean=True": {"lean": True},
+}
+rows = []
+for name, options in storage_modes.items():
+    fit = pf.feols("Y ~ X1 + X2", data, **options)
+    operations = {
+        "Coefficients": lambda: fit.coef(),
+        "Coefficient table": lambda: fit.tidy(),
+        "Residuals": lambda: fit.resid(),
+        "In-sample predictions": lambda: fit.predict(),
+        "Predictions on supplied new data": lambda: fit.predict(newdata=data.head()),
+    }
+    row = {"Storage": name}
+    for operation, call in operations.items():
+        try:
+            call()
+            row[operation] = "Available"
+        except MissingModelDataError:
+            row[operation] = "Requires retained state"
+    rows.append(row)
+print(pd.DataFrame(rows).set_index("Storage").T.to_markdown())
+```
+
+## Plan the operations you need
+
+- Compute residual-based statistics before discarding residuals.
+- Supply `newdata=` when predicting from a lean linear fit. Those predictions
+  use its retained formula specification and coefficients.
+- Fixed-effect prediction needs recovered effects. A stripped fit cannot
+  recover them from discarded original data; supported workflows must retain
+  or recover the required state.
+- Covariance updates and resampling can require designs, scores, original
+  data, or refits. Choose inference at estimation time when retaining less data.
+- IV first-stage models follow the same storage policy as their parent fit.
+
+## Know when state appears
+
+`fit.options`, `fit.model`, `fit.sample_info`, `fit.fitstat`,
+and `fit.capabilities` describe completed fits. Some components require a
+specific estimator or operation:
+
+| Component | Availability |
+| --- | --- |
+| `fit.coeftable`, `fit.variance_covariance` | Fits with estimated coefficients and inference; absent on fixed-effects-only OLS fits |
+| `fit.first_stage` | IV fits |
+| `fit.fixef_estimates` | After successful `fit.fixef()` |
+| `fit.ritest_statistics` | After `fit.ritest(..., store_ritest_statistics=True)` |
+| `fit.wald` | After a supported Wald test; an initial test is computed for eligible non-IV OLS fits |
+| `fit.solution` | Quantile solver state where published; removed by `lean=True` |
+
+When required state is absent, `MissingModelDataError` names the operation
+and gives the refitting remedy. Model support and retained state are separate:
+retaining data cannot enable an operation the estimator does not support.
+
+See [model support](/reference-guide/model-support.qmd),
+[`EstimationOptions`](/reference/estimation.state.EstimationOptions.qmd), and
+[`fit.predict()`](/reference/estimation.models.feols_.Feols.predict.qmd).

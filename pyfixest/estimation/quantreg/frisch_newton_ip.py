@@ -11,28 +11,31 @@ from scipy.linalg import lapack, solve_triangular
 class QuantregSolution:
     """Solution of the Frisch-Newton interior point solver.
 
+    Access as ``fit.solution``. Available on quantile results; removed by ``lean=True``. With
+    ``multi_method="cfm2"``, only the central quantile has a solver solution.
+
     Fields follow the notation of Portnoy and Koenker (1997), [Statistical
     Science](https://doi.org/10.1214/ss/1030037960).
 
     Parameters
     ----------
     beta : NDArray[np.float64]
-        Coefficient estimates, shape (n_coefficients,); the negated ``y``.
+        Coefficient estimates, shape `(n_coefficients,)`; the negated ``y``.
     has_converged : bool
         Whether the duality gap fell below the tolerance within the iteration
         budget.
     iterations : int
         Index of the final interior point iteration, counted from zero.
     x : NDArray[np.float64]
-        Primal variable, shape (n_solver_rows,).
+        Primal variable, shape `(n_solver_rows,)`.
     s : NDArray[np.float64]
-        Primal slack of the upper bound, ``u - x``, shape (n_solver_rows,).
+        Primal slack of the upper bound, ``u - x``, shape `(n_solver_rows,)`.
     z : NDArray[np.float64]
-        Dual variable of ``x >= 0``, shape (n_solver_rows,).
+        Dual variable of ``x >= 0``, shape `(n_solver_rows,)`.
     w : NDArray[np.float64]
-        Dual variable of ``x <= u``, shape (n_solver_rows,).
+        Dual variable of ``x <= u``, shape `(n_solver_rows,)`.
     y : NDArray[np.float64]
-        Dual variable of ``A x = b``, shape (n_coefficients,).
+        Dual variable of ``A x = b``, shape `(n_coefficients,)`.
 
     Examples
     --------
@@ -42,6 +45,11 @@ class QuantregSolution:
     fit = pf.quantreg("Y ~ X1", pf.get_data(), quantile=0.5)
     fit.solution.has_converged, fit.solution.iterations
     ```
+
+    See Also
+    --------
+    [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd),
+    [model storage](/reference-guide/model-storage.qmd).
     """
 
     beta: NDArray[np.float64]

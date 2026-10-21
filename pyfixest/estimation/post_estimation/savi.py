@@ -96,15 +96,23 @@ def _savi_confidence_radius(
 def optimal_mixture_precision(
     nobs: float, number_of_coefficients: float, alpha: float
 ) -> float:
-    """Compute the mixture precision that minimizes SAVI sequence width
-    at a specified sample size `nobs`.
+    """
+    Choose mixture precision for a SAVI confidence sequence at a planned sample size.
+
+    Call as `pf.optimal_mixture_precision(...)` after `import pyfixest as pf`.
+    Choose the precision before observing outcomes or beginning monitoring, then
+    use that same value across looks at the accumulating sample.
 
     Parameters
     ----------
     nobs : float
-        Target number of observations.
+        Positive target number of observations, greater than
+        `number_of_coefficients`. This is the planned sample size, not a signal
+        to retune precision after inspecting the fitted results.
+
     number_of_coefficients : float
-        Number of estimated coefficients, including the intercept.
+        Positive number of estimated coefficients, including the intercept.
+
     alpha : float
         Significance level between zero and one.
 
@@ -115,15 +123,39 @@ def optimal_mixture_precision(
 
     Examples
     --------
+    Plan a model with an intercept and two slopes, then reuse its chosen precision:
+
     ```{python}
     import pyfixest as pf
 
-    pf.optimal_mixture_precision(
-        nobs=100,
-        number_of_coefficients=3,
-        alpha=0.05,
+    precision = pf.optimal_mixture_precision(
+        nobs=1000, number_of_coefficients=3, alpha=0.05
     )
+    data = pf.get_data(seed=1234)
+    fit = pf.feols("Y ~ X1 + X2", data=data, vcov="hetero")
+    fit.confint(inference_type="savi", mixture_precision=precision)
+    fit.evalue(mixture_precision=precision)
+    fit.pvalue_savi(mixture_precision=precision)
     ```
+
+    Raises
+    ------
+    ValueError
+        If inputs are outside their stated ranges or if no finite optimum exists
+        for this sample-size, coefficient-count and significance-level combination.
+
+    Notes
+    -----
+    SAVI currently supports unweighted OLS without instruments or absorbed fixed
+    effects, using iid, hetero, HC1, HC2 or HC3 covariance. Confidence sequences,
+    e-values and sequential p-values use an asymptotic construction and are
+    coefficient-wise; tuning does not adjust for multiple coefficients.
+
+    See Also
+    --------
+    [fit.confint()](/reference/estimation.models.feols_.Feols.confint.qmd) computes SAVI confidence sequences.
+    [fit.evalue()](/reference/estimation.models.feols_.Feols.evalue.qmd) and
+    [fit.pvalue_savi()](/reference/estimation.models.feols_.Feols.pvalue_savi.qmd) test zero-coefficient nulls.
     """
     nobs = _validate_positive_float(nobs, "nobs")
     number_of_coefficients = _validate_positive_float(

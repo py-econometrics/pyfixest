@@ -291,7 +291,7 @@ def _factor_ast(factor: Factor) -> ast.expr | None:
 
 @dataclass(kw_only=True, frozen=True, slots=True, repr=False)
 class Formula:
-    """
+    r"""
     A formulaic-compliant formula.
 
     Splits a fixest-style formula into second stage, fixed effects and, for IV
@@ -315,6 +315,11 @@ class Formula:
     ```{python}
     Formula.parse("Y ~ X1 + csw(X2, X3)")
     ```
+
+    See Also
+    --------
+    [create_model_matrix()](/reference/estimation.formula.model_matrix.create_model_matrix.qmd) : Materialize a parsed formula.
+    [Formula syntax](/tutorials/formula-syntax.qmd) : User-facing formulas, fixed effects, IV, and stepwise models.
     """
 
     _formula: formulaic.Formula
@@ -551,9 +556,49 @@ class Formula:
 
     @classmethod
     def parse(cls, formula: str) -> list[Formula]:
-        """
-        Parse fixest-style formula. In case of multiple estimation syntax,
-        returns a list of multiple regression formulas.
+        r"""
+        Parse fixest syntax into one Formula per expanded specification.
+
+        Parameters
+        ----------
+        formula : str
+            Model formula with outcome and covariates separated by `~`, optional
+            fixed effects after `|`, and an optional IV block `[endogenous ~ instruments]`.
+            Stepwise calls `sw`, `sw0`, `csw`, `csw0`, and `mvsw` expand specifications.
+
+        Returns
+        -------
+        list[Formula]
+            Parsed specifications in expansion order. A formula without multiple
+            estimation syntax returns a one-element list. This step parses structure;
+            it does not evaluate data, fit coefficients, or verify empirical rank.
+
+        Raises
+        ------
+        FormulaSyntaxError
+            Unsupported formula structure, such as multiple IV blocks or more than
+            one endogenous variable. Malformed expressions may also raise Formulaic
+            parsing errors.
+        UnderDeterminedIVError
+            Fewer excluded instruments than endogenous regressors.
+        EndogVarsAsCovarsError
+            An endogenous variable also appears as an ordinary covariate.
+        InstrumentsAsCovarsError
+            An excluded instrument also appears as an ordinary covariate.
+
+        Examples
+        --------
+        ```{python}
+        from pyfixest.estimation.formula.parse import Formula
+
+        formulas = Formula.parse("Y ~ X1 + csw(X2, X3) | f1")
+        [formula.render() for formula in formulas]
+        ```
+
+        See Also
+        --------
+        [Formula](/reference/estimation.formula.parse.Formula.qmd) : Inspect stages and fixed-effect specifications.
+        [Formula syntax](/tutorials/formula-syntax.qmd) : Write formulas for public estimation functions.
         """
         formula = _preprocess(formula)
         return [

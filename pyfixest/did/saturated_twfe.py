@@ -18,7 +18,8 @@ from .did2s import DID
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class EventStudyDesign:
-    """Event-study design a fitted event study was estimated on.
+    r"""
+    Event-study design a fitted event study was estimated on.
 
     Published as `fit.event_study_design` by
     [event_study()](/reference/did.estimation.event_study.qmd) with
@@ -37,8 +38,9 @@ class EventStudyDesign:
         Name of the variable holding the unit-specific period of initial
         treatment.
     att : bool
-        Whether the average treatment effect on the treated was estimated
-        instead of the canonical event study with all leads and lags.
+        The `att` argument passed to `event_study()`. It is recorded only:
+        the saturated estimator always estimates the full event study with
+        one coefficient per cohort and relative period.
     cohort_event_times : Mapping[str, Mapping[str, Any]]
         Cohort-specific event-study curves, keyed by treatment cohort. Each
         value holds the tidy coefficient table of that cohort (`"est"`) and
@@ -50,7 +52,7 @@ class EventStudyDesign:
     import pyfixest as pf
 
     fit = pf.event_study(
-        pf.get_motherhood_event_study_data(),
+        pf.get_motherhood_event_study_data(n_per_country=8, seed=2026),
         yname="log_earnings",
         idname="unit",
         tname="year",
@@ -60,6 +62,11 @@ class EventStudyDesign:
     design = fit.event_study_design
     design.gname, sorted(design.cohort_event_times)
     ```
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Creates `fit.event_study_design` for saturated fits.
+    [Saturated event-study results](/reference/did.saturated_twfe.SaturatedEventStudy.qmd) : Aggregation and plotting operations.
     """
 
     yname: str
@@ -71,29 +78,30 @@ class EventStudyDesign:
 
 
 class SaturatedEventStudy(DID):
-    """
+    r"""
     Saturated event study with cohort-specific effect curves.
 
-    Attributes
+    Use [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"` to obtain a fitted `Feols` result. That fit has
+    `event_study_design` and the additional operations documented here:
+    `aggregate()`, `iplot()`, `iplot_aggregate()`, and
+    `test_treatment_heterogeneity()`.
+
+    Parameters
     ----------
-    data : pd.DataFrame
-        Dataframe containing the data.
-    yname : str
-        Name of the outcome variable.
-    idname : str
-        Name of the unit identifier variable.
-    tname : str
-        Name of the time variable.
-    gname : str
-        Name of the treatment variable.
-    cluster : str
-        The name of the cluster variable.
-    xfml : str
-        Additional covariates to include in the model.
-    att : bool
-        Whether to use the average treatment effect.
-    display_warning: bool
-        Whether to display (some) warning messages.
+    data : pandas.DataFrame
+        Panel data; the public `event_study()` entry point documents the columns.
+    yname, idname, tname, gname : str
+        Outcome, unit, numeric period, and first-treatment-period columns.
+        Never-treated units use `gname=0`.
+    att : bool, optional
+        Recorded in the design but currently ignored; the full event study is fitted.
+    cluster : str, optional
+        Clustering variable. `event_study()` defaults this to `idname`.
+    xfml : str, optional
+        Currently ignored by the saturated estimator.
+    display_warning : bool, optional
+        Display the beta-status warning. Default is `True`.
 
     Notes
     -----
@@ -106,14 +114,17 @@ class SaturatedEventStudy(DID):
 
     Examples
     --------
-    Returned by [event_study()](/reference/did.estimation.event_study.qmd) with
-    `estimator="saturated"`. `aggregate()` aggregates the cohort-specific
-    effects by event time.
+    [event_study()](/reference/did.estimation.event_study.qmd) with
+    `estimator="saturated"` returns a
+    [Feols](/reference/estimation.models.feols_.Feols.qmd) fit and attaches
+    the `aggregate()`, `iplot()`, `iplot_aggregate()`, and
+    `test_treatment_heterogeneity()` methods documented here to it.
+    `aggregate()` aggregates the cohort-specific effects by event time.
 
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_motherhood_event_study_data()
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
 
     fit = pf.event_study(
         data,
@@ -131,6 +142,12 @@ class SaturatedEventStudy(DID):
     ```{python}
     fit.iplot_aggregate()
     ```
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Public estimator entry point.
+    [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) : Design retained by the fitted result.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Cohort curves and aggregation.
     """
 
     def __init__(
@@ -171,7 +188,7 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object. It carries the event-study design
+            The fitted `Feols` model object. It carries the event-study design
             as `event_study_design`.
         """
         self.mod, cohort_event_times = _saturated_event_study(
@@ -194,18 +211,31 @@ class SaturatedEventStudy(DID):
 
     # !TODO - implement the rest of the methods
     def vcov(self):
-        """
+        r"""
         Get the covariance matrix.
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame containing the covariance matrix.
+        None
+            This estimator hook is unimplemented. On the `Feols` result returned by
+            `event_study()`, inspect `fit.variance_covariance.vcov` instead.
         """
         pass
 
     def iplot(self):
-        """Plot DID estimates."""
+        r"""
+        Display one event-time curve per treatment cohort with 95% confidence bands.
+
+        Returns
+        -------
+        None
+            Displays a matplotlib figure using `plt.show()`.
+
+        See Also
+        --------
+        [Saturated event-study results](/reference/did.saturated_twfe.SaturatedEventStudy.qmd) : Obtain a fit and follow the cohort/aggregation example.
+        [event_study()](/reference/did.estimation.event_study.qmd) : Use `estimator="saturated"` to access this operation.
+        """
         import matplotlib.pyplot as plt
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
@@ -242,43 +272,53 @@ class SaturatedEventStudy(DID):
         return self.mod.summary()
 
     def test_treatment_heterogeneity(self) -> WaldTest:
-        """
-        Test for treatment heterogeneity in the event study design.
+        r"""
+        Wald test on the post-treatment cohort-specific event study coefficients.
 
-        Parameters
-        ----------
-        by : str, optional
+        Despite its name, the current implementation tests the joint null that
+        all cohort-specific coefficients at event times greater than 0 are
+        zero. It does not test whether the effects are equal across cohorts
+        as in Lal (2025, [arXiv](https://arxiv.org/abs/2503.05125)), and it
+        leaves out event time 0.
 
-                The type of test to perform. Can be either "cohort" or "time".
-                Default is "cohort". If "cohort", tests for treatment heterogeneity
-                across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
-                for details.
+        Returns
+        -------
+        WaldTest
+            The chi2 statistic of the joint test and its p-value.
+
+        See Also
+        --------
+        [Saturated event-study results](/reference/did.saturated_twfe.SaturatedEventStudy.qmd) : Obtain a fit and follow the cohort/aggregation example.
+        [event_study()](/reference/did.estimation.event_study.qmd) : Use `estimator="saturated"` to access this operation.
         """
         return _test_treatment_heterogeneity(
             model=self.mod if isinstance(self, SaturatedEventStudy) else self,
         )
 
     def aggregate(self, agg="period", weighting: str | None = "shares") -> pd.DataFrame:
-        """
-        Aggregate the fully interacted event study estimates by relative time, cohort, and time.
+        r"""
+        Aggregate the cohort-specific event study estimates by event time.
 
         Parameters
         ----------
         agg : str, optional
-
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
-                computes the average treatment effect by period.
-
+            The aggregation level. Only `"period"`, the default, is supported:
+            the cohort-specific effects are aggregated by event time.
         weighting : str, optional
-
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+            The weighting scheme. Only `"shares"`, the default, is supported:
+            each cohort enters an event time with its share of the cohort
+            observations at that event time (Sun and Abraham 2021).
 
         Returns
         -------
-        pd.Series
-            A Series containing the aggregated estimates.
+        pd.DataFrame
+            The aggregated estimate per event time, with standard error,
+            t value, p value, and the bounds of the 95% confidence interval.
+
+        See Also
+        --------
+        [Saturated event-study results](/reference/did.saturated_twfe.SaturatedEventStudy.qmd) : Obtain a fit and follow the cohort/aggregation example.
+        [event_study()](/reference/did.estimation.event_study.qmd) : Use `estimator="saturated"` to access this operation.
         """
         if agg not in ["period"]:
             raise ValueError("agg must be either 'period'")
@@ -341,23 +381,28 @@ class SaturatedEventStudy(DID):
         return df_agg
 
     def iplot_aggregate(self, agg="period", weighting: str | None = "shares"):
-        """
+        r"""
         Plot the aggregated estimates.
 
         Parameters
         ----------
         agg : str, optional
-            The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-            Default is "att". If "att", computes the average treatment effect on the treated.
-            If "cohort", computes the average treatment effect by cohort. If "period",
-            computes the average treatment effect by period.
-
+            The aggregation level. Only `"period"`, the default, is supported:
+            the cohort-specific effects are aggregated by event time.
         weighting : str, optional
-            The type of weighting to use. Can be either 'shares' or 'variance'.
+            The weighting scheme. Only `"shares"`, the default, is supported:
+            each cohort enters an event time with its share of the cohort
+            observations at that event time (Sun and Abraham 2021).
 
         Returns
         -------
         None
+            Displays a matplotlib figure using `plt.show()`; does not return it.
+
+        See Also
+        --------
+        [Saturated event-study results](/reference/did.saturated_twfe.SaturatedEventStudy.qmd) : Obtain a fit and follow the cohort/aggregation example.
+        [event_study()](/reference/did.estimation.event_study.qmd) : Use `estimator="saturated"` to access this operation.
         """
         import matplotlib.pyplot as plt
 
@@ -451,21 +496,22 @@ def _test_treatment_heterogeneity(
     model: Feols,
 ) -> WaldTest:
     """
-    Test for treatment heterogeneity in the event study design.
+    Wald test on the post-treatment cohort-specific event study coefficients.
 
-    For details, see https://github.com/apoorvalal/TestingInEventStudies
+    Tests the joint null that all cohort-specific coefficients at event times
+    greater than 0 are zero. This is not the test of equal effects across
+    cohorts in Lal (2025, [arXiv](https://arxiv.org/abs/2503.05125)); see
+    https://github.com/apoorvalal/TestingInEventStudies for that test.
 
     Parameters
     ----------
-    model : SaturatedEventStudy
-        The fitted event study model
+    model : Feols
+        The fitted saturated event study model.
 
     Returns
     -------
     WaldTest
-
-            The chi2 test statistic of the joint null of no heterogeneity and
-            its p-value.
+        The chi2 statistic of the joint test and its p-value.
     """
     mmres = model.tidy().reset_index()
     P = mmres.shape[0]
@@ -491,14 +537,15 @@ def compute_period_weights(
     treatment: str = "treatment",
     include_grid: bool = True,
 ) -> pd.DataFrame:
-    """
+    r"""
     Compute Sun & Abraham interaction weights for all relative times.
 
     For l < 0, weight_{g,l} = n^0_{g,l} / Σ_{g'} n^0_{g',l}, where
       n^0_{g,l} = count of (cohort=g, period=l) still untreated but eventually treated.
     For l > 0, weight_{g,l} = n^1_{g,l} / Σ_{g'} n^1_{g',l}, where
       n^1_{g,l} = count of (cohort=g, period=l) already treated.
-    For l = 0, weight is set to zero in the final grid.
+    Event time 0 uses treated cohort shares, like other post-treatment periods.
+    Cells without observations have zero weight when `include_grid=True`.
 
     Parameters
     ----------
@@ -511,7 +558,7 @@ def compute_period_weights(
     treatment : str
         Column name of treatment indicator (0/1).
     include_grid : bool, default True
-        If True, returns a full (cohort x period) grid with zero-filled weights.
+        If `True`, returns a full (cohort x period) grid with zero-filled weights.
 
     Returns
     -------

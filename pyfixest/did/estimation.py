@@ -23,18 +23,27 @@ def event_study(
     estimator: str | None = "twfe",
     att: bool | None = True,
 ):
-    """
+    r"""
     Estimate Event Study Model.
 
     This function allows for the estimation of treatment effects using different
-    estimators. It supports "twfe" for the two-way fixed effects estimator,
-    "did2s" for Gardner's two-step DID2S estimator, and "saturated" for a
-    saturated event-study specification with cohort-specific effects.
+    estimators. It supports `twfe` for the two-way fixed effects estimator,
+    `did2s` for the two-step DID2S estimator of Gardner (2022,
+    [arXiv](https://arxiv.org/abs/2207.05943)), and `saturated` for a
+    saturated event-study specification with cohort-specific effects as in
+    Sun and Abraham (2021,
+    [Journal of Econometrics](https://doi.org/10.1016/j.jeconom.2020.09.006)).
+
+    The `twfe` and `did2s` estimators fit a static model with a single
+    `is_treated` coefficient. The `saturated` estimator fits the full event
+    study with one coefficient per cohort and relative period. For a dynamic
+    DID2S event study, call [did2s()](/reference/did.estimation.did2s.qmd)
+    directly.
 
     Parameters
     ----------
     data : DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     idname : str
@@ -42,23 +51,27 @@ def event_study(
     tname : str
         Variable name for calendar period.
     gname : str
-        Unit-specific time of initial treatment.
-    cluster: Optional[str]
-        The name of the cluster variable. If None, defaults to idname.
+        Unit-specific period of initial treatment, in the same numeric time
+        scale as `tname`. Never-treated units must have a value of 0.
+        Use consecutive period indices when differences represent event time.
+    xfml : str, optional
+        The formula for the covariates, e.g. "X1 + X2". Default is `None`.
+        Used by the `twfe` and `did2s` estimators; the `saturated` estimator
+        currently ignores it.
+    cluster : str, optional
+        The name of the cluster variable. If `None`, defaults to idname.
         With ``estimator="did2s"``, inference is fixed at estimation time, and
         post-estimation ``vcov()`` updates are rejected.
-    xfml : str
-        The formula for the covariates.
-    estimator : str
-        The estimator to use. Options are "did2s", "twfe", and "saturated".
+    estimator : str, optional
+        The estimator to use. Options are `twfe` (default), `did2s`, and
+        `saturated`.
     att : bool, optional
-        If True, estimates the average treatment effect on the treated (ATT).
-        If False, estimates the canonical event study design with all leads and
-        lags. Default is True.
+        Default is `True`. Currently has no effect: every estimator ignores it,
+        and `att=False` does not produce an event study with leads and lags.
 
     Returns
     -------
-    object
+    Feols
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
         With `estimator = "saturated"`, the fit additionally carries its
         [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
@@ -68,37 +81,31 @@ def event_study(
     Examples
     --------
     ```{python}
-    import pandas as pd
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
-
-    fit_twfe = pf.event_study(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
+    fit = pf.event_study(
+        data, yname="log_earnings", idname="unit", tname="year", gname="g",
         estimator="twfe",
-        att=True,
     )
+    fit.tidy()
+    ```
 
-    fit_twfe.tidy()
+    For cohort-specific event-time curves, choose the saturated estimator:
 
-    # run saturated event study
-    fit_twfe_saturated = pf.event_study(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
+    ```{python}
+    fit_saturated = pf.event_study(
+        data, yname="log_earnings", idname="unit", tname="year", gname="g",
         estimator="saturated",
     )
-
-    fit_twfe_saturated.aggregate()
-    fit_twfe_saturated.iplot_aggregate()
+    fit_saturated.aggregate().head()
     ```
+
+    See Also
+    --------
+    [did2s()](/reference/did.estimation.did2s.qmd) : Specify a dynamic or pooled two-stage model directly.
+    [panelview()](/reference/did.visualize.panelview.qmd) : Inspect treatment timing before fitting.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Compare estimators and event-time plots.
     """
     if not isinstance(data, pd.DataFrame):
         raise TypeError("data must be a pandas DataFrame.")
@@ -209,78 +216,74 @@ def did2s(
     cluster: str,
     weights: str | None = None,
 ):
-    """
+    r"""
     Estimate a Difference-in-Differences model using Gardner's two-step DID2S estimator.
+
+    Implements the two-stage difference-in-differences estimator of Gardner
+    (2022, [arXiv](https://arxiv.org/abs/2207.05943)): the first stage
+    estimates the fixed effects on untreated observations, the second stage
+    regresses the residualized outcome on the treatment variables.
 
     Parameters
     ----------
     data : pd.DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with `~`. It must contain
+        fixed effects, e.g. "~ 0 | unit + year".
     second_stage : str
-        The formula for the second stage, starting with '~'.
+        The formula for the second stage, starting with `~`. It must not
+        contain fixed effects.
     treatment : str
-        The name of the treatment variable.
+        The name of the treatment variable. It must be boolean or numeric with
+        exactly two distinct values; it is converted to boolean. The first
+        stage is fitted on the observations where `treatment` is `False`.
     cluster : str
         The name of the cluster variable.
         Inference is fixed at estimation time, and
         post-estimation ``vcov()`` updates are rejected.
+    weights : str, optional
+        Name of the column in `data` that contains the observation weights.
+        Default is `None`, which weights all observations equally.
 
     Returns
     -------
-    object
+    Feols
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
     ```{python}
-    import pandas as pd
-    import numpy as np
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
-    df_het.head()
-    ```
-
-    In a first step, we estimate a classical event study model:
-
-    ```{python}
-    # estimate the model
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
     fit = pf.did2s(
-        df_het,
-        yname="dep_var",
+        data, yname="log_earnings",
         first_stage="~ 0 | unit + year",
-        second_stage="~i(rel_year, ref=-1.0)",
-        treatment="treat",
-        cluster="state",
-    )
-
-    fit.tidy().head()
-    ```
-
-    We can also inspect the model visually:
-
-    ```{python}
-    fit.iplot(figsize= [1200, 400], coord_flip=False).show()
-    ```
-
-    To estimate a pooled effect, we need to slightly update the second stage formula:
-
-    ```{python}
-    fit = pf.did2s(
-        df_het,
-        yname="dep_var",
-        first_stage="~ 0 | unit + year",
-        second_stage="~i(treat)",
-        treatment="treat",
-        cluster="state"
+        second_stage="~ i(rel_year, ref=-1)",
+        treatment="treat", cluster="country",
     )
     fit.tidy().head()
     ```
+
+    Plot the dynamic effects, or replace the second stage for a pooled effect:
+
+    ```{python}
+    pf.iplot(fit, coord_flip=False, plot_backend="matplotlib")
+    pooled = pf.did2s(
+        data, yname="log_earnings", first_stage="~ 0 | unit + year",
+        second_stage="~ treat", treatment="treat", cluster="country",
+    )
+    pooled.tidy()
+    ```
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Choose a static or saturated event-study specification.
+    [panelview()](/reference/did.visualize.panelview.qmd) : Inspect treatment timing before fitting.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Compare estimators and event-time plots.
     """
     fit = _did2s_estimate(
         data=data.copy(),
@@ -330,16 +333,17 @@ def lpdid(
     att: bool = True,
     xfml=None,
 ) -> LPDID:
-    """
+    r"""
     Local projections approach to estimation.
 
     Estimate a Difference-in-Differences / Event Study Model via the Local
-    Projections Approach.
+    Projections Approach of Dube, Girardi, Jordà and Taylor (2023,
+    [NBER Working Paper 31184](https://www.nber.org/papers/w31184)).
 
     Parameters
     ----------
     data : DataFrame
-        The DataFrame containing all variables.
+        The `DataFrame` containing all variables.
     yname : str
         The name of the dependent variable.
     idname : str
@@ -347,70 +351,66 @@ def lpdid(
     tname : str
         Variable name for calendar period.
     gname : str
-        Unit-specific time of initial treatment.
+        Unit-specific period of initial treatment.
     vcov : str, dict, optional
-        The type of inference to employ. Defaults to {"CRV1": idname}.
-        Options include "iid", "hetero", or a dictionary like {"CRV1": idname}.
+        The type of inference to employ. Defaults to `{"CRV1": idname}`.
+        Options include `iid`, `hetero`, or a dictionary like `{"CRV1": idname}`.
     pre_window : int, optional
-        The number of periods before the treatment to include in the estimation.
-        Default is the minimum relative year in the data.
+        The earliest relative period to include in the estimation, given as a
+        negative relative period that exists in the data (e.g. -20 for 20
+        periods before treatment). Default is the minimum relative period in
+        the data.
     post_window : int, optional
-        The number of periods after the treatment to include in the estimation.
-        Default is the maximum relative year in the data.
+        The latest relative period to include in the estimation, e.g. 20 for 20
+        periods after treatment. It must exist in the data. Default is the
+        maximum relative period in the data.
     never_treated : int, optional
         Value in gname indicating units never treated. Default is 0.
     att : bool, optional
-        If True, estimates the pooled average treatment effect on the treated (ATT).
-        Default is True.
+        If `True` (default), estimates a single pooled average treatment effect
+        on the treated over relative periods 0 to `post_window`; `pre_window`
+        is then not used. If `False`, estimates one coefficient per relative
+        period from `pre_window` to `post_window`.
     xfml : str, optional
-        Formula for the covariates. Not yet supported.
+        Formula for the covariates, e.g. "X1 + X2", added to every local
+        projection regression. Default is `None`.
 
     Returns
     -------
-    DataFrame
-        A DataFrame with the estimated coefficients.
+    LPDID
+        A fitted [LPDID](/reference/did.lpdid.LPDID.qmd) object. Use its
+        `tidy()` method for a `DataFrame` of the estimated coefficients and its
+        `iplot()` method to plot them.
 
     Examples
     --------
     ```{python}
-    import pandas as pd
     import pyfixest as pf
 
-    url = "https://raw.githubusercontent.com/py-econometrics/pyfixest/master/pyfixest/did/data/df_het.csv"
-    df_het = pd.read_csv(url)
-
+    data = pf.get_motherhood_event_study_data(n_per_country=8, seed=2026)
     fit = pf.lpdid(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
-        vcov={"CRV1": "state"},
-        pre_window=-20,
-        post_window=20,
-        att=False
-    )
-
-    fit.tidy().head()
-    fit.iplot(figsize= [1200, 400], coord_flip=False).show()
-    ```
-
-    To get the ATT, set `att=True`:
-
-    ```{python}
-    fit = pf.lpdid(
-        df_het,
-        yname="dep_var",
-        idname="unit",
-        tname="year",
-        gname="g",
-        vcov={"CRV1": "state"},
-        pre_window=-20,
-        post_window=20,
-        att=True
+        data, yname="log_earnings", idname="unit", tname="year", gname="g",
+        vcov={"CRV1": "country"}, pre_window=-3, post_window=3, att=False,
     )
     fit.tidy()
+    fit.iplot(plot_backend="matplotlib", coord_flip=False)
     ```
+
+    For a pooled effect over relative periods 0 through 3:
+
+    ```{python}
+    pooled = pf.lpdid(
+        data, yname="log_earnings", idname="unit", tname="year", gname="g",
+        vcov={"CRV1": "country"}, post_window=3, att=True,
+    )
+    pooled.tidy()
+    ```
+
+    See Also
+    --------
+    [event_study()](/reference/did.estimation.event_study.qmd) : Choose a static or saturated event-study specification.
+    [panelview()](/reference/did.visualize.panelview.qmd) : Inspect treatment timing before fitting.
+    [Difference-in-differences tutorial](/tutorials/difference-in-differences.qmd) : Compare estimators and event-time plots.
     """
     FIT = LPDID(
         data=data,

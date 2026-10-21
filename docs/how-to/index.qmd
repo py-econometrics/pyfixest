@@ -6,6 +6,7 @@ aliases:
 listing:
   type: grid
   contents:
+    - estimation-examples.qmd
     - marginaleffects.qmd
     - anytime-valid-inference.qmd
     - regression_decomposition.qmd

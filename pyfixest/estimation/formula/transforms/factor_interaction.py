@@ -23,23 +23,37 @@ def factor_interaction(
     bin: dict | None = None,
     bin2: dict | None = None,
 ) -> FactorValues:
-    """
-    Fixest-style i() operator for categorical encoding with interactions.
+    r"""
+    Encode categorical indicators and interactions using `i()` in a model formula.
+
+    Access as `i(...)` inside `pf.feols()` or another estimator's formula.
+    The implementing function is `factor_interaction` in
+    `pyfixest.estimation.formula.transforms.factor_interaction`; users usually
+    do not call it directly.
 
     Parameters
     ----------
     data : array-like
         The categorical variable to encode.
     var2 : array-like, optional
-        Optional second variable to interact with (continuous or categorical).
+        Second variable to interact with. Numeric non-boolean input produces
+        category-specific slopes. Categorical/object/bool input produces
+        indicator interactions; `ref2` or `bin2` also selects this categorical
+        path even when the second variable is numeric.
     ref : Hashable, optional
-        Reference level to drop from `data`.
+        Reference level to drop from the first variable after any binning.
+        With no explicit reference, contrast coding depends on the intercept
+        and whether an interaction is requested.
     ref2 : Hashable, optional
-        Reference level to drop from `var2` (only if `var2` is categorical).
+        Reference level for a categorical second variable, after any binning.
+        Supplying this option treats even numeric `var2` as categories.
     bin : dict, optional
-        Mapping of `new_level -> [old_levels]` for binning `data`.
+        Mapping `{new_level: [old_levels]}` to combine levels in the first
+        variable. Unlisted values remain unchanged; reference values refer
+        to the resulting labels.
     bin2 : dict, optional
-        Mapping of `new_level -> [old_levels]` for binning `var2`.
+        Same binning rule for the second variable. Supplying it selects
+        categorical interaction encoding for that variable.
 
     Returns
     -------
@@ -57,7 +71,7 @@ def factor_interaction(
     ```{python}
     import pyfixest as pf
 
-    data = pf.get_data()
+    data = pf.get_data(seed=1234)
 
     fit = pf.feols("Y ~ i(f1, ref=0)", data)
     fit.tidy().head()
@@ -69,14 +83,33 @@ def factor_interaction(
     pf.feols("Y ~ i(f1, X2, ref=0)", data).tidy().head()
     ```
 
+    Categorical interactions can specify reference levels on both variables:
+
+    ```{python}
+    # ref2 selects the categorical path even though group is numeric.
+    data["group"] = data["f2"] % 2
+    pf.feols("Y ~ i(X1, group, ref=0, ref2=0)", data).tidy()
+    ```
+
+    Bin the first variable before constructing indicators:
+
+    ```{python}
+    pf.feols("Y ~ i(X1, ref='low', bin={'low': [0, 1]})", data).tidy()
+    ```
+
     Notes
     -----
-    Naming convention (matches R fixest)::
+    Names follow fixest-style encoding: `i(f1)` produces `f1::<level>`;
+    `i(f1, X2)` produces `f1::<level>:X2`; categorical interactions produce
+    `f1::<level>:f2::<level>`. Explicit references drop the corresponding
+    indicator levels. The formula's intercept, omitted reference pair, and
+    estimator collinearity handling determine the final estimable columns.
 
-        i(cyl)            -> cyl::4, cyl::6, cyl::8
-        i(cyl, ref=4)     -> cyl::6, cyl::8
-        i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
-        i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+    See Also
+    --------
+    [iplot()](/reference/report.iplot.qmd) : Plot coefficients created by `i()`.
+    [Formula syntax](/tutorials/formula-syntax.qmd) : Indicator references, interactions, and event studies.
+    [create_model_matrix()](/reference/estimation.formula.model_matrix.create_model_matrix.qmd) : Inspect materialized coefficient columns.
     """
     # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
