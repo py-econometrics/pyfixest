@@ -39,6 +39,9 @@ _ModelMatrixRole: TypeAlias = Literal[
 ]
 ColumnKey: TypeAlias = tuple[str, str]
 
+# THROWAWAY seam used only by prototype_explicit_i_names.py.
+_prototype_prepare_i_names = None
+
 
 @dataclass(frozen=True, kw_only=True)
 class _ModelMatrixKey:
@@ -537,6 +540,11 @@ def create_model_matrix(
         formula=formula, data=data, weights=weights, offset=offset
     )
     evaluation_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
+    if (
+        _prototype_prepare_i_names is not None
+        and evaluation_context.get("i") is FORMULAIC_TRANSFORMS["i"]
+    ):
+        formula_formulaic = _prototype_prepare_i_names(formula_formulaic)
     model_matrix = formula_formulaic.get_model_matrix(
         data=data,
         ensure_full_rank=ensure_full_rank,
