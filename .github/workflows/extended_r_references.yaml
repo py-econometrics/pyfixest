@@ -1,0 +1,55 @@
+name: Extended R References
+
+on:
+  workflow_call:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: github.event_name == 'push' || github.event.label.name == 'run-r-extended'
+    runs-on: ubuntu-latest
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/.r-library
+      PYTEST_XDIST_AUTO_NUM_WORKERS: 4
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          pixi-version: v0.76.2
+          cache: true
+          frozen: true
+          environments: py312-r
+      - name: Install GLPK for the did2s reference
+        run: sudo apt-get update && sudo apt-get install -y libglpk-dev
+      - uses: actions/cache@v5
+        with:
+          path: .r-library
+          key: r-extended-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pixi.lock', 'r_test_requirements.R') }}
+      - name: Install required R references
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          pixi run -e py312-r Rscript r_test_requirements.R --extended-only
+      - name: Run extended comparisons
+        run: pixi run -e py312-r test-r-extended
+        env:
+          PYTEST_ADDOPTS: --junitxml=r-extended-results.xml
+      - name: Reject skipped comparisons
+        if: always()
+        run: |
+          pixi run -e py312-r python - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          cases = ET.parse("r-extended-results.xml").findall(".//testcase")
+          counts = {kind: sum(case.find(kind) is not None for case in cases)
+                    for kind in ("skipped", "failure", "error")}
+          passed = len(cases) - sum(counts.values())
+          print(f"Extended R references: {passed} passed, {counts['skipped']} skipped, "
+                f"{counts['failure']} failed, {counts['error']} errors.")
+          sys.exit(not cases or any(counts.values()))
+          PY

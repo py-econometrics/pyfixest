@@ -5,18 +5,8 @@ if (!"--extended-only" %in% args) {
     required <- c(required, "collapse", "summclust", "ritest")
 }
 
-# Use a separate, cacheable user library in CI, without modifying Pixi's prefix.
-user_library <- Sys.getenv("R_LIBS_USER")
-if (nzchar(user_library) && !grepl("%", user_library, fixed = TRUE)) {
-    dir.create(user_library, recursive = TRUE, showWarnings = FALSE)
-    .libPaths(c(user_library, .libPaths()))
-}
-
-missing_packages <- function() {
-    required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
-}
-missing <- missing_packages()
-if (length(missing) && !"--check" %in% args) {
+missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) {
     install.packages(
         missing,
         repos = c(
@@ -27,15 +17,12 @@ if (length(missing) && !"--check" %in% args) {
         ),
         Ncpus = 2L
     )
-    missing <- missing_packages()
 }
+missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing)) {
     stop(
         "Required R reference packages could not be loaded: ",
         paste(missing, collapse = ", "),
         ". Run pixi run -e py312-r Rscript r_test_requirements.R --extended-only."
     )
-}
-for (package in required) {
-    message(package, " ", as.character(packageVersion(package)))
 }
