@@ -15,13 +15,19 @@ from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Factor, Term
 from numpy.typing import NDArray
 
+from pyfixest.core.demean import VaryingSlopes
 from pyfixest.core.detect_singletons import detect_singletons
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     flatten_model_matrix,
     get_fixed_effect_encoding,
 )
-from pyfixest.estimation.formula.parse import Formula, render_term
+from pyfixest.estimation.formula.parse import (
+    FixedEffectSpecification,
+    Formula,
+    render_term,
+)
 from pyfixest.estimation.formula.utils import _get_weights
 from pyfixest.estimation.internals.literals import DropStageOptions
 from pyfixest.estimation.internals.model_state import DroppedRowCounts
@@ -32,6 +38,7 @@ _ModelMatrixRole: TypeAlias = Literal[
     "dependent",
     "independent",
     "fixed_effects",
+    "fixed_effect_slopes",
     "endogenous",
     "instruments",
     "weights",
@@ -44,6 +51,7 @@ ColumnKey: TypeAlias = tuple[str, str]
 class _ModelMatrixKey:
     main: str = "second_stage"
     fixed_effects: str = "fe"
+    fixed_effect_slopes: str = "fe_slopes"
     instrumental_variable: str = "first_stage"
     weights: str = "weights"
     offset: str = "offset"
@@ -54,6 +62,7 @@ _ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyTyp
         "dependent": (_ModelMatrixKey.main, "lhs"),
         "independent": (_ModelMatrixKey.main, "rhs"),
         "fixed_effects": (_ModelMatrixKey.fixed_effects,),
+        "fixed_effect_slopes": (_ModelMatrixKey.fixed_effect_slopes,),
         "endogenous": (_ModelMatrixKey.instrumental_variable, "lhs"),
         "instruments": (_ModelMatrixKey.instrumental_variable, "rhs"),
         "weights": (_ModelMatrixKey.weights,),
@@ -87,6 +96,9 @@ class ModelMatrix:
         Whether to remove singleton fixed-effect groups.
     drop_intercept : bool, default False
         Whether to remove the structural intercept.
+    fixed_effect_specifications : tuple[FixedEffectSpecification, ...], default ()
+        Parsed fixed effects, which say whether each effect has an intercept
+        and which varying slopes it has.
 
     Examples
     --------
@@ -110,6 +122,9 @@ class ModelMatrix:
         The independent variable(s) (right-hand side of the main equation).
     fixed_effects : pd.DataFrame or None
         Fixed effects variables, encoded as integers.
+    varying_slopes : VaryingSlopes or None
+        Intercepts and slope covariates of the fixed effects, or None when no
+        fixed effect has varying slopes.
     endogenous : pd.DataFrame or None
         Endogenous variables in instrumental variable specifications.
     instruments : pd.DataFrame or None
@@ -134,8 +149,10 @@ class ModelMatrix:
         drop_rows: frozenset[int],
         drop_singletons: bool = True,
         drop_intercept: bool = False,
+        fixed_effect_specifications: tuple[FixedEffectSpecification, ...] = (),
     ) -> None:
         self._drop_intercept = drop_intercept
+        self._fixed_effect_specifications = fixed_effect_specifications
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
@@ -165,15 +182,22 @@ class ModelMatrix:
         self._fixed_effects_column_names = self._get_columns(
             model_matrix, role="fixed_effects"
         )
-        self._fixed_effect_names_by_column = {
-            column: get_fixed_effect_encoding(
-                transform_state=self._model_spec[
-                    _ModelMatrixKey.fixed_effects
-                ].transform_state,
-                column=column,
-            ).name
+        specification_by_levels = {
+            specification.levels: specification
+            for specification in self._fixed_effect_specifications
+        }
+        self._fixed_effect_specification_by_column = {
+            column: specification_by_levels[
+                get_fixed_effect_encoding(
+                    transform_state=self._model_spec[
+                        _ModelMatrixKey.fixed_effects
+                    ].transform_state,
+                    column=column,
+                ).term
+            ]
             for column in self._fixed_effects_column_names or []
         }
+        self._slope_column_by_term = self._collect_slope_columns(model_matrix)
         self._endogenous_column_names = self._get_columns(
             model_matrix, role="endogenous"
         )
@@ -182,6 +206,28 @@ class ModelMatrix:
         )
         self._weights_column_names = self._get_columns(model_matrix, role="weights")
         self._offset_column_names = self._get_columns(model_matrix, role="offset")
+
+    @staticmethod
+    def _collect_slope_columns(model_matrix: ModelMatrices) -> dict[Term, str]:
+        """Map each varying-slope term to its single numeric column."""
+        try:
+            slopes = model_matrix[_ModelMatrixKey.fixed_effect_slopes]
+        except KeyError:
+            return {}
+        slope_spec = slopes.model_spec
+        column_by_term: dict[Term, str] = {}
+        for term, _, columns in slope_spec.structure:
+            is_categorical = any(
+                str(factor) in slope_spec.factor_contrasts for factor in term.factors
+            )
+            if is_categorical or len(columns) != 1:
+                raise FormulaSyntaxError(
+                    f"Varying slope `{term}` must evaluate to one numeric column. "
+                    "Convert categorical slopes to a numeric column before "
+                    "estimation."
+                )
+            column_by_term[term] = columns[0]
+        return column_by_term
 
     def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
@@ -241,7 +287,11 @@ class ModelMatrix:
             elif len(self._offset_column_names) != 1:
                 raise ValueError("The offset must evaluate to exactly one column.")
 
-        if self._fixed_effects_column_names is not None or self._drop_intercept:
+        absorbs_intercept = any(
+            specification.intercept
+            for specification in self._fixed_effect_specification_by_column.values()
+        )
+        if absorbs_intercept or self._drop_intercept:
             if self._independent_column_names is not None:
                 self._independent_column_names = [
                     col for col in self._independent_column_names if col != "Intercept"
@@ -250,9 +300,16 @@ class ModelMatrix:
                 self._instruments_column_names = [
                     col for col in self._instruments_column_names if col != "Intercept"
                 ]
-        # Drop singletons if specified
-        if drop_singletons and self._fixed_effects_column_names is not None:
-            fixed_effects = self._data.loc[:, self._fixed_effects_column_names]
+        # Drop singletons if specified. A singleton is perfectly fit only by a
+        # level-specific intercept: slope-only effects such as `f1[[z]]` leave
+        # rows with a zero slope covariate informative, so fixest keeps them.
+        intercept_columns = [
+            column
+            for column, specification in self._fixed_effect_specification_by_column.items()
+            if specification.intercept
+        ]
+        if drop_singletons and intercept_columns:
+            fixed_effects = self._data.loc[:, intercept_columns]
             self._drop(
                 detect_singletons(fixed_effects.to_numpy()),
                 "singleton fixed effect(s)",
@@ -340,7 +397,43 @@ class ModelMatrix:
         if self._fixed_effects_column_names is None:
             return None
         return self._data.loc[:, self._fixed_effects_column_names].rename(
-            columns=self._fixed_effect_names_by_column
+            columns={
+                column: specification.name
+                for column, specification in self._fixed_effect_specification_by_column.items()
+            }
+        )
+
+    @property
+    def varying_slopes(self) -> VaryingSlopes | None:
+        """
+        Get the intercepts and varying slopes of the fixed effects.
+
+        Returns
+        -------
+        VaryingSlopes or None
+            Intercept flags and slope covariates in the column order of
+            `fixed_effects`, or None when no fixed effect has varying slopes.
+        """
+        if not self._slope_column_by_term:
+            return None
+        specifications = [
+            self._fixed_effect_specification_by_column[column]
+            for column in self._fixed_effects_column_names or []
+        ]
+        return VaryingSlopes(
+            intercepts=tuple(
+                specification.intercept for specification in specifications
+            ),
+            values=tuple(
+                self._data.loc[
+                    :,
+                    [
+                        self._slope_column_by_term[slope]
+                        for slope in specification.slopes
+                    ],
+                ].to_numpy(dtype=np.float64)
+                for specification in specifications
+            ),
         )
 
     @property
@@ -553,6 +646,7 @@ def create_model_matrix(
         drop_rows=drop_rows,
         drop_singletons=drop_singletons,
         drop_intercept=drop_intercept,
+        fixed_effect_specifications=formula.fixed_effect_specifications,
     )
 
 
@@ -580,6 +674,10 @@ def _get_formulaic_formula(
     if formula.is_fixed_effects:
         formula_kwargs.update(
             {_ModelMatrixKey.fixed_effects: formula.formulaic_fixed_effects}
+        )
+    if formula.has_varying_slopes:
+        formula_kwargs[_ModelMatrixKey.fixed_effect_slopes] = (
+            formula.fixed_effect_slopes
         )
     if formula.is_instrumental_variable:
         formula_kwargs.update(

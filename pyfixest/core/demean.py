@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal, get_args
 
 import numpy as np
 from numpy.typing import NDArray
-from within import LsmrOptions, Preconditioner, PreconditionerConfig, Solver
+from within import Effect, LsmrOptions, Preconditioner, PreconditionerConfig, Solver
 
 from ._core_impl import _demean_rs
 
@@ -12,6 +13,7 @@ WithinPreconditionerName = Literal["adaptive", "additive", "off", "diagonal"]
 
 __all__ = [
     "Preconditioner",
+    "VaryingSlopes",
     "WithinPreconditionerName",
     "demean",
     "demean_within",
@@ -26,6 +28,41 @@ _WITHIN_PRECONDITIONER_CONFIGS: dict[
     "off": PreconditionerConfig.Off,
     "diagonal": PreconditionerConfig.Diagonal,
 }
+
+
+@dataclass(frozen=True, slots=True)
+class VaryingSlopes:
+    """Intercepts and varying slopes of the fixed effects in an `flist` array.
+
+    Entry `j` describes column `j` of `flist`: whether each level has its own
+    intercept, and the covariates whose coefficients vary by level. The
+    effect `f[z]` has an intercept and slope `z`; `f[[z]]` has only the slope;
+    a plain `f` has only the intercept.
+
+    Attributes
+    ----------
+    intercepts : tuple[bool, ...]
+        Whether each fixed effect absorbs a level-specific intercept.
+    values : tuple[NDArray[np.float64], ...]
+        Slope covariates of each fixed effect, each of shape
+        `(n_samples, n_slopes)`; `n_slopes` is zero for a plain fixed effect.
+    """
+
+    intercepts: tuple[bool, ...]
+    values: tuple[NDArray[np.float64], ...]
+
+    def effects(self, flist: NDArray[np.uint32]) -> list[Effect]:
+        """Describe each column of `flist` as a `within` effect."""
+        return [
+            Effect(
+                np.ascontiguousarray(flist[:, column], dtype=np.uint32),
+                intercept,
+                [np.ascontiguousarray(slope, dtype=np.float64) for slope in slopes.T],
+            )
+            for column, (intercept, slopes) in enumerate(
+                zip(self.intercepts, self.values, strict=True)
+            )
+        ]
 
 
 def within_preconditioner_name(
@@ -122,6 +159,7 @@ def demean_within(
     maxiter: int = 1_000,
     local_size: int | None = None,
     preconditioner: WithinPreconditionerName | Preconditioner = "adaptive",
+    slopes: VaryingSlopes | None = None,
 ) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
@@ -131,8 +169,9 @@ def demean_within(
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
-    For single fixed effects, falls back to alternating projections (``_demean_rs``)
-    because the sparse iterative solver is designed for multi-way FE problems.
+    For single fixed effects without varying slopes, falls back to alternating
+    projections (``_demean_rs``) because the sparse iterative solver is
+    designed for multi-way FE problems.
 
     Parameters
     ----------
@@ -172,6 +211,9 @@ def demean_within(
         the current problem.
         If the computation of the pre-conditioner takes a long time, this can
         speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
+    slopes : VaryingSlopes or None, optional
+        Intercepts and varying slopes of the columns of ``flist``. ``None``
+        (default) gives every fixed effect an intercept and no slopes.
 
     Returns
     -------
@@ -200,8 +242,8 @@ def demean_within(
             f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
-    if flist.ndim == 1 or flist.shape[1] == 1:
-        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+    if slopes is None and flist_2d.shape[1] == 1:
         demeaned, success = _demean_rs(
             x.astype(np.float64, copy=False),
             flist_2d.astype(np.uint64, copy=False),
@@ -219,7 +261,9 @@ def demean_within(
         else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
     )
     solver = Solver(
-        np.asfortranarray(flist, dtype=np.uint32),
+        np.asfortranarray(flist_2d, dtype=np.uint32)
+        if slopes is None
+        else slopes.effects(flist_2d),
         weights=weights.astype(np.float64, copy=False) if weights is not None else None,
         preconditioner=config,
     )

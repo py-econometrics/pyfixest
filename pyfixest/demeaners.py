@@ -12,6 +12,7 @@ import numpy as np
 
 from pyfixest.core.demean import (
     Preconditioner,
+    VaryingSlopes,
     WithinPreconditionerName,
     demean_within,
     within_preconditioner_name,
@@ -50,6 +51,15 @@ def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner)
         stacklevel=_find_stack_level(),
     )
     return default
+
+
+def _reject_varying_slopes(slopes: VaryingSlopes | None, backend: str) -> None:
+    """Raise if a backend without varying-slope support receives slopes."""
+    if slopes is not None:
+        raise ValueError(
+            f"Varying slopes such as `f1[z]` are not supported by the {backend} "
+            "demeaner. Use `LsmrDemeaner(backend='within')`, the default demeaner."
+        )
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -168,13 +178,17 @@ class MapDemeaner(BaseDemeaner):
         flist: np.ndarray,
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
+        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean `x` by the fixed effects in `flist` via MAP.
 
         `cached_preconditioner` is accepted for interface uniformity with
         :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a
-        preconditioner, so the third return value is always `None`.
+        preconditioner, so the third return value is always `None`. MAP does
+        not support varying slopes and raises `ValueError` if `slopes` is
+        given.
         """
+        _reject_varying_slopes(slopes, backend="MAP")
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
 
@@ -257,6 +271,8 @@ class LsmrDemeaner(BaseDemeaner):
       provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
 
+    Varying slopes such as `f1[z]` and `f1[[z]]` require `backend="within"`.
+
     In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
     solving each projection with its current working weights. If an adaptive
     solve escalates, subsequent iterations reuse the additive replacement.
@@ -335,6 +351,7 @@ class LsmrDemeaner(BaseDemeaner):
         flist: np.ndarray,
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
+        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean ``x`` by the fixed effects in ``flist`` via LSMR.
 
@@ -352,6 +369,10 @@ class LsmrDemeaner(BaseDemeaner):
             escalated additive Schwarz preconditioner. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
+        slopes : VaryingSlopes or None, optional
+            Intercepts and varying slopes of the columns of ``flist``. Only
+            the ``within`` backend supports them; ``torch`` raises
+            ``ValueError``.
 
         Returns
         -------
@@ -371,8 +392,10 @@ class LsmrDemeaner(BaseDemeaner):
                 flist=flist,
                 weights=weights,
                 cached_preconditioner=cached_preconditioner,
+                slopes=slopes,
             )
         if self.backend == "torch":
+            _reject_varying_slopes(slopes, backend="torch LSMR")
             return self._demean_torch(x=x, flist=flist, weights=weights)
         raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
 
@@ -382,6 +405,7 @@ class LsmrDemeaner(BaseDemeaner):
         flist: np.ndarray,
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
+        slopes: VaryingSlopes | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean via `within`, reusing a matching cached preconditioner."""
         preconditioner: WithinPreconditionerName | Preconditioner
@@ -410,6 +434,7 @@ class LsmrDemeaner(BaseDemeaner):
             maxiter=self.fixef_maxiter,
             local_size=self.local_size,
             preconditioner=preconditioner,
+            slopes=slopes,
         )
 
     def _demean_torch(

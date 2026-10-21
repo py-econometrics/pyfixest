@@ -278,6 +278,10 @@ class Feols(ResultAccessorMixin):
         self.model = self._describe_model(
             parsed_formula=FixestFormula, sample_split=sample_split
         )
+        if FixestFormula.has_varying_slopes:
+            raise NotImplementedError(
+                "Varying slopes such as `f1[z]` are not yet supported in estimation."
+            )
         self._model_name_plot = self.model.model_name
 
         if sample_split is None:
