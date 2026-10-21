@@ -58,6 +58,8 @@ Other things:
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
 
+- pandas 1.5 and narwhals 1.17 are now the minimum supported versions. The old floors, `pandas>=1.1.0` and `narwhals>=1.13.3`, could not be installed alongside formulaic 1.2.x, which requires `pandas>=1.3` and `narwhals>=1.17`. On pandas older than 1.4, the slow `ritest()` algorithm overwrote the resampled column in the fit's stored data. See [#1785](https://github.com/py-econometrics/pyfixest/issues/1785).
+
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 
 - Multiple estimation no longer reuses another expression's demeaned values merely because its encoded columns have the same names, as with transformed `i()` terms or a literal column named like an expression. Cached columns are keyed by their rendered term and name, so equivalent columns still share values. Fixes [#1762](https://github.com/py-econometrics/pyfixest/issues/1762).
