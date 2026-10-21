@@ -91,6 +91,10 @@ def factor_interaction(
         var2_name = _get_series_name(var2, default="var") if var2 is not None else None
     else:
         factor_name, var2_name = names
+        if var2 is None:
+            var2_name = None
+        elif var2_name is None:
+            var2_name = _get_series_name(var2, default="var")
 
     def encoder(
         values: Any,
@@ -158,12 +162,17 @@ def _argument_expressions(
     if len(calls) != 1:
         return None
     (call,) = calls
+    # Unpacked arguments have no individual source expression to name.
+    if any(isinstance(arg, ast.Starred) for arg in call.args):
+        return None
     arguments = dict(zip(("data", "var2"), call.args, strict=False))
     arguments.update(
         (keyword.arg, keyword.value)
         for keyword in call.keywords
         if keyword.arg in ("data", "var2")
     )
+    if "data" not in arguments:
+        return None
     var2 = arguments.get("var2")
     return (
         _unparse_argument(arguments["data"], aliases=aliases),
