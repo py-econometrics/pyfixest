@@ -211,17 +211,9 @@ class ModelMatrix:
 
         # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
-        values = maybe_infinite.to_numpy()
-        if values.dtype.kind == "O":
-            # pandas 1.x can materialize nullable numeric transforms as objects.
-            # Apply the same predicate to scalars without coercing their range
-            # or precision; missing entries remain non-finite.
-            is_finite = np.zeros(values.shape, dtype=bool)
-            present = pd.notna(values)
-            is_finite[present] = np.frompyfunc(np.isfinite, 1, 1)(values[present])
-        else:
-            is_finite = np.isfinite(values)
-        is_finite_row = cast("NDArray[np.bool_]", is_finite.all(axis=1))
+        is_finite_row = cast(
+            "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
+        )
         self._drop(
             ~is_finite_row,
             "rows with infinite values",
