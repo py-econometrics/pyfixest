@@ -426,6 +426,12 @@ def test_quantreg(data_quantreg, fml, quantile, method, vcov, baseline):
     _check_fit(baseline, mod, confint=False)
     baseline.skip("confint", reason=QUANTREG_T_REFERENCE)
     baseline.check("resid", mod.resid()[0:5])
+    # One unweighted fit covers the quantile-specific array representations.
+    if (fml, quantile, method, vcov) == ("Y ~ X1 + X2", 0.5, "fn", "nid"):
+        arrays = _legacy_attributes(mod, ["_Y", "_X", "_Z", "_u_hat"])
+        _check_legacy_rows(baseline, arrays)
+        for name, values in arrays.items():
+            baseline.check_exact(f"{name}_shape", list(values.shape))
 
 
 # The 0.60 attribute names now resolve through deprecation shims that rebuild
@@ -444,24 +450,81 @@ def _check_legacy_rows(baseline, arrays, **tolerance):
         baseline.check(name, values[0:5], **tolerance)
 
 
+def _check_legacy_metadata(baseline, mod):
+    """Check an explicit release inventory, independent of the alias registry."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        for name in (
+            "_N_rows",
+            "n_separation_na",
+            "_weights_name",
+            "_weights_type",
+            "_has_weights",
+            "_sample_split_var",
+            "_n_fe",
+        ):
+            baseline.check_exact(name, getattr(mod, name))
+        # 0.60's set omits GLM separation, which the current sample includes.
+        if mod.n_separation_na == 0:
+            baseline.check_exact("_na_index", sorted(mod._na_index))
+            baseline.check_exact("_na_index_type", type(mod._na_index).__name__)
+        baseline.skip(
+            "_k_fe",
+            reason="The legacy encoded Series is removed; use "
+            "fit.fixef_counts.n_levels_by_fe for final-sample level counts.",
+        )
+
+
 @pytest.mark.parametrize(
-    "vcov,G_df",
-    [({"CRV1": "group_id"}, "min"), ({"CRV1": "group_id+f2"}, "conventional")],
+    "vcov,G_df,weights,weights_type,fixef,split,rhs",
+    [
+        ({"CRV1": "group_id"}, "min", "weights", "aweights", " | f1", None, "X1 + X2"),
+        (
+            {"CRV1": "group_id+f2"},
+            "conventional",
+            "weights",
+            "aweights",
+            " | f2 + f1",
+            None,
+            "X1 + X2",
+        ),
+        ("iid", "min", None, "aweights", "", None, "X1 + X2"),
+        ("hetero", "min", "fweights", "fweights", " | f1", "f2", "X1 + X2"),
+        ("iid", "min", "weights", "aweights", " | f1", None, "0"),
+    ],
 )
-def test_deprecated_attributes_feols(data_feols_variants, vcov, G_df, baseline):
+def test_deprecated_attributes_feols(
+    data_feols_variants, vcov, G_df, weights, weights_type, fixef, split, rhs, baseline
+):
     mod = pf.feols(
-        fml="Y ~ X1 + X2 | f1",
+        fml=f"Y ~ {rhs}{fixef}",
         data=data_feols_variants[(True, "str")],
         vcov=vcov,
-        weights="weights",
+        weights=weights,
+        weights_type=weights_type,
+        split=split,
         ssc=ssc(G_df=G_df),
     )
-    mod.fixef()
+    if split:
+        mod = mod.to_list()[0]
+    if fixef:
+        mod.fixef()
 
-    arrays = _legacy_attributes(
-        mod, ["_Y", "_X", "_Z", "_weights", "_scores", "_sumFE"]
-    )
+    names = ["_Y", "_X", "_u_hat", "_weights"]
+    if rhs != "0":
+        names.extend(["_scores", "_Z"])
+    if fixef:
+        names.append("_sumFE")
+    arrays = _legacy_attributes(mod, names)
     _check_legacy_rows(baseline, arrays)
+    for name, value in arrays.items():
+        baseline.check_exact(f"{name}_shape", list(value.shape))
+    _check_legacy_metadata(baseline, mod)
+    if rhs == "0":
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            baseline.check_exact("_Z", mod._Z)
+        return  # FE-only fits have no coefficient inference or sandwich.
     for name, values in _legacy_attributes(
         mod, ["_hessian", "_tZX", "_bread", "_ssc"]
     ).items():
@@ -480,24 +543,46 @@ def test_deprecated_attributes_iv(data_feols_variants, weights, weights_type, ba
         weights_type=weights_type,
     )
 
-    arrays = _legacy_attributes(mod, ["_Y", "_X", "_Z", "_X_hat", "_v_hat"])
+    arrays = _legacy_attributes(mod, ["_Y", "_X", "_Z", "_u_hat", "_X_hat", "_v_hat"])
     _check_legacy_rows(baseline, arrays)
+    for name, value in arrays.items():
+        baseline.check_exact(f"{name}_shape", list(value.shape))
+    _check_legacy_metadata(baseline, mod)
     for name, values in _legacy_attributes(mod, ["_bread", "_pi_hat"]).items():
         baseline.check(name, values)
     baseline.check_exact("G", [int(g) for g in _legacy_attributes(mod, ["_G"])["_G"]])
 
 
-@pytest.mark.parametrize("weights", [None, "weights"])
-def test_deprecated_attributes_fepois(data_fepois, weights, baseline):
+@pytest.mark.parametrize(
+    "weights,separated", [(None, False), ("weights", False), (None, True)]
+)
+def test_deprecated_attributes_fepois(data_fepois, weights, separated, baseline):
+    data = data_fepois.copy()
+    if separated:
+        group = data["f1"].dropna().iloc[0]
+        data.loc[data["f1"] == group, "Y"] = 0
     mod = pf.fepois(
         fml="Y ~ X1 + X2 | f1",
-        data=data_fepois,
+        data=data,
         vcov={"CRV1": "group_id"},
         weights=weights,
         iwls_tol=1e-10,
         iwls_maxiter=100,
     )
     mod.fixef()
+    _check_legacy_metadata(baseline, mod)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        baseline.check_exact("separation_check", mod.separation_check)
+        baseline.check("_pearson_chi2", mod._pearson_chi2, **FEPOIS_TOLERANCE)
+        for name in ("_loglik_null", "_pseudo_r2"):
+            value = getattr(mod, name)
+            if weights is None:
+                assert np.isfinite(value), name
+                baseline.check(name, value, **FEPOIS_TOLERANCE)
+            else:
+                assert value is None, name
+                baseline.check_exact(name, value)
 
     arrays = _legacy_attributes(
         mod, ["_Y", "_X", "_Z", "_u_hat", "_weights", "_scores", "_sumFE"]
@@ -519,7 +604,27 @@ def test_deprecated_attributes_feglm(data_fepois, family, baseline):
         iwls_tol=1e-10,
         iwls_maxiter=100,
     )
+    mod.fixef()
+    _check_legacy_metadata(baseline, mod)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        baseline.check_exact("separation_check", mod.separation_check)
 
-    arrays = _legacy_attributes(mod, ["_Y", "_X", "_u_hat", "_weights", "_scores"])
+    arrays = _legacy_attributes(
+        mod,
+        [
+            "_Y",
+            "_X",
+            "_Z",
+            "_u_hat",
+            "_weights",
+            "_scores",
+            "_sumFE",
+            "_Y_hat_link",
+            "_Y_hat_response",
+        ],
+    )
     _check_legacy_rows(baseline, arrays, **GLM_BINOMIAL_TOLERANCE)
-    baseline.check_exact("Y_shape", list(arrays["_Y"].shape))
+    for name, values in arrays.items():
+        baseline.check_exact(f"{name}_shape", list(values.shape))
+    assert not np.allclose(arrays["_Y_hat_link"], arrays["_Y_hat_response"])

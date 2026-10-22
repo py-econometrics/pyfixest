@@ -2,14 +2,14 @@
 
 pyfixest 0.70 moved the loose private attributes of fitted models into typed
 state such as `fit.model`, `fit.coeftable`, or `fit.variance_covariance`.
-`DEPRECATED_ATTRIBUTES` lists every 0.60 name whose state has moved, and
+`DEPRECATED_ATTRIBUTES` lists the compatibility aliases and explicit removals, and
 `DeprecatedAttributes` turns each row into a class-level data descriptor on the
 model classes it names:
 
-- an `Alias` returns the exact 0.60 value, rebuilt from the typed state, and
+- an `Alias` rebuilds the 0.60 representation from current fitted state and
   emits a `PyfixestDeprecationWarning` naming the replacement;
-- a `Removed` entry raises `AttributeError`, explaining why the 0.60 value
-  cannot be rebuilt and naming the replacement.
+- a `Removed` entry raises `AttributeError`, explaining why the 0.60
+  representation is no longer supported and naming the replacement.
 
 A row maps model-class names to entries. A subclass inherits the entry of its
 nearest listed ancestor, so a row names `Feols` for the common case and a
@@ -28,12 +28,20 @@ import dataclasses
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyfixest.errors import PyfixestDeprecationWarning
+
+if TYPE_CHECKING:
+    from pyfixest.did.saturated_twfe import EventStudyDesign
+    from pyfixest.estimation.internals.model_state import CollinearityCheck
+    from pyfixest.estimation.models.feglm_ import Feglm
+    from pyfixest.estimation.models.feiv_ import Feiv
+    from pyfixest.estimation.models.feols_ import Feols
+    from pyfixest.estimation.models.fepois_ import Fepois
 
 # The release that moved the attributes into typed state.
 REMOVED_IN = "0.70.0"
@@ -41,7 +49,7 @@ REMOVED_IN = "0.70.0"
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Alias:
-    """A deprecated name whose 0.60 value is rebuilt from typed state.
+    """Rebuild a deprecated attribute's 0.60 representation and name its replacement.
 
     Parameters
     ----------
@@ -49,7 +57,7 @@ class Alias:
         The typed state to use instead, as users write it, e.g.
         ``"fit.coeftable.se"``.
     read : Callable[[Any], Any]
-        Rebuild the 0.60 value from a fitted model. It raises
+        Rebuild the former representation from the current fitted model. It raises
         `AttributeError` while the typed state it reads is not published or
         was dropped by the storage options.
     """
@@ -58,7 +66,7 @@ class Alias:
     read: Callable[[Any], Any]
 
     def resolve(self, name: str, fit: object) -> Any:
-        """Return the 0.60 value of `fit.<name>`."""
+        """Return the compatibility value of `fit.<name>`."""
         try:
             return self.read(fit)
         except AttributeError as exc:
@@ -72,7 +80,7 @@ class Alias:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Removed:
-    """A deprecated name whose 0.60 value cannot be rebuilt exactly.
+    """Reject access to a removed 0.60 attribute with a reason and replacement.
 
     Parameters
     ----------
@@ -94,8 +102,8 @@ class Removed:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class DeprecatedAttribute:
-    """One deprecated 0.60 attribute of fitted models.
+class DeprecatedAttributeSpec:
+    """Map a deprecated attribute to alias or removal rules by model class.
 
     Parameters
     ----------
@@ -115,7 +123,7 @@ class DeprecatedAttribute:
 
 
 class _DeprecatedAttributeDescriptor:
-    """Class-level data descriptor serving one deprecated attribute."""
+    """Apply one class's deprecation rule with warnings and read-only access."""
 
     def __init__(self, *, name: str, entry: Alias | Removed, silent: bool) -> None:
         self.name = name
@@ -149,7 +157,7 @@ class _DeprecatedAttributeDescriptor:
 
 
 class DeprecatedAttributes:
-    """Mixin installing the `DEPRECATED_ATTRIBUTES` rows that name a subclass."""
+    """Install deprecation descriptors from the registry when subclasses are defined."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -179,7 +187,7 @@ class DeprecatedAttributes:
 # ---------------------------------------------------------------------------
 
 
-def _sqrt_weighted(fit: Any, values: NDArray[np.float64]) -> NDArray[np.float64]:
+def _sqrt_weighted(fit: Feols, values: NDArray[np.float64]) -> NDArray[np.float64]:
     """Premultiply rows by the square root of the observation weights."""
     weights = fit.observation_weights.values
     if weights is None:
@@ -189,14 +197,14 @@ def _sqrt_weighted(fit: Any, values: NDArray[np.float64]) -> NDArray[np.float64]
 
 
 def _sqrt_working_weighted(
-    fit: Any, values: NDArray[np.float64]
+    fit: Feglm, values: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Premultiply rows by the square root of the final IRLS weights."""
     sqrt_weights = np.sqrt(fit.working_state.working_weights.reshape(-1))
     return values * (sqrt_weights if values.ndim == 1 else sqrt_weights[:, None])
 
 
-def _linear_weights(fit: Any) -> NDArray[np.float64]:
+def _linear_weights(fit: Feols) -> NDArray[np.float64]:
     """0.60 `_weights`: the observation weights as a column, ones if unweighted."""
     weights = fit.observation_weights.values
     if weights is None:
@@ -204,7 +212,13 @@ def _linear_weights(fit: Any) -> NDArray[np.float64]:
     return weights.reshape((-1, 1))
 
 
-def _glm_sum_fe(fit: Any) -> NDArray[np.float64]:
+def _linear_residuals(fit: Feols) -> NDArray[np.float64]:
+    """Rebuild solver-scale residuals; FE-only OLS kept a column in 0.60."""
+    residuals = _sqrt_weighted(fit, fit._residuals)
+    return residuals.reshape((-1, 1)) if fit._X_is_empty else residuals
+
+
+def _glm_sum_fe(fit: Feglm) -> NDArray[np.float64]:
     """0.60 GLM `_sumFE`: weighted fits scaled it by sqrt(IRLS weights)."""
     sum_fe = fit.fixef_estimates.sumFE
     if not fit.options.has_weights:
@@ -212,7 +226,7 @@ def _glm_sum_fe(fit: Any) -> NDArray[np.float64]:
     return _sqrt_working_weighted(fit, sum_fe)
 
 
-def _clustered_ssc(fit: Any) -> NDArray[np.float64]:
+def _clustered_ssc(fit: Feols) -> NDArray[np.float64]:
     """0.60 `_ssc`: one-way clustered fits stored a (1, 1) array."""
     covariance = fit.variance_covariance
     if len(covariance.spec.clustervar) == 1:
@@ -220,7 +234,7 @@ def _clustered_ssc(fit: Any) -> NDArray[np.float64]:
     return covariance.ssc
 
 
-def _cluster_counts(fit: Any) -> list[int]:
+def _cluster_counts(fit: Feols) -> list[int]:
     """0.60 `_G`: the `G_df="min"` rule padded the minimum to three entries."""
     counts = list(fit.variance_covariance.G)
     if counts and fit.options.ssc.G_df == "min":
@@ -228,15 +242,33 @@ def _cluster_counts(fit: Any) -> list[int]:
     return counts
 
 
-def _sample_split_value(fit: Any) -> str | int | float:
+def _sample_split_value(fit: Feols) -> str | int | float:
     """0.60 `_sample_split_value`; unsplit and full-sample fits held a sentinel."""
     split = fit.model.sample_split
-    if split is None or split.value is None:
+    if split is None:
         raise AttributeError("this fit is not estimated on one value of a split")
-    return split.value
+    return "all" if split.value is None else split.value
 
 
-def _eff_f(fit: Any) -> float:
+def _na_index(fit: Feols) -> frozenset[int]:
+    """0.60 `_na_index` excluded rows subsequently dropped for separation."""
+    if fit.sample_info.dropped_by_stage.separation:
+        raise AttributeError(
+            "the row positions before separation are no longer retained; "
+            "fit.sample_info.dropped_row_index includes all filtering stages"
+        )
+    return fit.sample_info.dropped_row_index
+
+
+def _poisson_n_fe(fit: Fepois) -> int:
+    """After separation, 0.60 Poisson counted only FE with multiple levels."""
+    counts = fit.fixef_counts
+    if fit.sample_info.dropped_by_stage.separation:
+        return sum(n > 1 for n in counts.n_levels_by_fe)
+    return counts.n_fixef
+
+
+def _eff_f(fit: Feiv) -> float:
     """0.60 `_eff_F`, set only once `IV_Diag()` or `eff_F()` ran."""
     eff_f = fit.first_stage.diagnostics.eff_f
     if eff_f is None:
@@ -244,22 +276,23 @@ def _eff_f(fit: Any) -> float:
     return eff_f
 
 
-def _event_study_design(fit: Any) -> Any:
+def _event_study_design(fit: Feols) -> EventStudyDesign:
     """Return the design of a saturated event study; other fits carry none."""
     try:
-        return fit.event_study_design
+        # Saturated event studies attach this state dynamically.
+        return getattr(fit, "event_study_design")  # noqa: B009
     except AttributeError:
         raise AttributeError(
             "only `event_study(estimator='saturated')` fits record their design"
         ) from None
 
 
-def _collin_index(collinearity: Any) -> list[bool]:
+def _collin_index(collinearity: CollinearityCheck) -> list[bool]:
     """0.60 `_collin_index`: empty unless a column was dropped."""
     return list(collinearity.mask) if collinearity.any_dropped else []
 
 
-def _poisson_null_measure(fit: Any, value: float) -> float | None:
+def _poisson_null_measure(fit: Fepois, value: float) -> float | None:
     """0.60 left the Poisson null measures `None` for weighted fits."""
     return None if fit.options.has_weights else value
 
@@ -279,7 +312,7 @@ _NO_CROSS_PRODUCTS = (
 
 
 def _row(name: str, *, silent: bool = False, **classes: Alias | Removed):
-    return DeprecatedAttribute(name=name, classes=classes, silent=silent)
+    return DeprecatedAttributeSpec(name=name, classes=classes, silent=silent)
 
 
 def _alias(replacement: str, read: Callable[[Any], Any]) -> Alias:
@@ -291,8 +324,19 @@ def _removed(replacement: str, reason: str) -> Removed:
 
 
 # Keep rows grouped by the typed state that replaces them.
-DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
+DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
     # fit.model
+    _row(
+        "FixestFormula",
+        Feols=_removed(
+            "fit.model.parsed_formula",
+            "the parsed formula interface changed, including its stages and fixed effects",
+        ),
+    ),
+    _row(
+        "_model_spec",
+        Feols=_alias("fit.model.model_spec", lambda fit: fit.model.model_spec),
+    ),
     _row(
         "_fml",
         silent=True,
@@ -332,9 +376,64 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     _row(
         "_sample_split_value",
+        silent=True,
         Feols=_alias("fit.model.sample_split.value", _sample_split_value),
     ),
+    _row(
+        "_sample_split_var",
+        silent=True,
+        Feols=_alias(
+            "fit.model.sample_split",
+            lambda fit: (
+                None if fit.model.sample_split is None else fit.model.sample_split.var
+            ),
+        ),
+    ),
     # fit.options
+    *(
+        _row(
+            f"_{name}",
+            Feols=_alias(
+                f"fit.options.{name}",
+                lambda fit, name=name: getattr(fit.options, name),
+            ),
+        )
+        for name in (
+            "drop_singletons",
+            "drop_intercept",
+            "fixef_tol",
+            "store_data",
+            "copy_data",
+            "lean",
+            "context",
+            "demeaner",
+        )
+    ),
+    _row(
+        "_offset_name",
+        Feols=_alias("fit.options.offset", lambda fit: fit.options.offset),
+    ),
+    _row(
+        "_fixef_maxiter",
+        Feols=_alias(
+            "fit.options.demeaner.fixef_maxiter",
+            lambda fit: fit.options.demeaner.fixef_maxiter,
+        ),
+    ),
+    *(
+        _row(
+            f"_{name}",
+            Quantreg=_alias(
+                f"fit.options.{name}",
+                lambda fit, name=name: getattr(fit.options, name),
+            ),
+        )
+        for name in ("quantile_tol", "quantile_maxiter", "seed")
+    ),
+    _row(
+        "_accelerate",
+        Feglm=_alias("fit.options.accelerate", lambda fit: fit.options.accelerate),
+    ),
     _row(
         "_ssc_dict",
         Feols=_alias(
@@ -355,6 +454,24 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     _row("tol", Feglm=_alias("fit.options.tol", lambda fit: fit.options.tol)),
     _row(
+        "separation_check",
+        Feglm=_alias(
+            "fit.options.separation_check", lambda fit: fit.options.separation_check
+        ),
+    ),
+    _row(
+        "_has_weights",
+        Feols=_alias("fit.options.has_weights", lambda fit: fit.options.has_weights),
+    ),
+    _row(
+        "_weights_name",
+        Feols=_alias("fit.options.weights", lambda fit: fit.options.weights),
+    ),
+    _row(
+        "_weights_type",
+        Feols=_alias("fit.options.weights_type", lambda fit: fit.options.weights_type),
+    ),
+    _row(
         "_quantile",
         Quantreg=_alias("fit.options.quantile", lambda fit: fit.options.quantile),
     ),
@@ -363,6 +480,38 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
         "_N",
         silent=True,
         Feols=_alias("fit.sample_info.n_obs", lambda fit: fit.sample_info.n_obs),
+    ),
+    _row(
+        "_N_rows",
+        Feols=_alias("fit.sample_info.n_rows", lambda fit: fit.sample_info.n_rows),
+        Feglm=_alias(
+            "fit.sample_info",
+            lambda fit: (
+                fit.sample_info.n_rows + fit.sample_info.dropped_by_stage.separation
+            ),
+        ),
+        Fepois=_alias("fit.sample_info.n_rows", lambda fit: fit.sample_info.n_rows),
+    ),
+    _row("_na_index", Feols=_alias("fit.sample_info.dropped_row_index", _na_index)),
+    _row(
+        "n_separation_na",
+        Feols=_alias(
+            "fit.sample_info.dropped_by_stage.separation",
+            lambda fit: fit.sample_info.dropped_by_stage.separation,
+        ),
+    ),
+    _row(
+        "_k_fe",
+        Feols=_removed(
+            "fit.fixef_counts.n_levels_by_fe",
+            "its encoded Series labels and process-dependent ordering are no "
+            "longer supported",
+        ),
+    ),
+    _row(
+        "_n_fe",
+        Feols=_alias("fit.fixef_counts.n_fixef", lambda fit: fit.fixef_counts.n_fixef),
+        Fepois=_alias("fit.fixef_counts.n_fixef", _poisson_n_fe),
     ),
     _row(
         "_weights",
@@ -427,7 +576,9 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
         "_Z",
         Feols=_alias(
             "fit.within_data.design",
-            lambda fit: _sqrt_weighted(fit, fit.within_data.design),
+            lambda fit: (
+                None if fit._X_is_empty else _sqrt_weighted(fit, fit.within_data.design)
+            ),
         ),
         Feiv=_alias(
             "fit.within_data.instruments",
@@ -469,12 +620,14 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     _row(
         "_u_hat",
+        Feols=_alias("fit.resid()", _linear_residuals),
         Feglm=_alias(
             "fit.working_state.working_residuals",
             lambda fit: _sqrt_working_weighted(
                 fit, fit.working_state.working_residuals.reshape(-1)
             ),
         ),
+        Quantreg=_alias("fit.resid()", lambda fit: fit._residuals),
     ),
     # fit.fitted_values
     _row(
@@ -586,6 +739,10 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     # fit.fitstat
     _row(
+        "get_performance",
+        Feols=_alias("fit.fitstat", lambda fit: fit._publish_fit_statistics),
+    ),
+    _row(
         "_rmse",
         silent=True,
         Feols=_alias("fit.fitstat.rmse", lambda fit: fit.fitstat.rmse),
@@ -598,7 +755,11 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
         silent=True,
         Feols=_alias("fit.fitstat.r2_within", lambda fit: fit.fitstat.r2_within),
     ),
-    _row("_adj_r2", Feols=_alias("fit.fitstat.adj_r2", lambda fit: fit.fitstat.adj_r2)),
+    _row(
+        "_adj_r2",
+        silent=True,
+        Feols=_alias("fit.fitstat.adj_r2", lambda fit: fit.fitstat.adj_r2),
+    ),
     _row(
         "_adj_r2_within",
         silent=True,
@@ -631,6 +792,10 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
             lambda fit: _poisson_null_measure(fit, fit.fitstat.pseudo_r2),
         ),
     ),
+    _row(
+        "_pearson_chi2",
+        Fepois=_alias("fit.fitstat.pearson_chi2", lambda fit: fit.fitstat.pearson_chi2),
+    ),
     # fit.wald
     _row("_dfn", Feols=_alias("fit.wald.df1", lambda fit: fit.wald.df1)),
     _row("_dfd", Feols=_alias("fit.wald.df2", lambda fit: fit.wald.df2)),
@@ -653,8 +818,10 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     ),
     _row(
         "_alpha",
-        Feols=_alias(
-            "fit.fixef_estimates.alpha", lambda fit: fit.fixef_estimates.alpha
+        Feols=_removed(
+            "fit.fixef()",
+            "the dummy-coefficient layout changed, including unused categorical "
+            "levels; fixef() returns coefficients labelled by fixed-effect term and level",
         ),
     ),
     _row(
@@ -749,6 +916,21 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
         ),
     ),
     # fit.capabilities
+    *(
+        _row(
+            name,
+            Feols=_alias(
+                f"fit.capabilities.{field}",
+                lambda fit, field=field: getattr(fit.capabilities, field),
+            ),
+        )
+        for name, field in (
+            ("_support_hac_inference", "hac_inference"),
+            ("_support_decomposition", "decomposition"),
+            ("_supports_wildboottest", "wildboottest"),
+            ("_supports_cluster_causal_variance", "cluster_causal_variance"),
+        )
+    ),
     _row(
         "_support_crv3_inference",
         Feols=_alias(
@@ -759,8 +941,20 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttribute, ...] = (
     _row(
         "_support_iid_inference",
         # Every IV and GLM fit supported iid inference; 0.60 never read it.
-        Feiv=_alias("fit.capabilities", lambda fit: True),
-        Feglm=_alias("fit.capabilities", lambda fit: True),
+        # There is no IID capability field: vcov validates the requested type.
+        Feiv=_alias("fit.vcov", lambda fit: True),
+        Feglm=_alias("fit.vcov", lambda fit: True),
+    ),
+    # fit.ritest_statistics
+    *(
+        _row(
+            f"_ritest_{name}",
+            Feols=_alias(
+                f"fit.ritest_statistics.{name}",
+                lambda fit, name=name: getattr(fit.ritest_statistics, name),
+            ),
+        )
+        for name in ("statistics", "sample_stat", "pvalue")
     ),
     # fit.event_study_design
     _row(

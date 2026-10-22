@@ -81,8 +81,8 @@ class Feiv(Feols):
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
         get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
+    _residuals : np.ndarray
+        Response-unit residuals without square-root observation weighting.
     first_stage : FirstStage
         First-stage regression fitted after second-stage inference: the
         coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
@@ -230,7 +230,7 @@ class Feiv(Feols):
         )
 
         self._beta_hat = fit.beta
-        self._u_hat = fit.residuals
+        self._residuals = fit.residuals
         self.sandwich = fit.sandwich
 
         # The response minus the residual carries the fixed-effect
@@ -265,7 +265,7 @@ class Feiv(Feols):
             coefficients=model1._beta_hat,
             # note that model1.within_data.design is demeaned
             fitted_values=model1.within_data.design @ model1._beta_hat,
-            residuals=model1._u_hat,
+            residuals=model1._residuals,
             model=model1,
             instruments=instruments,
             diagnostics=first_stage_f_test(

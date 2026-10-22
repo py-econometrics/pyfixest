@@ -115,7 +115,6 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     residuals = (
         fit.within_data.response.flatten() - fit.within_data.design @ fit._beta_hat
     )
-    np.testing.assert_allclose(fit._u_hat, residuals)
     np.testing.assert_allclose(fit.resid(), residuals)
     sandwich = fit.sandwich
     assert type(sandwich) is SandwichComponents
@@ -173,9 +172,11 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     X_hat = within.instruments @ tZZinv @ tZX
     np.testing.assert_allclose(
         sandwich.scores,
-        X_hat * (weights * fit._u_hat)[:, None],
+        X_hat * (weights * fit.resid())[:, None],
     )
-    np.testing.assert_allclose(fit.resid(), fit._u_hat)
+    np.testing.assert_allclose(
+        fit.resid(), within.response.flatten() - within.design @ fit.coef().to_numpy()
+    )
 
 
 def test_formula_data_remains_canonical_after_linear_fit(
@@ -447,7 +448,6 @@ def test_undefined_fit_statistics_are_nan(
 ) -> None:
     fit = estimator(formula, lifecycle_data, **kwargs)
     assert all(np.isnan(value) for value in astuple(fit.fitstat))
-    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])

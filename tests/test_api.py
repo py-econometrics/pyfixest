@@ -326,7 +326,7 @@ def test_lean(estimator, kwargs, lean, store_data):
     if estimator is pf.feols:
         lean_only_attributes = {
             "sandwich",
-            "_u_hat",
+            "_residuals",
             "within_data",
             "observation_weights",
         }

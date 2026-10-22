@@ -148,7 +148,7 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
             tol=1e-10,
         )
     check_absolute_diff(
-        fit_ols._u_hat[0:5],
+        fit_ols.resid()[0:5],
         fit_gaussian.working_state.working_residuals[0:5],
         tol=1e-10,
     )

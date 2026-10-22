@@ -94,7 +94,7 @@ class QuantregMulti:
         beta_hat = median_quantreg.solution.beta
 
         median_quantreg._beta_hat = beta_hat
-        median_quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+        median_quantreg._residuals = Y.flatten() - (X @ beta_hat).flatten()
 
         def _direction_helper(i, direction):
             if direction == "left":
@@ -120,7 +120,7 @@ class QuantregMulti:
                 )
                 beta_hat = quantreg.solution.beta
                 quantreg._beta_hat = beta_hat
-                quantreg._u_hat = Y.flatten() - (X @ beta_hat).flatten()
+                quantreg._residuals = Y.flatten() - (X @ beta_hat).flatten()
 
             for i in range(q_median_idx - 1, -1, -1):
                 _cfm1_fun(i, "left")
@@ -134,7 +134,7 @@ class QuantregMulti:
                 i_prev = _direction_helper(i, direction)
 
                 beta_hat_prev = self.all_quantregs[q[i_prev]]._beta_hat
-                u_hat_prev = self.all_quantregs[q[i_prev]]._u_hat
+                u_hat_prev = self.all_quantregs[q[i_prev]]._residuals
 
                 kappa = np.median(np.abs(u_hat_prev - np.median(u_hat_prev)))
                 h_G = get_hall_sheather_bandwidth(q=q[i_prev], N=N)
@@ -147,7 +147,7 @@ class QuantregMulti:
                 beta_new = beta_hat_prev + np.linalg.solve(J, M).flatten()
 
                 self.all_quantregs[q[i]]._beta_hat = beta_new
-                self.all_quantregs[q[i]]._u_hat = (
+                self.all_quantregs[q[i]]._residuals = (
                     self.all_quantregs[q[i]].within_data.response.flatten()
                     - self.all_quantregs[q[i]].within_data.design @ beta_new
                 )
