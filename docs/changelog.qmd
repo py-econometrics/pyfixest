@@ -17,6 +17,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
+
 ### Word Regression Tables
 
 `pf.etable()` now supports `type="docx"` to return or save editable Word tables,
@@ -26,15 +28,41 @@ with per-call formatting through `docx_style`.
 
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
 
+### `within` LSMR Backend via `within-py`
+
+We now use the LSMR demeaner from the `within` package as the default backend, with adaptive preconditioning. Rust MAP remains available through `MapDemeaner()`.
+
+The LSMR stopping tolerances remain `fixef_atol=fixef_btol=1e-8`, matching `within`'s default. These control solver convergence, not the error in each demeaned value or derived statistic.
+
+`LsmrDemeaner(backend="within")` now calls the [`within`](https://github.com/py-econometrics/within) Python package (`within-py>=0.4.0,<0.5.0`, a new required dependency) instead of the `within` Rust crate compiled into pyfixest.
+
+The default `preconditioner="auto"` now selects the adaptive preconditioner introduced in `within` 0.4.0. Building the additive Schwarz preconditioner is the expensive setup step of the `within` solver, and on well-connected fixed effects it often does not pay off: the extra iterations that the cheap diagonal preconditioner needs cost less than building Schwarz. The adaptive preconditioner starts with the diagonal one and builds additive Schwarz only when convergence stalls. It skips the setup cost where Schwarz does not help and recovers its speed-up on sparse, weakly connected designs where it does.
+
+Breaking changes:
+
+- `preconditioner="auto"` selects the adaptive preconditioner instead of additive Schwarz. The explicit settings are `preconditioner="adaptive"` and `preconditioner="additive"`. Because adaptive preconditioning can finish using only the diagonal preconditioner, numerical results may differ from the previous default. Solver tolerances control convergence; they do not directly bound errors in demeaned values or estimated coefficients.
+- `pf.Preconditioner` is now `within.Preconditioner`. Its `variant` string is replaced by `config`, a `within.PreconditionerConfig`, and `build_time_seconds` is renamed `build_duration_seconds`. Preconditioners pickled by earlier pyfixest versions can no longer be loaded.
+
+`fepois` and `feglm` retain preconditioner reuse across IWLS iterations while solving each projection with its current working weights. If an adaptive solve escalates, the cache keeps its additive Schwarz replacement for subsequent iterations and sibling models. `fit.preconditioner` exposes this shared cached handle, as it does for OLS/IV.
+
 Other things:
 
 - `quantreg(vcov="hetero")` now uses observation-level Gaussian kernel weights in the heteroskedasticity-robust sandwich covariance, matching R `quantreg::summary.rq(se="ker")` instead of collapsing algebraically to IID standard errors. See [#1744](https://github.com/py-econometrics/pyfixest/issues/1744).
 
+- Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
+  minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
+
+- `did2s()` standard errors now use the fitted first-stage fixed-effect encoding, so `year^region` and `year:region` match an explicit combined column. Stage validation preserves spaces in quoted labels and consistently rejects second-stage intercept removal, IV and multiple models. See [#1758](https://github.com/py-econometrics/pyfixest/issues/1758) and [#1812](https://github.com/py-econometrics/pyfixest/issues/1812).
+
 - Iterative-rectifier separation checks use the retained response, regressors and fixed-effect codes, and respect the configured `collin_tol`. Stateful terms keep their fitted values after sample filtering, and predictors supplied through formula context cannot be shadowed by auxiliary columns.
+
+- IV formulas preserve covariates named like generated fitted values, such as `X2_hat`, and support interacted endogenous terms such as `X2:Z2`. Redundant declarations of the same endogenous term are deduplicated. Multiple estimation warns when several steps parse to the same model, as in `Y ~ csw(X1, X2) | X2 ~ Z1` or `Y ~ csw(X1, X1)`, because only one model is returned for them. Nested IV blocks and operations yielding unsupported IV specifications are rejected. Fixes [#1736](https://github.com/py-econometrics/pyfixest/issues/1736) and [#1808](https://github.com/py-econometrics/pyfixest/issues/1808).
 
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
+
+- pandas 2.3.3 and narwhals 1.17 are now the minimum supported versions. pandas 2.3.3 supports Python 3.10 and handles nullable numeric formula inputs without a pandas 1.x compatibility workaround. narwhals 1.17 is required by formulaic 1.2.x. See [#1785](https://github.com/py-econometrics/pyfixest/issues/1785).
 
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 

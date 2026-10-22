@@ -303,7 +303,7 @@ class Feglm(Feols):
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        "Residualize v and X by flist using weights."
+        """Residualize v and X with current working weights and a reused preconditioner."""
         if flist is None:
             return v, X
 

@@ -92,7 +92,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     sum_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.post_estimation.wald import _normalize_q, wald_test
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -438,7 +438,8 @@ class Feols(ResultAccessorMixin):
         ``None`` when no preconditioner participated in the solve —
         ``preconditioner='off'``, single-FE designs (MAP fallback), or any
         non-within backend. Otherwise the instance built on the first solve
-        for this model's row sample. Pass it back via
+        for this model's row sample, or the additive Schwarz preconditioner
+        that replaced it when a later adaptive solve escalated. Pass it back via
         ``LsmrDemeaner(backend='within', preconditioner=...)`` to skip the
         setup phase on a later fit over the same design.
         """
@@ -952,6 +953,7 @@ class Feols(ResultAccessorMixin):
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        q = _normalize_q(q=q, n_restrictions=R.shape[0])
 
         covariance = self.variance_covariance
         if covariance.spec.is_clustered:
@@ -962,7 +964,7 @@ class Feols(ResultAccessorMixin):
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
         if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
+            not np.array_equal(R, np.eye(self._k)) or np.any(q)
         ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",

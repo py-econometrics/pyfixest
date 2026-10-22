@@ -179,6 +179,53 @@ def test_did2s(data, weights):
     )
 
 
+@pytest.mark.against_r_extended
+@pytest.mark.skipif(not import_check, reason="R package did2s is not installed.")
+@pytest.mark.parametrize("weights", [None, "weights"])
+def test_did2s_interacted_fe_vs_r(data, weights):
+    """Compare interacted-FE estimates and standard errors with R did2s."""
+    data = data.assign(region=data["state"] % 3)
+    fit = did2s_pyfixest(
+        data=data,
+        yname="dep_var",
+        first_stage="~ X | unit + year:region",
+        second_stage="~ i(treat)",
+        treatment="treat",
+        cluster="state",
+        weights=weights,
+    )
+    r_weights = {} if weights is None else {"weights": weights}
+    reference = did2s.did2s(
+        data=data,
+        yname="dep_var",
+        first_stage=ro.Formula("~ X | unit + year^region"),
+        second_stage=ro.Formula("~ i(treat, ref=FALSE)"),
+        treatment="treat",
+        cluster_var="state",
+        **r_weights,
+    )
+    estimates = stats.coef(reference)
+    r_names = ro.r("function(fit) names(coef(fit))")(reference)
+    assert fit.coef().index.tolist() == [
+        name.replace("::TRUE", "::True") for name in r_names
+    ]
+    # First-stage iterative FE recovery affects residualized outcomes at 1e-6.
+    np.testing.assert_allclose(
+        fit.coef(),
+        np.asarray(estimates),
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S coefficients differ from R did2s",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        np.asarray(fixest.se(reference)),
+        rtol=1e-5,
+        atol=1e-5,
+        err_msg="DID2S standard errors differ from R did2s",
+    )
+
+
 def test_errors(data):
     # test expected errors: treatment
 

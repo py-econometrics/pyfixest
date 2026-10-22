@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import FormulaSyntaxError
+from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -955,6 +955,42 @@ def test_correct_number_of_models(test_data, formula: str, expected_n_models: in
     )
 
 
+@pytest.mark.parametrize(
+    "formula,expected_n_models",
+    [
+        ("Y ~ csw(X1, X1)", 1),
+        ("Y ~ X1 + sw0(X1, X2)", 2),
+        ("Y ~ csw(X1, X2) | X2 ~ Z1", 1),
+        ("Y ~ csw0(X2, X1) | X2 ~ Z1", 2),
+        ("Y ~ X1 + [X2 ~ Z1] + sw0(Z2, X2)", 2),
+    ],
+)
+def test_duplicate_stepwise_models_warn(
+    test_data, formula: str, expected_n_models: int
+):
+    """Steps that parse to the same model warn instead of silently collapsing."""
+    with pytest.warns(UserWarning, match="parse to the same model"):
+        fit = pf.feols(formula, data=test_data)
+
+    assert len(fit.to_list()) == expected_n_models
+
+
+@pytest.mark.parametrize(
+    "formula,kwargs",
+    [
+        ("Y ~ X1 + csw(X1, X2)", {}),
+        ("Y ~ csw(X1, Z2) + [X2 ~ Z1]", {}),
+        ("Y ~ X1", {"fsplit": "f1"}),
+    ],
+)
+def test_distinct_stepwise_models_do_not_warn(test_data, formula: str, kwargs):
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "error", message=".*parse to the same model", category=UserWarning
+        )
+        pf.feols(formula, data=test_data, **kwargs)
+
+
 def test_stepwise_call_over_several_lines_matches_single_line(test_data):
     """A triple-quoted formula with one stepwise argument per line fits the same models."""
     multiline = """
@@ -1062,11 +1098,102 @@ class TestEdgeCases:
         assert "Z1" in f.second_stage.rhs
         # assert f.as_first_stage().second_stage == "Z1 ~ W1"
 
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X1 + [[X2 ~ Z1] ~ Z2]",
+            "Y ~ X1 + [X2 ~ [Z1 ~ Z2]]",
+        ],
+        ids=["nested-endogenous", "nested-instruments"],
+    )
+    def test_reject_nested_multistage_formulas(self, formula):
+        """An IV block cannot contain another IV block on either side."""
+        with pytest.raises(FormulaSyntaxError, match="Nested instrumental-variable"):
+            Formula.parse(formula)
+
+    @pytest.mark.parametrize(
+        "rhs, error, match",
+        [
+            (
+                "X1 : [X2 ~ Z1]",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            (
+                "X1 - [X2 ~ Z1]",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            (
+                "-([X2 ~ Z1])",
+                FormulaSyntaxError,
+                "removed or transformed the endogenous terms.*X2.*IV specification remains",
+            ),
+            ("X1 * [X2 ~ Z1]", EndogVarsAsCovarsError, "X2"),
+        ],
+    )
+    def test_reject_unsupported_iv_second_stage(self, rhs, error, match):
+        """Algebra must preserve the endogenous term without creating invalid controls."""
+        with pytest.raises(error, match=match):
+            Formula.parse(f"Y ~ {rhs}")
+
+    @pytest.mark.parametrize(
+        "formula, expected",
+        [
+            ("Y ~ X2 + [X2 ~ Z1]", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ [X2 ~ Z1] + X2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X2 | X2 ~ Z1", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
+            ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
+            ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
+            ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
+            (
+                "Y ~ (X1 * X3 - X1:X3) + [X2:Z2 ~ (Z1 + Z3)^2]",
+                "Y ~ X1 + X3 + [X2:Z2 ~ Z1 + Z3 + Z1:Z3]",
+            ),
+            (
+                "Y ~ [X2 ~ Z1 / Z3] + (X1 + X3)^2 | f1:f2",
+                "Y ~ X1 + X3 + X1:X3 + [X2 ~ Z1 + Z1:Z3] | f1:f2",
+            ),
+        ],
+    )
+    def test_iv_semantic_deduplication(self, formula, expected):
+        """Equivalent evaluated terms define the same IV stages, controls and intercept."""
+        parsed = Formula.parse(formula)[0]
+        reference = Formula.parse(expected)[0]
+        assert parsed.second_stage == reference.second_stage
+        assert (
+            parsed.as_first_stage().second_stage
+            == reference.as_first_stage().second_stage
+        )
+        assert parsed.instruments == reference.instruments
+        assert parsed.render() == reference.render()
+
     def test_iv_transformed_endogenous_in_second_stage(self):
-        """A transformed endogenous variable survives the _hat term filtering."""
-        f = Formula.parse("Y ~ X1 | log(Z1) ~ W1")[0]
+        """A transformed endogenous variable is retained in the second stage."""
+        f = Formula.parse("Y ~ X1 + [log(Z1) ~ W1]")[0]
         assert f.second_stage == formulaic.Formula("Y ~ 1 + X1 + log(Z1)")
         assert str(f.as_first_stage().second_stage.lhs) == "log(Z1)"
+
+    @pytest.mark.parametrize(
+        "formula",
+        ["Y ~ X1 + [X2:Z2 ~ Z1]", "Y ~ X1 | X2:Z2 ~ Z1"],
+        ids=["bracket", "pipe"],
+    )
+    def test_iv_interacted_endogenous_preserves_parsed_stages(self, formula):
+        """An endogenous interaction stays intact without generated lookup terms."""
+        parsed = Formula.parse(formula)[0]
+        assert parsed.exogenous == formulaic.Formula("1 + X1")
+        assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
+        assert parsed.instruments == formulaic.Formula("1 + Z1")
+        assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
+
+        first_stage = parsed.as_first_stage().second_stage
+        expected_first_stage = formulaic.Formula("X2:Z2 ~ Z1 + X1")
+        assert first_stage.lhs == expected_first_stage.lhs
+        assert set(first_stage.rhs) == set(expected_first_stage.rhs)
+        assert Formula.parse(parsed.render())[0].second_stage == parsed.second_stage
 
     @pytest.mark.parametrize(
         "formula_template",

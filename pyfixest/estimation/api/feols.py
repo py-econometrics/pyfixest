@@ -147,7 +147,8 @@ def feols(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
+        maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
@@ -251,9 +252,10 @@ def feols(
     Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
     "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
-    `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way
-    clustering, you can provide a formula string, e.g. `{"CRV1": "f1 + f2"}` for
-    CRV1 inference with clustering by `f1`.
+    `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway
+    clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}`
+    for CRV1 inference with clustering by `f1` and `f2`, or
+    `{"CRV1": "f1 + f2 + f3"}` for three-way clustering.
 
     ```{python}
     fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})

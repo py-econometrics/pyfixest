@@ -283,9 +283,9 @@ def test_iv_errors():
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogenous variable specified as covariate
-    with pytest.raises(EndogVarsAsCovarsError):
-        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
+    # a distinct control term uses the endogenous variable
+    with pytest.raises(EndogVarsAsCovarsError, match="Z1"):
+        feols(fml="Y ~ log(Z1) | Z1 ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -1879,6 +1879,7 @@ def test_estimation_rejects_unsupported_vcov(estimator, vcov, error, match):
         ({"G_adj": 1}, TypeError, "G_adj must be True or False"),
         ({"k_fixef": "all"}, ValueError, "k_fixef must be one of"),
         ({"G_df": "max"}, ValueError, "G_df must be one of"),
+        ({"k_adjj": False}, ValueError, "ssc accepts the keys"),
     ],
 )
 def test_ssc_rejects_invalid_options(kwargs, error, match):

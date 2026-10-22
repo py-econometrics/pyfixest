@@ -105,17 +105,6 @@ def test_fepois_args():
     np.testing.assert_allclose(fit4.coef(), fit5.coef(), rtol=1e-12)
 
 
-def test_map_demeaner_defaults_to_rust():
-    data = pf.get_data()
-
-    assert pf.MapDemeaner().backend == "rust"
-
-    fit = pf.feols("Y ~ X1 | f1", data=data)
-
-    assert isinstance(fit.options.demeaner, pf.MapDemeaner)
-    assert fit.options.demeaner.backend == "rust"
-
-
 def _run_with_deprecated_kwargs(estimator_name, **kwargs):
     if estimator_name == "feols":
         return pf.feols("Y ~ X1 | f1", data=pf.get_data(), **kwargs)
@@ -151,9 +140,11 @@ def test_typed_demeaners_reject_tolerances_ge_one(builder, invalid_name):
         builder()
 
 
-@pytest.mark.parametrize("requested", ["auto", "off", "additive", "diagonal"])
+@pytest.mark.parametrize(
+    "requested", ["auto", "off", "adaptive", "additive", "diagonal"]
+)
 def test_lsmr_demeaner_accepts_within_preconditioner_strings(requested):
-    """All four documented string options round-trip through ``LsmrDemeaner``."""
+    """All documented string options round-trip through ``LsmrDemeaner``."""
     demeaner = pf.LsmrDemeaner(preconditioner=requested)
     assert demeaner.backend == "within"
     assert demeaner.preconditioner == requested
@@ -225,18 +216,19 @@ def test_within_preconditioner_reuse_across_estimators(data_fn, fit_fn):
     # the same solve as the original.
     np.testing.assert_allclose(fit_reused.coef(), fit.coef(), rtol=1e-10, atol=1e-10)
     assert isinstance(fit_reused.preconditioner, pf.Preconditioner)
-    assert fit_reused.preconditioner.variant == pre.variant
+    assert fit_reused.preconditioner.config == pre.config
     assert fit_reused.preconditioner.nrows == pre.nrows
 
 
-def test_fixest_multi_shares_preconditioners_by_na_index():
-    data = pf.get_data().copy()
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+def test_fixest_multi_shares_preconditioners_by_na_index(estimator):
+    data = pf.get_data(model="Fepois" if estimator is pf.fepois else "Feols").copy()
     data["X3"] = data["X2"] ** 2 + 0.1 * data["X1"]
     complete = data[["Y", "X1", "X2", "X3", "f1", "f2"]].notna().all(axis=1)
     extra_na_index = data.index[complete][0]
     data.loc[extra_na_index, "X3"] = np.nan
 
-    fit = pf.feols(
+    fit = estimator(
         "Y ~ csw(X1, X2, X3) | f1 + f2",
         data=data,
         demeaner=pf.LsmrDemeaner(backend="within"),
@@ -261,15 +253,12 @@ def test_fixest_multi_shares_preconditioners_by_na_index():
     }
 
 
-def test_within_preconditioner_off_yields_no_cached_preconditioner():
+@pytest.mark.parametrize(("data_fn", "fit_fn"), _REUSE_ESTIMATORS)
+def test_within_preconditioner_off_yields_no_cached_preconditioner(data_fn, fit_fn):
     """``preconditioner='off'`` disables Schwarz, so ``fit.preconditioner`` is None."""
-    data = pf.get_data()
-    fit = pf.feols(
-        "Y ~ X1 | f1 + f2",
-        data=data,
-        demeaner=pf.LsmrDemeaner(backend="within", preconditioner="off"),
-    )
+    fit = fit_fn(data_fn(), pf.LsmrDemeaner(backend="within", preconditioner="off"))
     assert fit.preconditioner is None
+    assert not fit._demean_cache.lookup_preconditioner
 
 
 @pytest.mark.parametrize("backend", ["torch"])
@@ -304,7 +293,7 @@ def test_feiv_first_stage_reuses_within_preconditioner():
     # a fresh pyo3 wrapper around the same factorization (identity differs;
     # value semantics match upstream — compare structurally).
     assert isinstance(fit.first_stage.model.preconditioner, pf.Preconditioner)
-    assert fit.first_stage.model.preconditioner.variant == preconditioner.variant
+    assert fit.first_stage.model.preconditioner.config == preconditioner.config
     assert fit.first_stage.model.preconditioner.nrows == preconditioner.nrows
 
 

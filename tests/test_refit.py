@@ -262,7 +262,7 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
     )
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
     "A same-sample refit reuses the preconditioner the fit built."
     data = get_data().dropna()
@@ -274,6 +274,11 @@ def test_refit_reuses_preconditioner_on_the_fit_sample(variant):
 
     assert fit.preconditioner is not None
     assert refitted.options.demeaner.preconditioner is fit.preconditioner
+    assert refitted.preconditioner.config == fit.preconditioner.config
+    assert (
+        refitted.preconditioner.build_duration_seconds
+        == fit.preconditioner.build_duration_seconds
+    )
 
 
 # estimation arguments that are not options of a single fit: the caller of a

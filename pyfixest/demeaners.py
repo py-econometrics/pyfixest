@@ -14,6 +14,7 @@ from pyfixest.core.demean import (
     Preconditioner,
     WithinPreconditionerName,
     demean_within,
+    within_preconditioner_name,
 )
 from pyfixest.utils.dev_utils import _find_stack_level
 
@@ -21,10 +22,10 @@ MapBackend = Literal["numba", "rust"]
 LsmrBackend = Literal["within", "torch"]
 LsmrPrecision = Literal["float32", "float64"]
 TorchDevice = Literal["auto", "cpu", "mps", "cuda"]
-LsmrPreconditioner = Literal["auto", "off", "additive", "diagonal"]
+LsmrPreconditioner = Literal["auto", "off", "adaptive", "additive", "diagonal"]
 
 _PRECONDITIONER_SUPPORT: dict[LsmrBackend, tuple[set[str], str]] = {
-    "within": (set(get_args(WithinPreconditionerName)), "additive"),
+    "within": (set(get_args(WithinPreconditionerName)), "adaptive"),
     "torch": ({"diagonal"}, "diagonal"),
 }
 
@@ -74,8 +75,8 @@ def _get_numba_demean() -> Callable[..., tuple[np.ndarray, bool]]:
     except ImportError as exc:
         raise ImportError(
             "The Numba MAP backend requires the optional `numba` extra. "
-            "Install it with `pip install pyfixest[numba]`, or use the default "
-            "`MapDemeaner(backend='rust')` backend."
+            "Install it with `pip install pyfixest[numba]`, or use the Rust "
+            "MAP backend with `MapDemeaner(backend='rust')`."
         ) from exc
 
     return cast(Callable[..., tuple[np.ndarray, bool]], demean_nb)
@@ -100,8 +101,8 @@ class BaseDemeaner:
     Holds the settings shared by all backends, currently `fixef_maxiter`. This
     class is not passed to an estimation function directly. Use one of the
     concrete demeaners instead:
-    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd), the default, or
-    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd). See
+    [LsmrDemeaner](/reference/demeaners.LsmrDemeaner.qmd), the default, or
+    [MapDemeaner](/reference/demeaners.MapDemeaner.qmd). See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for a
     comparison.
 
@@ -126,8 +127,8 @@ class MapDemeaner(BaseDemeaner):
     """
     Method of Alternating Projections (MAP) demeaner.
 
-    The default backend. Sweeps out the fixed effects by alternately projecting
-    on each of them until convergence. See
+    Projects out the fixed effects using the method of alternating
+    projections until convergence. See
     [Choosing a Demeaner Backend](/how-to/demeaner-backends.qmd) for when to use
     which backend.
 
@@ -223,6 +224,10 @@ class LsmrDemeaner(BaseDemeaner):
     backend. The `torch` backend uses both tolerances independently
     (SciPy LSMR convention).
 
+    Both tolerances default to `1e-8`, matching `within`'s default. They
+    control solver convergence, not the error in each demeaned value or
+    derived statistic.
+
     The `local_size` field only applies to `backend="within"`; the
     `torch` backend ignores it.
 
@@ -233,10 +238,13 @@ class LsmrDemeaner(BaseDemeaner):
     `preconditioner` selects the preconditioner. Supported values:
 
     - `"auto"` (default): selects different preconditioners for different
-      backend implementations: `"additive"` for `"within"`; `"diagonal"`
+      backend implementations: `"adaptive"` for `"within"`; `"diagonal"`
       for `"torch"`.
     - `"off"`: disables preconditioning. Supported by `"within"`; not
       supported by `"torch"`.
+    - `"adaptive"`: starts with the diagonal preconditioner and escalates to
+      additive Schwarz only when convergence stalls. Only supported by the
+      `"within"` backend.
     - `"additive"`: additive Schwarz preconditioner. Only supported by the
       `"within"` backend.
     - `"diagonal"`: diagonal (Jacobi) preconditioner. Supported by
@@ -248,6 +256,10 @@ class LsmrDemeaner(BaseDemeaner):
       fixed-effect factors because single-factor problems run MAP as the within algo
       provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
+
+    In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
+    solving each projection with its current working weights. If an adaptive
+    solve escalates, subsequent iterations reuse the additive replacement.
 
     If a *string* value is incompatible with the chosen backend, a
     `UserWarning` is emitted at solve time and the backend's default is
@@ -334,8 +346,10 @@ class LsmrDemeaner(BaseDemeaner):
             ``self.preconditioner``: the latter is the user's requested
             configuration, while ``cached_preconditioner`` is the model's
             internal "reuse this if it still matches" handle. The cache is
-            used only when the current request is a string preconditioner
-            with the same variant (``"additive"`` or ``"diagonal"``). If the
+            used when the current request is a string preconditioner
+            built with the same configuration (``"additive"`` or
+            ``"diagonal"``); an ``"adaptive"`` request also reuses an
+            escalated additive Schwarz preconditioner. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
 
@@ -369,7 +383,7 @@ class LsmrDemeaner(BaseDemeaner):
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
-        """Demean via the `within` crate, reusing a matching cached preconditioner."""
+        """Demean via `within`, reusing a matching cached preconditioner."""
         preconditioner: WithinPreconditionerName | Preconditioner
         if isinstance(self.preconditioner, Preconditioner):
             preconditioner = self.preconditioner
@@ -379,12 +393,14 @@ class LsmrDemeaner(BaseDemeaner):
                 _resolve_preconditioner("within", self.preconditioner),
             )
 
-        if (
-            cached_preconditioner is not None
-            and isinstance(preconditioner, str)
-            and cached_preconditioner.variant.lower() == preconditioner
-        ):
-            preconditioner = cached_preconditioner
+        if cached_preconditioner is not None and isinstance(preconditioner, str):
+            cached_name = within_preconditioner_name(cached_preconditioner)
+            same_kind = cached_name == preconditioner
+            already_escalated = (
+                preconditioner == "adaptive" and cached_name == "additive"
+            )
+            if same_kind or already_escalated:
+                preconditioner = cached_preconditioner
 
         return demean_within(
             x=x,

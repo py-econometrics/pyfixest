@@ -20,8 +20,8 @@ from pyfixest.errors import (
 )
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG
 from pyfixest.estimation.formula.formulaic_compat import (
+    PyfixestOperatorResolver,
     count_multistage_blocks,
-    filter_multistage_endogenous_terms,
     formula_required_variables,
     get_first_multistage_lhs,
     get_first_multistage_rhs,
@@ -41,6 +41,7 @@ from pyfixest.estimation.formula.utils import (
 )
 
 _PARSER: Final[FormulaParser] = DefaultFormulaParser(
+    operator_resolver=PyfixestOperatorResolver(),
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
@@ -357,6 +358,14 @@ class Formula:
                 "Multiple endogenous variables are currently not supported. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
             )
+        missing_endogenous = [
+            term for term in self.endogenous if term not in self._right_hand_side.root
+        ]
+        if missing_endogenous:
+            raise FormulaSyntaxError(
+                "Formula operations removed or transformed the endogenous terms "
+                f"{missing_endogenous}, but their IV specification remains."
+            )
         underdetermined = len(self.endogenous) > len(
             tuple(terms_without_intercept(self.instruments))
         )
@@ -449,7 +458,11 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            exogenous = filter_multistage_endogenous_terms(exogenous, self.endogenous)
+            # IV blocks add their endogenous terms to the root. Exclude those
+            # terms here so the first stage does not regress them on themselves.
+            exogenous = formulaic.formula.SimpleFormula(
+                term for term in exogenous.root if term not in self.endogenous
+            )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.is_fixed_effects and exogenous_terms:

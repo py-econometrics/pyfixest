@@ -126,7 +126,8 @@ def fepois(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
+        maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
@@ -242,7 +243,6 @@ def fepois(
 
     Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
-    For applied examples, see the [Poisson & GLMs tutorial](/tutorials/poisson-glm.html).
     """
     # Thin wrapper: fepois is exactly feglm(family="poisson"). Capture the
     # context here, as an integer frame offset passed on to feglm would resolve
