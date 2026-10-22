@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-import numpy as np
 import pandas as pd
 
-from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
+from pyfixest.did.did2s import DID2S, _did2s_estimate
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
-from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
 from pyfixest.estimation.models.feols_ import Feols
 
 
@@ -137,11 +135,7 @@ def event_study(
             cluster=cluster,
         )
 
-        fit, did2s._first_u, did2s._second_u = did2s.estimate()
-        vcov, _G = did2s.vcov(coefnames=fit._coefnames)
-        fit.variance_covariance = _did2s_covariance(
-            fit=fit, vcov=vcov, G=_G, cluster=cluster
-        )
+        fit = did2s.estimate()
         _mark_as_did2s(fit)
 
     elif estimator == "twfe":
@@ -157,7 +151,7 @@ def event_study(
         )
         fit = twfe.estimate()
 
-        vcov = fit.vcov(vcov={"CRV1": cluster})
+        fit.vcov(vcov={"CRV1": cluster})
         fit.model = replace(fit.model, method="twfe")
         # ritest(), update(), and SAVI have not supported event-study fits.
         fit.capabilities = replace(
@@ -179,7 +173,7 @@ def event_study(
             cluster=cluster,
         )
         fit = saturated.estimate()
-        vcov = fit.vcov(vcov={"CRV1": cluster})
+        fit.vcov(vcov={"CRV1": cluster})
 
         fit.model = replace(fit.model, method="saturated")
         # ritest(), update(), and SAVI have not supported event-study fits.
@@ -288,49 +282,14 @@ def did2s(
     fit.tidy().head()
     ```
     """
-    first_stage = first_stage.replace(" ", "")
-    second_stage = second_stage.replace(" ", "")
-    if not first_stage.startswith("~"):
-        raise ValueError(f"first_stage must start with '~', got '{first_stage}'.")
-    if not second_stage.startswith("~"):
-        raise ValueError(f"second_stage must start with '~', got '{second_stage}'.")
-
-    # assert that there is no 0, -1 or - 1 in the second stage formula
-    if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):
-        raise ValueError(
-            """
-            The second stage formula should not contain '+0' or '-1'. Note that
-            the intercept is dropped automatically due to the presence of fixed
-            effects in the first stage.
-            """
-        )
-
-    data = data.copy()
-
-    fit, first_u, second_u = _did2s_estimate(
-        data=data,
+    fit = _did2s_estimate(
+        data=data.copy(),
         yname=yname,
         _first_stage=first_stage,
         _second_stage=second_stage,
         treatment=treatment,
-        weights=weights,
-    )
-
-    vcov, _G = _did2s_vcov(
-        data=data,
-        yname=yname,
-        first_stage=first_stage,
-        second_stage=second_stage,
-        treatment=treatment,
-        first_u=first_u,
-        second_u=second_u,
         cluster=cluster,
         weights=weights,
-        coefnames=fit._coefnames,
-    )
-
-    fit.variance_covariance = _did2s_covariance(
-        fit=fit, vcov=vcov, G=_G, cluster=cluster
     )
     fit.get_inference()  # update inference with correct vcov matrix
     _mark_as_did2s(fit)
@@ -355,30 +314,6 @@ def _mark_as_did2s(fit: Feols) -> None:
         sherman_morrison_update=False,
         crv3_inference=False,
         anytime_valid_inference=False,
-    )
-
-
-def _did2s_covariance(
-    *, fit: Feols, vcov: np.ndarray, G: int, cluster: str
-) -> VarianceCovariance:
-    """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
-
-    The second-stage fit was estimated with ``vcov="iid"``; its degrees of
-    freedom and adjustment factor are kept. The spec records the cluster
-    variable, so `wald_test`, `wildboottest`, and `ccv` treat the fit as
-    clustered.
-    """
-    inner = fit.variance_covariance
-    return VarianceCovariance(
-        vcov=vcov,
-        meat=None,
-        ssc=np.ones(1),
-        df_k=inner.df_k,
-        df_t=inner.df_t,
-        spec=VcovSpec(
-            vcov_type="CRV", vcov_type_detail="CRV1 (GMM)", clustervar=(cluster,)
-        ),
-        G=(int(G),),
     )
 
 

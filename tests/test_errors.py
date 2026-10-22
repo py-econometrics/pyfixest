@@ -284,9 +284,9 @@ def test_iv_errors():
     # instrument specified as covariate
     with pytest.raises(InstrumentsAsCovarsError):
         feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # endogenous variable specified as covariate
-    with pytest.raises(EndogVarsAsCovarsError):
-        feols(fml="Y ~ Z1 | Z1  ~ X1", data=data)
+    # a distinct control term uses the endogenous variable
+    with pytest.raises(EndogVarsAsCovarsError, match="Z1"):
+        feols(fml="Y ~ log(Z1) | Z1 ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):

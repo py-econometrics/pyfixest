@@ -47,7 +47,10 @@ def test_event_study_twfe(data):
     # ), "TWFE confidence intervals are not the same."
 
 
-def test_event_study_did2s(data):
+@pytest.mark.parametrize("xfml", [None, "C(band)"])
+def test_event_study_did2s(data, xfml):
+    if xfml is not None:
+        data = data.assign(band=pd.Categorical((data["unit"] + data["year"]) % 3))
     event_study_did2s = event_study(
         data=data,
         yname="dep_var",
@@ -56,13 +59,14 @@ def test_event_study_did2s(data):
         gname="g",
         att=True,
         estimator="did2s",
+        xfml=xfml,
     )
 
     fit_did2s = did2s(
         data=data,
         yname="dep_var",
-        first_stage="~ 0 | state + year",
-        second_stage="~treat",
+        first_stage=f"~ {xfml or '0'} | state + year",
+        second_stage=f"~ treat + {xfml}" if xfml is not None else "~ treat",
         treatment="treat",
         cluster="state",
     )
@@ -81,6 +85,13 @@ def test_event_study_did2s(data):
     ), "DID2S confidence intervals are not the same."
 
     for fit in (event_study_did2s, fit_did2s):
+        if xfml is not None:
+            assert [
+                name for name in fit.coef().index if name.startswith("C(band)")
+            ] == [
+                "C(band)[T.1]",
+                "C(band)[T.2]",
+            ]
         covariance = fit.variance_covariance
         inference = fit.tidy().copy()
         for vcov in (
@@ -98,6 +109,23 @@ def test_event_study_did2s(data):
                 fit.vcov(vcov)
             assert fit.variance_covariance is covariance
             pd.testing.assert_frame_equal(fit.tidy(), inference)
+
+
+def test_did2s_quoted_reference(data):
+    """Preserve spaces in a quoted categorical reference level."""
+    fit = did2s(
+        data=data,
+        yname="dep_var",
+        first_stage="~ 0 | unit + year",
+        second_stage="~ treat + i(group, ref='Group 3')",
+        treatment="treat",
+        cluster="state",
+    )
+    assert fit.coef().index.tolist() == [
+        "treat",
+        "group::Group 1",
+        "group::Group 2",
+    ]
 
 
 # ---------------------------------------------------------------------------------
@@ -229,9 +257,39 @@ def test_event_study_invalid_cluster_type(data):
     [
         ({"first_stage": "0 | state + year"}, "first_stage must start with '~'"),
         ({"second_stage": "i(treat)"}, "second_stage must start with '~'"),
+        *[
+            ({"second_stage": stage}, "must not remove the intercept")
+            for stage in (
+                "~ i(treat) + 0",
+                "~ 0 + i(treat)",
+                "~ i(treat) - 1",
+                "~ -1 + i(treat)",
+            )
+        ],
+        ({"first_stage": "~ X"}, "First stage formula must contain fixed effects"),
+        (
+            {"second_stage": "~ i(treat) | unit"},
+            "Second stage formula must not contain fixed effects",
+        ),
+        (
+            {"first_stage": "~ sw(X, weights) | unit + year"},
+            "first_stage must specify a single model",
+        ),
+        (
+            {"second_stage": "~ sw(X, weights)"},
+            "second_stage must specify a single model",
+        ),
+        (
+            {"first_stage": "~ [X ~ weights] | unit + year"},
+            "first_stage must not contain instrumental variables",
+        ),
+        (
+            {"second_stage": "~ [X ~ weights]"},
+            "second_stage must not contain instrumental variables",
+        ),
     ],
 )
-def test_did2s_formula_must_start_with_tilde(data, stages, match):
+def test_did2s_formula_validation(data, stages, match):
     with pytest.raises(ValueError, match=match):
         did2s(
             data,

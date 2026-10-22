@@ -397,6 +397,66 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
     )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "formula, reference_formula, weights",
+    [
+        ("Y ~ X1 + X2_hat | X2 ~ Z1", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
+        ("Y ~ X1 + X2_hat + X2 + [X2 ~ Z1]", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
+        ("Y ~ [X2 ~ Z1] + X1 + X2_hat + X2", "Y ~ X1 + X2_hat | X2 ~ Z1", None),
+        ("Y ~ X1 + X2_hat + [X2:Z2 ~ Z1]", "Y ~ X1 + X2_hat | X2:Z2 ~ Z1", None),
+        (
+            "Y ~ X1 + X2_hat + X2 + [X2 ~ Z1] | f1",
+            "Y ~ X1 + X2_hat | f1 | X2 ~ Z1",
+            "weights",
+        ),
+        (
+            "Y ~ X1 + X2_hat + [X2:Z2 ~ Z1] | f1",
+            "Y ~ X1 + X2_hat | f1 | X2:Z2 ~ Z1",
+            "weights",
+        ),
+    ],
+    ids=[
+        "pipe",
+        "covariate-before-block",
+        "covariate-after-block",
+        "interacted-endogenous",
+        "weighted-fe",
+        "weighted-fe-interacted-endogenous",
+    ],
+)
+def test_iv_generated_name_collision_against_fixest(
+    formula, reference_formula, weights
+):
+    """User covariates survive placeholder names and redundant endogenous terms."""
+    data = get_data().dropna().assign(X2_hat=lambda frame: frame.Z2)
+    fit = feols(formula, data=data, weights=weights, vcov="iid")
+    reference = fixest.feols(
+        ro.Formula(reference_formula),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.NULL if weights is None else ro.Formula(f"~{weights}"),
+        vcov="iid",
+    )
+    first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(reference)
+    for model, model_r in (
+        (fit, reference),
+        (fit.first_stage.model, first_stage_r),
+    ):
+        assert "X2_hat" in model.coef().index
+        names_r = list(ro.r("function(fit) names(coef(fit))")(model_r))
+        names = [
+            column.removeprefix("fit_").replace("(Intercept)", "Intercept")
+            for column in names_r
+        ]
+        assert sorted(model.coef().index) == sorted(names)
+        np.testing.assert_allclose(
+            model.coef()[names], stats.coef(model_r), rtol=0, atol=1e-8
+        )
+        np.testing.assert_allclose(
+            model.se()[names], fixest.se(model_r), rtol=0, atol=1e-7
+        )
+
+
 @pytest.mark.parametrize("seed", [293, 912])
 @pytest.mark.parametrize("sd", [0.1, 0.2, 0.3])
 @pytest.mark.parametrize("has_weight", [0.0, 1.0])
