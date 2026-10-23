@@ -1076,7 +1076,12 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
-        if param is not None and param not in self._coefnames:
+        if param is None:
+            raise ValueError(
+                "param must name a coefficient to test; "
+                f"choose from {list(self._coefnames)}."
+            )
+        if param not in self._coefnames:
             raise ValueError(
                 f"Parameter {param} not found in the model's coefficients."
             )
@@ -1130,8 +1135,7 @@ class Feols(ResultAccessorMixin):
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
-        if param is not None:
-            R[_xnames.index(param)] = 1
+        R[_xnames.index(param)] = 1
         r = 0
 
         if run_heteroskedastic:
