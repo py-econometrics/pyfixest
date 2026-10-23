@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- `decompose()` now selects the focal coefficient using the actual matrix column order, preserving the decomposition when `x1_vars` precede `decomp_var` in the formula. See [#1961](https://github.com/py-econometrics/pyfixest/issues/1961).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 

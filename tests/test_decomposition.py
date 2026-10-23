@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -436,11 +438,16 @@ def smoke_test_only_coef():
 
 
 @pytest.mark.parametrize("agg_first", [True, False])
-def test_x1_vars(agg_first):
+@pytest.mark.parametrize(
+    "fml", ["y ~ x1 + x21 + x22 + x23", "y ~ x22 + x21 + x1 + x23"]
+)
+def test_x1_vars(agg_first, fml):
     "Test Gelbach decomposition with x1_vars."
+    from statsmodels.formula.api import ols
+
     data = pd.read_csv("tests/data/gelbach.csv")
 
-    fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
+    fit = pf.feols(fml, data=data)
 
     fit.decompose(
         param="x1",
@@ -452,7 +459,22 @@ def test_x1_vars(agg_first):
     )
     # test that param ALL is .5024257
     np.testing.assert_allclose(
-        fit.GelbachDecompositionResults.results.absolute["ALL"], 0.5024257
+        fit.GelbachDecompositionResults.results.absolute["ALL"],
+        0.5024257,
+        err_msg="Reordered decomposition differs from Stata's b1x2",
+    )
+    short = ols("y ~ x1 + x21", data=data).fit().params["x1"]
+    long = ols("y ~ x1 + x21 + x22 + x23", data=data).fit().params["x1"]
+    levels = fit.GelbachDecompositionResults.tidy(panels="levels").coefficients
+    # LSQR and statsmodels' SVD solve the same well-conditioned regressions.
+    np.testing.assert_allclose(
+        levels.loc[
+            ["direct_effect", "full_effect", "explained_effect", "unexplained_effect"]
+        ],
+        [short, long, short - long, long],
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Formula ordering changed Gelbach point estimates",
     )
 
     fit.decompose(

@@ -304,9 +304,11 @@ class GelbachDecomposition:
             else:
                 self.N = X.shape[0]
 
-            self.names_X1 = ["Intercept", self.decomp_var]
-            if self.x1_vars is not None:
-                self.names_X1 += self.x1_vars
+            self.names_X1 = ["Intercept"] + [
+                name
+                for name, is_mediator in zip(self.coefnames, self.mask, strict=True)
+                if not is_mediator
+            ]
             self.names_X = list(self.coefnames)
             self.decomp_var_in_X1_idx = self.names_X1.index(self.decomp_var)
             self.decomp_var_in_X_idx = self.names_X.index(self.decomp_var)
