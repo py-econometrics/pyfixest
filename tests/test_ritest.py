@@ -7,7 +7,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.post_estimation.ritest import _resample
+from pyfixest.estimation.post_estimation.ritest import _assignment_units, _resample
 
 matplotlib.use("Agg")  # Use a non-interactive backend
 
@@ -24,11 +24,35 @@ def test_fast_ritest_requires_numba(monkeypatch):
         fit.ritest("X1", reps=10, choose_algorithm="fast")
 
 
+def test_resample_permutes_actual_assignment():
+    """Draws keep the observed treatment values, per unit or per cluster."""
+    rng = np.random.default_rng(5)
+    D = np.repeat([1.0, 0.0], [10, 90])
+    cluster = np.repeat(np.arange(20), 5)
+    D_cluster = np.repeat(np.repeat([1.0, 0.0], [3, 17]), 5)
+
+    for _ in range(20):
+        draw = _resample(*_assignment_units(resampvar_arr=D), rng=rng)
+        np.testing.assert_array_equal(np.sort(draw), np.sort(D))
+
+        draw = _resample(
+            *_assignment_units(resampvar_arr=D_cluster, clustervar_arr=cluster),
+            rng=rng,
+        )
+        by_cluster = draw.reshape(20, 5)
+        assert (by_cluster == by_cluster[:, [0]]).all()
+        np.testing.assert_array_equal(np.sort(draw), np.sort(D_cluster))
+
+
 @pytest.mark.extended
-@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize(
+    "fml", ["Y~X1+D_cluster", "Y~X1+D_cluster|f1", "Y~X1+D_cluster|f1+f2"]
+)
+@pytest.mark.parametrize(
+    "resampvar, cluster",
+    [("X1", None), ("D_cluster", None), ("D_cluster", "group_id")],
+)
 @pytest.mark.parametrize("reps", [111, 212])
-@pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_algos_internally(data, fml, resampvar, reps, cluster):
     fit = pf.feols(fml, data=data)
 
@@ -68,6 +92,9 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_randomization_t_vs_c(fml, resampvar, cluster):
     data = pf.get_data(N=300)
+    if cluster is not None:
+        # cluster random assignment needs a cluster-level treatment
+        data["X1"] = data.groupby("group_id").X1.transform("first")
 
     fit1 = pf.feols(fml, data=data)
     fit2 = pf.feols(fml, data=data)
@@ -113,16 +140,38 @@ def ritest_results():
 
 @pytest.fixture
 def data():
-    return pf.get_data(N=1000, seed=2999)
+    data = pf.get_data(N=1000, seed=2999)
+    # unbalanced treatments, as in tests/r_test_comparisons.R
+    data["D_unit"] = (np.arange(len(data)) % 5 == 0).astype(float)
+    data["D_cluster"] = (data.group_id % 4 == 0).astype(float)
+    return data
+
+
+_FIXEF = ["", "|f1", "|f1+f2"]
+_R_CASES = (
+    [
+        (f"Y~X1+f3{fe}", resampvar, None)
+        for resampvar in ["X1", "f3", "X1=-0.75", "f3>0.05"]
+        for fe in _FIXEF
+    ]
+    + [
+        (f"Y~D_unit+f3{fe}", resampvar, None)
+        for resampvar in ["D_unit", "D_unit=0.2"]
+        for fe in _FIXEF
+    ]
+    + [
+        (f"Y~D_cluster+f3{fe}", resampvar, "group_id")
+        for resampvar in ["D_cluster", "D_cluster=0.2"]
+        for fe in _FIXEF
+    ]
+)
 
 
 @pytest.mark.extended
-@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
-@pytest.mark.parametrize("cluster", [None, "group_id"])
+@pytest.mark.parametrize("fml, resampvar, cluster", _R_CASES)
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 4000
+    reps = 10_000
 
     rng1 = np.random.default_rng(1234)
 
@@ -140,30 +189,15 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
 
     res1 = fit.ritest(**kwargs1)
 
-    if cluster is not None:
-        pval = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["pval"].to_numpy()
-        se = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["se"].to_numpy()
-        ci_lower = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["ci_lower"].to_numpy()
-    else:
-        pval = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["pval"].to_numpy()
-        se = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["se"].to_numpy()
-        ci_lower = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["ci_lower"].to_numpy()
+    expected = ritest_results.loc[(fml, resampvar, cluster or "none")]
+    pval = expected["pval"]
+    # four Monte Carlo standard errors of the difference of two estimates,
+    # each from 10,000 draws
+    atol = 4 * np.sqrt(pval * (1 - pval) * 2 / reps) + 1e-3
 
-    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=0.005, atol=0.005)
-    assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=0.005, atol=0.005)
-    assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=0.005, atol=0.005)
+    assert np.isclose(res1["Pr(>|t|)"], pval, rtol=0, atol=atol)
+    assert np.isclose(res1["Std. Error (Pr(>|t|))"], expected["se"], rtol=0, atol=atol)
+    assert np.isclose(res1["2.5% (Pr(>|t|))"], expected["ci_lower"], rtol=0, atol=atol)
 
 
 @pytest.mark.extended
@@ -201,9 +235,7 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
     expected = []
     for _ in range(reps):
         resampled = original.copy(deep=False)
-        resampled["D"] = _resample(
-            resampvar_arr=original.D.to_numpy(), rng=rng
-        ).flatten()
+        resampled["D"] = rng.permutation(original.D.to_numpy())
         reference = estimator(
             fml,
             data=resampled,

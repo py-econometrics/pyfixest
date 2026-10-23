@@ -655,6 +655,12 @@ def _binary_treatment_fit(data):
     return feols("Y ~ D", data=data)
 
 
+def _cluster_treatment_fit(data):
+    data = data.dropna().copy()
+    data["D"] = (data.f1 % 2 == 0).astype(float)
+    return feols("Y ~ D", data=data)
+
+
 @pytest.mark.parametrize(
     "kwargs,error,match",
     [
@@ -874,6 +880,10 @@ def test_ritest_error(data):
     with pytest.raises(ValueError):
         fit.ritest(resampvar="X1", cluster="f1", reps=100)
 
+    fit_clustered = pf.feols("Y ~ X1", data=data.dropna())
+    with pytest.raises(ValueError, match="`X1` varies within clusters of `f1`"):
+        fit_clustered.ritest(resampvar="X1", cluster="f1", reps=100)
+
     fit_iv = pf.feols("Y ~ 1 | X1 ~ Z1", data=data)
     with pytest.raises(NotImplementedError, match=r"randomization_inference is False"):
         fit_iv.ritest(resampvar="X1", reps=100)
@@ -928,7 +938,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "The initial model was not clustered",
         ),
         (
-            lambda d: _binary_treatment_fit(d).ritest(
+            lambda d: _cluster_treatment_fit(d).ritest(
                 resampvar="D", cluster="f1", reps=10
             ),
             UserWarning,
