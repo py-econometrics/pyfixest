@@ -814,6 +814,17 @@ def test_i_error():
             "Y ~ i(f_str, bin={'ax': ['a1', 'a2'], 'ay': 'a1'})",
             r"assigns the values \['a1'\] of the variable `f_str` to more than one",
         ),
+        # Empty mappings and empty bins.
+        ("Y ~ i(f_str, bin={})", r"for the variable `f_str` is empty"),
+        (
+            "Y ~ i(f_str, bin={'ax': []})",
+            r"assigns no values of the variable `f_str` to the bin 'ax'",
+        ),
+        # Mistyped level of the second variable.
+        (
+            "Y ~ i(f1, f_str, bin2={'ax': 'a12'})",
+            r"do not occur in the variable `f_str`. No match was found for \['a12'\]",
+        ),
     ],
 )
 def test_i_bin_invalid_values(fml, match):
