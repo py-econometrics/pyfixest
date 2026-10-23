@@ -314,14 +314,9 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     """
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
-    Values not in the mapping are kept unchanged (matches R fixest behavior).
-    A scalar old level (``bin={'low': 'a'}``) is treated as a one-element list.
-    The mapping and each bin must be non-empty, and every old level must occur
-    in the data and may belong to only one bin; otherwise a ``ValueError``
-    names the offending values. The mapping is validated once, when it is
-    first built from the estimation data, and is namespaced per variable to
-    avoid collisions when both sides of an interaction are binned
-    (``i(a, b, bin=..., bin2=...)``).
+    Values not in the mapping are kept unchanged. The mapping is validated and
+    cached when it is first built from the estimation data, so prediction reuses
+    it; the cache key is per variable, so ``bin`` and ``bin2`` do not collide.
     """
     bin_key = bin_mapping_state_key(str(series.name))
     if bin_key not in state:
