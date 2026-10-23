@@ -21,6 +21,7 @@ import rpy2.robjects as ro
 from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects.packages import importr
 
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation import feols
 
 fixest = importr("fixest")
@@ -590,6 +591,19 @@ def test_split_reference_validity(df_split_levels, split_arg):
     assert len(r_models) == (3 if split_arg == "fsplit" else 2)
     with pytest.raises(ValueError, match=r"apple.*not among the provided levels"):
         feols(fml, data=data, **{split_arg: "grp"})
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str, X1) + i(f_str, var2=X1)",
+        "Y ~ i(f_str, X1) + i(f_str, np.power(X1, 2))",
+    ],
+)
+def test_duplicate_column_names_raise(df_test, fml):
+    """Equally named columns would overwrite each other in the model matrix."""
+    with pytest.raises(FormulaSyntaxError, match="duplicate column names"):
+        feols(fml, df_test)
 
 
 # =============================================================================
