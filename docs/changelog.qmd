@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- `quantreg(vcov="hetero")` now uses observation-level Gaussian kernel weights in the heteroskedasticity-robust sandwich covariance, matching R `quantreg::summary.rq(se="ker")` instead of collapsing algebraically to IID standard errors. See [#1744](https://github.com/py-econometrics/pyfixest/issues/1744).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 
