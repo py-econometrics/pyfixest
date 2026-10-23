@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import sys
 import warnings
@@ -894,6 +896,21 @@ def test_ritest_error(data):
         fit.plot_ritest()
 
 
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_ritest_cluster_override_preserves_inference(data, statistic):
+    fit = _binary_treatment_fit(data)
+    covariance = fit.variance_covariance
+    fit.ritest(
+        resampvar="D",
+        cluster="f1",
+        reps=3,
+        type=statistic,
+        choose_algorithm="slow",
+        rng=np.random.default_rng(1),
+    )
+    assert fit.variance_covariance is covariance
+
+
 def test_optional_dependency_fallbacks(data, monkeypatch):
     """Missing optional plotting and bootstrap packages warn or raise, not print."""
     monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
@@ -923,13 +940,6 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         (
             lambda d: _binary_treatment_fit(d).ccv(
                 treatment="D", cluster="f1", n_splits=2, seed=1
-            ),
-            UserWarning,
-            "The initial model was not clustered",
-        ),
-        (
-            lambda d: _binary_treatment_fit(d).ritest(
-                resampvar="D", cluster="f1", reps=10
             ),
             UserWarning,
             "The initial model was not clustered",
