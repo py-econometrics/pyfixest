@@ -1076,12 +1076,7 @@ class Feols(ResultAccessorMixin):
 
         ```
         """
-        if param is None:
-            raise ValueError(
-                "param must name a coefficient to test; "
-                f"choose from {list(self._coefnames)}."
-            )
-        if param not in self._coefnames:
+        if param is not None and param not in self._coefnames:
             raise ValueError(
                 f"Parameter {param} not found in the model's coefficients."
             )
@@ -1094,6 +1089,12 @@ class Feols(ResultAccessorMixin):
             raise NotImplementedError(
                 "Wild cluster bootstrap is only supported for unweighted OLS models; "
                 "it is not available for IV, GLM, quantile regression, or DID2S fits."
+            )
+
+        if param is None:
+            raise ValueError(
+                "param must name a coefficient to test; "
+                f"choose from {list(self._coefnames)}."
             )
 
         cluster_list = []
