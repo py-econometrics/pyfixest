@@ -593,10 +593,17 @@ def test_split_reference_validity(df_split_levels, split_arg):
         feols(fml, data=data, **{split_arg: "grp"})
 
 
-def test_duplicate_column_names_raise(df_test):
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str, X1) + i(f_str, var2=X1)",
+        "Y ~ i(f_str, X1) + i(f_str, np.power(X1, 2))",
+    ],
+)
+def test_duplicate_column_names_raise(df_test, fml):
     """Equally named columns would overwrite each other in the model matrix."""
     with pytest.raises(FormulaSyntaxError, match="duplicate column names"):
-        feols("Y ~ i(f_str, X1) + i(f_str, var2=X1)", df_test)
+        feols(fml, df_test)
 
 
 # =============================================================================
