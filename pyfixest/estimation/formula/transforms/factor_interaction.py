@@ -294,7 +294,7 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
     return np.reshape(
         # Product has shape (n_rows, n_levels1, n_levels2)
         left[:, :, None] * right[:, None, :],
-        shape=(len(left), -1),
+        (len(left), -1),
     )
 
 
