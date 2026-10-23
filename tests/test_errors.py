@@ -798,6 +798,43 @@ def test_i_error():
         feols("Y ~ i(f1, X1, ref='a')", data)
 
 
+@pytest.mark.parametrize(
+    "fml,match",
+    [
+        # Mistyped level, alone or next to a valid one.
+        ("Y ~ i(f_str, bin={'ax': 'a12'})", r"No match was found for \['a12'\]"),
+        (
+            "Y ~ i(f_str, bin={'ax': ['a1', 'a12', 'a99']})",
+            r"No match was found for \['a12', 'a99'\]",
+        ),
+        # String levels do not match a numeric variable.
+        ("Y ~ i(f1, bin={'pre': ['-5', '-4']})", r"No match was found for \['-5', "),
+        # The same level in two bins.
+        (
+            "Y ~ i(f_str, bin={'ax': ['a1', 'a2'], 'ay': 'a1'})",
+            r"assigns the values \['a1'\] of the variable `f_str` to more than one",
+        ),
+        # Empty mappings and empty bins.
+        ("Y ~ i(f_str, bin={})", r"for the variable `f_str` is empty"),
+        (
+            "Y ~ i(f_str, bin={'ax': []})",
+            r"assigns no values of the variable `f_str` to the bin 'ax'",
+        ),
+        # Mistyped level of the second variable.
+        (
+            "Y ~ i(f1, f_str, bin2={'ax': 'a12'})",
+            r"do not occur in the variable `f_str`. No match was found for \['a12'\]",
+        ),
+    ],
+)
+def test_i_bin_invalid_values(fml, match):
+    """Invalid i() bin values raise instead of fitting the un-binned model."""
+    data = get_data()
+    data["f_str"] = np.random.default_rng(1).choice(["a1", "a2", "a3"], len(data))
+    with pytest.raises(ValueError, match=match):
+        feols(fml, data)
+
+
 def test_plot_error():
     df = get_data()
     fit = feols("Y ~ X1", data=df)
