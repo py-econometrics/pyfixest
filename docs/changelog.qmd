@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- `decompose()` retains mediators omitted from `combine_covariates` in an automatic `Other` group (extending that group if supplied). Explained effects now include all mediators, and the unexplained effect equals the full-regression coefficient. See [#1962](https://github.com/py-econometrics/pyfixest/issues/1962).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 

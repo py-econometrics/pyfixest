@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -6,6 +8,51 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.utils.dgps import gelbach_data
+
+
+@pytest.mark.parametrize("agg_first", [True, False])
+@pytest.mark.parametrize("has_fe", [False, True])
+@pytest.mark.parametrize("group_name", ["x21", "Other"])
+def test_partial_grouping_retains_all_mediators(agg_first, has_fe, group_name):
+    from statsmodels.formula.api import ols
+
+    data = pd.read_stata("tests/data/gelbach.dta")
+    fe = " + C(cluster)" if has_fe else ""
+    fit = pf.feols(
+        "y ~ x1 + x21 + x22 + x23" + (" | cluster" if has_fe else ""),
+        data=data,
+    )
+    groups = {group_name: ["x21"]}
+    gb = fit.decompose(
+        decomp_var="x1",
+        combine_covariates=groups,
+        only_coef=True,
+        agg_first=agg_first,
+    )
+    short = ols("y ~ x1", data=data).fit().params["x1"]
+    long = ols("y ~ x1 + x21 + x22 + x23" + fe, data=data).fit().params["x1"]
+    levels = gb.tidy(panels="levels").coefficients
+    # LSQR and statsmodels use different solvers; this small design is well conditioned.
+    np.testing.assert_allclose(
+        levels.loc[
+            ["direct_effect", "full_effect", "explained_effect", "unexplained_effect"]
+        ],
+        [short, long, short - long, long],
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="Partial grouping lost part of the Gelbach identity",
+    )
+    assert "Other" in levels.index
+    group_total = levels["Other"] + (levels["x21"] if group_name != "Other" else 0)
+    np.testing.assert_allclose(
+        group_total,
+        short - long,
+        rtol=1e-8,
+        atol=1e-10,
+        err_msg="The remainder was not retained in the Other group",
+    )
+    assert groups == {group_name: ["x21"]}
+
 
 # Set matplotlib backend for headless testing
 try:
