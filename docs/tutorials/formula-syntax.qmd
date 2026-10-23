@@ -138,11 +138,13 @@ You can also easily interact variables:
 fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 
-and set reference levels for both via the `ref` and `ref2` levels.
+A numeric second variable enters as a continuous slope. Wrap it in `C()` to
+interact two factors, and set reference levels for both via the `ref` and
+`ref2` arguments.
 
 ```{python}
-# set 1 as reference level
-fit_i3 = pf.feols("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data)
+# set 1 and 2 as reference levels
+fit_i3 = pf.feols("Y ~ i(f1, C(f2), ref = 1, ref2 = 2)", data=data)
 ```
 
 This is in particular useful for difference-in-differences models.

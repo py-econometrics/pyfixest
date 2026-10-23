@@ -328,6 +328,42 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ i(f_str, i.f_int)", "Y ~ i(f_str, C(f_int))"),
+        ("Y ~ i(f_str, i.f_int, ref2=10)", "Y ~ i(f_str, C(f_int), ref2=10)"),
+        ("Y ~ i(f_str, i.f_float)", "Y ~ i(f_str, C(f_float))"),
+        ("Y ~ i(f_str, i.f_int) | fe1", "Y ~ i(f_str, C(f_int)) | fe1"),
+        (
+            "Y ~ i(f_str, i.f_int, bin2=list(low=c(1, 2)), ref2='low')",
+            "Y ~ i(f_str, C(f_int), bin2={'low': [1, 2]}, ref2='low')",
+        ),
+    ],
+)
+def test_factor_x_numeric_factor(df_test, r_fml, py_fml):
+    """C() marks a numeric second variable as a factor."""
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ i(f_str, f_int, ref2=3)", "Y ~ i(f_str, f_int, ref2=3)"),
+        ("Y ~ i(f_str, X1, ref2=1)", "Y ~ i(f_str, X1, ref2=1)"),
+        ("Y ~ i(f_str, X1, bin2=list(z=1))", "Y ~ i(f_str, X1, bin2={'z': [1]})"),
+    ],
+)
+def test_ref2_bin2_keep_numeric_var2_continuous(df_test, r_fml, py_fml):
+    """`ref2` and `bin2` do not turn a numeric second variable into a factor."""
+    with pytest.warns(UserWarning, match="ignored for the numeric"):
+        py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
 # =============================================================================
 # Multiple i() Terms
 # =============================================================================

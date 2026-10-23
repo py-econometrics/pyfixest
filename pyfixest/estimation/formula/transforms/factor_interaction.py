@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Hashable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import pandas as pd
 from formulaic import FactorValues
+from formulaic.parser.types import Factor
 from formulaic.transforms import encode_contrasts
 from formulaic.transforms.contrasts import TreatmentContrasts
 from formulaic.utils.sentinels import UNSET
+
+from pyfixest.utils.dev_utils import _find_stack_level
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
@@ -31,15 +35,19 @@ def factor_interaction(
     data : array-like
         The categorical variable to encode.
     var2 : array-like, optional
-        Optional second variable to interact with (continuous or categorical).
+        Optional second variable to interact with. A numeric `var2` is
+        continuous; a non-numeric `var2` is a factor. Wrap a numeric `var2` in
+        `C()`, as in `i(f, C(k))`, to treat it as a factor.
     ref : Hashable, optional
         Reference level to drop from `data`.
     ref2 : Hashable, optional
-        Reference level to drop from `var2` (only if `var2` is categorical).
+        Reference level to drop from a factor `var2`. Ignored, with a warning,
+        when `var2` is continuous.
     bin : dict, optional
         Mapping of `new_level -> [old_levels]` for binning `data`.
     bin2 : dict, optional
-        Mapping of `new_level -> [old_levels]` for binning `var2`.
+        Mapping of `new_level -> [old_levels]` for binning a factor `var2`.
+        Ignored, with a warning, when `var2` is continuous.
 
     Returns
     -------
@@ -77,6 +85,7 @@ def factor_interaction(
         i(cyl, ref=4)     -> cyl::6, cyl::8
         i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+        i(cyl, C(gear))   -> cyl::4:gear::4, ..., cyl::8:gear::5
     """
     # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
@@ -110,9 +119,7 @@ def factor_interaction(
 
     # A factor-by-factor interaction spans the intercept, so formulaic passes
     # reduced_rank=True to the encoder whenever the model already spans it.
-    spans_intercept = var2 is None or _is_factor_interaction(
-        var2=pd.Series(unwrap_factor_values(var2)), ref2=ref2, bin2=bin2
-    )
+    spans_intercept = var2 is None or _is_factor_interaction(var2=var2)
     return FactorValues(
         wrapped_data,
         kind="categorical",
@@ -161,9 +168,9 @@ def _encode_i(
     data.drop(index=data.index[drop_rows], inplace=True)
     var2_is_numeric = False
     if var2 is not None:
+        var2_is_numeric = not _is_factor_interaction(var2=var2)
         var2 = pd.Series(var2)
         var2.name = var2_name
-        var2_is_numeric = not _is_factor_interaction(var2=var2, ref2=ref2, bin2=bin2)
         if not var2_is_numeric:
             var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
         var2.drop(index=var2.index[drop_rows], inplace=True)
@@ -191,7 +198,16 @@ def _encode_i(
             format="{field}",  # Use column names directly
         )
     elif var2_is_numeric:
-        # (ii) interaction with continuous variable
+        # (ii) interaction with continuous variable. `ref2` and `bin2` do not
+        # turn a numeric `var2` into a factor; they are ignored.
+        if ref2 is not None or bin2 is not None:
+            warnings.warn(
+                f"`ref2` and `bin2` apply only to a factor second variable and "
+                f"are ignored for the numeric `{var2_name}`. Use "
+                f"`C({var2_name})` to treat it as a factor.",
+                UserWarning,
+                stacklevel=_find_stack_level(),
+            )
         result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
         result.rename(
             columns={
@@ -305,11 +321,16 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
     )
 
 
-def _is_factor_interaction(
-    var2: pd.Series, ref2: Hashable | None, bin2: dict | None
-) -> bool:
-    """Return whether `i(f, var2)` interacts two factors rather than a slope."""
-    return ref2 is not None or bin2 is not None or not _is_numeric(var2)
+def _is_factor_interaction(var2: Any) -> bool:
+    """Return whether `i(f, var2)` interacts two factors rather than a slope.
+
+    `C(var2)` marks a numeric second variable as a factor.
+    """
+    marked_factor = (
+        isinstance(var2, FactorValues)
+        and var2.__formulaic_metadata__.kind is Factor.Kind.CATEGORICAL
+    )
+    return marked_factor or not _is_numeric(pd.Series(unwrap_factor_values(var2)))
 
 
 def _is_numeric(series: pd.Series) -> bool:
