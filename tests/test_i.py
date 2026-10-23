@@ -310,6 +310,63 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
+    "arguments",
+    [
+        "f_str, ref='apple'",
+        "f_str, g, ref='apple'",
+        "f_str, g, ref2='X'",
+        "f_str, g, ref='apple', ref2='X'",
+    ],
+)
+@pytest.mark.parametrize("operator", ["+", "*"])
+def test_factor_reference_with_ordinary_factor(df_test, arguments, operator):
+    """Explicit i() references must not reduce a later ordinary factor."""
+    data = df_test.assign(
+        h=np.random.default_rng(1942).choice(["A", "B"], len(df_test))
+    )
+    fit_py = feols(f"Y ~ 0 + i({arguments}) {operator} h", data)
+    r_arguments = arguments.replace(", g", ", i.g")
+    r_formula = ro.Formula(f"Y ~ 0 + i({r_arguments}) {operator} h")
+    r_formula.environment["i"] = fixest.i
+    fit_r = fixest.feols(r_formula, data)
+
+    # Ordinary factor labels differ between formulaic and R's model.matrix.
+    def name_to_r(name):
+        return re.sub(r"h\[(?:T\.)?([AB])\]", r"h\1", str(name))
+
+    py_coef = fit_py.coef().rename(index=name_to_r)
+    r_coef = pd.Series(get_r_coef_values(fit_r), index=get_r_coef_names(fit_r))
+    assert set(py_coef.index) == set(r_coef.index)
+    assert fit_py.sample_info.n_obs == int(stats.nobs(fit_r)[0])
+    # Both are well-conditioned OLS fits of the same design; only floating-point
+    # solve/accumulation order differs.
+    np.testing.assert_allclose(
+        py_coef,
+        r_coef.reindex(py_coef.index),
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="Explicit-reference interaction coefficients must match fixest",
+    )
+    py_se = fit_py.se().rename(index=name_to_r)
+    r_se = pd.Series(np.asarray(fixest.se(fit_r)), index=r_coef.index)
+    np.testing.assert_allclose(
+        py_se,
+        r_se.reindex(py_se.index),
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="Explicit-reference interaction standard errors must match fixest",
+    )
+    np.testing.assert_allclose(
+        fit_py.predict(newdata=data.iloc[:20]),
+        np.asarray(stats.predict(fit_r, newdata=data.iloc[:20])),
+        rtol=1e-10,
+        atol=1e-12,
+        err_msg="Explicit-reference interaction predictions must match fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g) | fe1", "Y ~ i(f_str, g) | fe1"),
@@ -330,6 +387,82 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
 # =============================================================================
 # Multiple i() Terms
 # =============================================================================
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("preceding", ["i(f_str, X1)", "i(f_int, ref=1)"])
+@pytest.mark.parametrize(
+    "step", ["i(f_str, g)", "sw(X2, i(f_str, g))", "csw(X2, i(f_str, g))"]
+)
+def test_i_reference_uses_intercept_span(df_test, preceding, step):
+    """Unlike fixest 0.14.0, non-spanning i() terms do not remove a later cell."""
+    fml = f"Y ~ 0 + {preceding} + {step}"
+    fit_py = feols(fml, data=df_test)
+    py_models = fit_py.to_list() if "sw(" in step else [fit_py]
+    assert len(py_models) == (2 if "sw(" in step else 1)
+    r_fml = fml.replace("i(f_str, g)", "i(f_str, i.g)")
+    # An explicit keep containing all levels suppresses fixest's positional
+    # reference choice without excluding any interaction cells.
+    r_full_fml = r_fml.replace(
+        "i(f_str, i.g)", "i(f_str, i.g, keep=c('apple', 'banana', 'cherry'))"
+    )
+    r_default = fixest.feols(ro.Formula(r_fml), df_test)
+    r_full = fixest.feols(ro.Formula(r_full_fml), df_test)
+    if "sw(" in step:
+        assert len(r_default) == len(r_full) == len(py_models)
+    r_defaults = (
+        [r_default.rx2(i + 1) for i in range(len(py_models))]
+        if "sw(" in step
+        else [r_default]
+    )
+    r_fulls = (
+        [r_full.rx2(i + 1) for i in range(len(py_models))]
+        if "sw(" in step
+        else [r_full]
+    )
+
+    for model_py, model_r, model_default in zip(
+        py_models, r_fulls, r_defaults, strict=True
+    ):
+        py_coef = model_py.coef()
+        r_coef = pd.Series(get_r_coef_values(model_r), index=get_r_coef_names(model_r))
+        assert set(py_coef.index) == set(r_coef.index)
+        assert model_py.sample_info.n_obs == int(stats.nobs(model_r)[0])
+        # Identical, well-conditioned OLS designs differ only in numerical solve
+        # and accumulation order, including in the expanded stepwise models.
+        np.testing.assert_allclose(
+            py_coef,
+            r_coef.reindex(py_coef.index),
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="Full interaction-cell coefficients must match explicit fixest references",
+        )
+        r_se = pd.Series(np.asarray(fixest.se(model_r)), index=r_coef.index)
+        np.testing.assert_allclose(
+            model_py.se(),
+            r_se.reindex(py_coef.index),
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="Full interaction-cell standard errors must match fixest",
+        )
+        np.testing.assert_allclose(
+            model_py.predict(newdata=df_test.iloc[:20]),
+            np.asarray(stats.predict(model_r, newdata=df_test.iloc[:20])),
+            rtol=1e-10,
+            atol=1e-12,
+            err_msg="Full interaction-cell predictions must match fixest",
+        )
+        default_names = get_r_coef_names(model_default)
+        first_cell = "f_str::apple:g::X"
+        if first_cell in py_coef.index:
+            assert set(default_names) == set(py_coef.index) - {first_cell}
+            assert np.sum(model_py.resid() ** 2) < np.sum(
+                np.asarray(stats.residuals(model_default)) ** 2
+            ), (
+                "Dropping the first interaction cell in fixest must change the fitted model"
+            )
+        else:
+            assert set(default_names) == set(py_coef.index)
 
 
 @pytest.mark.against_r_core

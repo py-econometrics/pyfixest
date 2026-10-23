@@ -108,10 +108,18 @@ def factor_interaction(
     # will check both for null values. This ensures drop_rows is correctly populated.
     wrapped_data = {"__data__": data, "__var2__": var2} if var2 is not None else data
 
-    # A factor-by-factor interaction spans the intercept, so formulaic passes
-    # reduced_rank=True to the encoder whenever the model already spans it.
-    spans_intercept = var2 is None or _is_factor_interaction(
-        var2=pd.Series(unwrap_factor_values(var2)), ref2=ref2, bin2=bin2
+    # Only a complete set of factor levels or interaction cells spans the
+    # intercept. Explicit references remove groups, so later terms must remain
+    # eligible for full-rank encoding.
+    spans_intercept = (
+        ref is None
+        and ref2 is None
+        and (
+            var2 is None
+            or _is_factor_interaction(
+                var2=pd.Series(unwrap_factor_values(var2)), ref2=ref2, bin2=bin2
+            )
+        )
     )
     return FactorValues(
         wrapped_data,
