@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix, hstack
 from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
+from pyfixest.errors import NanInClusterVarError
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
@@ -177,6 +178,19 @@ def _did2s_estimate(
     object
         A fitted model object of class feols with the two-stage covariance.
     """
+    # Gardner's cluster score sum must include every estimation observation.
+    # Validate before either stage, rather than silently omitting NA clusters
+    # from the covariance while retaining their outcomes in the fit.
+    if cluster not in data.columns:
+        raise ValueError(f"The cluster variable {cluster} is not in the data.")
+    if data[cluster].isna().any():
+        raise NanInClusterVarError(
+            f"The cluster variable {cluster} contains missing values. "
+            "Drop those observations before calling did2s()."
+        )
+    if data[cluster].nunique() < 2:
+        raise ValueError("did2s() requires at least two clusters.")
+
     _first_stage_full = f"{yname} {_first_stage}"
     _second_stage_full = f"{yname}_hat {_second_stage}"
 
