@@ -586,10 +586,17 @@ class Feols(ResultAccessorMixin):
             for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
              Additional keyword arguments for the variance-covariance matrix.
-        data: Optional[DataFrameType], optional
-            The data used for estimation. If None, tries to fetch the data from the
-            model object. Defaults to None.
+        data : Optional[DataFrameType], optional
+            Deprecated and ignored. The covariance matrix always uses the
+            estimation sample stored on the model. This argument will be
+            removed in a future release.
 
+        Notes
+        -----
+        Cluster and time variables are read from the stored estimation sample,
+        so they need not appear in the formula. Models fitted with
+        `store_data=False` or `lean=True` do not keep this sample; pass `vcov`
+        when fitting them instead.
 
         Returns
         -------
@@ -616,6 +623,14 @@ class Feols(ResultAccessorMixin):
         See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
+        if data is not None:
+            warnings.warn(
+                "The `data` argument of `vcov()` is deprecated and ignored: the "
+                "covariance matrix always uses the estimation sample stored on "
+                "the model. It will be removed in a future release.",
+                FutureWarning,
+                stacklevel=_find_stack_level(),
+            )
         self._require_capability(
             capability="covariance_update",
             method="vcov",
@@ -623,7 +638,7 @@ class Feols(ResultAccessorMixin):
         )
         spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
         self._check_vcov_support(spec)
-        return self._vcov_from_spec(spec, data=data)
+        return self._vcov_from_spec(spec)
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
         """Reject a covariance estimator this model cannot compute.
@@ -663,23 +678,13 @@ class Feols(ResultAccessorMixin):
                 "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
             )
 
-    def _vcov_from_spec(
-        self, spec: VcovSpec, data: DataFrameType | None = None
-    ) -> Feols:
+    def _vcov_from_spec(self, spec: VcovSpec) -> Feols:
         """Compute and publish the covariance of a parsed, supported `spec`.
 
         `vcov()` parses and checks the user's input first; the estimation
         pipeline passes the spec it parsed before fitting.
         """
         require_retained(self, "vcov", "_data")
-
-        data_to_check = data if data is not None else self._data
-        try:
-            data_to_check = _narwhals_to_pandas(data_to_check)
-        except TypeError as e:
-            raise TypeError(
-                f"The data set must be a DataFrame type. Received: {type(data)}"
-            ) from e
 
         vcov_type = spec.vcov_type
 
@@ -690,7 +695,7 @@ class Feols(ResultAccessorMixin):
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
             prep = prepare_cluster_state(
-                data=data_to_check,
+                data=self._data,
                 clustervar=list(spec.clustervar),
                 ssc=self.options.ssc,
                 fixef=self.model.fixed_effects,
