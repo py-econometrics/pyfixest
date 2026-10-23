@@ -108,10 +108,15 @@ def factor_interaction(
     # will check both for null values. This ensures drop_rows is correctly populated.
     wrapped_data = {"__data__": data, "__var2__": var2} if var2 is not None else data
 
+    # A factor-by-factor interaction spans the intercept, so formulaic passes
+    # reduced_rank=True to the encoder whenever the model already spans it.
+    spans_intercept = var2 is None or _is_factor_interaction(
+        var2=pd.Series(unwrap_factor_values(var2)), ref2=ref2, bin2=bin2
+    )
     return FactorValues(
         wrapped_data,
         kind="categorical",
-        spans_intercept=var2 is None,
+        spans_intercept=spans_intercept,
         encoder=encoder,
     )
 
@@ -158,7 +163,7 @@ def _encode_i(
     if var2 is not None:
         var2 = pd.Series(var2)
         var2.name = var2_name
-        var2_is_numeric = ref2 is None and bin2 is None and _is_numeric(var2)
+        var2_is_numeric = not _is_factor_interaction(var2=var2, ref2=ref2, bin2=bin2)
         if not var2_is_numeric:
             var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
         var2.drop(index=var2.index[drop_rows], inplace=True)
@@ -224,21 +229,23 @@ def _encode_i(
             ],
             index=dummies.index,
         )
-        # Drop reference level
-        if ref is None:
-            ref = get_contrast_levels(encoder_state, factor_name)[0]
-        if ref2 is None:
-            ref2 = get_contrast_levels(encoder_state, var2_name)[0]
-        interacted.drop(
-            f"{factor_name}::{ref}:{var2_name}::{ref2}",
-            axis=1,
-            inplace=True,
-            errors="ignore",
-        )
+        # Without ref/ref2 the cells span the intercept. Drop the first cell
+        # only when the model already spans it (intercept or an earlier
+        # full-rank term); otherwise keep every cell.
+        spans_intercept = ref is None and ref2 is None
+        if spans_intercept and reduced_rank:
+            first = get_contrast_levels(encoder_state, factor_name)[0]
+            first2 = get_contrast_levels(encoder_state, var2_name)[0]
+            interacted.drop(
+                f"{factor_name}::{first}:{var2_name}::{first2}",
+                axis=1,
+                inplace=True,
+                errors="ignore",
+            )
         return FactorValues(
             interacted,
             kind="categorical",
-            spans_intercept=True,
+            spans_intercept=spans_intercept and not reduced_rank,
             column_names=tuple(interacted.columns),
             format="{field}",  # Use column names directly
         )
@@ -296,6 +303,13 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
         left[:, :, None] * right[:, None, :],
         (len(left), -1),
     )
+
+
+def _is_factor_interaction(
+    var2: pd.Series, ref2: Hashable | None, bin2: dict | None
+) -> bool:
+    """Return whether `i(f, var2)` interacts two factors rather than a slope."""
+    return ref2 is not None or bin2 is not None or not _is_numeric(var2)
 
 
 def _is_numeric(series: pd.Series) -> bool:
