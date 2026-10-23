@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 
 import numpy as np
@@ -598,7 +600,18 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
         for instrument in instruments
     ]
     Z = reference_first_stage.within_data.design[:, iv_positions]
+    exogenous = np.delete(
+        reference_first_stage.within_data.design, iv_positions, axis=1
+    )
     observation_weights = reference_first_stage.observation_weights.values
+    weights_sqrt = (
+        1.0 if observation_weights is None else np.sqrt(observation_weights)[:, None]
+    )
+    Z = (
+        Z
+        - exogenous
+        @ np.linalg.lstsq(exogenous * weights_sqrt, Z * weights_sqrt, rcond=None)[0]
+    )
     Q_zz = (
         Z.T @ Z
         if observation_weights is None

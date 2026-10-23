@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- Effective F now partials out included exogenous regressors before forming the instrument cross-product, using the fitted weights and absorbed fixed effects. Overidentified models now give the same statistic after shifting instruments or adding included controls. See [#1963](https://github.com/py-econometrics/pyfixest/issues/1963).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 
