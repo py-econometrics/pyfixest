@@ -18,6 +18,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
+    formula_required_variables,
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
@@ -2123,6 +2124,20 @@ class Feols(ResultAccessorMixin):
 
         if choose_algorithm == "auto":
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
+
+        # The fast solver replaces only the bare treatment column. Formula
+        # refits must rebuild interactions, transforms, and a response that
+        # depends on the assignment.
+        parsed_formula = self.model.parsed_formula
+        other_terms = formulaic.formula.SimpleFormula(
+            [term for term in parsed_formula.exogenous if term != resampvar_]
+        )
+        requires_refit = resampvar_ in formula_required_variables(other_terms)
+        requires_refit |= resampvar_ in formula_required_variables(
+            parsed_formula.dependent
+        )
+        if requires_refit:
+            choose_algorithm = "slow"
 
         if choose_algorithm == "slow" or not self._closed_form_ols:
             vcov_input: str | dict[str, str]

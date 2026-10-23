@@ -12,6 +12,62 @@ from pyfixest.estimation.post_estimation.ritest import _assignment_units, _resam
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+@pytest.mark.parametrize("algorithm", ["auto", "fast", "slow"])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ D*x",
+        "y ~ D + {D*x}",
+        "y ~ D + I(D**2) + x",
+        "y ~ D*x | g",
+        "I(y-D) ~ D + x",
+    ],
+)
+def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
+    """Every draw must evaluate treatment-dependent terms on its new assignment."""
+    import statsmodels.formula.api as smf
+
+    rng = np.random.default_rng(4321)
+    n = 240
+    data = pd.DataFrame(
+        {
+            "D": rng.normal(size=n),
+            "x": rng.normal(size=n),
+            "g": np.repeat(np.arange(12), 20),
+        }
+    )
+    if "D**2" not in fml:
+        data["D"] = (data.D > 0).astype(float)
+    data["y"] = 0.4 * data.D + data.D * data.x + rng.normal(size=n)
+    fit = pf.feols(fml, data=data)
+    original = fit._data.copy(deep=True)
+    reps = 7
+    expected = []
+    rng = np.random.default_rng(31)
+    reference_fml = fml.replace("{D*x}", "I(D*x)")
+    reference_fml = reference_fml.replace(" | g", " + C(g)")
+    for _ in range(reps):
+        draw = data.assign(D=rng.permutation(data.D.to_numpy()))
+        expected.append(smf.ols(reference_fml, data=draw).fit().params["D"])
+
+    fit.ritest(
+        "D",
+        reps=reps,
+        choose_algorithm=algorithm,
+        rng=np.random.default_rng(31),
+        store_ritest_statistics=True,
+    )
+    # Both solvers compute the same OLS projection; FE absorption adds rounding.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-9,
+        err_msg="RI coefficients differ from statsmodels formula refits",
+    )
+    pd.testing.assert_frame_equal(fit._data, original)
+
+
 def test_fast_ritest_requires_numba(monkeypatch):
     """Fast ritest must surface a clear ImportError when numba is missing."""
     import pyfixest.estimation.post_estimation.ritest as ritest
