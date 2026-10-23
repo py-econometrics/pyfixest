@@ -693,6 +693,52 @@ def test_fepois_hc2_hc3_against_sandwich(vcov_type):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("separation_check", [None, ["fe", "ir"]])
+def test_gaussian_retains_nonpositive_fe_groups(weights, separation_check):
+    """Gaussian FE groups with nonpositive outcomes are not separated."""
+    data = pf.get_data(N=600, seed=76540251).dropna()
+    groups = data.f1.unique()
+    data.loc[data.f1 == groups[0], "Y"] = 0
+    data.loc[data.f1 == groups[1], "Y"] = -1
+    fml = "Y ~ X1 | f1"
+    fit = pf.feglm(
+        fml=fml,
+        data=data,
+        family="gaussian",
+        weights=weights,
+        separation_check=separation_check,
+        iwls_tol=1e-10,
+    )
+    r_weights = ro.NULL if weights is None else ro.Formula("~weights")
+    reference = fixest.feglm(
+        ro.Formula(fml),
+        data=data,
+        family=stats.gaussian(),
+        weights=r_weights,
+    )
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0]) == len(data)
+    assert fit.sample_info.dropped_by_stage.separation == 0
+    np.testing.assert_allclose(
+        fit.coef(),
+        np.asarray(stats.coef(reference)),
+        rtol=0,
+        atol=1e-9,
+        err_msg="Gaussian FE coefficients differ from R fixest::feglm",
+    )
+    # pyfixest Gaussian inference follows feols, including residual dispersion.
+    # R fixest::feglm uses unit dispersion, so compare covariance with feols.
+    reference_ols = fixest.feols(ro.Formula(fml), data=data, weights=r_weights)
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov,
+        np.asarray(stats.vcov(reference_ols)),
+        rtol=0,
+        atol=1e-9,
+        err_msg="Gaussian FE covariance differs from R fixest::feols",
+    )
+
+
+@pytest.mark.against_r_core
 def test_feglm_gaussian_reference_behavior():
     """Lock in pyfixest's Gaussian-GLM compatibility decision."""
     data = pf.get_data(N=500, seed=76540251, model="Feols").dropna()

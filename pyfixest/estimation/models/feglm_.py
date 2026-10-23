@@ -123,7 +123,10 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            model_matrix.fixed_effects is not None
+            # A Gaussian identity-link model has no separation: zero and
+            # negative response groups are valid least-squares observations.
+            self._family.name != "gaussian"
+            and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
             and self.options.separation_check  # not an empty list
         ):
