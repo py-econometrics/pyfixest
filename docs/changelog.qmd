@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- Randomization-t uses the fitted covariance estimator and small-sample corrections for both observed and permuted statistics, and computes the observed statistic as `(coef - null) / se`. An explicit assignment `cluster` applies CRV1 to both statistics without changing the fit's inference. Coefficient-based randomization keeps its existing null-centering convention. See [#1960](https://github.com/py-econometrics/pyfixest/issues/1960).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 

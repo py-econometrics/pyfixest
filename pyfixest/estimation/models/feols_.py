@@ -2088,20 +2088,27 @@ class Feols(ResultAccessorMixin):
         if reps < 1:
             raise ValueError(f"reps must be a positive integer, got {reps}.")
 
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
-
         rng = np.random.default_rng() if rng is None else rng
 
         sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+        ri_vcov = (
+            self.variance_covariance.spec
+            if cluster is None
+            else VcovSpec.from_user_input({"CRV1": cluster})
+        )
+        sample_stat = sample_coef - h0_value
+        if type == "randomization-t":
+            # Wu and Ding (JASA, 2021): observed and permuted statistics must
+            # use the same studentization. An assignment cluster override
+            # applies to both without changing the fitted model's inference.
+            sample_fit = (
+                self
+                if ri_vcov == self.variance_covariance.spec
+                else refit(self, data=self._data, vcov=ri_vcov, same_sample=True)
+            )
+            sample_stat = (sample_coef - h0_value) / np.array(
+                sample_fit.se().xs(resampvar_)
+            )
 
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
@@ -2110,21 +2117,9 @@ class Feols(ResultAccessorMixin):
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
         if choose_algorithm == "slow" or not self._closed_form_ols:
-            vcov_input: str | dict[str, str]
-            if cluster is not None:
-                vcov_input = {"CRV1": cluster}
-            else:
-                # "iid" for models without controls, else HC1
-                vcov_input = (
-                    "hetero"
-                    if (self.model.has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
-                    else "iid"
-                )
-
             # for performance reasons
             if type == "randomization-c":
-                vcov_input = "iid"
+                ri_vcov = VcovSpec.from_user_input("iid")
 
             ri_stats = _get_ritest_stats_slow(
                 data=self._data,
@@ -2136,7 +2131,7 @@ class Feols(ResultAccessorMixin):
                 fit_fn=partial(
                     refit,
                     self,
-                    vcov=VcovSpec.from_user_input(vcov_input),
+                    vcov=ri_vcov,
                     # permutations change the treatment, not the rows
                     same_sample=True,
                 ),
@@ -2169,14 +2164,14 @@ class Feols(ResultAccessorMixin):
             sample_stat=sample_stat,
             ri_stats=ri_stats[1:],
             method=test_type,
-            h0_value=h0_value,
+            h0_value=0,
             level=level,
         )
 
         if store_ritest_statistics:
             self.ritest_statistics = RitestStatistics(
                 statistics=ri_stats,
-                sample_stat=float(sample_stat - h0_value),
+                sample_stat=float(sample_stat),
                 pvalue=float(ri_pvalue),
             )
 
