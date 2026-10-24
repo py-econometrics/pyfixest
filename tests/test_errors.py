@@ -1249,6 +1249,19 @@ def test_separation_check_validations():
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
 
+def test_fepois_rejects_negative_fe_group():
+    """A fixed-effect group with only negative outcomes is not separated away."""
+    data = pd.DataFrame(
+        {
+            "Y": [-1, -2, 0, 1, 2, 3, 0, 4, 1, 2],
+            "X": [1, 2, 3, 4, 5, 6, 7, 8, 3, 1],
+            "f": [0, 0, 0, 1, 1, 1, 2, 2, 2, 1],
+        }
+    )
+    with pytest.raises(ValueError, match="must be weakly positive"):
+        pf.fepois("Y ~ X | f", data=data)
+
+
 def test_gelbach_errors():
     rng = np.random.default_rng(123)
 
