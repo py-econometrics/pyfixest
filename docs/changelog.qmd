@@ -360,6 +360,14 @@ We also removed:
 
 - Gaussian `feglm()` now retains fixed-effect groups with zero or negative outcomes instead of incorrectly dropping them as separated.
 
+- Logit and probit `feglm()` now drop fixed-effect groups with only 1 outcomes
+  as separated, in addition to groups with only 0 outcomes. The `"fe"` check
+  repeats until dropping a group leaves no other group at either outcome, and
+  `separation_check=["ir"]` also detects separation at outcome 1.
+
+- `fepois()` now raises its negative-outcome error when a fixed-effect group
+  has only negative outcomes, instead of dropping the group as separated.
+
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
   observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
   and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single

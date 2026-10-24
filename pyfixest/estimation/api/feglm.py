@@ -161,6 +161,8 @@ def feglm(
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default (when None).
+        Logit and probit fits drop observations separated at outcome 0 or 1,
+        Poisson fits those separated at outcome 0. Gaussian fits skip the check.
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",

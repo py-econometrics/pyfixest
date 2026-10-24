@@ -19,6 +19,7 @@ def check_for_separation(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
+    outcome_bounds: tuple[float, ...],
     demeaner: AnyDemeaner,
     collin_tol: float,
     methods: list[str] | None = None,
@@ -26,8 +27,10 @@ def check_for_separation(
     """
     Check for separation.
 
-    Check for separation of Poisson Regression. For details, see the ppmlhdfe
-    documentation on separation checks.
+    An observation is separated when its outcome sits at a bound that the
+    inverse link attains only as the linear predictor diverges, e.g. zero for
+    Poisson and zero or one for binary models. For details, see Correia,
+    Guimarães and Zylkin (2021), http://arxiv.org/abs/1903.01633.
 
     Parameters
     ----------
@@ -37,6 +40,8 @@ def check_for_separation(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    outcome_bounds : tuple[float, ...]
+        Outcome values the family's inverse link attains only in the limit.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
     collin_tol : float
@@ -67,7 +72,9 @@ def check_for_separation(
 
     separation_na: set[int] = set()
     for method in methods:
-        separation_na = separation_na.union(valid_methods[method](Y=Y, X=X, fe=fe))
+        separation_na = separation_na.union(
+            valid_methods[method](Y=Y, X=X, fe=fe, outcome_bounds=outcome_bounds)
+        )
 
     if separation_na:
         warnings.warn(
@@ -81,15 +88,28 @@ def check_for_separation(
 
 class _SeparationMethod(Protocol):
     def __call__(
-        self, *, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+        self,
+        *,
+        Y: pd.DataFrame,
+        X: pd.DataFrame,
+        fe: pd.DataFrame,
+        outcome_bounds: tuple[float, ...],
     ) -> set[int]: ...
 
 
 def _check_for_separation_fe(
-    *, Y: pd.DataFrame, X: pd.DataFrame, fe: pd.DataFrame
+    *,
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    outcome_bounds: tuple[float, ...],
 ) -> set[int]:
     """
     Check for separation using the "fe" check.
+
+    Drops fixed-effect levels whose retained outcomes all sit at one outcome
+    bound. Dropping a level can leave a level of another fixed effect at a
+    bound, so the check repeats until no level is dropped.
 
     Parameters
     ----------
@@ -99,35 +119,30 @@ def _check_for_separation_fe(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    outcome_bounds : tuple[float, ...]
+        Outcome values the family's inverse link attains only in the limit.
 
     Returns
     -------
     set
         Set of indices of separated observations.
     """
-    separation_na: set[int] = set()
-    if fe is not None and not (Y > 0).all(axis=0).all():
-        Y_help = (Y.iloc[:, 0] > 0).astype(int)
+    dependent = Y.iloc[:, 0].to_numpy()
+    retained = np.ones(dependent.shape[0], dtype=bool)
+    dropped_level = True
+    while dropped_level:
+        dropped_level = False
+        for bound in outcome_bounds:
+            interior = dependent != bound
+            for column in fe.columns:
+                levels = fe[column].to_numpy()
+                interior_levels = np.unique(levels[retained & interior])
+                separated = retained & ~np.isin(levels, interior_levels)
+                if separated.any():
+                    retained &= ~separated
+                    dropped_level = True
 
-        # loop over all elements of fe
-        for x in fe.columns:
-            ctab = pd.crosstab(Y_help, fe[x])
-            null_column = ctab.xs(0)
-            # sep_candidate if
-            # fixed effect level has only observations with Y > 0
-            sep_candidate = ((ctab > 0).sum(axis=0).to_numpy() == 1) & (
-                null_column > 0
-            ).to_numpy().flatten()
-            # droplist: list of levels to drop
-            droplist = ctab.xs(0)[sep_candidate].index.tolist()
-
-            # dropset: list of indices to drop
-            if len(droplist) > 0:
-                fe_in_droplist = fe[x].isin(droplist)
-                dropset = set(fe[x][fe_in_droplist].index)
-                separation_na = separation_na.union(dropset)
-
-    return separation_na
+    return set(Y.index[~retained])
 
 
 def _check_for_separation_ir(
@@ -135,6 +150,7 @@ def _check_for_separation_ir(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
+    outcome_bounds: tuple[float, ...],
     demeaner: AnyDemeaner,
     collin_tol: float,
     tol: float = 1e-4,
@@ -143,6 +159,9 @@ def _check_for_separation_ir(
     """
     Check for separation using the "iterative rectifier" algorithm
     proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
+
+    The rectifier detects separation at one outcome bound, with the remaining
+    outcomes as interior observations; it runs once for each bound.
 
     The inputs contain the outer model's evaluated columns and retained rows.
     Auxiliary weighted projections preserve that sample and the absorbed FE
@@ -157,6 +176,8 @@ def _check_for_separation_ir(
         Independent variables.
     fe : pd.DataFrame
         Fixed effects.
+    outcome_bounds : tuple[float, ...]
+        Outcome values the family's inverse link attains only in the limit.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
     collin_tol : float
@@ -171,14 +192,41 @@ def _check_for_separation_ir(
     set
         Set of indices of separated observations.
     """
+    separation_na: set[int] = set()
+    for bound in outcome_bounds:
+        separation_na |= _rectify_at_bound(
+            Y=Y,
+            X=X,
+            fe=fe,
+            bound=bound,
+            demeaner=demeaner,
+            collin_tol=collin_tol,
+            tol=tol,
+            maxiter=maxiter,
+        )
+    return separation_na
+
+
+def _rectify_at_bound(
+    *,
+    Y: pd.DataFrame,
+    X: pd.DataFrame,
+    fe: pd.DataFrame,
+    bound: float,
+    demeaner: AnyDemeaner,
+    collin_tol: float,
+    tol: float,
+    maxiter: int,
+) -> set[int]:
+    "Run the iterative rectifier for separation at one outcome bound."
     dependent = Y.iloc[:, 0]
-    is_interior = dependent > 0
+    is_interior = dependent != bound
     if is_interior.all():
         return set()
 
     # Project on the original materialized design. Stateful terms and FE codes
     # must not be reevaluated after the outer fit filters its rows.
-    response = (dependent == 0).to_numpy(dtype=np.float64)[:, None]
+    response = (~is_interior).to_numpy(dtype=np.float64)[:, None]
     weights = np.where(is_interior, is_interior.sum() / tol**2, 1.0)
     fixed_effects = fe.to_numpy()
     cache = DemeanCache()
