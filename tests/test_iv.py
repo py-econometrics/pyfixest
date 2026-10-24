@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import copy
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -183,6 +181,68 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         rtol=1e-5,
         atol=1e-5,
         err_msg="Effective F stats estimate mismatch between pyfixest and IV_Diag packages",
+    )
+
+
+@pytest.mark.skipif(import_check is False, reason="R package ivDiag not installed.")
+@pytest.mark.against_r_extended
+def test_iv_eff_f_overidentified_against_ivDiag():
+    """Compare overidentified effective F with ivDiag's R implementation.
+
+    The reference has two excluded instruments correlated with the included
+    control. This makes the comparison sensitive to partialling controls out
+    of the instruments before forming Q_zz.
+    """
+    rng = np.random.default_rng(7)
+    n = 240
+    data = pd.DataFrame(rng.normal(size=(n, 5)), columns=["y", "x", "z1", "z2", "u"])
+    data["g"] = np.repeat(np.arange(12), 20)
+    data["w"] = rng.integers(1, 4, n)
+    data["z1"] += 2 * data.x
+    data["z2"] += 3 * data.x + 5
+    data["d"] = data.z1 + 0.5 * data.z2 + data.x + data.u
+
+    def effective_f(frame: pd.DataFrame) -> float:
+        fit = feols(
+            "y ~ x + [d ~ z1 + z2] | g",
+            data=frame,
+            weights="w",
+            weights_type="aweights",
+            vcov="hetero",
+            ssc=ssc(k_adj=False),
+        )
+        fit.IV_Diag()
+        return fit.first_stage.diagnostics.eff_f
+
+    expected = float(
+        ivDiag.eff_F(
+            data=pandas2ri.py2rpy(data),
+            Y="y",
+            D="d",
+            Z=ro.StrVector(["z1", "z2"]),
+            controls=ro.StrVector(["x"]),
+            FE=ro.StrVector(["g"]),
+            weights="w",
+            prec=12,
+        )[0]
+    )
+    np.testing.assert_allclose(
+        effective_f(data),
+        expected,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Overidentified effective F differs from R ivDiag",
+    )
+
+    # Adding an included control to an instrument changes its representation,
+    # not its identifying information or the effective F statistic.
+    shifted_data = data.assign(z2=data.z2 + 4 * data.x + 8)
+    np.testing.assert_allclose(
+        effective_f(shifted_data),
+        expected,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Effective F changed under an equivalent instrument parameterization",
     )
 
 
@@ -572,9 +632,6 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
     first_stage_f_before = fit_iid.first_stage.diagnostics.f_stat
     first_stage_p_value_before = fit_iid.first_stage.diagnostics.p_value
 
-    reference_first_stage = copy.deepcopy(first_stage_model)
-    reference_first_stage.vcov("hetero")
-
     fit_iid.IV_Diag()
 
     assert vcov_type_detail_before == "iid"
@@ -593,36 +650,6 @@ def test_iv_diag_does_not_relabel_vcov_type(weights_type, k_adj):
     assert fit_iid.first_stage.diagnostics.f_stat == first_stage_f_before
     assert fit_iid.first_stage.diagnostics.p_value == first_stage_p_value_before
     assert np.isfinite(fit_iid.first_stage.diagnostics.eff_f)
-
-    instruments = list(fit_iid.first_stage.instruments)
-    iv_positions = [
-        list(first_stage_model._coefnames).index(instrument)
-        for instrument in instruments
-    ]
-    Z = reference_first_stage.within_data.design[:, iv_positions]
-    exogenous = np.delete(
-        reference_first_stage.within_data.design, iv_positions, axis=1
-    )
-    observation_weights = reference_first_stage.observation_weights.values
-    weights_sqrt = (
-        1.0 if observation_weights is None else np.sqrt(observation_weights)[:, None]
-    )
-    Z = (
-        Z
-        - exogenous
-        @ np.linalg.lstsq(exogenous * weights_sqrt, Z * weights_sqrt, rcond=None)[0]
-    )
-    Q_zz = (
-        Z.T @ Z
-        if observation_weights is None
-        else Z.T @ (observation_weights[:, None] * Z)
-    )
-    pi_hat = np.array(reference_first_stage.coef()[instruments])
-    Sigma = reference_first_stage.variance_covariance.vcov[
-        np.ix_(iv_positions, iv_positions)
-    ]
-    expected_eff_f = (pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(Sigma @ Q_zz))
-    np.testing.assert_allclose(fit_iid.first_stage.diagnostics.eff_f, expected_eff_f)
 
     # The effective F is computed from the heteroskedasticity-robust first
     # stage, so it does not depend on the outer model's covariance type.
