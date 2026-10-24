@@ -18,6 +18,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
+    formula_required_variables,
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
@@ -92,7 +93,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     sum_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.post_estimation.wald import _normalize_q, wald_test
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -258,6 +259,7 @@ class Feols(ResultAccessorMixin):
         cluster_causal_variance=True,
         decomposition=True,
         prediction=True,
+        prediction_inference=True,
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=True,
@@ -953,6 +955,7 @@ class Feols(ResultAccessorMixin):
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        q = _normalize_q(q=q, n_restrictions=R.shape[0])
 
         covariance = self.variance_covariance
         if covariance.spec.is_clustered:
@@ -963,7 +966,7 @@ class Feols(ResultAccessorMixin):
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
         if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
+            not np.array_equal(R, np.eye(self._k)) or np.any(q)
         ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
@@ -1090,6 +1093,12 @@ class Feols(ResultAccessorMixin):
                 "it is not available for IV, GLM, quantile regression, or DID2S fits."
             )
 
+        if param is None:
+            raise ValueError(
+                "param must name a coefficient to test; "
+                f"choose from {list(self._coefnames)}."
+            )
+
         cluster_list = []
 
         if cluster is not None and isinstance(cluster, str):
@@ -1129,8 +1138,7 @@ class Feols(ResultAccessorMixin):
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
-        if param is not None:
-            R[_xnames.index(param)] = 1
+        R[_xnames.index(param)] = 1
         r = 0
 
         if run_heteroskedastic:
@@ -1306,13 +1314,15 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # Abadie et al. (2023): the cluster component in the CCV mixture and
+        # its comparison row must use the same clusters as the split scores.
+        # Refit locally to retain the fit's SSC and leave its inference intact.
+        crv1_spec = VcovSpec.from_user_input({"CRV1": cluster})
+        crv1_fit = (
+            self
+            if self.variance_covariance.spec == crv1_spec
+            else refit(self, data=self._data, vcov=crv1_spec, same_sample=True)
+        )
 
         rng = np.random.default_rng(seed)
 
@@ -1360,7 +1370,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = crv1_fit.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1385,7 +1395,7 @@ class Feols(ResultAccessorMixin):
 
         res_ccv.name = "CCV"
 
-        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
+        res_crv1 = cast(pd.Series, crv1_fit.tidy().xs(treatment))
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
@@ -1828,10 +1838,11 @@ class Feols(ResultAccessorMixin):
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            If True, compute prediction standard errors. Supported only for OLS
+            models without weights or fixed effects. Defaults to False.
         interval: str, optional
             The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals have the same support limits as ``se_fit``.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
@@ -1865,6 +1876,9 @@ class Feols(ResultAccessorMixin):
         self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
+            self._require_capability(
+                capability="prediction_inference", method="predict"
+            )
             if self.model.has_fixef:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with fixed effects."
@@ -1976,13 +1990,18 @@ class Feols(ResultAccessorMixin):
         Conduct Randomization Inference (RI) test against a null hypothesis of
         `resampvar = 0`.
 
+        Each draw permutes the observed values of `resampvar` across
+        observations, or across clusters if `cluster` is provided, so it keeps
+        the number of treated units of the actual assignment.
+
         Parameters
         ----------
         resampvar : str
             The name of the variable to be resampled.
         cluster : str, optional
             The name of the cluster variable in case of cluster random assignment.
-            If provided, `resampvar` is held constant within each `cluster`.
+            If provided, `resampvar` must be constant within each `cluster`,
+            and its cluster-level values are permuted across clusters.
             Defaults to None.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
@@ -2079,6 +2098,16 @@ class Feols(ResultAccessorMixin):
             """
             )
 
+        if (
+            cluster is not None
+            and self._data.groupby(cluster)[resampvar_].nunique().gt(1).any()
+        ):
+            raise ValueError(
+                f"`{resampvar_}` varies within clusters of `{cluster}`. Cluster "
+                "random assignment requires a treatment that is constant within "
+                "each cluster."
+            )
+
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
 
@@ -2087,20 +2116,26 @@ class Feols(ResultAccessorMixin):
         if reps < 1:
             raise ValueError(f"reps must be a positive integer, got {reps}.")
 
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # An assignment-cluster override belongs to this test. Use a local
+        # refit with the fit's SSC instead of replacing its stored inference.
+        sample_fit = self
+        if cluster is not None and type == "randomization-t":
+            ri_vcov = VcovSpec.from_user_input({"CRV1": cluster})
+            if ri_vcov != self.variance_covariance.spec:
+                sample_fit = refit(
+                    self, data=self._data, vcov=ri_vcov, same_sample=True
+                )
 
         rng = np.random.default_rng() if rng is None else rng
 
         sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+        sample_stat = sample_coef - h0_value
+        if type == "randomization-t":
+            # Center the coefficient before studentization, so the null and
+            # coefficient share units.
+            sample_stat = (sample_coef - h0_value) / np.array(
+                sample_fit.se().xs(resampvar_)
+            )
 
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
@@ -2108,22 +2143,32 @@ class Feols(ResultAccessorMixin):
         if choose_algorithm == "auto":
             choose_algorithm = "fast" if _HAS_NUMBA else "slow"
 
+        # The fast solver replaces only the bare treatment column. Formula
+        # refits must rebuild interactions, transforms, and a response that
+        # depends on the assignment.
+        parsed_formula = self.model.parsed_formula
+        other_terms = formulaic.formula.SimpleFormula(
+            [term for term in parsed_formula.exogenous if term != resampvar_]
+        )
+        requires_refit = resampvar_ in formula_required_variables(other_terms)
+        requires_refit |= resampvar_ in formula_required_variables(
+            parsed_formula.dependent
+        )
+        if requires_refit:
+            choose_algorithm = "slow"
+
         if choose_algorithm == "slow" or not self._closed_form_ols:
-            vcov_input: str | dict[str, str]
-            if cluster is not None:
-                vcov_input = {"CRV1": cluster}
-            else:
-                # "iid" for models without controls, else HC1
-                vcov_input = (
-                    "hetero"
-                    if (self.model.has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
-                    else "iid"
-                )
+            # Wu and Ding (JASA, 2021): permuted statistics must use the
+            # fitted covariance and SSC, just like the observed statistic.
+            vcov_input = (
+                self.variance_covariance.spec
+                if cluster is None
+                else VcovSpec.from_user_input({"CRV1": cluster})
+            )
 
             # for performance reasons
             if type == "randomization-c":
-                vcov_input = "iid"
+                vcov_input = VcovSpec.from_user_input("iid")
 
             ri_stats = _get_ritest_stats_slow(
                 data=self._data,
@@ -2135,7 +2180,7 @@ class Feols(ResultAccessorMixin):
                 fit_fn=partial(
                     refit,
                     self,
-                    vcov=VcovSpec.from_user_input(vcov_input),
+                    vcov=vcov_input,
                     # permutations change the treatment, not the rows
                     same_sample=True,
                 ),
@@ -2168,14 +2213,13 @@ class Feols(ResultAccessorMixin):
             sample_stat=sample_stat,
             ri_stats=ri_stats[1:],
             method=test_type,
-            h0_value=h0_value,
             level=level,
         )
 
         if store_ritest_statistics:
             self.ritest_statistics = RitestStatistics(
                 statistics=ri_stats,
-                sample_stat=float(sample_stat - h0_value),
+                sample_stat=float(sample_stat),
                 pvalue=float(ri_pvalue),
             )
 

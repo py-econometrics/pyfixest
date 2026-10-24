@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import warnings
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from types import MappingProxyType
@@ -16,6 +17,7 @@ from formulaic.parser.types import Factor, Term
 from numpy.typing import NDArray
 
 from pyfixest.core.detect_singletons import detect_singletons
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     flatten_model_matrix,
@@ -185,6 +187,16 @@ class ModelMatrix:
 
     def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
+        for data in datas:
+            # formulaic keeps only the last of several equally named columns.
+            counts = Counter(data.model_spec.column_names)
+            duplicated = sorted(name for name, count in counts.items() if count > 1)
+            if duplicated:
+                raise FormulaSyntaxError(
+                    f"The formula produces duplicate column names {duplicated}, so "
+                    "some columns would be silently dropped. Remove or rename the "
+                    "repeated terms."
+                )
         if not all(datas[0].index.identical(other.index) for other in datas[1:]):
             raise ValueError("All design matrix data must have the same index.")
         data = pd.concat(datas, ignore_index=False, axis=1)
