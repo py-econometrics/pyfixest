@@ -358,6 +358,7 @@ We also removed:
 
 ### Bug Fixes
 
+- `predict()` now rejects `se_fit=True` and prediction intervals for quantile regression and GLMs instead of returning OLS intervals or silently ignoring the request ([#1652](https://github.com/py-econometrics/pyfixest/issues/1652)).
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
   observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
   and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single

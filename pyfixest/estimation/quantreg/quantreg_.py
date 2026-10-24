@@ -93,6 +93,7 @@ class Quantreg(Feols):
         cluster_causal_variance=False,
         decomposition=False,
         prediction=True,
+        prediction_inference=False,
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,
