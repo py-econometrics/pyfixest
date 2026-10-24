@@ -8,6 +8,7 @@ Tests cover:
 - Binning: bin and bin2 parameters
 - Intercept control: 0+, -1, 1+ syntax
 - Fixed effects combinations
+- IV controls and instruments with pipe and bracket syntax
 - Multiple i() terms
 """
 
@@ -395,6 +396,106 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     """Test i(factor1, factor2) with fixed effects."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
+
+
+# =============================================================================
+# IV Controls and Instruments
+# =============================================================================
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("syntax", ["pipe", "bracket"])
+@pytest.mark.parametrize("role", ["control", "instrument"])
+@pytest.mark.parametrize(
+    "intercept,interaction,fixed_effects",
+    [
+        ("1", "i(f_str, g)", ""),
+        ("0", "i(f_str, g)", ""),
+        ("-1", "i(f_str, g)", ""),
+        ("0", "i(f_str, g, ref='apple')", ""),
+        ("0", "i(f_str, g, ref2='X')", ""),
+        ("0", "i(f_str, g, ref='apple', ref2='X')", ""),
+        ("1", "i(f_str, g)", "fe1"),
+        ("0", "i(f_str, X2) + i(f_str, g)", ""),
+    ],
+    ids=[
+        "intercept",
+        "zero",
+        "minus-one",
+        "ref",
+        "ref2",
+        "both-refs",
+        "fe",
+        "slope-first",
+    ],
+)
+def test_i_iv_vs_fixest(df_test, syntax, role, intercept, interaction, fixed_effects):
+    """Both IV syntaxes preserve interaction coding in both estimation stages."""
+    rng = np.random.default_rng(1942)
+    data = df_test.assign(Z=rng.normal(size=len(df_test)))
+    error = rng.normal(size=len(data))
+    data["D"] = data["Z"] + (data["f_str"] == "apple") + 0.5 * error
+    data["Y"] = 2 * data["D"] + data["X1"] + error + data["Y"]
+    controls = f"{intercept} + X1"
+    instruments = "Z"
+    if role == "control":
+        controls += f" + {interaction}"
+    else:
+        instruments += f" + {interaction}"
+
+    fe = f" | {fixed_effects}" if fixed_effects else ""
+    pipe_formula = f"Y ~ {controls}{fe} | D ~ {instruments}"
+    formula = (
+        pipe_formula
+        if syntax == "pipe"
+        else f"Y ~ {controls} + [D ~ {instruments}]{fe}"
+    )
+    r_formula = pipe_formula.replace("i(f_str, g", "i(f_str, i.g")
+    if intercept in {"0", "-1"} and (
+        role == "instrument" or "i(f_str, X2)" in interaction
+    ):
+        # fixest selects an implicit reference in the instrument block and in
+        # later i() terms even without an intercept. Explicit full-level keep
+        # matches the full-cell specification used by pyfixest (see #1917 and
+        # test_i_reference_uses_intercept_span).
+        r_formula = r_formula.replace(
+            "i(f_str, i.g)",
+            "i(f_str, i.g, keep=c('apple', 'banana', 'cherry'))",
+        )
+
+    fit_py = feols(formula, data=data, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(r_formula), data, vcov="iid")
+    first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
+    for model_py, model_r in (
+        (fit_py, fit_r),
+        (fit_py.first_stage.model, first_stage_r),
+    ):
+        r_names = [name.removeprefix("fit_") for name in get_r_coef_names(model_r)]
+        py_coef = model_py.coef()
+        assert set(py_coef.index) == set(r_names)
+        assert model_py.sample_info.n_obs == int(stats.nobs(model_r)[0])
+        # Use the existing IV comparison tolerances in tests/test_iv.py.
+        np.testing.assert_allclose(
+            py_coef.loc[r_names],
+            get_r_coef_values(model_r),
+            rtol=0,
+            atol=1e-8,
+            err_msg="IV interaction coefficients must match fixest",
+        )
+        np.testing.assert_allclose(
+            model_py.se().loc[r_names],
+            np.asarray(fixest.se(model_r)),
+            rtol=0,
+            atol=1e-7,
+            err_msg="IV interaction standard errors must match fixest",
+        )
+        np.testing.assert_allclose(
+            model_py.resid()[:20],
+            np.asarray(stats.residuals(model_r))[:20],
+            rtol=0,
+            atol=1e-8,
+            err_msg="IV interaction residuals must match fixest",
+        )
 
 
 # =============================================================================
