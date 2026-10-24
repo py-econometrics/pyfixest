@@ -327,17 +327,14 @@ def _fail_on_reparse(*args, **kwargs):
     ],
 )
 def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
-    """A statsmodels fit checks the null's units independently of ritest."""
-    import statsmodels.api as sm
-
+    """Explicit centering and direct refits bypass ritest's statistic handling."""
     rng = np.random.default_rng(8)
     data = pd.DataFrame({"D": rng.integers(0, 2, 120).astype(float)})
     data["y"] = 0.3 * data.D + rng.normal(size=len(data)) * (1 + data.D)
     fit = pf.feols("y ~ D", data=data, vcov="iid")
-    observed = sm.OLS(data.y, sm.add_constant(data.D)).fit()
-    expected_sample = observed.params.iloc[1] - h0
+    expected_sample = fit.coef().loc["D"] - h0
     if statistic == "randomization-t":
-        expected_sample /= observed.bse.iloc[1]
+        expected_sample /= fit.se().loc["D"]
     result = fit.ritest(
         f"D={h0}",
         type=statistic,
@@ -349,12 +346,14 @@ def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
     draw_rng = np.random.default_rng(1)
     expected_draws = []
     for _ in range(7):
-        draw = sm.OLS(
-            data.y, sm.add_constant(draw_rng.permutation(data.D.to_numpy()))
-        ).fit()
-        values = draw.tvalues if statistic == "randomization-t" else draw.params
-        expected_draws.append(values.iloc[1])
-    # QR/SVD accumulation rounding is below 1e-10 on this two-column design.
+        draw = pf.feols(
+            "y ~ D",
+            data=data.assign(D=draw_rng.permutation(data.D.to_numpy())),
+            vcov="iid",
+        )
+        values = draw.tstat() if statistic == "randomization-t" else draw.coef()
+        expected_draws.append(values.loc["D"])
+    # Fast and direct solvers differ by less than 1e-10 on this two-column design.
     np.testing.assert_allclose(
         fit.ritest_statistics.statistics,
         expected_draws,

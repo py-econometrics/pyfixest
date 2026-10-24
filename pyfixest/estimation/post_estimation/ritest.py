@@ -298,21 +298,23 @@ def _get_ritest_pvalue(
     ri_stats: np.ndarray,
     method: str,
     level: float,
-    h0_value: float,
 ) -> tuple[np.float64, np.float64, np.ndarray]:
     """
     Compute the p-value of the test statistic and
     standard error and CI of the p-value.
+
+    `sample_stat` must already be centered on the null and, for a t-test,
+    studentized.
     """
     reps = len(ri_stats)
     ci_sides = [0, 1]
 
     if method == "two-sided":
-        probs = np.abs(ri_stats) >= np.abs(sample_stat - h0_value)
+        probs = np.abs(ri_stats) >= np.abs(sample_stat)
     elif method == "greater":
-        probs = ri_stats <= sample_stat - h0_value
+        probs = ri_stats <= sample_stat
     elif method == "lower":
-        probs = ri_stats >= sample_stat - h0_value
+        probs = ri_stats >= sample_stat
     else:
         raise ValueError(
             "The `method` argument must be one of 'two-sided', 'right', 'left'."

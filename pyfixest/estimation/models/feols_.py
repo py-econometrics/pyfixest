@@ -2128,8 +2128,8 @@ class Feols(ResultAccessorMixin):
         sample_coef = np.array(self.coef().xs(resampvar_))
         sample_stat = sample_coef - h0_value
         if type == "randomization-t":
-            # Wu and Ding (JASA, 2021): center the coefficient before
-            # studentization, so the null and coefficient share units.
+            # Center the coefficient before studentization, so the null and
+            # coefficient share units.
             sample_stat = (sample_coef - h0_value) / np.array(self.se().xs(resampvar_))
 
         # always run slow algorithm for randomization-t
@@ -2212,7 +2212,6 @@ class Feols(ResultAccessorMixin):
             sample_stat=sample_stat,
             ri_stats=ri_stats[1:],
             method=test_type,
-            h0_value=0,
             level=level,
         )
 
