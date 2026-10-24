@@ -25,8 +25,6 @@ matplotlib.use("Agg")  # Use a non-interactive backend
 )
 def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
     """Every draw must evaluate treatment-dependent terms on its new assignment."""
-    import statsmodels.formula.api as smf
-
     rng = np.random.default_rng(4321)
     n = 240
     data = pd.DataFrame(
@@ -44,11 +42,10 @@ def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
     reps = 7
     expected = []
     rng = np.random.default_rng(31)
-    reference_fml = fml.replace("{D*x}", "I(D*x)")
-    reference_fml = reference_fml.replace(" | g", " + C(g)")
+    # Direct formula fits rebuild every column without ritest's algorithm selection.
     for _ in range(reps):
         draw = data.assign(D=rng.permutation(data.D.to_numpy()))
-        expected.append(smf.ols(reference_fml, data=draw).fit().params["D"])
+        expected.append(pf.feols(fml, data=draw).coef().loc["D"])
 
     fit.ritest(
         "D",
@@ -57,13 +54,12 @@ def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
         rng=np.random.default_rng(31),
         store_ritest_statistics=True,
     )
-    # Both solvers compute the same OLS projection; FE absorption adds rounding.
     np.testing.assert_allclose(
         fit.ritest_statistics.statistics,
         expected,
         rtol=0,
         atol=1e-9,
-        err_msg="RI coefficients differ from statsmodels formula refits",
+        err_msg="RI coefficients differ from direct feols formula refits",
     )
     pd.testing.assert_frame_equal(fit._data, original)
 
