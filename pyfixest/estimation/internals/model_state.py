@@ -1078,6 +1078,10 @@ class Capabilities:
     prediction : bool
         Whether ``predict()`` is available. IV and ``did2s()`` fits do not
         support it.
+    prediction_inference : bool
+        Whether ``predict(se_fit=True)`` and ``predict(interval="prediction")``
+        are available. Only OLS fits support them, additionally requiring no
+        weights or fixed effects.
     fixed_effect_recovery : bool
         Whether the model class can recover fixed-effect estimates through
         ``fixef()``. IV, ``quantreg()``, and ``did2s()`` fits do not support
@@ -1120,6 +1124,7 @@ class Capabilities:
     cluster_causal_variance: bool
     decomposition: bool
     prediction: bool
+    prediction_inference: bool
     fixed_effect_recovery: bool
     randomization_inference: bool
     sherman_morrison_update: bool

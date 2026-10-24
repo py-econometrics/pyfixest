@@ -1408,21 +1408,29 @@ def test_feglm_offset_requires_poisson():
     pf.feglm("Y_p ~ X1", data=data.dropna(), family="poisson", offset="off")
 
 
-def test_prediction_errors_glm():
-    "Test that the prediction errors not supported for GLM models."
-    data = pf.get_data()
-    data["Y"] = np.where(data["Y"] > 0, 1, 0)
-
-    fit_gaussian = pf.feglm("Y ~ X1", data=data, family="gaussian")
-    fit_probit = pf.feglm("Y ~ X1", data=data, family="probit")
-    fit_logit = pf.feglm("Y ~ X1", data=data, family="logit")
-    fit_pois = pf.fepois("Y ~ X1", data=data)
-
-    for model in [fit_gaussian, fit_probit, fit_logit, fit_pois]:
-        with pytest.raises(
-            NotImplementedError, match="Prediction with standard errors"
-        ):
-            model.predict(se_fit=True)
+@pytest.mark.parametrize(
+    "model",
+    ["quantreg", "feglm-gaussian", "feglm-probit", "feglm-logit", "fepois"],
+)
+@pytest.mark.parametrize("storage", [{}, {"lean": True}, {"store_data": False}])
+def test_prediction_inference_unsupported(model, storage):
+    """Unsupported inference fails before accessing retained prediction state."""
+    fit = capability_fit(model, fixed_effects=False, **storage)
+    for newdata in [None, pf.get_data().head()]:
+        for inference in [
+            {"se_fit": True},
+            {"interval": "prediction"},
+            {"se_fit": True, "interval": "prediction"},
+        ]:
+            with pytest.raises(
+                NotImplementedError,
+                match=r"fit\.capabilities\.prediction_inference is False",
+            ):
+                fit.predict(newdata=newdata, **inference)
+        if not storage.get("lean") or newdata is not None:
+            assert isinstance(fit.predict(newdata=newdata), np.ndarray)
+    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
+        fit.predict(interval="invalid")
 
 
 def test_glm_resid_rejects_invalid_type():

@@ -258,6 +258,7 @@ class Feols(ResultAccessorMixin):
         cluster_causal_variance=True,
         decomposition=True,
         prediction=True,
+        prediction_inference=True,
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=True,
@@ -1829,10 +1830,11 @@ class Feols(ResultAccessorMixin):
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            If True, compute prediction standard errors. Supported only for OLS
+            models without weights or fixed effects. Defaults to False.
         interval: str, optional
             The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals have the same support limits as ``se_fit``.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
@@ -1866,6 +1868,9 @@ class Feols(ResultAccessorMixin):
         self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
+            self._require_capability(
+                capability="prediction_inference", method="predict"
+            )
             if self.model.has_fixef:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with fixed effects."
