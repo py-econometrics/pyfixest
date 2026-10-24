@@ -1665,6 +1665,57 @@ def test_errors_hac():
             )
 
 
+@pytest.mark.parametrize("entry", ["did2s", "event_study"])
+@pytest.mark.parametrize("invalid", ["partial", "nullable", "all", "one", "absent"])
+def test_did2s_invalid_clusters(entry, invalid):
+    """Both DID2S entries reject undefined clustered inference before fitting."""
+    unit = np.repeat(np.arange(12), 6)
+    year = np.tile(np.arange(6), 12)
+    data = pd.DataFrame({"unit": unit, "year": year})
+    data["g"] = np.where(unit < 6, 3, 0)
+    data["treat"] = (year >= data.g) & (data.g > 0)
+    data["y"] = (
+        unit + year + data.treat + np.random.default_rng(42).normal(size=len(unit))
+    )
+    data["cluster"] = unit.astype(float)
+    error, message = NanInClusterVarError, "cluster.*missing"
+    if invalid == "partial":
+        data.loc[0, "cluster"] = np.nan
+    elif invalid == "nullable":
+        data["cluster"] = pd.Series(unit, dtype="Int64")
+        data.loc[0, "cluster"] = pd.NA
+    elif invalid == "all":
+        data["cluster"] = np.nan
+    elif invalid == "one":
+        data["cluster"] = "only"
+        error, message = ValueError, "at least two clusters"
+    else:
+        data = data.drop(columns="cluster")
+        error, message = ValueError, "cluster.*not.*data"
+    original = data.copy(deep=True)
+    with pytest.raises(error, match=message):
+        if entry == "did2s":
+            pf.did2s(
+                data,
+                yname="y",
+                first_stage="~ 0 | unit + year",
+                second_stage="~ treat",
+                treatment="treat",
+                cluster="cluster",
+            )
+        else:
+            pf.event_study(
+                data,
+                yname="y",
+                idname="unit",
+                tname="year",
+                gname="g",
+                estimator="did2s",
+                cluster="cluster",
+            )
+    pd.testing.assert_frame_equal(data, original)
+
+
 def test_did2s_unestimated_first_stage_fixef():
     "did2s raises an informative error when first-stage fixed effects cannot be estimated for some levels (#1244)."
     rng = np.random.default_rng(42)
