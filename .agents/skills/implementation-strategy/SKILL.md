@@ -32,9 +32,9 @@ Record only applicable decisions; link existing contracts that remain unchanged.
   estimation, retained-data modes, and backends, plus explicit unsupported
   errors, under "Result and numerical boundaries". New estimators need a
   complete support matrix; existing features need the affected paths reviewed.
-- For new estimators or numerical changes: the permanent external reference
-  and test location, selected through
-  [External numerical references](../../../docs/developer/testing.md#external-numerical-references).
+- For new estimators or numerical changes: the numerical reference, why it is
+  independent of the behavior being changed, and test location, selected through
+  [Choosing a numerical reference](../../../docs/developer/testing.md#choosing-a-numerical-reference).
   Resolve missing support or reference decisions before implementing that path.
 - For changes that can affect numerical results: whether results must remain
   invariant or which quantities and estimators may change. Apply

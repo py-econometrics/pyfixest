@@ -47,6 +47,14 @@ Breaking changes:
 
 Other things:
 
+- `decompose()` retains mediators omitted from `combine_covariates` in an automatic `Other` group (extending that group if supplied). Explained effects now include all mediators, and the unexplained effect equals the full-regression coefficient. See [#1962](https://github.com/py-econometrics/pyfixest/issues/1962).
+- `ritest(type="randomization-t")` now uses the fitted covariance estimator and small-sample corrections for permutation statistics, replacing the automatic IID/HC1 choice. See [#1960](https://github.com/py-econometrics/pyfixest/issues/1960).
+- `ritest(type="randomization-t")` now computes the observed statistic as `(coef - null) / se` for nonzero null hypotheses. Coefficient-based tests retain their existing null-centering convention.
+- `ritest(cluster=...)` now preserves the fitted model's inference. An explicit assignment cluster uses CRV1 on that cluster for both observed and permuted t-statistics, retaining the fitted small-sample corrections.
+- `ccv()` now uses CRV1 on its requested cluster for both the variance mixture and comparison row, preserving the fitted model's covariance and small-sample corrections.
+
+- `wildboottest()` now rejects a missing `param` with a `ValueError` naming the available coefficients. The default `None` previously tested an empty restriction and returned p = 0 with an undefined t-statistic. See [#1959](https://github.com/py-econometrics/pyfixest/issues/1959).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 
@@ -76,6 +84,7 @@ Other things:
 - `i(f, x)` with a boolean `x` (`bool`, nullable `boolean`, or an object column of booleans with missing values) now fits one 0/1 slope per level of `f`, as R `fixest` does with a logical. It created `x::True`/`x::False` interaction cells instead, so an event study `i(rel_year, treat, ref=-1)` with a boolean `treat` returned different estimates than with an integer `treat`. See [#1756](https://github.com/py-econometrics/pyfixest/issues/1756).
 - Iterative-rectifier separation checks preserve row alignment after missing observations are dropped, so Poisson estimates match those from manually prefiltered data. See [#1777](https://github.com/py-econometrics/pyfixest/issues/1777).
 - The fast `ritest()` algorithm now works with interacted fixed effects such as `| f1^f2` and `| f3 + f1:f2`. It raised `KeyError` because it looked the fixed effects up as raw data columns; it now uses the encoded fixed effects of the fit, like the slow algorithm. See [#1780](https://github.com/py-econometrics/pyfixest/issues/1780).
+- `ritest()` now permutes the observed treatment assignment in each draw, so the draws keep the actual number of treated units. It drew each treatment uniformly from the distinct treatment values instead, which resampled a treatment with 20% treated units at about 50% and typically made p-values too small. With `cluster=`, the cluster-level treatments are permuted across clusters, and a treatment that varies within a cluster raises `ValueError`. This also affects `rwolf()` and `wyoung()` with `sampling_method="ri"`. See [#1964](https://github.com/py-econometrics/pyfixest/issues/1964).
 - Rows with a zero weight are now dropped with a warning, as R `fixest` does, instead of raising a contradictory "must have only non-negative values" error. They are counted in `fit.sample_info.dropped_by_stage.zero_weight`; negative weights still raise. See [#1800](https://github.com/py-econometrics/pyfixest/issues/1800).
 - `did2s()` no longer crashes when the second stage has a column that is dropped as collinear, such as an all-zero covariate or a never-treated group in `i(group, treat)`. The GMM variance now uses the same columns as the fitted coefficients. See [#1811](https://github.com/py-econometrics/pyfixest/issues/1811).
 - `wildboottest()` and `decompose()` on fixed-effects models now leave out covariates that the fit dropped as collinear. Before, they rebuilt the design matrix with those columns, so the bootstrap t-statistic and the decomposition rows did not match the fitted model. See [#1778](https://github.com/py-econometrics/pyfixest/issues/1778).
@@ -367,13 +376,19 @@ We also removed:
 
 - `fepois()` now raises its negative-outcome error when a fixed-effect group
   has only negative outcomes, instead of dropping the group as separated.
-
+- `ritest()` now refits formulas with treatment-dependent interactions or transforms so every draw rebuilds their design columns.
+- `did2s()` and DID2S event studies now reject missing cluster IDs and fewer than two clusters before fitting, preventing zero standard errors from omitted cluster scores.
+- `predict()` now rejects `se_fit=True` and prediction intervals for quantile regression and GLMs instead of returning OLS intervals or silently ignoring the request ([#1652](https://github.com/py-econometrics/pyfixest/issues/1652)).
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
   observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
   and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single
   density estimate, so the one-step updates mostly shifted the intercept and
   returned nearly identical slopes at every quantile
   ([#1745](https://github.com/py-econometrics/pyfixest/issues/1745)).
+- `event_study(..., estimator="saturated")` now adds the `xfml` covariates to
+  the regression. It previously ignored them and silently returned the
+  unadjusted estimates
+  ([#1966](https://github.com/py-econometrics/pyfixest/issues/1966)).
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
@@ -421,6 +436,11 @@ We also removed:
   draws and were typically too narrow; a `seed` now gives the same results for
   any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
+- `decompose()` no longer depends on the order of regressors in the formula.
+  When a variable in `x1_vars` preceded `decomp_var`, the short-regression
+  coefficient of that background variable was reported as the effect of
+  `decomp_var`, so the direct and unexplained effects were wrong
+  ([#1967](https://github.com/py-econometrics/pyfixest/issues/1967)).
 - The IV first stage is now fitted on exactly the second stage's rows and with
   its `ssc`, `drop_intercept`, and `context`. Previously, arguments from the `feols`
   call would not be propageted, e.g.  dropped singletons always defaulted to `fixef_rm="none"`.

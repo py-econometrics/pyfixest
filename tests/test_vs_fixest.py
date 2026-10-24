@@ -14,7 +14,6 @@ import pyfixest as pf
 from pyfixest.estimation import feols
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.internals.model_state import VcovSpec
-from pyfixest.estimation.post_estimation.ritest import _resample
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.utils import get_data, ssc
 from tests._feols_test_cases import (
@@ -2191,9 +2190,7 @@ def test_no_intercept_ritest_against_fixest(data_feols, statistic):
     rng = np.random.default_rng(71)
     for _ in range(5):
         resampled = fit._data.copy(deep=False)
-        resampled["D"] = _resample(
-            resampvar_arr=fit._data.D.to_numpy(), rng=rng
-        ).flatten()
+        resampled["D"] = rng.permutation(fit._data.D.to_numpy())
         reference = fixest.feols(ro.Formula("Y ~ D - 1"), data=resampled, vcov="iid")
         value = (
             stats.coef(reference)[0]
