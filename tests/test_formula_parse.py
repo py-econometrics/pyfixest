@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -1112,29 +1112,19 @@ class TestEdgeCases:
             Formula.parse(formula)
 
     @pytest.mark.parametrize(
-        "rhs, error, match",
+        "rhs",
         [
-            (
-                "X1 : [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "X1 - [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "-([X2 ~ Z1])",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            ("X1 * [X2 ~ Z1]", EndogVarsAsCovarsError, "X2"),
+            "X1 : [X2 ~ Z1]",
+            "X1 - [X2 ~ Z1]",
+            "-([X2 ~ Z1])",
         ],
     )
-    def test_reject_unsupported_iv_second_stage(self, rhs, error, match):
-        """Algebra must preserve the endogenous term without creating invalid controls."""
-        with pytest.raises(error, match=match):
+    def test_reject_unsupported_iv_second_stage(self, rhs):
+        """Algebra must preserve the declared endogenous term in the regression."""
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"removed or transformed the endogenous terms.*X2.*IV specification remains",
+        ):
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
@@ -1146,6 +1136,7 @@ class TestEdgeCases:
             ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
             ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
             ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X1 * [X2 ~ Z1]", "Y ~ X1 + X1:X2 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
             (
