@@ -7,7 +7,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.post_estimation.ritest import _assignment_units, _resample
+from pyfixest.estimation.post_estimation.ritest import _assignment_units
 
 matplotlib.use("Agg")  # Use a non-interactive backend
 
@@ -80,24 +80,22 @@ def test_fast_ritest_requires_numba(monkeypatch):
         fit.ritest("X1", reps=10, choose_algorithm="fast")
 
 
-def test_resample_permutes_actual_assignment():
-    """Draws keep the observed treatment values, per unit or per cluster."""
-    rng = np.random.default_rng(5)
+def test_assignment_units():
+    """Keep each unit's treatment and map observations to their assignment unit."""
     D = np.repeat([1.0, 0.0], [10, 90])
     cluster = np.repeat(np.arange(20), 5)
     D_cluster = np.repeat(np.repeat([1.0, 0.0], [3, 17]), 5)
 
-    for _ in range(20):
-        draw = _resample(*_assignment_units(resampvar_arr=D), rng=rng)
-        np.testing.assert_array_equal(np.sort(draw), np.sort(D))
+    assignment, unit_codes = _assignment_units(resampvar_arr=D)
+    np.testing.assert_array_equal(assignment, D)
+    np.testing.assert_array_equal(unit_codes, np.arange(len(D)))
 
-        draw = _resample(
-            *_assignment_units(resampvar_arr=D_cluster, clustervar_arr=cluster),
-            rng=rng,
-        )
-        by_cluster = draw.reshape(20, 5)
-        assert (by_cluster == by_cluster[:, [0]]).all()
-        np.testing.assert_array_equal(np.sort(draw), np.sort(D_cluster))
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=D_cluster, clustervar_arr=cluster
+    )
+    np.testing.assert_array_equal(assignment, np.repeat([1.0, 0.0], [3, 17]))
+    np.testing.assert_array_equal(unit_codes, cluster)
+    np.testing.assert_array_equal(assignment[unit_codes], D_cluster)
 
 
 @pytest.mark.extended

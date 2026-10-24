@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- `wildboottest()` now rejects a missing `param` with a `ValueError` naming the available coefficients. The default `None` previously tested an empty restriction and returned p = 0 with an undefined t-statistic. See [#1959](https://github.com/py-econometrics/pyfixest/issues/1959).
+
 - Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
   minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
 
@@ -360,13 +362,18 @@ We also removed:
 ### Bug Fixes
 
 - `ritest()` now refits formulas with treatment-dependent interactions or transforms so every draw rebuilds their design columns.
-
+- `did2s()` and DID2S event studies now reject missing cluster IDs and fewer than two clusters before fitting, preventing zero standard errors from omitted cluster scores.
+- `predict()` now rejects `se_fit=True` and prediction intervals for quantile regression and GLMs instead of returning OLS intervals or silently ignoring the request ([#1652](https://github.com/py-econometrics/pyfixest/issues/1652)).
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
   observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
   and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single
   density estimate, so the one-step updates mostly shifted the intercept and
   returned nearly identical slopes at every quantile
   ([#1745](https://github.com/py-econometrics/pyfixest/issues/1745)).
+- `event_study(..., estimator="saturated")` now adds the `xfml` covariates to
+  the regression. It previously ignored them and silently returned the
+  unadjusted estimates
+  ([#1966](https://github.com/py-econometrics/pyfixest/issues/1966)).
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
