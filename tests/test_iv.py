@@ -241,7 +241,7 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
             "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
             False,
         ),
-        # Explicit references align categorical instrument coding with fixest.
+        # An explicit reference selects the omitted instrument level.
         (
             "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
             "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
@@ -295,31 +295,65 @@ def test_first_stage_vs_fixest(
     _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
 
 
-@pytest.mark.against_r_core
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Pre-existing: default i() instrument coding differs from fixest without an intercept (#1917).",
-)
-@pytest.mark.parametrize(
-    "fml",
-    [
-        "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
-        "Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]",
-    ],
-    ids=["pipe", "bracket"],
-)
-def test_no_intercept_iv_default_categorical_instrument_vs_fixest(fml):
-    """Without a reference, fixest omits a level that pyfixest retains."""
+def _categorical_iv_data() -> pd.DataFrame:
     data = get_data()
     data["category"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
+    data["group"] = pd.Categorical(np.take(["u", "v", "w", "x"], data.index % 4))
+    return data
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r",
+    [
+        (
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
+        ),
+        (
+            "Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]",
+            "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
+        ),
+        ("Y ~ 0 + [X1 ~ i(category)]", "Y ~ 0 | X1 ~ i(category)"),
+        # the categorical covariate keeps all levels, the instrument omits one
+        (
+            "Y ~ 0 + i(group) + [X1 ~ Z1 + i(category)]",
+            "Y ~ 0 + i(group) | X1 ~ Z1 + i(category)",
+        ),
+        (
+            "Y ~ 0 + X2 + [X1 ~ i(category) + i(group)]",
+            "Y ~ 0 + X2 | X1 ~ i(category) + i(group)",
+        ),
+    ],
+    ids=["pipe", "bracket", "no-covariates", "categorical-covariate", "two-factors"],
+)
+def test_no_intercept_iv_default_categorical_instrument_vs_fixest(fml, fml_r):
+    """Without an intercept, categorical instruments still omit a reference level."""
+    data = _categorical_iv_data()
     fit = feols(fml, data=data, vcov="iid")
-    fit_r = fixest.feols(
-        ro.Formula("Y ~ 0 + X2 | X1 ~ Z1 + i(category)"),
-        data=pandas2ri.py2rpy(data),
-        vcov="iid",
-    )
+    fit_r = fixest.feols(ro.Formula(fml_r), data=pandas2ri.py2rpy(data), vcov="iid")
     _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
+
+
+@pytest.mark.parametrize("instrument", ["C(category)", "category"])
+def test_no_intercept_iv_categorical_instrument_encodings_agree(instrument):
+    """`C()` and categorical columns omit the reference level like `i()`."""
+    data = _categorical_iv_data()
+    fit = feols(f"Y ~ 0 + X2 + [X1 ~ Z1 + {instrument}]", data=data)
+    fit_i = feols("Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]", data=data)
+    assert fit.model_matrix.instruments.shape == fit_i.model_matrix.instruments.shape
+    np.testing.assert_allclose(
+        fit.coef().to_numpy(),
+        fit_i.coef().to_numpy(),
+        rtol=1e-12,
+        err_msg="second-stage coefficients != i() instrument",
+    )
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        fit_i.first_stage.diagnostics.f_stat,
+        rtol=1e-12,
+        err_msg="first-stage F statistic != i() instrument",
+    )
 
 
 @pytest.mark.against_r_core
