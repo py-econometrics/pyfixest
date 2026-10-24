@@ -88,9 +88,7 @@ def _get_ritest_stats_slow(
     ri_stats = np.zeros(reps)
 
     for i in tqdm(range(reps)):
-        data_resampled[resampvar] = _resample(
-            assignment=assignment, unit_codes=unit_codes, rng=rng
-        )
+        data_resampled[resampvar] = rng.permutation(assignment)[unit_codes]
 
         fixest_fit = fit_fn(data=data_resampled)
         if type == "randomization-c":
@@ -236,9 +234,7 @@ def _run_ri(
     X_demean2 = np.ascontiguousarray(X_demean2)
 
     for i in range(reps):
-        D2 = _resample(assignment=assignment, unit_codes=unit_codes, rng=rng).reshape(
-            (-1, 1)
-        )
+        D2 = rng.permutation(assignment)[unit_codes].reshape((-1, 1))
 
         D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
@@ -283,32 +279,6 @@ def _assignment_units(
     return assignment, unit_codes
 
 
-def _resample(
-    assignment: np.ndarray, unit_codes: np.ndarray, rng: np.random.Generator
-) -> np.ndarray:
-    """
-    Draw a treatment assignment by permuting the observed one.
-
-    A permutation keeps the number of treated units and, for a non-binary
-    treatment, the distribution of treatment values fixed across draws.
-
-    Parameters
-    ----------
-    assignment : np.ndarray
-        The treatment of each unit of random assignment.
-    unit_codes : np.ndarray
-        The index into `assignment` of each observation.
-    rng : np.random.Generator
-        The random number generator.
-
-    Returns
-    -------
-    np.ndarray
-        The resampled treatment of each observation, of shape (N,).
-    """
-    return rng.permutation(assignment)[unit_codes]
-
-
 def lstsq_numba(A, B):
     """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
     U, s, VT = np.linalg.svd(A, full_matrices=False)
@@ -319,7 +289,6 @@ def lstsq_numba(A, B):
 
 
 if nb is not None:
-    _resample = nb.njit(_resample)
     lstsq_numba = nb.njit()(lstsq_numba)
     _run_ri = nb.njit()(_run_ri)
 
