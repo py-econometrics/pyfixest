@@ -48,6 +48,7 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+_INTERCEPT: Final[Term] = Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)])
 
 
 def _render_factor(factor: Factor) -> str:
@@ -318,6 +319,9 @@ class Formula:
     """
 
     _formula: formulaic.Formula
+    # Set by `as_first_stage()` without an intercept: the right-hand side
+    # intercept only encodes the instruments that follow it.
+    _encoding_intercept: bool = False
 
     def __post_init__(self) -> None:
         if not hasattr(self._formula, "lhs") or not hasattr(self._formula, "rhs"):
@@ -405,7 +409,12 @@ class Formula:
         parsed stages.
         """
         exogenous = _render_formula_part(
-            self.exogenous, explicit_no_intercept=not self.is_fixed_effects
+            (
+                terms_without_intercept(self.exogenous)
+                if self._encoding_intercept
+                else self.exogenous
+            ),
+            explicit_no_intercept=not self.is_fixed_effects,
         )
         result = f"{_render_formula_part(self.dependent)} ~ {exogenous}"
         if self.is_instrumental_variable:
@@ -446,6 +455,19 @@ class Formula:
         # A MULTIPART formula is a tuple of formulas on the right hand side
         return isinstance(self._formula.rhs, tuple) and any(
             terms_without_intercept(self._formula.rhs[-1])
+        )
+
+    @property
+    def has_intercept(self) -> bool:
+        """Whether the design keeps an intercept column.
+
+        Fixed effects absorb the intercept. Intercepts that only set the
+        encoding of categorical terms leave no column.
+        """
+        return (
+            not self.is_fixed_effects
+            and not self._encoding_intercept
+            and any(term == "1" for term in self.exogenous)
         )
 
     @property
@@ -525,15 +547,42 @@ class Formula:
         # Preserve the existing reduced-rank categorical encoding for FE models.
         # ModelMatrix removes this encoding intercept after materialization.
         if self.is_fixed_effects and terms and not any(term == "1" for term in terms):
-            terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
+            terms.insert(0, _INTERCEPT)
         return formulaic.formula.StructuredFormula(
-            lhs=self.dependent, rhs=formulaic.formula.SimpleFormula(terms)
+            lhs=self.dependent,
+            # keeps the position of a first stage's encoding intercept
+            rhs=formulaic.formula.SimpleFormula(
+                terms, _ordering=self.exogenous.ordering
+            ),
         )
 
     def as_first_stage(self) -> Formula:
-        """Return the parsed OLS specification for an IV first stage."""
+        """Return the parsed OLS specification for an IV first stage.
+
+        Categorical instruments are encoded as if the model had an intercept,
+        so they omit a reference level even when it has none.
+        """
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
+        if not self.has_intercept and not self.is_fixed_effects:
+            # Terms are encoded in order: the intercept reduces the rank of the
+            # instruments after it, while the exogenous terms before it keep
+            # their second-stage encoding. Instruments share no variables with
+            # exogenous terms.
+            rhs = formulaic.formula.SimpleFormula(
+                [
+                    *self.exogenous,
+                    _INTERCEPT,
+                    *terms_without_intercept(self.instruments),
+                ],
+                _ordering=formulaic.formula.OrderingMethod.NONE,
+            )
+            return Formula(
+                _formula=formulaic.formula.StructuredFormula(
+                    lhs=self.endogenous, rhs=rhs
+                ),
+                _encoding_intercept=True,
+            )
         instruments = (
             self.instruments
             if any(term == "1" for term in self.exogenous)

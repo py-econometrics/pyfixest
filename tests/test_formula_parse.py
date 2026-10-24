@@ -1223,8 +1223,11 @@ class TestEdgeCases:
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)
         assert first_stage.lhs == expected_stage.lhs
-        # Both parsed blocks can contribute the same intercept term.
-        assert set(first_stage.rhs) == set(expected_stage.rhs)
+        # Without an intercept, an intercept term only encodes the instruments.
+        assert {term for term in first_stage.rhs if term != "1"} == {
+            term for term in expected_stage.rhs if term != "1"
+        }
+        assert parsed.as_first_stage().has_intercept == ("1" in expected_stage.rhs)
         reparsed = Formula.parse(parsed.render())[0]
         assert (
             reparsed.as_first_stage().second_stage
