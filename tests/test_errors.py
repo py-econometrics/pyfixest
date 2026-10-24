@@ -256,6 +256,13 @@ def test_depvar_numeric():
             False,
             "exactly one endogenous variable",
         ),
+        # The repeated control deduplicates; the categorical check rejects
+        # the multi-column endogenous term before the column-count check.
+        (
+            "Y ~ C(f1) + [C(f1) ~ Z1 + Z2]",
+            False,
+            "endogenous variable must be numeric",
+        ),
     ],
 )
 def test_dependent_and_endogenous_model_matrix_errors(
