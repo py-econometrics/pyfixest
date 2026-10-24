@@ -2158,21 +2158,17 @@ class Feols(ResultAccessorMixin):
             choose_algorithm = "slow"
 
         if choose_algorithm == "slow" or not self._closed_form_ols:
-            vcov_input: str | dict[str, str]
-            if cluster is not None:
-                vcov_input = {"CRV1": cluster}
-            else:
-                # "iid" for models without controls, else HC1
-                vcov_input = (
-                    "hetero"
-                    if (self.model.has_fixef and len(self._coefnames) > 1)
-                    or len(self._coefnames) > 2
-                    else "iid"
-                )
+            # Wu and Ding (JASA, 2021): permuted statistics must use the
+            # fitted covariance and SSC, just like the observed statistic.
+            vcov_input = (
+                self.variance_covariance.spec
+                if cluster is None
+                else VcovSpec.from_user_input({"CRV1": cluster})
+            )
 
             # for performance reasons
             if type == "randomization-c":
-                vcov_input = "iid"
+                vcov_input = VcovSpec.from_user_input("iid")
 
             ri_stats = _get_ritest_stats_slow(
                 data=self._data,
@@ -2184,7 +2180,7 @@ class Feols(ResultAccessorMixin):
                 fit_fn=partial(
                     refit,
                     self,
-                    vcov=VcovSpec.from_user_input(vcov_input),
+                    vcov=vcov_input,
                     # permutations change the treatment, not the rows
                     same_sample=True,
                 ),

@@ -289,7 +289,7 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
         reference = estimator(
             fml,
             data=resampled,
-            vcov="iid" if statistic == "randomization-c" else "hetero",
+            vcov="iid",
         )
         values = (
             reference.coef() if statistic == "randomization-c" else reference.tstat()
