@@ -933,8 +933,8 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "Distribution changed to chi2",
         ),
         (
-            lambda d: _cluster_treatment_fit(d).ritest(
-                resampvar="D", cluster="f1", reps=10
+            lambda d: _binary_treatment_fit(d).ccv(
+                treatment="D", cluster="f1", n_splits=2, seed=1
             ),
             UserWarning,
             "The initial model was not clustered",
