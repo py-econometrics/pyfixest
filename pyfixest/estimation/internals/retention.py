@@ -15,7 +15,7 @@ class RetentionPolicy:
     lean: bool = False
 
 
-_STORE_DATA_ATTRIBUTES: tuple[str, ...] = ("_data", "model_matrix")
+_STORE_DATA_ATTRIBUTES: tuple[str, ...] = ("_data", "model_matrix", "_within_fixef")
 
 _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "_data",
@@ -25,6 +25,7 @@ _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "fitted_values",
     "working_state",
     "within_data",
+    "_within_fixef",
     "observation_weights",
     "solution",
 )

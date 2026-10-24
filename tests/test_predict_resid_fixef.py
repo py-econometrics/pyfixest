@@ -7,7 +7,7 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.demeaners import MapDemeaner
+from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -62,7 +62,9 @@ def test_ols_prediction_internally(data, fml, weights):
 
 @pytest.mark.parametrize("fixed_effects", ["f1", "f1 + f2"])
 @pytest.mark.parametrize("weights", [None, "weights"])
-def test_recovery_preserves_codes_after_levels_are_removed(fixed_effects, weights):
+def test_recovery_preserves_codes_after_levels_are_removed(
+    fixed_effects, weights, recovery_demeaner
+):
     """#1786: dropped levels must not shift recovery's code-to-level mapping."""
     data = pf.get_data(N=400, seed=6534714).dropna()
     removed_level = data.f1.min()
@@ -75,7 +77,7 @@ def test_recovery_preserves_codes_after_levels_are_removed(fixed_effects, weight
         data=data,
         weights=weights,
         fixef_rm="singleton",
-        demeaner=MapDemeaner(fixef_tol=1e-12),
+        demeaner=recovery_demeaner,
     )
     recovered = fit.fixef(atol=1e-12, btol=1e-12)
     assert {str(removed_level), "999.0"}.isdisjoint(
@@ -120,8 +122,19 @@ def weights(request):
     return request.param
 
 
+@pytest.fixture(
+    params=[
+        MapDemeaner(fixef_tol=1e-12),
+        LsmrDemeaner(fixef_atol=1e-12, fixef_btol=1e-12),
+    ],
+    ids=["map", "within"],
+)
+def recovery_demeaner(request):
+    return request.param
+
+
 @pytest.fixture
-def fits_vs_fixest(fixest_data, estimator, fml, weights):
+def fits_vs_fixest(fixest_data, estimator, fml, weights, recovery_demeaner):
     """Fit the same model with pyfixest and fixest; recover pyfixest's FEs."""
     r_fml = fml.replace("f1:f2", "f1^f2")
     r_weights = {"weights": ro.Formula(f"~{weights}")} if weights is not None else {}
@@ -129,13 +142,20 @@ def fits_vs_fixest(fixest_data, estimator, fml, weights):
         fml, r_fml = fml.replace("Y", "Y_bin", 1), r_fml.replace("Y", "Y_bin", 1)
 
     if estimator == "feols":
-        fit = pf.feols(fml=fml, data=fixest_data, weights=weights)
+        fit = pf.feols(
+            fml=fml, data=fixest_data, weights=weights, demeaner=recovery_demeaner
+        )
         fit_r = fixest.feols(ro.Formula(r_fml), data=fixest_data, **r_weights)
     elif estimator in ("fepois", "fepois_offset"):
         offset = "off" if estimator == "fepois_offset" else None
         r_offset = {"offset": ro.Formula("~off")} if offset is not None else {}
         fit = pf.fepois(
-            fml=fml, data=fixest_data, offset=offset, weights=weights, iwls_tol=1e-10
+            fml=fml,
+            data=fixest_data,
+            offset=offset,
+            weights=weights,
+            iwls_tol=1e-10,
+            demeaner=recovery_demeaner,
         )
         fit_r = fixest.fepois(
             ro.Formula(r_fml), data=fixest_data, glm_tol=1e-10, **r_offset, **r_weights
@@ -145,6 +165,7 @@ def fits_vs_fixest(fixest_data, estimator, fml, weights):
             fml=fml,
             data=fixest_data,
             family=estimator,
+            demeaner=recovery_demeaner,
             weights=weights,
             iwls_tol=1e-10,
         )
@@ -171,6 +192,7 @@ def fits_vs_fixest(fixest_data, estimator, fml, weights):
         "Y ~ X1 | f1 + f2",
         "Y ~ X1 | f1:f2",
         "Y ~ 1 | f1",
+        "Y ~ 1 | f1 + f2",
     ],
 )
 def test_vs_fixest(request, fits_vs_fixest, fixest_data, estimator, fml):
@@ -529,4 +551,84 @@ def test_context_capture_with_out_of_sample_predict():
     for context_fit in [context_captured_fit, context_captured_fit_map]:
         np.testing.assert_almost_equal(
             context_fit.predict(data_test), explicit_fit.predict(data_test), decimal=3
+        )
+
+
+@pytest.mark.parametrize("estimator", ["feols", "fepois"])
+@pytest.mark.parametrize("weights_type", ["aweights", "fweights"])
+@pytest.mark.parametrize("accelerate", [False, True])
+def test_within_fixef_reuses_projection(
+    data, monkeypatch, estimator, weights_type, accelerate
+):
+    """Recovery uses cached coefficients, including GLM warm starts and rank drops."""
+    from importlib import import_module
+
+    data = data.copy()
+    data["w"] = np.random.default_rng(1).integers(1, 5, len(data))
+    data["duplicate"] = data.X1
+    kwargs = (
+        {"accelerate": accelerate, "iwls_tol": 1e-10} if estimator == "fepois" else {}
+    )
+    fit = getattr(pf, estimator)(
+        "Y ~ X1 + duplicate + X2 | f1 + f2",
+        data=data,
+        weights="w",
+        weights_type=weights_type,
+        demeaner=LsmrDemeaner(fixef_atol=1e-12, fixef_btol=1e-12),
+        **kwargs,
+    )
+    expected = fit.predict()
+    assert fit._within_fixef is not None
+    assert not fit._within_fixef.flags.writeable
+
+    def unexpected_solve(*args, **kwargs):
+        pytest.fail("within fixed effects must not be estimated again by LSQR")
+
+    monkeypatch.setattr(
+        import_module("pyfixest.estimation.models.feols_"), "lsqr", unexpected_solve
+    )
+    recovered = fit.fixef()
+    # Recovery reuses the projection to solver precision; the GLM linear
+    # predictor is the final accepted full IWLS step, including acceleration.
+    np.testing.assert_allclose(
+        fit.predict(newdata=fit._data)[:10],
+        expected[:10],
+        rtol=1e-7,
+        atol=1e-7,
+        err_msg="Stored within coefficients do not reproduce fitted values",
+    )
+    assert recovered.loc[recovered.variable == "f2", "coefficient"].iloc[0] == 0
+
+
+def test_within_fixef_multiple_estimation_and_disconnected_levels(data, monkeypatch):
+    from importlib import import_module
+
+    data = data.copy()
+    # The extra factor makes two disconnected components, with missing levels
+    # and a different sample for the second response.
+    data["component"] = (data.f1 > data.f1.median()).astype(int)
+    data["f2"] = data.f2 + 100 * data.component
+    data["Y2"] = data.Y
+    data.loc[data.index[:10], "Y2"] = np.nan
+    fit = pf.feols(
+        "sw(Y, Y2) ~ sw(X1, X2, X1 + X2) | f1 + f2 + component",
+        data=data,
+        demeaner=LsmrDemeaner(fixef_atol=1e-12, fixef_btol=1e-12),
+    )
+
+    def unexpected_solve(*args, **kwargs):
+        pytest.fail("Cached within coefficients must survive multiple estimation")
+
+    monkeypatch.setattr(
+        import_module("pyfixest.estimation.models.feols_"), "lsqr", unexpected_solve
+    )
+    for model in fit.to_list():
+        assert model._within_fixef is not None
+        model.fixef()
+        np.testing.assert_allclose(
+            model.predict(newdata=model._data)[:10],
+            model.predict()[:10],
+            rtol=1e-8,
+            atol=1e-8,
+            err_msg="Multiple-estimation cache misaligned within coefficients",
         )

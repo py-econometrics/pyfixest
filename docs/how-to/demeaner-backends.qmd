@@ -202,3 +202,15 @@ pf.etable([fit, fit2], digits = 6)
 ::: {.callout-warning}
 `Preconditioner` instances are tied to specific fixed effect structures. `within` validates that the preconditioner's DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user's responsibility to ensure that the preconditioner is reused on the same FE structure.
 :::
+
+## Fixed-effect recovery
+
+For multi-factor `LsmrDemeaner(backend="within")` fits, `fixef()` and
+out-of-sample prediction reuse the coefficients computed during demeaning,
+including weighted OLS and GLM fits. Recovery uses the estimation-time
+`fixef_atol`/`fixef_btol`; the `atol`/`btol` arguments of `fixef()` apply only
+to the separate LSQR recovery used by other backends and the single-factor
+MAP fallback. The first observed level of each factor after the first is
+normalized to zero. Disconnected or otherwise unidentified effects can have
+different individual coefficients across solvers; their in-sample sum is
+unchanged.

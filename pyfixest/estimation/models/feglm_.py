@@ -172,8 +172,8 @@ class Feglm(Feols):
 
         def _demean(
             v: np.ndarray, X: np.ndarray, weights: np.ndarray, tol: float
-        ) -> tuple[np.ndarray, np.ndarray]:
-            return self.residualize(
+        ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+            return self._residualize_with_fixef(
                 v=v,
                 X=X,
                 flist=fixed_effects,
@@ -197,6 +197,9 @@ class Feglm(Feols):
             fixef_tol=self.options.fixef_tol,
         )
 
+        self._within_fixef = fit.fixed_effects
+        if self._within_fixef is not None:
+            self._within_fixef.setflags(write=False)
         self.collinearity = fit.collinearity
         self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
@@ -305,18 +308,32 @@ class Feglm(Feols):
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Residualize v and X with current working weights and a reused preconditioner."""
+        response, design, _ = self._residualize_with_fixef(
+            v=v, X=X, flist=flist, weights=weights, tol=tol
+        )
+        return response, design
+
+    def _residualize_with_fixef(
+        self,
+        v: np.ndarray,
+        X: np.ndarray,
+        flist: np.ndarray | None,
+        weights: np.ndarray,
+        tol: float,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+        """Residualize v and X with current working weights and a reused preconditioner."""
         if flist is None:
-            return v, X
+            return v, X, None
 
         effective_demeaner = self.options.demeaner.with_tol(tol)
-        vX_tilde = self._demean_cache.demean_array(
+        vX_tilde, fixed_effects = self._demean_cache.demean_array_with_fixef(
             x=np.c_[v, X],
             flist=flist,
             weights=weights.flatten(),
             na_index=self.sample_info.dropped_row_index,
             demeaner=effective_demeaner,
         )
-        return vX_tilde[:, 0], vX_tilde[:, 1:]
+        return vX_tilde[:, 0], vX_tilde[:, 1:], fixed_effects
 
     def predict(
         self,
