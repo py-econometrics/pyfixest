@@ -366,6 +366,10 @@ We also removed:
   density estimate, so the one-step updates mostly shifted the intercept and
   returned nearly identical slopes at every quantile
   ([#1745](https://github.com/py-econometrics/pyfixest/issues/1745)).
+- `event_study(..., estimator="saturated")` now adds the `xfml` covariates to
+  the regression. It previously ignored them and silently returned the
+  unadjusted estimates
+  ([#1966](https://github.com/py-econometrics/pyfixest/issues/1966)).
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
