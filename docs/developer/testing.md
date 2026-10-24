@@ -16,6 +16,8 @@ may not have the compiled extension or the right optional dependencies.
   performance-relevant change
 - [Verification reporting](#verification-reporting): concise evidence and status
 - [Release contract](#release-contract): regression checks and declared differences
+- [Choosing a numerical reference](#choosing-a-numerical-reference): when internal
+  comparisons suffice and when external evidence is required
 - [External numerical references](#external-numerical-references): reference
   preference order, rpy2 rules, and the [tolerance contract](#tolerance-contract)
 - [Test design](#test-design): controlling suite growth, error-path tests,
@@ -49,10 +51,11 @@ Never defer a failing check or a targeted check needed to resolve a material
 uncertainty. The change is not merge-ready until all required merge evidence
 is green.
 
-`test-py` is the broad Python-only regression baseline. It does not compare
-results with R or another external implementation, so it cannot establish
-numerical parity for estimation or inference changes. Run the applicable
-external-reference suite as separate, stronger evidence.
+`test-py` is the broad Python-only regression baseline. A passing baseline alone
+does not establish numerical correctness or parity with external software. Use
+the targeted evidence selected under
+[Choosing a numerical reference](#choosing-a-numerical-reference), and run the
+applicable external-reference suites required by the selection matrix.
 
 `test-all` collects every test supported by the current Pixi environment. It
 does not install the CRAN-only packages from `r_test_requirements.R`, so those
@@ -121,7 +124,8 @@ This matrix is authoritative for which checks a change requires.
 | Repository guidance (including `docs/developer/`) or workflow metadata | `git diff --check`; validate changed links and applicable skills, templates, or configuration | affected CI workflow only; no docs build or render |
 | Python API or internals | targeted public tests; changed-file lint; `pixi run ty` | Python baseline |
 | Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint; `pixi run ty` | Python baseline; applicable external suite for every estimator the refactor touches |
-| Estimation or inference numerics | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
+| Input preparation or orchestration around an unchanged numerical method | targeted independent regression and edge tests under [Choosing a numerical reference](#choosing-a-numerical-reference); release contract with every intended difference declared by `reason`; changed-file lint; `pixi run ty` | Python baseline; existing applicable external suites |
+| Changes to estimation or inference equations or numerical algorithms | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
 | New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
 | HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
 | Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
@@ -193,7 +197,8 @@ For an invariant refactor, run the contract early and after edits that can
 affect results. Reuse evidence after unrelated prose or metadata edits.
 Unexplained drift is a regression: fix it, or explicitly reclassify the change
 as numerics. An intentional change needs a `reason` in
-`tests/test_release_contract.py`, the applicable external comparison, and a
+`tests/test_release_contract.py`, an independent regression test selected under
+[Choosing a numerical reference](#choosing-a-numerical-reference), and a
 changelog entry. Widen an individual `baseline.check(...)` or use
 `baseline.skip(...)` only for a documented behavior change since the pinned
 release, never simply to make a failure pass. The default comparison is near
@@ -202,12 +207,44 @@ machine precision.
 For baseline setup, invalidation, or release rolls, read
 [Release-baseline maintenance](#release-baseline-maintenance).
 
+## Choosing a numerical reference
+
+Choose a reference that independently checks the behavior being changed.
+Independence means bypassing the faulty or modified path; it does not
+necessarily mean using another package.
+
+For fixes to input preparation, formula rebuilding, algorithm selection,
+indexing, or orchestration around an established estimator, prefer an explicit
+calculation or direct public-API refit within pyfixest when it provides an
+independent reference. This is sufficient even when correcting the bug changes
+numerical results, provided that:
+
+- the underlying estimator and statistical definition are unchanged;
+- the reference constructs the expected inputs explicitly and bypasses the
+  behavior under test;
+- the comparison would fail on the buggy implementation.
+
+For example, test `ritest()` formula rebuilding by explicitly permuting the
+treatment in the raw data, calling `feols()` for each draw, and comparing the
+resulting treatment coefficients. Comparing two `ritest()` modes alone is
+insufficient if both could share the faulty behavior.
+
+New estimators require permanent external comparisons. Changes to estimation
+or inference equations or numerical algorithms require external evidence
+wherever overlapping software exists. Apply the same requirement when an
+internal comparison could reproduce the numerical error being tested.
+
+State briefly in the test what makes the reference independent of the failure,
+and follow the [Tolerance contract](#tolerance-contract). Add an external
+comparison when it resolves additional uncertainty; an adequate internal
+reference needs no duplicate external regression test. Existing external
+compatibility tests and applicable CI suites remain required.
+
 ## External numerical references
 
-Every new estimator requires a permanent comparison with existing software;
-numerical changes to existing estimators require one wherever overlapping
-software exists. Simulations, shape checks, and internal reimplementations do
-not substitute for external evidence. Choose the reference in this order:
+When [Choosing a numerical reference](#choosing-a-numerical-reference) requires
+external evidence, simulations, shape checks, and internal reimplementations do
+not substitute for it. Choose the external reference in this order:
 
 1. live R `fixest`, another established R package, or a well-established Python
    package available in a maintained environment;
