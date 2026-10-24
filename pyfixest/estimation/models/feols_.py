@@ -1314,13 +1314,15 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # Abadie et al. (2023): the cluster component in the CCV mixture and
+        # its comparison row must use the same clusters as the split scores.
+        # Refit locally to retain the fit's SSC and leave its inference intact.
+        crv1_spec = VcovSpec.from_user_input({"CRV1": cluster})
+        crv1_fit = (
+            self
+            if self.variance_covariance.spec == crv1_spec
+            else refit(self, data=self._data, vcov=crv1_spec, same_sample=True)
+        )
 
         rng = np.random.default_rng(seed)
 
@@ -1368,7 +1370,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = crv1_fit.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1393,7 +1395,7 @@ class Feols(ResultAccessorMixin):
 
         res_ccv.name = "CCV"
 
-        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
+        res_crv1 = cast(pd.Series, crv1_fit.tidy().xs(treatment))
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
@@ -2114,20 +2116,26 @@ class Feols(ResultAccessorMixin):
         if reps < 1:
             raise ValueError(f"reps must be a positive integer, got {reps}.")
 
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # An assignment-cluster override belongs to this test. Use a local
+        # refit with the fit's SSC instead of replacing its stored inference.
+        sample_fit = self
+        if cluster is not None and type == "randomization-t":
+            ri_vcov = VcovSpec.from_user_input({"CRV1": cluster})
+            if ri_vcov != self.variance_covariance.spec:
+                sample_fit = refit(
+                    self, data=self._data, vcov=ri_vcov, same_sample=True
+                )
 
         rng = np.random.default_rng() if rng is None else rng
 
         sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+        sample_stat = sample_coef - h0_value
+        if type == "randomization-t":
+            # Center the coefficient before studentization, so the null and
+            # coefficient share units.
+            sample_stat = (sample_coef - h0_value) / np.array(
+                sample_fit.se().xs(resampvar_)
+            )
 
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
@@ -2205,14 +2213,13 @@ class Feols(ResultAccessorMixin):
             sample_stat=sample_stat,
             ri_stats=ri_stats[1:],
             method=test_type,
-            h0_value=h0_value,
             level=level,
         )
 
         if store_ritest_statistics:
             self.ritest_statistics = RitestStatistics(
                 statistics=ri_stats,
-                sample_stat=float(sample_stat - h0_value),
+                sample_stat=float(sample_stat),
                 pvalue=float(ri_pvalue),
             )
 

@@ -317,78 +317,122 @@ def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
 
 
-@pytest.mark.parametrize("vcov", ["iid", "hetero", "HC2", "HC3", {"CRV1": "s"}])
-def test_randomization_t_uses_fitted_covariance(vcov):
-    """Statsmodels independently checks studentization on every assignment."""
-    import statsmodels.api as sm
-
+@pytest.mark.parametrize("h0", [-0.25, 0.25])
+@pytest.mark.parametrize(
+    "statistic,algorithm",
+    [
+        ("randomization-t", "slow"),
+        ("randomization-c", "slow"),
+        ("randomization-c", "fast"),
+    ],
+)
+def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
+    """Explicit centering and direct refits bypass ritest's statistic handling."""
     rng = np.random.default_rng(8)
-    n = 120
-    data = pd.DataFrame(
-        {
-            "D": rng.integers(0, 2, n).astype(float),
-            "x": rng.normal(size=n),
-            "s": np.repeat(np.arange(12), 10),
-        }
-    )
-    data["y"] = 0.3 * data.D + data.x + rng.normal(size=12)[data.s]
-    data["y"] += rng.normal(size=n) * (1 + data.D)
-    has_fe = isinstance(vcov, dict)
-    # Match statsmodels' HC2/HC3 and explicit-dummy cluster corrections.
-    correction = pf.ssc(
-        k_adj=not has_fe and vcov not in ["HC2", "HC3"], G_adj=not has_fe
-    )
-    fit = pf.feols(
-        "y ~ D + x" + (" | s" if has_fe else ""),
-        data=data,
-        vcov=vcov,
-        ssc=correction,
-    )
-
-    def reference(treatment):
-        design = sm.add_constant(np.column_stack([treatment, data.x]))
-        if has_fe:
-            design = np.column_stack(
-                [design, pd.get_dummies(data.s, drop_first=True, dtype=float)]
-            )
-            return (
-                sm.OLS(data.y, design)
-                .fit(
-                    cov_type="cluster",
-                    cov_kwds={"groups": data.s, "use_correction": False},
-                )
-                .tvalues.iloc[1]
-            )
-        cov_type = {"hetero": "HC1"}.get(vcov, vcov)
-        result = (
-            sm.OLS(data.y, design).fit()
-            if cov_type == "iid"
-            else (sm.OLS(data.y, design).fit(cov_type=cov_type))
-        )
-        return result.tvalues.iloc[1]
-
-    reps = 7
-    fit.ritest(
-        "D",
-        type="randomization-t",
-        reps=reps,
+    data = pd.DataFrame({"D": rng.integers(0, 2, 120).astype(float)})
+    data["y"] = 0.3 * data.D + rng.normal(size=len(data)) * (1 + data.D)
+    fit = pf.feols("y ~ D", data=data, vcov="iid")
+    expected_sample = fit.coef().loc["D"] - h0
+    if statistic == "randomization-t":
+        expected_sample /= fit.se().loc["D"]
+    result = fit.ritest(
+        f"D={h0}",
+        type=statistic,
+        choose_algorithm=algorithm,
+        reps=7,
         rng=np.random.default_rng(1),
         store_ritest_statistics=True,
     )
     draw_rng = np.random.default_rng(1)
-    expected = [reference(draw_rng.permutation(data.D.to_numpy())) for _ in range(reps)]
-    # Independent QR/SVD solvers agree to rounding on this full-rank design.
+    expected_draws = []
+    for _ in range(7):
+        draw = pf.feols(
+            "y ~ D",
+            data=data.assign(D=draw_rng.permutation(data.D.to_numpy())),
+            vcov="iid",
+        )
+        values = draw.tstat() if statistic == "randomization-t" else draw.coef()
+        expected_draws.append(values.loc["D"])
+    # Fast and direct solvers differ by less than 1e-10 on this two-column design.
     np.testing.assert_allclose(
         fit.ritest_statistics.statistics,
-        expected,
+        expected_draws,
         rtol=1e-9,
         atol=1e-10,
-        err_msg="Permutation t-statistics differ from the fitted covariance reference",
+        err_msg="Permutation statistics changed with the null hypothesis",
     )
     np.testing.assert_allclose(
         fit.ritest_statistics.sample_stat,
-        reference(data.D),
+        expected_sample,
         rtol=1e-9,
         atol=1e-10,
-        err_msg="Observed t-statistic differs from the fitted covariance reference",
+        err_msg="The null was subtracted on the wrong statistic scale",
+    )
+    expected_pvalue = np.mean(np.abs(expected_draws[1:]) >= abs(expected_sample))
+    assert result["Pr(>|t|)"] == expected_pvalue
+
+
+@pytest.mark.parametrize("h0", [0.0, 0.25])
+@pytest.mark.parametrize(
+    "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
+)
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic, h0):
+    """Direct CRV1 fits bypass the override and leave its numerical contract explicit."""
+    rng = np.random.default_rng(9)
+    assignments = rng.integers(0, 2, 12).astype(float)
+    data = pd.DataFrame(
+        {
+            "D": np.repeat(assignments, 10),
+            "x": rng.normal(size=120),
+            "g1": np.repeat(np.arange(12), 10),
+            "g2": np.tile(np.arange(10), 12),
+        }
+    )
+    data["y"] = 0.4 * data.D + data.x + rng.normal(size=12)[data.g1]
+    data["y"] += rng.normal(size=len(data))
+    correction = pf.ssc(k_adj=False, G_adj=False)
+    fit = pf.feols("y ~ D + x", data=data, vcov=initial_vcov, ssc=correction)
+    covariance = fit.variance_covariance
+    original = fit.tidy().copy(deep=True)
+
+    def reference(draw_data, *, null=0.0):
+        draw_fit = pf.feols(
+            "y ~ D + x", data=draw_data, vcov={"CRV1": "g1"}, ssc=correction
+        )
+        value = draw_fit.coef().loc["D"] - null
+        if statistic == "randomization-t":
+            value /= draw_fit.se().loc["D"]
+        return value
+
+    draw_rng = np.random.default_rng(1)
+    expected = [
+        reference(data.assign(D=np.repeat(draw_rng.permutation(assignments), 10)))
+        for _ in range(5)
+    ]
+    fit.ritest(
+        f"D={h0}",
+        cluster="g1",
+        type=statistic,
+        choose_algorithm="slow",
+        reps=5,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    assert fit.variance_covariance is covariance
+    pd.testing.assert_frame_equal(fit.tidy(), original)
+    # The same estimator and rows differ only by cluster-score accumulation rounding.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override permutation statistics differ from direct CRV1 fits",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        reference(data, null=h0),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override observed statistic differs from the direct CRV1 fit",
     )

@@ -48,6 +48,9 @@ Breaking changes:
 Other things:
 
 - `ritest(type="randomization-t")` now uses the fitted covariance estimator and small-sample corrections for permutation statistics, replacing the automatic IID/HC1 choice. See [#1960](https://github.com/py-econometrics/pyfixest/issues/1960).
+- `ritest(type="randomization-t")` now computes the observed statistic as `(coef - null) / se` for nonzero null hypotheses. Coefficient-based tests retain their existing null-centering convention.
+- `ritest(cluster=...)` now preserves the fitted model's inference. An explicit assignment cluster uses CRV1 on that cluster for both observed and permuted t-statistics, retaining the fitted small-sample corrections.
+- `ccv()` now uses CRV1 on its requested cluster for both the variance mixture and comparison row, preserving the fitted model's covariance and small-sample corrections.
 
 - `wildboottest()` now rejects a missing `param` with a `ValueError` naming the available coefficients. The default `None` previously tested an empty restriction and returned p = 0 with an undefined t-statistic. See [#1959](https://github.com/py-econometrics/pyfixest/issues/1959).
 
