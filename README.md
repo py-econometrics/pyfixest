@@ -8,6 +8,7 @@
 [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Downloads](https://img.shields.io/pepy/dt/pyfixest)](https://pepy.tech/project/pyfixest)
 [![Downloads](https://img.shields.io/pypi/dm/pyfixest)](https://pepy.tech/project/pyfixest)
+[![DOI](https://zenodo.org/badge/568100553.svg)](https://doi.org/10.5281/zenodo.15814089)
 
 [![Project Chat][chat-badge]][chat-url]
 
@@ -156,14 +157,31 @@ We thank all institutions that have funded or supported work on PyFixest!
 
 ## How to Cite
 
-If you want to cite PyFixest, you can use the following BibTeX entry:
+`PyFixest` reimplements the design, interface, and defaults of R's
+[`fixest`](https://lrberge.github.io/fixest/) in Python. Credit for that
+design belongs to the `fixest` authors. **If you use PyFixest, please cite both
+PyFixest and fixest.**
+
+PyFixest (DOI always resolves to the latest Zenodo release):
 
 ```bibtex
 @software{pyfixest,
   author  = {{The PyFixest Authors}},
   title   = {{pyfixest: Fast high-dimensional fixed effect estimation in Python}},
-  year    = {2025},
-  url     = {https://github.com/py-econometrics/pyfixest}
+  year    = {2026},
+  url     = {https://github.com/py-econometrics/pyfixest},
+  doi     = {10.5281/zenodo.15814089}
+}
+```
+
+fixest:
+
+```bibtex
+@article{berge2026fixest,
+  title   = {fixest: A fast and feature-rich framework for econometric estimations in R},
+  author  = {Berg{\'e}, Laurent R and Butts, Kyle and McDermott, Grant},
+  journal = {arXiv preprint arXiv:2601.21749},
+  year    = {2026}
 }
 ```
 
