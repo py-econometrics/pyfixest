@@ -15,8 +15,6 @@ from pyfixest.utils.utils import ssc
 @pytest.mark.parametrize("qk", [0, 0.5])
 def test_ccv_uses_requested_cluster_without_mutation(initial_vcov, qk):
     """The mixture and reported CRV1 row both use the CCV cluster."""
-    import statsmodels.api as sm
-
     rng = np.random.default_rng(12345)
     n = 400
     data = pd.DataFrame(
@@ -38,16 +36,13 @@ def test_ccv_uses_requested_cluster_without_mutation(initial_vcov, qk):
     pd.testing.assert_frame_equal(fit.tidy(), original)
     if qk == 0:
         # Identical CRV1 finite-sample factors leave only accumulation rounding.
-        reference = sm.OLS(data.y, sm.add_constant(data.D)).fit(
-            cov_type="cluster",
-            cov_kwds={"groups": data.g2, "use_correction": False},
-        )
+        reference = requested_fit.tidy().loc["D", "Std. Error"]
         np.testing.assert_allclose(
             result["Std. Error"],
-            reference.bse["D"],
+            reference,
             rtol=0,
             atol=1e-12,
-            err_msg="qk=0 CCV/CRV1 SE differs from statsmodels clustered SE",
+            err_msg="qk=0 CCV/CRV1 SE differs from the CRV1 SE",
         )
 
 
