@@ -207,7 +207,7 @@ class GelbachDecomposition:
                 x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
-            self.combine_covariates_dict = self.combine_covariates
+            self.combine_covariates_dict = dict(self.combine_covariates)
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
@@ -218,6 +218,21 @@ class GelbachDecomposition:
 
         self._check_covariates()
         self._check_combine_covariates()
+        self.combine_covariates_dict = {
+            name: list(covariates)
+            for name, covariates in self.combine_covariates_dict.items()
+        }
+
+        grouped = set(
+            itertools.chain.from_iterable(self.combine_covariates_dict.values())
+        )
+        remainder = [
+            name
+            for name in self.mediator_names
+            if name != "Intercept" and name not in grouped
+        ]
+        if remainder:
+            self.combine_covariates_dict.setdefault("Other", []).extend(remainder)
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
