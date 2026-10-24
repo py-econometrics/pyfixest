@@ -315,3 +315,59 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
 
 def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
+
+
+@pytest.mark.parametrize("h0", [-0.25, 0.25])
+@pytest.mark.parametrize(
+    "statistic,algorithm",
+    [
+        ("randomization-t", "slow"),
+        ("randomization-c", "slow"),
+        ("randomization-c", "fast"),
+    ],
+)
+def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
+    """A statsmodels fit checks the null's units independently of ritest."""
+    import statsmodels.api as sm
+
+    rng = np.random.default_rng(8)
+    data = pd.DataFrame({"D": rng.integers(0, 2, 120).astype(float)})
+    data["y"] = 0.3 * data.D + rng.normal(size=len(data)) * (1 + data.D)
+    fit = pf.feols("y ~ D", data=data, vcov="iid")
+    observed = sm.OLS(data.y, sm.add_constant(data.D)).fit()
+    expected_sample = observed.params.iloc[1] - h0
+    if statistic == "randomization-t":
+        expected_sample /= observed.bse.iloc[1]
+    result = fit.ritest(
+        f"D={h0}",
+        type=statistic,
+        choose_algorithm=algorithm,
+        reps=7,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    draw_rng = np.random.default_rng(1)
+    expected_draws = []
+    for _ in range(7):
+        draw = sm.OLS(
+            data.y, sm.add_constant(draw_rng.permutation(data.D.to_numpy()))
+        ).fit()
+        values = draw.tvalues if statistic == "randomization-t" else draw.params
+        expected_draws.append(values.iloc[1])
+    # QR/SVD accumulation rounding is below 1e-10 on this two-column design.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected_draws,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Permutation statistics changed with the null hypothesis",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        expected_sample,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="The null was subtracted on the wrong statistic scale",
+    )
+    expected_pvalue = np.mean(np.abs(expected_draws[1:]) >= abs(expected_sample))
+    assert result["Pr(>|t|)"] == expected_pvalue
