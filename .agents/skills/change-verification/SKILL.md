@@ -19,9 +19,11 @@ summarized in the handoff or PR.
 2. For code changes, read "Runtime tiers" and the commands needed for the
    selected checks. Run targeted tests and changed-file lint/type checks while
    editing, then the selected broader baseline once the implementation settles.
-3. For numerical changes or invariant refactors, read "Release contract".
-   Run it early for an invariant refactor and rerun after edits that can affect
-   results. Reuse a passing result after unrelated prose or metadata edits.
+3. For numerical changes or invariant refactors, read "Release contract" and
+   [Choosing a numerical reference](../../../docs/developer/testing.md#choosing-a-numerical-reference).
+   Run the release contract early for an invariant refactor and rerun after
+   edits that can affect results. Reuse a passing result after unrelated prose
+   or metadata edits.
    Investigate failures under that policy; do not relabel drift as intentional
    merely to make the check pass.
 4. Reuse applicable evidence for the same code state. Defer required long
