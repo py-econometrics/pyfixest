@@ -92,7 +92,7 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     sum_fixed_effects,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.wald import wald_test
+from pyfixest.estimation.post_estimation.wald import _normalize_q, wald_test
 from pyfixest.estimation.refit import refit
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -258,6 +258,7 @@ class Feols(ResultAccessorMixin):
         cluster_causal_variance=True,
         decomposition=True,
         prediction=True,
+        prediction_inference=True,
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=True,
@@ -953,6 +954,7 @@ class Feols(ResultAccessorMixin):
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
+        q = _normalize_q(q=q, n_restrictions=R.shape[0])
 
         covariance = self.variance_covariance
         if covariance.spec.is_clustered:
@@ -963,7 +965,7 @@ class Feols(ResultAccessorMixin):
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
         if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or (q is not None and np.any(q))
+            not np.array_equal(R, np.eye(self._k)) or np.any(q)
         ):
             warnings.warn(
                 "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
@@ -1090,6 +1092,12 @@ class Feols(ResultAccessorMixin):
                 "it is not available for IV, GLM, quantile regression, or DID2S fits."
             )
 
+        if param is None:
+            raise ValueError(
+                "param must name a coefficient to test; "
+                f"choose from {list(self._coefnames)}."
+            )
+
         cluster_list = []
 
         if cluster is not None and isinstance(cluster, str):
@@ -1129,8 +1137,7 @@ class Feols(ResultAccessorMixin):
 
         # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
-        if param is not None:
-            R[_xnames.index(param)] = 1
+        R[_xnames.index(param)] = 1
         r = 0
 
         if run_heteroskedastic:
@@ -1828,10 +1835,11 @@ class Feols(ResultAccessorMixin):
              Defaults to 'link'. 'link' and 'response' lead
             to identical results for linear models.
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            If True, compute prediction standard errors. Supported only for OLS
+            models without weights or fixed effects. Defaults to False.
         interval: str, optional
             The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals have the same support limits as ``se_fit``.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
@@ -1865,6 +1873,9 @@ class Feols(ResultAccessorMixin):
         self._require_capability(capability="prediction", method="predict")
 
         if interval == "prediction" or se_fit:
+            self._require_capability(
+                capability="prediction_inference", method="predict"
+            )
             if self.model.has_fixef:
                 raise NotImplementedError(
                     "Prediction errors are currently not supported for models with fixed effects."

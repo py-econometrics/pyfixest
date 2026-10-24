@@ -21,6 +21,7 @@ import rpy2.robjects as ro
 from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects.packages import importr
 
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation import feols
 
 fixest = importr("fixest")
@@ -249,10 +250,22 @@ def test_with_intercept_drop_level(df_test, fml):
 
 
 @pytest.mark.against_r_core
-def test_binning_simple(df_test):
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        (
+            "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))",
+            "Y ~ i(f_str, bin={'fruit': ['apple','banana']})",
+        ),
+        # A scalar old level bins that level instead of its characters.
+        (
+            "Y ~ i(f_str, bin=list(fruit='apple'))",
+            "Y ~ i(f_str, bin={'fruit': 'apple'})",
+        ),
+    ],
+)
+def test_binning_simple(df_test, r_fml, py_fml):
     """Test i() with bin parameter."""
-    r_fml = "Y ~ i(f_str, bin=list(fruit=c('apple','banana')))"
-    py_fml = "Y ~ i(f_str, bin={'fruit': ['apple','banana']})"
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
 
@@ -735,6 +748,19 @@ def test_split_reference_validity(df_split_levels, split_arg):
     assert len(r_models) == (3 if split_arg == "fsplit" else 2)
     with pytest.raises(ValueError, match=r"apple.*not among the provided levels"):
         feols(fml, data=data, **{split_arg: "grp"})
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ i(f_str, X1) + i(f_str, var2=X1)",
+        "Y ~ i(f_str, X1) + i(f_str, np.power(X1, 2))",
+    ],
+)
+def test_duplicate_column_names_raise(df_test, fml):
+    """Equally named columns would overwrite each other in the model matrix."""
+    with pytest.raises(FormulaSyntaxError, match="duplicate column names"):
+        feols(fml, df_test)
 
 
 # =============================================================================

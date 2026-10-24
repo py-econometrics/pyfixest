@@ -1,8 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
 import pyfixest as pf
 from pyfixest.utils.utils import get_data, ssc
+
+
+@pytest.mark.parametrize("vcov", ["hetero", {"CRV1": "group_id"}])
+@pytest.mark.parametrize("fml", ["Y ~ X1 + X2", "Y ~ sw(X1, X2)"])
+def test_missing_param_is_rejected(vcov, fml):
+    fit = pf.feols(fml, data=get_data(N=100, seed=9), vcov=vcov)
+    with pytest.raises(ValueError, match=r"param.*coefficient"):
+        fit.wildboottest(reps=9, seed=1)
 
 
 @pytest.fixture
