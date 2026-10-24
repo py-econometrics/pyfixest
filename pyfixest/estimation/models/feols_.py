@@ -2126,8 +2126,11 @@ class Feols(ResultAccessorMixin):
         rng = np.random.default_rng() if rng is None else rng
 
         sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
-        sample_stat = sample_tstat if type == "randomization-t" else sample_coef
+        sample_stat = sample_coef - h0_value
+        if type == "randomization-t":
+            # Wu and Ding (JASA, 2021): center the coefficient before
+            # studentization, so the null and coefficient share units.
+            sample_stat = (sample_coef - h0_value) / np.array(self.se().xs(resampvar_))
 
         # always run slow algorithm for randomization-t
         choose_algorithm = "slow" if type == "randomization-t" else choose_algorithm
@@ -2209,14 +2212,14 @@ class Feols(ResultAccessorMixin):
             sample_stat=sample_stat,
             ri_stats=ri_stats[1:],
             method=test_type,
-            h0_value=h0_value,
+            h0_value=0,
             level=level,
         )
 
         if store_ritest_statistics:
             self.ritest_statistics = RitestStatistics(
                 statistics=ri_stats,
-                sample_stat=float(sample_stat - h0_value),
+                sample_stat=float(sample_stat),
                 pvalue=float(ri_pvalue),
             )
 
