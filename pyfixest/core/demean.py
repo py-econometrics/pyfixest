@@ -200,6 +200,33 @@ def demean_within(
             f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
+    config = (
+        preconditioner
+        if isinstance(preconditioner, Preconditioner)
+        else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
+    )
+    return _demean_within(
+        x=x,
+        flist=flist,
+        weights=weights,
+        tol=tol,
+        maxiter=maxiter,
+        local_size=local_size,
+        preconditioner=config,
+    )
+
+
+def _demean_within(
+    *,
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint32],
+    weights: NDArray[np.float64] | None,
+    tol: float,
+    maxiter: int,
+    local_size: int | None,
+    preconditioner: Preconditioner | PreconditionerConfig,
+) -> tuple[NDArray, bool, Preconditioner | None]:
+    """Solve with a built handle or a transient internal rebuild configuration."""
     if flist.ndim == 1 or flist.shape[1] == 1:
         flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
         demeaned, success = _demean_rs(
@@ -213,15 +240,10 @@ def demean_within(
         )
         return demeaned, success, None
 
-    config = (
-        preconditioner
-        if isinstance(preconditioner, Preconditioner)
-        else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
-    )
     solver = Solver(
         np.asfortranarray(flist, dtype=np.uint32),
         weights=weights.astype(np.float64, copy=False) if weights is not None else None,
-        preconditioner=config,
+        preconditioner=preconditioner,
     )
     result = solver.solve_batch(
         np.asfortranarray(x, dtype=np.float64),

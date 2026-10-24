@@ -14,7 +14,12 @@ import pyfixest as pf
 import pyfixest.demeaners as demeaners
 from pyfixest.core import demean as demean_rs
 from pyfixest.core.demean import demean_within, within_preconditioner_name
-from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
+from pyfixest.demeaners import (
+    LsmrDemeaner,
+    MapDemeaner,
+    _resolve_preconditioner,
+    _with_fresh_preconditioner,
+)
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
 from tests._torch_test_utils import HAS_TORCH, torch_param
@@ -305,7 +310,8 @@ def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
 
 
-def test_demean_within_rejects_invalid_preconditioner():
+@pytest.mark.parametrize("invalid", [object(), PreconditionerConfig.Adaptive()])
+def test_demean_within_rejects_invalid_preconditioner(invalid):
     rng = np.random.default_rng(0)
     x = rng.normal(size=(20, 2))
     flist = np.column_stack(
@@ -313,12 +319,12 @@ def test_demean_within_rejects_invalid_preconditioner():
     ).astype(np.uint32)
     weights = np.ones(20)
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Preconditioner"):
         demean_within(
             x=x,
             flist=flist,
             weights=weights,
-            preconditioner=object(),  # type: ignore[arg-type]
+            preconditioner=invalid,  # type: ignore[arg-type]
         )
 
 
@@ -547,7 +553,8 @@ def test_demean_cache_replaces_unescalated_adaptive_preconditioner(demean_data):
     assert cache.lookup_preconditioner[na_index] is diagonal
 
 
-def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch):
+@pytest.mark.parametrize("rebuild", [False, True])
+def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch, rebuild):
     """Reuse additive Schwarz after an adaptive solve builds it, as weights change.
 
     Simulate the weighted demeaning steps used in iteratively reweighted least
@@ -574,15 +581,18 @@ def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch):
     demeaner = LsmrDemeaner(
         preconditioner=preconditioner, fixef_atol=1e-10, fixef_btol=1e-10
     )
+    if rebuild:
+        demeaner = _with_fresh_preconditioner(demeaner)
     calls = []
-    original = demeaners.demean_within
+    solve_name = "_demean_within" if rebuild else "demean_within"
+    original = getattr(demeaners, solve_name)
 
     def record_solve(**kwargs):
         result = original(**kwargs)
         calls.append((kwargs["preconditioner"], result[2]))
         return result
 
-    monkeypatch.setattr(demeaners, "demean_within", record_solve)
+    monkeypatch.setattr(demeaners, solve_name, record_solve)
     cache = DemeanCache()
     sample = frozenset()
     cache.demean_array(
