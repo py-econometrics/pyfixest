@@ -7,6 +7,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
+from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation import feols
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data, ssc
@@ -455,6 +456,282 @@ def test_iv_generated_name_collision_against_fixest(
         np.testing.assert_allclose(
             model.se()[names], fixest.se(model_r), rtol=0, atol=1e-7
         )
+
+
+@pytest.fixture
+def iv_identification_data():
+    return (
+        get_data()
+        .dropna()
+        .assign(
+            D=lambda frame: frame.X1, C=lambda frame: frame.X2, Z=lambda frame: frame.Z1
+        )
+    )
+
+
+@pytest.fixture(
+    params=[(None, ""), ("weights", ""), ("weights", "f1")],
+    ids=["unweighted", "weighted", "weighted-fe"],
+)
+def iv_identification_options(request):
+    return request.param
+
+
+def _assert_iv_identification_error_matches_fixest(
+    *, data, covariates, instrument, weights, fixed_effects, message, reference_message
+):
+    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    with pytest.raises(IVIdentificationError, match=message):
+        feols(
+            f"Y ~ {covariates} + [D ~ {instrument}]" + suffix,
+            data=data,
+            weights=weights,
+        )
+
+    reference_formula = (
+        f"Y ~ {covariates} | "
+        + (f"{fixed_effects} | " if fixed_effects else "")
+        + f"D ~ {instrument}"
+    )
+    reference_error = ro.r("""function(fml, data, weights) {
+        tryCatch({
+            fixest::feols(fml, data=data, weights=weights)
+            "NO ERROR"
+        }, error=function(e) conditionMessage(e))
+    }""")(
+        ro.Formula(reference_formula),
+        pandas2ri.py2rpy(data),
+        ro.NULL if weights is None else ro.Formula(f"~{weights}"),
+    )[0]
+    assert reference_message in reference_error
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_perfect_covariate_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    data["C"] = data.D - data.D.mean()
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="C",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="fully explained",
+        reference_message="fully explained",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_perfect_instrument_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    data["Z"] = data.D
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="C",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="fully explained",
+        reference_message="fully explained",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_perfect_instrument_without_covariates_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    data["Z"] = data.D
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="0",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="fully explained",
+        reference_message="fully explained",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_irrelevant_instrument_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    # OLS residuals have no remaining projection onto C or Z on this sample.
+    data["D"] = feols("D ~ C + Z" + suffix, data=data, weights=weights).resid()
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="C",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="no explanatory power",
+        reference_message="0 explanatory power",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_irrelevant_instrument_without_covariates_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    data["D"] = feols("D ~ C + Z" + suffix, data=data, weights=weights).resid()
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="0",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="no explanatory power",
+        reference_message="0 explanatory power",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_small_instrument_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    # lstsq alone retains this column, but the estimation rank check drops it.
+    data["Z"] *= 1e-9
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="C",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="no explanatory power",
+        reference_message="0 explanatory power",
+    )
+
+
+@pytest.mark.against_r_core
+def test_iv_identification_small_covariate_against_fixest(
+    iv_identification_data, iv_identification_options
+):
+    data = iv_identification_data
+    weights, fixed_effects = iv_identification_options
+    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    data["D"] = feols("D ~ C + Z" + suffix, data=data, weights=weights).resid()
+    data["C_small"] = 1e-9 * data.D
+    _assert_iv_identification_error_matches_fixest(
+        data=data,
+        covariates="C + C_small",
+        instrument="Z",
+        weights=weights,
+        fixed_effects=fixed_effects,
+        message="no explanatory power",
+        reference_message="0 explanatory power",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize("control_scale", [1.0, 1e14], ids=["original", "rescaled"])
+def test_iv_control_rescaling_against_fixest(
+    iv_identification_data, weights, control_scale
+):
+    """Control units must not trigger a different rank cutoff in IV validation."""
+    data = iv_identification_data
+    data["C"] *= control_scale
+    fit = feols("Y ~ C + [D ~ Z]", data=data, weights=weights, vcov="iid")
+    reference = fixest.feols(
+        ro.Formula("Y ~ C | D ~ Z"),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.NULL if weights is None else ro.Formula("~weights"),
+        vcov="iid",
+    )
+    names_r = list(ro.r("function(fit) names(coef(fit))")(reference))
+    names = [
+        name.removeprefix("fit_").replace("(Intercept)", "Intercept")
+        for name in names_r
+    ]
+    assert sorted(fit.coef().index) == sorted(names)
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0])
+    # Compare C in its original units so absolute tolerances do not mask errors
+    # in its tiny coefficient or standard error after rescaling.
+    original_units = np.array([control_scale if name == "C" else 1.0 for name in names])
+    np.testing.assert_allclose(
+        fit.coef()[names] * original_units,
+        np.asarray(stats.coef(reference)) * original_units,
+        rtol=0,
+        atol=1e-8,
+        err_msg="IV coefficients with a rescaled control != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names] * original_units,
+        np.asarray(fixest.se(reference)) * original_units,
+        rtol=0,
+        atol=1e-7,
+        err_msg="IV standard errors with a rescaled control != fixest",
+    )
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "covariates, reference_covariates",
+    [("C", "1"), ("C + X2", "X2")],
+    ids=["all-controls-absorbed", "one-control-retained"],
+)
+def test_iv_identification_with_absorbed_covariate_against_fixest(
+    weights, covariates, reference_covariates
+):
+    """Dropping an absorbed control keeps the second-stage projection aligned."""
+    data = (
+        get_data()
+        .dropna()
+        .assign(
+            D=lambda frame: frame.X1, C=lambda frame: frame.f1, Z=lambda frame: frame.Z1
+        )
+    )
+    with pytest.warns(UserWarning, match="dropped due to multicollinearity"):
+        fit = feols(
+            f"Y ~ {covariates} + [D ~ Z] | f1",
+            data=data,
+            weights=weights,
+            vcov="iid",
+        )
+    # C is fully absorbed. fixest 0.14.0 fails internally when every weighted
+    # covariate is absorbed, so compare the equivalent design with C omitted.
+    reference = fixest.feols(
+        ro.Formula(f"Y ~ {reference_covariates} | f1 | D ~ Z"),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.NULL if weights is None else ro.Formula("~weights"),
+        vcov="iid",
+    )
+    names_r = list(ro.r("function(fit) names(coef(fit))")(reference))
+    names = [name.removeprefix("fit_") for name in names_r]
+    assert sorted(fit.coef().index) == sorted(names)
+    assert "C" in fit.collinearity.dropped_coef_names
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0])
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IV coefficients with an absorbed covariate != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IV standard errors with an absorbed covariate != fixest",
+    )
 
 
 @pytest.mark.parametrize("seed", [293, 912])
