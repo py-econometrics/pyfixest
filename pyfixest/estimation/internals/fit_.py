@@ -108,27 +108,10 @@ def project_onto_design(
     sqrt_weights: NDArray[np.float64] | None,
     solver: SolverOptions,
 ) -> NDArray[np.float64]:
-    """Return least-squares fitted values of response on design.
+    """Project response onto design, returning fitted values on response scale.
 
-    Parameters
-    ----------
-    response : NDArray[np.float64]
-        One or more response columns, shape (N, k), without square-root
-        weight premultiplication.
-    design : NDArray[np.float64]
-        Nonempty regressor matrix, shape (N, q), after removing collinear
-        columns and without square-root weight premultiplication.
-    sqrt_weights : NDArray[np.float64] or None
-        Square roots of observation weights, shape (N, 1). ``None`` applies
-        no weights. Both response and design are premultiplied internally.
-    solver : SolverOptions
-        Solver passed through to ``solve_ols`` for the normal equations.
-
-    Returns
-    -------
-    NDArray[np.float64]
-        Fitted values, shape (N, k), on the scale of response without
-        square-root weight premultiplication. Inputs are not mutated.
+    Inputs are unweighted; when provided, ``sqrt_weights`` is applied for the
+    projection only.
     """
     response_solver = response
     design_solver = design
