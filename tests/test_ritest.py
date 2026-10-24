@@ -317,11 +317,67 @@ def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
 
 
+@pytest.mark.parametrize("h0", [-0.25, 0.25])
+@pytest.mark.parametrize(
+    "statistic,algorithm",
+    [
+        ("randomization-t", "slow"),
+        ("randomization-c", "slow"),
+        ("randomization-c", "fast"),
+    ],
+)
+def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
+    """Explicit centering and direct refits bypass ritest's statistic handling."""
+    rng = np.random.default_rng(8)
+    data = pd.DataFrame({"D": rng.integers(0, 2, 120).astype(float)})
+    data["y"] = 0.3 * data.D + rng.normal(size=len(data)) * (1 + data.D)
+    fit = pf.feols("y ~ D", data=data, vcov="iid")
+    expected_sample = fit.coef().loc["D"] - h0
+    if statistic == "randomization-t":
+        expected_sample /= fit.se().loc["D"]
+    result = fit.ritest(
+        f"D={h0}",
+        type=statistic,
+        choose_algorithm=algorithm,
+        reps=7,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    draw_rng = np.random.default_rng(1)
+    expected_draws = []
+    for _ in range(7):
+        draw = pf.feols(
+            "y ~ D",
+            data=data.assign(D=draw_rng.permutation(data.D.to_numpy())),
+            vcov="iid",
+        )
+        values = draw.tstat() if statistic == "randomization-t" else draw.coef()
+        expected_draws.append(values.loc["D"])
+    # Fast and direct solvers differ by less than 1e-10 on this two-column design.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected_draws,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Permutation statistics changed with the null hypothesis",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        expected_sample,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="The null was subtracted on the wrong statistic scale",
+    )
+    expected_pvalue = np.mean(np.abs(expected_draws[1:]) >= abs(expected_sample))
+    assert result["Pr(>|t|)"] == expected_pvalue
+
+
+@pytest.mark.parametrize("h0", [0.0, 0.25])
 @pytest.mark.parametrize(
     "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
 )
 @pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
-def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic):
+def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic, h0):
     """Direct CRV1 fits bypass the override and leave its numerical contract explicit."""
     rng = np.random.default_rng(9)
     assignments = rng.integers(0, 2, 12).astype(float)
@@ -340,12 +396,14 @@ def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic):
     covariance = fit.variance_covariance
     original = fit.tidy().copy(deep=True)
 
-    def reference(draw_data):
+    def reference(draw_data, *, null=0.0):
         draw_fit = pf.feols(
             "y ~ D + x", data=draw_data, vcov={"CRV1": "g1"}, ssc=correction
         )
-        values = draw_fit.tstat() if statistic == "randomization-t" else draw_fit.coef()
-        return values.loc["D"]
+        value = draw_fit.coef().loc["D"] - null
+        if statistic == "randomization-t":
+            value /= draw_fit.se().loc["D"]
+        return value
 
     draw_rng = np.random.default_rng(1)
     expected = [
@@ -353,7 +411,7 @@ def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic):
         for _ in range(5)
     ]
     fit.ritest(
-        "D",
+        f"D={h0}",
         cluster="g1",
         type=statistic,
         choose_algorithm="slow",
@@ -373,7 +431,7 @@ def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic):
     )
     np.testing.assert_allclose(
         fit.ritest_statistics.sample_stat,
-        reference(data),
+        reference(data, null=h0),
         rtol=0,
         atol=1e-10,
         err_msg="Cluster override observed statistic differs from the direct CRV1 fit",
