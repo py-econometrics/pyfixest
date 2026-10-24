@@ -1314,13 +1314,15 @@ class Feols(ResultAccessorMixin):
                 f"Cluster variable {cluster} not found in the data used for the model fit."
             )
 
-        if not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # Abadie et al. (2023): the cluster component in the CCV mixture and
+        # its comparison row must use the same clusters as the split scores.
+        # Refit locally to retain the fit's SSC and leave its inference intact.
+        crv1_spec = VcovSpec.from_user_input({"CRV1": cluster})
+        crv1_fit = (
+            self
+            if self.variance_covariance.spec == crv1_spec
+            else refit(self, data=self._data, vcov=crv1_spec, same_sample=True)
+        )
 
         rng = np.random.default_rng(seed)
 
@@ -1368,7 +1370,7 @@ class Feols(ResultAccessorMixin):
         vcov_splits /= N
 
         crv1_idx = self._coefnames.index(treatment)
-        vcov_crv1 = self.variance_covariance.vcov[crv1_idx, crv1_idx]
+        vcov_crv1 = crv1_fit.variance_covariance.vcov[crv1_idx, crv1_idx]
         vcov_ccv = qk * vcov_splits + (1 - qk) * vcov_crv1
 
         se = np.sqrt(vcov_ccv)
@@ -1393,7 +1395,7 @@ class Feols(ResultAccessorMixin):
 
         res_ccv.name = "CCV"
 
-        res_crv1 = cast(pd.Series, self.tidy().xs(treatment))
+        res_crv1 = cast(pd.Series, crv1_fit.tidy().xs(treatment))
         res_crv1.name = "CRV1"
 
         return pd.concat([res_ccv, res_crv1], axis=1).T
