@@ -124,7 +124,9 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            model_matrix.fixed_effects is not None
+            # Families without outcome bounds, such as Gaussian, cannot separate.
+            self._family.outcome_bounds
+            and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
             and self.options.separation_check  # not an empty list
         ):
@@ -132,6 +134,7 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
+                outcome_bounds=self._family.outcome_bounds,
                 demeaner=self.options.demeaner,
                 collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
