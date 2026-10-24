@@ -315,3 +315,66 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
 
 def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
+
+
+@pytest.mark.parametrize(
+    "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
+)
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic):
+    """Direct CRV1 fits bypass the override and leave its numerical contract explicit."""
+    rng = np.random.default_rng(9)
+    assignments = rng.integers(0, 2, 12).astype(float)
+    data = pd.DataFrame(
+        {
+            "D": np.repeat(assignments, 10),
+            "x": rng.normal(size=120),
+            "g1": np.repeat(np.arange(12), 10),
+            "g2": np.tile(np.arange(10), 12),
+        }
+    )
+    data["y"] = 0.4 * data.D + data.x + rng.normal(size=12)[data.g1]
+    data["y"] += rng.normal(size=len(data))
+    correction = pf.ssc(k_adj=False, G_adj=False)
+    fit = pf.feols("y ~ D + x", data=data, vcov=initial_vcov, ssc=correction)
+    covariance = fit.variance_covariance
+    original = fit.tidy().copy(deep=True)
+
+    def reference(draw_data):
+        draw_fit = pf.feols(
+            "y ~ D + x", data=draw_data, vcov={"CRV1": "g1"}, ssc=correction
+        )
+        values = draw_fit.tstat() if statistic == "randomization-t" else draw_fit.coef()
+        return values.loc["D"]
+
+    draw_rng = np.random.default_rng(1)
+    expected = [
+        reference(data.assign(D=np.repeat(draw_rng.permutation(assignments), 10)))
+        for _ in range(5)
+    ]
+    fit.ritest(
+        "D",
+        cluster="g1",
+        type=statistic,
+        choose_algorithm="slow",
+        reps=5,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    assert fit.variance_covariance is covariance
+    pd.testing.assert_frame_equal(fit.tidy(), original)
+    # The same estimator and rows differ only by cluster-score accumulation rounding.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override permutation statistics differ from direct CRV1 fits",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        reference(data),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override observed statistic differs from the direct CRV1 fit",
+    )

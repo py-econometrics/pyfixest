@@ -2114,19 +2114,20 @@ class Feols(ResultAccessorMixin):
         if reps < 1:
             raise ValueError(f"reps must be a positive integer, got {reps}.")
 
-        # update vcov if cluster provided but not in model
-        if cluster is not None and not self.variance_covariance.spec.is_clustered:
-            warnings.warn(
-                "The initial model was not clustered. CRV1 inference is computed and stored in the model object.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
-            )
-            self.vcov({"CRV1": cluster})
+        # An assignment-cluster override belongs to this test. Use a local
+        # refit with the fit's SSC instead of replacing its stored inference.
+        sample_fit = self
+        if cluster is not None and type == "randomization-t":
+            ri_vcov = VcovSpec.from_user_input({"CRV1": cluster})
+            if ri_vcov != self.variance_covariance.spec:
+                sample_fit = refit(
+                    self, data=self._data, vcov=ri_vcov, same_sample=True
+                )
 
         rng = np.random.default_rng() if rng is None else rng
 
         sample_coef = np.array(self.coef().xs(resampvar_))
-        sample_tstat = np.array(self.tstat().xs(resampvar_))
+        sample_tstat = np.array(sample_fit.tstat().xs(resampvar_))
         sample_stat = sample_tstat if type == "randomization-t" else sample_coef
 
         # always run slow algorithm for randomization-t
