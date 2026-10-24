@@ -15,6 +15,7 @@ from pyfixest.utils.utils import ssc
     "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
 )
 @pytest.mark.parametrize("qk", [0, 0.5])
+@pytest.mark.filterwarnings("error:The initial model was not clustered:UserWarning")
 def test_ccv_uses_requested_cluster_without_mutation(initial_vcov, qk):
     """The mixture and reported CRV1 row both use the CCV cluster."""
     rng = np.random.default_rng(12345)
