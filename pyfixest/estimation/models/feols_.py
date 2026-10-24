@@ -1987,13 +1987,18 @@ class Feols(ResultAccessorMixin):
         Conduct Randomization Inference (RI) test against a null hypothesis of
         `resampvar = 0`.
 
+        Each draw permutes the observed values of `resampvar` across
+        observations, or across clusters if `cluster` is provided, so it keeps
+        the number of treated units of the actual assignment.
+
         Parameters
         ----------
         resampvar : str
             The name of the variable to be resampled.
         cluster : str, optional
             The name of the cluster variable in case of cluster random assignment.
-            If provided, `resampvar` is held constant within each `cluster`.
+            If provided, `resampvar` must be constant within each `cluster`,
+            and its cluster-level values are permuted across clusters.
             Defaults to None.
         reps : int, optional
             The number of randomization iterations. Defaults to 100.
@@ -2088,6 +2093,16 @@ class Feols(ResultAccessorMixin):
             The cluster variable contains missing values. This is not allowed
             for randomization inference via `ritest()`.
             """
+            )
+
+        if (
+            cluster is not None
+            and self._data.groupby(cluster)[resampvar_].nunique().gt(1).any()
+        ):
+            raise ValueError(
+                f"`{resampvar_}` varies within clusters of `{cluster}`. Cluster "
+                "random assignment requires a treatment that is constant within "
+                "each cluster."
             )
 
         if type not in ["randomization-t", "randomization-c"]:

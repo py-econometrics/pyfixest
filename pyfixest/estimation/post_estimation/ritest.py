@@ -80,19 +80,15 @@ def _get_ritest_stats_slow(
     # columns; `fit_fn` must not modify its input
     data_resampled = data.copy(deep=False)
 
-    resampvar_arr = data_resampled[resampvar].to_numpy()
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=data_resampled[resampvar].to_numpy(),
+        clustervar_arr=clustervar_arr,
+    )
 
     ri_stats = np.zeros(reps)
 
     for i in tqdm(range(reps)):
-        D_treat = _resample(
-            resampvar_arr=resampvar_arr,
-            clustervar_arr=clustervar_arr,
-            rng=rng,
-            iterations=1,
-        ).flatten()
-
-        data_resampled[resampvar] = D_treat
+        data_resampled[resampvar] = rng.permutation(assignment)[unit_codes]
 
         fixest_fit = fit_fn(data=data_resampled)
         if type == "randomization-c":
@@ -173,15 +169,16 @@ def _get_ritest_stats_fast(
 
     X_demean2 = X_demean[:, bool_idx]
 
-    D = D.reshape(-1, 1) if D.ndim == 1 else D
     X_demean2 = X_demean2.reshape(-1, 1) if X_demean2.ndim == 1 else X_demean2
 
-    resampvar_arr = D
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=D, clustervar_arr=clustervar_arr
+    )
 
     return _run_ri(
         reps=reps,
-        resampvar_arr=resampvar_arr,
-        clustervar_arr=clustervar_arr,
+        assignment=assignment,
+        unit_codes=unit_codes,
         Y_demean=Y_demean,
         X_demean2=X_demean2,
         fval=fval,
@@ -193,14 +190,14 @@ def _get_ritest_stats_fast(
 
 def _run_ri(
     reps: int,
-    resampvar_arr: np.ndarray,
+    assignment: np.ndarray,
+    unit_codes: np.ndarray,
     rng: np.random.Generator,
     fval: np.ndarray | None,
     weights: np.ndarray,
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
     demean_fn: Callable[..., Any],
-    clustervar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Run the randomization inference.
@@ -209,8 +206,10 @@ def _run_ri(
     ----------
     reps : int
         The number of repetitions.
-    resampvar_arr : np.ndarray
-        Array containing the treatment variable.
+    assignment : np.ndarray
+        The treatment of each unit of random assignment.
+    unit_codes : np.ndarray
+        The index into `assignment` of each observation.
     rng : np.random.Generator
         The random number generator.
     fval : np.ndarray
@@ -222,8 +221,6 @@ def _run_ri(
     Y_demean : np.ndarray
     demean_fn : Callable
         The numba-backed `demean` function, validated as importable by the caller.
-    clustervar_arr : np.ndarray, optional
-        Array containing the cluster variable. Defaults to None.
 
     Returns
     -------
@@ -237,12 +234,7 @@ def _run_ri(
     X_demean2 = np.ascontiguousarray(X_demean2)
 
     for i in range(reps):
-        D2 = _resample(
-            resampvar_arr=resampvar_arr,
-            clustervar_arr=clustervar_arr,
-            rng=rng,
-            iterations=1,
-        )
+        D2 = rng.permutation(assignment)[unit_codes].reshape((-1, 1))
 
         D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
@@ -253,78 +245,38 @@ def _run_ri(
     return ri_coefs
 
 
-def _resample(
-    resampvar_arr: np.ndarray,
-    rng: np.random.Generator,
-    iterations: int = 1,
-    clustervar_arr: np.ndarray | None = None,
-) -> np.ndarray:
+def _assignment_units(
+    resampvar_arr: np.ndarray, clustervar_arr: np.ndarray | None = None
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Random resampling of the treatment variable.
+    Collapse the treatment to its units of random assignment.
+
+    Without clusters, every observation is a unit. With clusters, every
+    cluster is a unit, and the caller must ensure that the treatment is
+    constant within each cluster.
 
     Parameters
     ----------
     resampvar_arr : np.ndarray
         Array containing the treatment variable.
-    rng : np.random.Generator
-        The random number generator.
-    iterations : int, optional
-        The number of iterations. Defaults to 1. If bigger than 1,
-        return `iterations` resampled treatment variables. Basically,
-        this argument allows to vectorize the resampling process.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
 
     Returns
     -------
-    np.ndarray
-        The resampled treatment variable(s). If `iterations` is bigger
-        than 1, the array has shape (N, iterations), where N is the
-        number of observations. Otherwise, the array has shape (N,1).
+    tuple[np.ndarray, np.ndarray]
+        The treatment of each unit, and the index of each observation's unit.
     """
-    N = resampvar_arr.shape[0]
-    resampvar_values = np.unique(resampvar_arr)
+    D = np.ascontiguousarray(resampvar_arr, dtype=np.float64).ravel()
 
-    if clustervar_arr is not None:
-        clustervar_values = np.unique(clustervar_arr)
-        D_treat = np.zeros((N, iterations))
+    if clustervar_arr is None:
+        return D, np.arange(D.shape[0])
 
-        for i, _ in enumerate(clustervar_values):
-            idx = (clustervar_arr == clustervar_values[i]).flatten()
-            D_treat[idx, :] = random_choice(resampvar_values, 1 * iterations, rng)
+    unit_codes, units = pd.factorize(np.asarray(clustervar_arr).ravel())
+    assignment = np.empty(len(units))
+    assignment[unit_codes] = D
 
-    else:
-        D_treat = random_choice(resampvar_values, N * iterations, rng).reshape(
-            (N, iterations)
-        )
-
-    return D_treat
-
-
-def random_choice(arr: np.ndarray, size: int, rng: np.random.Generator) -> np.ndarray:
-    """
-    Randomly sample from an array.
-
-    Parameters
-    ----------
-    arr : np.ndarray
-        The array from which to sample.
-    size : int
-        The number of samples.
-    rng : np.random.Generator
-        The random number generator.
-
-    Returns
-    -------
-    np.ndarray
-        The sampled array (with replacement) of size `size`.
-    """
-    n = len(arr)
-    result = np.empty(size, dtype=arr.dtype)
-    for i in range(size):
-        idx = rng.integers(0, n)
-        result[i] = arr[idx]
-    return result
+    return assignment, unit_codes
 
 
 def lstsq_numba(A, B):
@@ -337,8 +289,6 @@ def lstsq_numba(A, B):
 
 
 if nb is not None:
-    random_choice = nb.njit(random_choice)
-    _resample = nb.njit(_resample)
     lstsq_numba = nb.njit()(lstsq_numba)
     _run_ri = nb.njit()(_run_ri)
 
