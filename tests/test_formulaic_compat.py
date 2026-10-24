@@ -465,10 +465,12 @@ def test_fe_rejects_object_dtype(data, term, prediction, kind):
         "Q('f1')",
         "f1:relabel(f2)",
         "f1:2",
+        "C(f1)[X1]",
+        "f1:C(f2)[[X1]]",
     ],
 )
 def test_fe_rejects_non_lookup_terms(data, expression):
-    """Estimation rejects fixed-effect transforms before materialization."""
+    """Estimation rejects fixed-effect transforms, including slope levels."""
     with pytest.raises(
         FormulaSyntaxError,
         match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",
@@ -537,11 +539,6 @@ def test_singletons_ignore_slope_only_effects(data, fixed_effects, n_singletons)
 def test_varying_slopes_reject_categorical_slopes(data):
     with pytest.raises(FormulaSyntaxError, match=r"`C\(f2\)` must evaluate to one"):
         create_model_matrix(Formula.parse("Y ~ X1 | f1[C(f2)]")[0], data.copy())
-
-
-def test_estimation_rejects_varying_slopes(data):
-    with pytest.raises(NotImplementedError, match="Varying slopes"):
-        pf.feols("Y ~ X1 | f1[Z1]", data=data)
 
 
 def test_fe_unseen_combination_predicts_nan(data):
