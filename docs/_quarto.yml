@@ -3,7 +3,6 @@ project:
   output-dir: _site
   resources:
     - CNAME
-    - robots.txt
   render:
     - "*.qmd"
     - "*.ipynb"
@@ -47,7 +46,6 @@ metadata-files:
 
 website:
   title: "PyFixest"
-  site-url: "https://pyfixest.org"
   description: "Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest."
   llms-txt: true
   favicon: "figures/pyfixest-logo.png"
