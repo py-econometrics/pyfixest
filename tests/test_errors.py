@@ -1254,6 +1254,14 @@ def test_separation_check_validations():
         pf.fepois("Y ~ X1", data=data, separation_check=["fe", "invalid"])
 
 
+@pytest.mark.parametrize("family", ["logit", "probit"])
+def test_feglm_binomial_ignores_ir_separation_check(family):
+    data = pf.get_data()
+    data["Y"] = (data["Y"] > 0).astype(int)
+    with pytest.warns(UserWarning, match="separation_check='ir' is not applied"):
+        pf.feglm("Y ~ X1 | f1", data=data, family=family, separation_check=["ir"])
+
+
 def test_fepois_rejects_negative_fe_group():
     """A fixed-effect group with only negative outcomes is not separated away."""
     data = pd.DataFrame(

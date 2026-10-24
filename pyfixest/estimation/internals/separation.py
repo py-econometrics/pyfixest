@@ -160,8 +160,8 @@ def _check_for_separation_ir(
     Check for separation using the "iterative rectifier" algorithm
     proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
 
-    The rectifier detects separation at one outcome bound, with the remaining
-    outcomes as interior observations; it runs once for each bound.
+    The rectifier is one-sided: it detects separation at a single outcome
+    bound, so `feglm()` skips it for logit and probit.
 
     The inputs contain the outer model's evaluated columns and retained rows.
     Auxiliary weighted projections preserve that sample and the absorbed FE
@@ -177,7 +177,8 @@ def _check_for_separation_ir(
     fe : pd.DataFrame
         Fixed effects.
     outcome_bounds : tuple[float, ...]
-        Outcome values the family's inverse link attains only in the limit.
+        The single outcome value the family's inverse link attains only in the
+        limit.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
     collin_tol : float
@@ -192,33 +193,7 @@ def _check_for_separation_ir(
     set
         Set of indices of separated observations.
     """
-    separation_na: set[int] = set()
-    for bound in outcome_bounds:
-        separation_na |= _rectify_at_bound(
-            Y=Y,
-            X=X,
-            fe=fe,
-            bound=bound,
-            demeaner=demeaner,
-            collin_tol=collin_tol,
-            tol=tol,
-            maxiter=maxiter,
-        )
-    return separation_na
-
-
-def _rectify_at_bound(
-    *,
-    Y: pd.DataFrame,
-    X: pd.DataFrame,
-    fe: pd.DataFrame,
-    bound: float,
-    demeaner: AnyDemeaner,
-    collin_tol: float,
-    tol: float,
-    maxiter: int,
-) -> set[int]:
-    "Run the iterative rectifier for separation at one outcome bound."
+    (bound,) = outcome_bounds
     dependent = Y.iloc[:, 0]
     is_interior = dependent != bound
     if is_interior.all():

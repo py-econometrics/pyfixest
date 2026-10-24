@@ -41,20 +41,6 @@ def test_separation_ir_without_regressors(response, groups, expected):
     )
 
 
-def test_separation_ir_at_upper_bound():
-    """A regressor that is zero for every 0 outcome separates its 1 outcomes."""
-    dependent = pd.DataFrame({"y": [1, 1, 0, 1, 0, 1]})
-    arguments = {
-        "Y": dependent,
-        "X": pd.DataFrame({"x": [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]}),
-        "fe": pd.DataFrame({"intercept": np.zeros(6, dtype=np.int64)}),
-        "demeaner": MapDemeaner(),
-        "collin_tol": 1e-9,
-    }
-    assert _check_for_separation_ir(**arguments, outcome_bounds=(0.0,)) == set()
-    assert _check_for_separation_ir(**arguments, outcome_bounds=(0.0, 1.0)) == {0, 1}
-
-
 @pytest.mark.parametrize(
     "dataset_path",
     sorted((Path(__file__).parent / "data/ppmlhdfe_separation_examples").glob("*.csv")),
