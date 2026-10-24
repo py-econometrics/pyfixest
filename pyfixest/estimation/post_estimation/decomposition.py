@@ -524,7 +524,7 @@ class GelbachDecomposition:
         direct_effect = float(direct_effect_array[0])
         full_effect = float(beta_full[self.decomp_var_in_X_idx])
         explained_effect = sum(mediator_effects.values())
-        unexplained_effect = full_effect
+        unexplained_effect = direct_effect - explained_effect
 
         gelbach_results = GelbachResults(
             direct_effect=direct_effect,
