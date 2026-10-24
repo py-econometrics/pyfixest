@@ -12,6 +12,58 @@ from pyfixest.estimation.post_estimation.ritest import _assignment_units
 matplotlib.use("Agg")  # Use a non-interactive backend
 
 
+@pytest.mark.parametrize("algorithm", ["auto", "fast", "slow"])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ D*x",
+        "y ~ D + {D*x}",
+        "y ~ D + I(D**2) + x",
+        "y ~ D*x | g",
+        "I(y-D) ~ D + x",
+    ],
+)
+def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
+    """Every draw must evaluate treatment-dependent terms on its new assignment."""
+    rng = np.random.default_rng(4321)
+    n = 240
+    data = pd.DataFrame(
+        {
+            "D": rng.normal(size=n),
+            "x": rng.normal(size=n),
+            "g": np.repeat(np.arange(12), 20),
+        }
+    )
+    if "D**2" not in fml:
+        data["D"] = (data.D > 0).astype(float)
+    data["y"] = 0.4 * data.D + data.D * data.x + rng.normal(size=n)
+    fit = pf.feols(fml, data=data)
+    original = fit._data.copy(deep=True)
+    reps = 7
+    expected = []
+    rng = np.random.default_rng(31)
+    # Direct formula fits rebuild every column without ritest's algorithm selection.
+    for _ in range(reps):
+        draw = data.assign(D=rng.permutation(data.D.to_numpy()))
+        expected.append(pf.feols(fml, data=draw).coef().loc["D"])
+
+    fit.ritest(
+        "D",
+        reps=reps,
+        choose_algorithm=algorithm,
+        rng=np.random.default_rng(31),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-9,
+        err_msg="RI coefficients differ from direct feols formula refits",
+    )
+    pd.testing.assert_frame_equal(fit._data, original)
+
+
 def test_fast_ritest_requires_numba(monkeypatch):
     """Fast ritest must surface a clear ImportError when numba is missing."""
     import pyfixest.estimation.post_estimation.ritest as ritest

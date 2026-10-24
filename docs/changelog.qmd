@@ -361,6 +361,7 @@ We also removed:
 
 ### Bug Fixes
 
+- `ritest()` now refits formulas with treatment-dependent interactions or transforms so every draw rebuilds their design columns.
 - `did2s()` and DID2S event studies now reject missing cluster IDs and fewer than two clusters before fitting, preventing zero standard errors from omitted cluster scores.
 - `predict()` now rejects `se_fit=True` and prediction intervals for quantile regression and GLMs instead of returning OLS intervals or silently ignoring the request ([#1652](https://github.com/py-econometrics/pyfixest/issues/1652)).
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
