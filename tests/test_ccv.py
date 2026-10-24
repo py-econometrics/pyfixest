@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from functools import partial
 
 import numpy as np
@@ -6,6 +8,44 @@ import pytest
 
 from pyfixest.estimation import feols
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
+from pyfixest.utils.utils import ssc
+
+
+@pytest.mark.parametrize(
+    "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
+)
+@pytest.mark.parametrize("qk", [0, 0.5])
+def test_ccv_uses_requested_cluster_without_mutation(initial_vcov, qk):
+    """The mixture and reported CRV1 row both use the CCV cluster."""
+    rng = np.random.default_rng(12345)
+    n = 400
+    data = pd.DataFrame(
+        {
+            "D": rng.binomial(1, 0.5, n),
+            "g1": rng.integers(0, 20, n),
+            "g2": np.repeat(np.arange(10), 40),
+        }
+    )
+    data["y"] = 0.5 * data.D + rng.normal(size=n)
+    # a non-default correction checks that the refit retains the fit's SSC
+    correction = ssc(k_adj=False, G_adj=False)
+    fit = feols("y ~ D", data=data, vcov=initial_vcov, ssc=correction)
+    original = fit.tidy().copy(deep=True)
+    result = fit.ccv(treatment="D", cluster="g2", qk=qk, n_splits=2, seed=1)
+    requested_fit = feols("y ~ D", data=data, vcov={"CRV1": "g2"}, ssc=correction)
+    expected = requested_fit.ccv(treatment="D", qk=qk, n_splits=2, seed=1)
+    pd.testing.assert_frame_equal(result, expected, rtol=0, atol=1e-12)
+    pd.testing.assert_frame_equal(fit.tidy(), original)
+    if qk == 0:
+        # Identical CRV1 finite-sample factors leave only accumulation rounding.
+        reference = requested_fit.tidy().loc["D", "Std. Error"]
+        np.testing.assert_allclose(
+            result["Std. Error"],
+            reference,
+            rtol=0,
+            atol=1e-12,
+            err_msg="qk=0 CCV/CRV1 SE differs from the CRV1 SE",
+        )
 
 
 @pytest.fixture
