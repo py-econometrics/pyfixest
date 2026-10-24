@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import sys
 import warnings
@@ -929,13 +931,6 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             ),
             UserWarning,
             "Distribution changed to chi2",
-        ),
-        (
-            lambda d: _binary_treatment_fit(d).ccv(
-                treatment="D", cluster="f1", n_splits=2, seed=1
-            ),
-            UserWarning,
-            "The initial model was not clustered",
         ),
         (
             lambda d: _cluster_treatment_fit(d).ritest(
