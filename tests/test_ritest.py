@@ -289,7 +289,7 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
         reference = estimator(
             fml,
             data=resampled,
-            vcov="iid" if statistic == "randomization-c" else "hetero",
+            vcov="iid",
         )
         values = (
             reference.coef() if statistic == "randomization-c" else reference.tstat()
@@ -315,3 +315,80 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
 
 def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
+
+
+@pytest.mark.parametrize("vcov", ["iid", "hetero", "HC2", "HC3", {"CRV1": "s"}])
+def test_randomization_t_uses_fitted_covariance(vcov):
+    """Statsmodels independently checks studentization on every assignment."""
+    import statsmodels.api as sm
+
+    rng = np.random.default_rng(8)
+    n = 120
+    data = pd.DataFrame(
+        {
+            "D": rng.integers(0, 2, n).astype(float),
+            "x": rng.normal(size=n),
+            "s": np.repeat(np.arange(12), 10),
+        }
+    )
+    data["y"] = 0.3 * data.D + data.x + rng.normal(size=12)[data.s]
+    data["y"] += rng.normal(size=n) * (1 + data.D)
+    has_fe = isinstance(vcov, dict)
+    # Match statsmodels' HC2/HC3 and explicit-dummy cluster corrections.
+    correction = pf.ssc(
+        k_adj=not has_fe and vcov not in ["HC2", "HC3"], G_adj=not has_fe
+    )
+    fit = pf.feols(
+        "y ~ D + x" + (" | s" if has_fe else ""),
+        data=data,
+        vcov=vcov,
+        ssc=correction,
+    )
+
+    def reference(treatment):
+        design = sm.add_constant(np.column_stack([treatment, data.x]))
+        if has_fe:
+            design = np.column_stack(
+                [design, pd.get_dummies(data.s, drop_first=True, dtype=float)]
+            )
+            return (
+                sm.OLS(data.y, design)
+                .fit(
+                    cov_type="cluster",
+                    cov_kwds={"groups": data.s, "use_correction": False},
+                )
+                .tvalues.iloc[1]
+            )
+        cov_type = {"hetero": "HC1"}.get(vcov, vcov)
+        result = (
+            sm.OLS(data.y, design).fit()
+            if cov_type == "iid"
+            else (sm.OLS(data.y, design).fit(cov_type=cov_type))
+        )
+        return result.tvalues.iloc[1]
+
+    reps = 7
+    fit.ritest(
+        "D",
+        type="randomization-t",
+        reps=reps,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    draw_rng = np.random.default_rng(1)
+    expected = [reference(draw_rng.permutation(data.D.to_numpy())) for _ in range(reps)]
+    # Independent QR/SVD solvers agree to rounding on this full-rank design.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Permutation t-statistics differ from the fitted covariance reference",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        reference(data.D),
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Observed t-statistic differs from the fitted covariance reference",
+    )
