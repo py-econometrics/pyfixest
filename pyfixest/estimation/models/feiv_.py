@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
+from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -24,7 +26,6 @@ from pyfixest.estimation.internals.model_state import (
     ModelDescription,
     SampleSplit,
     WithinIvData,
-    WithinLinearData,
 )
 from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
@@ -97,8 +98,10 @@ class Feiv(Feols):
 
     Raises
     ------
-    ValueError
-        If Z is not a two-dimensional array.
+    IVIdentificationError
+        If the exogenous variables and instruments fully explain an
+        endogenous variable, or the instruments add no explanatory power for
+        it.
 
     Examples
     --------
@@ -204,40 +207,123 @@ class Feiv(Feols):
             endogenous=endogenous,
         )
 
-    def _drop_multicollinear_within_data(
-        self, within_data: WithinLinearData
-    ) -> WithinLinearData:
-        """Drop collinear columns from the second-stage design and the instruments."""
-        within_data = super()._drop_multicollinear_within_data(within_data)
-        assert isinstance(within_data, WithinIvData)
-        instruments, collinearity = drop_multicollinear_variables(
-            within_data.instruments,
-            self._coefnames_z,
-            self.options.collin_tol,
+    def _validate_iv_identification(
+        self,
+        within_data: WithinIvData,
+        *,
+        projected_design: NDArray[np.float64],
+        sqrt_weights: NDArray[np.float64] | None,
+    ) -> None:
+        """Check each endogenous variable's first-stage SSRs.
+
+        Runs before structural column selection, which could otherwise drop an
+        endogenous regressor.
+        """
+        endogenous_frame = self.model_matrix.endogenous
+        assert endogenous_frame is not None
+
+        endogenous_names = endogenous_frame.columns
+        endogenous_positions = self.model_matrix.independent.columns.get_indexer(
+            endogenous_names
         )
-        self.collinearity_instruments = collinearity
-        self._coefnames_z = list(collinearity.coefnames)
-        return replace(within_data, instruments=instruments)
+        # A missing name would select no columns, which broadcast to zero SSRs.
+        if np.any(endogenous_positions < 0):
+            raise RuntimeError(
+                "Endogenous variables are missing from the second-stage design: "
+                f"{list(endogenous_names[endogenous_positions < 0])}."
+            )
+        exogenous_mask = np.ones(projected_design.shape[1], dtype=bool)
+        exogenous_mask[endogenous_positions] = False
+
+        endogenous = within_data.endogenous
+        fitted_endogenous = projected_design[:, endogenous_positions]
+        exogenous = within_data.design[:, exogenous_mask]
+
+        # Drop collinear controls before the controls-only regression.
+        if exogenous.shape[1] > 0:
+            collinear, _, _ = find_collinear_variables(
+                np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
+                self.options.collin_tol,
+            )
+            exogenous = exogenous[:, ~np.asarray(collinear, dtype=bool)]
+
+        residuals = endogenous - fitted_endogenous
+
+        if exogenous.shape[1] == 0:
+            residuals_without_instruments = endogenous
+        else:
+            fitted_without_instruments = project_onto_design(
+                response=endogenous,
+                design=exogenous,
+                sqrt_weights=sqrt_weights,
+                solver=self.options.solver,
+            )
+            residuals_without_instruments = endogenous - fitted_without_instruments
+
+        if sqrt_weights is not None:
+            residuals = residuals * sqrt_weights
+            residuals_without_instruments = residuals_without_instruments * sqrt_weights
+
+        ssr = np.sum(residuals**2, axis=0)
+        ssr_without_instruments = np.sum(residuals_without_instruments**2, axis=0)
+
+        # Absolute thresholds on the first-stage SSRs.
+        for name, ssr_i, ssr_without_instruments_i in zip(
+            endogenous_names, ssr, ssr_without_instruments, strict=True
+        ):
+            if ssr_i < 1e-10:
+                raise IVIdentificationError(
+                    f"The endogenous variable '{name}' is fully explained by the "
+                    "exogenous variables and instruments."
+                )
+            if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
+                raise IVIdentificationError(
+                    "The instruments add no explanatory power for the endogenous "
+                    f"variable '{name}'."
+                )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_within_data(self._demean())
-        # Narrow the base return type so `within_data.instruments` type-checks.
-        assert isinstance(within_data, WithinIvData)
-        self._set_within_data(within_data)
+        within_data = self._demean()
+        # Drop collinear columns from instruments
+        instruments, instrument_collinearity = drop_multicollinear_variables(
+            X=within_data.instruments,
+            names=self._coefnames_z,
+            collin_tol=self.options.collin_tol,
+        )
+        self.collinearity_instruments = instrument_collinearity
+        self._coefnames_z = list(instrument_collinearity.coefnames)
+
+        # Project second-stage regressors onto the retained instruments.
         weights = self.observation_weights.values
         sqrt_weights = (
             None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
         )
         projected_design = project_onto_design(
             response=within_data.design,
-            design=within_data.instruments,
+            design=instruments,
             sqrt_weights=sqrt_weights,
             solver=self.options.solver,
         )
+
+        # Validate identification using first-stage projection
+        # before collinearity removal can drop the endogenous regressor
+        self._validate_iv_identification(
+            within_data=within_data,
+            projected_design=projected_design,
+            sqrt_weights=sqrt_weights,
+        )
+
+        # Drop collinear variables in the second stage and update within data
+        structural_data = self._drop_multicollinear_within_data(within_data)
+        assert isinstance(structural_data, WithinIvData)
+        within_data = replace(structural_data, instruments=instruments)
+        self._set_within_data(within_data)
+
+        # Fit the second stage
         fit = fit_iv(
             X=within_data.design,
-            X_hat=projected_design,
+            X_hat=self.collinearity.select(projected_design),
             Y=within_data.response,
             weights=self.observation_weights.values,
             solver=self.options.solver,

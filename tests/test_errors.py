@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import sys
 import warnings
+from contextlib import nullcontext
 from functools import partial
 
 import numpy as np
@@ -16,6 +17,7 @@ from pyfixest.errors import (
     FixedEffectEvaluationError,
     FormulaSyntaxError,
     InstrumentsAsCovarsError,
+    IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
     UnderDeterminedIVError,
@@ -308,6 +310,116 @@ def test_iv_errors():
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
     with pytest.raises(VcovTypeNotSupportedError):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
+
+
+@pytest.fixture
+def iv_identification_data():
+    data = pf.get_data().dropna()
+    return data.assign(D=data.X1, C=data.X2, Z=data.Z1)
+
+
+@pytest.mark.parametrize(
+    "weights, fixed_effects",
+    [
+        pytest.param(None, "", id="unweighted"),
+        pytest.param("weights", "", id="weighted"),
+        pytest.param("weights", "f1", id="weighted-fe"),
+    ],
+)
+@pytest.mark.parametrize(
+    "case, covariates",
+    [
+        pytest.param("perfect-control", "C", id="perfect-control"),
+        pytest.param("perfect-instrument", "C", id="perfect-instrument"),
+        pytest.param("perfect-instrument", "0", id="perfect-instrument-no-controls"),
+        pytest.param("irrelevant-instrument", "C", id="irrelevant-instrument"),
+        pytest.param(
+            "irrelevant-instrument", "0", id="irrelevant-instrument-no-controls"
+        ),
+        pytest.param("dropped-instrument", "C", id="dropped-instrument"),
+        pytest.param("dropped-control", "C + C_small", id="dropped-control"),
+    ],
+)
+def test_iv_identification_errors(
+    iv_identification_data, weights, fixed_effects, case, covariates
+):
+    """IV estimation rejects perfect first stages and irrelevant instruments."""
+    data = iv_identification_data
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
+    if case == "perfect-control":
+        data["C"] = data.D - data.D.mean()
+    elif case == "perfect-instrument":
+        data["Z"] = data.D
+    elif case == "dropped-instrument":
+        data["Z"] *= 1e-9  # Too small to survive collinearity removal.
+    else:
+        # Construct D with no remaining projection onto the controls or instruments.
+        data["D"] = pf.feols(
+            f"D ~ C + Z{fe_suffix}", data=data, weights=weights
+        ).resid()
+        if case == "dropped-control":
+            data["C_small"] = 1e-9 * data.D
+
+    if case in ("perfect-control", "perfect-instrument"):
+        message = "variable 'D' is fully explained"
+    else:
+        message = "no explanatory power for the endogenous variable 'D'"
+
+    with pytest.raises(IVIdentificationError, match=message):
+        pf.feols(f"Y ~ {covariates} + [D ~ Z]{fe_suffix}", data=data, weights=weights)
+
+
+@pytest.mark.parametrize("weights", [None, "weights"])
+@pytest.mark.parametrize(
+    "control_scale, covariates, fixed_effects, expected_names",
+    [
+        pytest.param(1.0, "C", "", {"Intercept", "C", "D"}, id="original"),
+        pytest.param(1e14, "C", "", {"Intercept", "C", "D"}, id="rescaled"),
+        pytest.param(1.0, "C", "f1", {"D"}, id="all-controls-absorbed"),
+        pytest.param(1.0, "C + X2", "f1", {"X2", "D"}, id="one-control-retained"),
+    ],
+)
+def test_iv_identification_valid_designs(
+    iv_identification_data,
+    weights,
+    control_scale,
+    covariates,
+    fixed_effects,
+    expected_names,
+):
+    """Valid IV models still estimate when controls are rescaled or absorbed."""
+    data = iv_identification_data
+    if fixed_effects:
+        data["C"] = data.f1  # The fixed effects absorb C completely.
+    else:
+        data["C"] *= control_scale
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
+    expected_warning = (
+        pytest.warns(UserWarning, match="dropped due to multicollinearity")
+        if fixed_effects
+        else nullcontext()
+    )
+    with expected_warning:
+        fit = pf.feols(
+            f"Y ~ {covariates} + [D ~ Z]{fe_suffix}", data=data, weights=weights
+        )
+
+    assert set(fit.coef().index) == expected_names
+    assert np.isfinite(fit.coef()).all()
+    assert np.isfinite(fit.se()).all()
+
+
+def test_iv_constant_instrument_without_intercept(iv_identification_data):
+    """A constant instrument is accepted when the IV formula has no intercept."""
+    data = iv_identification_data.assign(K=1.0)
+    fit = pf.feols("Y ~ 0 + [D ~ K]", data=data)
+
+    assert list(fit.coef().index) == ["D"]
+    # The just-identified IV estimator sum(K * Y) / sum(K * D) with K = 1.
+    np.testing.assert_allclose(
+        fit.coef()["D"], data.Y.sum() / data.D.sum(), rtol=1e-10, atol=0
+    )
+    assert np.isfinite(fit.se()).all()
 
 
 @pytest.mark.parametrize("estimator", [feols, fepois])
