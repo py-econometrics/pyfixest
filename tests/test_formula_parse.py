@@ -642,6 +642,10 @@ class TestVaryingSlopeParsing:
             ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
             ("f1[[z]]", [("f1", False, ("z",))]),
             ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
+            (
+                "f1[[z]] + f2[[z]]",
+                [("f1", False, ("z",)), ("f2", False, ("z",))],
+            ),
             ("f1:f2[z]", [("f1:f2", True, ("z",))]),
             ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
@@ -656,6 +660,7 @@ class TestVaryingSlopeParsing:
             ("f1[z + 1]", [("f1", True, ("z + 1",))]),
             ("f1[z - 1]", [("f1", True, ("z - 1",))]),
             ("f1[z + z]", [("f1", True, ("z + z",))]),
+            ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
             ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
             ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
             ("f1[z1**2, z2 + 1]", [("f1", True, ("z1 ** 2", "z2 + 1"))]),
@@ -686,21 +691,72 @@ class TestVaryingSlopeParsing:
             for spec in parsed.fixed_effect_specifications
         ] == expected
 
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f2:f3", ["f1", "f2:f3"]),
+            ("f1[z]", ["f1[z]"]),
+            ("f1:f2[[z1, z2**2]]", ["f1:f2[[z1, z2 ** 2]]"]),
+            ("f1 + f1[[z]] + f2", ["f1[z]", "f2"]),
+        ],
+    )
+    def test_effect_names_use_fixest_syntax(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert [spec.name for spec in parsed.fixed_effect_specifications] == expected
+
+    @pytest.mark.parametrize(
+        "formula,expected",
+        [
+            ("Y ~ X1 | f1[[z]]", "Y ~ 1 + X1 | f1[[z]]"),
+            ("Y ~ 0 + X1 | f1[[z]]", "Y ~ 0 + X1 | f1[[z]]"),
+            ("Y ~ X1 | f1[z]", "Y ~ X1 | f1[z]"),
+        ],
+    )
+    def test_slope_only_models_render_their_intercept(self, formula, expected):
+        """Slope-only effects absorb no constant, so the name shows the choice."""
+        assert Formula.parse(formula)[0].render() == expected
+
     def test_no_fixed_effects_have_no_specs(self):
         parsed = Formula.parse("Y ~ X1")[0]
 
         assert parsed.fixed_effect_specifications == ()
 
-    def test_distinct_terms_with_shared_levels_remain_distinct(self):
-        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f1[[z]]", [("f1", True, ("z",)), ("f2", True, ())]),
+            ("f1[z, z]", [("f1", True, ("z",)), ("f2", True, ())]),
+            ("f1[w, z, z]", [("f1", True, ("w", "z")), ("f2", True, ())]),
+            ("f1[[z, z]]", [("f1", False, ("z",)), ("f2", True, ())]),
+            (
+                "f1[[z]] + f1[w, w]",
+                [("f1", True, ("z", "w")), ("f2", True, ())],
+            ),
+            (
+                "f1[[z]] + f2 + f1[[w]]",
+                [("f1", False, ("z", "w")), ("f2", True, ())],
+            ),
+            (
+                "f1[z] + f1[[w]]",
+                [("f1", True, ("z", "w")), ("f2", True, ())],
+            ),
+            (
+                "f1[z] + f1[w]",
+                [("f1", True, ("z", "w")), ("f2", True, ())],
+            ),
+            ("f1[[z2]] + f1[z1, z2]", [("f1", True, ("z2", "z1")), ("f2", True, ())]),
+            ("f1:f2[[z]] + f2:f1", [("f2", True, ()), ("f1:f2", True, ("z",))]),
+        ],
+    )
+    def test_effects_on_shared_levels_merge(self, fixed_effects, expected):
+        """Effects on shared levels combine intercepts and unique slopes in order."""
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects} + f2")[0]
 
         assert [
             (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
             for spec in parsed.fixed_effect_specifications
-        ] == [
-            ("f1", True, ()),
-            ("f1", False, ("z",)),
-        ]
+        ] == expected
 
     @pytest.mark.parametrize(
         "fixed_effects",
@@ -711,16 +767,31 @@ class TestVaryingSlopeParsing:
 
         assert len(parsed.fixed_effect_specifications) == 1
 
-    def test_effect_and_slope_order_follow_formulaic(self):
-        parsed = Formula.parse("Y ~ X1 | f2[z2, z1] + f1[[z3]]")[0]
+    @pytest.mark.parametrize(
+        "fixed_effects,expected,expected_slopes",
+        [
+            (
+                "f2[z2, z1] + f1[[z3]]",
+                [("f2", True, ("z2", "z1")), ("f1", False, ("z3",))],
+                ("z2", "z1", "z3"),
+            ),
+            (
+                "firm[[z]] + region[[w]] + firm[[v]]",
+                [("firm", False, ("z", "v")), ("region", False, ("w",))],
+                ("z", "v", "w"),
+            ),
+        ],
+    )
+    def test_effect_and_slope_order_follow_formulaic(
+        self, fixed_effects, expected, expected_slopes
+    ):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
 
         assert [
             (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
             for spec in parsed.fixed_effect_specifications
-        ] == [
-            ("f2", True, ("z2", "z1")),
-            ("f1", False, ("z3",)),
-        ]
+        ] == expected
+        assert tuple(map(str, parsed.fixed_effect_slopes)) == expected_slopes
 
     def test_formulaic_transform_is_preserved_as_a_slope_term(self):
         parsed = Formula.parse("Y ~ X1 | f1[log(z)]")[0]
