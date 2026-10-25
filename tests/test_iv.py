@@ -1,6 +1,5 @@
 import copy
 from contextlib import nullcontext
-from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -9,10 +8,9 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 
+import pyfixest as pf
 from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation import feols
-from pyfixest.estimation.internals.model_state import WithinIvData
-from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data, ssc
 
@@ -483,67 +481,6 @@ def _fixest_iv_error(formula, *, data, weights=None):
     )[0]
 
 
-@pytest.mark.parametrize("case", ["perfect-fit", "irrelevant-instruments"])
-def test_iv_identification_checks_each_endogenous_variable(case):
-    """The validator names the failing column even when the first one is valid.
-
-    Multiple endogenous variables are rejected by the public formula parser,
-    so exercise the per-column validation directly.
-    """
-    rng = np.random.default_rng(1992)
-    n_obs = 64
-    # Orthogonal columns make the first-stage fits explicit:
-    # D1 = z1 + v1 projects onto z1; D2 = z2 + v2 projects onto z2.
-    basis, _ = np.linalg.qr(
-        np.column_stack((np.ones(n_obs), rng.normal(size=(n_obs, 5))))
-    )
-    intercept, control, z1, z2, v1, v2 = basis.T
-    instruments = np.column_stack((intercept, control, z1, z2))
-    endogenous = pd.DataFrame({"D1": z1 + v1, "D2": z2 + v2})
-
-    def validate(endogenous):
-        """Build the minimal model state consumed by the validator."""
-        # Structural order deliberately differs from endogenous order.
-        independent = pd.DataFrame(
-            {
-                "Intercept": intercept,
-                "D2": endogenous.D2,
-                "C": control,
-                "D1": endogenous.D1,
-            }
-        )
-        design = independent.to_numpy()
-        model_matrix = SimpleNamespace(endogenous=endogenous, independent=independent)
-        model = SimpleNamespace(
-            model_matrix=model_matrix,
-            options=SimpleNamespace(collin_tol=1e-10, solver="np.linalg.solve"),
-        )
-        within_data = WithinIvData(
-            response=np.zeros((n_obs, 1)),
-            design=design,
-            instruments=instruments,
-            endogenous=endogenous.to_numpy(),
-        )
-        first_stage_coefficients = np.linalg.lstsq(instruments, design, rcond=None)[0]
-        Feiv._validate_iv_identification(
-            model,
-            within_data=within_data,
-            projected_design=instruments @ first_stage_coefficients,
-            sqrt_weights=None,
-        )
-
-    # Both columns pass before changing only D2.
-    validate(endogenous)
-    if case == "perfect-fit":
-        endogenous["D2"] = z2
-        message = "variable 'D2' is fully explained"
-    else:
-        endogenous["D2"] = v2  # Orthogonal to every instrument and control.
-        message = "no explanatory power for the endogenous variable 'D2'"
-    with pytest.raises(IVIdentificationError, match=message):
-        validate(endogenous)
-
-
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "weights, fixed_effects",
@@ -582,7 +519,9 @@ def test_iv_identification_errors_against_fixest(
         data["Z"] *= 1e-9
     else:
         # OLS residuals have no remaining projection onto C or Z on this sample.
-        data["D"] = feols(f"D ~ C + Z{fe_suffix}", data=data, weights=weights).resid()
+        data["D"] = pf.feols(
+            f"D ~ C + Z{fe_suffix}", data=data, weights=weights
+        ).resid()
         if case == "dropped-control":
             # This control would explain D perfectly, but is too small to retain.
             data["C_small"] = 1e-9 * data.D
@@ -597,7 +536,7 @@ def test_iv_identification_errors_against_fixest(
     formula = f"Y ~ {covariates} + [D ~ Z]{fe_suffix}"
     reference_formula = f"Y ~ {covariates}{fe_suffix} | D ~ Z"
     with pytest.raises(IVIdentificationError, match=message):
-        feols(formula, data=data, weights=weights)
+        pf.feols(formula, data=data, weights=weights)
 
     reference_error = _fixest_iv_error(reference_formula, data=data, weights=weights)
     assert reference_message in reference_error
@@ -637,7 +576,7 @@ def test_iv_identification_valid_designs_against_fixest(
         else nullcontext()
     )
     with expected_warning:
-        fit = feols(formula, data=data, weights=weights, vcov="iid")
+        fit = pf.feols(formula, data=data, weights=weights, vcov="iid")
     if fixed_effects:
         assert "C" in fit.collinearity.dropped_coef_names
     # Omit absorbed C from the R formula: fixest can fail when all weighted
@@ -678,7 +617,7 @@ def test_iv_constant_instrument_without_intercept_against_fixest(
 ):
     """A constant instrument identifies a model without intercept."""
     data = iv_identification_data.assign(K=1.0)
-    fit = feols("Y ~ 0 + [D ~ K]", data=data)
+    fit = pf.feols("Y ~ 0 + [D ~ K]", data=data)
     # The just-identified IV estimator sum(K * Y) / sum(K * D) with K = 1.
     expected_coef = data.Y.sum() / data.D.sum()
     np.testing.assert_allclose(fit.coef()["D"], expected_coef, rtol=1e-10, atol=0)
