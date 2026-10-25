@@ -13,10 +13,8 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
-    EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
-    InstrumentsAsCovarsError,
     IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
@@ -260,6 +258,11 @@ def test_depvar_numeric():
             False,
             "exactly one endogenous variable",
         ),
+        (
+            "Y ~ X1 + [poly(X1, 2) ~ Z1]",
+            False,
+            "exactly one endogenous variable",
+        ),
     ],
 )
 def test_dependent_and_endogenous_model_matrix_errors(
@@ -276,6 +279,45 @@ def test_dependent_and_endogenous_model_matrix_errors(
         feols(fml=fml, data=data, context={"two_columns": two_columns})
 
 
+@pytest.mark.parametrize(
+    "fml, message",
+    [
+        ("Y ~ center(X1) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1] | f1", "fully explained"),
+        ("Y ~ center(X1) + [X2 ~ X1]", "no explanatory power"),
+    ],
+)
+def test_iv_rejects_invalid_transformed_specifications(fml, message):
+    """Distinct transformed terms are parsed but invalid numerical models fail."""
+    with pytest.raises(IVIdentificationError, match=message):
+        feols(fml=fml, data=get_data().dropna())
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 + [X2 ~ X1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)]",
+        "Y ~ I(X1**2) + [X2 ~ I(X1**2)]",
+        "Y ~ X1:Z1 + [X2 ~ X1:Z1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)] | f1",
+    ],
+)
+def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
+    """Missing formula columns must not mask the instrument specification error."""
+    with pytest.raises(IVIdentificationError, match="all instrument terms"):
+        feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
+
+
+@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
+def test_iv_allows_identical_instrument_covariate_terms(term):
+    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
+    assert "X2" in fit.coef().index
+
+
 def test_iv_errors():
     data = get_data()
 
@@ -284,12 +326,6 @@ def test_iv_errors():
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
     with pytest.raises(UnderDeterminedIVError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
-    # instrument specified as covariate
-    with pytest.raises(InstrumentsAsCovarsError):
-        feols(fml="Y ~ X1 | Z1  ~ X1 + X2", data=data)
-    # a distinct control term uses the endogenous variable
-    with pytest.raises(EndogVarsAsCovarsError, match="Z1"):
-        feols(fml="Y ~ log(Z1) | Z1 ~ X1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
@@ -2124,20 +2160,3 @@ def test_estimation_rejects_malformed_ssc():
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
     assert legacy.options.ssc == pf.ssc(k_adj=False)
-
-
-@pytest.mark.parametrize("transform", ["center(X1)", "scale(X1)", "poly(X1, 2)"])
-@pytest.mark.parametrize(
-    "fml, error",
-    [
-        ("Y ~ {transform} + [X1 ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ X1 + [{transform} ~ Z1]", EndogVarsAsCovarsError),
-        ("Y ~ {transform} + [X2 ~ X1]", InstrumentsAsCovarsError),
-        ("Y ~ X1 + [X2 ~ {transform}]", InstrumentsAsCovarsError),
-    ],
-)
-@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
-def test_iv_rejects_transformed_variable_overlap(transform, fml, error, fixed_effects):
-    """Stateful transforms cannot hide a variable shared by explicit IV roles."""
-    with pytest.raises(error, match="X1"):
-        feols(fml=fml.format(transform=transform) + fixed_effects, data=get_data())

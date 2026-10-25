@@ -16,10 +16,8 @@ from formulaic.utils.variables import Variable
 
 import pyfixest as pf
 from pyfixest.errors import (
-    EndogVarsAsCovarsError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
-    InstrumentsAsCovarsError,
 )
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -627,6 +625,8 @@ def test_formulaic_284_transform_state_reused(data):
         ("Q('my var')", {"my var"}),
         ("{X1 * X2}", {"X1", "X2"}),
         ("i(f1, X1)", {"f1", "X1"}),
+        ("my_fun(X1)", {"X1"}),
+        ("X1.fillna(0)", {"X1"}),
     ],
 )
 def test_required_variables_preserve_quoted_names(rhs, expected):
@@ -636,38 +636,18 @@ def test_required_variables_preserve_quoted_names(rhs, expected):
 
 
 @pytest.mark.parametrize(
-    "fml, error",
+    "fml",
     [
-        (
-            "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
-            EndogVarsAsCovarsError,
-        ),
-        (
-            "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
-            EndogVarsAsCovarsError,
-        ),
-        (
-            "Y ~ I(`my var`) + [X2 ~ Q('my var')]",
-            InstrumentsAsCovarsError,
-        ),
-        (
-            "Y ~ Q('my var') + [X2 ~ I(`my var`)]",
-            InstrumentsAsCovarsError,
-        ),
-        (
-            "Y ~ center(`my var`) + [`my var` ~ Z1]",
-            EndogVarsAsCovarsError,
-        ),
-        (
-            "Y ~ scale(`my var`) + [X2 ~ `my var`]",
-            InstrumentsAsCovarsError,
-        ),
+        "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
+        "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
+        "Y ~ center(`my var`) + [`my var` ~ Z1]",
+        "Y ~ scale(`my var`) + [X2 ~ `my var`]",
     ],
 )
-def test_iv_rejects_quoted_variable_overlap(fml, error):
-    """Quoted transformations must not hide a variable used in both IV roles."""
-    with pytest.raises(error, match="my var"):
-        Formula.parse(fml)
+def test_iv_defers_identification_of_distinct_quoted_terms(fml):
+    """Distinct quoted terms reach materialization even when numerically collinear."""
+    parsed = Formula.parse(fml)[0]
+    assert parsed.is_instrumental_variable
 
 
 @pytest.mark.parametrize(
