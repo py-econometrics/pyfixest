@@ -1235,7 +1235,7 @@ class TestEdgeCases:
         first_stage = f.as_first_stage()
         assert not first_stage.is_instrumental_variable
         assert first_stage.fixed_effects == f.fixed_effects
-        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + W1 + X1")
+        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + X1 + W1")
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""
