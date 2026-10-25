@@ -439,7 +439,7 @@ class Feols(ResultAccessorMixin):
             weights_type=weights_type,
         )
 
-    def _demeaning_effects(self) -> np.ndarray | list[Effect]:
+    def _fixed_effects_for_demeaning(self) -> np.ndarray | list[Effect]:
         """Return the fixed effects in the form the demeaner consumes.
 
         Slope designs need complete effects; plain codes keep the single-factor
@@ -471,7 +471,7 @@ class Feols(ResultAccessorMixin):
                 design,
                 y_keys=self.model_matrix.column_keys("dependent"),
                 x_keys=self.model_matrix.column_keys("independent"),
-                fe=self._demeaning_effects(),
+                fe=self._fixed_effects_for_demeaning(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
