@@ -298,10 +298,11 @@ def test_first_stage_vs_fixest(
 
 
 def _iv_categorical_data():
-    """Return the example data with a complete cross of factors `f` and `g`."""
+    """Return the example data with crossed factors `f` and `g` and integer `k`."""
     data = get_data()
     data["f"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
     data["g"] = pd.Categorical(np.take(["u", "v"], data.index // 3 % 2))
+    data["k"] = data.index % 4 + 1
     return data
 
 
@@ -438,66 +439,99 @@ IV_CATEGORICAL_DIFFERENCE_CASES = [
         "Y ~ 0 + X2 + [X1 ~ i(f)]",
         "Y ~ 0 + X2 | X1 ~ i(f)",
         "Y ~ 0 + X2 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        None,
         id="no-intercept-i-instrument",
     ),
     pytest.param(
         "Y ~ 0 + X2 | X1 ~ i(f)",
         "Y ~ 0 + X2 | X1 ~ i(f)",
         "Y ~ 0 + X2 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        None,
         id="no-intercept-i-instrument-legacy",
     ),
     pytest.param(
         "Y ~ 0 + [X1 ~ C(f)]",
         "Y ~ 0 | X1 ~ factor(f)",
         "Y ~ 0 | X1 ~ 0 + factor(f)",
+        None,
         id="no-intercept-C-instrument",
     ),
     pytest.param(
         "Y ~ 0 + [X1 ~ 1 + i(f)]",
         "Y ~ 0 | X1 ~ 1 + i(f)",
         "Y ~ 0 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        None,
         id="no-intercept-inner-one",
     ),
     pytest.param(
         "Y ~ 0 + X2 + [X1 ~ i(f, g)]",
         "Y ~ 0 + X2 | X1 ~ i(f, i.g)",
         "Y ~ 0 + X2 | X1 ~ i(f, i.g, keep = c('a', 'b', 'c'))",
+        None,
         id="no-intercept-factor-interaction-instrument",
     ),
     pytest.param(
         "Y ~ 0 + i(f, X2) + i(f, g)",
         "Y ~ 0 + i(f, X2) + i(f, i.g)",
         "Y ~ 0 + i(f, X2) + i(f, i.g, keep = c('a', 'b', 'c'))",
+        None,
         id="later-i-after-slopes",
     ),
     pytest.param(
         "Y ~ 0 + i(f, ref='a') + i(g)",
         "Y ~ 0 + i(f, ref = 'a') + i(g)",
         "Y ~ 0 + i(f, ref = 'a') + i(g, keep = c('u', 'v'))",
+        None,
         id="later-i-after-explicit-ref",
     ),
     pytest.param(
         "Y ~ 0 + X2 + [X1 ~ i(f, ref='a') + i(g)]",
         "Y ~ 0 + X2 | X1 ~ i(f, ref = 'a') + i(g)",
         "Y ~ 0 + X2 | X1 ~ i(f, ref = 'a') + i(g, keep = c('u', 'v'))",
+        None,
         id="later-i-after-explicit-ref-instrument",
+    ),
+    # fixest ignores `ref2` on a numeric second variable; pyfixest raises and
+    # asks for C(k) instead of silently fitting slopes.
+    pytest.param(
+        "Y ~ i(f, k, ref2=1)",
+        "Y ~ i(f, k, ref2 = 1)",
+        "Y ~ i(f, k)",
+        r"`k` is numeric.*C\(k\)",
+        id="numeric-second-variable-ref2",
     ),
 ]
 
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
-    "fml, fml_r_default, fml_r_reference", IV_CATEGORICAL_DIFFERENCE_CASES
+    "fml, fml_r_default, fml_r_reference, error", IV_CATEGORICAL_DIFFERENCE_CASES
 )
 def test_iv_categorical_coding_differences_from_fixest(
-    fml, fml_r_default, fml_r_reference
+    fml, fml_r_default, fml_r_reference, error
 ):
-    """Pyfixest keeps every level or cell that fixest's default omits."""
+    """Pyfixest keeps every level or cell that fixest's default omits.
+
+    With `error`, pyfixest rejects the formula and the reference is the model
+    that fixest fits instead.
+    """
     data = _iv_categorical_data()
-    fit = feols(fml, data=data, vcov="iid", fixef_rm="none")
     data_r = pandas2ri.py2rpy(data)
     reference_r = _feols_r_iid(fml_r_reference, data_r)
     default_r = _feols_r_iid(fml_r_default, data_r)
+    if error is not None:
+        with pytest.raises(ValueError, match=error):
+            feols(fml, data=data)
+        np.testing.assert_allclose(
+            np.asarray(stats.coef(default_r)),
+            np.asarray(stats.coef(reference_r)),
+            rtol=0,
+            atol=1e-10,
+            err_msg="fixest no longer ignores the argument",
+        )
+        return
+
+    fit = feols(fml, data=data, vcov="iid", fixef_rm="none")
     model, default_model_r = fit, default_r
     if isinstance(fit, Feiv):
         _assert_iv_stages_match_fixest(fit=fit, fit_r=reference_r)

@@ -989,10 +989,13 @@ def test_i_error():
             "Y ~ i(f1, f_str, bin2={'ax': 'a12'})",
             r"do not occur in the variable `f_str`. No match was found for \['a12'\]",
         ),
+        # A numeric second variable gives slopes; factor options need C().
+        ("Y ~ i(f_str, f1, ref2=1)", r"`f1` is numeric.*`i\(f_str, C\(f1\), ref2"),
+        ("Y ~ i(f_str, X1, bin2={'lo': [1]})", r"`X1` is numeric.*C\(X1\)"),
     ],
 )
 def test_i_bin_invalid_values(fml, match):
-    """Invalid i() bin values raise instead of fitting the un-binned model."""
+    """Invalid i() bins and references raise instead of fitting another model."""
     data = get_data()
     data["f_str"] = np.random.default_rng(1).choice(["a1", "a2", "a3"], len(data))
     with pytest.raises(ValueError, match=match):
