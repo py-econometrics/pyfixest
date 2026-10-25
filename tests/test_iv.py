@@ -468,12 +468,19 @@ def iv_identification_data():
     return data.assign(D=data.X1, C=data.X2, Z=data.Z1)
 
 
-@pytest.fixture(
-    params=[(None, ""), ("weights", ""), ("weights", "f1")],
-    ids=["unweighted", "weighted", "weighted-fe"],
-)
-def iv_identification_options(request):
-    return request.param
+def _fixest_iv_error(formula, *, data, weights=None):
+    """Return fixest's error message, or a sentinel if estimation succeeds."""
+    capture_error = ro.r("""function(fml, data, weights) {
+        tryCatch({
+            fixest::feols(fml, data=data, weights=weights)
+            "NO ERROR"
+        }, error=function(e) conditionMessage(e))
+    }""")
+    return capture_error(
+        ro.Formula(formula),
+        pandas2ri.py2rpy(data),
+        ro.NULL if weights is None else ro.Formula(f"~{weights}"),
+    )[0]
 
 
 @pytest.mark.parametrize("case", ["perfect-fit", "irrelevant-instruments"])
@@ -484,12 +491,18 @@ def test_iv_identification_checks_each_endogenous_variable(case):
     so exercise the per-column validation directly.
     """
     rng = np.random.default_rng(1992)
-    basis, _ = np.linalg.qr(np.column_stack((np.ones(64), rng.normal(size=(64, 5)))))
+    n_obs = 64
+    # Orthogonal columns make the first-stage fits explicit:
+    # D1 = z1 + v1 projects onto z1; D2 = z2 + v2 projects onto z2.
+    basis, _ = np.linalg.qr(
+        np.column_stack((np.ones(n_obs), rng.normal(size=(n_obs, 5))))
+    )
     intercept, control, z1, z2, v1, v2 = basis.T
     instruments = np.column_stack((intercept, control, z1, z2))
     endogenous = pd.DataFrame({"D1": z1 + v1, "D2": z2 + v2})
 
     def validate(endogenous):
+        """Build the minimal model state consumed by the validator."""
         # Structural order deliberately differs from endogenous order.
         independent = pd.DataFrame(
             {
@@ -500,92 +513,93 @@ def test_iv_identification_checks_each_endogenous_variable(case):
             }
         )
         design = independent.to_numpy()
-        state = SimpleNamespace(
-            model_matrix=SimpleNamespace(
-                endogenous=endogenous, independent=independent
-            ),
+        model_matrix = SimpleNamespace(endogenous=endogenous, independent=independent)
+        model = SimpleNamespace(
+            model_matrix=model_matrix,
             options=SimpleNamespace(collin_tol=1e-10, solver="np.linalg.solve"),
         )
+        within_data = WithinIvData(
+            response=np.zeros((n_obs, 1)),
+            design=design,
+            instruments=instruments,
+            endogenous=endogenous.to_numpy(),
+        )
+        first_stage_coefficients = np.linalg.lstsq(instruments, design, rcond=None)[0]
         Feiv._validate_iv_identification(
-            state,
-            within_data=WithinIvData(
-                response=np.zeros((64, 1)),
-                design=design,
-                instruments=instruments,
-                endogenous=endogenous.to_numpy(),
-            ),
-            projected_design=instruments
-            @ np.linalg.lstsq(instruments, design, rcond=None)[0],
+            model,
+            within_data=within_data,
+            projected_design=instruments @ first_stage_coefficients,
             sqrt_weights=None,
         )
 
+    # Both columns pass before changing only D2.
     validate(endogenous)
-    endogenous["D2"] = z2 if case == "perfect-fit" else v2
-    message = (
-        "variable 'D2' is fully explained"
-        if case == "perfect-fit"
-        else "no explanatory power for the endogenous variable 'D2'"
-    )
+    if case == "perfect-fit":
+        endogenous["D2"] = z2
+        message = "variable 'D2' is fully explained"
+    else:
+        endogenous["D2"] = v2  # Orthogonal to every instrument and control.
+        message = "no explanatory power for the endogenous variable 'D2'"
     with pytest.raises(IVIdentificationError, match=message):
         validate(endogenous)
 
 
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(
+    "weights, fixed_effects",
+    [
+        pytest.param(None, "", id="unweighted"),
+        pytest.param("weights", "", id="weighted"),
+        pytest.param("weights", "f1", id="weighted-fe"),
+    ],
+)
+@pytest.mark.parametrize(
     "case, covariates",
     [
-        ("perfect-control", "C"),
-        ("perfect-instrument", "C"),
-        ("perfect-instrument", "0"),
-        ("irrelevant-instrument", "C"),
-        ("irrelevant-instrument", "0"),
-        ("small-instrument", "C"),
-        ("small-control", "C + C_small"),
+        pytest.param("perfect-control", "C", id="perfect-control"),
+        pytest.param("perfect-instrument", "C", id="perfect-instrument"),
+        pytest.param("perfect-instrument", "0", id="perfect-instrument-no-controls"),
+        pytest.param("irrelevant-instrument", "C", id="irrelevant-instrument"),
+        pytest.param(
+            "irrelevant-instrument", "0", id="irrelevant-instrument-no-controls"
+        ),
+        pytest.param("dropped-instrument", "C", id="dropped-instrument"),
+        pytest.param("dropped-control", "C + C_small", id="dropped-control"),
     ],
 )
 def test_iv_identification_errors_against_fixest(
-    iv_identification_data, iv_identification_options, case, covariates
+    iv_identification_data, weights, fixed_effects, case, covariates
 ):
+    """Invalid first stages raise the same kind of error in pyfixest and fixest."""
     data = iv_identification_data
-    weights, fixed_effects = iv_identification_options
-    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
     if case == "perfect-control":
         data["C"] = data.D - data.D.mean()
     elif case == "perfect-instrument":
         data["Z"] = data.D
-    elif case == "small-instrument":
+    elif case == "dropped-instrument":
         # The estimation rank check drops this tiny instrument.
         data["Z"] *= 1e-9
     else:
         # OLS residuals have no remaining projection onto C or Z on this sample.
-        data["D"] = feols("D ~ C + Z" + suffix, data=data, weights=weights).resid()
-        if case == "small-control":
+        data["D"] = feols(f"D ~ C + Z{fe_suffix}", data=data, weights=weights).resid()
+        if case == "dropped-control":
+            # This control would explain D perfectly, but is too small to retain.
             data["C_small"] = 1e-9 * data.D
 
-    perfect_fit = case.startswith("perfect")
-    message = (
-        "variable 'D' is fully explained"
-        if perfect_fit
-        else "no explanatory power for the endogenous variable 'D'"
-    )
-    with pytest.raises(IVIdentificationError, match=message):
-        feols(
-            f"Y ~ {covariates} + [D ~ Z]" + suffix,
-            data=data,
-            weights=weights,
-        )
+    if case in ("perfect-control", "perfect-instrument"):
+        message = "variable 'D' is fully explained"
+        reference_message = "fully explained"
+    else:
+        message = "no explanatory power for the endogenous variable 'D'"
+        reference_message = "0 explanatory power"
 
-    reference_error = ro.r("""function(fml, data, weights) {
-        tryCatch({
-            fixest::feols(fml, data=data, weights=weights)
-            "NO ERROR"
-        }, error=function(e) conditionMessage(e))
-    }""")(
-        ro.Formula(f"Y ~ {covariates}" + suffix + " | D ~ Z"),
-        pandas2ri.py2rpy(data),
-        ro.NULL if weights is None else ro.Formula(f"~{weights}"),
-    )[0]
-    reference_message = "fully explained" if perfect_fit else "0 explanatory power"
+    formula = f"Y ~ {covariates} + [D ~ Z]{fe_suffix}"
+    reference_formula = f"Y ~ {covariates}{fe_suffix} | D ~ Z"
+    with pytest.raises(IVIdentificationError, match=message):
+        feols(formula, data=data, weights=weights)
+
+    reference_error = _fixest_iv_error(reference_formula, data=data, weights=weights)
     assert reference_message in reference_error
 
 
@@ -594,12 +608,11 @@ def test_iv_identification_errors_against_fixest(
 @pytest.mark.parametrize(
     "control_scale, covariates, reference_covariates, fixed_effects",
     [
-        (1.0, "C", "C", ""),
-        (1e14, "C", "C", ""),
-        (1.0, "C", "1", "f1"),
-        (1.0, "C + X2", "X2", "f1"),
+        pytest.param(1.0, "C", "C", "", id="original"),
+        pytest.param(1e14, "C", "C", "", id="rescaled"),
+        pytest.param(1.0, "C", "1", "f1", id="all-controls-absorbed"),
+        pytest.param(1.0, "C + X2", "X2", "f1", id="one-control-retained"),
     ],
-    ids=["original", "rescaled", "all-controls-absorbed", "one-control-retained"],
 )
 def test_iv_identification_valid_designs_against_fixest(
     iv_identification_data,
@@ -611,26 +624,26 @@ def test_iv_identification_valid_designs_against_fixest(
 ):
     """Rescaled and absorbed controls preserve estimates and projection alignment."""
     data = iv_identification_data
-    data["C"] = data.f1 if fixed_effects else data.C * control_scale
-    suffix = f" | {fixed_effects}" if fixed_effects else ""
+    if fixed_effects:
+        data["C"] = data.f1  # The fixed effects absorb C completely.
+    else:
+        data["C"] *= control_scale
+    fe_suffix = f" | {fixed_effects}" if fixed_effects else ""
+    formula = f"Y ~ {covariates} + [D ~ Z]{fe_suffix}"
+    reference_formula = f"Y ~ {reference_covariates}{fe_suffix} | D ~ Z"
     expected_warning = (
         pytest.warns(UserWarning, match="dropped due to multicollinearity")
         if fixed_effects
         else nullcontext()
     )
     with expected_warning:
-        fit = feols(
-            f"Y ~ {covariates} + [D ~ Z]" + suffix,
-            data=data,
-            weights=weights,
-            vcov="iid",
-        )
+        fit = feols(formula, data=data, weights=weights, vcov="iid")
     if fixed_effects:
         assert "C" in fit.collinearity.dropped_coef_names
     # Omit absorbed C from the R formula: fixest can fail when all weighted
     # controls are absorbed. The reference has the same effective design.
     reference = fixest.feols(
-        ro.Formula(f"Y ~ {reference_covariates}" + suffix + " | D ~ Z"),
+        ro.Formula(reference_formula),
         data=pandas2ri.py2rpy(data),
         weights=ro.NULL if weights is None else ro.Formula("~weights"),
         vcov="iid",
@@ -667,17 +680,11 @@ def test_iv_constant_instrument_without_intercept_against_fixest(
     data = iv_identification_data.assign(K=1.0)
     fit = feols("Y ~ 0 + [D ~ K]", data=data)
     # The just-identified IV estimator sum(K * Y) / sum(K * D) with K = 1.
-    np.testing.assert_allclose(
-        fit.coef()["D"], data.Y.sum() / data.D.sum(), rtol=1e-10, atol=0
-    )
+    expected_coef = data.Y.sum() / data.D.sum()
+    np.testing.assert_allclose(fit.coef()["D"], expected_coef, rtol=1e-10, atol=0)
 
     # fixest compares against the centered SSR, as if an intercept were present.
-    reference_error = ro.r("""function(data) {
-        tryCatch({
-            fixest::feols(Y ~ 0 | D ~ K, data=data)
-            "NO ERROR"
-        }, error=function(e) conditionMessage(e))
-    }""")(pandas2ri.py2rpy(data))[0]
+    reference_error = _fixest_iv_error("Y ~ 0 | D ~ K", data=data)
     assert "0 explanatory power" in reference_error
 
 
