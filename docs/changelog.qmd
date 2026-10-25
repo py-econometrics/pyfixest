@@ -47,6 +47,8 @@ Breaking changes:
 
 Other things:
 
+- Passing `data` to a fitted model's `vcov()` now raises `ValueError`; the argument will be removed in a future release. It paired the frame's rows with the fit by position, so reordered, shorter, or longer frames gave wrong cluster-robust standard errors or aborted Python. The covariance matrix uses the estimation sample stored on the model, which holds every column of the input data. Models fitted with `store_data=False` or `lean=True` keep no sample: choose `vcov` when fitting them. See [#1825](https://github.com/py-econometrics/pyfixest/issues/1825).
+
 - `decompose()` retains mediators omitted from `combine_covariates` in an automatic `Other` group (extending that group if supplied). Explained effects now include all mediators, and the unexplained effect equals the full-regression coefficient. See [#1962](https://github.com/py-econometrics/pyfixest/issues/1962).
 - `ritest(type="randomization-t")` now uses the fitted covariance estimator and small-sample corrections for permutation statistics, replacing the automatic IID/HC1 choice. See [#1960](https://github.com/py-econometrics/pyfixest/issues/1960).
 - `ritest(type="randomization-t")` now computes the observed statistic as `(coef - null) / se` for nonzero null hypotheses. Coefficient-based tests retain their existing null-centering convention.
