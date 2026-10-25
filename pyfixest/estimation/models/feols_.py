@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
+from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
@@ -129,17 +130,11 @@ def _fixed_effect_counts(model_matrix: ModelMatrix) -> FixedEffectCounts:
     if fixed_effects is None:
         return FixedEffectCounts()
     n_levels_by_fe = tuple(int(size) for size in fixed_effects.nunique(axis=0))
-    slopes = model_matrix.varying_slopes
-    if slopes is None:
-        return FixedEffectCounts(
-            n_levels_by_fe=n_levels_by_fe,
-            has_intercept_by_fe=(True,) * len(n_levels_by_fe),
-            n_slopes_by_fe=(0,) * len(n_levels_by_fe),
-        )
+    specifications = model_matrix.fixed_effect_specifications
     return FixedEffectCounts(
         n_levels_by_fe=n_levels_by_fe,
-        has_intercept_by_fe=slopes.intercepts,
-        n_slopes_by_fe=tuple(values.shape[1] for values in slopes.values),
+        has_intercept_by_fe=tuple(spec.intercept for spec in specifications),
+        n_slopes_by_fe=tuple(len(spec.slopes) for spec in specifications),
     )
 
 
@@ -444,6 +439,20 @@ class Feols(ResultAccessorMixin):
             weights_type=weights_type,
         )
 
+    def _demeaning_effects(self) -> np.ndarray | list[Effect]:
+        """Return the fixed effects in the form the demeaner consumes.
+
+        Slope designs need complete effects; plain codes keep the single-factor
+        MAP fallback available.
+        """
+        if self.model.parsed_formula.has_varying_slopes:
+            effects = self.model_matrix.effects
+            assert effects is not None
+            return effects
+        fixed_effects = self.model_matrix.fixed_effects
+        assert fixed_effects is not None
+        return fixed_effects.to_numpy()
+
     def _demean(self) -> WithinLinearData:
         """Convert model frames to arrays and residualize them on the fixed effects.
 
@@ -462,11 +471,10 @@ class Feols(ResultAccessorMixin):
                 design,
                 y_keys=self.model_matrix.column_keys("dependent"),
                 x_keys=self.model_matrix.column_keys("independent"),
-                fe=fixed_effects.to_numpy(),
+                fe=self._demeaning_effects(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
-                slopes=self.model_matrix.varying_slopes,
             )
         return WithinLinearData(response=response, design=design)
 

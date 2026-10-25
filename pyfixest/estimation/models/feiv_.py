@@ -195,11 +195,10 @@ class Feiv(Feols):
                 instruments,
                 y_keys=self.model_matrix.column_keys("endogenous"),
                 x_keys=self.model_matrix.column_keys("instruments"),
-                fe=fixed_effects.to_numpy(),
+                fe=self._demeaning_effects(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
-                slopes=self.model_matrix.varying_slopes,
             )
         return WithinIvData(
             response=linear_data.response,
