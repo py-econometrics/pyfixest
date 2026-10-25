@@ -511,6 +511,100 @@ def test_iv_transformed_terms_against_fixest(
     )
 
 
+# Restricted/unrestricted first-stage Wald test in base R: regress X1 on the
+# controls plus the instruments and test the instrument coefficients that are
+# not aliased with the controls. This bypasses pyfixest's and fixest's column
+# selection, so it defines the test conditional on every control direction.
+_CONDITIONAL_FIRST_STAGE_WALD_R = """
+function(d, controls, instruments, vcov_type, weights) {
+  w <- if (weights == "") NULL else d[[weights]]
+  d$w_ <- if (is.null(w)) 1 else w
+  restricted <- lm(as.formula(paste("X1 ~", controls)), d, weights = w_)
+  unrestricted <- lm(
+    as.formula(paste("X1 ~", controls, "+", instruments)), d, weights = w_
+  )
+  b <- coef(unrestricted)
+  tested <- setdiff(names(b)[!is.na(b)], names(coef(restricted)))
+  V <- switch(
+    vcov_type,
+    iid = vcov(unrestricted),
+    hetero = sandwich::vcovHC(unrestricted, type = "HC1"),
+    cluster = sandwich::vcovCL(unrestricted, cluster = ~unit, type = "HC1")
+  )
+  b <- b[tested]
+  c(drop(b %*% solve(V[tested, tested], b)) / length(tested), length(tested))
+}
+"""
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "vcov, vcov_type",
+    [("iid", "iid"), ("hetero", "hetero"), ({"CRV1": "unit"}, "cluster")],
+    ids=["iid", "hetero", "CRV1"],
+)
+@pytest.mark.parametrize(
+    "fml, controls_r, instruments_r, weights, fml_fixest",
+    [
+        # Equivalent first-stage bases of one model: all f and g cells.
+        # fixest keeps all f levels when asked to, drops a g level instead, and
+        # tests three f coefficients; see docs/developer/fixest-compatibility.md.
+        (
+            "Y ~ 0 + C(g) + [X1 ~ i(f)]",
+            "0 + g",
+            "f",
+            None,
+            "Y ~ 0 + factor(g) | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        ),
+        ("Y ~ 0 + C(g) + [X1 ~ C(f)]", "0 + g", "f", None, None),
+        ("Y ~ C(g) + [X1 ~ i(f)]", "1 + g", "f", None, None),
+        ("Y ~ 0 + C(g) + [X1 ~ i(f)]", "0 + g", "f", "weights", None),
+        ("Y ~ C(g) + [X1 ~ i(f)] | f3", "1 + g + factor(f3)", "f", None, None),
+        # A numeric control equal to one instrument level.
+        ("Y ~ 0 + level_a + [X1 ~ C(f)]", "0 + level_a", "f", None, None),
+    ],
+)
+def test_first_stage_f_conditions_on_controls(
+    fml, controls_r, instruments_r, weights, fml_fixest, vcov, vcov_type
+):
+    """The first-stage F tests the instruments given every control direction.
+
+    Instruments that overlap the controls, here `f` given the levels of `g`, do
+    not add restrictions, so equivalent bases give the same statistic.
+    """
+    data = get_data()
+    data["f"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
+    data["g"] = pd.Categorical(np.take(["u", "v"], data.index // 3 % 2))
+    data["level_a"] = (data["f"] == "a").astype(float)
+    data["unit"] = data.index // 20
+    fit = feols(fml, data=data, weights=weights, vcov=vcov)
+    sample = data.drop(index=list(fit.sample_info.dropped_row_index))
+    statistic_r, restrictions_r = ro.r(_CONDITIONAL_FIRST_STAGE_WALD_R)(
+        pandas2ri.py2rpy(sample),
+        controls_r,
+        instruments_r,
+        vcov_type,
+        weights or "",
+    )
+
+    assert len(fit.first_stage.instruments) == restrictions_r == 2
+    # Both sides solve the same well-conditioned least-squares problem; only
+    # accumulation order differs.
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        statistic_r,
+        rtol=1e-8,
+        err_msg="first-stage F statistic != conditional Wald test in R",
+    )
+    if fml_fixest is not None and vcov_type == "iid":
+        fit_fixest = fixest.feols(
+            ro.Formula(fml_fixest), data=pandas2ri.py2rpy(data), vcov="iid"
+        )
+        ivwald = ro.r("function(fit) fixest::fitstat(fit, 'ivwald')[[1]]")(fit_fixest)
+        assert ivwald.rx2("df1")[0] == 3, "fixest no longer tests all f levels"
+        assert not np.isclose(ivwald.rx2("stat")[0], statistic_r, rtol=1e-3)
+
+
 @pytest.mark.parametrize("seed", [293, 912])
 @pytest.mark.parametrize("sd", [0.1, 0.2, 0.3])
 @pytest.mark.parametrize("has_weight", [0.0, 1.0])
