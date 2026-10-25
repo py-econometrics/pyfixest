@@ -11,7 +11,8 @@ syntax, post-estimation tools, and Rust kernels for hot loops.
    tests before introducing a new pattern.
 3. **Never return silently wrong numbers.** Define and test supported estimation
    paths; reject unsupported combinations explicitly. Numerical changes need
-   external-reference evidence under the testing policy.
+   regression evidence independent of the failure being fixed; choose internal
+   or external references under the testing policy.
 
 ## Choose the relevant workflow
 

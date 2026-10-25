@@ -12,7 +12,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
-from pyfixest.estimation.internals.fit_ import fit_iv
+from pyfixest.estimation.internals.fit_ import fit_iv, project_onto_design
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
@@ -140,6 +140,7 @@ class Feiv(Feols):
         cluster_causal_variance=False,
         decomposition=False,
         prediction=False,
+        prediction_inference=False,
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,
@@ -224,9 +225,19 @@ class Feiv(Feols):
         # Narrow the base return type so `within_data.instruments` type-checks.
         assert isinstance(within_data, WithinIvData)
         self._set_within_data(within_data)
+        weights = self.observation_weights.values
+        sqrt_weights = (
+            None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
+        )
+        projected_design = project_onto_design(
+            response=within_data.design,
+            design=within_data.instruments,
+            sqrt_weights=sqrt_weights,
+            solver=self.options.solver,
+        )
         fit = fit_iv(
             X=within_data.design,
-            Z=within_data.instruments,
+            X_hat=projected_design,
             Y=within_data.response,
             weights=self.observation_weights.values,
             solver=self.options.solver,

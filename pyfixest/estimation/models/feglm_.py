@@ -77,6 +77,7 @@ class Feglm(Feols):
         cluster_causal_variance=False,
         decomposition=False,
         prediction=True,
+        prediction_inference=False,
         fixed_effect_recovery=True,
         randomization_inference=False,
         sherman_morrison_update=False,
@@ -123,7 +124,9 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            model_matrix.fixed_effects is not None
+            # Families without outcome bounds, such as Gaussian, cannot separate.
+            self._family.outcome_bounds
+            and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
             and self.options.separation_check  # not an empty list
         ):
@@ -131,6 +134,7 @@ class Feglm(Feols):
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
                 fe=model_matrix.fixed_effects,
+                outcome_bounds=self._family.outcome_bounds,
                 demeaner=self.options.demeaner,
                 collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
@@ -362,27 +366,29 @@ class Feglm(Feols):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            Prediction standard errors are not supported for GLMs. Passing True
+            raises NotImplementedError. Defaults to False.
         interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals are not supported for GLMs. Passing 'prediction'
+            raises NotImplementedError. Defaults to None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
 
         Returns
         -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+        np.ndarray
+            Predicted values on the requested scale.
         """
-        if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for GLMs."
-            )
-
-        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        yhat = super().predict(
+            newdata=newdata,
+            type="link",
+            atol=atol,
+            btol=btol,
+            se_fit=se_fit,
+            interval=interval,
+            alpha=alpha,
+        )
         if type == "response":
             return self._family.inv_link(
                 yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat

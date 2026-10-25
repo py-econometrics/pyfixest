@@ -33,7 +33,7 @@ fml_list = [
     ("Y ~ X1 + X2 + C(f1) + C(f2)", "Y ~ X1 + X2 | f1 + f2"),
 ]
 
-fml_ols_vs_gaussian = ["Y ~ X1", "Y ~ X1 + C(f1)", "Y ~ X1 * X2"]
+fml_ols_vs_gaussian = ["Y ~ X1", "Y ~ X1 + C(f1)", "Y ~ X1 * X2", "Y ~ X1 | f1"]
 
 
 @pytest.mark.parametrize("family", ["gaussian", "logit", "probit", "poisson"])
@@ -126,6 +126,11 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     if dropna:
         data = data.dropna()
 
+    # Zero and strictly negative FE groups are valid Gaussian observations.
+    groups = data.f1.unique()
+    data.loc[data.f1 == groups[0], "Y"] = 0
+    data.loc[data.f1 == groups[1], "Y"] = -1
+
     fit_ols = pf.feols(fml=fml, data=data, vcov=inference, weights=weights)
     fit_gaussian = pf.feglm(
         fml=fml,
@@ -134,6 +139,8 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
         vcov=inference,
         weights=weights,
     )
+
+    assert fit_gaussian.sample_info.n_obs == fit_ols.sample_info.n_obs
 
     check_absolute_diff(
         fit_ols.coef().xs("X1"), fit_gaussian.coef().xs("X1"), tol=1e-10

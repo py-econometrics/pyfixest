@@ -168,6 +168,7 @@ class GelbachDecomposition:
     cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
     unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
+    x1_indices: list[int] = field(init=False)
     mediator_names: list[str] = field(init=False)
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     X1_dict: dict[Any, Any] = field(init=False, default_factory=dict)
@@ -182,9 +183,9 @@ class GelbachDecomposition:
         )
 
         # build index for all variables in X1: decomp_var, x1_vars
-        x1_indices = [self.coefnames.index(var) for var in x1_variables]
+        self.x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[x1_indices] = False
+        self.mask[self.x1_indices] = False
 
         self.mediator_names = [
             name for name in self.coefnames if self.mask[self.coefnames.index(name)]
@@ -206,7 +207,7 @@ class GelbachDecomposition:
                 x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
-            self.combine_covariates_dict = self.combine_covariates
+            self.combine_covariates_dict = dict(self.combine_covariates)
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
@@ -217,6 +218,21 @@ class GelbachDecomposition:
 
         self._check_covariates()
         self._check_combine_covariates()
+        self.combine_covariates_dict = {
+            name: list(covariates)
+            for name, covariates in self.combine_covariates_dict.items()
+        }
+
+        grouped = set(
+            itertools.chain.from_iterable(self.combine_covariates_dict.values())
+        )
+        remainder = [
+            name
+            for name in self.mediator_names
+            if name != "Intercept" and name not in grouped
+        ]
+        if remainder:
+            self.combine_covariates_dict.setdefault("Other", []).extend(remainder)
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
@@ -282,7 +298,8 @@ class GelbachDecomposition:
             self.X = X
             self.Y = Y
 
-            self.X1 = self.X[:, ~self.mask]
+            # keep X1 columns in the order of names_X1, not the formula order
+            self.X1 = self.X[:, self.x1_indices]
             self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
             self.X2 = self.X[:, self.mask]
 
@@ -341,7 +358,7 @@ class GelbachDecomposition:
         else:
             # need to compute X1, X2 in bootstrap sample
 
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, self.x1_indices]])
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(

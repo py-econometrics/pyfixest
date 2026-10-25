@@ -314,16 +314,46 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     """
     Apply binning: bin={'low': ['a','b'], 'high': ['c','d']}.
 
-    Values not in the mapping are kept unchanged (matches R fixest behavior).
-    The bin mapping is namespaced per variable to avoid collisions when
-    both sides of an interaction are binned (``i(a, b, bin=..., bin2=...)``).
+    Values not in the mapping are kept unchanged. The mapping is validated and
+    cached when it is first built from the estimation data, so prediction reuses
+    it; the cache key is per variable, so ``bin`` and ``bin2`` do not collide.
     """
     bin_key = bin_mapping_state_key(str(series.name))
     if bin_key not in state:
+        if not bins:
+            raise ValueError(
+                f"The binning of i() for the variable `{series.name}` is empty. "
+                "Map each new level to the values it bins, as in "
+                "{'low': ['a', 'b']}."
+            )
         mapping = {}
+        duplicated = []
         for new_level, old_levels in bins.items():
+            if isinstance(old_levels, str) or not isinstance(old_levels, Iterable):
+                old_levels = [old_levels]
+            old_levels = list(old_levels)
+            if not old_levels:
+                raise ValueError(
+                    f"The binning of i() assigns no values of the variable "
+                    f"`{series.name}` to the bin {new_level!r}."
+                )
             for old in old_levels:
+                if old in mapping and old not in duplicated:
+                    duplicated.append(old)
                 mapping[old] = new_level
+        if duplicated:
+            raise ValueError(
+                f"The binning of i() assigns the values {duplicated!r} of the "
+                f"variable `{series.name}` to more than one bin. Each value may "
+                "belong to only one bin."
+            )
+        observed = set(series.dropna().unique())
+        unmatched = [old for old in mapping if old not in observed]
+        if unmatched:
+            raise ValueError(
+                f"The binning of i() names values that do not occur in the "
+                f"variable `{series.name}`. No match was found for {unmatched!r}."
+            )
         state[bin_key] = mapping
     return series.replace(state[bin_key])
 
