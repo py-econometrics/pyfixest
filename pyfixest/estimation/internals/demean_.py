@@ -5,10 +5,10 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 from numpy.typing import NDArray
+from within import Effect
 
 from pyfixest.core.demean import (
     Preconditioner,
-    VaryingSlopes,
     within_preconditioner_name,
 )
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
@@ -88,11 +88,10 @@ class DemeanCache:
     def demean_array(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
-        slopes: VaryingSlopes | None = None,
     ) -> np.ndarray:
         """Recompute a projection with current weights and a cached preconditioner.
 
@@ -115,26 +114,23 @@ class DemeanCache:
             weights=weights,
             na_index=na_index,
             demeaner=demeaner,
-            slopes=slopes,
         )
         return result
 
     def _run_or_raise(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
-        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, Preconditioner | None]:
         cached_preconditioner = self.lookup_preconditioner.get(na_index)
         result, success, used_preconditioner = demeaner.demean(
-            x,
-            flist,
-            weights,
+            x=x,
+            flist=flist,
+            weights=weights,
             cached_preconditioner=cached_preconditioner,
-            slopes=slopes,
         )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
@@ -150,11 +146,10 @@ class DemeanCache:
         *,
         y_keys: Sequence[Hashable],
         x_keys: Sequence[Hashable],
-        fe: np.ndarray | None,
+        fe: np.ndarray | list[Effect] | None,
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
         demeaner: AnyDemeaner,
-        slopes: VaryingSlopes | None = None,
     ) -> tuple[
         NDArray[np.float64],
         NDArray[np.float64],
@@ -176,17 +171,15 @@ class DemeanCache:
             Ordered response keys corresponding to the columns of ``Y``.
         x_keys : Sequence[Hashable]
             Ordered regressor keys corresponding to the columns of ``X``.
-        fe : np.ndarray or None
-            Encoded fixed-effect identifiers, or ``None`` for no fixed effects.
+        fe : np.ndarray, list[within.Effect], or None
+            Encoded fixed-effect identifiers, complete effects, or ``None`` for
+            no fixed effects. A cache block shares the same effect design.
         weights : NDArray[np.float64] or None
             Observation weights passed to the within transformation.
         na_index : frozenset[int]
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner
             Configured within-transformation strategy.
-        slopes : VaryingSlopes or None
-            Intercepts and varying slopes of the columns of ``fe``, or
-            ``None`` for plain fixed effects.
 
         Returns
         -------
@@ -210,7 +203,7 @@ class DemeanCache:
         if cached is None:
             YX = np.concatenate((Y_array, X_array), axis=1)
             YX_demeaned, used_preconditioner = self._run_or_raise(
-                YX, fe, weights, na_index, demeaner, slopes
+                x=YX, flist=fe, weights=weights, na_index=na_index, demeaner=demeaner
             )
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
@@ -225,7 +218,11 @@ class DemeanCache:
             if uncached_positions:
                 YX = np.concatenate((Y_array, X_array), axis=1)
                 uncached_demeaned, used_preconditioner = self._run_or_raise(
-                    YX[:, uncached_positions], fe, weights, na_index, demeaner, slopes
+                    x=YX[:, uncached_positions],
+                    flist=fe,
+                    weights=weights,
+                    na_index=na_index,
+                    demeaner=demeaner,
                 )
                 uncached_keys = tuple(yx_keys[index] for index in uncached_positions)
                 cached_demeaned = np.concatenate(

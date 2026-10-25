@@ -14,8 +14,8 @@ from formulaic.model_matrix import ModelMatrices
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Factor, Term
 from numpy.typing import NDArray
+from within import Effect
 
-from pyfixest.core.demean import VaryingSlopes
 from pyfixest.core.detect_singletons import detect_singletons
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
@@ -122,9 +122,9 @@ class ModelMatrix:
         The independent variable(s) (right-hand side of the main equation).
     fixed_effects : pd.DataFrame or None
         Fixed effects variables, encoded as integers.
-    varying_slopes : VaryingSlopes or None
-        Intercepts and slope covariates of the fixed effects, or None when no
-        fixed effect has varying slopes.
+    effects : list[within.Effect] or None
+        Complete fixed effects with group codes, intercept flags, and slope
+        covariates, or None when no fixed effects are specified.
     endogenous : pd.DataFrame or None
         Endogenous variables in instrumental variable specifications.
     instruments : pd.DataFrame or None
@@ -300,9 +300,7 @@ class ModelMatrix:
                 self._instruments_column_names = [
                     col for col in self._instruments_column_names if col != "Intercept"
                 ]
-        # Drop singletons if specified. A singleton is perfectly fit only by a
-        # level-specific intercept: slope-only effects such as `f1[[z]]` leave
-        # rows with a zero slope covariate informative, so fixest keeps them.
+        # Singleton detection only for fixed effects without slopes.
         intercept_columns = [
             column
             for column, specification in self._fixed_effect_specification_by_column.items()
@@ -378,8 +376,8 @@ class ModelMatrix:
         -------
         pd.DataFrame
             DataFrame containing the independent variable(s) (right-hand side
-            of the main equation). Intercept columns are excluded when fixed
-            effects are present.
+            of the main equation). Intercept columns are excluded when a fixed
+            effect includes group-specific intercepts or `drop_intercept=True`.
         """
         return self._data.loc[:, self._independent_column_names or []]
 
@@ -404,37 +402,37 @@ class ModelMatrix:
         )
 
     @property
-    def varying_slopes(self) -> VaryingSlopes | None:
+    def effects(self) -> list[Effect] | None:
         """
-        Get the intercepts and varying slopes of the fixed effects.
+        Build complete fixed effects for the ``within`` solver.
 
         Returns
         -------
-        VaryingSlopes or None
-            Intercept flags and slope covariates in the column order of
-            `fixed_effects`, or None when no fixed effect has varying slopes.
+        list[within.Effect] or None
+            Each effect contains its own integer group codes, intercept flag,
+            and numeric slope covariates for the retained rows. Effects follow
+            the column order of `fixed_effects`. Returns None without fixed
+            effects.
         """
-        if not self._slope_column_by_term:
+        if self._fixed_effects_column_names is None:
             return None
-        specifications = [
-            self._fixed_effect_specification_by_column[column]
-            for column in self._fixed_effects_column_names or []
-        ]
-        return VaryingSlopes(
-            intercepts=tuple(
-                specification.intercept for specification in specifications
-            ),
-            values=tuple(
-                self._data.loc[
-                    :,
-                    [
-                        self._slope_column_by_term[slope]
+        effects = []
+        for column in self._fixed_effects_column_names:
+            specification = self._fixed_effect_specification_by_column[column]
+            effects.append(
+                Effect(
+                    levels=np.ascontiguousarray(self._data[column], dtype=np.uint32),
+                    intercept=specification.intercept,
+                    slopes=[
+                        np.ascontiguousarray(
+                            self._data[self._slope_column_by_term[slope]],
+                            dtype=np.float64,
+                        )
                         for slope in specification.slopes
                     ],
-                ].to_numpy(dtype=np.float64)
-                for specification in specifications
-            ),
-        )
+                )
+            )
+        return effects
 
     @property
     def endogenous(self) -> pd.DataFrame | None:

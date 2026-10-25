@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Literal, get_args
 
 import numpy as np
@@ -13,7 +12,6 @@ WithinPreconditionerName = Literal["adaptive", "additive", "off", "diagonal"]
 
 __all__ = [
     "Preconditioner",
-    "VaryingSlopes",
     "WithinPreconditionerName",
     "demean",
     "demean_within",
@@ -28,41 +26,6 @@ _WITHIN_PRECONDITIONER_CONFIGS: dict[
     "off": PreconditionerConfig.Off,
     "diagonal": PreconditionerConfig.Diagonal,
 }
-
-
-@dataclass(frozen=True, slots=True)
-class VaryingSlopes:
-    """Intercepts and varying slopes of the fixed effects in an `flist` array.
-
-    Entry `j` describes column `j` of `flist`: whether each level has its own
-    intercept, and the covariates whose coefficients vary by level. The
-    effect `f[z]` has an intercept and slope `z`; `f[[z]]` has only the slope;
-    a plain `f` has only the intercept.
-
-    Attributes
-    ----------
-    intercepts : tuple[bool, ...]
-        Whether each fixed effect absorbs a level-specific intercept.
-    values : tuple[NDArray[np.float64], ...]
-        Slope covariates of each fixed effect, each of shape
-        `(n_samples, n_slopes)`; `n_slopes` is zero for a plain fixed effect.
-    """
-
-    intercepts: tuple[bool, ...]
-    values: tuple[NDArray[np.float64], ...]
-
-    def effects(self, flist: NDArray[np.uint32]) -> list[Effect]:
-        """Describe each column of `flist` as a `within` effect."""
-        return [
-            Effect(
-                np.ascontiguousarray(flist[:, column], dtype=np.uint32),
-                intercept,
-                [np.ascontiguousarray(slope, dtype=np.float64) for slope in slopes.T],
-            )
-            for column, (intercept, slopes) in enumerate(
-                zip(self.intercepts, self.values, strict=True)
-            )
-        ]
 
 
 def within_preconditioner_name(
@@ -153,13 +116,12 @@ def demean(
 
 def demean_within(
     x: NDArray[np.float64],
-    flist: NDArray[np.uint32],
+    flist: NDArray[np.uint32] | list[Effect],
     weights: NDArray[np.float64] | None = None,
     tol: float = 1e-08,
     maxiter: int = 1_000,
     local_size: int | None = None,
     preconditioner: WithinPreconditionerName | Preconditioner = "adaptive",
-    slopes: VaryingSlopes | None = None,
 ) -> tuple[NDArray, bool, Preconditioner | None]:
     """
     Demean an array using modified LSMR via `within`.
@@ -169,17 +131,18 @@ def demean_within(
     This backend is designed to be fast for sparse / poorly connected fixed effect
     structures, where the method of alternating projections (MAP) can struggle.
 
-    For single fixed effects without varying slopes, falls back to alternating
-    projections (``_demean_rs``) because the sparse iterative solver is
-    designed for multi-way FE problems.
+    For a single fixed effect supplied as a code array, falls back to alternating
+    projections (``_demean_rs``). Explicit ``within.Effect`` objects, including
+    varying slopes, are passed directly to the LSMR solver.
 
     Parameters
     ----------
     x : numpy.ndarray
         Input array of shape (n_samples, n_features).
-    flist : numpy.ndarray
+    flist : numpy.ndarray or list[within.Effect]
         Array of shape (n_samples, n_factors) specifying the fixed effects
-        (integer-encoded).
+        (integer-encoded), or complete effects containing their group codes,
+        intercept flags, and slope covariates.
     weights : numpy.ndarray or None, optional
         Array of shape (n_samples,) specifying observation weights.
     tol : float, optional
@@ -204,16 +167,12 @@ def demean_within(
         additive Schwarz only when convergence stalls; ``"additive"`` uses
         additive Schwarz preconditioning from the start; ``"off"`` disables
         preconditioning; ``"diagonal"`` uses a diagonal (Jacobi) preconditioner.
-        Preconditioners are only computed and applied
-        for two or more fixed-effect factors; single-factor problems use
-        MAP and do not use a preconditioner. Alternatively, you can
+        Single-factor code arrays use MAP without a preconditioner.
+        Explicit effect objects always use LSMR. Alternatively, you can
         pass a previously-built :class:`Preconditioner` and reuse it for
         the current problem.
         If the computation of the pre-conditioner takes a long time, this can
         speed up subsequent calls to ``demean_within`` with the same fixed effect structure.
-    slopes : VaryingSlopes or None, optional
-        Intercepts and varying slopes of the columns of ``flist``. ``None``
-        (default) gives every fixed effect an intercept and no slopes.
 
     Returns
     -------
@@ -242,18 +201,20 @@ def demean_within(
             f"LSMR backend; use {_valid_str}, or a Preconditioner instance."
         )
 
-    flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
-    if slopes is None and flist_2d.shape[1] == 1:
-        demeaned, success = _demean_rs(
-            x.astype(np.float64, copy=False),
-            flist_2d.astype(np.uint64, copy=False),
-            weights.astype(np.float64, copy=False)
-            if weights is not None
-            else np.ones(x.shape[0], dtype=np.float64),
-            tol,
-            maxiter,
-        )
-        return demeaned, success, None
+    if isinstance(flist, np.ndarray):
+        flist_2d = flist.reshape(-1, 1) if flist.ndim == 1 else flist
+        if flist_2d.shape[1] == 1:
+            demeaned, success = _demean_rs(
+                x.astype(np.float64, copy=False),
+                flist_2d.astype(np.uint64, copy=False),
+                weights.astype(np.float64, copy=False)
+                if weights is not None
+                else np.ones(x.shape[0], dtype=np.float64),
+                tol,
+                maxiter,
+            )
+            return demeaned, success, None
+        flist = np.asfortranarray(flist_2d, dtype=np.uint32)
 
     config = (
         preconditioner
@@ -261,9 +222,7 @@ def demean_within(
         else _WITHIN_PRECONDITIONER_CONFIGS[preconditioner]()
     )
     solver = Solver(
-        np.asfortranarray(flist_2d, dtype=np.uint32)
-        if slopes is None
-        else slopes.effects(flist_2d),
+        flist,
         weights=weights.astype(np.float64, copy=False) if weights is not None else None,
         preconditioner=config,
     )

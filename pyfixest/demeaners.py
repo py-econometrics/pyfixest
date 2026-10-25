@@ -9,10 +9,10 @@ from types import ModuleType
 from typing import ClassVar, Literal, cast, get_args
 
 import numpy as np
+from within import Effect
 
 from pyfixest.core.demean import (
     Preconditioner,
-    VaryingSlopes,
     WithinPreconditionerName,
     demean_within,
     within_preconditioner_name,
@@ -53,13 +53,16 @@ def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner)
     return default
 
 
-def _reject_varying_slopes(slopes: VaryingSlopes | None, backend: str) -> None:
-    """Raise if a backend without varying-slope support receives slopes."""
-    if slopes is not None:
-        raise ValueError(
-            f"Varying slopes such as `f1[z]` are not supported by the {backend} "
+def _require_fixed_effect_codes(
+    flist: np.ndarray | list[Effect], backend: str
+) -> np.ndarray:
+    """Require group codes for backends without explicit-effect support."""
+    if isinstance(flist, list):
+        raise TypeError(
+            f"Explicit fixed effects are not supported by the {backend} "
             "demeaner. Use `LsmrDemeaner(backend='within')`, the default demeaner."
         )
+    return flist
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -175,20 +178,19 @@ class MapDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
-        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean `x` by the fixed effects in `flist` via MAP.
 
         `cached_preconditioner` is accepted for interface uniformity with
         :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a
-        preconditioner, so the third return value is always `None`. MAP does
-        not support varying slopes and raises `ValueError` if `slopes` is
-        given.
+        preconditioner, so the third return value is always `None`. MAP requires
+        a group-code array and raises `TypeError` for explicit `within.Effect`
+        objects.
         """
-        _reject_varying_slopes(slopes, backend="MAP")
+        flist = _require_fixed_effect_codes(flist=flist, backend="MAP")
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
 
@@ -348,15 +350,18 @@ class LsmrDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
-        slopes: VaryingSlopes | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean ``x`` by the fixed effects in ``flist`` via LSMR.
 
         Parameters
         ----------
+        flist : np.ndarray or list[within.Effect]
+            Encoded group identifiers, or complete effects containing group
+            codes, intercept flags, and slope covariates. Only the ``within``
+            backend accepts explicit effects; ``torch`` raises ``TypeError``.
         cached_preconditioner : Preconditioner or None, optional
             A preconditioner saved by the caller from an earlier within solve
             on the same fixed-effect design. This is separate from
@@ -369,10 +374,6 @@ class LsmrDemeaner(BaseDemeaner):
             escalated additive Schwarz preconditioner. If the
             user explicitly supplied a ``Preconditioner`` on the demeaner,
             that object is passed through and the model cache is ignored.
-        slopes : VaryingSlopes or None, optional
-            Intercepts and varying slopes of the columns of ``flist``. Only
-            the ``within`` backend supports them; ``torch`` raises
-            ``ValueError``.
 
         Returns
         -------
@@ -392,20 +393,18 @@ class LsmrDemeaner(BaseDemeaner):
                 flist=flist,
                 weights=weights,
                 cached_preconditioner=cached_preconditioner,
-                slopes=slopes,
             )
         if self.backend == "torch":
-            _reject_varying_slopes(slopes, backend="torch LSMR")
+            flist = _require_fixed_effect_codes(flist=flist, backend="torch LSMR")
             return self._demean_torch(x=x, flist=flist, weights=weights)
         raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
 
     def _demean_within(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
-        slopes: VaryingSlopes | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
         """Demean via `within`, reusing a matching cached preconditioner."""
         preconditioner: WithinPreconditionerName | Preconditioner
@@ -428,13 +427,14 @@ class LsmrDemeaner(BaseDemeaner):
 
         return demean_within(
             x=x,
-            flist=flist.astype(np.uint32, copy=False),
+            flist=flist.astype(np.uint32, copy=False)
+            if isinstance(flist, np.ndarray)
+            else flist,
             weights=weights,
             tol=max(self.fixef_atol, self.fixef_btol),
             maxiter=self.fixef_maxiter,
             local_size=self.local_size,
             preconditioner=preconditioner,
-            slopes=slopes,
         )
 
     def _demean_torch(

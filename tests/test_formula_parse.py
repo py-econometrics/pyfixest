@@ -727,6 +727,7 @@ class TestVaryingSlopeParsing:
         [
             ("f1 + f1[[z]]", [("f1", True, ("z",)), ("f2", True, ())]),
             ("f1[z, z]", [("f1", True, ("z",)), ("f2", True, ())]),
+            ("f1[w, z, z]", [("f1", True, ("w", "z")), ("f2", True, ())]),
             ("f1[[z, z]]", [("f1", False, ("z",)), ("f2", True, ())]),
             (
                 "f1[[z]] + f1[w, w]",
