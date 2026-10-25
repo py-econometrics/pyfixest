@@ -46,6 +46,28 @@ Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
 translating R's `I(X1^2)`.
 
+### Categorical IV instruments without an intercept
+
+In an IV model, the main formula decides whether both stages have an
+intercept; a `0` or `1` inside the IV block has no effect. Without an intercept,
+fixed effects, or another term that spans the constant, PyFixest keeps every
+level of an unreferenced categorical instrument. For a factor `f` with levels
+`a`, `b`, and `c`:
+
+| Formula | PyFixest instruments | `fixest` 0.14 instruments |
+|---|---|---|
+| `Y ~ 0 + X2 + [X1 ~ i(f)]` | `f::a`, `f::b`, `f::c` | `f::b`, `f::c` |
+| `Y ~ 0 + [X1 ~ C(f)]` | all three levels | `b` and `c` |
+| `Y ~ X2 + [X1 ~ i(f)]` | `f::b`, `f::c` | `f::b`, `f::c` |
+
+Without an intercept, the remaining levels do not span the constant, so
+omitting one restricts the instruments instead of reparameterizing them, and
+the estimates differ. To request `fixest`'s reduced instruments in PyFixest,
+set the reference explicitly, as in `i(f, ref="a")`. To reproduce PyFixest in
+R, keep every level with `i(f, keep = c("a", "b", "c"))` or `0 + factor(f)`
+inside the IV part. See
+[#1917](https://github.com/py-econometrics/pyfixest/issues/1917).
+
 ## Setup
 
 
