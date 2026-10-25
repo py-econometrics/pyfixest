@@ -88,24 +88,16 @@ for example ``"Y ~ `my covariate` | firm"``.
 
 ### Varying slopes
 
-As in `fixest`, square brackets after a fixed effect add slopes that vary by
-its levels. `f1[X2]` absorbs an intercept and a slope on `X2` for every level
-of `f1`; `f1[[X2]]` absorbs only the slopes. Separate several slopes with
-commas, as in `f1[X2, Z1]`, and attach slopes to interacted fixed effects as in
-`f1:f2[X2]`. Slopes can be arithmetic expressions such as `f1[X2**2]`.
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+`f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+as in `f1[X2, Z1]`. Slopes also work with interacted groups (`f1:f2[X2]`)
+and arithmetic expressions (`f1[X2**2]`).
 
 ```{python}
 fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
 fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
 pf.etable([fit_slopes, fit_slopes_only])
 ```
-
-A slope-only effect such as `f1[[X2]]` absorbs no constant, so the model keeps
-its intercept unless the formula removes it with `0 +`. Effects on the same
-levels are combined: `f1 + f1[[X2]]` is `f1[X2]`. Because brackets in the
-fixed-effect part always denote varying slopes, a Python subscript such as
-`frame["f1"]` cannot name a fixed effect there; add the column to `data`
-instead.
 
 Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`,
 and require the default `within` demeaner. `predict()`, `fixef()`,

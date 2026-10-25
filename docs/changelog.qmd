@@ -21,14 +21,11 @@ Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 ### Varying Slopes
 
-`feols()`, including IV, `fepois()`, and `feglm()` now estimate fixed effects
-with varying slopes in `fixest` syntax: `f1[X2]` absorbs an intercept and a
-slope on `X2` for every level of `f1`, and `f1[[X2]]` only the slopes. As in
-`fixest`, slope coefficients count in the small-sample degrees of freedom,
-singletons and the Poisson separation check only consider effects with
-intercepts, and slope-only models keep their intercept. Varying slopes require
-the default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`,
-`ritest()`, `decompose()`, and CRV3 or HAC inference raise for these models.
+`feols()`, including IV, `fepois()`, and `feglm()` now support slopes that vary
+across fixed-effect levels: `f1[X2]` adds a slope on `X2` for each level of
+`f1`, and `f1[[X2]]` includes only the slopes. Varying slopes require the
+default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`,
+`decompose()`, and CRV3 or HAC inference are not yet supported for these models.
 
 ```{python}
 pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()

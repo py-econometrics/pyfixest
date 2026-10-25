@@ -68,8 +68,8 @@ def feols(
         block on the right-hand side. Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables via sw(),
         interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2),
-        and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1
-        next to its intercepts, and "FE1[[Z]]" adds only the slopes.
+        and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1,
+        and "FE1[[Z]]" adds only the slopes.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
@@ -401,10 +401,9 @@ def feols(
     pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
 
-    Fixed effects can also have varying slopes, as in `fixest`. `f1[X2]`
-    absorbs an intercept and a slope on `X2` for every level of `f1`, while
-    `f1[[X2]]` absorbs only the slopes, so the model keeps its intercept.
-    Several slopes are separated by commas, as in `f1[X2, Z1]`:
+    Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+    `f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+    as in `f1[X2, Z1]`:
 
     ```{python}
     fit_vs = pf.feols("Y ~ X1 | f1[X2] + f2", data)
