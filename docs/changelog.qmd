@@ -21,6 +21,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 post-treatment event times, including treatment onset, instead of testing that
 individual post-treatment effects are zero.
 
+Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
+
 ### Word Regression Tables
 
 `pf.etable()` now supports `type="docx"` to return or save editable Word tables,
@@ -49,15 +51,32 @@ Breaking changes:
 
 Other things:
 
+- Passing `data` to a fitted model's `vcov()` now raises `ValueError`; the argument will be removed in a future release. It paired the frame's rows with the fit by position, so reordered, shorter, or longer frames gave wrong cluster-robust standard errors or aborted Python. The covariance matrix uses the estimation sample stored on the model, which holds every column of the input data. Models fitted with `store_data=False` or `lean=True` keep no sample: choose `vcov` when fitting them. See [#1825](https://github.com/py-econometrics/pyfixest/issues/1825).
+
+- `decompose()` retains mediators omitted from `combine_covariates` in an automatic `Other` group (extending that group if supplied). Explained effects now include all mediators, and the unexplained effect equals the full-regression coefficient. See [#1962](https://github.com/py-econometrics/pyfixest/issues/1962).
+- `ritest(type="randomization-t")` now uses the fitted covariance estimator and small-sample corrections for permutation statistics, replacing the automatic IID/HC1 choice. See [#1960](https://github.com/py-econometrics/pyfixest/issues/1960).
+- `ritest(type="randomization-t")` now computes the observed statistic as `(coef - null) / se` for nonzero null hypotheses. Coefficient-based tests retain their existing null-centering convention.
+- `ritest(cluster=...)` now preserves the fitted model's inference. An explicit assignment cluster uses CRV1 on that cluster for both observed and permuted t-statistics, retaining the fitted small-sample corrections.
+- `ccv()` now uses CRV1 on its requested cluster for both the variance mixture and comparison row, preserving the fitted model's covariance and small-sample corrections.
+
+- `wildboottest()` now rejects a missing `param` with a `ValueError` naming the available coefficients. The default `None` previously tested an empty restriction and returned p = 0 with an undefined t-statistic. See [#1959](https://github.com/py-econometrics/pyfixest/issues/1959).
+
+- Factor-by-factor `i()` interactions now work at the declared NumPy 1.25.2
+  minimum. See [#1909](https://github.com/py-econometrics/pyfixest/issues/1909).
+
 - `did2s()` standard errors now use the fitted first-stage fixed-effect encoding, so `year^region` and `year:region` match an explicit combined column. Stage validation preserves spaces in quoted labels and consistently rejects second-stage intercept removal, IV and multiple models. See [#1758](https://github.com/py-econometrics/pyfixest/issues/1758) and [#1812](https://github.com/py-econometrics/pyfixest/issues/1812).
 
 - Iterative-rectifier separation checks use the retained response, regressors and fixed-effect codes, and respect the configured `collin_tol`. Stateful terms keep their fitted values after sample filtering, and predictors supplied through formula context cannot be shadowed by auxiliary columns.
 
 - IV formulas preserve covariates named like generated fitted values, such as `X2_hat`, and support interacted endogenous terms such as `X2:Z2`. Redundant declarations of the same endogenous term are deduplicated. Multiple estimation warns when several steps parse to the same model, as in `Y ~ csw(X1, X2) | X2 ~ Z1` or `Y ~ csw(X1, X1)`, because only one model is returned for them. Nested IV blocks and operations yielding unsupported IV specifications are rejected. Fixes [#1736](https://github.com/py-econometrics/pyfixest/issues/1736) and [#1808](https://github.com/py-econometrics/pyfixest/issues/1808).
 
+- IV estimation allows valid transformed controls and redundant instruments, and raises `IVIdentificationError` when an endogenous variable's first-stage SSR is below `1e-10`, or when the instruments reduce it by less than `1e-10` relative to the exogenous variables alone, matching R `fixest`. The thresholds are absolute, so endogenous variables on a very small scale can be rejected. Validation reuses the first-stage projection and respects control rescaling, observation weights, and fixed effects. Fixes [#1891](https://github.com/py-econometrics/pyfixest/issues/1891).
+
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
 - Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
+
+- pandas 2.3.3 and narwhals 1.17 are now the minimum supported versions. pandas 2.3.3 supports Python 3.10 and handles nullable numeric formula inputs without a pandas 1.x compatibility workaround. narwhals 1.17 is required by formulaic 1.2.x. See [#1785](https://github.com/py-econometrics/pyfixest/issues/1785).
 
 - Slow randomization inference reuses parsed formulas, preserving no-intercept specifications and controls whose names contain the treatment name.
 
@@ -73,6 +92,7 @@ Other things:
 - `i(f, x)` with a boolean `x` (`bool`, nullable `boolean`, or an object column of booleans with missing values) now fits one 0/1 slope per level of `f`, as R `fixest` does with a logical. It created `x::True`/`x::False` interaction cells instead, so an event study `i(rel_year, treat, ref=-1)` with a boolean `treat` returned different estimates than with an integer `treat`. See [#1756](https://github.com/py-econometrics/pyfixest/issues/1756).
 - Iterative-rectifier separation checks preserve row alignment after missing observations are dropped, so Poisson estimates match those from manually prefiltered data. See [#1777](https://github.com/py-econometrics/pyfixest/issues/1777).
 - The fast `ritest()` algorithm now works with interacted fixed effects such as `| f1^f2` and `| f3 + f1:f2`. It raised `KeyError` because it looked the fixed effects up as raw data columns; it now uses the encoded fixed effects of the fit, like the slow algorithm. See [#1780](https://github.com/py-econometrics/pyfixest/issues/1780).
+- `ritest()` now permutes the observed treatment assignment in each draw, so the draws keep the actual number of treated units. It drew each treatment uniformly from the distinct treatment values instead, which resampled a treatment with 20% treated units at about 50% and typically made p-values too small. With `cluster=`, the cluster-level treatments are permuted across clusters, and a treatment that varies within a cluster raises `ValueError`. This also affects `rwolf()` and `wyoung()` with `sampling_method="ri"`. See [#1964](https://github.com/py-econometrics/pyfixest/issues/1964).
 - Rows with a zero weight are now dropped with a warning, as R `fixest` does, instead of raising a contradictory "must have only non-negative values" error. They are counted in `fit.sample_info.dropped_by_stage.zero_weight`; negative weights still raise. See [#1800](https://github.com/py-econometrics/pyfixest/issues/1800).
 - `did2s()` no longer crashes when the second stage has a column that is dropped as collinear, such as an all-zero covariate or a never-treated group in `i(group, treat)`. The GMM variance now uses the same columns as the fitted coefficients. See [#1811](https://github.com/py-econometrics/pyfixest/issues/1811).
 - `wildboottest()` and `decompose()` on fixed-effects models now leave out covariates that the fit dropped as collinear. Before, they rebuilt the design matrix with those columns, so the bootstrap t-statistic and the decomposition rows did not match the fitted model. See [#1778](https://github.com/py-econometrics/pyfixest/issues/1778).
@@ -83,6 +103,8 @@ Other things:
 - `log()` in formulas is now numpy's `np.log`, formulaic's default, instead of a pyfixest wrapper. The wrapper called zeros, negatives, and already-missing inputs "infinite values", booked all of them as missing, and warned that rows were "dropped from the model" even in `predict(newdata=...)`. Now zero and `inf` rows are counted under `fit.sample_info.dropped_by_stage.infinite` and negative or missing rows under `missing`, and negative or zero inputs raise numpy's `RuntimeWarning`s, as R's `log()` warns "NaNs produced". Estimates are unchanged; `predict(newdata=...)` returns `±inf` instead of NaN for a zero input, matching `fixest`. See [#1806](https://github.com/py-econometrics/pyfixest/issues/1806).
 - For each estimation sample, `i()` now takes its levels from the values present before rows with missing values are dropped, matching R `fixest` for unsplit fits. On a pandas `Categorical`, unused categories are no longer levels: an unused first category made the last observed level the reference, so `i(ac)` with categories `["a0", "a1", "a2", "a3"]` and no `a0` rows reported `ac::a1` and `ac::a2` against `a3` instead of `ac::a2` and `ac::a3` against `a1`, and other unused categories produced all-zero columns that were dropped with a multicollinearity warning. A `ref` that names a category absent from the supplied data now raises `ValueError`. For any column type, a level observed only on rows dropped for missing values remains a level and a valid reference: with `apple` rows missing `Y`, `i(f)` with levels `apple`, `banana`, `cherry` now reports `f::banana` (reference `apple`, `f::cherry` dropped as collinear) instead of `f::cherry` against `banana`. With `split` or `fsplit`, levels and reference validity are determined separately within each sample: an explicit reference absent from any split sample raises `ValueError`. This intentionally differs from R `fixest`, which determines levels from the full supplied data before splitting. See [#1769](https://github.com/py-econometrics/pyfixest/issues/1769).
 - Reject misplaced IV blocks and IV-before-FE ordering before rewriting legacy formulas, preventing fixed effects from becoming covariates. Legacy IV formulas also preserve `|` inside expressions. See [#1766](https://github.com/py-econometrics/pyfixest/issues/1766).
+- `i()` validates its `bin` argument. A single old level such as `bin={'ax': 'a1'}` now bins that level instead of iterating over its characters, and empty bins, old levels that do not occur in the data, and old levels that appear in two bins raise `ValueError` naming them, instead of silently fitting the un-binned model. See [#1771](https://github.com/py-econometrics/pyfixest/issues/1771).
+- A formula whose terms produce equal model-matrix column names now raises `FormulaSyntaxError` instead of silently keeping only the last column. For example, both blocks of `Y ~ i(a, X2) + i(a, np.square(X2))` were named `a::a1:X2`, so the fit returned three slopes instead of six. See [#1928](https://github.com/py-econometrics/pyfixest/issues/1928).
 - `sw`, `csw`, `sw0`, and `csw0` now accept a single argument, matching R `fixest`, including `| sw0(fe)` for models with and without a fixed effect.
 - Stepwise formula expansions preserve grouping under `:`, `*`, and `-`, so `csw(X1, X2):Z1` interacts both cumulative terms with `Z1`.
 - Multiple estimation operators (`sw`, `csw`, `sw0`, `csw0`, `mvsw`) now expand in two more spellings that R `fixest` accepts. Their arguments may span several lines, as in a triple-quoted formula with one argument per line, which failed with `name 'csw' is not defined`. A space may also separate the operator from its parenthesis, as in `sw (X1, X2)` or `csw (f1, f2)`, which failed with `Unknown operator ','`. See [#1810](https://github.com/py-econometrics/pyfixest/issues/1810).
@@ -353,12 +375,23 @@ We also removed:
 
 ### Bug Fixes
 
+- Gaussian `feglm()` now retains fixed-effect groups with zero or negative outcomes instead of incorrectly dropping them as separated ([#1978](https://github.com/py-econometrics/pyfixest/issues/1978)).
+- Logit and probit `feglm()` now drop fixed-effect groups whose outcomes are all 1 as separated, in addition to groups whose outcomes are all 0. The `"fe"` check repeats until no group of any fixed effect has all outcomes at 0 or all at 1 ([#1623](https://github.com/py-econometrics/pyfixest/issues/1623)).
+- Logit and probit `feglm()` now warn and ignore `separation_check=["ir"]`. The iterative rectifier detects separation at one outcome only and missed separation that appears once observations at the other outcome are dropped.
+- `fepois()` now raises its negative-outcome error when a fixed-effect group has only negative outcomes, instead of dropping the group as separated.
+- `ritest()` now refits formulas with treatment-dependent interactions or transforms so every draw rebuilds their design columns.
+- `did2s()` and DID2S event studies now reject missing cluster IDs and fewer than two clusters before fitting, preventing zero standard errors from omitted cluster scores.
+- `predict()` now rejects `se_fit=True` and prediction intervals for quantile regression and GLMs instead of returning OLS intervals or silently ignoring the request ([#1652](https://github.com/py-econometrics/pyfixest/issues/1652)).
 - `quantreg(..., multi_method="cfm2")` now updates each quantile with the
   observation-level density-weighted Hessian of Chernozhukov, Fernández-Val
   and Melly (2022, Algorithm 3). It previously scaled `X'X` by a single
   density estimate, so the one-step updates mostly shifted the intercept and
   returned nearly identical slopes at every quantile
   ([#1745](https://github.com/py-econometrics/pyfixest/issues/1745)).
+- `event_study(..., estimator="saturated")` now adds the `xfml` covariates to
+  the regression. It previously ignored them and silently returned the
+  unadjusted estimates
+  ([#1966](https://github.com/py-econometrics/pyfixest/issues/1966)).
 - Fitted models and non-plotting DiD and reporting paths no longer import
   plotting dependencies eagerly. `ritest()` loads its numerical helpers on use,
   while Matplotlib, Seaborn, and Lets-Plot load only when plotting.
@@ -406,6 +439,11 @@ We also removed:
   draws and were typically too narrow; a `seed` now gives the same results for
   any `nthreads`. `tidy(alpha=...)` now honors `alpha`
   instead of always returning 95% intervals, so `bootstrap()` no longer takes it.
+- `decompose()` no longer depends on the order of regressors in the formula.
+  When a variable in `x1_vars` preceded `decomp_var`, the short-regression
+  coefficient of that background variable was reported as the effect of
+  `decomp_var`, so the direct and unexplained effects were wrong
+  ([#1967](https://github.com/py-econometrics/pyfixest/issues/1967)).
 - The IV first stage is now fitted on exactly the second stage's rows and with
   its `ssc`, `drop_intercept`, and `context`. Previously, arguments from the `feols`
   call would not be propageted, e.g.  dropped singletons always defaulted to `fixef_rm="none"`.

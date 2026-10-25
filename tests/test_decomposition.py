@@ -480,6 +480,35 @@ def test_x1_vars(agg_first):
     )
 
 
+@pytest.mark.parametrize("agg_first", [True, False])
+def test_x1_vars_order_invariant(agg_first):
+    "x1_vars that precede the decomposition variable give the same decomposition."
+    data = pd.read_csv("tests/data/gelbach.csv")
+
+    def decompose(fml):
+        fit = pf.feols(fml, data=data)
+        fit.decompose(
+            decomp_var="x1",
+            x1_vars=["x21"],
+            agg_first=agg_first,
+            only_coef=True,
+        )
+        return fit.GelbachDecompositionResults.results
+
+    results = decompose("y ~ x1 + x21 + x22 + x23")
+    results_reordered = decompose("y ~ x21 + x1 + x22 + x23")
+
+    beta_short = pf.feols("y ~ x1 + x21", data=data).coef()["x1"]
+    np.testing.assert_allclose(results.direct_effect, beta_short)
+    np.testing.assert_allclose(results_reordered.direct_effect, beta_short)
+    for name in ["full_effect", "explained_effect", "unexplained_effect"]:
+        np.testing.assert_allclose(
+            getattr(results_reordered, name), getattr(results, name)
+        )
+    for mediator, value in results.absolute.items():
+        np.testing.assert_allclose(results_reordered.absolute[mediator], value)
+
+
 def test_tidy_snapshot(gelbach_decomposition):
     "Mock test for tidy()."
     tidy_result = gelbach_decomposition.tidy(alpha=0.05).query(

@@ -25,7 +25,9 @@ their ability to produce one:
 
 1. weights, fixed effects, IV, multiple estimation, vcov/SSC, or stripped-data
    paths with undefined or untested behavior;
-2. numerical changes without a permanent external reference;
+2. numerical changes without independent regression evidence, including missing
+   external comparisons when required by
+   [Choosing a numerical reference](../../../docs/developer/testing.md#choosing-a-numerical-reference);
 3. public behavior that differs from `fixest` without an entry in
    `docs/developer/fixest-compatibility.md`;
 4. estimator-specific logic leaking into shared runners or model classes;

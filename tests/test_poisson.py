@@ -33,6 +33,7 @@ def test_separation_ir_without_regressors(response, groups, expected):
             Y=dependent,
             X=pd.DataFrame(index=dependent.index),
             fe=pd.DataFrame({"group": groups}),
+            outcome_bounds=(0.0,),
             demeaner=MapDemeaner(),
             collin_tol=1e-9,
         )
@@ -67,6 +68,7 @@ def test_separation_ir_datasets(dataset_path):
         "Y": data[["y"]],
         "X": regressors,
         "fe": fixed_effects,
+        "outcome_bounds": (0.0,),
         "demeaner": MapDemeaner(),
         "collin_tol": 1e-9,
     }

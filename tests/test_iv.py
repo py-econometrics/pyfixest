@@ -457,6 +457,60 @@ def test_iv_generated_name_collision_against_fixest(
         )
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "formula, reference_formula",
+    [
+        ("Y ~ I(X1**2) + [X1 ~ Z1]", "Y ~ I(X1^2) | X1 ~ Z1"),
+        ("Y ~ X1 + [I(X1**2) ~ Z1]", "Y ~ X1 | I(X1^2) ~ Z1"),
+        ("Y ~ X1 + [X2 ~ Z1 + I(X1**2)]", "Y ~ X1 | X2 ~ Z1 + I(X1^2)"),
+        ("Y ~ X1 + [X2 ~ Z1 + Z1:X1]", "Y ~ X1 | X2 ~ Z1 + Z1:X1"),
+        ("Y ~ X1 + [X2 ~ Z1 + X1]", "Y ~ X1 | X2 ~ Z1 + X1"),
+    ],
+)
+@pytest.mark.parametrize("weights, fixed_effects", [(None, ""), ("weights", "f1")])
+def test_iv_transformed_terms_against_fixest(
+    formula, reference_formula, weights, fixed_effects
+):
+    """Numerically valid transformations and redundant instruments are allowed."""
+    data = get_data().dropna()
+    if fixed_effects:
+        formula += f" | {fixed_effects}"
+        reference_formula = reference_formula.replace(
+            " | ", f" | {fixed_effects} | ", 1
+        )
+    fit = feols(formula, data=data, weights=weights, vcov="iid")
+    reference = fixest.feols(
+        ro.Formula(reference_formula),
+        data=pandas2ri.py2rpy(data),
+        weights=ro.NULL if weights is None else ro.Formula("~weights"),
+        vcov="iid",
+    )
+    names_r = list(ro.r("function(fit) names(coef(fit))")(reference))
+    names = [
+        name.removeprefix("fit_")
+        .replace("(Intercept)", "Intercept")
+        .replace("I(I(X1^2))", "I(X1 ** 2)")
+        for name in names_r
+    ]
+    assert sorted(fit.coef().index) == sorted(names)
+    assert fit.sample_info.n_obs == int(stats.nobs(reference)[0])
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(reference),
+        rtol=0,
+        atol=1e-8,
+        err_msg="IV transformed-term coefficients != fixest",
+    )
+    np.testing.assert_allclose(
+        fit.se()[names],
+        fixest.se(reference),
+        rtol=0,
+        atol=1e-7,
+        err_msg="IV transformed-term standard errors != fixest",
+    )
+
+
 @pytest.mark.parametrize("seed", [293, 912])
 @pytest.mark.parametrize("sd", [0.1, 0.2, 0.3])
 @pytest.mark.parametrize("has_weight", [0.0, 1.0])

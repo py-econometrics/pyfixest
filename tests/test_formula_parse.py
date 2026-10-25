@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -1112,29 +1112,19 @@ class TestEdgeCases:
             Formula.parse(formula)
 
     @pytest.mark.parametrize(
-        "rhs, error, match",
+        "rhs",
         [
-            (
-                "X1 : [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "X1 - [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "-([X2 ~ Z1])",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            ("X1 * [X2 ~ Z1]", EndogVarsAsCovarsError, "X2"),
+            "X1 : [X2 ~ Z1]",
+            "X1 - [X2 ~ Z1]",
+            "-([X2 ~ Z1])",
         ],
     )
-    def test_reject_unsupported_iv_second_stage(self, rhs, error, match):
-        """Algebra must preserve the endogenous term without creating invalid controls."""
-        with pytest.raises(error, match=match):
+    def test_reject_unsupported_iv_second_stage(self, rhs):
+        """Algebra must preserve the declared endogenous term in the regression."""
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"removed or transformed the endogenous terms.*X2.*IV specification remains",
+        ):
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
@@ -1145,7 +1135,11 @@ class TestEdgeCases:
             ("Y ~ X2 | X2 ~ Z1", "Y ~ 1 + [X2 ~ Z1]"),
             ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
             ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
+            ("Y ~ `my var` + [`my var` ~ Z1]", "Y ~ 1 + [`my var` ~ Z1]"),
+            ("Y ~ I(`my var`) + [I(`my var`) ~ Z1]", "Y ~ 1 + [I(`my var`) ~ Z1]"),
+            ("Y ~ Q('my var') + [Q('my var') ~ Z1]", "Y ~ 1 + [Q('my var') ~ Z1]"),
             ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
+            ("Y ~ X1 * [X2 ~ Z1]", "Y ~ X1 + X1:X2 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
             (
@@ -1162,6 +1156,7 @@ class TestEdgeCases:
         """Equivalent evaluated terms define the same IV stages, controls and intercept."""
         parsed = Formula.parse(formula)[0]
         reference = Formula.parse(expected)[0]
+        assert set(parsed.exogenous).isdisjoint(parsed.endogenous)
         assert parsed.second_stage == reference.second_stage
         assert (
             parsed.as_first_stage().second_stage

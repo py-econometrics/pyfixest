@@ -390,13 +390,19 @@ def test_lpdid():
 @pytest.mark.against_r_core
 @pytest.mark.parametrize("unit", ["unit"])
 @pytest.mark.parametrize("cluster", ["unit", "unit2"])
-def test_fully_interacted(unit, cluster):
+@pytest.mark.parametrize("xfml", [None, "X"])
+def test_fully_interacted(unit, cluster, xfml):
     df_multi_cohort = pd.read_csv(
         resources.files("pyfixest.did.data").joinpath("df_het.csv")
     )
+    rng = np.random.default_rng(21)
     if cluster == "unit2":
-        rng = np.random.default_rng(21)
         df_multi_cohort["unit2"] = rng.choice(range(100), size=len(df_multi_cohort))
+    # Correlated with the outcome so that dropping it would move the estimates.
+    df_multi_cohort["X"] = df_multi_cohort["dep_var"] + rng.normal(
+        size=len(df_multi_cohort)
+    )
+    covariates = f" + {xfml}" if xfml is not None else ""
 
     saturated_py = pf.event_study(
         data=df_multi_cohort,
@@ -406,11 +412,14 @@ def test_fully_interacted(unit, cluster):
         gname="g",
         estimator="saturated",
         cluster=cluster,
+        xfml=xfml,
     )
     heterogeneity = saturated_py.test_treatment_heterogeneity()
 
     saturated_r = fixest.feols(
-        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = TRUE) | unit + year"),
+        ro.Formula(
+            f"dep_var ~ 1 + sunab(g, year, no_agg = TRUE){covariates} | unit + year"
+        ),
         data=df_multi_cohort,
         vcov=ro.Formula(f"~{cluster}"),
     )
@@ -478,12 +487,15 @@ def test_fully_interacted(unit, cluster):
     py_agg_tidy = saturated_py.aggregate()
 
     saturated_agg_r = fixest.feols(
-        ro.Formula("dep_var ~ 1 + sunab(g, year, no_agg = FALSE) | unit + year"),
+        ro.Formula(
+            f"dep_var ~ 1 + sunab(g, year, no_agg = FALSE){covariates} | unit + year"
+        ),
         data=df_multi_cohort,
         vcov=ro.Formula(f"~{cluster}"),
     )
 
     r_agg_tidy = pd.DataFrame(broom.tidy_fixest(saturated_agg_r)).T
+    r_agg_tidy = r_agg_tidy[r_agg_tidy.iloc[:, 0] != xfml]
 
     r_agg_est = r_agg_tidy.iloc[:, 1].astype(float).values
     r_agg_se = r_agg_tidy.loc[:, 2].astype(float).values
