@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from pyfixest.errors import EmptyVcovError
+from pyfixest.errors import EmptyVcovError, PyfixestDeprecationWarning
 from pyfixest.estimation.internals.model_state import CoefficientTable
 from pyfixest.estimation.internals.retention import require_retained
 
@@ -134,7 +134,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     variance_covariance: "VarianceCovariance"
     coeftable: CoefficientTable
     _beta_hat: np.ndarray
-    _u_hat: np.ndarray
+    _residuals: np.ndarray
     model_matrix: "ModelMatrix"
     options: "EstimationOptions"
     observation_weights: "ObservationWeights"
@@ -144,21 +144,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     _coefnames: list[str]
     model: "ModelDescription"
     _k: int
-
-    @property
-    def _fml(self) -> str:
-        """Formula string. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.formula` instead."""
-        return self.model.formula
-
-    @property
-    def _method(self) -> str:
-        """Estimator name. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.method` instead."""
-        return self.model.method
-
-    @property
-    def _vcov(self) -> np.ndarray:
-        """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
-        return self.variance_covariance.vcov
 
     def evalue(
         self: "Feols",
@@ -370,7 +355,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if joint:
             warnings.warn(
                 "joint=True is deprecated. Use inference_type='simult' instead.",
-                FutureWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=3,
             )
             if inference_type not in ("regular", "simult"):
@@ -548,5 +533,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
-        require_retained(self, "resid", "_u_hat")
-        return self._u_hat.flatten()
+        require_retained(self, "resid", "_residuals")
+        return self._residuals.flatten()

@@ -201,7 +201,7 @@ class Quantreg(Feols):
         fitted = self.within_data.design @ self._beta_hat
         self.fitted_values = FittedValues(link=fitted, response=fitted)
 
-        self._u_hat = (
+        self._residuals = (
             self.within_data.response.flatten()
             - self.within_data.design @ self._beta_hat
         )
@@ -373,7 +373,7 @@ class Quantreg(Feols):
         vcov = vcov_iid_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
-            u_hat=self._u_hat,
+            u_hat=self._residuals,
             q=self.options.quantile,
             N=self.sample_info.n_rows,
         )
@@ -383,7 +383,7 @@ class Quantreg(Feols):
         vcov = vcov_hetero_qreg(
             X=self.within_data.design,
             Y=self.within_data.response,
-            u_hat=self._u_hat,
+            u_hat=self._residuals,
             q=self.options.quantile,
             N=self.sample_info.n_rows,
         )
@@ -421,7 +421,7 @@ class Quantreg(Feols):
         """
         vcov = vcov_crv1_qreg(
             X=self.within_data.design,
-            u_hat=self._u_hat,
+            u_hat=self._residuals,
             q=self.options.quantile,
             clustid=clustid,
             cluster_col=cluster_col,
@@ -434,5 +434,7 @@ class Quantreg(Feols):
     @property
     def objective_value(self):
         "Compute the total loss of the quantile regression model."
-        require_retained(self, "objective_value", "_u_hat")
-        return np.sum(np.abs(self._u_hat) * (self.options.quantile - (self._u_hat < 0)))
+        require_retained(self, "objective_value", "_residuals")
+        return np.sum(
+            np.abs(self._residuals) * (self.options.quantile - (self._residuals < 0))
+        )

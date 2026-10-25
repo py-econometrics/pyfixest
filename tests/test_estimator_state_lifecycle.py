@@ -92,9 +92,8 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     assert isinstance(fit.model_matrix.dependent, pd.DataFrame)
     assert isinstance(fit.observation_weights, ObservationWeights)
     assert isinstance(fit.within_data, WithinLinearData)
-    assert not hasattr(fit, "_Z")
-    assert not hasattr(fit, "_Yd")
-    assert not hasattr(fit, "_Xd")
+    # The 0.60 names survive only as class-level deprecation shims.
+    assert not {"_Z", "_Yd", "_Xd"} & set(vars(fit))
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     np.testing.assert_array_equal(fit.observation_weights.values, weights)
@@ -116,7 +115,6 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
     residuals = (
         fit.within_data.response.flatten() - fit.within_data.design @ fit._beta_hat
     )
-    np.testing.assert_allclose(fit._u_hat, residuals)
     np.testing.assert_allclose(fit.resid(), residuals)
     sandwich = fit.sandwich
     assert type(sandwich) is SandwichComponents
@@ -131,7 +129,7 @@ def test_feols_keeps_formula_within_and_weight_domains_distinct(
         sandwich.bread @ hessian, np.eye(hessian.shape[0]), atol=1e-12
     )
     for name in ("_scores", "_hessian", "_bread", "_tZX", "_tXZ", "_tZy", "_tZZinv"):
-        assert not hasattr(fit, name), name
+        assert name not in vars(fit), name
 
     with pytest.raises(FrozenInstanceError):
         fit.within_data.response = fit.within_data.design  # type: ignore[misc]
@@ -153,10 +151,7 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
 
     within = fit.within_data
     assert isinstance(within, WithinIvData)
-    assert not hasattr(fit, "_Yd")
-    assert not hasattr(fit, "_Xd")
-    assert not hasattr(fit, "_Zd")
-    assert not hasattr(fit, "_endogvard")
+    assert not {"_Yd", "_Xd", "_Zd", "_endogvard"} & set(vars(fit))
 
     weights = lifecycle_data["weight"].to_numpy(dtype=np.float64)
     weighted_design = weights[:, None] * within.design
@@ -177,9 +172,11 @@ def test_weighted_iv_keeps_each_econometric_role_on_within_scale(
     X_hat = within.instruments @ tZZinv @ tZX
     np.testing.assert_allclose(
         sandwich.scores,
-        X_hat * (weights * fit._u_hat)[:, None],
+        X_hat * (weights * fit.resid())[:, None],
     )
-    np.testing.assert_allclose(fit.resid(), fit._u_hat)
+    np.testing.assert_allclose(
+        fit.resid(), within.response.flatten() - within.design @ fit.coef().to_numpy()
+    )
 
 
 def test_formula_data_remains_canonical_after_linear_fit(
@@ -451,7 +448,6 @@ def test_undefined_fit_statistics_are_nan(
 ) -> None:
     fit = estimator(formula, lifecycle_data, **kwargs)
     assert all(np.isnan(value) for value in astuple(fit.fitstat))
-    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -529,7 +525,8 @@ def test_published_components_preserve_inputs(
         "_w_final",
         "_y_final",
     )
-    assert not any(hasattr(fit, name) for name in removed)
+    # The 0.60 names survive only as class-level deprecation shims.
+    assert not set(removed) & set(vars(fit))
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")

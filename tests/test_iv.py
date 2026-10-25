@@ -498,7 +498,7 @@ def test_1st_stage_iv(seed, sd, has_weight, adj_vcov):
 
     _pi_hat_ols = fit_ols._beta_hat
     _X_hat_ols = fit_ols.within_data.design @ fit_ols._beta_hat
-    _v_hat_ols = fit_ols._u_hat
+    _v_hat_ols = fit_ols.resid()
     _F_stat_ols = wald_ols.f_statistic
     _F_pval_ols = wald_ols.pvalue
 

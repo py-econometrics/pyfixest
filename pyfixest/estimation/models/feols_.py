@@ -15,7 +15,7 @@ from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import PyfixestDeprecationWarning, VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
@@ -80,6 +80,7 @@ from pyfixest.estimation.internals.vcov_utils import (
     get_ssc_cluster,
     prepare_cluster_state,
 )
+from pyfixest.estimation.models._deprecated_attributes import DeprecatedAttributes
 from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
 from pyfixest.estimation.post_estimation.decomposition import (
     GelbachDecomposition,
@@ -121,7 +122,7 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
     return tuple(fixed_effects.columns)
 
 
-class Feols(ResultAccessorMixin):
+class Feols(ResultAccessorMixin, DeprecatedAttributes):
     """
     Non user-facing class to estimate a linear regression via OLS.
 
@@ -187,15 +188,13 @@ class Feols(ResultAccessorMixin):
         Number of independent variables (or features).
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
-    _data : Any
-        Data used in the regression, to be enriched outside of the class.
     _beta_hat : np.ndarray
         Estimated regression coefficients.
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
         get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
+    _residuals : np.ndarray
+        Response-unit residuals without square-root observation weighting.
     variance_covariance : VarianceCovariance
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
@@ -210,8 +209,6 @@ class Feols(ResultAccessorMixin):
     coeftable : CoefficientTable
         Coefficient table published by `get_inference()`: estimates, standard
         errors, t-statistics, p-values, and confidence bounds.
-    _F_stat : Any
-        F-statistic for the model, set in get_Ftest().
     fixef_estimates : FixedEffectEstimates
         Fixed-effect estimates published by `fixef()`: the coefficient records
         grouped by fixed effect, the dummy-coded solution `alpha`, and the
@@ -220,13 +217,20 @@ class Feols(ResultAccessorMixin):
         Goodness-of-fit measures computed by `_fit_statistics()` and published
         right after get_fit(); ``NaN`` where the estimator defines none.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Absent when the fit was built
+        with `lean=True` or `store_data=False`.
     _model_name_plot: str
         The name of the model used when plotting and summarizing models. Usually identical to
         `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called
         and models with identical model names are passed. In this case,
         the _model_name_plot attribute will be modified.
+
+    Notes
+    -----
+    The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_X`,
+    now live in the typed components above. Their old names still work as
+    deprecated aliases or raise an informative `AttributeError`; see
+    [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
     """
 
     # Set in get_fit().
@@ -513,7 +517,7 @@ class Feols(ResultAccessorMixin):
             # Fixed-effects-only model: no coefficients, residuals are the
             # within-transformed response, and the plan skips vcov().
             self._beta_hat = np.empty(0)
-            self._u_hat = within_data.response.flatten()
+            self._residuals = within_data.response.flatten()
         else:
             fit = fit_ols(
                 X=within_data.design,
@@ -523,7 +527,7 @@ class Feols(ResultAccessorMixin):
             )
 
             self._beta_hat = fit.beta
-            self._u_hat = fit.residuals
+            self._residuals = fit.residuals
             self.sandwich = fit.sandwich
 
         # The response minus the residual carries the fixed-effect
@@ -550,7 +554,7 @@ class Feols(ResultAccessorMixin):
         return linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,
-            residuals=self._u_hat,
+            residuals=self._residuals,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
@@ -788,7 +792,7 @@ class Feols(ResultAccessorMixin):
 
     def _vcov_iid(self) -> VcovTerm:
         vcov = vcov_iid_ols(
-            residuals=self._u_hat,
+            residuals=self._residuals,
             bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,
@@ -892,10 +896,14 @@ class Feols(ResultAccessorMixin):
         return vcov_mat
 
     def _clear_attributes(self):
-        """Apply the configured fitted-model retention policy."""
+        """Apply the configured fitted-model retention policy.
+
+        Only instance state is dropped; the class-level descriptors of the
+        deprecated 0.60 attributes stay and read the remaining typed state.
+        """
+        state = vars(self)
         for attr in omitted_attributes(self.options.retention):
-            if hasattr(self, attr):
-                delattr(self, attr)
+            state.pop(attr, None)
 
     def wald_test(
         self,
@@ -1600,7 +1608,7 @@ class Feols(ResultAccessorMixin):
         if has_param:
             warnings.warn(
                 "The 'param' argument is deprecated. Please use 'decomp_var' instead.",
-                FutureWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=_find_stack_level(),
             )
             decomp_var = param

@@ -16,7 +16,11 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
+from pyfixest.errors import (
+    EndogVarsAsCovarsError,
+    FormulaSyntaxError,
+    PyfixestDeprecationWarning,
+)
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -529,7 +533,7 @@ class TestFixedEffectInteractions:
 
     def test_canonical_interaction_parses_without_warning(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("error", DeprecationWarning)
+            warnings.simplefilter("error", PyfixestDeprecationWarning)
             parsed = Formula.parse("Y ~ X1 | f1:f2")[0]
 
         assert str(parsed._formula.rhs[1]) == "1 + f1:f2"
@@ -539,7 +543,7 @@ class TestFixedEffectInteractions:
         canonical = Formula.parse("Y ~ X1 | f1:f2")[0]
 
         with pytest.warns(
-            DeprecationWarning,
+            PyfixestDeprecationWarning,
             match=r"Instead of `Y ~ X1 \| f1\^f2` use `Y ~ X1 \| f1:f2`",
         ) as caught:
             legacy = Formula.parse("Y ~ X1 | f1^f2")[0]
@@ -556,7 +560,7 @@ class TestFixedEffectInteractions:
         ],
     )
     def test_legacy_chained_and_mixed_interactions(self, fixed_effects, expected):
-        with pytest.warns(DeprecationWarning) as caught:
+        with pytest.warns(PyfixestDeprecationWarning) as caught:
             parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
 
         assert len(caught) == 1
@@ -566,7 +570,7 @@ class TestFixedEffectInteractions:
     def test_rewrite_is_scoped_to_top_level_fixed_effects(self):
         formula = "Y^out ~ (X1 + X2)^2 + [X3 ~ (Z1 + Z2)^2] | I(f1^2) + f2^f3"
 
-        with pytest.warns(DeprecationWarning) as caught:
+        with pytest.warns(PyfixestDeprecationWarning) as caught:
             translated = _preprocess_fixed_effect_interactions(formula)
 
         assert len(caught) == 1
@@ -583,7 +587,7 @@ class TestFixedEffectInteractions:
 
     def test_nested_fe_and_iv_power_expressions_are_untouched(self):
         with warnings.catch_warnings():
-            warnings.simplefilter("error", DeprecationWarning)
+            warnings.simplefilter("error", PyfixestDeprecationWarning)
             nested_fe = Formula.parse("Y ~ X1 | I(f1^2)")[0]
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
@@ -604,7 +608,7 @@ class TestInstrumentalVariableBoundaries:
         ],
     )
     def test_legacy_iv_preserves_formula_roles(self, formula, canonical):
-        with pytest.warns(DeprecationWarning, match="fixest-style") as caught:
+        with pytest.warns(PyfixestDeprecationWarning, match="fixest-style") as caught:
             parsed = Formula.parse(formula)[0]
         assert len(caught) == 1
         reference = Formula.parse(canonical)[0]
@@ -623,7 +627,7 @@ class TestInstrumentalVariableBoundaries:
     )
     def test_valid_brackets_and_python_tilde_preserved(self, formula):
         with warnings.catch_warnings():
-            warnings.simplefilter("error", DeprecationWarning)
+            warnings.simplefilter("error", PyfixestDeprecationWarning)
             parsed = Formula.parse(formula)[0]
         assert parsed.is_fixed_effects
         assert parsed.is_instrumental_variable == ("[X2 ~ Z1]" in formula)

@@ -75,6 +75,14 @@ class FormulaSyntaxError(Exception):  # noqa: D101
     pass
 
 
+class PyfixestDeprecationWarning(FutureWarning):
+    """A pyfixest feature is deprecated and will be removed in a future release.
+
+    A `FutureWarning` subclass, so Python shows it by default in scripts and
+    notebooks, and users can filter pyfixest's deprecations on their own.
+    """
+
+
 __all__ = [
     "CovariateInteractionError",
     "DepvarIsNotNumericError",
@@ -90,6 +98,7 @@ __all__ = [
     "MissingModelDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
+    "PyfixestDeprecationWarning",
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",

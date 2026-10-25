@@ -1,0 +1,177 @@
+---
+title: "Migrating Fitted-Model Attributes from PyFixest 0.60"
+description: "Where the private attributes of fitted models live since PyFixest 0.70, and how to update code that reads them."
+categories: [migration, fitted models]
+jupyter: python3
+toc: true
+toc-title: "On this page"
+toc-location: left
+---
+
+PyFixest 0.70 moves the state of a fitted model out of loose private attributes
+such as `fit._se`, `fit._vcov`, or `fit._X` into typed components: `fit.model`,
+`fit.options`, `fit.sample_info`, `fit.coeftable`, `fit.variance_covariance`,
+`fit.fitstat`, `fit.sandwich`, `fit.first_stage`, and others. Each component is
+documented in the [API reference](/reference/index.qmd).
+
+The compatibility layer preserves the names listed below while you migrate:
+
+- Most listed names are **deprecated aliases**. They reconstruct the former
+  representation from the current fit and emit a `PyfixestDeprecationWarning`
+  that names the replacement. They do not rerun the 0.60 estimator.
+- Some 0.60 representations are no longer supported. Their names are **removed**:
+  reading them raises an `AttributeError` that explains why and names the
+  replacement.
+- On weighted OLS and IV fits, `fit._u_hat` includes the square-root observation
+  weights, as in 0.60. Use `fit.resid()` for residuals in the outcome's units.
+
+Internal solver caches and other names outside this table are not covered by
+the compatibility layer. An alias also raises `AttributeError` if the required
+state was discarded by `lean=True` or has not been computed yet.
+
+```{python}
+import warnings
+
+import pyfixest as pf
+from pyfixest.errors import PyfixestDeprecationWarning
+
+data = pf.get_data()
+fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    old = fit._se
+
+print(caught[0].message)
+print((old == fit.coeftable.se).all())
+```
+
+## Find the old names in your code
+
+`PyfixestDeprecationWarning` is a `FutureWarning`, so Python shows it by
+default. To find reads of aliases whose warnings are enabled, turn the
+warning into an error, for example in your test suite:
+
+```{python}
+#| eval: false
+warnings.simplefilter("error", PyfixestDeprecationWarning)
+```
+
+With pytest, add `"error::pyfixest.errors.PyfixestDeprecationWarning"` to the
+`filterwarnings` setting instead.
+
+## Values that differ from the new components
+
+The aliases reconstruct the former values where possible. The following
+conventions and explicit exceptions matter when moving to the new field named
+in the warning and in the "Use instead" column:
+
+- **Weighted arrays.** PyFixest 0.60 stored the arrays of weighted OLS and IV
+  fits multiplied by the square root of the weights (`_Y`, `_X`, `_Z`,
+  `_u_hat`, `_X_hat`, `_v_hat`, `_sumFE`), and the final IRLS arrays of GLMs multiplied
+  by the square root of the working weights (`_Y`, `_X`, `_Z`, `_u_hat`, and
+  `_sumFE` of weighted fits). The aliases apply the same scaling. The new components hold the unweighted
+  arrays: `fit.within_data`, `fit.working_state`, `fit.first_stage`, and
+  `fit.fixef_estimates`.
+  Fixed-effects-only OLS retains the former column shape of `_u_hat` and
+  returns `None` for `_Z`; `fit.resid()` always returns a flat array.
+- **Estimation changes.** Aliases reflect the numerical changes described in
+  the [0.70 changelog](/changelog.qmd): weighted
+  RMSE divides by the sum of weights; Gaussian GLMs now publish R² measures
+  and RMSE and use t-based coefficient inference; and changes to IRLS can
+  change Poisson, logit, and probit results slightly.
+- **Empty defaults.** PyFixest 0.60 set many attributes to an empty array,
+  `None`, or `NaN`. An alias raises `AttributeError` when its component is
+  absent, for example `fit._sumFE` before `fit.fixef()` runs or `fit._eff_F`
+  before `fit.IV_Diag()` runs. Some components are never published for a
+  particular fit: FE-only fits have no coefficient inference (`_se`, `_vcov`,
+  `_vcov_type`, `_G`), and fits other than saturated event studies have no
+  event-study design (`_yname`, `_att`, and the other design names).
+  On unsplit fits `_sample_split_value` also raises instead of returning the
+  old `all` marker. On full-sample `fsplit` fits it returns the string `"all"`
+  so table packages retain the sample label.
+- **Fixed-effect coefficients.** `_alpha` raises an error because its positional
+  layout changed, including the handling of unused categorical levels. Use
+  `fit.fixef()` for a table labelled by fixed-effect term and level, or
+  `fit.fixef_estimates.fixed_effects` after calling `fixef()` for the coefficient
+  records. The new `fit.fixef_estimates.alpha` uses the current dummy layout and
+  is not a substitute for the old array's positional indexing.
+- **Sample metadata.** `_k_fe` is removed: its encoded pandas Series labels and
+  process-dependent ordering are no longer supported. Use
+  `fit.fixef_counts.n_levels_by_fe` for the level counts in the final estimation
+  sample, in the order of `fit.model.fixed_effects`.
+  `_n_fe` returns the number of fixed effects. After Poisson separation, it
+  counts only fixed effects with more than one remaining level, as in 0.60.
+  After separation, 0.60's
+  `_na_index` omitted the separated rows; that set cannot be rebuilt, so the
+  alias raises an informative error. Use `fit.sample_info.dropped_row_index`
+  for rows removed by all filtering stages. Non-Poisson GLMs' `_N_rows`
+  includes the separated rows, as in 0.60; use
+  `fit.sample_info.n_rows` for the fitted row count.
+- **Lists instead of tuples.** `_icovars` and `_clustervar` return a list or
+  `None`, `_collin_index` returns an empty list when no column was dropped, and
+  `_G` repeats the smallest cluster count three times under the default
+  `ssc(G_df="min")`.
+- **Canonical formulas.** `_fml` and `_model_name` return the canonical
+  formula PyFixest now stores, such as `Y ~ 1 + X1`; `_fixef` joins the fixed
+  effects with `+` and no spaces. Interacted fixed effects appear as `f1:f2`
+  instead of `f1^f2` in all three names. `FixestFormula` raises an informative
+  error because its parsed-formula interface changed; use
+  `fit.model.parsed_formula`. `_model_spec` exposes the current formulaic
+  specifications, including their current fixed-effect encoding.
+- **Changed support.** `_support_crv3_inference` reports that non-Poisson GLMs
+  no longer accept CRV3 inference. The other capability aliases likewise
+  report current support. There is no `fit.capabilities.iid` field:
+  use `fit.vcov(vcov="iid")` to request IID inference, which validates support.
+- **DID2S metadata.** `_vcov_type` is now `"CRV"` instead of `"CRV1"`;
+  `_clustervar` names the cluster variable and `_is_clustered` is true.
+  `_G` now returns a list (padded under `G_df="min"`) instead of the old
+  integer count. `_ssc` is a `(1, 1)` array containing `1.0`, rather than the
+  old one-dimensional OLS correction: the stored covariance already includes
+  the two-step GMM calculation.
+- **Methods.** `get_performance()` remains callable with a deprecation
+  warning; read the automatically computed `fit.fitstat` instead.
+  The former IV `first_stage()` method is now the `fit.first_stage` data
+  component and cannot be called. The first stage is fitted automatically;
+  read `fit.first_stage.model` and `fit.first_stage.diagnostics`, and use
+  `fit.IV_Diag()` for additional diagnostics.
+
+## Names still read by other packages
+
+Released versions of [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+and [maketables](https://github.com/py-econometrics/maketables) read some of
+these names directly, including maketables' use of `_adj_r2`,
+`_sample_split_var`, and `_sample_split_value`. The table marks
+these aliases as silent: they are documented as deprecated but do not emit a
+runtime warning yet. Once the consuming packages release versions using the
+new components and users have had an upgrade window, a later PyFixest release
+can enable warnings. Removal follows a warning period; publishing an upstream
+fix does not immediately remove an alias. No removal version is scheduled yet.
+
+## All deprecated names
+
+"Model classes" names the classes whose fits the row applies to; subclasses
+follow their parent, so a `Feols` row also covers IV, GLM, and quantile fits
+unless a later row names them.
+
+```{python}
+#| echo: false
+#| output: asis
+from pyfixest.estimation.models._deprecated_attributes import (
+    DEPRECATED_ATTRIBUTES,
+    Removed,
+)
+
+print("| Old attribute | Model classes | Use instead | Status |")
+print("|---|---|---|---|")
+for attribute in DEPRECATED_ATTRIBUTES:
+    for class_name, entry in attribute.classes.items():
+        if isinstance(entry, Removed):
+            status = f"Removed: {entry.reason}"
+        else:
+            status = "Deprecated alias" + (" (silent)" if attribute.silent else "")
+        print(
+            f"| `fit.{attribute.name}` | `{class_name}` "
+            f"| `{entry.replacement}` | {status} |"
+        )
+```

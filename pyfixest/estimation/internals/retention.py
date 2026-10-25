@@ -21,7 +21,7 @@ _LEAN_ATTRIBUTES: tuple[str, ...] = (
     "_data",
     "model_matrix",
     "sandwich",
-    "_u_hat",
+    "_residuals",
     "fitted_values",
     "working_state",
     "within_data",

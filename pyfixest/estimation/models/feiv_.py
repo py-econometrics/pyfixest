@@ -62,12 +62,10 @@ class Feiv(Feols):
 
     Attributes
     ----------
-    _Z : np.ndarray
-        Processed instruments after handling multicollinearity.
-    _weights_type_feiv : str
-        Type of the weights variable defined in Feiv class.
-        Either "aweights" for analytic weights or "fweights"
-        for frequency weights.
+    within_data : WithinIvData
+        Response, second-stage design, instruments, and endogenous regressors
+        after demeaning by fixed effects and removing collinear columns,
+        without multiplication by square-root weights.
     _coefnames_z : list[str]
         Names of coefficients for Z after handling multicollinearity.
     collinearity_instruments : CollinearityCheck
@@ -83,17 +81,16 @@ class Feiv(Feols):
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
         get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
+    _residuals : np.ndarray
+        Response-unit residuals without square-root observation weighting.
     first_stage : FirstStage
         First-stage regression fitted after second-stage inference: the
         coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
         fitted first-stage model, the excluded instruments, and the
         instrument-strength `diagnostics`.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
-
+        The data frame used in the estimation. Absent when the fit was built
+        with `lean=True` or `store_data=False`.
 
     Raises
     ------
@@ -244,7 +241,7 @@ class Feiv(Feols):
         )
 
         self._beta_hat = fit.beta
-        self._u_hat = fit.residuals
+        self._residuals = fit.residuals
         self.sandwich = fit.sandwich
 
         # The response minus the residual carries the fixed-effect
@@ -279,7 +276,7 @@ class Feiv(Feols):
             coefficients=model1._beta_hat,
             # note that model1.within_data.design is demeaned
             fitted_values=model1.within_data.design @ model1._beta_hat,
-            residuals=model1._u_hat,
+            residuals=model1._residuals,
             model=model1,
             instruments=instruments,
             diagnostics=first_stage_f_test(

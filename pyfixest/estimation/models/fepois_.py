@@ -37,14 +37,15 @@ class Fepois(Feglm):
         The linear predictor and the response mean of the final IRLS iteration.
     sandwich : SandwichComponents
         IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
-    coefnames : list[str]
-        Names of the coefficients in the design matrix X.
+    fitstat : FitStatistics
+        The deviance, log-likelihood, null log-likelihood, pseudo R-squared,
+        and Pearson chi-squared statistic of the fit.
     options : GlmEstimationOptions
         The estimation options the model was built with, including the IRLS
         `maxiter` and `tol`, the separation check, and the offset.
     _data: pd.DataFrame
-        The data frame used in the estimation. None if arguments `lean = True` or
-        `store_data = False`.
+        The data frame used in the estimation. Absent when the fit was built
+        with `lean=True` or `store_data=False`.
 
     Examples
     --------
