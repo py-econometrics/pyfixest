@@ -98,8 +98,10 @@ class Feiv(Feols):
 
     Raises
     ------
-    ValueError
-        If Z is not a two-dimensional array.
+    IVIdentificationError
+        If the exogenous variables and instruments fully explain an
+        endogenous variable, or the instruments add no explanatory power for
+        it.
 
     Examples
     --------
@@ -212,16 +214,30 @@ class Feiv(Feols):
         projected_design: NDArray[np.float64],
         sqrt_weights: NDArray[np.float64] | None,
     ) -> None:
-        """Check first-stage SSRs before structural column selection."""
+        """Check each endogenous variable's first-stage SSRs.
+
+        Runs before structural column selection, which could otherwise drop an
+        endogenous regressor.
+        """
         endogenous_frame = self.model_matrix.endogenous
         assert endogenous_frame is not None
 
-        endogenous_mask = self.model_matrix.independent.columns.isin(
-            endogenous_frame.columns
+        endogenous_names = endogenous_frame.columns
+        endogenous_positions = self.model_matrix.independent.columns.get_indexer(
+            endogenous_names
         )
+        # A missing name would select no columns, which broadcast to zero SSRs.
+        if np.any(endogenous_positions < 0):
+            raise RuntimeError(
+                "Endogenous variables are missing from the second-stage design: "
+                f"{list(endogenous_names[endogenous_positions < 0])}."
+            )
+        exogenous_mask = np.ones(projected_design.shape[1], dtype=bool)
+        exogenous_mask[endogenous_positions] = False
+
         endogenous = within_data.endogenous
-        fitted_endogenous = projected_design[:, endogenous_mask]
-        exogenous = within_data.design[:, ~endogenous_mask]
+        fitted_endogenous = projected_design[:, endogenous_positions]
+        exogenous = within_data.design[:, exogenous_mask]
 
         # Drop collinear controls before the controls-only regression.
         if exogenous.shape[1] > 0:
@@ -248,19 +264,23 @@ class Feiv(Feols):
             residuals = residuals * sqrt_weights
             residuals_without_instruments = residuals_without_instruments * sqrt_weights
 
-        ssr = np.sum(residuals**2)
-        ssr_without_instruments = np.sum(residuals_without_instruments**2)
+        ssr = np.sum(residuals**2, axis=0)
+        ssr_without_instruments = np.sum(residuals_without_instruments**2, axis=0)
 
-        # fixest::feols uses these absolute thresholds on first-stage SSRs.
-        if ssr < 1e-10:
-            raise IVIdentificationError(
-                "The endogenous variable is fully explained by the "
-                "exogenous variables and instruments."
-            )
-        if abs(ssr_without_instruments - ssr) < 1e-10:
-            raise IVIdentificationError(
-                "The instruments add no explanatory power for the endogenous variable."
-            )
+        # Absolute thresholds on the first-stage SSRs.
+        for name, ssr_i, ssr_without_instruments_i in zip(
+            endogenous_names, ssr, ssr_without_instruments, strict=True
+        ):
+            if ssr_i < 1e-10:
+                raise IVIdentificationError(
+                    f"The endogenous variable '{name}' is fully explained by the "
+                    "exogenous variables and instruments."
+                )
+            if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
+                raise IVIdentificationError(
+                    "The instruments add no explanatory power for the endogenous "
+                    f"variable '{name}'."
+                )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
@@ -295,7 +315,7 @@ class Feiv(Feols):
         )
 
         # Drop collinear variables in the second stage and update within data
-        structural_data = super()._drop_multicollinear_within_data(within_data)
+        structural_data = self._drop_multicollinear_within_data(within_data)
         assert isinstance(structural_data, WithinIvData)
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
