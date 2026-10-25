@@ -575,14 +575,14 @@ def test_iwls_cache_keeps_later_adaptive_escalation(demean_data, monkeypatch):
         preconditioner=preconditioner, fixef_atol=1e-10, fixef_btol=1e-10
     )
     calls = []
-    original = demeaners.demean_within
+    original = demeaners._demean_within
 
     def record_solve(**kwargs):
         result = original(**kwargs)
         calls.append((kwargs["preconditioner"], result[2]))
         return result
 
-    monkeypatch.setattr(demeaners, "demean_within", record_solve)
+    monkeypatch.setattr(demeaners, "_demean_within", record_solve)
     cache = DemeanCache()
     sample = frozenset()
     cache.demean_array(

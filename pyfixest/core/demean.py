@@ -186,6 +186,33 @@ def demean_within(
         i.e. when ``preconditioner="off"`` or the single-factor MAP fallback
         path was taken.
     """
+    values, success, used_preconditioner, _ = _demean_within(
+        x=x,
+        flist=flist,
+        weights=weights,
+        tol=tol,
+        maxiter=maxiter,
+        local_size=local_size,
+        preconditioner=preconditioner,
+    )
+    return values, success, used_preconditioner
+
+
+def _demean_within(
+    x: NDArray[np.float64],
+    flist: NDArray[np.uint32],
+    weights: NDArray[np.float64] | None = None,
+    tol: float = 1e-8,
+    maxiter: int = 1_000,
+    local_size: int | None = None,
+    preconditioner: WithinPreconditionerName | Preconditioner = "adaptive",
+) -> tuple[NDArray, bool, Preconditioner | None, NDArray[np.float64] | None]:
+    """Also retain projection coefficients in treatment-coded dummy order.
+
+    Coefficient rows follow sorted observed levels, keeping all levels of the
+    first factor and omitting the first observed level of every later factor.
+    Columns follow ``x``. The single-factor MAP fallback has no stored solution.
+    """
     _valid_names = get_args(WithinPreconditionerName)
     _valid_str = ", ".join(repr(n) for n in _valid_names)
     if isinstance(preconditioner, Preconditioner):
@@ -211,7 +238,7 @@ def demean_within(
             tol,
             maxiter,
         )
-        return demeaned, success, None
+        return demeaned, success, None, None
 
     config = (
         preconditioner
@@ -227,4 +254,19 @@ def demean_within(
         np.asfortranarray(x, dtype=np.float64),
         options=LsmrOptions(tol=tol, maxiter=maxiter, local_size=local_size),
     )
-    return result.demeaned, all(result.converged), solver.preconditioner
+    # within uses compact, sorted levels. Shift its unrestricted solution to
+    # pyfixest's treatment normalization without solving the projection again.
+    coefficients = result.x
+    blocks = []
+    offset = 0
+    for term in range(result.layout.n_terms()):
+        n_levels = result.layout.n_levels(term)
+        block = coefficients[offset : offset + n_levels].copy()
+        offset += n_levels
+        if term:
+            reference = block[0].copy()
+            blocks[0] += reference
+            block = block[1:] - reference
+        blocks.append(block)
+    alpha = np.concatenate(blocks, axis=0)
+    return result.demeaned, all(result.converged), solver.preconditioner, alpha

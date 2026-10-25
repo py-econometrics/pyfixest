@@ -307,11 +307,13 @@ def test_feiv_first_stage_reuses_within_preconditioner():
 )
 @pytest.mark.parametrize("lean", [False, True])
 @pytest.mark.parametrize("store_data", [False, True])
-def test_lean(estimator, kwargs, lean, store_data):
+@pytest.mark.parametrize("demeaner", [pf.MapDemeaner(), pf.LsmrDemeaner()])
+def test_lean(estimator, kwargs, lean, store_data, demeaner):
     data = pf.get_data(model="Fepois")
     fit = estimator(
-        "Y ~ X1 + X2 | f1",
+        "Y ~ X1 + X2 | f1 + f2",
         data=data,
+        demeaner=demeaner,
         lean=lean,
         store_data=store_data,
         vcov={"CRV1": "f1"},
@@ -322,6 +324,9 @@ def test_lean(estimator, kwargs, lean, store_data):
     assert fit.options.retention == RetentionPolicy(store_data=store_data, lean=lean)
     assert hasattr(fit, "_data") == (store_data and not lean)
     assert hasattr(fit, "model_matrix") == (store_data and not lean)
+    assert hasattr(fit, "_within_fixef") == (store_data and not lean)
+    if store_data and not lean and isinstance(demeaner, pf.LsmrDemeaner):
+        assert fit._within_fixef is not None
     assert hasattr(fit, "fitted_values") == (not lean)
     if estimator is pf.feols:
         lean_only_attributes = {

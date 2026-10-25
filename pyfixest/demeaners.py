@@ -13,7 +13,7 @@ import numpy as np
 from pyfixest.core.demean import (
     Preconditioner,
     WithinPreconditionerName,
-    demean_within,
+    _demean_within,
     within_preconditioner_name,
 )
 from pyfixest.utils.dev_utils import _find_stack_level
@@ -366,12 +366,13 @@ class LsmrDemeaner(BaseDemeaner):
             setup across subsequent solves on the same design.
         """
         if self.backend == "within":
-            return self._demean_within(
+            values, success, preconditioner, _ = self._demean_within(
                 x=x,
                 flist=flist,
                 weights=weights,
                 cached_preconditioner=cached_preconditioner,
             )
+            return values, success, preconditioner
         if self.backend == "torch":
             return self._demean_torch(x=x, flist=flist, weights=weights)
         raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
@@ -382,8 +383,8 @@ class LsmrDemeaner(BaseDemeaner):
         flist: np.ndarray,
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
-    ) -> tuple[np.ndarray, bool, Preconditioner | None]:
-        """Demean via `within`, reusing a matching cached preconditioner."""
+    ) -> tuple[np.ndarray, bool, Preconditioner | None, np.ndarray | None]:
+        """Demean via `within`, retaining its fixed-effect coefficients."""
         preconditioner: WithinPreconditionerName | Preconditioner
         if isinstance(self.preconditioner, Preconditioner):
             preconditioner = self.preconditioner
@@ -402,7 +403,7 @@ class LsmrDemeaner(BaseDemeaner):
             if same_kind or already_escalated:
                 preconditioner = cached_preconditioner
 
-        return demean_within(
+        return _demean_within(
             x=x,
             flist=flist.astype(np.uint32, copy=False),
             weights=weights,
