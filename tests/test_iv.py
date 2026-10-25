@@ -1,5 +1,6 @@
 import copy
 from contextlib import nullcontext
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,8 @@ from rpy2.robjects.packages import importr
 
 from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation import feols
+from pyfixest.estimation.internals.model_state import WithinIvData
+from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.utils.check_r_install import check_r_install
 from pyfixest.utils.utils import get_data, ssc
 
@@ -471,6 +474,60 @@ def iv_identification_data():
 )
 def iv_identification_options(request):
     return request.param
+
+
+@pytest.mark.parametrize("case", ["perfect-fit", "irrelevant-instruments"])
+def test_iv_identification_checks_each_endogenous_variable(case):
+    """The validator names the failing column even when the first one is valid.
+
+    Multiple endogenous variables are rejected by the public formula parser,
+    so exercise the per-column validation directly.
+    """
+    rng = np.random.default_rng(1992)
+    basis, _ = np.linalg.qr(np.column_stack((np.ones(64), rng.normal(size=(64, 5)))))
+    intercept, control, z1, z2, v1, v2 = basis.T
+    instruments = np.column_stack((intercept, control, z1, z2))
+    endogenous = pd.DataFrame({"D1": z1 + v1, "D2": z2 + v2})
+
+    def validate(endogenous):
+        # Structural order deliberately differs from endogenous order.
+        independent = pd.DataFrame(
+            {
+                "Intercept": intercept,
+                "D2": endogenous.D2,
+                "C": control,
+                "D1": endogenous.D1,
+            }
+        )
+        design = independent.to_numpy()
+        state = SimpleNamespace(
+            model_matrix=SimpleNamespace(
+                endogenous=endogenous, independent=independent
+            ),
+            options=SimpleNamespace(collin_tol=1e-10, solver="np.linalg.solve"),
+        )
+        Feiv._validate_iv_identification(
+            state,
+            within_data=WithinIvData(
+                response=np.zeros((64, 1)),
+                design=design,
+                instruments=instruments,
+                endogenous=endogenous.to_numpy(),
+            ),
+            projected_design=instruments
+            @ np.linalg.lstsq(instruments, design, rcond=None)[0],
+            sqrt_weights=None,
+        )
+
+    validate(endogenous)
+    endogenous["D2"] = z2 if case == "perfect-fit" else v2
+    message = (
+        "variable 'D2' is fully explained"
+        if case == "perfect-fit"
+        else "no explanatory power for the endogenous variable 'D2'"
+    )
+    with pytest.raises(IVIdentificationError, match=message):
+        validate(endogenous)
 
 
 @pytest.mark.against_r_core
