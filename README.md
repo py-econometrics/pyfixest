@@ -30,6 +30,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
+  - **Varying slopes** for fixed effects with `f[x]` and `f[[x]]`
   - Multiple estimation syntax
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
@@ -117,6 +118,12 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`:
+
+```python
+pf.feols("Y ~ X1 | f1[X2] + f2", data=data).summary()
+```
 
 `PyFixest` also supports multiple estimation syntax:
 

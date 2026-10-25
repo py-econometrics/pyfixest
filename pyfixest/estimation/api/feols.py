@@ -67,7 +67,9 @@ def feols(
         from the fixed effects; instruments go into a "[endogenous ~ instruments]"
         block on the right-hand side. Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables via sw(),
-        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
+        interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2),
+        and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1,
+        and "FE1[[Z]]" adds only the slopes.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
@@ -398,6 +400,20 @@ def feols(
     ```{python}
     pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
+
+    Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+    `f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+    as in `f1[X2, Z1]`:
+
+    ```{python}
+    fit_vs = pf.feols("Y ~ X1 | f1[X2] + f2", data)
+    fit_vs_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data)
+    pf.etable([fit_vs, fit_vs_only])
+    ```
+
+    Varying slopes require the default `within` demeaner. `predict()`,
+    `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC
+    inference are not yet supported for these models.
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     For a compact overview of formula features including `i()`, see the

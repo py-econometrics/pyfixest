@@ -86,6 +86,24 @@ are unsupported; create the transformed column in `data` first.
 Outcome, covariate, and instrument names can still be quoted with backticks,
 for example ``"Y ~ `my covariate` | firm"``.
 
+### Varying slopes
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+`f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+as in `f1[X2, Z1]`. Slopes also work with interacted groups (`f1:f2[X2]`)
+and arithmetic expressions (`f1[X2**2]`).
+
+```{python}
+fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
+fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
+pf.etable([fit_slopes, fit_slopes_only])
+```
+
+Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`,
+and require the default `within` demeaner. `predict()`, `fixef()`,
+`wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not
+yet supported for these models.
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
