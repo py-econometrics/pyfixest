@@ -415,7 +415,10 @@ def test_iv_constant_instrument_without_intercept(iv_identification_data):
     fit = pf.feols("Y ~ 0 + [D ~ K]", data=data)
 
     assert list(fit.coef().index) == ["D"]
-    assert np.isfinite(fit.coef()).all()
+    # The just-identified IV estimator sum(K * Y) / sum(K * D) with K = 1.
+    np.testing.assert_allclose(
+        fit.coef()["D"], data.Y.sum() / data.D.sum(), rtol=1e-10, atol=0
+    )
     assert np.isfinite(fit.se()).all()
 
 
