@@ -413,6 +413,23 @@ class ModelMatrix:
         )
 
     @property
+    def fixed_effect_specifications(self) -> tuple[FixedEffectSpecification, ...]:
+        """
+        Get the specification of each materialized fixed effect.
+
+        Returns
+        -------
+        tuple[FixedEffectSpecification, ...]
+            Specifications in the column order of `fixed_effects`, which say
+            whether each effect has an intercept and which slopes it has.
+            Empty without fixed effects.
+        """
+        return tuple(
+            self._fixed_effect_specification_by_column[column]
+            for column in self._fixed_effects_column_names or []
+        )
+
+    @property
     def effects(self) -> list[Effect] | None:
         """
         Build complete fixed effects for the ``within`` solver.

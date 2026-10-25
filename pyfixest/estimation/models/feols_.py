@@ -5,6 +5,7 @@ import warnings
 from dataclasses import replace
 from functools import partial
 from importlib import import_module
+from itertools import compress
 from typing import ClassVar, Literal, cast, overload
 
 import formulaic
@@ -13,8 +14,10 @@ import pandas as pd
 from scipy.sparse import csc_matrix, diags
 from scipy.sparse.linalg import lsqr
 from scipy.stats import t
+from within import Effect
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -119,6 +122,20 @@ def _fixed_effect_names(model_matrix: ModelMatrix) -> tuple[str, ...]:
     if fixed_effects is None:
         return ()
     return tuple(fixed_effects.columns)
+
+
+def _fixed_effect_counts(model_matrix: ModelMatrix) -> FixedEffectCounts:
+    """Count levels, intercepts, and slopes of the materialized fixed effects."""
+    fixed_effects = model_matrix.fixed_effects
+    if fixed_effects is None:
+        return FixedEffectCounts()
+    n_levels_by_fe = tuple(int(size) for size in fixed_effects.nunique(axis=0))
+    specifications = model_matrix.fixed_effect_specifications
+    return FixedEffectCounts(
+        n_levels_by_fe=n_levels_by_fe,
+        has_intercept_by_fe=tuple(spec.intercept for spec in specifications),
+        n_slopes_by_fe=tuple(len(spec.slopes) for spec in specifications),
+    )
 
 
 class Feols(ResultAccessorMixin):
@@ -281,9 +298,7 @@ class Feols(ResultAccessorMixin):
             parsed_formula=FixestFormula, sample_split=sample_split
         )
         if FixestFormula.has_varying_slopes:
-            raise NotImplementedError(
-                "Varying slopes such as `f1[z]` are not yet supported in estimation."
-            )
+            self._check_varying_slopes_support()
         self._model_name_plot = self.model.model_name
 
         if sample_split is None:
@@ -301,6 +316,27 @@ class Feols(ResultAccessorMixin):
         self.capabilities = self._declared_capabilities
         if self.options.has_weights:
             self.capabilities = replace(self.capabilities, wildboottest=False)
+        if FixestFormula.has_varying_slopes:
+            # These methods rebuild or reuse plain fixed-effect codes.
+            self.capabilities = replace(
+                self.capabilities,
+                crv3_inference=False,
+                hac_inference=False,
+                wildboottest=False,
+                decomposition=False,
+                prediction=False,
+                fixed_effect_recovery=False,
+                randomization_inference=False,
+            )
+
+    def _check_varying_slopes_support(self) -> None:
+        """Reject estimators and demeaners that cannot absorb varying slopes."""
+        demeaner = self.options.demeaner
+        if not isinstance(demeaner, LsmrDemeaner) or demeaner.backend != "within":
+            raise ValueError(
+                "Varying slopes such as `f1[z]` require "
+                "`LsmrDemeaner(backend='within')`, the default demeaner."
+            )
 
     def _describe_model(
         self,
@@ -369,16 +405,7 @@ class Feols(ResultAccessorMixin):
 
         self._coefnames = independent.columns.tolist()
 
-        fixed_effects = model_matrix.fixed_effects
-        self.fixef_counts = (
-            FixedEffectCounts(
-                n_levels_by_fe=tuple(
-                    int(size) for size in fixed_effects.nunique(axis=0)
-                )
-            )
-            if fixed_effects is not None
-            else FixedEffectCounts()
-        )
+        self.fixef_counts = _fixed_effect_counts(model_matrix=model_matrix)
 
         self.observation_weights = self._set_observation_weights()
         weights = self.observation_weights
@@ -412,6 +439,20 @@ class Feols(ResultAccessorMixin):
             weights_type=weights_type,
         )
 
+    def _fixed_effects_for_demeaning(self) -> np.ndarray | list[Effect]:
+        """Return the fixed effects in the form the demeaner consumes.
+
+        Slope designs need complete effects; plain codes keep the single-factor
+        MAP fallback available.
+        """
+        if self.model.parsed_formula.has_varying_slopes:
+            effects = self.model_matrix.effects
+            assert effects is not None
+            return effects
+        fixed_effects = self.model_matrix.fixed_effects
+        assert fixed_effects is not None
+        return fixed_effects.to_numpy()
+
     def _demean(self) -> WithinLinearData:
         """Convert model frames to arrays and residualize them on the fixed effects.
 
@@ -430,7 +471,7 @@ class Feols(ResultAccessorMixin):
                 design,
                 y_keys=self.model_matrix.column_keys("dependent"),
                 x_keys=self.model_matrix.column_keys("independent"),
-                fe=fixed_effects.to_numpy(),
+                fe=self._fixed_effects_for_demeaning(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
                 demeaner=self.options.demeaner,
@@ -667,12 +708,12 @@ class Feols(ResultAccessorMixin):
                 )
             if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
                 raise VcovTypeNotSupportedError(
-                    f"CRV3 inference is not for models of type '{self.model.method}'."
+                    f"CRV3 inference is not supported for {self._describe_fits()}."
                 )
         if spec.vcov_type == "HAC":
             if not self.capabilities.hac_inference:
                 raise NotImplementedError(
-                    "HAC inference is not supported for this model type."
+                    f"HAC inference is not supported for {self._describe_fits()}."
                 )
             if self.options.has_weights and self.options.weights_type == "fweights":
                 raise NotImplementedError(
@@ -699,13 +740,21 @@ class Feols(ResultAccessorMixin):
         df_t: int | float
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
+            # Only level intercepts can be nested in clusters; fixest counts
+            # every varying-slope coefficient.
+            has_intercept = self.fixef_counts.has_intercept_by_fe
+            fixed_effects = self.model_matrix.fixed_effects
             prep = prepare_cluster_state(
                 data=self._data,
                 clustervar=list(spec.clustervar),
                 ssc=self.options.ssc,
-                fixef=self.model.fixed_effects,
-                fe=self.model_matrix.fixed_effects,
-                n_levels_by_fe=self.fixef_counts.n_levels_by_fe,
+                fixef=tuple(compress(self.model.fixed_effects, has_intercept)),
+                fe=None
+                if fixed_effects is None
+                else fixed_effects.loc[:, list(has_intercept)],
+                n_levels_by_fe=tuple(
+                    compress(self.fixef_counts.n_levels_by_fe, has_intercept)
+                ),
             )
             G = tuple(int(g) for g in prep.G)
             correction = get_ssc_cluster(
@@ -776,6 +825,7 @@ class Feols(ResultAccessorMixin):
             n_fe=self.fixef_counts.n_fixef,
             k_fe_nested=k_fe_nested,
             n_fe_fully_nested=n_fe_fully_nested,
+            k_slopes=self.fixef_counts.n_slope_coefficients,
             G=G,
         )
 
@@ -969,7 +1019,12 @@ class Feols(ResultAccessorMixin):
         if covariance.spec.is_clustered:
             df2: int | float = min(covariance.G) - 1
         else:
-            df2 = self.sample_info.n_obs - self._k - self.fixef_counts.n_levels
+            df2 = (
+                self.sample_info.n_obs
+                - self._k
+                - self.fixef_counts.n_levels
+                - self.fixef_counts.n_slope_coefficients
+            )
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
@@ -1095,6 +1150,11 @@ class Feols(ResultAccessorMixin):
             if self.options.has_weights:
                 raise NotImplementedError(
                     "Wild cluster bootstrap is not supported for WLS estimation."
+                )
+            if self.model.parsed_formula.has_varying_slopes:
+                raise NotImplementedError(
+                    "Wild cluster bootstrap is not supported for models with "
+                    "varying slopes."
                 )
             raise NotImplementedError(
                 "Wild cluster bootstrap is only supported for unweighted OLS models; "
@@ -1481,13 +1541,20 @@ class Feols(ResultAccessorMixin):
         """Reject a post-estimation method the model class does not support."""
         if getattr(self.capabilities, capability):
             return
-        estimator = f"'{self.model.method}' fits"
-        if self.model.is_iv:
-            estimator += " with instruments"
         raise exception_type(
-            f"{method}() is not supported for {estimator}: "
+            f"{method}() is not supported for {self._describe_fits()}: "
             f"fit.capabilities.{capability} is False."
         )
+
+    def _describe_fits(self) -> str:
+        """Name the kind of fit in messages about unsupported features."""
+        features = []
+        if self.model.is_iv:
+            features.append("instruments")
+        if self.model.parsed_formula.has_varying_slopes:
+            features.append("varying slopes")
+        estimator = f"'{self.model.method}' fits"
+        return f"{estimator} with {' and '.join(features)}" if features else estimator
 
     def decompose(
         self,
