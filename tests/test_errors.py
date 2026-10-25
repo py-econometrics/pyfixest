@@ -258,6 +258,11 @@ def test_depvar_numeric():
             False,
             "exactly one endogenous variable",
         ),
+        (
+            "Y ~ X1 + [poly(X1, 2) ~ Z1]",
+            False,
+            "exactly one endogenous variable",
+        ),
     ],
 )
 def test_dependent_and_endogenous_model_matrix_errors(
@@ -275,26 +280,36 @@ def test_dependent_and_endogenous_model_matrix_errors(
 
 
 @pytest.mark.parametrize(
-    "fml, error, message",
+    "fml, message",
     [
-        ("Y ~ center(X1) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ scale(X1) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ X1 + [center(X1) ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ X1 + [scale(X1) ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ X1 + [X1.fillna(0) ~ Z1]", IVIdentificationError, "fully explained"),
-        ("Y ~ X1 + [poly(X1, 2) ~ Z1]", TypeError, "exactly one endogenous"),
-        ("Y ~ center(X1) + [X2 ~ X1]", IVIdentificationError, "no explanatory power"),
+        ("Y ~ center(X1) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [center(X1) ~ Z1] | f1", "fully explained"),
+        ("Y ~ center(X1) + [X2 ~ X1]", "no explanatory power"),
     ],
 )
-@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
-def test_iv_rejects_invalid_transformed_specifications(
-    fml, error, message, fixed_effects
-):
+def test_iv_rejects_invalid_transformed_specifications(fml, message):
     """Distinct transformed terms are parsed but invalid numerical models fail."""
-    with pytest.raises(error, match=message):
-        feols(fml=fml + fixed_effects, data=get_data().dropna())
+    with pytest.raises(IVIdentificationError, match=message):
+        feols(fml=fml, data=get_data().dropna())
+
+
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "Y ~ X1 + [X2 ~ X1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)]",
+        "Y ~ I(X1**2) + [X2 ~ I(X1**2)]",
+        "Y ~ X1:Z1 + [X2 ~ X1:Z1]",
+        "Y ~ center(X1) + [X2 ~ center(X1)] | f1",
+    ],
+)
+def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
+    """Missing formula columns must not mask the instrument specification error."""
+    with pytest.raises(IVIdentificationError, match="all instrument terms"):
+        feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
 @pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])

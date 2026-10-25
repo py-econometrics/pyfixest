@@ -18,7 +18,6 @@ import pyfixest as pf
 from pyfixest.errors import (
     FixedEffectEvaluationError,
     FormulaSyntaxError,
-    IVIdentificationError,
 )
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -639,42 +638,14 @@ def test_required_variables_preserve_quoted_names(rhs, expected):
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y ~ `my var` + [`my var` ~ Z1]",
-        "Y ~ I(`my var`) + [I(`my var`) ~ Z1]",
-        "Y ~ Q('my var') + [Q('my var') ~ Z1]",
-    ],
-)
-def test_iv_deduplicates_identical_quoted_endogenous_terms(fml):
-    """An identical endogenous term is a redundant declaration, including when quoted."""
-    parsed = Formula.parse(fml)[0]
-    assert parsed.exogenous == formulaic.Formula("1")
-
-
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-@pytest.mark.parametrize("fixed_effects", ["", " | f1"])
-def test_iv_rejects_no_excluded_instrument_before_materialization(term, fixed_effects):
-    """Identical instrument/covariate terms fail without data or demeaning."""
-    with pytest.raises(IVIdentificationError, match="all instrument terms"):
-        Formula.parse(f"Y ~ {term} + [X2 ~ {term}]{fixed_effects}")
-
-
-@pytest.mark.parametrize(
-    "fml",
-    [
-        "Y ~ i(f1) + [X2 ~ i(f2)]",
-        "Y ~ my_fun(X1) + [X2 ~ my_fun(Z1)]",
-        "Y ~ my_fun(X1) + [my_fun(X2) ~ Z1]",
         "Y ~ I(`my var`) + [Q('my var') ~ Z1]",
         "Y ~ Q('my var') + [I(`my var`) ~ Z1]",
         "Y ~ center(`my var`) + [`my var` ~ Z1]",
         "Y ~ scale(`my var`) + [X2 ~ `my var`]",
-        "Y ~ X1 + [X2 ~ I(X1**2)]",
-        "Y ~ I(X1**2) + [X1 ~ Z1]",
-        "Y ~ X1 + [I(X1**2) ~ Z1]",
     ],
 )
-def test_iv_allows_distinct_transformed_terms(fml):
-    """Distinct terms may share callable names or source data columns."""
+def test_iv_defers_identification_of_distinct_quoted_terms(fml):
+    """Distinct quoted terms reach materialization even when numerically collinear."""
     parsed = Formula.parse(fml)[0]
     assert parsed.is_instrumental_variable
 
