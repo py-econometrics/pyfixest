@@ -1,4 +1,5 @@
 import copy
+import re
 
 import numpy as np
 import pandas as pd
@@ -295,31 +296,138 @@ def test_first_stage_vs_fixest(
     _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
 
 
-@pytest.mark.against_r_core
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="Pre-existing: default i() instrument coding differs from fixest without an intercept (#1917).",
-)
-@pytest.mark.parametrize(
-    "fml",
-    [
-        "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
-        "Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]",
-    ],
-    ids=["pipe", "bracket"],
-)
-def test_no_intercept_iv_default_categorical_instrument_vs_fixest(fml):
-    """Without a reference, fixest omits a level that pyfixest retains."""
+def _iv_categorical_data():
+    """Return the example data with a complete cross of factors `f` and `g`."""
     data = get_data()
-    data["category"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
-    fit = feols(fml, data=data, vcov="iid")
-    fit_r = fixest.feols(
-        ro.Formula("Y ~ 0 + X2 | X1 ~ Z1 + i(category)"),
-        data=pandas2ri.py2rpy(data),
+    data["f"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
+    data["g"] = pd.Categorical(np.take(["u", "v"], data.index // 3 % 2))
+    return data
+
+
+def _feols_r_iid(fml_r, data_r):
+    return fixest.feols(
+        ro.Formula(fml_r),
+        data=data_r,
         vcov="iid",
+        ssc=fixest.ssc(True, "nonnested", False, True, "min", "min"),
+        fixef_rm="none",
     )
-    _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
+
+
+# Categorical IV coding that matches fixest. Each case maps a canonical formula
+# to the R formula of every model it expands to, and states whether both
+# first stages use the same named columns. The main formula decides the
+# intercept of both stages; `0` or `1` inside the IV block does not.
+IV_CATEGORICAL_PARITY_CASES = [
+    pytest.param(
+        "Y ~ 1 + [X1 ~ 0 + i(f)]",
+        ["Y ~ 1 | X1 ~ 0 + i(f)"],
+        True,
+        id="intercept-inner-zero-i",
+    ),
+    pytest.param(
+        "Y ~ 1 + [X1 ~ 0 + C(f)]",
+        ["Y ~ 1 | X1 ~ factor(f)"],
+        True,
+        id="intercept-inner-zero-C",
+    ),
+    pytest.param(
+        "Y ~ C(g) + [X1 ~ 0 + i(f)]",
+        ["Y ~ factor(g) | X1 ~ i(f)"],
+        True,
+        id="intercept-categorical-control",
+    ),
+    # The levels of `g` span the constant, so one level of `f` is redundant.
+    # Which one is dropped depends on first-stage column priority.
+    pytest.param(
+        "Y ~ 0 + C(g) + [X1 ~ i(f)]",
+        ["Y ~ 0 + factor(g) | X1 ~ i(f)"],
+        False,
+        id="no-intercept-categorical-control",
+    ),
+    pytest.param(
+        "Y ~ 0 + X2 + [X1 ~ C(f)] | f2",
+        ["Y ~ 0 + X2 | f2 | X1 ~ factor(f)"],
+        True,
+        id="fixed-effects",
+    ),
+    pytest.param(
+        "Y ~ 1 + [X1 ~ 0 + i(f)] | csw0(f2)",
+        ["Y ~ 1 | X1 ~ 0 + i(f)", "Y ~ 1 | f2 | X1 ~ 0 + i(f)"],
+        True,
+        id="multiple-estimation",
+    ),
+]
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("fml, fmls_r, same_basis", IV_CATEGORICAL_PARITY_CASES)
+def test_iv_categorical_coding_vs_fixest(fml, fmls_r, same_basis):
+    data = _iv_categorical_data()
+    fit = feols(fml, data=data, vcov="iid", fixef_rm="none")
+    fits = fit.to_list() if len(fmls_r) > 1 else [fit]
+    data_r = pandas2ri.py2rpy(data)
+    for model, fml_r in zip(fits, fmls_r, strict=True):
+        _assert_iv_stages_match_fixest(
+            fit=model, fit_r=_feols_r_iid(fml_r, data_r), same_basis=same_basis
+        )
+
+
+# Intentional differences from fixest's default categorical IV coding; see
+# "Categorical IV instruments without an intercept" in
+# docs/developer/fixest-compatibility.md. Each case lists the default R formula,
+# whose coding differs, and an explicit R formula with the full instrument space
+# that pyfixest uses.
+IV_CATEGORICAL_DIFFERENCE_CASES = [
+    pytest.param(
+        "Y ~ 0 + X2 + [X1 ~ i(f)]",
+        "Y ~ 0 + X2 | X1 ~ i(f)",
+        "Y ~ 0 + X2 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        id="no-intercept-i-instrument",
+    ),
+    pytest.param(
+        "Y ~ 0 + X2 | X1 ~ i(f)",
+        "Y ~ 0 + X2 | X1 ~ i(f)",
+        "Y ~ 0 + X2 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        id="no-intercept-i-instrument-legacy",
+    ),
+    pytest.param(
+        "Y ~ 0 + [X1 ~ C(f)]",
+        "Y ~ 0 | X1 ~ factor(f)",
+        "Y ~ 0 | X1 ~ 0 + factor(f)",
+        id="no-intercept-C-instrument",
+    ),
+    pytest.param(
+        "Y ~ 0 + [X1 ~ 1 + i(f)]",
+        "Y ~ 0 | X1 ~ 1 + i(f)",
+        "Y ~ 0 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
+        id="no-intercept-inner-one",
+    ),
+]
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r_default, fml_r_reference", IV_CATEGORICAL_DIFFERENCE_CASES
+)
+def test_iv_categorical_coding_differences_from_fixest(
+    fml, fml_r_default, fml_r_reference
+):
+    """Pyfixest keeps every instrument level that fixest's default omits."""
+    data = _iv_categorical_data()
+    fit = feols(fml, data=data, vcov="iid", fixef_rm="none")
+    data_r = pandas2ri.py2rpy(data)
+    _assert_iv_stages_match_fixest(fit=fit, fit_r=_feols_r_iid(fml_r_reference, data_r))
+
+    default_r = _feols_r_iid(fml_r_default, data_r)
+    first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(default_r)
+    assert len(stats.coef(first_stage_r)) == len(fit.first_stage.model.coef()) - 1, (
+        "fixest's default no longer omits exactly one instrument level"
+    )
+    endogenous_r = ro.r("function(fit) coef(fit)[['fit_X1']]")(default_r)[0]
+    assert abs(fit.coef()["X1"] - endogenous_r) > 1e-3, (
+        "fixest's default reduced instruments no longer change the estimate"
+    )
 
 
 @pytest.mark.against_r_core
@@ -342,8 +450,20 @@ def test_weighted_no_intercept_iv_vs_fixest(fml, vcov):
     _assert_iv_stages_match_fixest(fit=fit, fit_r=fit_r)
 
 
-def _assert_iv_stages_match_fixest(fit, fit_r):
-    """Compare both IV stages and instrument inference against the R reference."""
+def _fixest_name(name):
+    """Return the `fixest` name of a pyfixest coefficient."""
+    if name == "Intercept":
+        return "(Intercept)"
+    return re.sub(r"^C\((\w+)\)\[(?:T\.)?(.+)\]$", r"factor(\1)\2", name)
+
+
+def _assert_iv_stages_match_fixest(fit, fit_r, same_basis=True):
+    """Compare both IV stages and instrument inference against the R reference.
+
+    Without `same_basis`, compare only quantities that do not depend on the
+    first-stage basis: the intercept, the second stage, and first-stage
+    residuals.
+    """
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model
 
@@ -351,14 +471,14 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
     has_intercept_r = "(Intercept)" in names_r
     assert ("Intercept" in fit.model_matrix.instruments.columns) == has_intercept_r
     assert ("Intercept" in first_stage.coef().index) == has_intercept_r
-    second_stage_names_r = list(ro.r("function(fit) names(coef(fit))")(fit_r))
-    second_stage_names = [
-        name.replace("(Intercept)", "Intercept").removeprefix("fit_")
-        for name in second_stage_names_r
+    second_stage_names_r = [
+        name.removeprefix("fit_")
+        for name in ro.r("function(fit) names(coef(fit))")(fit_r)
     ]
-    assert sorted(fit.coef().index) == sorted(second_stage_names)
+    coef = fit.coef().rename(_fixest_name)
+    assert sorted(coef.index) == sorted(second_stage_names_r)
     np.testing.assert_allclose(
-        fit.coef()[second_stage_names],
+        coef[second_stage_names_r],
         np.asarray(stats.coef(fit_r)),
         rtol=0,
         atol=1e-8,
@@ -368,18 +488,27 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
     n_obs_r = int(stats.nobs(fit_r)[0])
     assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"
     assert first_stage.sample_info.n_obs == n_obs_r, "first-stage n_obs != fixest"
-
-    names_r = [name.replace("(Intercept)", "Intercept") for name in names_r]
-    assert sorted(first_stage.coef().index) == sorted(names_r), "coefnames differ"
     np.testing.assert_allclose(
-        first_stage.coef()[names_r],
+        first_stage.resid()[::50],
+        np.asarray(stats.resid(first_stage_r))[::50],
+        rtol=0,
+        atol=1e-8,
+        err_msg="first-stage residuals != fixest",
+    )
+    if not same_basis:
+        return
+
+    first_stage_coef = first_stage.coef().rename(_fixest_name)
+    assert sorted(first_stage_coef.index) == sorted(names_r), "coefnames differ"
+    np.testing.assert_allclose(
+        first_stage_coef[names_r],
         np.asarray(stats.coef(first_stage_r)),
         rtol=0,
         atol=1e-8,
         err_msg="first-stage coefficients != fixest",
     )
     np.testing.assert_allclose(
-        first_stage.se()[names_r],
+        first_stage.se().rename(_fixest_name)[names_r],
         np.asarray(fixest.se(first_stage_r)),
         rtol=0,
         atol=1e-7,

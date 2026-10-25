@@ -1198,7 +1198,7 @@ class TestEdgeCases:
         ],
         ids=["pipe", "bracket"],
     )
-    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize("instruments", ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1"])
     @pytest.mark.parametrize(
         "exogenous, expected",
         [
