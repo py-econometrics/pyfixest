@@ -388,6 +388,26 @@ IV_CATEGORICAL_PARITY_CASES = [
         True,
         id="cell-slopes-control",
     ),
+    # Explicitly referenced i() terms do not span the intercept, so a later
+    # categorical term keeps every level.
+    pytest.param(
+        "Y ~ 0 + i(f, ref='a') + C(g)",
+        ["Y ~ 0 + i(f, ref = 'a') + factor(g)"],
+        True,
+        id="explicit-ref-then-categorical",
+    ),
+    pytest.param(
+        "Y ~ 0 + i(f, g, ref2='u') * C(g)",
+        ["Y ~ 0 + i(f, i.g, ref2 = 'u') * factor(g)"],
+        True,
+        id="explicit-ref2-times-categorical",
+    ),
+    pytest.param(
+        "Y ~ 0 + i(f, ref='a') + C(g) + [X1 ~ Z1]",
+        ["Y ~ 0 + i(f, ref = 'a') + factor(g) | X1 ~ Z1"],
+        True,
+        id="explicit-ref-then-categorical-control",
+    ),
 ]
 
 
@@ -399,9 +419,13 @@ def test_iv_categorical_coding_vs_fixest(fml, fmls_r, same_basis):
     fits = fit.to_list() if len(fmls_r) > 1 else [fit]
     data_r = pandas2ri.py2rpy(data)
     for model, fml_r in zip(fits, fmls_r, strict=True):
-        _assert_iv_stages_match_fixest(
-            fit=model, fit_r=_feols_r_iid(fml_r, data_r), same_basis=same_basis
-        )
+        fit_r = _feols_r_iid(fml_r, data_r)
+        if isinstance(model, Feiv):
+            _assert_iv_stages_match_fixest(
+                fit=model, fit_r=fit_r, same_basis=same_basis
+            )
+        else:
+            _assert_fit_matches_fixest(fit=model, fit_r=fit_r)
 
 
 # Intentional differences from fixest's default categorical coding; see
@@ -445,6 +469,18 @@ IV_CATEGORICAL_DIFFERENCE_CASES = [
         "Y ~ 0 + i(f, X2) + i(f, i.g)",
         "Y ~ 0 + i(f, X2) + i(f, i.g, keep = c('a', 'b', 'c'))",
         id="later-i-after-slopes",
+    ),
+    pytest.param(
+        "Y ~ 0 + i(f, ref='a') + i(g)",
+        "Y ~ 0 + i(f, ref = 'a') + i(g)",
+        "Y ~ 0 + i(f, ref = 'a') + i(g, keep = c('u', 'v'))",
+        id="later-i-after-explicit-ref",
+    ),
+    pytest.param(
+        "Y ~ 0 + X2 + [X1 ~ i(f, ref='a') + i(g)]",
+        "Y ~ 0 + X2 | X1 ~ i(f, ref = 'a') + i(g)",
+        "Y ~ 0 + X2 | X1 ~ i(f, ref = 'a') + i(g, keep = c('u', 'v'))",
+        id="later-i-after-explicit-ref-instrument",
     ),
 ]
 
