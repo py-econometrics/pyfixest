@@ -7,16 +7,24 @@ all must see every non-default argument of the original fit: the weights of a
 `feols` fit, the offset of a `fepois` fit, and so on.
 """
 
+from __future__ import annotations
+
+import copy
+import pickle
 from dataclasses import fields, replace
 from functools import partial
 from inspect import signature
 
 import numpy as np
 import pandas as pd
+import pyhdfe
 import pytest
+from joblib.externals import cloudpickle
+from within import PreconditionerConfig, Solver
+from within.config import LocalSolverConfig, ReductionStrategy, Staleness
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
-from pyfixest.estimation import feols, fepois
+from pyfixest.estimation import feglm, feols, fepois
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
@@ -236,7 +244,7 @@ def test_refits_leave_data_untouched(data, case):
     pd.testing.assert_frame_equal(data, data_before)
 
 
-@pytest.mark.parametrize("variant", ["additive", "diagonal"])
+@pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])
 def test_refit_rebuilds_prebuilt_preconditioner(variant):
     "A preconditioner built on the full sample is not reused on a refit sample."
     data = get_data().dropna()
@@ -247,11 +255,14 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
         preconditioner=fepois(fml, data, demeaner=by_name).preconditioner
     )
     fit = fepois(fml, data, demeaner=prebuilt)
-    subsample = data[data["f1"] != data["f1"].iloc[0]]
+    subsample = data[data["f1"] != data["f1"].iloc[0]].copy()
+    # Rebuild after formula-level row filtering, not from the raw refit data.
+    subsample.loc[subsample.index[0], "X1"] = np.nan
 
     refitted = refit(fit, data=subsample, vcov=IID)
 
-    assert refitted.options.demeaner == by_name
+    assert refitted.options.demeaner.preconditioner is prebuilt.preconditioner
+    assert refitted.sample_info.n_obs < len(subsample)
     expected = fepois(fml, data=subsample, demeaner=by_name)
     # same preconditioner variant; the LSMR solves stop at their 1e-8 tolerance
     np.testing.assert_allclose(
@@ -260,6 +271,137 @@ def test_refit_rebuilds_prebuilt_preconditioner(variant):
         rtol=1e-6,
         err_msg="coef",
     )
+
+
+@pytest.mark.parametrize(
+    ("estimator", "iv"),
+    [
+        pytest.param(feols, False, id="ols"),
+        pytest.param(feols, True, id="iv"),
+        pytest.param(fepois, False, id="poisson"),
+        pytest.param(feglm, False, id="logit"),
+    ],
+)
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("adaptive", [False, True])
+def test_refit_preserves_custom_preconditioner_configuration(
+    estimator, iv, weighted, adaptive
+):
+    """Refits retain custom settings, cache reuse and serializable model state."""
+    rng = np.random.default_rng(427)
+    n_obs = 1000
+    fe = np.asfortranarray(rng.integers(0, 10, size=(n_obs, 2)), dtype=np.uint32)
+    x = rng.normal(size=n_obs)
+    data = pd.DataFrame(
+        {"Y": 2 * x + rng.normal(size=n_obs), "X": x, "f1": fe[:, 0], "f2": fe[:, 1]}
+    )
+    data["w"] = rng.uniform(0.5, 2.0, size=n_obs)
+    fml = "Y ~ X | f1 + f2"
+    if iv:
+        data["Z"] = x + rng.normal(size=n_obs)
+        fml = "Y ~ 1 | f1 + f2 | X ~ Z"
+    kwargs = {"weights": "w"} if weighted else {}
+    if estimator is fepois:
+        data["Y"] = rng.poisson(np.exp(0.2 * x))
+        kwargs["separation_check"] = ["ir"]
+    elif estimator is feglm:
+        data["Y"] = rng.binomial(1, 1 / (1 + np.exp(-0.3 * x)))
+        kwargs["family"] = "logit"
+    config = PreconditionerConfig.Additive(
+        local_solver=LocalSolverConfig(dense_threshold=64),
+        reduction=ReductionStrategy.AtomicScatter,
+    )
+    if adaptive:
+        config = PreconditionerConfig.Adaptive(
+            local_solver=config.local_solver,
+            reduction=config.reduction,
+            stall=Staleness(window=1, threshold=0.0),
+        )
+    demeaner = LsmrDemeaner(
+        preconditioner=Solver(
+            fe,
+            weights=data["w"].to_numpy() if weighted else None,
+            preconditioner=config,
+        ).preconditioner,
+        fixef_atol=1e-10,
+        fixef_btol=1e-10,
+        # The tuned ladder escalates after one iteration; the default ladder
+        # cannot converge on this design within the same three-iteration budget.
+        fixef_maxiter=3 if estimator is feols and not weighted and not iv else 1000,
+    )
+    fit = estimator(fml, data=data, demeaner=demeaner, **kwargs)
+    subsample = data.iloc[:800].copy()
+    subsample_fe = np.asfortranarray(
+        subsample[["f1", "f2"]].to_numpy(), dtype=np.uint32
+    )
+    expected = estimator(
+        fml,
+        data=subsample,
+        demeaner=replace(
+            demeaner,
+            preconditioner=Solver(
+                subsample_fe,
+                weights=subsample["w"].to_numpy() if weighted else None,
+                preconditioner=config,
+            ).preconditioner,
+        ),
+        **kwargs,
+    )
+
+    refitted = refit(fit, data=subsample, vcov=IID)
+
+    assert refitted.options.demeaner.preconditioner is demeaner.preconditioner
+    assert refitted.options.demeaner.preconditioner.config == config
+    assert refitted.preconditioner.config.local_solver == config.local_solver
+    assert refitted.preconditioner.config.reduction == config.reduction
+    np.testing.assert_allclose(
+        refitted.coef(),
+        expected.coef(),
+        rtol=1e-10,
+        atol=1e-10,
+        err_msg="refit coefficients",
+    )
+    if estimator is feols:
+        weights = subsample[["w"]].to_numpy() if weighted else None
+        columns = ["Y", "X", "Z"] if iv else ["Y", "X"]
+        yx = pyhdfe.create(subsample_fe).residualize(
+            subsample[columns].to_numpy(), weights=weights
+        )
+        if weights is not None:
+            yx *= np.sqrt(weights)
+        coef = (
+            [yx[:, 2] @ yx[:, 0] / (yx[:, 2] @ yx[:, 1])]
+            if iv
+            else np.linalg.lstsq(yx[:, 1:], yx[:, 0], rcond=None)[0]
+        )
+        np.testing.assert_allclose(refitted.coef(), coef, rtol=1e-8, atol=1e-10)
+
+    restored_demeaner = pickle.loads(pickle.dumps(refitted.options.demeaner))
+    assert restored_demeaner.preconditioner.config == config
+    hash(restored_demeaner)
+    # Full models contain lambda functions; cloudpickle is the serialization
+    # path used by joblib. Standard pickle suffices for the demeaner itself.
+    for restored in (
+        copy.deepcopy(refitted),
+        cloudpickle.loads(cloudpickle.dumps(refitted)),
+    ):
+        np.testing.assert_array_equal(restored.coef(), refitted.coef())
+        assert restored.options.demeaner.preconditioner.config == config
+        smaller = refit(restored, data=subsample.iloc[:600], vcov=IID)
+        assert smaller.sample_info.n_obs == 600
+        assert smaller.options.demeaner.preconditioner.config == config
+        reused = refit(restored, data=restored._data, vcov=IID, same_sample=True)
+        assert type(reused.options.demeaner) is LsmrDemeaner
+        assert reused.options.demeaner.preconditioner is restored.preconditioner
+        assert (
+            reused.preconditioner.build_duration_seconds
+            == restored.preconditioner.build_duration_seconds
+        )
+
+    if estimator is feols and not weighted and not iv:
+        # CRV3 uses the same changed-sample refit path through the public API.
+        fit.vcov({"CRV3": "f1"})
+        assert np.isfinite(fit.se()).all()
 
 
 @pytest.mark.parametrize("variant", ["adaptive", "additive", "diagonal"])

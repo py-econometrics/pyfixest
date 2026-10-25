@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from importlib import import_module
 from numbers import Integral, Real
 from types import ModuleType
@@ -13,6 +13,7 @@ import numpy as np
 from pyfixest.core.demean import (
     Preconditioner,
     WithinPreconditionerName,
+    _demean_within,
     demean_within,
     within_preconditioner_name,
 )
@@ -470,6 +471,56 @@ class LsmrDemeaner(BaseDemeaner):
 
 
 AnyDemeaner = MapDemeaner | LsmrDemeaner
+
+
+@dataclass(frozen=True, slots=True)
+class _FreshLsmrDemeaner(LsmrDemeaner):
+    """Rebuild for each new sample, retaining only a picklable source handle.
+
+    The configuration is read at solve time, after row filtering and weight
+    construction. It never becomes fitted state: ``within`` configuration
+    objects cannot be pickled or deep-copied. Each cache block owns the fresh
+    handle and any subsequent adaptive escalation, including under IWLS.
+    """
+
+    def _demean_within(
+        self,
+        x: np.ndarray,
+        flist: np.ndarray,
+        weights: np.ndarray | None,
+        cached_preconditioner: Preconditioner | None,
+    ) -> tuple[np.ndarray, bool, Preconditioner | None]:
+        assert isinstance(self.preconditioner, Preconditioner)
+        return _demean_within(
+            x=x,
+            flist=flist.astype(np.uint32, copy=False),
+            weights=weights,
+            tol=max(self.fixef_atol, self.fixef_btol),
+            maxiter=self.fixef_maxiter,
+            local_size=self.local_size,
+            preconditioner=(
+                cached_preconditioner
+                if cached_preconditioner is not None
+                else self.preconditioner.config
+            ),
+        )
+
+
+def _with_fresh_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
+    """Make the next solve build a fresh preconditioner with the same settings.
+
+    Retain a prebuilt handle as the configuration source for changed samples
+    or auxiliary projections, without storing an unpicklable configuration.
+    """
+    if not (
+        isinstance(demeaner, LsmrDemeaner)
+        and isinstance(demeaner.preconditioner, Preconditioner)
+    ):
+        return demeaner
+    return _FreshLsmrDemeaner(
+        **{field.name: getattr(demeaner, field.name) for field in fields(LsmrDemeaner)}
+    )
+
 
 __all__ = [
     "AnyDemeaner",
