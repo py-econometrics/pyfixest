@@ -31,7 +31,6 @@ from pyfixest.estimation.internals.retention import require_retained
 from pyfixest.estimation.internals.vcov_ import meat_hetero
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.refit import refit
-from pyfixest.utils.dev_utils import _find_stack_level
 from pyfixest.utils.utils import get_ssc
 
 
@@ -100,8 +99,9 @@ class Feiv(Feols):
     Raises
     ------
     IVIdentificationError
-        If the projected second-stage design is rank deficient, so the
-        endogenous coefficient cannot be identified conditional on the controls.
+        If the exogenous variables and instruments fully explain an
+        endogenous variable, or the instruments add no explanatory power for
+        it.
 
     Examples
     --------
@@ -207,76 +207,90 @@ class Feiv(Feols):
             endogenous=endogenous,
         )
 
-    def _drop_multicollinear_controls(self, within_data: WithinIvData) -> WithinIvData:
-        """Remove redundant controls while preserving every endogenous column."""
+    def _validate_iv_identification(
+        self,
+        within_data: WithinIvData,
+        *,
+        projected_design: NDArray[np.float64],
+        sqrt_weights: NDArray[np.float64] | None,
+    ) -> None:
+        """Check each endogenous variable's first-stage SSRs.
+
+        Runs before structural column selection, which could otherwise drop an
+        endogenous regressor.
+        """
         endogenous_frame = self.model_matrix.endogenous
         assert endogenous_frame is not None
-        control_positions = np.flatnonzero(
-            ~np.isin(self._coefnames, endogenous_frame.columns)
+
+        endogenous_names = endogenous_frame.columns
+        endogenous_positions = self.model_matrix.independent.columns.get_indexer(
+            endogenous_names
         )
-        mask = np.zeros(len(self._coefnames), dtype=bool)
-        if control_positions.size:
-            controls = within_data.design[:, control_positions]
-            excluded, _, _ = find_collinear_variables(
-                np.ascontiguousarray(controls.T @ controls, dtype=np.float64),
+        # A missing name would select no columns, which broadcast to zero SSRs.
+        if np.any(endogenous_positions < 0):
+            raise RuntimeError(
+                "Endogenous variables are missing from the second-stage design: "
+                f"{list(endogenous_names[endogenous_positions < 0])}."
+            )
+        exogenous_mask = np.ones(projected_design.shape[1], dtype=bool)
+        exogenous_mask[endogenous_positions] = False
+
+        endogenous = within_data.endogenous
+        fitted_endogenous = projected_design[:, endogenous_positions]
+        exogenous = within_data.design[:, exogenous_mask]
+
+        # Drop collinear controls before the controls-only regression.
+        if exogenous.shape[1] > 0:
+            collinear, _, _ = find_collinear_variables(
+                np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
                 self.options.collin_tol,
             )
-            mask[control_positions] = np.asarray(excluded, dtype=bool)
+            exogenous = exogenous[:, ~np.asarray(collinear, dtype=bool)]
 
-        names = np.asarray(self._coefnames)
-        dropped = tuple(names[mask].tolist())
-        self.collinearity = CollinearityCheck(
-            dropped_coef_names=dropped,
-            mask=tuple(mask.tolist()),
-            coefnames=tuple(names[~mask].tolist()),
-        )
-        self._coefnames = list(self.collinearity.coefnames)
-        if dropped:
-            warnings.warn(
-                f"{len(dropped)} variables dropped due to multicollinearity.\n"
-                f"The following variables are dropped: {list(dropped)}.",
-                UserWarning,
-                stacklevel=_find_stack_level(),
+        residuals = endogenous - fitted_endogenous
+
+        if exogenous.shape[1] == 0:
+            residuals_without_instruments = endogenous
+        else:
+            fitted_without_instruments = project_onto_design(
+                response=endogenous,
+                design=exogenous,
+                sqrt_weights=sqrt_weights,
+                solver=self.options.solver,
             )
-        return replace(within_data, design=self.collinearity.select(within_data.design))
+            residuals_without_instruments = endogenous - fitted_without_instruments
 
-    def _validate_iv_identification(
-        self, *, projected_design: NDArray[np.float64]
-    ) -> None:
-        """Reject projected rank failure rather than drop endogenous columns."""
-        endogenous_frame = self.model_matrix.endogenous
-        assert endogenous_frame is not None
-        is_endogenous = np.isin(self._coefnames, endogenous_frame.columns)
-        # Controls precede endogenous regressors for the sequential absolute
-        # collinearity tolerance, regardless of the materialized column order.
-        positions = np.concatenate(
-            (np.flatnonzero(~is_endogenous), np.flatnonzero(is_endogenous))
-        )
-        if not _projected_design_has_full_rank(
-            projected_design=projected_design[:, positions],
-            collin_tol=self.options.collin_tol,
+        if sqrt_weights is not None:
+            residuals = residuals * sqrt_weights
+            residuals_without_instruments = residuals_without_instruments * sqrt_weights
+
+        ssr = np.sum(residuals**2, axis=0)
+        ssr_without_instruments = np.sum(residuals_without_instruments**2, axis=0)
+
+        # Absolute thresholds on the first-stage SSRs.
+        for name, ssr_i, ssr_without_instruments_i in zip(
+            endogenous_names, ssr, ssr_without_instruments, strict=True
         ):
-            raise IVIdentificationError(
-                "The projected second-stage design is rank deficient. "
-                f"The endogenous variable(s) {list(endogenous_frame.columns)} "
-                "cannot be identified conditional on the exogenous variables."
-            )
+            if ssr_i < 1e-10:
+                raise IVIdentificationError(
+                    f"The endogenous variable '{name}' is fully explained by the "
+                    "exogenous variables and instruments."
+                )
+            if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
+                raise IVIdentificationError(
+                    "The instruments add no explanatory power for the endogenous "
+                    f"variable '{name}'."
+                )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
-        within_data = self._drop_multicollinear_controls(self._demean())
-        # Preserve the instrument order used by the first-stage refit. Any
-        # retained basis spans the original instruments and controls.
-        try:
-            instruments, instrument_collinearity = drop_multicollinear_variables(
-                X=within_data.instruments,
-                names=self._coefnames_z,
-                collin_tol=self.options.collin_tol,
-            )
-        except ValueError as exc:
-            raise IVIdentificationError(
-                "No noncollinear instruments remain for the first-stage projection."
-            ) from exc
+        within_data = self._demean()
+        # Drop collinear columns from instruments
+        instruments, instrument_collinearity = drop_multicollinear_variables(
+            X=within_data.instruments,
+            names=self._coefnames_z,
+            collin_tol=self.options.collin_tol,
+        )
         self.collinearity_instruments = instrument_collinearity
         self._coefnames_z = list(instrument_collinearity.coefnames)
 
@@ -292,16 +306,24 @@ class Feiv(Feols):
             solver=self.options.solver,
         )
 
-        # Unlike redundant instrument columns, projected endogenous columns
-        # cannot be removed without changing the requested structural model.
-        self._validate_iv_identification(projected_design=projected_design)
-        within_data = replace(within_data, instruments=instruments)
+        # Validate identification using first-stage projection
+        # before collinearity removal can drop the endogenous regressor
+        self._validate_iv_identification(
+            within_data=within_data,
+            projected_design=projected_design,
+            sqrt_weights=sqrt_weights,
+        )
+
+        # Drop collinear variables in the second stage and update within data
+        structural_data = self._drop_multicollinear_within_data(within_data)
+        assert isinstance(structural_data, WithinIvData)
+        within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
 
         # Fit the second stage
         fit = fit_iv(
             X=within_data.design,
-            X_hat=projected_design,
+            X_hat=self.collinearity.select(projected_design),
             Y=within_data.response,
             weights=self.observation_weights.values,
             solver=self.options.solver,
@@ -550,36 +572,6 @@ class Feiv(Feols):
         )
 
 
-def _projected_design_has_full_rank(
-    *, projected_design: NDArray[np.float64], collin_tol: float
-) -> bool:
-    """Check the projected design, with controls before endogenous columns.
-
-    The absolute tolerance remains a squared sequential residual norm on
-    unpremultiplied within scale, as in the existing collinearity checks.
-    Normalize columns before QR to avoid Gram-matrix cancellation under
-    rescaling, then restore their units for this absolute check. An SVD of
-    the small triangular factor also enforces numerical rank at the usual
-    machine-precision floor, independently of column units.
-
-    Observation weights already enter the first-stage projection. Positive
-    weights preserve rank; keeping the absolute check on within scale avoids
-    changing identification under a common rescaling of analytic weights.
-    """
-    n_rows, n_columns = projected_design.shape
-    if n_rows < n_columns:
-        return False
-    norms = np.linalg.norm(projected_design, axis=0)
-    if np.any(norms == 0):
-        return False
-    triangular = np.linalg.qr(projected_design / norms, mode="r")
-    if np.any(np.abs(np.diag(triangular)) * norms < np.sqrt(collin_tol)):
-        return False
-    singular_values = np.linalg.svd(triangular, compute_uv=False)
-    rank_tol = np.finfo(np.float64).eps * max(projected_design.shape)
-    return bool(singular_values[-1] > rank_tol * singular_values[0])
-
-
 def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list[int]:
     """Locate the excluded instruments among the first-stage coefficients."""
     coefnames = list(model._coefnames)
@@ -611,17 +603,7 @@ def first_stage_f_test(
     -------
     FirstStageDiagnostics
         The F statistic and its p-value; `eff_f` is not computed here.
-        An exactly perfect identified first stage reports infinite F and
-        a zero p-value, the zero-residual-variance limit of the Wald statistic.
     """
-    # An exactly perfect, identified first stage has zero coefficient
-    # covariance. The generic Wald pseudoinverse would turn this into F=0;
-    # use its zero-noise limit instead. Near-perfect fits use the usual test.
-    # RMSE is retained under lean=True, so the statistic can be refreshed
-    # after residual arrays have been discarded.
-    if model.fitstat.rmse == 0:
-        return FirstStageDiagnostics(f_stat=np.inf, p_value=0.0, eff_f=None)
-
     # Pad an identity matrix of size p_iv by p_iv with zeros to select the
     # excluded instruments out of the first stage's k coefficients.
     p_iv = len(instrument_positions)
@@ -671,8 +653,4 @@ def effective_f_statistic(
     """
     Z = instruments_within
     Q_zz = Z.T @ Z if weights is None else Z.T @ (weights[:, None] * Z)
-    numerator = float(pi_hat.T @ Q_zz @ pi_hat)
-    denominator = float(np.trace(instrument_vcov @ Q_zz))
-    if denominator == 0:
-        return np.inf if numerator > 0 else np.nan
-    return numerator / denominator
+    return float((pi_hat.T @ Q_zz @ pi_hat) / np.sum(np.diag(instrument_vcov @ Q_zz)))

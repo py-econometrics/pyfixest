@@ -122,23 +122,6 @@ for the full set of formula-parsing changes in 0.70.
 :::
 
 ::: {.callout-note}
-## Identification checks
-
-PyFixest drops redundant controls and instruments before estimating the first
-stage. It then checks the rank of the projected second-stage design. If the
-fitted endogenous regressor is a linear combination of the controls, the model
-raises `IVIdentificationError` instead of silently dropping that regressor.
-The rank check uses `collin_tol` on the within-scale design and a
-column-normalized machine-precision check; passing it does not establish
-instrument exogeneity or rule out weak instruments.
-
-Unlike R `fixest`, PyFixest allows a perfect first stage when the second-stage
-design has full rank. In that case 2SLS equals OLS. An exactly perfect first
-stage has zero residual variance, so its first-stage F statistic is reported
-as infinity, with p-value zero.
-:::
-
-::: {.callout-note}
 ## Fixed Effects with IV
 
 When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `PyFixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `PyFixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.

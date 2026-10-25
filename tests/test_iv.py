@@ -462,24 +462,12 @@ def test_iv_generated_name_collision_against_fixest(
 @pytest.fixture
 def iv_identification_data():
     data = get_data().dropna()
-    rng = np.random.default_rng(20261025)
-    return data.assign(
-        D=data.X1,
-        C=data.X2,
-        Z=data.Z1,
-        fweights=rng.integers(1, 5, size=len(data)),
-    )
+    return data.assign(D=data.X1, C=data.X2, Z=data.Z1)
 
 
 @pytest.fixture(
-    params=[
-        (None, "aweights", ""),
-        ("weights", "aweights", ""),
-        ("fweights", "fweights", ""),
-        ("weights", "aweights", "f1"),
-        ("fweights", "fweights", "f1"),
-    ],
-    ids=["unweighted", "aweights", "fweights", "aweights-fe", "fweights-fe"],
+    params=[(None, ""), ("weights", ""), ("weights", "f1")],
+    ids=["unweighted", "weighted", "weighted-fe"],
 )
 def iv_identification_options(request):
     return request.param
@@ -490,6 +478,8 @@ def iv_identification_options(request):
     "case, covariates",
     [
         ("perfect-control", "C"),
+        ("perfect-instrument", "C"),
+        ("perfect-instrument", "0"),
         ("irrelevant-instrument", "C"),
         ("irrelevant-instrument", "0"),
         ("small-instrument", "C"),
@@ -500,33 +490,32 @@ def test_iv_identification_errors_against_fixest(
     iv_identification_data, iv_identification_options, case, covariates
 ):
     data = iv_identification_data
-    weights, weights_type, fixed_effects = iv_identification_options
+    weights, fixed_effects = iv_identification_options
     suffix = f" | {fixed_effects}" if fixed_effects else ""
     if case == "perfect-control":
         data["C"] = data.D - data.D.mean()
+    elif case == "perfect-instrument":
+        data["Z"] = data.D
     elif case == "small-instrument":
         # The estimation rank check drops this tiny instrument.
         data["Z"] *= 1e-9
     else:
         # OLS residuals have no remaining projection onto C or Z on this sample.
-        data["D"] = feols(
-            "D ~ C + Z" + suffix,
-            data=data,
-            weights=weights,
-            weights_type=weights_type,
-        ).resid()
+        data["D"] = feols("D ~ C + Z" + suffix, data=data, weights=weights).resid()
         if case == "small-control":
             data["C_small"] = 1e-9 * data.D
 
     perfect_fit = case.startswith("perfect")
-    with pytest.raises(
-        IVIdentificationError, match="projected second-stage design is rank deficient"
-    ):
+    message = (
+        "variable 'D' is fully explained"
+        if perfect_fit
+        else "no explanatory power for the endogenous variable 'D'"
+    )
+    with pytest.raises(IVIdentificationError, match=message):
         feols(
             f"Y ~ {covariates} + [D ~ Z]" + suffix,
             data=data,
             weights=weights,
-            weights_type=weights_type,
         )
 
     reference_error = ro.r("""function(fml, data, weights) {
@@ -541,179 +530,6 @@ def test_iv_identification_errors_against_fixest(
     )[0]
     reference_message = "fully explained" if perfect_fit else "0 explanatory power"
     assert reference_message in reference_error
-
-
-@pytest.mark.parametrize("covariates", ["C", "0"])
-@pytest.mark.parametrize("retention", [{}, {"lean": True}, {"store_data": False}])
-def test_iv_perfect_first_stage_matches_ols(
-    iv_identification_data, iv_identification_options, covariates, retention
-):
-    """OLS bypasses the IV projection and independently identifies perfect fits."""
-    data = iv_identification_data.assign(Z=lambda frame: frame.D)
-    weights, weights_type, fixed_effects = iv_identification_options
-    suffix = f" | {fixed_effects}" if fixed_effects else ""
-    options = dict(
-        data=data, weights=weights, weights_type=weights_type, vcov="iid", **retention
-    )
-    fit = feols(f"Y ~ {covariates} + [D ~ Z]" + suffix, **options)
-    reference = feols(f"Y ~ {covariates} + D" + suffix, **options)
-    names = list(reference.coef().index)
-    assert list(fit.coef().index) == names
-    assert "D" not in fit.collinearity.dropped_coef_names
-    assert fit.sample_info.n_obs == reference.sample_info.n_obs
-    # The designs coincide; these bounds allow only projection/solve roundoff.
-    np.testing.assert_allclose(
-        fit.coef()[names],
-        reference.coef()[names],
-        rtol=0,
-        atol=1e-10,
-        err_msg="perfect-first-stage coefficients versus direct OLS",
-    )
-    np.testing.assert_allclose(
-        fit.variance_covariance.vcov,
-        reference.variance_covariance.vcov,
-        rtol=0,
-        atol=1e-10,
-        err_msg="perfect-first-stage covariance versus direct OLS",
-    )
-    if not retention:
-        np.testing.assert_allclose(
-            fit.resid()[:5],
-            reference.resid()[:5],
-            rtol=0,
-            atol=1e-10,
-            err_msg="perfect-first-stage residuals versus direct OLS",
-        )
-
-
-@pytest.mark.parametrize("retention", [{}, {"lean": True}, {"store_data": False}])
-def test_iv_exact_perfect_first_stage_diagnostics(retention):
-    """Orthogonal integer columns make the first-stage residual exactly zero."""
-    rng = np.random.default_rng(20261025)
-    data = pd.DataFrame(
-        {
-            "C": np.tile([-1.0, -1.0, 1.0, 1.0], 20),
-            "D": np.tile([-1.0, 1.0, -1.0, 1.0], 20),
-        }
-    )
-    data["Z"] = data.D
-    data["Y"] = data.C + data.D + rng.normal(size=len(data))
-    fit = feols("Y ~ C + [D ~ Z]", data=data, **retention)
-    assert not np.any(fit.first_stage.residuals)
-    assert fit.first_stage.diagnostics.f_stat == np.inf
-    assert fit.first_stage.diagnostics.p_value == 0.0
-    fit.IV_weakness_test(["f_stat"])
-    assert fit.first_stage.diagnostics.f_stat == np.inf
-    assert fit.first_stage.diagnostics.p_value == 0.0
-    if not retention.get("lean", False):
-        fit.eff_F()
-        assert fit.first_stage.diagnostics.eff_f == np.inf
-
-
-@pytest.mark.parametrize("weight_scale", [1e-3, 1.0, 1e3])
-def test_iv_identification_uses_rank_tolerance(weight_scale):
-    """A positive tiny first stage is allowed under an explicit rank tolerance."""
-    controls = np.tile([-1.0, -1.0, 1.0, 1.0], 20)
-    instrument = np.tile([-1.0, 1.0, -1.0, 1.0], 20)
-    noise = controls * instrument
-    endogenous = noise + 1e-7 * instrument
-    data = pd.DataFrame(
-        {
-            "C": controls,
-            "Z": instrument,
-            "D": endogenous,
-            "Y": 2 * endogenous + 3 * controls + 0.1 * noise,
-            "weights": weight_scale,
-        }
-    )
-    fit = feols(
-        "Y ~ C + [D ~ Z]",
-        data=data,
-        weights="weights",
-        collin_tol=1e-15,
-    )
-    # Z is exactly orthogonal to the controls. This just-identified ratio
-    # bypasses rank selection and the first-stage numerical projection.
-    expected = instrument @ data.Y / (instrument @ data.D)
-    # Division by the 1e-7 first-stage signal amplifies projection roundoff.
-    np.testing.assert_allclose(
-        fit.coef()["D"],
-        expected,
-        rtol=0,
-        atol=1e-8,
-        err_msg="small positive first-stage coefficient versus IV moment ratio",
-    )
-    with pytest.raises(
-        IVIdentificationError, match="projected second-stage design is rank deficient"
-    ):
-        feols("Y ~ C + [D ~ Z]", data=data, weights="weights", collin_tol=1e-9)
-
-
-@pytest.mark.parametrize(
-    "case", ["control", "instrument", "control-copy", "control-span"]
-)
-def test_iv_redundant_columns_match_reduced_fit(
-    iv_identification_data, iv_identification_options, case
-):
-    """An explicitly reduced formula bypasses redundant-column selection."""
-    data = iv_identification_data.assign(C_copy=lambda frame: frame.C)
-    data["Z_copy"] = data.Z
-    data["Z_control"] = data.C if case == "control-copy" else data.C + data.Z
-    covariates = "C + C_copy" if case == "control" else "C"
-    instruments = {
-        "control": "Z",
-        "instrument": "Z + Z_copy",
-        "control-copy": "Z_control + Z",
-        "control-span": "Z_control + Z",
-    }[case]
-    weights, weights_type, fixed_effects = iv_identification_options
-    suffix = f" | {fixed_effects}" if fixed_effects else ""
-    options = dict(data=data, weights=weights, weights_type=weights_type, vcov="iid")
-    with pytest.warns(UserWarning, match="dropped due to multicollinearity"):
-        fit = feols(f"Y ~ {covariates} + [D ~ {instruments}]" + suffix, **options)
-    reference = feols("Y ~ C + [D ~ Z]" + suffix, **options)
-    names = list(reference.coef().index)
-    assert list(fit.coef().index) == names
-    assert "D" not in fit.collinearity.dropped_coef_names
-    # Same instrument/control spaces; only projection roundoff may differ.
-    np.testing.assert_allclose(
-        fit.coef()[names],
-        reference.coef()[names],
-        rtol=0,
-        atol=1e-9,
-        err_msg="redundant-column coefficients versus reduced specification",
-    )
-    np.testing.assert_allclose(
-        fit.variance_covariance.vcov,
-        reference.variance_covariance.vcov,
-        rtol=0,
-        atol=1e-9,
-        err_msg="redundant-column covariance versus reduced specification",
-    )
-
-
-@pytest.mark.parametrize("fixed_effects", ["", "f1"])
-def test_iv_no_surviving_instruments(iv_identification_data, fixed_effects):
-    data = iv_identification_data.assign(Z=0.0)
-    suffix = f" | {fixed_effects}" if fixed_effects else ""
-    with pytest.raises(
-        IVIdentificationError, match="No noncollinear instruments remain"
-    ):
-        feols("Y ~ 0 + [D ~ Z]" + suffix, data=data)
-
-
-@pytest.mark.against_r_core
-def test_iv_perfect_first_stage_fixest_difference(iv_identification_data):
-    """Fixest deliberately rejects a full-rank perfect first stage."""
-    data = iv_identification_data.assign(Z=lambda frame: frame.D)
-    feols("Y ~ C + [D ~ Z]", data=data)
-    error = ro.r("""function(data) {
-        tryCatch({
-            fixest::feols(Y ~ C | D ~ Z, data=data)
-            "NO ERROR"
-        }, error=function(e) conditionMessage(e))
-    }""")(pandas2ri.py2rpy(data))[0]
-    assert "fully explained" in error
 
 
 @pytest.mark.against_r_core
