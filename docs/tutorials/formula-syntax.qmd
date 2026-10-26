@@ -104,12 +104,11 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 fit_iv.summary()
 ```
 
-The main formula decides whether both stages have an intercept. A `0` or `1`
-inside the brackets has no effect: `Y ~ 0 + [X1 ~ Z1]` omits the intercept
-from both stages, and `Y ~ X2 + [X1 ~ 0 + Z1]` keeps it in both. Without an
-intercept or fixed effects, categorical instruments such as `i(f)` and `C(f)`
-keep every level unless another term already spans the constant. This differs
-from `fixest`; see
+The main formula decides whether both stages have an intercept:
+`Y ~ 0 + [X1 ~ Z1]` omits it from both stages. A `0`, `1`, or `-1` inside the
+brackets raises an error. Without an intercept or fixed effects, categorical
+instruments such as `i(f)` and `C(f)` keep every level unless another term
+already spans the constant. This differs from `fixest`; see
 [categorical IV instruments](../explanation/compare-fixest-pyfixest.qmd#categorical-iv-instruments-without-an-intercept).
 
 The former fixest-style syntax, such as `Y ~ X2 | f1 + f2 | X1 ~ Z1`, is

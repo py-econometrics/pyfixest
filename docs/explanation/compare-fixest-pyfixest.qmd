@@ -49,7 +49,8 @@ translating R's `I(X1^2)`.
 ### Categorical IV instruments without an intercept
 
 In an IV model, the main formula decides whether both stages have an
-intercept; a `0` or `1` inside the IV block has no effect. Without an intercept,
+intercept; a `0`, `1`, or `-1` inside the IV block raises an error, while
+`fixest` accepts it. Without an intercept,
 fixed effects, or another term that spans the constant, PyFixest keeps every
 level of an unreferenced categorical instrument. For a factor `f` with levels
 `a`, `b`, and `c`:
