@@ -413,7 +413,9 @@ def feols(
 
     Varying slopes require the default `within` demeaner. `predict()`,
     `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC
-    inference are not yet supported for these models.
+    inference are not yet supported for these models. Slope-only effects such as
+    `f1[[X2]]` do not absorb the constant, so the model keeps and reports an
+    `Intercept`; write `0 +` in the formula to drop it.
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     For a compact overview of formula features including `i()`, see the

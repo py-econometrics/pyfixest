@@ -104,6 +104,15 @@ and require the default `within` demeaner. `predict()`, `fixef()`,
 `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not
 yet supported for these models.
 
+Slope-only effects such as `f1[[X2]]` do not absorb the constant, so the model
+keeps and reports an `Intercept`. Effects with level-specific intercepts, such
+as `f1[X2]`, absorb it. Write `0 +` on the right-hand side to drop the
+intercept of a slope-only model:
+
+```{python}
+pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
+```
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.

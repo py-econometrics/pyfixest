@@ -219,7 +219,8 @@ def did2s(
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with '~'. It must not contain
+        varying slopes such as `unit[year]`.
     second_stage : str
         The formula for the second stage, starting with '~'.
     treatment : str
