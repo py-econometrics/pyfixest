@@ -5,10 +5,7 @@ from scipy import integrate, stats
 
 import pyfixest as pf
 from pyfixest.estimation import feols
-from pyfixest.estimation.post_estimation.savi import (
-    _savi_cluster_e_value,
-    _savi_e_value,
-)
+from pyfixest.estimation.post_estimation.savi import _savi_e_value
 from pyfixest.utils.utils import ssc
 
 
@@ -263,29 +260,34 @@ def _hotelling_radius(alpha, mixture_precision, n_units):
     return np.sqrt((n_units - 1) * (1 - boundary) / (boundary - g_ratio))
 
 
-@pytest.mark.parametrize("dfn", [1, 2, 3])
-@pytest.mark.parametrize("n_clusters", [6, 15])
-def test_savi_cluster_e_value_has_unit_mean_under_exact_null(dfn, n_clusters):
-    """Check the exact e-value property of the clustered formula.
+@pytest.mark.parametrize("n_clusters", [3, 6, 15])
+def test_savi_cluster_e_value_has_unit_mean_under_exact_null(n_clusters):
+    """Check the exact e-value property of the clustered convention.
 
     Under the common-design Gaussian benchmark of Lindon (2026,
-    arXiv:2610.25613, Proposition common), (G - q) / (q (G - 1)) Q is
-    F(q, G - q), and the Bayes factor has null mean one. The reference is the
-    F density alone; an exponent of (G - 1 + q) / 2 fails for q > 1.
+    arXiv:2610.25613, Proposition 3), the squared CR1 t statistic is
+    F(1, G - 1) and the e-process (17), the observation-level formula at
+    `nobs=G` and `dfd=G - 1`, has null mean one. The reference is the F
+    density alone; `G - k` degrees of freedom, the observation-level
+    convention, break the identity.
     """
-    scale = dfn * (n_clusters - 1) / (n_clusters - dfn)
-    mean, _ = integrate.quad(
-        lambda f: (
-            stats.f.pdf(f, dfn, n_clusters - dfn)
-            * _savi_cluster_e_value(
-                scale * f, dfn=dfn, n_clusters=n_clusters, mixture_precision=1.5
-            )
-        ),
-        0,
-        np.inf,
-        limit=200,
-    )
-    np.testing.assert_allclose(mean, 1.0, rtol=1e-6)
+
+    def null_mean(dfd):
+        mean, _ = integrate.quad(
+            lambda f: (
+                stats.f.pdf(f, 1, n_clusters - 1)
+                * _savi_e_value(
+                    f, dfn=1, dfd=dfd, nobs=n_clusters, mixture_precision=1.5
+                )
+            ),
+            0,
+            np.inf,
+            limit=200,
+        )
+        return mean
+
+    np.testing.assert_allclose(null_mean(dfd=n_clusters - 1), 1.0, rtol=1e-6)
+    assert abs(null_mean(dfd=n_clusters - 2) - 1.0) > 1e-3
 
 
 @pytest.mark.parametrize(
@@ -299,7 +301,7 @@ def test_savi_crv1_matches_per_cluster_hotelling_under_common_design(
 
     With a common within-cluster design, the CR1 t statistic equals the
     one-sample t statistic of the per-cluster OLS coefficients (Lindon 2026,
-    arXiv:2610.25613, Proposition common). The reference fits each cluster
+    arXiv:2610.25613, Proposition 3). The reference fits each cluster
     separately and never touches the pooled covariance or `ssc`.
     """
     rng = np.random.default_rng(20261026)
@@ -349,7 +351,7 @@ def test_savi_crv1_matches_explicit_cr1_sandwich_with_unequal_clusters():
 
     Clusters differ in size and design. The reference builds the CR1
     covariance G / (G - 1) (X'X)^-1 sum_g s_g s_g' (X'X)^-1 of Lindon (2026,
-    arXiv:2610.25613, equation CR1) from the raw arrays, bypassing pyfixest's
+    arXiv:2610.25613, equation (16)) from the raw arrays, bypassing pyfixest's
     covariance and its small-sample factor.
     """
     rng = np.random.default_rng(7)
