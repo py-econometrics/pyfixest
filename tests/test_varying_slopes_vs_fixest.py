@@ -65,7 +65,9 @@ def _r_vcov(vcov: str | dict[str, str]):
 
 
 def _r_coefnames(fit_r) -> list[str]:
-    names = ro.r("function(fit) names(coef(fit))")(fit_r)
+    # `as.character` turns the NULL names of a model without coefficients into
+    # an empty vector.
+    names = ro.r("function(fit) as.character(names(coef(fit)))")(fit_r)
     return [
         name.replace("(Intercept)", "Intercept").removeprefix("fit_") for name in names
     ]
@@ -78,6 +80,9 @@ def _assert_matches_fixest(
     names = _r_coefnames(fit_r)
     assert sorted(fit.coef().index) == sorted(names), "coefficient names != fixest"
     assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    if not names:
+        # Models without coefficients have no covariance or degrees of freedom.
+        return
     assert fit.variance_covariance.df_k == int(fixest.degrees_freedom(fit_r, "k")[0]), (
         "df_k != fixest"
     )
@@ -105,27 +110,23 @@ def test_varying_slopes_against_fixest(data, case, vcov, weights):
     )
 
     _assert_matches_fixest(fit, fit_r)
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize("case", OLS_SLOPE_CASES, ids=lambda case: case.fml)
-def test_varying_slopes_fit_statistics_against_fixest(data, case):
-    fit = pf.feols(case.fml, data=data, demeaner=DEMEANER)
-    fit_r = fixest.feols(ro.Formula(case.fml_r), data=data, fixef_tol=R_FIXEF_TOL)
-    r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
-
-    np.testing.assert_allclose(
-        [
-            fit.fitstat.r2,
-            fit.fitstat.adj_r2,
-            fit.fitstat.r2_within,
-            fit.fitstat.adj_r2_within,
-        ],
-        np.asarray(r2),
-        rtol=0,
-        atol=1e-8,
-        err_msg="r2",
-    )
+    if vcov != "iid" or weights is not None or case not in OLS_SLOPE_CASES:
+        return
+    # pyfixest reports no fit statistics for models without coefficients.
+    if not fit.coef().empty:
+        r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
+        np.testing.assert_allclose(
+            [
+                fit.fitstat.r2,
+                fit.fitstat.adj_r2,
+                fit.fitstat.r2_within,
+                fit.fitstat.adj_r2_within,
+            ],
+            np.asarray(r2),
+            rtol=0,
+            atol=1e-8,
+            err_msg="r2",
+        )
     np.testing.assert_allclose(
         fit.resid()[:5],
         np.asarray(stats.residuals(fit_r))[:5],
@@ -265,10 +266,16 @@ def test_varying_slopes_multiple_estimation_against_fixest(
         multi = pf.fepois(fml, data=data_glm, demeaner=DEMEANER, iwls_tol=1e-10)
         fits_r = [
             fixest.fepois(
-                ro.Formula(single), data=data_glm, fixef_tol=R_FIXEF_TOL, glm_tol=1e-10
+                ro.Formula(single),
+                data=data_glm,
+                fixef_tol=R_FIXEF_TOL,
+                glm_tol=1e-10,
+                glm_iter=GLM_MAXITER,
             )
             for single in single_fmls
         ]
+        for fit_r in fits_r:
+            assert bool(fit_r.rx2("convStatus")[0]), "fixest IRLS did not converge"
         tolerances = {"coef_atol": GLM_COEF_ATOL, "se_atol": GLM_SE_ATOL}
 
     for fit, fit_r in zip(multi.to_list(), fits_r, strict=True):

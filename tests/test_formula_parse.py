@@ -646,6 +646,14 @@ class TestVaryingSlopeParsing:
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
             ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
             ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
+            # Signs and scales leave fitted models unchanged, so only parsing
+            # can detect a dropped operator.
+            ("f1[-z]", [("f1", True, ("-z",))]),
+            ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
+            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
+            ("f1[z // 2]", [("f1", True, ("z // 2",))]),
+            ("f1[z % 2]", [("f1", True, ("z % 2",))]),
             (
                 'f1[transform(z, mode="scale", center=True)]',
                 [("f1", True, ("transform(z, mode='scale', center=True)",))],

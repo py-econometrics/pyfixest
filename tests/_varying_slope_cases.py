@@ -40,6 +40,8 @@ OLS_SLOPE_CASES = (
         full_matrix=True,
     ),
     _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
+    _same("Y ~ 1 | f1[X2]", (("f1", True, ("X2",)),)),
+    _same("Y ~ X1 | f1[[X2, Z1]]", (("f1", False, ("X2", "Z1")),)),
     _same("Y ~ X1 | f1[X2, Z1] + f2", (("f1", True, ("X2", "Z1")), ("f2", True, ()))),
     _same(
         "Y ~ X1 | f1[[X2]] + f2[[X2]]",
@@ -83,6 +85,12 @@ OLS_SLOPE_CASES = (
     ),
     _same("Y ~ X1 | f1[X2 * Z1]", (("f1", True, ("X2 * Z1",)),)),
     _same("Y ~ X1 | f1[X2 + Z1]", (("f1", True, ("X2 + Z1",)),)),
+    # One column enters slopes of two effects, once transformed.
+    SlopeCase(
+        "Y ~ X1 | f1[Z1] + f2[[X2, Z1**2]]",
+        "Y ~ X1 | f1[Z1] + f2[[X2, I(Z1^2)]]",
+        (("f1", True, ("Z1",)), ("f2", False, ("X2", "Z1 ** 2"))),
+    ),
     # A regressor equal to the slope covariate is collinear with the slopes.
     _same("Y ~ X2 + X1 | f1[X2]", (("f1", True, ("X2",)),)),
     _same("Y ~ X2 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
@@ -117,6 +125,7 @@ GLM_SLOPE_CASES = (
     OLS_SLOPE_CASES[2],
     OLS_SLOPE_CASES[3],
     _same("Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
+    _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
 )
 
 # Every distinct formula, for checks that do not depend on the estimator.
