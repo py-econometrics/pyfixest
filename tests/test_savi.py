@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import integrate, stats
 
 import pyfixest as pf
 from pyfixest.estimation import feols
@@ -105,7 +106,7 @@ def test_savi_e_value_matches_gaussian_large_sample_limit():
     np.testing.assert_allclose(e_value, gaussian_e_value, rtol=1e-5)
 
 
-@pytest.mark.parametrize("vcov", ["iid", "hetero"])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "group_id"}])
 @pytest.mark.parametrize("mixture_precision", [1.0, 2.5])
 def test_savi_confidence_sequences_contain_confidence_intervals(
     vcov, mixture_precision
@@ -244,3 +245,154 @@ def test_optimal_mixture_precision_is_a_local_minimum_of_the_confidence_radius()
     grid_values = np.array([radius(g) for g in grid])
 
     assert np.all(grid_values >= f_min - 1e-9)
+
+
+def _hotelling_e_value(t_squared, n_units, dfn, mixture_precision):
+    g_ratio = mixture_precision / (mixture_precision + n_units)
+    return g_ratio ** (dfn / 2) * (
+        (1 + t_squared / (n_units - 1)) / (1 + g_ratio * t_squared / (n_units - 1))
+    ) ** (n_units / 2)
+
+
+def _hotelling_radius(alpha, mixture_precision, n_units):
+    g_ratio = mixture_precision / (mixture_precision + n_units)
+    boundary = (alpha**2 * g_ratio) ** (1 / n_units)
+    return np.sqrt((n_units - 1) * (1 - boundary) / (boundary - g_ratio))
+
+
+@pytest.mark.parametrize("n_clusters", [3, 6, 15])
+def test_savi_cluster_e_value_has_unit_mean_under_exact_null(n_clusters):
+    """Check the exact e-value property of the clustered convention.
+
+    Under the common-design Gaussian benchmark of Lindon (2026,
+    arXiv:2610.25613, Proposition 3), the squared CR1 t statistic is
+    F(1, G - 1) and the e-process (17), the observation-level formula at
+    `nobs=G` and `dfd=G - 1`, has null mean one. The reference is the F
+    density alone; `G - k` degrees of freedom, the observation-level
+    convention, break the identity.
+    """
+
+    def null_mean(dfd):
+        mean, _ = integrate.quad(
+            lambda f: (
+                stats.f.pdf(f, 1, n_clusters - 1)
+                * _savi_e_value(
+                    f, dfn=1, dfd=dfd, nobs=n_clusters, mixture_precision=1.5
+                )
+            ),
+            0,
+            np.inf,
+            limit=200,
+        )
+        return mean
+
+    np.testing.assert_allclose(null_mean(dfd=n_clusters - 1), 1.0, rtol=1e-6)
+    assert abs(null_mean(dfd=n_clusters - 2) - 1.0) > 1e-3
+
+
+@pytest.mark.parametrize(
+    "small_sample_correction",
+    [ssc(), ssc(k_adj=False), ssc(G_adj=False)],
+)
+def test_savi_crv1_matches_per_cluster_hotelling_under_common_design(
+    small_sample_correction,
+):
+    """Compare clustered SAVI with Hotelling inference on per-cluster fits.
+
+    With a common within-cluster design, the CR1 t statistic equals the
+    one-sample t statistic of the per-cluster OLS coefficients (Lindon 2026,
+    arXiv:2610.25613, Proposition 3). The reference fits each cluster
+    separately and never touches the pooled covariance or `ssc`.
+    """
+    rng = np.random.default_rng(20261026)
+    n_clusters, cluster_size = 12, 5
+    x_within = rng.normal(size=cluster_size)
+    cluster = np.repeat(np.arange(n_clusters), cluster_size)
+    x = np.tile(x_within, n_clusters)
+    y = (
+        0.4
+        + 0.3 * x
+        + rng.normal(size=n_clusters)[cluster]
+        + rng.normal(size=cluster.size)
+    )
+    data = pd.DataFrame({"Y": y, "X1": x, "cluster": cluster})
+    fit = feols("Y ~ X1", data, vcov={"CRV1": "cluster"}, ssc=small_sample_correction)
+
+    design = np.column_stack([np.ones(cluster_size), x_within])
+    per_cluster = np.array(
+        [
+            np.linalg.lstsq(design, y[cluster == g], rcond=None)[0]
+            for g in range(n_clusters)
+        ]
+    )
+    estimate = per_cluster.mean(axis=0)
+    se = per_cluster.std(axis=0, ddof=1) / np.sqrt(n_clusters)
+    mixture_precision, alpha = 2.0, 0.1
+
+    np.testing.assert_allclose(
+        fit.evalue(mixture_precision=mixture_precision),
+        _hotelling_e_value(
+            (estimate / se) ** 2, n_clusters, dfn=1, mixture_precision=2.0
+        ),
+        rtol=1e-8,
+    )
+    radius = _hotelling_radius(alpha, mixture_precision, n_clusters)
+    np.testing.assert_allclose(
+        fit.confint(
+            alpha=alpha, inference_type="savi", mixture_precision=mixture_precision
+        ).to_numpy(),
+        np.column_stack([estimate - radius * se, estimate + radius * se]),
+        rtol=1e-8,
+    )
+
+
+def test_savi_crv1_matches_explicit_cr1_sandwich_with_unequal_clusters():
+    """Compare clustered SAVI with an explicit CR1 sandwich.
+
+    Clusters differ in size and design. The reference builds the CR1
+    covariance G / (G - 1) (X'X)^-1 sum_g s_g s_g' (X'X)^-1 of Lindon (2026,
+    arXiv:2610.25613, equation (16)) from the raw arrays, bypassing pyfixest's
+    covariance and its small-sample factor.
+    """
+    rng = np.random.default_rng(7)
+    sizes = rng.integers(1, 9, size=25)
+    cluster = np.repeat(np.arange(sizes.size), sizes)
+    x = rng.normal(size=cluster.size) + rng.normal(size=sizes.size)[cluster]
+    y = (
+        1.0
+        + 0.2 * x
+        + rng.normal(size=sizes.size)[cluster]
+        + rng.normal(scale=1 + np.abs(x))
+    )
+    data = pd.DataFrame({"Y": y, "X1": x, "cluster": cluster})
+    fit = feols("Y ~ X1", data, vcov={"CRV1": "cluster"})
+
+    design = np.column_stack([np.ones(cluster.size), x])
+    bread = np.linalg.inv(design.T @ design)
+    beta = bread @ design.T @ y
+    scores = design * (y - design @ beta)[:, None]
+    cluster_scores = np.array(
+        [scores[cluster == g].sum(axis=0) for g in range(sizes.size)]
+    )
+    n_clusters = sizes.size
+    vcov = (
+        n_clusters
+        / (n_clusters - 1)
+        * bread
+        @ cluster_scores.T
+        @ cluster_scores
+        @ bread
+    )
+    se = np.sqrt(np.diag(vcov))
+    radius = _hotelling_radius(0.05, 1.0, n_clusters)
+
+    np.testing.assert_allclose(
+        fit.evalue(),
+        _hotelling_e_value((beta / se) ** 2, n_clusters, dfn=1, mixture_precision=1.0),
+        rtol=1e-8,
+    )
+    np.testing.assert_allclose(
+        fit.confint(inference_type="savi").to_numpy(),
+        np.column_stack([beta - radius * se, beta + radius * se]),
+        rtol=1e-8,
+    )

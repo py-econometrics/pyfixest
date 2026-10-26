@@ -71,7 +71,7 @@ monitoring schedule, and mixture precision.
 To gain a better intuition about when SAVI is useful and how it behaves, we simulate several scenarios that aim to illustrate the usefulness of SAVI inference for real-world use cases often encountered in tech companies.
 
 The first set of simulations uses fixed-time and SAVI inference to measure false positives
-under daily stopping. For the second set of simulations, the **confidence sequences are the product**: the simulations illustrate how to use confidence sequences to qualify that a Java-to-Kotlin rewrite does no harm, to report correct inferences on weekly holdout results,^[This is also useful for A/A baseline checks of an experimentation platform's randomization. Repeated fixed-time looks can eventually produce a statistically significant estimate by chance; SAVI controls the probability of any such crossing within the monitored sequence.] and make hourly rollback decisions for a canary release.^[The holdout and canary examples assume that incoming units are independent and that the target effect remains fixed during monitoring. PyFixest's current iid/heteroskedastic SAVI implementation does not cover repeated measurements from the same users, serial dependence, changing traffic composition, or an evolving release policy. [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052) list dependent outcomes as future work.] A final simulation studies regression adjustment with SAVI inference.
+under daily stopping. For the second set of simulations, the **confidence sequences are the product**: the simulations illustrate how to use confidence sequences to qualify that a Java-to-Kotlin rewrite does no harm, to report correct inferences on weekly holdout results,^[This is also useful for A/A baseline checks of an experimentation platform's randomization. Repeated fixed-time looks can eventually produce a statistically significant estimate by chance; SAVI controls the probability of any such crossing within the monitored sequence.] and make hourly rollback decisions for a canary release.^[The holdout and canary examples assume that incoming units are independent and that the target effect remains fixed during monitoring. PyFixest's iid/heteroskedastic SAVI implementation does not cover repeated measurements from the same users, serial dependence, changing traffic composition, or an evolving release policy. Repeated measurements that arrive as complete clusters are covered by [clustered SAVI](#clustered-outcomes).] A final simulation studies regression adjustment with SAVI inference.
 
 All simulations use `PyFixest`'s implementation of the linear-model method of
 [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052), which
@@ -1892,7 +1892,7 @@ simulation is repeated with an average treatment effect of zero. Across
 
 ## SAVI in PyFixest
 
-In `PyFixest`, SAVI inference following Lindon et al. (2026) is available as a post-estimation method via the `pvalue_savi`, `evalue`, and `confint` methods.
+In `PyFixest`, SAVI inference following Lindon et al. (2026), and [Lindon (2026)](https://arxiv.org/abs/2610.25613) for [clustered outcomes](#clustered-outcomes), is available as a post-estimation method via the `pvalue_savi`, `evalue`, and `confint` methods.
 ```{python}
 rng = np.random.default_rng(42)
 n_per_arm = 800
@@ -1954,3 +1954,69 @@ As we can see, the SAVI confidence sequence is wider than the fixed-time interva
 ```{python}
 fit.pvalue().loc["treated"].round(3)
 ```
+
+## Clustered outcomes
+
+When each randomized unit contributes several rows, such as several sessions
+per user or several pupils per classroom, the rows within a unit are
+dependent. Fit the regression with a one-way `CRV1` covariance on the unit,
+and the SAVI methods switch to the cluster-robust e-process and confidence
+sequence of [Lindon (2026)](https://arxiv.org/abs/2610.25613). The sequential
+units are then clusters: the sample size is the number of clusters `G`, the
+degrees of freedom are `G - 1`, and the covariance is CR1 with the factor
+`G / (G - 1)` only, whatever `ssc` the fit used. Clusters may differ in size
+and design, but each one must be observed in full when it enters the monitored
+sample; a cluster that keeps accruing rows after it is first analyzed is not
+covered. Multiway clustering and `CRV3` are not supported.
+
+```{python}
+n_users = 400
+sessions = rng.integers(1, 6, size=n_users)
+user = np.repeat(np.arange(n_users), sessions)
+treated_user = rng.integers(0, 2, size=n_users)
+user_effect = rng.normal(0, 0.5, size=n_users)
+
+session_data = pd.DataFrame(
+    {
+        "user": user,
+        "treated": treated_user[user],
+        "minutes": 10
+        + 0.8 * treated_user[user]
+        + user_effect[user]
+        + rng.normal(0, 2, size=user.size),
+    }
+)
+
+clustered_fit = pf.feols(
+    "minutes ~ treated", data=session_data, vcov={"CRV1": "user"}
+)
+clustered_fit.confint(inference_type="savi").loc["treated"].round(3)
+```
+
+Because the clustered degrees of freedom are `G - 1` whatever the number of
+coefficients, choose the mixture precision for a target of `G` clusters with
+`number_of_coefficients=1`:
+
+```{python}
+pf.optimal_mixture_precision(
+    nobs=2_000,
+    number_of_coefficients=1,
+    alpha=0.05,
+)
+```
+
+## Literature
+
+- Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor (2026).
+  ["Anytime-Valid Inference in Linear Models with Applications to
+  Regression-Adjusted Causal Inference."](https://doi.org/10.1080/01621459.2026.2692052)
+  *Journal of the American Statistical Association*.
+  doi:10.1080/01621459.2026.2692052. The iid and heteroskedasticity-robust
+  e-processes and confidence sequences.
+- Lindon, Michael (2026). ["Anytime-Valid Inference in Linear Models with
+  Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence
+  Sequences."](https://arxiv.org/abs/2610.25613) arXiv:2610.25613 [stat.ME].
+  The cluster-robust e-process and confidence sequence used for `CRV1` fits.
+- Lin, Winston (2013). ["Agnostic Notes on Regression Adjustments to
+  Experimental Data: Reexamining Freedman's Critique."](https://doi.org/10.1214/12-AOAS583)
+  *The Annals of Applied Statistics*, 7(1), 295–318.
