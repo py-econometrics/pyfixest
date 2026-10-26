@@ -15,7 +15,6 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
-from pyfixest.errors import NonConvergenceError
 from tests._varying_slope_cases import (
     GLM_SLOPE_CASES,
     IV_SLOPE_CASES,
@@ -392,18 +391,19 @@ GLM_DEVIANCE_ATOL = 1e-7
 GLM_MAXITER = 100
 
 
+# Binomial IRLS reaches a NaN deviance on this formula.
+BINOMIAL_SKIPPED_FML = "Y ~ X1 | f1:f2[X2]"
+
+
 def _glm_cases() -> list:
     params = []
     for case in GLM_SLOPE_CASES:
         for family in ("poisson", "logit", "probit", "gaussian"):
             marks = (
-                pytest.mark.xfail(
-                    # Weighted probit fails in step-halving instead.
-                    raises=(NonConvergenceError, RuntimeError),
-                    strict=True,
-                    reason="Binomial IRLS does not converge with interacted slopes",
+                pytest.mark.skip(
+                    reason="https://github.com/py-econometrics/pyfixest/issues/2001"
                 )
-                if family in ("logit", "probit") and ":" in case.fml
+                if family in ("logit", "probit") and case.fml == BINOMIAL_SKIPPED_FML
                 else ()
             )
             params.append(
@@ -430,8 +430,6 @@ def test_varying_slopes_glm_against_fixest(data_glm, case, family, vcov, weights
         fml = fml.replace("Y ~", "Y_binary ~")
         fml_r = fml_r.replace("Y ~", "Y_binary ~")
     r_kwargs = {} if weights is None else {"weights": ro.Formula(f"~{weights}")}
-    # Fit the reference first so an expected pyfixest failure is only accepted
-    # against a converged fixest fit.
     if family == "gaussian":
         # Gaussian GLM inference follows OLS; see the fixest compatibility ledger.
         fit_r = fixest.feols(
