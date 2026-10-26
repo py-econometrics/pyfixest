@@ -209,6 +209,12 @@ def _did2s_estimate(
             raise ValueError(f"{name} must not contain instrumental variables.")
     if not first_formulas[0].is_fixed_effects:
         raise ValueError("First stage formula must contain fixed effects.")
+    if first_formulas[0].has_varying_slopes:
+        raise ValueError(
+            "First stage formula must not contain varying slopes such as "
+            "`unit[year]`. did2s() imputes untreated outcomes from the estimated "
+            "fixed effects, which are not available for varying slopes."
+        )
     if second_formulas[0].is_fixed_effects:
         raise ValueError("Second stage formula must not contain fixed effects.")
     if not any(term == "1" for term in second_formulas[0].exogenous):

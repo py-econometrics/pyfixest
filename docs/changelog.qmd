@@ -26,6 +26,8 @@ across fixed-effect levels: `f1[X2]` adds a slope on `X2` for each level of
 `f1`, and `f1[[X2]]` includes only the slopes. Varying slopes require the
 default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`,
 `decompose()`, and CRV3 or HAC inference are not yet supported for these models.
+Slope-only models such as `Y ~ X1 | f1[[X2]]` keep and report an `Intercept`. `did2s()` rejects varying slopes in its first
+stage.
 
 ```{python}
 pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()

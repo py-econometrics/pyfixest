@@ -265,6 +265,21 @@ def test_errors(data):
         )
 
 
+@pytest.mark.parametrize(
+    "first_stage", ["~ X | state[year] + year", "~ 0 | state[[X]]"]
+)
+def test_did2s_rejects_varying_slopes_in_first_stage(data, first_stage):
+    with pytest.raises(ValueError, match="must not contain varying slopes"):
+        did2s_pyfixest(
+            data,
+            yname="dep_var",
+            first_stage=first_stage,
+            second_stage="~ i(rel_year)",
+            treatment="treat",
+            cluster="state",
+        )
+
+
 def test_did2s_wildboottest_ccv_unsupported(data):
     "did2s's two-step GMM covariance does not support wild bootstrap or CCV inference."
     fit = did2s_pyfixest(

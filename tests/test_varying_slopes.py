@@ -88,3 +88,15 @@ def test_varying_slopes_with_reduced_retention(data, retention):
 
     np.testing.assert_allclose(reduced.coef(), full.coef(), rtol=0, atol=1e-12)
     np.testing.assert_allclose(reduced.se(), full.se(), rtol=0, atol=1e-12)
+
+
+def test_varying_slopes_boolean_slope_equals_zero_one_slope(data):
+    """A boolean slope is treated as its 0/1 coding."""
+    data = data.assign(b=data["X2"] > 0)
+    data["b_float"] = data["b"].astype(float)
+
+    fit_bool = pf.feols("Y ~ X1 | f1[b]", data=data)
+    fit_float = pf.feols("Y ~ X1 | f1[b_float]", data=data)
+
+    np.testing.assert_allclose(fit_bool.coef(), fit_float.coef(), rtol=0, atol=1e-12)
+    np.testing.assert_allclose(fit_bool.se(), fit_float.se(), rtol=0, atol=1e-12)

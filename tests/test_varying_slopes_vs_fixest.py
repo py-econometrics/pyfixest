@@ -280,7 +280,7 @@ def test_varying_slopes_glm_against_fixest(data_glm, fml, fml_r, family, vcov, w
 
 
 def _separation_data(*, mixed_signs: bool) -> pd.DataFrame:
-    """Group 0 has only zero outcomes; its slope covariate takes both signs."""
+    """Group 0 has only zero outcomes; its slope covariate has mixed or one sign."""
     rng = np.random.default_rng(7)
     g = np.repeat(np.arange(6), 20)
     z = np.tile([-1.0, 1.0], 60) if mixed_signs else np.tile([0.5, 1.5], 60)
@@ -331,3 +331,37 @@ def test_varying_slopes_separation_against_fixest(
 
     assert fit.sample_info.dropped_by_stage.separation == n_separated
     _assert_glm_matches_fixest(fit, fit_r)
+
+
+@pytest.mark.against_r_core
+def test_varying_slopes_one_signed_separation_differs_from_fixest():
+    """A slope-only group with one-signed covariate and all-zero outcomes is separated.
+
+    Sending its slope to minus infinity drives every fitted mean of the group to
+    zero. The `ir` check drops the group, while fixest keeps it. The coefficients
+    agree, but the observation counts and therefore the standard errors differ.
+    """
+    data = _separation_data(mixed_signs=False)
+    fml = "y ~ x | g[[z]]"
+
+    with pytest.warns(UserWarning, match="20 observations removed"):
+        fit = pf.fepois(
+            fml,
+            data=data,
+            vcov="iid",
+            separation_check=["fe", "ir"],
+            demeaner=DEMEANER,
+            iwls_tol=1e-10,
+        )
+    fit_r = fixest.fepois(
+        ro.Formula(fml), data=data, vcov="iid", fixef_tol=R_FIXEF_TOL, glm_tol=1e-10
+    )
+
+    assert fit.sample_info.dropped_by_stage.separation == 20
+    assert fit.sample_info.n_obs == 100
+    assert int(stats.nobs(fit_r)[0]) == 120
+    names = _r_coefnames(fit_r)
+    np.testing.assert_allclose(
+        fit.coef()[names], stats.coef(fit_r), rtol=0, atol=GLM_COEF_ATOL
+    )
+    assert not np.allclose(fit.se()[names], fixest.se(fit_r), rtol=0, atol=1e-5)
