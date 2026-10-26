@@ -112,7 +112,7 @@ def test_varying_slopes_against_fixest(data, case, vcov, weights):
     _assert_matches_fixest(fit, fit_r)
     if vcov != "iid" or weights is not None or case not in OLS_SLOPE_CASES:
         return
-    # pyfixest reports no fit statistics for models without coefficients.
+    # pyfixest reports no fit statistics for models without coefficients (#2002).
     if not fit.coef().empty:
         r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
         np.testing.assert_allclose(
