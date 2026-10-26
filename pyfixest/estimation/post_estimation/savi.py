@@ -1,13 +1,25 @@
 """
 Safe anytime-valid inference (SAVI) formulas for linear models.
 
-This module implements the asymptotic t/g-mixture e-value and confidence
-sequence formulas from:
+Observation-level (iid and heteroskedasticity-robust) inference implements the
+asymptotic t/g-mixture e-value and confidence sequence formulas from:
 
     Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor
     (2026). "Anytime-Valid Inference in Linear Models with Applications to
     Regression-Adjusted Causal Inference." Journal of the American Statistical
     Association. https://doi.org/10.1080/01621459.2026.2692052
+
+One-way cluster-robust inference implements the cluster-robust e-process and
+confidence sequence, equations (ECR) and (kappa), from:
+
+    Lindon, Michael (2026). "Anytime-Valid Inference in Linear Models with
+    Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence
+    Sequences." arXiv:2610.25613. https://arxiv.org/abs/2610.25613
+
+The two settings use different finite-sample conventions. The clustered
+process counts clusters rather than rows, uses nu = G - 1 whatever the number
+of coefficients, raises its ratio to the power G / 2 for every restriction
+dimension, and uses the CR1 covariance with only the factor G / (G - 1).
 
 The public pyfixest model methods expose these formulas as SAVI e-values,
 sequential p-values, and confidence sequences. They use an asymptotic
@@ -37,7 +49,7 @@ SAVI_REFERENCE = (
     "Statistical Association. https://doi.org/10.1080/01621459.2026.2692052"
 )
 
-_SAVI_SUPPORTED_VCOV_TYPES = ("iid", "hetero")
+_SAVI_SUPPORTED_VCOV_TYPES = ("iid", "hetero", "CRV")
 
 
 def _validate_positive_float(value: float, name: str) -> float:
@@ -91,6 +103,65 @@ def _savi_confidence_radius(
     if denominator <= 0:
         return np.inf
     return float(np.sqrt(dfd * (1 - boundary) / denominator))
+
+
+def _savi_cluster_e_value(
+    wald_statistic: float | np.ndarray,
+    dfn: int,
+    n_clusters: int,
+    mixture_precision: float,
+) -> np.ndarray:
+    """Compute cluster-robust SAVI e-values from Wald statistics.
+
+    Equation (ECR) of Lindon (2026, arXiv:2610.25613): the one-sample
+    Hotelling e-value with Hotelling's T^2 replaced by the CR1 Wald statistic
+    `wald_statistic` of a restriction with `dfn` rows. Unlike the
+    observation-level formula, nu = G - 1 and the exponent is G / 2 for every
+    `dfn`. The process is one while G <= `dfn`.
+    """
+    wald_statistic = np.asarray(wald_statistic, dtype=float)
+    if n_clusters <= dfn:
+        return np.ones_like(wald_statistic)
+    g_ratio = mixture_precision / (mixture_precision + n_clusters)
+    stat_ratio = wald_statistic / (n_clusters - 1)
+    log_e_value = dfn / 2 * np.log(g_ratio) + n_clusters / 2 * (
+        np.log1p(stat_ratio) - np.log1p(g_ratio * stat_ratio)
+    )
+    return np.exp(log_e_value)
+
+
+def _savi_cluster_confidence_radius(
+    alpha: float,
+    mixture_precision: float,
+    n_clusters: int,
+) -> float:
+    """Compute the coefficient-wise cluster-robust confidence-sequence radius.
+
+    The square root of kappa_G(phi, 1, alpha), equation (kappa) of Lindon
+    (2026, arXiv:2610.25613), with nu = G - 1.
+    """
+    if n_clusters <= 1:
+        return np.inf
+    g_ratio = mixture_precision / (mixture_precision + n_clusters)
+    boundary = (alpha**2 * g_ratio) ** (1 / n_clusters)
+    denominator = boundary - g_ratio
+    if denominator <= 0:
+        return np.inf
+    return float(np.sqrt((n_clusters - 1) * (1 - boundary) / denominator))
+
+
+def _cluster_robust_se(model: Feols) -> np.ndarray:
+    """Compute CR1 standard errors with only the G / (G - 1) factor.
+
+    Liang and Zeger (1986) with the finite-sample factor G / (G - 1), equation
+    (CR1) of Lindon (2026, arXiv:2610.25613). The fitted covariance carries
+    pyfixest's small-sample factor, by default also (N - 1) / (N - k), which
+    is divided out so that the result does not depend on `ssc`.
+    """
+    covariance = model.variance_covariance
+    n_clusters = covariance.G[0]
+    unadjusted_vcov = covariance.vcov / covariance.ssc[0]
+    return np.sqrt(np.diag(unadjusted_vcov) * n_clusters / (n_clusters - 1))
 
 
 def optimal_mixture_precision(
@@ -168,12 +239,23 @@ def _validate_savi_model(*, model: Feols, method: str) -> None:
         )
     if not hasattr(model, "variance_covariance"):
         raise EmptyVcovError()
-    vcov_type = model.variance_covariance.spec.vcov_type
-    if vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
+    spec = model.variance_covariance.spec
+    if spec.vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
-            f"SAVI inference does not support vcov type {vcov_type!r}. "
-            "Supported types are iid, hetero, HC1, HC2, and HC3."
+            f"SAVI inference does not support vcov type {spec.vcov_type!r}. "
+            "Supported types are iid, hetero, HC1, HC2, HC3, and one-way CRV1."
         )
+    if spec.vcov_type == "CRV":
+        if len(spec.clustervar) != 1:
+            raise NotImplementedError(
+                "SAVI inference does not support multiway clustering; "
+                "cluster by exactly one variable."
+            )
+        if spec.vcov_type_detail != "CRV1":
+            raise NotImplementedError(
+                f"SAVI inference does not support {spec.vcov_type_detail}; "
+                "use CRV1 for clustered inference."
+            )
 
 
 def _evalue(
@@ -182,13 +264,22 @@ def _evalue(
 ) -> pd.Series:
     """Compute coefficient-wise SAVI e-values for a validated model."""
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-    values = _savi_e_value(
-        model.coeftable.tstat**2,
-        dfn=1,
-        dfd=model.variance_covariance.df_t,
-        nobs=model.sample_info.n_obs,
-        mixture_precision=mixture_precision,
-    )
+    covariance = model.variance_covariance
+    if covariance.spec.vcov_type == "CRV":
+        values = _savi_cluster_e_value(
+            (model._beta_hat / _cluster_robust_se(model)) ** 2,
+            dfn=1,
+            n_clusters=covariance.G[0],
+            mixture_precision=mixture_precision,
+        )
+    else:
+        values = _savi_e_value(
+            model.coeftable.tstat**2,
+            dfn=1,
+            dfd=covariance.df_t,
+            nobs=model.sample_info.n_obs,
+            mixture_precision=mixture_precision,
+        )
     return pd.Series(values, index=model._coefnames, name="e_value")
 
 
@@ -217,13 +308,22 @@ def _confint(
     coefnames, coef_indices = _select_coefnames_and_indices(
         model._coefnames, keep, drop, exact_match
     )
-    critical_value = _savi_confidence_radius(
-        alpha=alpha,
-        mixture_precision=mixture_precision,
-        nobs=model.sample_info.n_obs,
-        dfd=model.variance_covariance.df_t,
-    )
-    standard_errors = model.coeftable.se[coef_indices]
+    covariance = model.variance_covariance
+    if covariance.spec.vcov_type == "CRV":
+        critical_value = _savi_cluster_confidence_radius(
+            alpha=alpha,
+            mixture_precision=mixture_precision,
+            n_clusters=covariance.G[0],
+        )
+        standard_errors = _cluster_robust_se(model)[coef_indices]
+    else:
+        critical_value = _savi_confidence_radius(
+            alpha=alpha,
+            mixture_precision=mixture_precision,
+            nobs=model.sample_info.n_obs,
+            dfd=covariance.df_t,
+        )
+        standard_errors = model.coeftable.se[coef_indices]
     estimates = model._beta_hat[coef_indices]
 
     df = pd.DataFrame(

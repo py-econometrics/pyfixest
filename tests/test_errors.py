@@ -1951,7 +1951,7 @@ def unsupported_savi_design(request):
     return fit, "weighted feols"
 
 
-@pytest.fixture(scope="module", params=["hac", "crv", "multiway_crv"])
+@pytest.fixture(scope="module", params=["hac", "crv3", "multiway_crv"])
 def unsupported_savi_vcov(request):
     if request.param == "hac":
         rng = np.random.default_rng(123)
@@ -1971,9 +1971,11 @@ def unsupported_savi_vcov(request):
         return fit, "HAC"
 
     data = pf.get_data().dropna(subset=["Y", "X1", "X2", "group_id", "f1"])
-    cluster = "group_id + f1" if request.param == "multiway_crv" else "group_id"
-    fit = feols("Y ~ X1 + X2", data, vcov={"CRV1": cluster})
-    return fit, "does not support vcov type 'CRV'"
+    if request.param == "multiway_crv":
+        fit = feols("Y ~ X1 + X2", data, vcov={"CRV1": "group_id + f1"})
+        return fit, "does not support multiway clustering"
+    fit = feols("Y ~ X1 + X2", data, vcov={"CRV3": "group_id"})
+    return fit, "does not support CRV3"
 
 
 def test_savi_rejects_unsupported_models(unsupported_savi_model):
@@ -1990,7 +1992,7 @@ def test_savi_rejects_weights_and_fixed_effects(unsupported_savi_design):
         fit.evalue()
 
 
-def test_savi_rejects_hac_and_crv(unsupported_savi_vcov):
+def test_savi_rejects_hac_crv3_and_multiway_crv(unsupported_savi_vcov):
     fit, match = unsupported_savi_vcov
     with pytest.raises(NotImplementedError, match=match):
         fit.evalue()

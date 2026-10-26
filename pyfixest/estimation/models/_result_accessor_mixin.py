@@ -181,11 +181,21 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Notes
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
-        absorbed fixed effects. The covariance estimator must be iid or
-        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). Note that
-        for `HC2`/`HC3`, pyfixest's default small-sample correction scales the
-        variance by `n / (n - k)` while the R implementation in `avlm` does not.
-        Inference is pointwise / by coefficient.
+        absorbed fixed effects. The covariance estimator must be iid,
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`), or one-way
+        cluster robust (`CRV1`). Note that for `HC2`/`HC3`, pyfixest's default
+        small-sample correction scales the variance by `n / (n - k)` while the R
+        implementation in `avlm` does not. Inference is pointwise / by
+        coefficient.
+
+        Iid and heteroskedasticity-robust fits follow
+        [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052).
+        Clustered fits follow the cluster-robust e-process of
+        [Lindon (2026)](https://arxiv.org/abs/2610.25613): the sequential units
+        are clusters, so the sample size is the number of clusters `G`, the
+        degrees of freedom are `G - 1`, and the covariance is CR1 with only the
+        factor `G / (G - 1)`, whatever `ssc` the fit used. Clusters must be
+        observed in full when they enter the monitored sample.
 
         Examples
         --------
@@ -454,11 +464,14 @@ class ResultAccessorMixin(TidyColumnAccessors):
         Notes
         -----
         SAVI currently supports unweighted, non-IV `feols` models without
-        absorbed fixed effects. The covariance estimator must be iid or
-        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`). With
-        `HC2`/`HC3`, pyfixest's default small-sample correction scales the
-        variance by `n / (n - k)`. You need to pass `ssc(k_adj=False)` to reproduce `avlm`,
-        which applies no such correction.
+        absorbed fixed effects. The covariance estimator must be iid,
+        heteroskedasticity robust (`hetero`, `HC1`, `HC2`, or `HC3`), or one-way
+        cluster robust (`CRV1`). With `HC2`/`HC3`, pyfixest's default
+        small-sample correction scales the variance by `n / (n - k)`. You need
+        to pass `ssc(k_adj=False)` to reproduce `avlm`, which applies no such
+        correction. Clustered confidence sequences use the CR1 covariance with
+        only the factor `G / (G - 1)`, whatever `ssc` the fit used; see
+        `evalue` for the clustered method.
 
         Examples
         --------
