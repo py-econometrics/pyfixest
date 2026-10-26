@@ -45,6 +45,11 @@ OLS_SLOPE_CASES = (
         "Y ~ X1 | f1[[X2]] + f2[[X2]]",
         (("f1", False, ("X2",)), ("f2", False, ("X2",))),
     ),
+    SlopeCase(
+        "Y ~ X1 | f1:f2[[X2]]",
+        "Y ~ X1 | f1^f2[[X2]]",
+        (("f1:f2", False, ("X2",)),),
+    ),
     # Effects on the same levels merge into one effect.
     _same(
         "Y ~ X1 | f1 + f1[[X2]] + f2[[Z1]]",
@@ -83,6 +88,9 @@ OLS_SLOPE_CASES = (
     _same("Y ~ X2 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
 )
 
+# fixest drops the intercept of slope-only IV models from its parameter count
+# and residuals; `test_varying_slopes_iv_intercept_differs_from_fixest` covers
+# `Y ~ X2 + [X1 ~ Z1] | f1[[Z2]]` against an explicit dummy-variable 2SLS fit.
 IV_SLOPE_CASES = (
     SlopeCase(
         "Y ~ X2 + [X1 ~ Z1] | f1[Z2]",
@@ -95,6 +103,11 @@ IV_SLOPE_CASES = (
         "Y ~ X2 | f1[[Z2]] + f2 | X1 ~ Z1",
         (("f1", False, ("Z2",)), ("f2", True, ())),
         full_matrix=True,
+    ),
+    SlopeCase(
+        "Y ~ 0 + X2 + [X1 ~ Z1] | f1[[Z2]]",
+        "Y ~ 0 + X2 | f1[[Z2]] | X1 ~ Z1",
+        (("f1", False, ("Z2",)),),
     ),
 )
 
