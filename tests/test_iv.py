@@ -225,8 +225,6 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
         ("Y ~ 0 + [X1 ~ Z1 + Z2]", "Y ~ 0 | X1 ~ Z1 + Z2", False),
         ("Y ~ X2 | X1 ~ Z1 + Z2", "Y ~ X2 | X1 ~ Z1 + Z2", False),
         ("Y ~ X2 + [X1 ~ Z1 + Z2]", "Y ~ X2 | X1 ~ Z1 + Z2", False),
-        ("Y ~ 0 + X2 | X1 ~ 0 + Z1 + Z2", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
-        ("Y ~ 0 + X2 + [X1 ~ 0 + Z1 + Z2]", "Y ~ 0 + X2 | X1 ~ Z1 + Z2", False),
         ("Y ~ 0 + X2 | f1 | X1 ~ Z1 + Z2", "Y ~ 0 + X2 | f1 | X1 ~ Z1 + Z2", False),
         (
             "Y ~ 0 + X2 + [X1 ~ Z1 + Z2] | f1",
@@ -322,22 +320,23 @@ def _feols_r_iid(fml_r, data_r):
 # Categorical IV coding that matches fixest. Each case maps a canonical formula
 # to the R formula of every model it expands to, and states whether both
 # first stages use the same named columns. The main formula decides the
-# intercept of both stages; `0` or `1` inside the IV block does not.
+# intercept of both stages. Pyfixest rejects `0` or `1` inside the IV block;
+# fixest keeps the intercept despite the inner `0` of some R references.
 IV_CATEGORICAL_PARITY_CASES = [
     pytest.param(
-        "Y ~ 1 + [X1 ~ 0 + i(f)]",
+        "Y ~ 1 + [X1 ~ i(f)]",
         ["Y ~ 1 | X1 ~ 0 + i(f)"],
         True,
-        id="intercept-inner-zero-i",
+        id="intercept-i",
     ),
     pytest.param(
-        "Y ~ 1 + [X1 ~ 0 + C(f)]",
+        "Y ~ 1 + [X1 ~ C(f)]",
         ["Y ~ 1 | X1 ~ factor(f)"],
         True,
-        id="intercept-inner-zero-C",
+        id="intercept-C",
     ),
     pytest.param(
-        "Y ~ C(g) + [X1 ~ 0 + i(f)]",
+        "Y ~ C(g) + [X1 ~ i(f)]",
         ["Y ~ factor(g) | X1 ~ i(f)"],
         True,
         id="intercept-categorical-control",
@@ -357,7 +356,7 @@ IV_CATEGORICAL_PARITY_CASES = [
         id="fixed-effects",
     ),
     pytest.param(
-        "Y ~ 1 + [X1 ~ 0 + i(f)] | csw0(f2)",
+        "Y ~ 1 + [X1 ~ i(f)] | csw0(f2)",
         ["Y ~ 1 | X1 ~ 0 + i(f)", "Y ~ 1 | f2 | X1 ~ 0 + i(f)"],
         True,
         id="multiple-estimation",
@@ -455,13 +454,6 @@ IV_CATEGORICAL_DIFFERENCE_CASES = [
         "Y ~ 0 | X1 ~ 0 + factor(f)",
         None,
         id="no-intercept-C-instrument",
-    ),
-    pytest.param(
-        "Y ~ 0 + [X1 ~ 1 + i(f)]",
-        "Y ~ 0 | X1 ~ 1 + i(f)",
-        "Y ~ 0 | X1 ~ i(f, keep = c('a', 'b', 'c'))",
-        None,
-        id="no-intercept-inner-one",
     ),
     pytest.param(
         "Y ~ 0 + X2 + [X1 ~ i(f, g)]",

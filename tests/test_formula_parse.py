@@ -588,7 +588,7 @@ class TestFixedEffectInteractions:
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
         assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
-        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+        assert str(iv_power.instruments) == "Z1 + Z2 + Z1:Z2"
 
 
 class TestInstrumentalVariableBoundaries:
@@ -1128,6 +1128,37 @@ class TestEdgeCases:
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X2 + [X1 ~ 0 + Z1]",
+            "Y ~ X2 + [X1 ~ 1 + Z1]",
+            "Y ~ X2 + [X1 ~ -1 + Z1]",
+            "Y ~ X2 + [X1 ~ Z1 - 1]",
+            "Y ~ X2 + [X1 ~ (Z1 + 0)]",
+            "Y ~ 0 + X2 + [X1 ~ 1 + Z1]",
+            "Y ~ X2 + [0 + X1 ~ Z1]",
+            "Y ~ X2 + [X1 ~ sw(Z1, 0 + Z2)]",
+            "Y ~ X2 | X1 ~ 0 + Z1",
+            "Y ~ X2 | f1 | X1 ~ 1 + Z1",
+        ],
+    )
+    def test_reject_intercept_in_iv_block(self, formula):
+        """The main formula sets the intercept of both IV stages."""
+        with pytest.raises(
+            FormulaSyntaxError, match=r"cannot contain `0`, `1` or `-1`"
+        ):
+            Formula.parse(formula)
+
+    @pytest.mark.parametrize(
+        "formula",
+        ["Y ~ X2 + [X1 ~ I(Z1 + 1) + {Z2 - 0}]", "Y ~ X2 + [X1 ~ Z1 + sw0(Z2)]"],
+        ids=["python-expressions", "zero-step"],
+    )
+    def test_iv_block_allows_constants_in_expressions(self, formula):
+        """Constants inside expressions or a generated zero step set no intercept."""
+        assert all(parsed.is_instrumental_variable for parsed in Formula.parse(formula))
+
+    @pytest.mark.parametrize(
         "formula, expected",
         [
             ("Y ~ X2 + [X2 ~ Z1]", "Y ~ 1 + [X2 ~ Z1]"),
@@ -1181,7 +1212,7 @@ class TestEdgeCases:
         parsed = Formula.parse(formula)[0]
         assert parsed.exogenous == formulaic.Formula("1 + X1")
         assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
-        assert parsed.instruments == formulaic.Formula("1 + Z1")
+        assert parsed.instruments == formulaic.Formula("0 + Z1")
         assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
 
         first_stage = parsed.as_first_stage().second_stage
@@ -1192,13 +1223,9 @@ class TestEdgeCases:
 
     @pytest.mark.parametrize(
         "formula_template",
-        [
-            "Y ~ {exogenous} | X1 ~ {instruments}",
-            "Y ~ {exogenous} + [X1 ~ {instruments}]",
-        ],
+        ["Y ~ {exogenous} | X1 ~ Z1", "Y ~ {exogenous} + [X1 ~ Z1]"],
         ids=["pipe", "bracket"],
     )
-    @pytest.mark.parametrize("instruments", ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1"])
     @pytest.mark.parametrize(
         "exogenous, expected",
         [
@@ -1210,15 +1237,14 @@ class TestEdgeCases:
         ],
     )
     def test_iv_first_stage_preserves_intercept_choice(
-        self, formula_template, instruments, exogenous, expected
+        self, formula_template, exogenous, expected
     ):
-        """The instrument block's implicit intercept follows the main equation."""
-        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
+        """The main equation sets the intercept of both stages."""
+        formula = formula_template.format(exogenous=exogenous)
         parsed = Formula.parse(formula)[0]
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)
         assert first_stage.lhs == expected_stage.lhs
-        # Both parsed blocks can contribute the same intercept term.
         assert set(first_stage.rhs) == set(expected_stage.rhs)
         reparsed = Formula.parse(parsed.render())[0]
         assert (
@@ -1309,7 +1335,7 @@ class TestEdgeCases:
         'Y ~ log(X1) + np.log(X2) | Q("my fe")',
         "Y ~ {X1 ** 2} + {np.pi} | f1",
         "Y ~ X2 + [X1 ~ Z1] | f1",
-        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
+        "Y ~ X2 - 1 + [X1 ~ Z1]",
         "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
         "Y ~ `tick\\`name` | f1",
         "Y ~ X1 | f1[z]",
