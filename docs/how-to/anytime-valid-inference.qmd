@@ -1892,7 +1892,7 @@ simulation is repeated with an average treatment effect of zero. Across
 
 ## SAVI in PyFixest
 
-In `PyFixest`, SAVI inference following Lindon et al. (2026) is available as a post-estimation method via the `pvalue_savi`, `evalue`, and `confint` methods.
+In `PyFixest`, SAVI inference following Lindon et al. (2026), and [Lindon (2026)](https://arxiv.org/abs/2610.25613) for [clustered outcomes](#clustered-outcomes), is available as a post-estimation method via the `pvalue_savi`, `evalue`, and `confint` methods.
 ```{python}
 rng = np.random.default_rng(42)
 n_per_arm = 800

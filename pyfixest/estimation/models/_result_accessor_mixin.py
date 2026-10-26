@@ -469,9 +469,10 @@ class ResultAccessorMixin(TidyColumnAccessors):
         cluster robust (`CRV1`). With `HC2`/`HC3`, pyfixest's default
         small-sample correction scales the variance by `n / (n - k)`. You need
         to pass `ssc(k_adj=False)` to reproduce `avlm`, which applies no such
-        correction. Clustered confidence sequences use the CR1 covariance with
-        only the factor `G / (G - 1)`, whatever `ssc` the fit used; see
-        `evalue` for the clustered method.
+        correction. Clustered confidence sequences follow
+        [Lindon (2026)](https://arxiv.org/abs/2610.25613) and use the CR1
+        covariance with only the factor `G / (G - 1)`, whatever `ssc` the fit
+        used; see `evalue` for the clustered method.
 
         Examples
         --------
