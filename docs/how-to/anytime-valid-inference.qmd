@@ -2004,3 +2004,19 @@ pf.optimal_mixture_precision(
     alpha=0.05,
 )
 ```
+
+## Literature
+
+- Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor (2026).
+  ["Anytime-Valid Inference in Linear Models with Applications to
+  Regression-Adjusted Causal Inference."](https://doi.org/10.1080/01621459.2026.2692052)
+  *Journal of the American Statistical Association*.
+  doi:10.1080/01621459.2026.2692052. The iid and heteroskedasticity-robust
+  e-processes and confidence sequences.
+- Lindon, Michael (2026). ["Anytime-Valid Inference in Linear Models with
+  Clustered Outcomes: Exact Multivariate Tests and Cluster-Robust Confidence
+  Sequences."](https://arxiv.org/abs/2610.25613) arXiv:2610.25613 [stat.ME].
+  The cluster-robust e-process and confidence sequence used for `CRV1` fits.
+- Lin, Winston (2013). ["Agnostic Notes on Regression Adjustments to
+  Experimental Data: Reexamining Freedman's Critique."](https://doi.org/10.1214/12-AOAS583)
+  *The Annals of Applied Statistics*, 7(1), 295–318.
