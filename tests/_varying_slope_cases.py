@@ -60,7 +60,12 @@ OLS_SLOPE_CASES = (
     _same("Y ~ X1 | f1[[X2]] + f1", (("f1", True, ("X2",)),)),
     _same("Y ~ X1 | f1[X2, X2]", (("f1", True, ("X2",)),)),
     _same("Y ~ X1 | f1[[X2, X2]]", (("f1", False, ("X2",)),)),
-    _same("Y ~ X1 | f1[[X2]] + f1[[X2]]", (("f1", False, ("X2",)),)),
+    # A slope repeated across terms is kept once.
+    SlopeCase(
+        "Y ~ X1 | f1[[Z1]] + f1[X2, Z1]",
+        "Y ~ X1 | f1[Z1, X2]",
+        (("f1", True, ("Z1", "X2")),),
+    ),
     _same("Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
     _same("Y ~ X1 | f1[X2] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
     _same(
@@ -85,6 +90,8 @@ OLS_SLOPE_CASES = (
     ),
     _same("Y ~ X1 | f1[X2 * Z1]", (("f1", True, ("X2 * Z1",)),)),
     _same("Y ~ X1 | f1[X2 + Z1]", (("f1", True, ("X2 + Z1",)),)),
+    # Without an intercept, shifting the slope covariate changes the model.
+    _same("Y ~ X1 | f1[[X2 + 1]]", (("f1", False, ("X2 + 1",)),)),
     # One column enters slopes of two effects, once transformed.
     SlopeCase(
         "Y ~ X1 | f1[Z1] + f2[[X2, Z1**2]]",

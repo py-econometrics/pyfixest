@@ -772,6 +772,7 @@ class TestVaryingSlopeParsing:
             "f1[z[0]]",  # unsupported syntax
             "f1[z > 0]",
             "f1[[x for x in z]]",
+            "f1[log(z[0])]",  # nested inside a supported call
             "f1[transform(z, **options)]",  # keyword unpacking
         ],
     )

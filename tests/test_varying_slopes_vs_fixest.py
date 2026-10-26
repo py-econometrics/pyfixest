@@ -75,6 +75,10 @@ def _r_coefnames(fit_r) -> list[str]:
     ]
 
 
+def _r_first_stage(fit_r):
+    return ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
+
+
 def _assert_matches_fixest(
     fit, fit_r, *, coef_atol: float = COEF_ATOL, se_atol: float = SE_ATOL
 ) -> None:
@@ -112,6 +116,8 @@ def test_varying_slopes_against_fixest(data, case, vcov, weights):
     )
 
     _assert_matches_fixest(fit, fit_r)
+    if case in IV_SLOPE_CASES:
+        _assert_matches_fixest(fit.first_stage.model, _r_first_stage(fit_r))
     np.testing.assert_allclose(
         fit.resid()[:5],
         np.asarray(stats.residuals(fit_r))[:5],
@@ -312,8 +318,8 @@ def test_varying_slopes_iv_intercept_differs_from_fixest(data):
     The reference spells out the intercept, `X2`, and one `Z2` slope per `f1`
     level in both stages, bypassing the fixed-effect demeaning. fixest 0.14.0
     estimates the same coefficients but leaves the intercept out of its
-    parameter count and residuals, so its standard errors differ (see the
-    compatibility ledger).
+    parameter count in both stages and out of the second-stage residuals, so
+    its standard errors differ (see the compatibility ledger).
     """
     fit = pf.feols(
         "Y ~ X2 + [X1 ~ Z1] | f1[[Z2]]", data=data, vcov="iid", demeaner=DEMEANER
@@ -356,6 +362,48 @@ def test_varying_slopes_iv_intercept_differs_from_fixest(data):
     )
     assert int(fixest.degrees_freedom(fit_r, "k")[0]) == n_params - 1
     assert not np.allclose(fit.se()[r_names], fixest.se(fit_r), rtol=0, atol=1e-3)
+
+    # The first stage regresses X1 on the instruments.
+    first_stage = fit.first_stage.model
+    x1 = kept["X1"].to_numpy()
+    coef_1 = np.linalg.lstsq(instruments, x1, rcond=None)[0]
+    resid_1 = x1 - instruments @ coef_1
+    vcov_1 = (
+        resid_1
+        @ resid_1
+        / (n_obs - n_params)
+        * np.linalg.inv(instruments.T @ instruments)
+    )
+    names_1 = ["Intercept", "X2", "Z1"]
+
+    assert first_stage.variance_covariance.df_k == n_params, "first-stage df_k"
+    np.testing.assert_allclose(
+        first_stage.coef()[names_1],
+        coef_1[:3],
+        rtol=0,
+        atol=1e-10,
+        err_msg="first-stage coef",
+    )
+    np.testing.assert_allclose(
+        first_stage.se()[names_1],
+        np.sqrt(np.diag(vcov_1))[:3],
+        rtol=0,
+        atol=1e-10,
+        err_msg="first-stage se",
+    )
+
+    first_stage_r = _r_first_stage(fit_r)
+    r_names_1 = _r_coefnames(first_stage_r)
+    np.testing.assert_allclose(
+        first_stage.coef()[r_names_1],
+        stats.coef(first_stage_r),
+        rtol=0,
+        atol=COEF_ATOL,
+    )
+    assert int(fixest.degrees_freedom(first_stage_r, "k")[0]) == n_params - 1
+    assert not np.allclose(
+        first_stage.se()[r_names_1], fixest.se(first_stage_r), rtol=0, atol=1e-6
+    )
 
 
 @pytest.mark.against_r_core
