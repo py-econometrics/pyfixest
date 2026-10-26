@@ -124,8 +124,21 @@ GLM_SLOPE_CASES = (
     OLS_SLOPE_CASES[1],
     OLS_SLOPE_CASES[2],
     OLS_SLOPE_CASES[3],
-    _same("Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
-    _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
+    _same(
+        "Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),), full_matrix=True
+    ),
+    _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),), full_matrix=True),
+    _same("Y ~ X1 | f1[X2] + f2[Z1]", (("f1", True, ("X2",)), ("f2", True, ("Z1",)))),
+    SlopeCase(
+        "Y ~ X1 | f1:f2[[X2]]",
+        "Y ~ X1 | f1^f2[[X2]]",
+        (("f1:f2", False, ("X2",)),),
+    ),
+    SlopeCase(
+        "Y ~ X1 | f1:f2[[X2, Z1]]",
+        "Y ~ X1 | f1^f2[[X2, Z1]]",
+        (("f1:f2", False, ("X2", "Z1")),),
+    ),
 )
 
 # Every distinct formula, for checks that do not depend on the estimator.

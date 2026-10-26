@@ -55,8 +55,10 @@ def _inference_cases(cases: tuple[SlopeCase, ...]) -> list:
 @pytest.fixture(scope="module")
 def data() -> pd.DataFrame:
     data = pf.get_data(N=1000, seed=76540251, beta_type="2", error_type="2")
-    # Missing slope values drop rows like any other variable.
+    # Missing slope values drop rows like any other variable. Row 4 is complete
+    # otherwise, so its missing Z1 drops a row only where Z1 enters the model.
     data.loc[[3, 17], "X2"] = np.nan
+    data.loc[4, "Z1"] = np.nan
     return data
 
 
@@ -110,6 +112,13 @@ def test_varying_slopes_against_fixest(data, case, vcov, weights):
     )
 
     _assert_matches_fixest(fit, fit_r)
+    np.testing.assert_allclose(
+        fit.resid()[:5],
+        np.asarray(stats.residuals(fit_r))[:5],
+        rtol=0,
+        atol=RESID_ATOL,
+        err_msg="resid",
+    )
     if vcov != "iid" or weights is not None or case not in OLS_SLOPE_CASES:
         return
     # pyfixest reports no fit statistics for models without coefficients (#2002).
@@ -127,13 +136,6 @@ def test_varying_slopes_against_fixest(data, case, vcov, weights):
             atol=1e-8,
             err_msg="r2",
         )
-    np.testing.assert_allclose(
-        fit.resid()[:5],
-        np.asarray(stats.residuals(fit_r))[:5],
-        rtol=0,
-        atol=RESID_ATOL,
-        err_msg="resid",
-    )
 
 
 @pytest.mark.against_r_core
@@ -398,24 +400,43 @@ GLM_DEVIANCE_ATOL = 1e-7
 GLM_MAXITER = 100
 
 
-# Binomial IRLS reaches a NaN deviance on this formula.
-BINOMIAL_SKIPPED_FML = "Y ~ X1 | f1:f2[X2]"
+GLM_FAILURE_ISSUE = "https://github.com/py-econometrics/pyfixest/issues/2001"
+# pyfixest fails where fixest converges. The test asserts each failure, so a
+# fix fails the test until its entry is removed.
+GLM_KNOWN_FAILURES = {
+    ("Y ~ X1 | f1:f2[X2]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[X2]", "probit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2]]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2]]", "probit"): (ValueError, "invalid solver input"),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "poisson"): (
+        ValueError,
+        r"weight at index \d+ must be finite",
+    ),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "probit"): (RuntimeError, "Step-halving failed"),
+}
 
 
 def _glm_cases() -> list:
+    """Cross representative formulas with every vcov and weights option."""
     params = []
     for case in GLM_SLOPE_CASES:
-        for family in ("poisson", "logit", "probit", "gaussian"):
-            marks = (
-                pytest.mark.skip(
-                    reason="https://github.com/py-econometrics/pyfixest/issues/2001"
-                )
-                if family in ("logit", "probit") and case.fml == BINOMIAL_SKIPPED_FML
-                else ()
+        options = (
+            [
+                (vcov, weights)
+                for vcov in ["iid", "hetero", {"CRV1": "f1"}]
+                for weights in (None, "weights")
+            ]
+            if case.full_matrix
+            else [("iid", None)]
+        )
+        params.extend(
+            pytest.param(
+                case, family, vcov, weights, id=f"{case.fml}-{family}-{vcov}-{weights}"
             )
-            params.append(
-                pytest.param(case, family, marks=marks, id=f"{case.fml}-{family}")
-            )
+            for family in ("poisson", "logit", "probit", "gaussian")
+            for vcov, weights in options
+        )
     return params
 
 
@@ -428,9 +449,7 @@ def data_glm() -> pd.DataFrame:
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f1"}], ids=str)
-@pytest.mark.parametrize(("case", "family"), _glm_cases())
+@pytest.mark.parametrize(("case", "family", "vcov", "weights"), _glm_cases())
 def test_varying_slopes_glm_against_fixest(data_glm, case, family, vcov, weights):
     fml, fml_r = case.fml, case.fml_r
     if family in ("logit", "probit"):
@@ -472,10 +491,19 @@ def test_varying_slopes_glm_against_fixest(data_glm, case, family, vcov, weights
         "iwls_tol": 1e-10,
         "iwls_maxiter": GLM_MAXITER,
     }
-    if family == "poisson":
-        fit = pf.fepois(fml, **glm_kwargs)
-    else:
-        fit = pf.feglm(fml, family=family, **glm_kwargs)
+
+    def fit_glm():
+        if family == "poisson":
+            return pf.fepois(fml, **glm_kwargs)
+        return pf.feglm(fml, family=family, **glm_kwargs)
+
+    known_failure = GLM_KNOWN_FAILURES.get((case.fml, family))
+    if known_failure is not None:
+        error, message = known_failure
+        with pytest.raises(error, match=message):
+            fit_glm()
+        pytest.xfail(GLM_FAILURE_ISSUE)
+    fit = fit_glm()
 
     _assert_matches_fixest(fit, fit_r, coef_atol=GLM_COEF_ATOL, se_atol=GLM_SE_ATOL)
     if family != "gaussian":
