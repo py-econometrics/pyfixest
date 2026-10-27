@@ -1138,6 +1138,10 @@ class TestEdgeCases:
             "Y ~ 0 + X2 + [X1 ~ 1 + Z1]",
             "Y ~ X2 + [0 + X1 ~ Z1]",
             "Y ~ X2 + [X1 ~ sw(Z1, 0 + Z2)]",
+            "Y ~ X2 + sw([X1 ~ Z1 + 0], [X1 ~ Z2])",
+            "Y ~ sw(X2 + [X1 ~ 0 + Z1], X3)",
+            "Y ~ X2 + csw0([X1 ~ Z1 - 1])",
+            "Y ~ X2 + [X1 ~ Z1 + {1}]",
             "Y ~ X2 | X1 ~ 0 + Z1",
             "Y ~ X2 | f1 | X1 ~ 1 + Z1",
         ],
@@ -1151,8 +1155,12 @@ class TestEdgeCases:
 
     @pytest.mark.parametrize(
         "formula",
-        ["Y ~ X2 + [X1 ~ I(Z1 + 1) + {Z2 - 0}]", "Y ~ X2 + [X1 ~ Z1 + sw0(Z2)]"],
-        ids=["python-expressions", "zero-step"],
+        [
+            "Y ~ X2 + [X1 ~ I(Z1 + 1) + {Z2 - 0}]",
+            "Y ~ X2 + [X1 ~ Z1 + sw0(Z2)]",
+            "Y ~ sw(X2 - 1, X3) + [X1 ~ Z1]",
+        ],
+        ids=["python-expressions", "zero-step", "main-formula-intercept-step"],
     )
     def test_iv_block_allows_constants_in_expressions(self, formula):
         """Constants inside expressions or a generated zero step set no intercept."""

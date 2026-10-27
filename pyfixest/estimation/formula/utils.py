@@ -134,17 +134,27 @@ def _count_formula_tildes(part: str) -> int:
     return count
 
 
-def _sets_intercept(token: Token) -> bool:
-    """Whether a token is `0` or `1`, also inside multiple-estimation arguments."""
-    if token.kind is Token.Kind.VALUE:
-        return token.token in {"0", "1"}
-    if token.kind is Token.Kind.PYTHON and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(
-        token.token
-    ):
-        start, end = _get_position_of_first_parenthesis_pair(token.token)
-        return any(
-            _sets_intercept(argument) for argument in tokenize(token.token[start:end])
-        )
+def _sets_instrumental_variable_intercept(part: str, depth: int = 0) -> bool:
+    """Whether `part` writes `0` or `1` inside an IV block.
+
+    Multiple-estimation arguments are scanned at the depth of their call, so
+    both `sw([X1 ~ Z1 + 0], [X1 ~ Z2])` and `[X1 ~ sw(Z1, 0 + Z2)]` count,
+    while a generated zero step does not. `{1}` and `` `1` `` are Python and
+    name tokens that Formulaic also reads as an intercept.
+    """
+    for token in tokenize(part):
+        if token.kind is Token.Kind.CONTEXT and token.token == "[":
+            depth += 1
+        elif token.kind is Token.Kind.CONTEXT and token.token == "]":
+            depth -= 1
+        elif token.kind is Token.Kind.PYTHON and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(
+            token.token
+        ):
+            start, end = _get_position_of_first_parenthesis_pair(token.token)
+            if _sets_instrumental_variable_intercept(token.token[start:end], depth):
+                return True
+        elif depth > 0 and token.token.strip() in {"0", "1"}:
+            return True
     return False
 
 
@@ -156,19 +166,13 @@ def _reject_intercept_in_instrumental_variable_block(formula: str) -> None:
     tokens. Brackets only delimit IV blocks: subscripts and varying-slope
     fixed effects such as `f1[z]` are single Python tokens.
     """
-    depth = 0
-    for token in tokenize(formula):
-        if token.kind is Token.Kind.CONTEXT and token.token == "[":
-            depth += 1
-        elif token.kind is Token.Kind.CONTEXT and token.token == "]":
-            depth -= 1
-        elif depth > 0 and _sets_intercept(token):
-            raise FormulaSyntaxError(
-                "An IV block takes its intercept from the main formula, so "
-                "`[endogenous ~ instruments]` cannot contain `0`, `1` or `-1`. "
-                "To fit both stages without an intercept, write `0 +` in the "
-                f"main formula, as in `Y ~ 0 + X1 + [X2 ~ Z1]`. Received: {formula}"
-            )
+    if _sets_instrumental_variable_intercept(formula):
+        raise FormulaSyntaxError(
+            "An IV block takes its intercept from the main formula, so "
+            "`[endogenous ~ instruments]` cannot contain `0`, `1` or `-1`. "
+            "To fit both stages without an intercept, write `0 +` in the "
+            f"main formula, as in `Y ~ 0 + X1 + [X2 ~ Z1]`. Received: {formula}"
+        )
 
 
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:
