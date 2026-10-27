@@ -279,6 +279,7 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/mayuriphad"><img src="https://avatars.githubusercontent.com/u/163738104?v=4?s=40" width="40px;" alt="Mayuri"/><br /><sub><b>Mayuri</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mayuriphad" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://johannes-schmieder.com"><img src="https://avatars.githubusercontent.com/u/47986688?v=4?s=40" width="40px;" alt="Johannes Schmieder"/><br /><sub><b>Johannes Schmieder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Ajohannes-schmieder" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
