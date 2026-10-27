@@ -18,7 +18,7 @@ from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import NonConvergenceError, VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
@@ -1816,6 +1816,12 @@ class Feols(ResultAccessorMixin):
             A tidy DataFrame with columns `variable`, `code`, `level`, and
             `coefficient` containing the estimated fixed effects.
 
+        Raises
+        ------
+        NonConvergenceError
+            If LSQR reaches its iteration limit before meeting `atol` and
+            `btol`.
+
         Examples
         --------
         ```{python}
@@ -1859,7 +1865,14 @@ class Feols(ResultAccessorMixin):
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
 
-        alpha = lsqr(D_w, uhat, atol=atol, btol=btol)[0]
+        alpha, istop, itn = lsqr(D_w, uhat, atol=atol, btol=btol)[:3]
+        # istop 7: LSQR stopped at its iteration limit before meeting atol/btol.
+        if istop == 7:
+            raise NonConvergenceError(
+                f"Fixed-effect recovery did not converge: LSQR reached its "
+                f"iteration limit ({itn} iterations) before meeting "
+                f"atol={atol} and btol={btol}."
+            )
 
         self.fixef_estimates = FixedEffectEstimates(
             fixed_effects=build_fixed_effects(
