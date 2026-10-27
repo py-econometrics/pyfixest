@@ -1819,8 +1819,8 @@ class Feols(ResultAccessorMixin):
         Raises
         ------
         NonConvergenceError
-            If LSQR reaches its iteration limit before meeting `atol` and
-            `btol`.
+            If LSQR stops at its iteration limit or because the problem is
+            too ill-conditioned, before meeting `atol` and `btol`.
 
         Examples
         --------
@@ -1866,7 +1866,23 @@ class Feols(ResultAccessorMixin):
             D_w = diags(weights_sqrt, 0).dot(D)
 
         alpha, istop, itn = lsqr(D_w, uhat, atol=atol, btol=btol)[:3]
-        # istop 7: LSQR stopped at its iteration limit before meeting atol/btol.
+        # LSQR stopping reasons (istop), from SciPy's lsqr message table:
+        #   0  x = 0 is the exact solution
+        #   1  Ax - b is small enough, given atol and btol
+        #   2  the least-squares solution is good enough, given atol
+        #   3  the estimate of cond(Abar) has exceeded conlim
+        #   4  Ax - b is small enough for this machine
+        #   5  the least-squares solution is good enough for this machine
+        #   6  cond(Abar) seems to be too large for this machine
+        #   7  the iteration limit has been reached
+        # Codes 3, 6, and 7 stop before the accuracy tests are met.
+        # https://github.com/scipy/scipy/blob/v1.17.1/scipy/sparse/linalg/_isolve/lsqr.py#L334-L341
+        if istop in (3, 6):
+            raise NonConvergenceError(
+                f"Fixed-effect recovery did not converge: LSQR stopped after "
+                f"{itn} iterations because the problem is too ill-conditioned "
+                f"(istop={istop}), before meeting atol={atol} and btol={btol}."
+            )
         if istop == 7:
             raise NonConvergenceError(
                 f"Fixed-effect recovery did not converge: LSQR reached its "

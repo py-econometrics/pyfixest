@@ -20,8 +20,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 `fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR
-reaches its iteration limit while recovering the fixed effects, instead of
-returning unconverged estimates.
+stops at its iteration limit or because the problem is too ill-conditioned while
+recovering the fixed effects, instead of returning unconverged estimates.
 
 ### Varying Slopes
 
