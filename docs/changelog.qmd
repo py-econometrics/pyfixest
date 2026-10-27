@@ -21,7 +21,9 @@ Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 `fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR
 stops at its iteration limit or because the problem is too ill-conditioned while
-recovering the fixed effects, instead of returning unconverged estimates.
+recovering the fixed effects, instead of returning unconverged estimates. The
+`solver="scipy.sparse.linalg.lsqr"` coefficient solver and `decompose()` raise
+the same error.
 
 ### Varying Slopes
 
