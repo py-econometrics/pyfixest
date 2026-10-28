@@ -104,7 +104,10 @@ def compare_with_r(
     py_names = [normalize_coef_name(str(n)) for n in fit_py._coefnames]
     py_values = fit_py.coef().values
 
-    fit_r = fixest.feols(ro.Formula(r_fml), df)
+    r_formula = ro.Formula(r_fml)
+    # R's model.matrix evaluates i() directly when it is inside a : term.
+    r_formula.environment["i"] = fixest.i
+    fit_r = fixest.feols(r_formula, df)
     r_names = get_r_coef_names(fit_r)
     r_values = get_r_coef_values(fit_r)
 
@@ -298,10 +301,21 @@ def test_binning_with_continuous(df_test):
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g)", "Y ~ i(f_str, g)"),
+        ("Y ~ i(f_str, i.g):X1", "Y ~ i(f_str, g):X1"),
         ("Y ~ i(f_str, i.g, ref='apple')", "Y ~ i(f_str, g, ref='apple')"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X')",
             "Y ~ i(f_str, g, ref='apple', ref2='X')",
+        ),
+        ("Y ~ i(f_str, i.g, ref2='X')", "Y ~ i(f_str, g, ref2='X')"),
+        # Without an intercept, every cell is kept (#1767)
+        ("Y ~ X1 + i(f_str, i.g) - 1", "Y ~ X1 + i(f_str, g) - 1"),
+        ("Y ~ 0 + X1 + i(f_str, i.g)", "Y ~ 0 + X1 + i(f_str, g)"),
+        ("Y ~ 0 + i(f_str, i.g, ref='apple')", "Y ~ 0 + i(f_str, g, ref='apple')"),
+        ("Y ~ 0 + i(f_str, i.g, ref2='X')", "Y ~ 0 + i(f_str, g, ref2='X')"),
+        (
+            "Y ~ 0 + i(f_str, i.g, ref='apple', ref2='X')",
+            "Y ~ 0 + i(f_str, g, ref='apple', ref2='X')",
         ),
     ],
 )
@@ -316,6 +330,9 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g) | fe1", "Y ~ i(f_str, g) | fe1"),
+        ("Y ~ i(f_str, i.g):X1 | fe1", "Y ~ i(f_str, g):X1 | fe1"),
+        ("Y ~ i(f_str, i.g, ref='apple') | fe1", "Y ~ i(f_str, g, ref='apple') | fe1"),
+        ("Y ~ i(f_str, i.g, ref2='X') | fe1", "Y ~ i(f_str, g, ref2='X') | fe1"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X') | fe1",
             "Y ~ i(f_str, g, ref='apple', ref2='X') | fe1",
