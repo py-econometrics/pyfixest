@@ -320,10 +320,67 @@ def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
         feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-def test_iv_allows_identical_instrument_covariate_terms(term):
-    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
-    assert "X2" in fit.coef().index
+@pytest.mark.parametrize(
+    "term, redundant",
+    [
+        ("X1", "X1"),
+        ("center(X1)", "center(X1)"),
+        ("I(X1**2)", "I(X1**2)"),
+        ("X1:Z1", "X1:Z1"),
+        ("X1", "center(X1)"),
+        ("X1:Z1", "I(X1 * Z1)"),
+    ],
+)
+@pytest.mark.parametrize(
+    "weights, weights_type, fixed_effects, vcov",
+    [
+        (None, "aweights", "", "iid"),
+        (None, "aweights", " | f1", "hetero"),
+        ("weights", "aweights", " | f1", {"CRV1": "f2"}),
+        ("frequency", "fweights", "", "iid"),
+    ],
+)
+def test_iv_redundant_instruments_match_omitted_terms(
+    term, redundant, weights, weights_type, fixed_effects, vcov
+):
+    """Redundant instruments add no identifying variation, even under another name."""
+    data = get_data().dropna()
+    data["frequency"] = np.arange(len(data)) % 3 + 1
+    options = {"weights": weights, "weights_type": weights_type, "vcov": vcov}
+    fit = feols(
+        fml=f"Y ~ {term} + [X2 ~ {redundant} + Z2]{fixed_effects}",
+        data=data,
+        **options,
+    )
+    # Omitting the redundant term bypasses the faulty collinearity selection.
+    reference = feols(
+        fml=f"Y ~ {term} + [X2 ~ Z2]{fixed_effects}", data=data, **options
+    )
+
+    assert list(fit.coef().index) == list(reference.coef().index)
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), rtol=1e-12, err_msg="IV coefficients"
+    )
+    np.testing.assert_allclose(
+        fit.se(), reference.se(), rtol=1e-12, err_msg="IV standard errors"
+    )
+    # fixest 0.14.2 counts the redundant instrument in the first-stage tests'
+    # numerator degrees of freedom; see docs/developer/fixest-compatibility.md.
+    assert fit.first_stage.instruments == ("Z2",)
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        reference.first_stage.diagnostics.f_stat,
+        rtol=1e-12,
+        err_msg="first-stage F statistic",
+    )
+    fit.eff_F()
+    reference.eff_F()
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.eff_f,
+        reference.first_stage.diagnostics.eff_f,
+        rtol=1e-12,
+        err_msg="effective F statistic",
+    )
 
 
 def test_iv_errors():
