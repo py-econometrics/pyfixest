@@ -44,7 +44,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
 - **Post-Estimation & Reporting**
-  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
+  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
 ## Installation
 
