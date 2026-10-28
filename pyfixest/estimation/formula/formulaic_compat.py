@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from collections import deque
 from collections.abc import Iterator, Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 import formulaic
@@ -108,6 +109,39 @@ def _iv_block(
     return Structured(lhs, deps=(Structured(lhs=lhs, rhs=rhs),))
 
 
+def _interaction_without_iv(
+    lhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    rhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    *,
+    operator: Operator,
+    context: Mapping[str, Any],
+) -> Any:
+    """Reject implicit exogenous interactions with an endogenous IV block."""
+    has_iv = any(
+        isinstance(terms, Structured) and count_multistage_blocks(terms)
+        for terms in (lhs, rhs)
+    )
+    result = Structured._merge(
+        lhs, rhs, merger=partial(operator.to_terms, context=context)
+    )
+    if not has_iv:
+        return result
+    original_terms = {
+        term
+        for terms in (lhs, rhs)
+        for term in (terms.root if isinstance(terms, Structured) else terms)
+    }
+    # A power of a single IV term can just deduplicate it. Reject expansions
+    # that introduce new terms, whose endogenous/exogenous role is ambiguous.
+    if set(result.root).difference(original_terms):
+        raise FormulaSyntaxError(
+            "Interactions around an instrumental-variable block are not supported. "
+            "Write interactions explicitly and specify which term is endogenous "
+            "inside `[endogenous ~ instruments]`."
+        )
+    return result
+
+
 class PyfixestOperatorResolver(DefaultOperatorResolver):
     """Keep IV terms in dependencies without generating placeholder covariates.
 
@@ -130,7 +164,7 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
 
     @property
     def operators(self) -> list[Operator]:
-        """Replace only the bracketed IV operator, preserving Formulaic's grammar."""
+        """Preserve IV terms and reject implicit interactions around IV blocks."""
         operators = super().operators
         multistage_operator_positions = [
             position
@@ -155,6 +189,19 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
             structural=operator.structural,
             disabled=operator.disabled,
         )
+        for position, operator in enumerate(operators):
+            if operator.symbol in {"*", ":", "/", "in", "^", "**"}:
+                operators[position] = Operator(
+                    operator.symbol,
+                    arity=operator.arity,
+                    precedence=operator.precedence,
+                    associativity=operator.associativity,
+                    fixity=operator.fixity,
+                    to_terms=partial(_interaction_without_iv, operator=operator),
+                    accepts_context=operator.accepts_context,
+                    structural=True,
+                    disabled=operator.disabled,
+                )
         return operators
 
 
@@ -195,7 +242,9 @@ def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
     return isinstance(rhs, formulaic.formula.StructuredFormula)
 
 
-def count_multistage_blocks(rhs: formulaic.formula.Formula) -> int:
+def count_multistage_blocks(
+    rhs: formulaic.formula.Formula | Structured[OrderedSet[Term]],
+) -> int:
     """Count formulaic MULTISTAGE deps on a StructuredFormula RHS."""
     # formulaic internal: MULTISTAGE stores the parsed first-stage formulas in
     # `.deps`; formulaic does not currently expose a documented accessor.

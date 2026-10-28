@@ -1185,7 +1185,6 @@ class TestEdgeCases:
     @pytest.mark.parametrize(
         "rhs",
         [
-            "X1 : [X2 ~ Z1]",
             "X1 - [X2 ~ Z1]",
             "-([X2 ~ Z1])",
         ],
@@ -1210,7 +1209,6 @@ class TestEdgeCases:
             ("Y ~ I(`my var`) + [I(`my var`) ~ Z1]", "Y ~ 1 + [I(`my var`) ~ Z1]"),
             ("Y ~ Q('my var') + [Q('my var') ~ Z1]", "Y ~ 1 + [Q('my var') ~ Z1]"),
             ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
-            ("Y ~ X1 * [X2 ~ Z1]", "Y ~ X1 + X1:X2 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
             (
