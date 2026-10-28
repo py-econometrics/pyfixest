@@ -5,8 +5,10 @@ import warnings
 from enum import Enum
 
 import pandas as pd
-from formulaic.parser.algos import tokenize
-from formulaic.parser.types import Token
+from formulaic.parser import DefaultFormulaParser, DefaultOperatorResolver
+from formulaic.parser.algos import tokenize, tokens_to_ast
+from formulaic.parser.algos.sanitize_tokens import sanitize_python_code
+from formulaic.parser.types import ASTNode, Token
 
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
@@ -91,6 +93,7 @@ _MULTIPLE_ESTIMATION_PATTERN = re.compile(
 
 def _preprocess(formula: str) -> str:
     formula = _preprocess_fixest_instrumental_variable(formula)
+    _reject_intercept_in_instrumental_variable_block(formula)
     formula = _preprocess_fixed_effect_interactions(formula)
     formula = _preprocess_fixest_multiple_dependents(formula)
     return formula
@@ -131,6 +134,78 @@ def _count_formula_tildes(part: str) -> int:
             start, end = _get_position_of_first_parenthesis_pair(token.token)
             count += _count_formula_tildes(token.token[start:end])
     return count
+
+
+def _sets_instrumental_variable_intercept(part: str, depth: int = 0) -> bool:
+    """Whether `part` writes `0` or `1` inside an IV block.
+
+    Multiple-estimation arguments are scanned at the depth of their call, so
+    both `sw([X1 ~ Z1 + 0], [X1 ~ Z2])` and `[X1 ~ sw(Z1, 0 + Z2)]` count,
+    while a generated zero step does not. `{1}` and `` `1` `` are Python and
+    name tokens that Formulaic also reads as an intercept.
+    """
+    if depth == 0 and "[" not in part:
+        return False
+    tokens = list(tokenize(part))
+    for token in tokens:
+        if (
+            token.kind is Token.Kind.PYTHON
+            and not _MULTIPLE_ESTIMATION_PATTERN.fullmatch(token.token)
+        ):
+            # Match Formulaic's normalization of expressions such as `{(1)}`.
+            token.token = sanitize_python_code(token.token)
+    # Inspect the operator tree before Formulaic inserts implicit intercepts.
+    tree = tokens_to_ast(
+        tokens,
+        operator_resolver=DefaultOperatorResolver(
+            feature_flags=DefaultFormulaParser.FeatureFlags.ALL
+        ),
+    )
+    pending = [(tree, depth)]
+    while pending:
+        node, depth = pending.pop()
+        if isinstance(node, ASTNode):
+            if node.operator.symbol == "~" and node.operator.accepts_context(
+                [Token("[", kind=Token.Kind.CONTEXT)]
+            ):
+                depth += 1
+            args = list(node.args)
+            if node.operator.symbol in {"^", "**"}:
+                args = args[:1]  # The exponent is not an intercept term.
+            elif node.operator.symbol == ":" and any(arg != "1" for arg in args):
+                args = [arg for arg in args if arg != "1"]  # Unit scaling.
+            pending.extend((arg, depth) for arg in args)
+        elif isinstance(node, Token):
+            if (
+                node.kind is Token.Kind.PYTHON
+                and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(node.token)
+            ):
+                start, end = _get_position_of_first_parenthesis_pair(node.token)
+                if any(
+                    _sets_instrumental_variable_intercept(arg, depth=depth)
+                    for arg in _str_split_by_sep(node.token[start:end], separator=",")
+                ):
+                    return True
+            elif depth > 0 and node.token.strip() in {"0", "1"}:
+                return True
+    return False
+
+
+def _reject_intercept_in_instrumental_variable_block(formula: str) -> None:
+    """Reject `0`, `1` and `-1` inside an `[endogenous ~ instruments]` block.
+
+    The main formula sets the intercept of both IV stages. Formulaic inserts a
+    `1` after every `~`, so an explicit `1` in a block is visible only in the
+    tokens. Brackets only delimit IV blocks: subscripts and varying-slope
+    fixed effects such as `f1[z]` are single Python tokens.
+    """
+    if _sets_instrumental_variable_intercept(formula):
+        raise FormulaSyntaxError(
+            "An IV block takes its intercept from the main formula, so "
+            "`[endogenous ~ instruments]` cannot contain `0`, `1` or `-1`. "
+            "To fit both stages without an intercept, write `0 +` in the "
+            f"main formula, as in `Y ~ 0 + X1 + [X2 ~ Z1]`. Received: {formula}"
+        )
 
 
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:

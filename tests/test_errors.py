@@ -333,7 +333,7 @@ def test_iv_errors():
     with pytest.raises(FormulaSyntaxError):
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
     with pytest.raises(UnderDeterminedIVError):
-        feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
+        feols(fml="Y ~ X1 | Z1 ~ X2 - X2", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
