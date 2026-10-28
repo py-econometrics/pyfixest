@@ -6,12 +6,14 @@ Numerical results are compared with R fixest in
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import pyfixest as pf
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import FormulaSyntaxError, VcovTypeNotSupportedError
 
 
 @pytest.fixture(scope="module")
@@ -38,21 +40,25 @@ def test_varying_slopes_require_within_demeaner(data, demeaner, estimator):
         lambda fit: fit.fixef(),
         lambda fit: fit.decompose(param="X1", x1_vars=["X2"]),
         lambda fit: fit.ritest(resampvar="X1", reps=10),
+        lambda fit: fit.wildboottest(param="X1", reps=9),
     ],
-    ids=["predict", "fixef", "decompose", "ritest"],
+    ids=["predict", "fixef", "decompose", "ritest", "wildboottest"],
 )
 def test_varying_slopes_reject_unsupported_post_estimation(data, call):
     fit = pf.feols("Y ~ X1 + X2 | f1[Z1]", data=data)
 
-    with pytest.raises(NotImplementedError, match="fits with varying slopes"):
+    with pytest.raises(NotImplementedError, match=r"(fits|models) with varying slopes"):
         call(fit)
 
 
-def test_varying_slopes_reject_wild_bootstrap(data):
-    fit = pf.feols("Y ~ X1 | f1[Z1]", data=data)
+@pytest.mark.parametrize("slope", ["C(f2)", "f2_str"])
+def test_varying_slopes_reject_categorical_slopes(data, slope):
+    data = data.assign(f2_str=data["f2"].astype(str))
 
-    with pytest.raises(NotImplementedError, match="models with varying slopes"):
-        fit.wildboottest(param="X1", reps=9)
+    with pytest.raises(
+        FormulaSyntaxError, match=rf"`{re.escape(slope)}` must evaluate to one numeric"
+    ):
+        pf.feols(f"Y ~ X1 | f1[{slope}]", data=data)
 
 
 @pytest.mark.parametrize(
@@ -68,17 +74,6 @@ def test_varying_slopes_reject_unsupported_vcov(data, vcov, vcov_kwargs, error):
 
     with pytest.raises(error, match="fits with varying slopes"):
         pf.feols("Y ~ X1 | f1[Z1]", data=panel, vcov=vcov, vcov_kwargs=vcov_kwargs)
-
-
-def test_varying_slopes_multiple_estimation_matches_single_fits(data):
-    """Models with different slopes on the same levels keep separate caches."""
-    fixed_effects = ["f1", "f1[X2]", "f1[[X2]]", "f1[X2, Z1]"]
-    multi = pf.feols(f"Y ~ X1 | sw({', '.join(fixed_effects)})", data=data)
-
-    for fit, fixed_effect in zip(multi.to_list(), fixed_effects, strict=True):
-        single = pf.feols(f"Y ~ X1 | {fixed_effect}", data=data)
-        np.testing.assert_allclose(fit.coef(), single.coef(), rtol=0, atol=1e-10)
-        np.testing.assert_allclose(fit.se(), single.se(), rtol=0, atol=1e-10)
 
 
 @pytest.mark.parametrize("retention", [{"lean": True}, {"store_data": False}])

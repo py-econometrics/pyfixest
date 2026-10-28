@@ -1,8 +1,9 @@
 """Compare varying-slope fixed effects with R fixest.
 
 R fixest is the reference for coefficients, standard errors, observation
-counts, degrees of freedom, and fit statistics of models with `f[z]` and
-`f[[z]]` fixed effects.
+counts, degrees of freedom, residuals, and fit statistics of models with `f[z]`
+and `f[[z]]` fixed effects. The formulas live in `tests/_varying_slope_cases.py`,
+which `tests/test_formula_parse.py` also checks at the parsing layer.
 """
 
 from __future__ import annotations
@@ -14,6 +15,12 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from tests._varying_slope_cases import (
+    GLM_SLOPE_CASES,
+    IV_SLOPE_CASES,
+    OLS_SLOPE_CASES,
+    SlopeCase,
+)
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -22,32 +29,36 @@ stats = importr("stats")
 # to about 1e-8 and standard errors, built on the residuals, to about 1e-7.
 COEF_ATOL = 1e-8
 SE_ATOL = 1e-7
+# Residuals carry the fixed-effect solver error of both sides.
+RESID_ATOL = 1e-7
 DEMEANER = pf.LsmrDemeaner(fixef_atol=1e-12, fixef_btol=1e-12, fixef_maxiter=10_000)
 R_FIXEF_TOL = 1e-10
-
-# (pyfixest formula, fixest formula)
-OLS_FORMULAS = [
-    ("Y ~ X1 | f1[X2]", "Y ~ X1 | f1[X2]"),
-    ("Y ~ X1 | f1[[X2]]", "Y ~ X1 | f1[[X2]]"),
-    ("Y ~ 0 + X1 | f1[[X2]]", "Y ~ 0 + X1 | f1[[X2]]"),
-    ("Y ~ X1 | f1[X2, Z1] + f2", "Y ~ X1 | f1[X2, Z1] + f2"),
-    ("Y ~ X1 | f1[[X2, Z1]] + f2", "Y ~ X1 | f1[[X2, Z1]] + f2"),
-    ("Y ~ X1 | f1 + f1[[X2]] + f2[[Z1]]", "Y ~ X1 | f1 + f1[[X2]] + f2[[Z1]]"),
-    ("Y ~ X1 | f1:f2[X2]", "Y ~ X1 | f1^f2[X2]"),
-    ("Y ~ X1 | f1[X2**2]", "Y ~ X1 | f1[I(X2^2)]"),
-]
-IV_FORMULAS = [
-    ("Y ~ X2 + [X1 ~ Z1] | f1[Z2]", "Y ~ X2 | f1[Z2] | X1 ~ Z1"),
-    ("Y ~ X2 + [X1 ~ Z1] | f1[[Z2]] + f2", "Y ~ X2 | f1[[Z2]] + f2 | X1 ~ Z1"),
-]
 VCOVS = ["iid", "hetero", {"CRV1": "f1"}, {"CRV1": "f2"}, {"CRV1": "f1+f2"}]
+
+
+def _inference_cases(cases: tuple[SlopeCase, ...]) -> list:
+    """Cross representative formulas with every vcov and weights option."""
+    params = []
+    for case in cases:
+        options = (
+            [(vcov, weights) for vcov in VCOVS for weights in (None, "weights")]
+            if case.full_matrix
+            else [("iid", None)]
+        )
+        params.extend(
+            pytest.param(case, vcov, weights, id=f"{case.fml}-{vcov}-{weights}")
+            for vcov, weights in options
+        )
+    return params
 
 
 @pytest.fixture(scope="module")
 def data() -> pd.DataFrame:
     data = pf.get_data(N=1000, seed=76540251, beta_type="2", error_type="2")
-    # Missing slope values drop rows like any other variable.
+    # Missing slope values drop rows like any other variable. Row 4 is complete
+    # otherwise, so its missing Z1 drops a row only where Z1 enters the model.
     data.loc[[3, 17], "X2"] = np.nan
+    data.loc[4, "Z1"] = np.nan
     return data
 
 
@@ -56,37 +67,48 @@ def _r_vcov(vcov: str | dict[str, str]):
 
 
 def _r_coefnames(fit_r) -> list[str]:
-    names = ro.r("function(fit) names(coef(fit))")(fit_r)
+    # `as.character` turns the NULL names of a model without coefficients into
+    # an empty vector.
+    names = ro.r("function(fit) as.character(names(coef(fit)))")(fit_r)
     return [
         name.replace("(Intercept)", "Intercept").removeprefix("fit_") for name in names
     ]
 
 
-def _assert_matches_fixest(fit, fit_r) -> None:
+def _r_first_stage(fit_r):
+    return ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
+
+
+def _assert_matches_fixest(
+    fit, fit_r, *, coef_atol: float = COEF_ATOL, se_atol: float = SE_ATOL
+) -> None:
     # fixest lists instrumented regressors first.
     names = _r_coefnames(fit_r)
     assert sorted(fit.coef().index) == sorted(names), "coefficient names != fixest"
     assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    if not names:
+        # Models without coefficients have no covariance or degrees of freedom.
+        return
     assert fit.variance_covariance.df_k == int(fixest.degrees_freedom(fit_r, "k")[0]), (
         "df_k != fixest"
     )
     np.testing.assert_allclose(
-        fit.coef()[names], stats.coef(fit_r), rtol=0, atol=COEF_ATOL, err_msg="coef"
+        fit.coef()[names], stats.coef(fit_r), rtol=0, atol=coef_atol, err_msg="coef"
     )
     np.testing.assert_allclose(
-        fit.se()[names], fixest.se(fit_r), rtol=0, atol=SE_ATOL, err_msg="se"
+        fit.se()[names], fixest.se(fit_r), rtol=0, atol=se_atol, err_msg="se"
     )
 
 
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", VCOVS, ids=str)
-@pytest.mark.parametrize(("fml", "fml_r"), OLS_FORMULAS + IV_FORMULAS)
-def test_varying_slopes_against_fixest(data, fml, fml_r, vcov, weights):
-    fit = pf.feols(fml, data=data, vcov=vcov, weights=weights, demeaner=DEMEANER)
+@pytest.mark.parametrize(
+    ("case", "vcov", "weights"), _inference_cases(OLS_SLOPE_CASES + IV_SLOPE_CASES)
+)
+def test_varying_slopes_against_fixest(data, case, vcov, weights):
+    fit = pf.feols(case.fml, data=data, vcov=vcov, weights=weights, demeaner=DEMEANER)
     r_kwargs = {} if weights is None else {"weights": ro.Formula(f"~{weights}")}
     fit_r = fixest.feols(
-        ro.Formula(fml_r),
+        ro.Formula(case.fml_r),
         data=data,
         vcov=_r_vcov(vcov),
         fixef_tol=R_FIXEF_TOL,
@@ -94,26 +116,32 @@ def test_varying_slopes_against_fixest(data, fml, fml_r, vcov, weights):
     )
 
     _assert_matches_fixest(fit, fit_r)
-
-
-@pytest.mark.against_r_core
-@pytest.mark.parametrize(("fml", "fml_r"), OLS_FORMULAS)
-def test_varying_slopes_fit_statistics_against_fixest(data, fml, fml_r):
-    fit = pf.feols(fml, data=data, demeaner=DEMEANER)
-    fit_r = fixest.feols(ro.Formula(fml_r), data=data, fixef_tol=R_FIXEF_TOL)
-    r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
-
+    if case in IV_SLOPE_CASES:
+        _assert_matches_fixest(fit.first_stage.model, _r_first_stage(fit_r))
     np.testing.assert_allclose(
-        [
-            fit.fitstat.r2,
-            fit.fitstat.adj_r2,
-            fit.fitstat.r2_within,
-            fit.fitstat.adj_r2_within,
-        ],
-        np.asarray(r2),
+        fit.resid()[:5],
+        np.asarray(stats.residuals(fit_r))[:5],
         rtol=0,
-        atol=1e-8,
+        atol=RESID_ATOL,
+        err_msg="resid",
     )
+    if vcov != "iid" or weights is not None or case not in OLS_SLOPE_CASES:
+        return
+    # pyfixest reports no fit statistics for models without coefficients (#2002).
+    if not fit.coef().empty:
+        r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
+        np.testing.assert_allclose(
+            [
+                fit.fitstat.r2,
+                fit.fitstat.adj_r2,
+                fit.fitstat.r2_within,
+                fit.fitstat.adj_r2_within,
+            ],
+            np.asarray(r2),
+            rtol=0,
+            atol=1e-8,
+            err_msg="r2",
+        )
 
 
 @pytest.mark.against_r_core
@@ -159,9 +187,234 @@ def test_varying_slopes_singletons_against_fixest(
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize("vcov", ["iid", {"CRV1": "g"}], ids=str)
+@pytest.mark.parametrize("fixed_effects", ["g[z]", "g[[z]]"])
+def test_varying_slopes_zero_slope_group_against_fixest(fixed_effects, vcov):
+    """A group whose slope covariate is all zero has an unidentified slope."""
+    rng = np.random.default_rng(3)
+    g = np.repeat(np.arange(15), 20)
+    z = rng.normal(size=g.size)
+    z[g == 0] = 0.0
+    x = rng.normal(size=g.size)
+    y = 1 + x + 0.05 * g * z + rng.normal(size=g.size)
+    data = pd.DataFrame({"y": y, "x": x, "g": g, "z": z})
+    fml = f"y ~ x | {fixed_effects}"
+
+    fit = pf.feols(fml, data=data, vcov=vcov, demeaner=DEMEANER)
+    fit_r = fixest.feols(
+        ro.Formula(fml), data=data, vcov=_r_vcov(vcov), fixef_tol=R_FIXEF_TOL
+    )
+
+    _assert_matches_fixest(fit, fit_r)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("slope_type", ["float", "int"])
+@pytest.mark.parametrize("level_type", ["float", "str", "categorical"])
+def test_varying_slopes_column_types_against_fixest(data, level_type, slope_type):
+    """Levels and slopes accept the same column types as other model terms."""
+    data = data.dropna().reset_index(drop=True)
+    levels = data["f1"].astype(int)
+    data["f1"] = {
+        "float": data["f1"],
+        "str": levels.astype(str),
+        "categorical": pd.Categorical(levels),
+    }[level_type]
+    data["s"] = {
+        "float": data["X2"],
+        "int": np.round(3 * data["X2"]).astype(int),
+    }[slope_type]
+    fml = "Y ~ X1 | f1[s] + f2[[s]]"
+
+    fit = pf.feols(fml, data=data, demeaner=DEMEANER)
+    fit_r = fixest.feols(ro.Formula(fml), data=data, fixef_tol=R_FIXEF_TOL)
+
+    _assert_matches_fixest(fit, fit_r)
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    ("fml", "single_fmls"),
+    [
+        (
+            "Y ~ X1 | sw(f1, f1[X2], f1[[X2]], f1[X2, Z1])",
+            [
+                "Y ~ X1 | f1",
+                "Y ~ X1 | f1[X2]",
+                "Y ~ X1 | f1[[X2]]",
+                "Y ~ X1 | f1[X2, Z1]",
+            ],
+        ),
+        (
+            "Y ~ X1 | csw0(f1[[X2]], f2)",
+            ["Y ~ X1", "Y ~ X1 | f1[[X2]]", "Y ~ X1 | f1[[X2]] + f2"],
+        ),
+        ("Y ~ sw(X1, X1 + Z1) | f1[X2]", ["Y ~ X1 | f1[X2]", "Y ~ X1 + Z1 | f1[X2]"]),
+    ],
+)
+@pytest.mark.parametrize("estimator", ["feols", "fepois"])
+def test_varying_slopes_multiple_estimation_against_fixest(
+    data, data_glm, fml, single_fmls, estimator
+):
+    """Each model of a multiple estimation matches its single fixest fit.
+
+    Single fits are the reference because fixest 0.14.0 multiple estimation
+    drops the intercept of slope-only models (see the compatibility ledger).
+    Models with different slopes on the same levels must not share a demeaning
+    cache entry.
+    """
+    if estimator == "feols":
+        multi = pf.feols(fml, data=data, demeaner=DEMEANER)
+        fits_r = [
+            fixest.feols(ro.Formula(single), data=data, fixef_tol=R_FIXEF_TOL)
+            for single in single_fmls
+        ]
+        tolerances = {}
+    else:
+        multi = pf.fepois(fml, data=data_glm, demeaner=DEMEANER, iwls_tol=1e-10)
+        fits_r = [
+            fixest.fepois(
+                ro.Formula(single),
+                data=data_glm,
+                fixef_tol=R_FIXEF_TOL,
+                glm_tol=1e-10,
+                glm_iter=GLM_MAXITER,
+            )
+            for single in single_fmls
+        ]
+        for fit_r in fits_r:
+            assert bool(fit_r.rx2("convStatus")[0]), "fixest IRLS did not converge"
+        tolerances = {"coef_atol": GLM_COEF_ATOL, "se_atol": GLM_SE_ATOL}
+
+    for fit, fit_r in zip(multi.to_list(), fits_r, strict=True):
+        _assert_matches_fixest(fit, fit_r, **tolerances)
+
+
+@pytest.mark.against_r_core
+def test_fixest_multiple_estimation_drops_slope_only_intercept(data):
+    """Fixest 0.14.0 fits slope-only models of a multiple estimation without intercept.
+
+    The single fit keeps the intercept, as pyfixest does in both cases (see the
+    compatibility ledger). This fails once fixest agrees with its single fit.
+    """
+    multi = pf.feols("Y ~ X1 | sw(f1[X2], f1[[X2]])", data=data, demeaner=DEMEANER)
+    multi_r = fixest.feols(
+        ro.Formula("Y ~ X1 | sw(f1[X2], f1[[X2]])"), data=data, fixef_tol=R_FIXEF_TOL
+    )
+    single_r = fixest.feols(
+        ro.Formula("Y ~ X1 | f1[[X2]]"), data=data, fixef_tol=R_FIXEF_TOL
+    )
+    slope_only, slope_only_r = multi.to_list()[1], multi_r.rx2(2)
+
+    assert _r_coefnames(slope_only_r) == ["X1"]
+    _assert_matches_fixest(slope_only, single_r)
+    assert abs(slope_only.coef()["X1"] - stats.coef(slope_only_r)[0]) > 1e-3
+
+
+@pytest.mark.against_r_core
+def test_varying_slopes_iv_intercept_differs_from_fixest(data):
+    """A slope-only IV model with an intercept matches explicit dummy 2SLS.
+
+    The reference spells out the intercept, `X2`, and one `Z2` slope per `f1`
+    level in both stages, bypassing the fixed-effect demeaning. fixest 0.14.0
+    estimates the same coefficients but leaves the intercept out of its
+    parameter count in both stages and out of the second-stage residuals, so
+    its standard errors differ (see the compatibility ledger).
+    """
+    fit = pf.feols(
+        "Y ~ X2 + [X1 ~ Z1] | f1[[Z2]]", data=data, vcov="iid", demeaner=DEMEANER
+    )
+    fit_r = fixest.feols(
+        ro.Formula("Y ~ X2 | f1[[Z2]] | X1 ~ Z1"),
+        data=data,
+        vcov="iid",
+        fixef_tol=R_FIXEF_TOL,
+    )
+
+    kept = data.dropna(subset=["Y", "X1", "X2", "Z1", "Z2", "f1"])
+    slopes = (
+        pd.get_dummies(kept["f1"], dtype=float).to_numpy() * kept[["Z2"]].to_numpy()
+    )
+    intercept = np.ones((len(kept), 1))
+    design = np.column_stack([intercept, kept[["X2", "X1"]], slopes])
+    instruments = np.column_stack([intercept, kept[["X2", "Z1"]], slopes])
+    projected = instruments @ np.linalg.lstsq(instruments, design, rcond=None)[0]
+    y = kept["Y"].to_numpy()
+    coef = np.linalg.lstsq(projected, y, rcond=None)[0]
+    resid = y - design @ coef
+    n_obs, n_params = design.shape
+    vcov = resid @ resid / (n_obs - n_params) * np.linalg.inv(projected.T @ projected)
+    names = ["Intercept", "X2", "X1"]
+
+    assert fit.variance_covariance.df_k == n_params, "df_k != explicit 2SLS"
+    np.testing.assert_allclose(
+        fit.coef()[names], coef[:3], rtol=0, atol=1e-10, err_msg="coef"
+    )
+    np.testing.assert_allclose(
+        fit.se()[names], np.sqrt(np.diag(vcov))[:3], rtol=0, atol=1e-10, err_msg="se"
+    )
+    np.testing.assert_allclose(fit.resid(), resid, rtol=0, atol=1e-10, err_msg="resid")
+
+    # The observed fixest difference.
+    r_names = _r_coefnames(fit_r)
+    np.testing.assert_allclose(
+        fit.coef()[r_names], stats.coef(fit_r), rtol=0, atol=COEF_ATOL
+    )
+    assert int(fixest.degrees_freedom(fit_r, "k")[0]) == n_params - 1
+    assert not np.allclose(fit.se()[r_names], fixest.se(fit_r), rtol=0, atol=1e-3)
+
+    # The first stage regresses X1 on the instruments.
+    first_stage = fit.first_stage.model
+    x1 = kept["X1"].to_numpy()
+    coef_1 = np.linalg.lstsq(instruments, x1, rcond=None)[0]
+    resid_1 = x1 - instruments @ coef_1
+    vcov_1 = (
+        resid_1
+        @ resid_1
+        / (n_obs - n_params)
+        * np.linalg.inv(instruments.T @ instruments)
+    )
+    names_1 = ["Intercept", "X2", "Z1"]
+
+    assert first_stage.variance_covariance.df_k == n_params, "first-stage df_k"
+    np.testing.assert_allclose(
+        first_stage.coef()[names_1],
+        coef_1[:3],
+        rtol=0,
+        atol=1e-10,
+        err_msg="first-stage coef",
+    )
+    np.testing.assert_allclose(
+        first_stage.se()[names_1],
+        np.sqrt(np.diag(vcov_1))[:3],
+        rtol=0,
+        atol=1e-10,
+        err_msg="first-stage se",
+    )
+
+    first_stage_r = _r_first_stage(fit_r)
+    r_names_1 = _r_coefnames(first_stage_r)
+    np.testing.assert_allclose(
+        first_stage.coef()[r_names_1],
+        stats.coef(first_stage_r),
+        rtol=0,
+        atol=COEF_ATOL,
+    )
+    assert int(fixest.degrees_freedom(first_stage_r, "k")[0]) == n_params - 1
+    assert not np.allclose(
+        first_stage.se()[r_names_1], fixest.se(first_stage_r), rtol=0, atol=1e-6
+    )
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f1"}], ids=str)
 @pytest.mark.parametrize(
-    ("fml", "fml_r"), [OLS_FORMULAS[0], OLS_FORMULAS[1], IV_FORMULAS[0]]
+    ("fml", "fml_r"),
+    [
+        (IV_SLOPE_CASES[0].fml, IV_SLOPE_CASES[0].fml_r),
+        (OLS_SLOPE_CASES[0].fml, OLS_SLOPE_CASES[0].fml_r),
+        (OLS_SLOPE_CASES[1].fml, OLS_SLOPE_CASES[1].fml_r),
+    ],
 )
 def test_varying_slopes_frequency_weights_against_fixest(data, fml, fml_r, vcov):
     """Frequency weights match fixest on the literally expanded rows."""
@@ -189,11 +442,50 @@ def test_varying_slopes_frequency_weights_against_fixest(data, fml, fml_r, vcov)
 # about 1e-6 and standard errors, through the final working weights, to 1e-5.
 GLM_COEF_ATOL = 1e-6
 GLM_SE_ATOL = 1e-5
-GLM_FORMULAS = [
-    ("Y ~ X1 | f1[X2]", "Y ~ X1 | f1[X2]"),
-    ("Y ~ X1 | f1[[X2]]", "Y ~ X1 | f1[[X2]]"),
-    ("Y ~ X1 | f1[[X2, Z1]] + f2", "Y ~ X1 | f1[[X2, Z1]] + f2"),
-]
+# The relative IRLS stopping rule of 1e-10 on deviances of order 1e3.
+GLM_DEVIANCE_ATOL = 1e-7
+# Enough IRLS iterations for every reference fit to converge.
+GLM_MAXITER = 100
+
+
+GLM_FAILURE_ISSUE = "https://github.com/py-econometrics/pyfixest/issues/2001"
+# pyfixest fails where fixest converges. The test asserts each failure, so a
+# fix fails the test until its entry is removed.
+GLM_KNOWN_FAILURES = {
+    ("Y ~ X1 | f1:f2[X2]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[X2]", "probit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2]]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2]]", "probit"): (ValueError, "invalid solver input"),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "poisson"): (
+        ValueError,
+        r"weight at index \d+ must be finite",
+    ),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "logit"): (RuntimeError, "Step-halving failed"),
+    ("Y ~ X1 | f1:f2[[X2, Z1]]", "probit"): (RuntimeError, "Step-halving failed"),
+}
+
+
+def _glm_cases() -> list:
+    """Cross representative formulas with every vcov and weights option."""
+    params = []
+    for case in GLM_SLOPE_CASES:
+        options = (
+            [
+                (vcov, weights)
+                for vcov in ["iid", "hetero", {"CRV1": "f1"}]
+                for weights in (None, "weights")
+            ]
+            if case.full_matrix
+            else [("iid", None)]
+        )
+        params.extend(
+            pytest.param(
+                case, family, vcov, weights, id=f"{case.fml}-{family}-{vcov}-{weights}"
+            )
+            for family in ("poisson", "logit", "probit", "gaussian")
+            for vcov, weights in options
+        )
+    return params
 
 
 @pytest.fixture(scope="module")
@@ -204,52 +496,13 @@ def data_glm() -> pd.DataFrame:
     return data
 
 
-def _assert_glm_matches_fixest(fit, fit_r) -> None:
-    names = _r_coefnames(fit_r)
-    assert sorted(fit.coef().index) == sorted(names), "coefficient names != fixest"
-    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
-    assert fit.variance_covariance.df_k == int(fixest.degrees_freedom(fit_r, "k")[0]), (
-        "df_k != fixest"
-    )
-    np.testing.assert_allclose(
-        fit.coef()[names],
-        stats.coef(fit_r),
-        rtol=0,
-        atol=GLM_COEF_ATOL,
-        err_msg="coef",
-    )
-    np.testing.assert_allclose(
-        fit.se()[names], fixest.se(fit_r), rtol=0, atol=GLM_SE_ATOL, err_msg="se"
-    )
-
-
 @pytest.mark.against_r_core
-@pytest.mark.parametrize("weights", [None, "weights"])
-@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f1"}], ids=str)
-@pytest.mark.parametrize("family", ["poisson", "logit", "probit", "gaussian"], ids=str)
-@pytest.mark.parametrize(("fml", "fml_r"), GLM_FORMULAS)
-def test_varying_slopes_glm_against_fixest(data_glm, fml, fml_r, family, vcov, weights):
-    if family == "poisson":
-        fit = pf.fepois(
-            fml,
-            data=data_glm,
-            vcov=vcov,
-            weights=weights,
-            demeaner=DEMEANER,
-            iwls_tol=1e-10,
-        )
-    else:
-        fml = fml.replace("Y ~", "Y_binary ~") if family != "gaussian" else fml
-        fml_r = fml_r.replace("Y ~", "Y_binary ~") if family != "gaussian" else fml_r
-        fit = pf.feglm(
-            fml,
-            data=data_glm,
-            family=family,
-            vcov=vcov,
-            weights=weights,
-            demeaner=DEMEANER,
-            iwls_tol=1e-10,
-        )
+@pytest.mark.parametrize(("case", "family", "vcov", "weights"), _glm_cases())
+def test_varying_slopes_glm_against_fixest(data_glm, case, family, vcov, weights):
+    fml, fml_r = case.fml, case.fml_r
+    if family in ("logit", "probit"):
+        fml = fml.replace("Y ~", "Y_binary ~")
+        fml_r = fml_r.replace("Y ~", "Y_binary ~")
     r_kwargs = {} if weights is None else {"weights": ro.Formula(f"~{weights}")}
     if family == "gaussian":
         # Gaussian GLM inference follows OLS; see the fixest compatibility ledger.
@@ -273,10 +526,51 @@ def test_varying_slopes_glm_against_fixest(data_glm, fml, fml_r, family, vcov, w
             vcov=_r_vcov(vcov),
             fixef_tol=R_FIXEF_TOL,
             glm_tol=1e-10,
+            glm_iter=GLM_MAXITER,
             **r_kwargs,
         )
+        assert bool(fit_r.rx2("convStatus")[0]), "fixest IRLS did not converge"
 
-    _assert_glm_matches_fixest(fit, fit_r)
+    glm_kwargs = {
+        "data": data_glm,
+        "vcov": vcov,
+        "weights": weights,
+        "demeaner": DEMEANER,
+        "iwls_tol": 1e-10,
+        "iwls_maxiter": GLM_MAXITER,
+    }
+
+    def fit_glm():
+        if family == "poisson":
+            return pf.fepois(fml, **glm_kwargs)
+        return pf.feglm(fml, family=family, **glm_kwargs)
+
+    known_failure = GLM_KNOWN_FAILURES.get((case.fml, family))
+    if known_failure is not None:
+        error, message = known_failure
+        with pytest.raises(error, match=message):
+            fit_glm()
+        pytest.xfail(GLM_FAILURE_ISSUE)
+    fit = fit_glm()
+
+    _assert_matches_fixest(fit, fit_r, coef_atol=GLM_COEF_ATOL, se_atol=GLM_SE_ATOL)
+    if family != "gaussian":
+        np.testing.assert_allclose(
+            fit.fitstat.deviance,
+            float(np.asarray(fit_r.rx2("deviance"))[0]),
+            rtol=0,
+            atol=GLM_DEVIANCE_ATOL,
+            err_msg="deviance",
+        )
+    if family == "poisson":
+        # pyfixest defines the log-likelihood for Poisson fits only.
+        np.testing.assert_allclose(
+            fit.fitstat.loglik,
+            float(np.asarray(fit_r.rx2("loglik"))[0]),
+            rtol=0,
+            atol=GLM_DEVIANCE_ATOL,
+            err_msg="loglik",
+        )
 
 
 def _separation_data(*, mixed_signs: bool) -> pd.DataFrame:
@@ -330,7 +624,7 @@ def test_varying_slopes_separation_against_fixest(
     )
 
     assert fit.sample_info.dropped_by_stage.separation == n_separated
-    _assert_glm_matches_fixest(fit, fit_r)
+    _assert_matches_fixest(fit, fit_r, coef_atol=GLM_COEF_ATOL, se_atol=GLM_SE_ATOL)
 
 
 @pytest.mark.against_r_core

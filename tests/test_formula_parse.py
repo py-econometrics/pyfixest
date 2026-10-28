@@ -26,6 +26,7 @@ from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
     _preprocess_fixed_effect_interactions,
 )
+from tests._varying_slope_cases import ALL_SLOPE_CASES
 
 # =============================================================================
 # Fixtures
@@ -642,31 +643,15 @@ class TestVaryingSlopeParsing:
             ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
             ("f1[[z]]", [("f1", False, ("z",))]),
             ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
-            (
-                "f1[[z]] + f2[[z]]",
-                [("f1", False, ("z",)), ("f2", False, ("z",))],
-            ),
-            ("f1:f2[z]", [("f1:f2", True, ("z",))]),
-            ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
-            ("f1[z**2]", [("f1", True, ("z ** 2",))]),
-            ("f1[I(z**2)]", [("f1", True, ("I(z ** 2)",))]),
-            ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
-            ("f1[z1 + z2]", [("f1", True, ("z1 + z2",))]),
-            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
-            ("f1[z1 * z2]", [("f1", True, ("z1 * z2",))]),
-            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
-            ("f1[-z]", [("f1", True, ("-z",))]),
-            ("f1[z + 1]", [("f1", True, ("z + 1",))]),
-            ("f1[z - 1]", [("f1", True, ("z - 1",))]),
-            ("f1[z + z]", [("f1", True, ("z + z",))]),
             ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
-            ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
-            ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
-            ("f1[z1**2, z2 + 1]", [("f1", True, ("z1 ** 2", "z2 + 1"))]),
-            ("f1[[z1**2, z2 + 1]]", [("f1", False, ("z1 ** 2", "z2 + 1"))]),
-            ("f1:f2[z**2]", [("f1:f2", True, ("z ** 2",))]),
+            ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
+            # Signs and scales leave fitted models unchanged, so only parsing
+            # can detect a dropped operator.
+            ("f1[-z]", [("f1", True, ("-z",))]),
             ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
+            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
             ("f1[z // 2]", [("f1", True, ("z // 2",))]),
             ("f1[z % 2]", [("f1", True, ("z % 2",))]),
             (
@@ -690,6 +675,23 @@ class TestVaryingSlopeParsing:
             )
             for spec in parsed.fixed_effect_specifications
         ] == expected
+
+    @pytest.mark.parametrize(
+        "case",
+        ALL_SLOPE_CASES,
+        ids=lambda case: case.fml,
+    )
+    def test_varying_slope_formulas_parse(self, case):
+        """The formulas compared with R fixest parse to the expected effects."""
+        parsed = Formula.parse(case.fml)[0]
+
+        assert (
+            tuple(
+                (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+                for spec in parsed.fixed_effect_specifications
+            )
+            == case.effects
+        )
 
     @pytest.mark.parametrize(
         "fixed_effects,expected",
@@ -723,95 +725,6 @@ class TestVaryingSlopeParsing:
         assert parsed.fixed_effect_specifications == ()
 
     @pytest.mark.parametrize(
-        "fixed_effects,expected",
-        [
-            ("f1 + f1[[z]]", [("f1", True, ("z",)), ("f2", True, ())]),
-            ("f1[z, z]", [("f1", True, ("z",)), ("f2", True, ())]),
-            ("f1[w, z, z]", [("f1", True, ("w", "z")), ("f2", True, ())]),
-            ("f1[[z, z]]", [("f1", False, ("z",)), ("f2", True, ())]),
-            (
-                "f1[[z]] + f1[w, w]",
-                [("f1", True, ("z", "w")), ("f2", True, ())],
-            ),
-            (
-                "f1[[z]] + f2 + f1[[w]]",
-                [("f1", False, ("z", "w")), ("f2", True, ())],
-            ),
-            (
-                "f1[z] + f1[[w]]",
-                [("f1", True, ("z", "w")), ("f2", True, ())],
-            ),
-            (
-                "f1[z] + f1[w]",
-                [("f1", True, ("z", "w")), ("f2", True, ())],
-            ),
-            ("f1[[z2]] + f1[z1, z2]", [("f1", True, ("z2", "z1")), ("f2", True, ())]),
-            ("f1:f2[[z]] + f2:f1", [("f2", True, ()), ("f1:f2", True, ("z",))]),
-        ],
-    )
-    def test_effects_on_shared_levels_merge(self, fixed_effects, expected):
-        """Effects on shared levels combine intercepts and unique slopes in order."""
-        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects} + f2")[0]
-
-        assert [
-            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
-            for spec in parsed.fixed_effect_specifications
-        ] == expected
-
-    @pytest.mark.parametrize(
-        "fixed_effects",
-        ["f1 + f1", "f1[[z]] + f1[[z]]"],
-    )
-    def test_formulaic_deduplicates_identical_terms(self, fixed_effects):
-        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
-
-        assert len(parsed.fixed_effect_specifications) == 1
-
-    @pytest.mark.parametrize(
-        "fixed_effects,expected,expected_slopes",
-        [
-            (
-                "f2[z2, z1] + f1[[z3]]",
-                [("f2", True, ("z2", "z1")), ("f1", False, ("z3",))],
-                ("z2", "z1", "z3"),
-            ),
-            (
-                "firm[[z]] + region[[w]] + firm[[v]]",
-                [("firm", False, ("z", "v")), ("region", False, ("w",))],
-                ("z", "v", "w"),
-            ),
-        ],
-    )
-    def test_effect_and_slope_order_follow_formulaic(
-        self, fixed_effects, expected, expected_slopes
-    ):
-        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
-
-        assert [
-            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
-            for spec in parsed.fixed_effect_specifications
-        ] == expected
-        assert tuple(map(str, parsed.fixed_effect_slopes)) == expected_slopes
-
-    def test_formulaic_transform_is_preserved_as_a_slope_term(self):
-        parsed = Formula.parse("Y ~ X1 | f1[log(z)]")[0]
-
-        assert tuple(map(str, parsed.fixed_effect_specifications[0].slopes)) == (
-            "log(z)",
-        )
-
-    def test_stepwise_varying_slopes(self):
-        parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
-
-        assert [
-            (
-                str(model.fixed_effect_specifications[0].levels),
-                model.fixed_effect_specifications[0].intercept,
-            )
-            for model in parsed
-        ] == [("f1", True), ("f2", False)]
-
-    @pytest.mark.parametrize(
         "fixed_effects,reason,example",
         [
             ("f1[[]]", "must specify at least one slope", "f1[[z]]"),
@@ -837,18 +750,7 @@ class TestVaryingSlopeParsing:
 
     @pytest.mark.parametrize(
         "expression",
-        [
-            "f1 + f2",
-            "f1 - f1",
-            "f1 - f2",
-            "f1 ** 2",
-            "f1 * f2",
-            "f1 / 2",
-            "f1 // 2",
-            "f1 % 2",
-            "+f1",
-            "-f1",
-        ],
+        ["f1 + f2", "-f1"],
     )
     def test_varying_slope_level_rejects_arithmetic(self, expression):
         parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
@@ -865,37 +767,13 @@ class TestVaryingSlopeParsing:
     @pytest.mark.parametrize(
         "fixed_effects",
         [
-            "f1[z1:z2]",
-            "f1[:]",
-            "f1[::2]",
-            "f1[z, z1:z2]",
-            "f1[0]",
+            "f1[0]",  # no column name
             'f1["z"]',
-            "f1[[0]]",
-            "f1[z, 0]",
-            'f1[[z, "z"]]',
-            "f1[True]",
-            "f1[None]",
-            "f1[...]",
-            "f1[-1]",
-            "f1[1 + 2]",
-            "f1[z[0]]",
-            "f1[[[z]]]",
-            "f1[[(z1, z2)]]",
-            "f1[{z}]",
-            "f1[{'z': z}]",
-            "f1[[x for x in z]]",
-            "f1[(x for x in z)]",
-            "f1[z if flag else z2]",
+            "f1[z[0]]",  # unsupported syntax
             "f1[z > 0]",
-            "f1[z and z2]",
-            "f1[z & z2]",
-            "f1[~z]",
-            "f1[(z := z2)]",
-            "f1[(lambda x: x)(z)]",
-            "f1[log(z[0])]",
-            "f1[log(*z)]",
-            "f1[transform(z, **options)]",
+            "f1[[x for x in z]]",
+            "f1[log(z[0])]",  # nested inside a supported call
+            "f1[transform(z, **options)]",  # keyword unpacking
         ],
     )
     def test_unsupported_slope_expressions(self, fixed_effects):

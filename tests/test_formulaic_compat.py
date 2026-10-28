@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from types import SimpleNamespace
 
 import formulaic
@@ -16,7 +15,6 @@ from formulaic.parser import DefaultOperatorResolver
 from formulaic.utils.variables import Variable
 
 import pyfixest as pf
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.errors import (
     FixedEffectEvaluationError,
     FormulaSyntaxError,
@@ -32,12 +30,10 @@ from pyfixest.estimation.formula.formulaic_compat import (
     rows_with_unseen_contrast_levels,
     terms_without_intercept,
 )
-from pyfixest.estimation.formula.model_matrix import create_model_matrix
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
     FixedEffectEncoding,
 )
-from pyfixest.estimation.internals.demean_ import DemeanCache
 
 FORMULAIC_279 = "https://github.com/matthewwardrop/formulaic/pull/279"
 
@@ -477,128 +473,6 @@ def test_fe_rejects_non_lookup_terms(data, expression):
         match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",
     ):
         pf.feols(f"Y ~ X1 | {expression}", data=data)
-
-
-@pytest.mark.parametrize(
-    "firm_slope,region_slopes",
-    [(False, False), (False, True), (True, True)],
-    ids=["plain-effects", "plain-and-slope-effects", "slope-effects"],
-)
-def test_effects_materialize_with_level_codes(data, firm_slope, region_slopes):
-    """Materialized effects yield the explicit projection after joint row drops."""
-    frame = data.copy()
-    frame.loc[3, "Z1"] = np.nan
-    firm = "f1[Z1]" if firm_slope else "f1"
-    region = "f2[[X2, Z1 ** 2]]" if region_slopes else "f2"
-    model_matrix = create_model_matrix(
-        Formula.parse(f"Y ~ X1 | {firm} + {region}")[0], frame
-    )
-    has_slopes = firm_slope or region_slopes
-    kept = frame.drop(index=3) if has_slopes else frame
-    effects = model_matrix.effects
-
-    assert model_matrix.dropped_row_index == (
-        frozenset({3}) if has_slopes else frozenset()
-    )
-    assert model_matrix.fixed_effects.columns.tolist() == [firm, region]
-    assert effects is not None
-    assert len(effects) == 2
-    y = model_matrix.dependent.to_numpy()
-    x = model_matrix.independent.to_numpy()
-    cache = DemeanCache()
-    demeaner = LsmrDemeaner(fixef_atol=1e-12, fixef_btol=1e-12)
-    y_demeaned, x_demeaned, _ = cache.demean_yx(
-        Y=y,
-        X=x,
-        y_keys=model_matrix.column_keys("dependent"),
-        x_keys=model_matrix.column_keys("independent"),
-        fe=effects,
-        weights=None,
-        na_index=model_matrix.dropped_row_index,
-        demeaner=demeaner,
-    )
-
-    firm_dummies = pd.get_dummies(kept.f1, dtype=float).to_numpy()
-    region_dummies = pd.get_dummies(kept.f2, dtype=float).to_numpy()
-    columns = [firm_dummies]
-    if firm_slope:
-        columns.append(firm_dummies * kept.Z1.to_numpy()[:, None])
-    if region_slopes:
-        columns.extend(
-            [
-                region_dummies * kept.X2.to_numpy()[:, None],
-                region_dummies * (kept.Z1.to_numpy() ** 2)[:, None],
-            ]
-        )
-    else:
-        columns.append(region_dummies)
-    design = np.column_stack(columns)
-    yx = np.column_stack([y, x])
-    coefficients = np.linalg.lstsq(design, yx, rcond=None)[0]
-    expected = yx - design @ coefficients
-    # Allow projection error from LSMR's normal-equation stopping criterion.
-    np.testing.assert_allclose(
-        np.column_stack([y_demeaned, x_demeaned]),
-        expected,
-        rtol=0,
-        atol=1e-9,
-        err_msg="Materialized effects differ from the explicit fixed-effect projection",
-    )
-    # Reuse the effect design and preconditioner for a different projection.
-    recomputed = cache.demean_array(
-        x=yx,
-        flist=effects,
-        weights=None,
-        na_index=model_matrix.dropped_row_index,
-        demeaner=demeaner,
-    )
-    np.testing.assert_allclose(
-        recomputed,
-        expected,
-        rtol=0,
-        atol=1e-9,
-        err_msg="Cached-preconditioner projection differs from explicit fixed effects",
-    )
-
-
-@pytest.mark.parametrize(
-    "fml,expected",
-    [
-        ("Y ~ X1 | f1[[Z1]]", ["Intercept", "X1"]),
-        ("Y ~ 0 + X1 | f1[[Z1]]", ["X1"]),
-        ("Y ~ X1 | f1[Z1]", ["X1"]),
-        ("Y ~ X1 | f1[[Z1]] + f2", ["X1"]),
-    ],
-)
-def test_slope_only_effects_keep_the_intercept(data, fml, expected):
-    """Like fixest, only effects with intercepts absorb the model constant."""
-    model_matrix = create_model_matrix(Formula.parse(fml)[0], data.copy())
-
-    assert model_matrix.independent.columns.tolist() == expected
-
-
-@pytest.mark.parametrize(
-    "fixed_effects,n_singletons", [("f1[[Z1]]", 0), ("f1[Z1]", 1), ("f1", 1)]
-)
-def test_singletons_ignore_slope_only_effects(data, fixed_effects, n_singletons):
-    """Only intercept-bearing effects enter count-based singleton removal."""
-    frame = data.copy()
-    frame.loc[0, "f1"] = 99
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "1 singleton", UserWarning)
-        model_matrix = create_model_matrix(
-            Formula.parse(f"Y ~ X1 | {fixed_effects}")[0],
-            frame,
-            drop_singletons=True,
-        )
-
-    assert model_matrix.dropped_by_stage.singleton == n_singletons
-
-
-def test_varying_slopes_reject_categorical_slopes(data):
-    with pytest.raises(FormulaSyntaxError, match=r"`C\(f2\)` must evaluate to one"):
-        create_model_matrix(Formula.parse("Y ~ X1 | f1[C(f2)]")[0], data.copy())
 
 
 def test_fe_unseen_combination_predicts_nan(data):

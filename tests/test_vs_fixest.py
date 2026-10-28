@@ -1410,6 +1410,10 @@ def test_glm_vs_fixest(N, seed, dropna, fml, demeaner, weights, inference, famil
         ("Y + Y2 ~ sw(X1, X2) | csw(f1, f2)"),
         ("Y + Y2 ~ csw(X1, X2) | sw(f1, f2)"),
         ("Y + Y2 ~ sw0(X1, X2) | csw0(f1, f2)"),
+        # Varying slopes with intercepts; slope-only models are compared with
+        # single fits in tests/test_varying_slopes_vs_fixest.py.
+        ("Y ~ X1 | sw(f1[X2], f1[X2, Z1])"),
+        ("Y ~ X1 | csw0(f2[X2], f1)"),
         # ("Y ~ i(f1,X2) | csw0(f2)"),
         # ("Y ~ i(f1,X2) | sw0(f2)"),
         # ("Y ~ i(f1,X2) | csw(f2, f3)"),
