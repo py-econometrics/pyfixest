@@ -5,8 +5,9 @@ import warnings
 from enum import Enum
 
 import pandas as pd
-from formulaic.parser.algos import tokenize
-from formulaic.parser.types import Token
+from formulaic.parser import DefaultFormulaParser, DefaultOperatorResolver
+from formulaic.parser.algos import tokenize, tokens_to_ast
+from formulaic.parser.types import ASTNode, Token
 
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
@@ -142,19 +143,42 @@ def _sets_instrumental_variable_intercept(part: str, depth: int = 0) -> bool:
     while a generated zero step does not. `{1}` and `` `1` `` are Python and
     name tokens that Formulaic also reads as an intercept.
     """
-    for token in tokenize(part):
-        if token.kind is Token.Kind.CONTEXT and token.token == "[":
-            depth += 1
-        elif token.kind is Token.Kind.CONTEXT and token.token == "]":
-            depth -= 1
-        elif token.kind is Token.Kind.PYTHON and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(
-            token.token
-        ):
-            start, end = _get_position_of_first_parenthesis_pair(token.token)
-            if _sets_instrumental_variable_intercept(token.token[start:end], depth):
+    if depth == 0 and "[" not in part:
+        return False
+    # Inspect the operator tree before Formulaic inserts implicit intercepts.
+    tree = tokens_to_ast(
+        tokenize(part),
+        operator_resolver=DefaultOperatorResolver(
+            feature_flags=DefaultFormulaParser.FeatureFlags.ALL
+        ),
+    )
+    pending = [(tree, depth)]
+    while pending:
+        node, depth = pending.pop()
+        if isinstance(node, ASTNode):
+            if node.operator.symbol == "~" and node.operator.accepts_context(
+                [Token("[", kind=Token.Kind.CONTEXT)]
+            ):
+                depth += 1
+            args = list(node.args)
+            if node.operator.symbol in {"^", "**"}:
+                args = args[:1]  # The exponent is not an intercept term.
+            elif node.operator.symbol == ":" and any(arg != "1" for arg in args):
+                args = [arg for arg in args if arg != "1"]  # Unit scaling.
+            pending.extend((arg, depth) for arg in args)
+        elif isinstance(node, Token):
+            if (
+                node.kind is Token.Kind.PYTHON
+                and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(node.token)
+            ):
+                start, end = _get_position_of_first_parenthesis_pair(node.token)
+                if any(
+                    _sets_instrumental_variable_intercept(arg, depth=depth)
+                    for arg in _str_split_by_sep(node.token[start:end], separator=",")
+                ):
+                    return True
+            elif depth > 0 and node.token.strip() in {"0", "1"}:
                 return True
-        elif depth > 0 and token.token.strip() in {"0", "1"}:
-            return True
     return False
 
 

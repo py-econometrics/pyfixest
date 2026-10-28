@@ -1033,6 +1033,44 @@ def test_explicit_no_fe_iv_coefficients_match(test_data):
     assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
 
 
+@pytest.mark.parametrize("main", ["X2", "0 + X2"])
+@pytest.mark.parametrize(
+    "instruments",
+    ["(Z1 + Z2)^1", "(Z1 + Z2)**(1)", "1:Z1 + Z2", "Z1:(1) + Z2"],
+)
+def test_iv_instrument_powers_and_scales_match_plain_terms(
+    test_data, main, instruments
+):
+    """Unit exponents and scales specify instruments without setting an intercept."""
+    fit = pf.feols(f"Y ~ {main} + [X1 ~ {instruments}]", data=test_data)
+    reference = pf.feols(f"Y ~ {main} + [X1 ~ Z1 + Z2]", data=test_data)
+    for model, expected in [
+        (fit, reference),
+        (fit.first_stage.model, reference.first_stage.model),
+    ]:
+        np.testing.assert_allclose(
+            model.resid()[::50],
+            expected.resid()[::50],
+            rtol=0,
+            atol=1e-10,
+            err_msg="IV stage residuals differ from plain instrument terms",
+        )
+    np.testing.assert_allclose(
+        fit.coef(),
+        reference.coef(),
+        rtol=0,
+        atol=1e-10,
+        err_msg="IV coefficients differ from plain instrument terms",
+    )
+    np.testing.assert_allclose(
+        fit.se(),
+        reference.se(),
+        rtol=0,
+        atol=1e-10,
+        err_msg="IV standard errors differ from plain instrument terms",
+    )
+
+
 def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     """Interacted fixed effects match an explicitly constructed group."""
     data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
@@ -1142,6 +1180,10 @@ class TestEdgeCases:
             "Y ~ sw(X2 + [X1 ~ 0 + Z1], X3)",
             "Y ~ X2 + csw0([X1 ~ Z1 - 1])",
             "Y ~ X2 + [X1 ~ Z1 + {1}]",
+            "Y ~ X2 + [X1 ~ Z1^1 + 1]",
+            "Y ~ X2 + [X1 ~ Z1 + 1:1]",
+            "Y ~ X2 + [X1 ~ (Z1 + 1)^1]",
+            "Y ~ X2 + [X1 ~ sw(Z1^1, Z2 + 1)]",
             "Y ~ X2 | X1 ~ 0 + Z1",
             "Y ~ X2 | f1 | X1 ~ 1 + Z1",
         ],
@@ -1159,8 +1201,16 @@ class TestEdgeCases:
             "Y ~ X2 + [X1 ~ I(Z1 + 1) + {Z2 - 0}]",
             "Y ~ X2 + [X1 ~ Z1 + sw0(Z2)]",
             "Y ~ sw(X2 - 1, X3) + [X1 ~ Z1]",
+            "Y ~ X2 + [X1 ~ sw(Z1^1, 1:Z2)]",
+            "Y ~ X2 + sw([X1 ~ Z1^1], [X1 ~ 1:Z2])",
         ],
-        ids=["python-expressions", "zero-step", "main-formula-intercept-step"],
+        ids=[
+            "python-expressions",
+            "zero-step",
+            "main-formula-intercept-step",
+            "instrument-steps",
+            "iv-block-steps",
+        ],
     )
     def test_iv_block_allows_constants_in_expressions(self, formula):
         """Constants inside expressions or a generated zero step set no intercept."""
