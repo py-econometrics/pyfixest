@@ -7,6 +7,7 @@ from enum import Enum
 import pandas as pd
 from formulaic.parser import DefaultFormulaParser, DefaultOperatorResolver
 from formulaic.parser.algos import tokenize, tokens_to_ast
+from formulaic.parser.algos.sanitize_tokens import sanitize_python_code
 from formulaic.parser.types import ASTNode, Token
 
 from pyfixest.errors import FormulaSyntaxError
@@ -145,9 +146,17 @@ def _sets_instrumental_variable_intercept(part: str, depth: int = 0) -> bool:
     """
     if depth == 0 and "[" not in part:
         return False
+    tokens = list(tokenize(part))
+    for token in tokens:
+        if (
+            token.kind is Token.Kind.PYTHON
+            and not _MULTIPLE_ESTIMATION_PATTERN.fullmatch(token.token)
+        ):
+            # Match Formulaic's normalization of expressions such as `{(1)}`.
+            token.token = sanitize_python_code(token.token)
     # Inspect the operator tree before Formulaic inserts implicit intercepts.
     tree = tokens_to_ast(
-        tokenize(part),
+        tokens,
         operator_resolver=DefaultOperatorResolver(
             feature_flags=DefaultFormulaParser.FeatureFlags.ALL
         ),
