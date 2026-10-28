@@ -12,13 +12,12 @@ import formulaic
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, diags
-from scipy.sparse.linalg import lsqr
 from scipy.stats import t
 from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
-from pyfixest.errors import NonConvergenceError, VcovTypeNotSupportedError
+from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
@@ -69,6 +68,7 @@ from pyfixest.estimation.internals.retention import (
     omitted_attributes,
     require_retained,
 )
+from pyfixest.estimation.internals.solvers import solve_lsqr
 from pyfixest.estimation.internals.vcov_ import (
     meat_crv1,
     meat_hac,
@@ -1865,30 +1865,9 @@ class Feols(ResultAccessorMixin):
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
 
-        alpha, istop, itn = lsqr(D_w, uhat, atol=atol, btol=btol)[:3]
-        # LSQR stopping reasons (istop), from SciPy's lsqr message table:
-        #   0  x = 0 is the exact solution
-        #   1  Ax - b is small enough, given atol and btol
-        #   2  the least-squares solution is good enough, given atol
-        #   3  the estimate of cond(Abar) has exceeded conlim
-        #   4  Ax - b is small enough for this machine
-        #   5  the least-squares solution is good enough for this machine
-        #   6  cond(Abar) seems to be too large for this machine
-        #   7  the iteration limit has been reached
-        # Codes 3, 6, and 7 stop before the accuracy tests are met.
-        # https://github.com/scipy/scipy/blob/v1.17.1/scipy/sparse/linalg/_isolve/lsqr.py#L334-L341
-        if istop in (3, 6):
-            raise NonConvergenceError(
-                f"Fixed-effect recovery did not converge: LSQR stopped after "
-                f"{itn} iterations because the problem is too ill-conditioned "
-                f"(istop={istop}), before meeting atol={atol} and btol={btol}."
-            )
-        if istop == 7:
-            raise NonConvergenceError(
-                f"Fixed-effect recovery did not converge: LSQR reached its "
-                f"iteration limit ({itn} iterations) before meeting "
-                f"atol={atol} and btol={btol}."
-            )
+        alpha = solve_lsqr(
+            A=D_w, b=uhat, atol=atol, btol=btol, task="Fixed-effect recovery"
+        )
 
         self.fixef_estimates = FixedEffectEstimates(
             fixed_effects=build_fixed_effects(
