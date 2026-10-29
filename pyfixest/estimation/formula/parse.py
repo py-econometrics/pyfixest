@@ -43,6 +43,13 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
+# Without Formulaic's implicit intercept, an IV block keeps a `1` only if the
+# user wrote one.
+_PARSER_EXPLICIT_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
+    operator_resolver=PyfixestOperatorResolver(),
+    feature_flags=FORMULAIC_FEATURE_FLAG,
+    include_intercept=False,
+)
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
@@ -548,15 +555,82 @@ class Formula:
         Parse fixest-style formula. In case of multiple estimation syntax,
         returns a list of multiple regression formulas.
         """
-        formula = _preprocess(formula)
-        return [
+        preprocessed = _preprocess(formula)
+        formulas = [
             Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
-            for formulaic_compliant in _expand_all_multiple_estimation(formula)
+            for formulaic_compliant in _expand_all_multiple_estimation(preprocessed)
         ]
+        if any(parsed.is_instrumental_variable for parsed in formulas):
+            for parsed, expanded in zip(
+                formulas,
+                _expand_all_multiple_estimation(preprocessed, written_only=True),
+                strict=True,
+            ):
+                if parsed.is_instrumental_variable and not parsed.is_fixed_effects:
+                    _reject_contradicting_iv_intercept(
+                        parsed,
+                        formulaic.Formula(expanded, _parser=_PARSER_EXPLICIT_INTERCEPT),
+                        received=formula,
+                    )
+        return formulas
 
 
-def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
+def _reject_contradicting_iv_intercept(
+    parsed: Formula, explicit: formulaic.Formula, *, received: str
+) -> None:
+    """Reject an IV block whose intercept contradicts the main formula.
+
+    The main formula sets the intercept of both IV stages, and a block may
+    repeat that choice. Formulaic inserts a `1` into every block, so `0` and
+    `-1` show as a block without `1` in `parsed`, and a written `1` shows as a
+    block with `1` in `explicit`, which was parsed without the implicit one.
+    `explicit` is only inspected, so it skips the identification checks.
+    Callers skip fixed effects, which absorb the intercept of both stages.
+    """
+    explicit_rhs = explicit.rhs[0] if isinstance(explicit.rhs, tuple) else explicit.rhs
+    main_has_intercept = any(term == "1" for term in parsed._right_hand_side.root)
+    block_removes_intercept = not any(
+        term == "1" for term in get_first_multistage_rhs(parsed._right_hand_side)
+    )
+    block_adds_intercept = any(
+        term == "1" for term in get_first_multistage_rhs(explicit_rhs)
+    )
+    if main_has_intercept and block_removes_intercept:
+        contradiction = (
+            "The main formula has an intercept, but the IV block removes it "
+            "with `0` or `-1`."
+        )
+    elif not main_has_intercept and block_adds_intercept:
+        contradiction = (
+            "The main formula has no intercept, but the IV block adds one with `1`."
+        )
+    else:
+        return
+    raise FormulaSyntaxError(
+        f"{contradiction} The main formula sets the intercept of both IV "
+        "stages. Remove it from the block, or write `0 +` in the main formula "
+        f"to fit both stages without an intercept. Received: {received}"
+    )
+
+
+def _is_factor_of_product(formula: str, start: int, end: int) -> bool:
+    """Whether `formula[start:end]` is an operand of `:`, `*`, `/` or `^`."""
+    before = formula[:start].rstrip()[-1:]
+    after = formula[end:].lstrip()[:1]
+    return before in {":", "*", "/"} or after in {":", "*", "/", "^"}
+
+
+def _expand_first_multiple_estimation(
+    formula: str, *, written_only: bool = False
+) -> list[str] | None:
     """Expand the first multiple estimation syntax in formula.
+
+    The zero step of `sw0` is `1`. With `written_only`, it is `1` only as an
+    operand of a product, where it is the identity, and `0` as an addend, where
+    it adds nothing, so that a `1` in the result was written by the user.
+    Two zero steps that meet in one product, as in `sw0(a):sw0(b)`, and
+    identical calls in different positions are not told apart, so they can
+    report a `1` that nobody wrote.
 
     The call may have a space before its parenthesis and arguments on several
     lines, as in `csw (X1,` followed by `X2)` on the next line.
@@ -592,7 +666,15 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
     ):
         # Add zero step
-        arguments = ["1", *arguments]
+        zero_step = (
+            "0"
+            if written_only
+            and not _is_factor_of_product(
+                formula, match.start(), parenthesis_closed + 1
+            )
+            else "1"
+        )
+        arguments = [zero_step, *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
         formula.replace(multiple_estimation_call, f"({argument})")
@@ -600,12 +682,16 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     ]
 
 
-def _expand_all_multiple_estimation(formula: str) -> Iterator[str]:
+def _expand_all_multiple_estimation(
+    formula: str, *, written_only: bool = False
+) -> Iterator[str]:
     """Recursively expand all multiple estimation calls."""
-    expansion = _expand_first_multiple_estimation(formula)
+    expansion = _expand_first_multiple_estimation(formula, written_only=written_only)
     if expansion is None:
         # No multiple estimation syntax present
         yield formula
     else:
         for formula_expanded in expansion:
-            yield from _expand_all_multiple_estimation(formula_expanded)
+            yield from _expand_all_multiple_estimation(
+                formula_expanded, written_only=written_only
+            )

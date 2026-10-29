@@ -315,8 +315,9 @@ def _feols_r_iid(fml_r, data_r):
 # Categorical IV coding that matches fixest. Each case maps a canonical formula
 # to the R formula of every model it expands to, and states whether both
 # first stages use the same named columns. The main formula decides the
-# intercept of both stages. Pyfixest rejects `0` or `1` inside the IV block;
-# fixest keeps the intercept despite the inner `0` of some R references.
+# intercept of both stages. Pyfixest rejects a `0` or `1` inside the IV block
+# that contradicts it; fixest keeps the intercept despite the inner `0` of some
+# R references.
 IV_CATEGORICAL_PARITY_CASES = [
     pytest.param(
         "Y ~ 1 + [X1 ~ i(f)]",

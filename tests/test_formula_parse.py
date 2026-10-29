@@ -1166,62 +1166,140 @@ class TestEdgeCases:
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
-        "formula",
+        "formula, message",
         [
-            "Y ~ X2 + [X1 ~ 0 + Z1]",
-            "Y ~ X2 + [X1 ~ 1 + Z1]",
-            "Y ~ X2 + [X1 ~ -1 + Z1]",
-            "Y ~ X2 + [X1 ~ Z1 - 1]",
-            "Y ~ X2 + [X1 ~ (Z1 + 0)]",
-            "Y ~ 0 + X2 + [X1 ~ 1 + Z1]",
-            "Y ~ X2 + [0 + X1 ~ Z1]",
-            "Y ~ X2 + [X1 ~ sw(Z1, 0 + Z2)]",
-            "Y ~ X2 + sw([X1 ~ Z1 + 0], [X1 ~ Z2])",
-            "Y ~ sw(X2 + [X1 ~ 0 + Z1], X3)",
-            "Y ~ X2 + csw0([X1 ~ Z1 - 1])",
-            "Y ~ X2 + [X1 ~ Z1 + {1}]",
-            "Y ~ 0 + X2 + [X1 ~ Z1 + {(1)}]",
-            "Y ~ X2 + [X1 ~ Z1 - {((1))}]",
-            "Y ~ X2 + [X1 ~ Z1 + {(0)}]",
-            "Y ~ X2 + [{(1)} + X1 ~ Z1]",
-            "Y ~ X2 | X1 ~ Z1 + {(1)}",
-            "Y ~ X2 + [X1 ~ sw(Z1, Z2 + {(1)})]",
-            "Y ~ X2 + sw([X1 ~ Z1 + {(1)}], [X1 ~ Z2])",
-            "Y ~ X2 + [X1 ~ Z1^1 + 1]",
-            "Y ~ X2 + [X1 ~ Z1 + 1:1]",
-            "Y ~ X2 + [X1 ~ (Z1 + 1)^1]",
-            "Y ~ X2 + [X1 ~ sw(Z1^1, Z2 + 1)]",
-            "Y ~ X2 | X1 ~ 0 + Z1",
-            "Y ~ X2 | f1 | X1 ~ 1 + Z1",
+            ("Y ~ X2 + [X1 ~ 0 + Z1]", "has an intercept, but the IV block removes"),
+            ("Y ~ X2 + [X1 ~ -1 + Z1]", "has an intercept, but the IV block removes"),
+            ("Y ~ X2 + [X1 ~ Z1 - 1]", "has an intercept, but the IV block removes"),
+            ("Y ~ X2 + [X1 ~ Z1 + 0]", "has an intercept, but the IV block removes"),
+            (
+                "Y ~ 1 + X2 + [X1 ~ 0 + Z1]",
+                "has an intercept, but the IV block removes",
+            ),
+            ("Y ~ X2 + sw([X1 ~ Z1 + 0], [X1 ~ Z2])", "IV block removes"),
+            ("Y ~ sw([X1 ~ Z1 - 1], [X1 ~ Z2])", "IV block removes"),
+            ("Y ~ sw(X2 + [X1 ~ 0 + Z1], X3)", "IV block removes"),
+            ("Y ~ X2 + csw0([X1 ~ Z1 - 1])", "IV block removes"),
+            ("Y ~ X2 | X1 ~ 0 + Z1", "has an intercept, but the IV block removes"),
+            ("Y ~ X2 | X1 ~ Z1 - 1", "has an intercept, but the IV block removes"),
+            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1]", "has no intercept, but the IV block adds"),
+            ("Y ~ X2 - 1 + [X1 ~ Z1 + 1]", "has no intercept, but the IV block adds"),
+            ("Y ~ 0 + X2 + [X1 ~ Z1 + {1}]", "has no intercept, but the IV block adds"),
+            ("Y ~ 0 + X2 + [X1 ~ Z1 + `1`]", "has no intercept, but the IV block adds"),
+            (
+                "Y ~ 0 + X2 + [X1 ~ Z1 + {(1)}]",
+                "has no intercept, but the IV block adds",
+            ),
+            ("Y ~ 0 + X2 + [X1 ~ Z1^1 + 1]", "has no intercept, but the IV block adds"),
+            ("Y ~ 0 + X2 + [X1 ~ sw(Z1, 1 + Z2)]", "IV block adds"),
+            ("Y ~ 0 + X2 + sw([X1 ~ Z1 + 1], [X1 ~ Z2])", "IV block adds"),
+            ("Y ~ 0 + X2 + [X1 ~ Z3 + (1 + Z1):sw0(Z2)]", "IV block adds"),
+            ("Y ~ 0 + X2 | X1 ~ 1 + Z1", "has no intercept, but the IV block adds"),
+            ("Y + Y2 ~ 0 + X2 + [X1 ~ 1 + Z1]", "IV block adds"),
         ],
     )
-    def test_reject_intercept_in_iv_block(self, formula):
-        """The main formula sets the intercept of both IV stages."""
-        with pytest.raises(
-            FormulaSyntaxError, match=r"cannot contain `0`, `1` or `-1`"
-        ):
+    def test_reject_iv_intercept_contradicting_main_formula(self, formula, message):
+        """A block may not add or remove the intercept the main formula sets."""
+        with pytest.raises(FormulaSyntaxError, match=message) as excinfo:
             Formula.parse(formula)
+        assert f"Received: {formula}" in str(excinfo.value)
+
+    @pytest.mark.parametrize(
+        "main, block",
+        [
+            ("X2", "Z1"),
+            ("X2", "1 + Z1"),
+            ("X2", "Z1 + 1"),
+            ("0 + X2", "Z1"),
+            ("0 + X2", "0 + Z1"),
+            ("0 + X2", "Z1 - 1"),
+            ("X2 - 1", "-1 + Z1"),
+            ("-1 + X2", "Z1 + 0"),
+            ("0", "0 + Z1"),
+        ],
+    )
+    @pytest.mark.parametrize("syntax", ["bracket", "pipe"])
+    def test_iv_block_may_repeat_main_intercept(self, syntax, main, block):
+        """A block that repeats the main formula's intercept choice is accepted."""
+        template = "Y ~ {main} + [X1 ~ {block}]" if syntax == "bracket" else None
+        formula = (
+            template.format(main=main, block=block)
+            if template
+            else f"Y ~ {main} | X1 ~ {block}"
+        )
+        reference = f"Y ~ {main} + [X1 ~ Z1]"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            parsed = Formula.parse(formula)[0]
+        assert (
+            parsed.as_first_stage().second_stage
+            == Formula.parse(reference)[0].as_first_stage().second_stage
+        )
+        assert parsed.second_stage == Formula.parse(reference)[0].second_stage
+
+    @pytest.mark.parametrize("main", ["X2", "0 + X2"])
+    @pytest.mark.parametrize(
+        "instruments",
+        [
+            "(1 + Z1):Z2",
+            "(1:1):Z1 + Z2",
+            "1:Z1 + Z2",
+            "Z1:(1) + Z2",
+            "(Z1 + Z2)^1",
+            "I(Z1 + 1) + {Z2 - 0}",
+            "Z1 + sw0(Z2)",
+            "Z1 + csw0(Z2, Z3)",
+            "Z1 + mvsw(Z2, Z3)",
+            "Z1:sw0(Z2)",
+            "sw0(Z1):Z2 + Z3",
+            "Z3 + (1 + Z1):Z2",
+        ],
+    )
+    def test_iv_block_expressions_do_not_contradict(self, main, instruments):
+        """Constants that are not an intercept of the block are not contradictions."""
+        parsed = Formula.parse(f"Y ~ {main} + [X1 ~ {instruments}]")
+        assert all(model.is_instrumental_variable for model in parsed)
+
+    @pytest.mark.parametrize("main", ["X2", "0 + X2"])
+    def test_iv_zero_step_in_product_keeps_the_instrument(self, main):
+        """The zero step of `sw0` is the identity of a product, not a deleted term."""
+        parsed = Formula.parse(f"Y ~ {main} + [X1 ~ Z1:sw0(Z2)]")
+        assert [str(model.instruments) for model in parsed] == ["Z1:1", "Z1:Z2"]
 
     @pytest.mark.parametrize(
         "formula",
         [
-            "Y ~ X2 + [X1 ~ I(Z1 + 1) + {Z2 - 0}]",
-            "Y ~ X2 + [X1 ~ Z1 + sw0(Z2)]",
+            "Y ~ X2 + [X1 ~ sw(Z1, 0 + Z2)]",
+            "Y ~ X2 + [X1 ~ (Z1 + 0)]",
+            "Y ~ X2 + [X1 ~ Z1 + (0)]",
+            "Y ~ X2 + [0 + X1 ~ Z1]",
             "Y ~ sw(X2 - 1, X3) + [X1 ~ Z1]",
-            "Y ~ X2 + [X1 ~ sw(Z1^1, 1:Z2)]",
-            "Y ~ X2 + sw([X1 ~ Z1^1], [X1 ~ 1:Z2])",
-        ],
-        ids=[
-            "python-expressions",
-            "zero-step",
-            "main-formula-intercept-step",
-            "instrument-steps",
-            "iv-block-steps",
         ],
     )
-    def test_iv_block_allows_constants_in_expressions(self, formula):
-        """Constants inside expressions or a generated zero step set no intercept."""
-        assert all(parsed.is_instrumental_variable for parsed in Formula.parse(formula))
+    def test_iv_intercept_without_scope_over_block_is_ignored(self, formula):
+        """A `0` Formulaic scopes to a group, step or the endogenous side has no effect.
+
+        The main formula keeps setting the intercept of both stages.
+        """
+        for parsed in Formula.parse(formula):
+            first_stage = parsed.as_first_stage().second_stage
+            assert any(term == "1" for term in first_stage.rhs)
+            assert any(term == "1" for term in parsed.second_stage.rhs)
+
+    @pytest.mark.parametrize(
+        "formula",
+        [
+            "Y ~ X2 + [X1 ~ 0 + Z1] | f1",
+            "Y ~ 0 + X2 + [X1 ~ 1 + Z1] | f1",
+            "Y ~ X2 | f1 | X1 ~ 0 + Z1",
+            "Y ~ 0 + X2 | f1 | X1 ~ 1 + Z1",
+        ],
+    )
+    def test_iv_block_intercept_is_moot_with_fixed_effects(self, formula):
+        """Fixed effects absorb the intercept of both stages, so nothing contradicts."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            assert Formula.parse(formula)[0].is_instrumental_variable
 
     @pytest.mark.parametrize(
         "formula, expected",
