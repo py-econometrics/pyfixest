@@ -2068,6 +2068,7 @@ class Feols(ResultAccessorMixin):
         choose_algorithm: str = "auto",
         store_ritest_statistics: bool = False,
         level: float = 0.95,
+        strata: str | None = None,
     ) -> pd.Series:
         """
         Conduct Randomization Inference (RI) test against a null hypothesis of
@@ -2075,7 +2076,9 @@ class Feols(ResultAccessorMixin):
 
         Each draw permutes the observed values of `resampvar` across
         observations, or across clusters if `cluster` is provided, so it keeps
-        the number of treated units of the actual assignment.
+        the number of treated units of the actual assignment. If `strata` is
+        provided, the permutation runs within each stratum, so it also keeps
+        each stratum's treated units.
 
         Parameters
         ----------
@@ -2111,6 +2114,12 @@ class Feols(ResultAccessorMixin):
         level: float, optional
             The level for the confidence interval of the randomization inference
             p-value. Defaults to 0.95.
+        strata : str, optional
+            The name of the strata (block) variable in case of stratified random
+            assignment, as `strata` in R's `ritest`. If provided, the observed
+            values of `resampvar` are permuted within each stratum. Combined
+            with `cluster`, whole clusters are permuted within strata, and each
+            cluster must lie within a single stratum. Defaults to None.
 
         Returns
         -------
@@ -2138,6 +2147,9 @@ class Feols(ResultAccessorMixin):
 
         # store statistics for plotting
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
+
+        # permute X1 within the levels of f2 (stratified assignment)
+        fit.ritest("X1", reps=1000, strata="f2")
         ```
         """
         from pyfixest.estimation.post_estimation.ritest import (
@@ -2190,6 +2202,25 @@ class Feols(ResultAccessorMixin):
                 "random assignment requires a treatment that is constant within "
                 "each cluster."
             )
+
+        stratavar_arr = None
+        if strata is not None:
+            if strata not in self._data:
+                raise ValueError(f"The variable {strata} is not found in the data.")
+            stratavar_arr = pd.factorize(self._data[strata])[0]
+            if np.any(stratavar_arr == -1):
+                raise ValueError(
+                    "The strata variable contains missing values. This is not "
+                    "allowed for randomization inference via `ritest()`."
+                )
+            if (
+                cluster is not None
+                and self._data.groupby(cluster)[strata].nunique().gt(1).any()
+            ):
+                raise ValueError(
+                    f"Each cluster of `{cluster}` must lie within a single stratum "
+                    f"of `{strata}`: clusters are permuted within strata."
+                )
 
         if type not in ["randomization-t", "randomization-c"]:
             raise ValueError("type must be 'randomization-t' or 'randomization-c.")
@@ -2257,6 +2288,7 @@ class Feols(ResultAccessorMixin):
                 data=self._data,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
+                stratavar_arr=stratavar_arr,
                 reps=reps,
                 type=type,
                 rng=rng,
@@ -2286,6 +2318,7 @@ class Feols(ResultAccessorMixin):
                 coefnames=self._coefnames,
                 resampvar=resampvar_,
                 clustervar_arr=clustervar_arr,
+                stratavar_arr=stratavar_arr,
                 reps=reps,
                 rng=rng,
                 fval_df=fval_df,
@@ -2324,6 +2357,8 @@ class Feols(ResultAccessorMixin):
 
         if cluster is not None:
             res["Cluster"] = cluster
+        if strata is not None:
+            res["Strata"] = strata
 
         return res
 

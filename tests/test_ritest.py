@@ -7,7 +7,11 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.post_estimation.ritest import _assignment_units
+from pyfixest.estimation.post_estimation.ritest import (
+    _assignment_units,
+    _permute_within_strata,
+    _unit_strata,
+)
 
 matplotlib.use("Agg")  # Use a non-interactive backend
 
@@ -248,6 +252,148 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     assert np.isclose(res1["Pr(>|t|)"], pval, rtol=0, atol=atol)
     assert np.isclose(res1["Std. Error (Pr(>|t|))"], expected["se"], rtol=0, atol=atol)
     assert np.isclose(res1["2.5% (Pr(>|t|))"], expected["ci_lower"], rtol=0, atol=atol)
+
+
+@pytest.fixture
+def data_strata(data):
+    # complete rows, as R's `ritest` uses for strata outside the model;
+    # strata nest the `group_id` clusters, as in tests/r_test_comparisons.R
+    data = data.dropna().copy()
+    data["stratum"] = data.group_id % 3
+    return data
+
+
+@pytest.fixture
+def ritest_strata_results():
+    results_df = pd.read_csv("tests/data/ritest_strata_results.csv")
+    results_df.set_index(["formula", "resampvar", "cluster"], inplace=True)
+    return results_df
+
+
+@pytest.mark.parametrize("clustered", [False, True])
+def test_permute_within_strata(clustered):
+    """Every stratum keeps its treatment values; clusters move as a whole."""
+    rng = np.random.default_rng(8)
+    n = 120
+    strata = rng.integers(0, 3, n)
+    # clusters nest in strata
+    cluster = 10 * strata + rng.integers(0, 4, n) if clustered else None
+    if clustered:
+        D = (cluster % 2 == 0).astype(float)
+    else:
+        D = rng.integers(0, 2, n).astype(float)
+
+    assignment, unit_codes = _assignment_units(resampvar_arr=D, clustervar_arr=cluster)
+    unit_strata = _unit_strata(
+        unit_codes=unit_codes, stratavar_arr=strata, n_units=len(assignment)
+    )
+
+    for _ in range(50):
+        permuted = _permute_within_strata(
+            assignment=assignment, unit_strata=unit_strata, rng=rng
+        )
+        for stratum in np.unique(unit_strata):
+            in_stratum = unit_strata == stratum
+            np.testing.assert_array_equal(
+                np.sort(permuted[in_stratum]),
+                np.sort(assignment[in_stratum]),
+                err_msg=f"Treatment values of stratum {stratum} changed.",
+            )
+        if clustered:
+            D_draw = permuted[unit_codes]
+            assert pd.Series(D_draw).groupby(cluster).nunique().eq(1).all(), (
+                "Permuted treatment varies within a cluster."
+            )
+
+
+def test_ritest_strata_validation(data_strata):
+    fit = pf.feols("Y ~ D_cluster", data=data_strata)
+
+    with pytest.raises(ValueError, match="not found in the data"):
+        fit.ritest("D_cluster", reps=10, strata="not_a_column")
+
+    data_missing = data_strata.copy()
+    data_missing["stratum"] = data_missing["stratum"].astype(float)
+    data_missing.loc[data_missing.index[5], "stratum"] = np.nan
+    with pytest.raises(ValueError, match="strata variable contains missing"):
+        pf.feols("Y ~ D_cluster", data=data_missing).ritest(
+            "D_cluster", reps=10, strata="stratum"
+        )
+
+    # f1 levels span several strata
+    data_cross = data_strata.copy()
+    data_cross["D_f1"] = (data_cross.f1 % 2 == 0).astype(float)
+    with pytest.raises(ValueError, match="must lie within a single stratum"):
+        pf.feols("Y ~ D_f1", data=data_cross).ritest(
+            "D_f1", reps=10, cluster="f1", strata="stratum"
+        )
+
+
+_STRATA_CASES = (
+    [(f"Y~X1+f3{fe}", "X1", None) for fe in ["", "|f1"]]
+    + [(f"Y~D_unit+f3{fe}", "D_unit", None) for fe in ["", "|f1"]]
+    + [(f"Y~D_cluster+f3{fe}", "D_cluster", "group_id") for fe in ["", "|f1"]]
+)
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("fml, resampvar, cluster", _STRATA_CASES)
+def test_ritest_strata_algos_internally(data_strata, fml, resampvar, cluster):
+    fit = pf.feols(fml, data=data_strata)
+    kwargs = {
+        "resampvar": resampvar,
+        "reps": 111,
+        "cluster": cluster,
+        "strata": "stratum",
+        "store_ritest_statistics": True,
+    }
+
+    fit.ritest(**kwargs, choose_algorithm="slow", rng=np.random.default_rng(1234))
+    ritest_stats_slow = fit.ritest_statistics.statistics.copy()
+    fit.ritest(**kwargs, choose_algorithm="fast", rng=np.random.default_rng(1234))
+    ritest_stats_fast = fit.ritest_statistics.statistics.copy()
+
+    # same seed, so the same permutations; the statistics agree up to the
+    # solvers' floating-point precision
+    np.testing.assert_allclose(
+        ritest_stats_slow,
+        ritest_stats_fast,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Slow and fast stratified RI statistics differ.",
+    )
+
+
+@pytest.mark.extended
+@pytest.mark.parametrize("fml, resampvar, cluster", _STRATA_CASES)
+def test_ritest_strata_vs_r(
+    data_strata, fml, resampvar, cluster, ritest_strata_results
+):
+    fit = pf.feols(fml, data=data_strata)
+    reps = 10_000
+    res = fit.ritest(
+        resampvar=resampvar,
+        reps=reps,
+        cluster=cluster,
+        strata="stratum",
+        choose_algorithm="fast",
+        rng=np.random.default_rng(1234),
+    )
+    expected = ritest_strata_results.loc[(fml, resampvar, cluster or "none")]
+    pval = expected["pval"]
+    # four Monte Carlo standard errors of the difference of two estimates,
+    # each from 10,000 draws, as in `test_vs_r`
+    atol = 4 * np.sqrt(pval * (1 - pval) * 2 / reps) + 1e-3
+
+    for name, r_name in [
+        ("Pr(>|t|)", "pval"),
+        ("Std. Error (Pr(>|t|))", "se"),
+        ("2.5% (Pr(>|t|))", "ci_lower"),
+    ]:
+        assert np.isclose(res[name], expected[r_name], rtol=0, atol=atol), (
+            f"Stratified RI {name} differs from R ritest: "
+            f"{res[name]} vs {expected[r_name]} (atol={atol:.4f})."
+        )
 
 
 @pytest.mark.extended
