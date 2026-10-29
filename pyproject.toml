@@ -276,7 +276,7 @@ r-reticulate = ">=1.0"
 cmd = "Rscript tests/r_test_comparisons.R"
 depends-on = []
 inputs = ["tests/r_test_comparisons.R"]
-outputs = ["tests/data/ritest_results.csv"]
+outputs = ["tests/data/ritest_results.csv", "tests/data/ritest_strata_results.csv"]
 env = { RETICULATE_PYTHON = "$CONDA_PREFIX/bin/python" }
 
 [tool.pixi.feature.r.tasks.test-r-hac]

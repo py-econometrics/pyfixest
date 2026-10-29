@@ -168,8 +168,9 @@ redundant work:
 - **`_setup`** (maturin import hook): installs the hook into the active
   environment before tasks that import `pyfixest`.
 - **`_update-test-data`**: runs `Rscript tests/r_test_comparisons.R` to
-  generate `tests/data/ritest_results.csv`. Cached via `inputs`/`outputs` --
-  only re-runs if the R script changes or the CSV is missing.
+  generate `tests/data/ritest_results.csv` and
+  `tests/data/ritest_strata_results.csv`. Cached via `inputs`/`outputs` --
+  only re-runs if the R script changes or a CSV is missing.
 
 Note: `test-r-extended` requires extra R packages not available on conda-forge.
 Install them manually before running: `Rscript r_test_requirements.R`.

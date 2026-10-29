@@ -42,6 +42,7 @@ def _get_ritest_stats_slow(
     fit_fn: Callable[..., Any],
     rng: np.random.Generator,
     clustervar_arr: np.ndarray | None = None,
+    stratavar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (slow).
@@ -68,6 +69,9 @@ def _get_ritest_stats_slow(
         The random number generator.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
+    stratavar_arr : np.ndarray, optional
+        Integer codes of the strata variable, one per observation. If
+        provided, the treatment is permuted within strata. Defaults to None.
 
     Returns
     -------
@@ -84,11 +88,21 @@ def _get_ritest_stats_slow(
         resampvar_arr=data_resampled[resampvar].to_numpy(),
         clustervar_arr=clustervar_arr,
     )
+    unit_strata = _unit_strata(
+        unit_codes=unit_codes, stratavar_arr=stratavar_arr, n_units=len(assignment)
+    )
 
     ri_stats = np.zeros(reps)
 
     for i in tqdm(range(reps)):
-        data_resampled[resampvar] = rng.permutation(assignment)[unit_codes]
+        permuted = (
+            rng.permutation(assignment)
+            if unit_strata is None
+            else _permute_within_strata(
+                assignment=assignment, unit_strata=unit_strata, rng=rng
+            )
+        )
+        data_resampled[resampvar] = permuted[unit_codes]
 
         fixest_fit = fit_fn(data=data_resampled)
         if type == "randomization-c":
@@ -110,6 +124,7 @@ def _get_ritest_stats_fast(
     weights: np.ndarray,
     clustervar_arr: np.ndarray | None = None,
     fval_df: pd.DataFrame | None = None,
+    stratavar_arr: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Compute tests statistics using randomization inference (fast).
@@ -136,6 +151,9 @@ def _get_ritest_stats_fast(
         The sample weights.
     clustervar_arr : np.ndarray, optional
         Array containing the cluster variable. Defaults to None.
+    stratavar_arr : np.ndarray, optional
+        Integer codes of the strata variable, one per observation. If
+        provided, the treatment is permuted within strata. Defaults to None.
     fval_df : pd.DataFrame, optional
         The fixed effects. Defaults to None.
 
@@ -174,11 +192,15 @@ def _get_ritest_stats_fast(
     assignment, unit_codes = _assignment_units(
         resampvar_arr=D, clustervar_arr=clustervar_arr
     )
+    unit_strata = _unit_strata(
+        unit_codes=unit_codes, stratavar_arr=stratavar_arr, n_units=len(assignment)
+    )
 
     return _run_ri(
         reps=reps,
         assignment=assignment,
         unit_codes=unit_codes,
+        unit_strata=unit_strata,
         Y_demean=Y_demean,
         X_demean2=X_demean2,
         fval=fval,
@@ -198,6 +220,7 @@ def _run_ri(
     Y_demean: np.ndarray,
     X_demean2: np.ndarray,
     demean_fn: Callable[..., Any],
+    unit_strata: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Run the randomization inference.
@@ -221,6 +244,9 @@ def _run_ri(
     Y_demean : np.ndarray
     demean_fn : Callable
         The numba-backed `demean` function, validated as importable by the caller.
+    unit_strata : np.ndarray, optional
+        The stratum code of each unit of random assignment. If provided, the
+        assignment is permuted within strata. Defaults to None.
 
     Returns
     -------
@@ -234,7 +260,13 @@ def _run_ri(
     X_demean2 = np.ascontiguousarray(X_demean2)
 
     for i in range(reps):
-        D2 = rng.permutation(assignment)[unit_codes].reshape((-1, 1))
+        if unit_strata is None:
+            permuted = rng.permutation(assignment)
+        else:
+            permuted = _permute_within_strata(
+                assignment=assignment, unit_strata=unit_strata, rng=rng
+            )
+        D2 = permuted[unit_codes].reshape((-1, 1))
 
         D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
@@ -279,6 +311,67 @@ def _assignment_units(
     return assignment, unit_codes
 
 
+def _unit_strata(
+    unit_codes: np.ndarray, stratavar_arr: np.ndarray | None, n_units: int
+) -> np.ndarray | None:
+    """
+    Map the strata codes of the observations onto the units of assignment.
+
+    Parameters
+    ----------
+    unit_codes : np.ndarray
+        The index of each observation's unit, from `_assignment_units`.
+    stratavar_arr : np.ndarray, optional
+        Integer codes of the strata variable, one per observation. The
+        caller must ensure that each unit lies within a single stratum.
+    n_units : int
+        The number of units of assignment.
+
+    Returns
+    -------
+    np.ndarray or None
+        The stratum code of each unit, or None without strata.
+    """
+    if stratavar_arr is None:
+        return None
+    unit_strata = np.empty(n_units, dtype=np.int64)
+    unit_strata[unit_codes] = np.asarray(stratavar_arr).ravel()
+    return unit_strata
+
+
+def _permute_within_strata(
+    assignment: np.ndarray, unit_strata: np.ndarray, rng: np.random.Generator
+) -> np.ndarray:
+    """
+    Permute the units' treatment within each stratum.
+
+    Stratified (blocked) randomization inference as in Heß (2017),
+    "Randomization inference with Stata: A guide and software", Stata Journal
+    17(3), and R's `ritest(..., strata=)`: the treatment values of each
+    stratum are permuted among that stratum's units, so every stratum keeps
+    its observed treatment values.
+
+    Parameters
+    ----------
+    assignment : np.ndarray
+        The treatment of each unit of random assignment.
+    unit_strata : np.ndarray
+        The stratum code of each unit.
+    rng : np.random.Generator
+        The random number generator.
+
+    Returns
+    -------
+    np.ndarray
+        The permuted treatment of each unit.
+    """
+    permuted = assignment.copy()
+    for stratum in np.unique(unit_strata):
+        idx = np.flatnonzero(unit_strata == stratum)
+        permuted[idx] = rng.permutation(assignment[idx])
+    return permuted
+
+
 def lstsq_numba(A, B):
     """Implement np.linalg.lstsq(A, B) using SVD decomposition."""
     U, s, VT = np.linalg.svd(A, full_matrices=False)
@@ -290,6 +383,7 @@ def lstsq_numba(A, B):
 
 if nb is not None:
     lstsq_numba = nb.njit()(lstsq_numba)
+    _permute_within_strata = nb.njit(_permute_within_strata)
     _run_ri = nb.njit()(_run_ri)
 
 
