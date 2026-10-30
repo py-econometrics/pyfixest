@@ -17,6 +17,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+`test_treatment_heterogeneity()` now tests equality of cohort effects at shared
+post-treatment event times, including treatment onset, instead of testing that
+individual post-treatment effects are zero.
+
 Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 `fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR

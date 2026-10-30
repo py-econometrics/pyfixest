@@ -429,7 +429,7 @@ def test_fully_interacted(unit, cluster, xfml):
         cluster=cluster,
         xfml=xfml,
     )
-    saturated_py.test_treatment_heterogeneity()
+    heterogeneity = saturated_py.test_treatment_heterogeneity()
 
     saturated_r = fixest.feols(
         ro.Formula(
@@ -437,6 +437,45 @@ def test_fully_interacted(unit, cluster, xfml):
         ),
         data=df_multi_cohort,
         vcov=ro.Formula(f"~{cluster}"),
+    )
+
+    # Lal (2025), across-cohort null in the "Testing for across-cohort
+    # heterogeneity" section: https://arxiv.org/abs/2503.05125. Independent
+    # live fixest estimates and car restrictions verify the equality null,
+    # rather than testing whether all cohort effects are zero. R builds its
+    # restrictions using sunab's own names and includes treatment onset.
+    r_heterogeneity = ro.r("""
+        function(model) {
+            terms <- names(coef(model))
+            event_time <- as.numeric(sub(":cohort::.*", "",
+                                        sub("^year::", "", terms)))
+            groups <- split(seq_along(terms)[event_time >= 0],
+                            event_time[event_time >= 0])
+            contrasts <- lapply(groups, function(indices) {
+                if (length(indices) < 2) return(NULL)
+                rows <- diag(length(terms))[indices[-1], , drop = FALSE]
+                rows[, indices[1]] <- -1
+                rows
+            })
+            car::linearHypothesis(model, do.call(rbind, contrasts), test="Chisq")
+        }
+    """)(saturated_r)
+    assert heterogeneity.df1 == int(r_heterogeneity.rx2("Df")[1]) == 11
+    # FE projection and clustered cross-product reduction differ between R
+    # and Python; allow 1e-7 absolute error in this derived quadratic form.
+    np.testing.assert_allclose(
+        heterogeneity.stat,
+        r_heterogeneity.rx2("Chisq")[1],
+        rtol=1e-8,
+        atol=1e-7,
+        err_msg="Across-cohort heterogeneity chi-squared statistic differs from R",
+    )
+    np.testing.assert_allclose(
+        heterogeneity.pvalue,
+        r_heterogeneity.rx2("Pr(>Chisq)")[1],
+        rtol=1e-6,
+        atol=0,
+        err_msg="Across-cohort heterogeneity p-value differs from R",
     )
 
     r_tidy = pd.DataFrame(broom.tidy_fixest(saturated_r)).T
@@ -565,6 +604,60 @@ def test_fully_interacted_mpdata(mpdata_path):
     # run plotting
     fit_saturated.iplot()
     fit_saturated.iplot_aggregate()
+
+
+@pytest.mark.against_r_core
+@pytest.mark.parametrize("n_cohorts", [1, 2, 3])
+def test_treatment_heterogeneity_null(n_cohorts):
+    """Common effects cancel; onset and only overlapping cohort cells count."""
+    rng = np.random.default_rng(1746)
+    n_units, n_periods = 80, 9
+    unit = np.repeat(np.arange(n_units), n_periods)
+    year = np.tile(np.arange(n_periods), n_units)
+    g = np.repeat(np.resize([0, *range(2, 2 * n_cohorts + 1, 2)], n_units), n_periods)
+    rel_time = year - g
+    treated = (g > 0) & (rel_time >= 0)
+    data = pd.DataFrame(
+        {"unit": unit, "year": year, "g": g, "y": rng.normal(size=len(unit))}
+    )
+
+    def fit():
+        return pf.event_study(
+            data=data,
+            yname="y",
+            idname="unit",
+            tname="year",
+            gname="g",
+            estimator="saturated",
+        )
+
+    model = fit()
+    if n_cohorts == 1:
+        with pytest.raises(
+            ValueError, match=r"at least two cohorts.*same post-treatment"
+        ):
+            model.test_treatment_heterogeneity()
+        return
+
+    baseline = model.test_treatment_heterogeneity()
+    # Large common dynamic effects are allowed under the equality null.
+    data["y"] += np.where(treated, 10 + rel_time**2, 0)
+    common = fit().test_treatment_heterogeneity()
+    np.testing.assert_allclose(
+        common.stat,
+        baseline.stat,
+        rtol=1e-8,
+        atol=1e-8,
+        err_msg="Common nonzero dynamic effects must cancel from cohort contrasts",
+    )
+    assert common.df1 == (5 if n_cohorts == 2 else 8)
+
+    # Changing only one cohort's onset effect must enter the test. Coefficients
+    # at other event times are unchanged by this exact design-column shift.
+    data["y"] += 100 * ((g == 2) & (rel_time == 0))
+    onset = fit().test_treatment_heterogeneity()
+    assert onset.stat > common.stat + 1000
+    assert onset.pvalue < 0.001
 
 
 def test_saturated_event_study_int_vs_float_dtypes():
