@@ -254,9 +254,14 @@ def _observed_levels(
     values: a level seen only on dropped rows remains a level (and can be the
     reference), while unused categories of a pandas Categorical are not levels.
     """
+    levels = None
     if bins is not None:
+        contrasts_state = get_or_create_contrast_state(encoder_state, str(series.name))
+        # Fit time only: prediction reuses the stored levels.
+        if "levels" not in contrasts_state:
+            levels = _binned_numeric_levels(data=series, bins=bins)
         series = _apply_binning(series, bins, encoder_state)
-    return series.astype("category").cat.remove_unused_categories()
+    return series.astype(pd.CategoricalDtype(levels)).cat.remove_unused_categories()
 
 
 def _encode_factor(
@@ -285,6 +290,35 @@ def _encode_factor(
         levels = contrasts_state.get("categories", dummies.columns.tolist())
         set_contrast_levels(encoder_state, str(data.name), levels)
     return dummies
+
+
+def _binned_numeric_levels(data: pd.Series, bins: dict) -> list[Any] | None:
+    """
+    Return the level order for a numeric variable binned under a label.
+
+    When a bin label is not a number, the binned variable becomes a factor
+    whose levels keep the sorted original values, with each bin label at the
+    position of the bin's first listed value. Returns None when the default
+    order is already correct: for non-numeric variables and when every label
+    is a number, so the binned values stay numeric.
+    """
+    if not _is_numeric(data) or all(
+        isinstance(label, (int, float, np.number)) and not isinstance(label, bool)
+        for label in bins
+    ):
+        return None
+    observed = sorted(data.dropna().unique().tolist())
+    position = {value: i for i, value in enumerate(observed)}
+    keyed_levels = [
+        (i, value)
+        for i, value in enumerate(observed)
+        if not any(value in members for members in bins.values())
+    ]
+    for label, members in bins.items():
+        anchors = [position[member] for member in members if member in position]
+        if anchors:
+            keyed_levels.append((anchors[0], label))
+    return [level for _, level in sorted(keyed_levels, key=lambda pair: pair[0])]
 
 
 def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
