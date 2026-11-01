@@ -1,72 +1,56 @@
 # pyfixest — guide for coding agents
 
-pyfixest ports R's `fixest` to Python: fixed-effects estimation, fixest formula
-syntax, post-estimation tools, and Rust kernels for hot loops.
+pyfixest brings R's `fixest` workflow to Python: fixed-effects estimation,
+formula syntax, inference, and post-estimation, with Rust kernels for hot loops.
 
-## Core principles
+## Essentials
 
-1. **Mirror `fixest`** in user-facing behavior, naming, and defaults unless an
-   intentional difference is documented and tested.
-2. **Follow the nearest implementation.** Find the in-repo precedent and its
-   tests before introducing a new pattern.
-3. **Never return silently wrong numbers.** Define and test supported estimation
-   paths; reject unsupported combinations explicitly. Numerical changes need
-   regression evidence independent of the failure being fixed; choose internal
-   or external references under the testing policy.
+- Mirror `fixest` in overlapping user-facing behavior unless a difference is
+  intentional; [compatibility policy](docs/developer/fixest-compatibility.md)
+  owns those decisions. Never silently fit a different model or return numbers
+  for an unsupported path.
+- Start with the nearest implementation and its tests. Complete the request
+  in small, self-contained changes that are easy to review; see
+  [PR sizing](docs/developer/git-and-pr-style.md#stacks-and-commits).
+  Keep independent fixes separate, including numerical corrections discovered
+  during an invariant refactor.
+- Prefer code a maintainer can follow from inputs to results. An abstraction
+  earns its place by clarifying an operation, owning an invariant, or serving
+  real callers—not by adding another layer to pass through.
+- Use `pixi run` for Python, pytest, lint, docs, and R commands. Use
+  `pixi task list` to discover tasks. Select checks from the
+  [testing policy](docs/developer/testing.md#selection-matrix), including
+  before/after benchmarks for performance-relevant estimation changes.
 
-## Choose the relevant workflow
+## Load only the workflow the task needs
 
-Read only the skill and policy sections needed for the task. Reuse decisions
-and evidence already established in the current task unless the change
-invalidates them. A prose-only edit does not require an estimator strategy.
+| Task | Read |
+|---|---|
+| Implement estimator, inference, formula, post-estimation, public API, or shared-core changes | [implementation-strategy](.agents/skills/implementation-strategy/SKILL.md) |
+| Select or report checks for a change | [change-verification](.agents/skills/change-verification/SKILL.md) |
+| Review a diff, self-review, or walk through changed code together | [pr-review](.agents/skills/pr-review/SKILL.md), choosing the requested mode |
+| Prepare commits, push, open a PR, or curate history | [pr-handoff](.agents/skills/pr-handoff/SKILL.md) |
+| Create or edit a GitHub issue | [issue style](docs/developer/git-and-pr-style.md#issues) |
 
-| Task | Procedure | Policy |
-|---|---|---|
-| Implement estimator, API behavior, inference, formula, post-estimation, or shared-core changes | [implementation-strategy](.agents/skills/implementation-strategy/SKILL.md) | [Architecture](docs/developer/architecture.md): boundaries and extension seams |
-| Verify a change before handoff | [change-verification](.agents/skills/change-verification/SKILL.md) | [Testing](docs/developer/testing.md#selection-matrix): required checks by change type |
-| Review a diff or self-review before handoff | [pr-review](.agents/skills/pr-review/SKILL.md) | Relevant architecture, testing, and scope policies |
-| Prepare commits, push, or submit a draft PR | [pr-handoff](.agents/skills/pr-handoff/SKILL.md) | [Git and PR style](docs/developer/git-and-pr-style.md) |
-| Change intentional `fixest` differences | Relevant implementation/review skill | [Compatibility ledger](docs/developer/fixest-compatibility.md) |
-| Create or edit a GitHub issue | Read the linked policy section | [Issue style](docs/developer/git-and-pr-style.md#issues) |
+A question or prose correction does not require an implementation plan.
+Reuse decisions and checks already established unless the change invalidates
+them. Internal workflow steps need not appear as checklists in replies or PRs.
 
-`docs/developer/` owns policy; skills apply it. Keep full rules and explanations
-in one owner, with brief reminders where useful. These developer documents are
-not rendered as part of the Quarto site. `CLAUDE.md` imports this file; keep
-tool-specific copies of the rules out of the repository. The analytics prompt
-at `docs/skills.md` serves users, not this contributor workflow.
-
-## Working conventions
-
-- Use `pixi run` for all Python, pytest, lint, docs, and R commands. Bare tools
-  may miss dependencies or the compiled extension. Find commands and check
-  selection in the testing policy; use `pixi task list` to discover tasks.
-- Run the opt-in `bench-estimation` benchmarks before and after changes to
-  demeaning, IRLS, solvers, vcov, model-matrix construction, or Rust kernels;
-  see [estimation benchmarks](docs/developer/testing.md#estimation-benchmarks).
-- Use econometric names such as `scores`, `meat`, `bread`, `u_hat`, and
-  `clustid`; cite the method's paper in the implementing function.
-- Use `from __future__ import annotations`, PEP 604 unions, keyword arguments
-  for internal calls, and `NDArray[np.float64]` in stubs. Put shared typed option
-  aliases in `pyfixest/estimation/internals/literals.py`.
-- Validate options at the API boundary with `ValueError` naming allowed values;
-  use the flat classes in `pyfixest/errors/` for domain failures.
-- Guard optional dependencies at import time; raise an actionable error naming
-  the pip extra only when that path is used.
-- Use `np.random.default_rng(seed)`, never global seeding. Never mutate user
-  input except through the documented `copy_data=False` path.
-- Keep estimation-specific work out of generic runners. Architecture owns the
-  [wiring recipes](docs/developer/architecture.md#repository-map-and-extension-seams),
-  [support contracts](docs/developer/architecture.md#result-and-numerical-boundaries),
-  and [documentation requirements](docs/developer/architecture.md#public-documentation).
+`docs/developer/` owns detailed policy; skills apply it. Read the relevant
+sections, not every linked document. [Architecture](docs/developer/architecture.md)
+owns code conventions and extension seams; [Git and PR style](docs/developer/git-and-pr-style.md)
+owns scope and publication. These documents are not part of the rendered site.
+`CLAUDE.md` imports this file; `.claude/skills/` links to the shared skills.
+`docs/skills.md` is guidance for package users, not contributors.
 
 ## Boundaries
 
+- Preserve unrelated user changes. Change `pixi.lock` or `Cargo.lock` only for
+  intentional dependency work; avoid unrelated formatting.
+- Never hand-edit generated `docs/reference/**`, `docs/_freeze/**`,
+  `docs/_site/**`, `.coverage`, or `coverage.xml`.
 - Follow [Git approval policy](docs/developer/git-and-pr-style.md#approval-and-handoff):
   never commit to `master`, rewrite history without approval for that specific
   rewrite, or merge agent-authored work.
-- Change `pixi.lock` or `Cargo.lock` only for intentional dependency changes.
-- Do not hand-edit generated `docs/reference/**`, `docs/_freeze/**`,
-  `docs/_site/**`, `.coverage`, or `coverage.xml`.
-- Preserve unrelated user changes and avoid unrelated formatting.
-- Edit `AGENTS.md`, `.agents/skills/`, or `docs/developer/` only when the task
-  concerns guidance. Otherwise propose discovered policy gaps at handoff.
+- Edit contributor guidance only when the task concerns it. Otherwise propose
+  a discovered policy gap at handoff instead of adding rules during a code fix.
