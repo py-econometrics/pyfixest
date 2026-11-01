@@ -43,8 +43,9 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
-# Without Formulaic's implicit intercept, an IV block keeps a `1` only if the
-# user wrote one.
+# Parse the whole formula without implicit intercepts so we can inspect the IV
+# block for an explicitly added `1`. This second parse checks whether the block
+# contradicts the main formula's intercept choice; it is not used for fitting.
 _PARSER_EXPLICIT_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     operator_resolver=PyfixestOperatorResolver(),
     feature_flags=FORMULAIC_FEATURE_FLAG,
