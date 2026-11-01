@@ -675,7 +675,7 @@ class Formula:
                 _expand_all_multiple_estimation(preprocessed, written_only=True),
                 strict=True,
             ):
-                if parsed.is_instrumental_variable and not parsed.is_fixed_effects:
+                if parsed.is_instrumental_variable and not parsed.absorbs_intercept:
                     _reject_contradicting_iv_intercept(
                         parsed,
                         formulaic.Formula(expanded, _parser=_PARSER_EXPLICIT_INTERCEPT),
@@ -694,7 +694,8 @@ def _reject_contradicting_iv_intercept(
     `-1` show as a block without `1` in `parsed`, and a written `1` shows as a
     block with `1` in `explicit`, which was parsed without the implicit one.
     `explicit` is only inspected, so it skips the identification checks.
-    Callers skip fixed effects, which absorb the intercept of both stages.
+    Callers skip fixed effects with group intercepts, which absorb the
+    intercept of both stages; slope-only effects such as `f1[[z]]` do not.
     """
     explicit_rhs = explicit.rhs[0] if isinstance(explicit.rhs, tuple) else explicit.rhs
     main_has_intercept = any(term == "1" for term in parsed._right_hand_side.root)

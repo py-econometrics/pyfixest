@@ -341,8 +341,9 @@ Behaviour that changed as a result:
   formula with an intercept, as in `Y ~ X2 + [X1 ~ 0 + Z1]` or
   `Y ~ X2 | X1 ~ 0 + Z1`, or a `1` under one without, as in
   `Y ~ 0 + X2 + [X1 ~ 1 + Z1]`. Write `Y ~ 0 + X2 + [X1 ~ Z1]` to fit both
-  stages without an intercept. Fixed effects absorb the intercept, so nothing
-  contradicts there. A `0` inside a parenthesized group, a stepwise step or the
+  stages without an intercept. Fixed effects with group intercepts, such as
+  `f1` or `f1[z]`, absorb the intercept, so nothing contradicts there;
+  slope-only effects such as `f1[[z]]` do not. A `0` inside a parenthesized group, a stepwise step or the
   endogenous side of the block is scoped by Formulaic and has no effect. In
   0.60.0, an inner `0` failed with a singular-matrix error when the main
   formula had an intercept, and an inner `1` was ignored. IV model names write

@@ -1267,6 +1267,9 @@ class TestEdgeCases:
             ("Y ~ 0 + X2 + [X1 ~ Z3 + (1 + Z1):sw0(Z2)]", "IV block adds"),
             ("Y ~ 0 + X2 | X1 ~ 1 + Z1", "has no intercept, but the IV block adds"),
             ("Y + Y2 ~ 0 + X2 + [X1 ~ 1 + Z1]", "IV block adds"),
+            ("Y ~ X2 + [X1 ~ 0 + Z1] | f1[[X2]]", "IV block removes"),
+            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1] | f1[[X2]]", "IV block adds"),
+            ("Y ~ X2 | f1[[X2]] | X1 ~ 0 + Z1", "IV block removes"),
         ],
     )
     def test_reject_iv_intercept_contradicting_main_formula(self, formula, message):
@@ -1364,10 +1367,12 @@ class TestEdgeCases:
             "Y ~ 0 + X2 + [X1 ~ 1 + Z1] | f1",
             "Y ~ X2 | f1 | X1 ~ 0 + Z1",
             "Y ~ 0 + X2 | f1 | X1 ~ 1 + Z1",
+            "Y ~ X2 + [X1 ~ 0 + Z1] | f1[X2]",
+            "Y ~ X2 + [X1 ~ 0 + Z1] | f1 + f2[[X2]]",
         ],
     )
     def test_iv_block_intercept_is_moot_with_fixed_effects(self, formula):
-        """Fixed effects absorb the intercept of both stages, so nothing contradicts."""
+        """Fixed effects with group intercepts absorb the intercept of both stages."""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             assert Formula.parse(formula)[0].is_instrumental_variable
