@@ -1,120 +1,100 @@
 # Git and pull-request style
 
-This document defines the style for presenting pyfixest changes to reviewers.
-Use the [`pr-handoff`](../../.agents/skills/pr-handoff/SKILL.md) skill to
-curate agent-owned commits and prepare the PR. This document owns Git approval
-policy and branch, commit, and PR conventions; the skill applies them.
+This file owns change scope, Git authorization, and how work is presented to
+reviewers. The [handoff skill](../../.agents/skills/pr-handoff/SKILL.md) applies it.
 
 ## Establish the base
 
-Use the PR's actual base branch, not an assumed local `master`. For an existing
-PR, read `baseRefName` from GitHub. Fetch the corresponding remote branch when
-network access permits, then record the base ref and merge-base SHA. If a fetch
-fails, use the available remote-tracking ref and report that it may be stale.
+Use the comparison the user asked for. Otherwise use an existing PR's actual
+`baseRefName`; for local work, establish its intended parent from the branch
+and task. Do not assume that the current checkout or a stale local `master`
+is the base. Fetch the remote base when possible and record its merge-base;
+if unavailable, state which local ref was used and that it may be stale.
 
-For a stack, record each layer's immediate parent. Review and run targeted
-checks for each layer against that parent, and run the broad suites once on
-the cumulative top layer against the trunk, unless each layer must be
-independently releasable.
-
-## Branch names
-
-Use `<type>/<short-kebab-case-intent>`, where `type` is normally `feat`, `fix`,
-`refactor`, `perf`, `test`, `docs`, `ci`, `build`, or `chore`. Name the
-reviewer-visible outcome, not the authoring tool, agent, issue number alone, or
-position in a stack.
-
-Examples: `feat/oriv`, `fix/cluster-df`, `docs/agent-workflow`.
-
-## Approval and handoff
-
-Never commit to `master` or rewrite contributor-owned history. Every history
-rewrite requires explicit user approval for that specific rewrite in the
-current conversation; a request to prepare a PR is not rewrite approval.
-Before asking, report the affected branches and their immediate parents,
-agent ownership, pushed/review status, original tip SHAs, dependent branches,
-and exact rewrite and stack-rebase commands. Proceed only with a clean
-worktree, named branches other than `master`, verified parents, and recorded
-tips. Never rewrite silently after review starts.
-
-Submit agent-authored work as draft PRs. Mark a layer ready for review only
-when required checks pass or required long checks are visibly running in CI
-on that head. Merge readiness follows the testing policy. Agents stop at
-handoff: they never merge their work or invoke `gh stack merge`. A human
-maintainer reviews every PR and every stack layer before merge.
+Include relevant uncommitted and untracked changes. For a stack, inspect each
+layer against its immediate parent and the cumulative result against trunk.
+Confirm the diff viewer uses the same comparison. Files inherited from a
+parent or already squash-merged are not new changes in this layer.
 
 ## Change scope
 
-Define the smallest observable outcome that satisfies the request. Include
-adjacent fixes or refactors only when requested, explicitly accepted, or needed
-for that outcome. Discovering a pre-existing defect does not make it a
-prerequisite; assign independent work to a follow-up issue. A new abstraction
-does not itself authorize broader behavior.
+Complete the requested outcome with the smallest coherent change. Include
+adjacent fixes or refactors only when requested, accepted, or necessary for
+that outcome. A pre-existing bug does not automatically become a prerequisite.
+In an invariant refactor, preserve behavior and separate newly discovered
+numerical fixes. Identify independent follow-ups; open issues when authorized.
 
-## Stacks
+Prefer a local simplification over a new framework, registry, or compatibility
+layer unless the latter solves a concrete problem. Conversely, do not reduce
+line count by hiding the algorithm or dropping necessary support and evidence.
+Keep scratch reports and debugging artifacts out of the PR unless requested.
 
-Use one PR for a small cohesive change. Prefer a GitHub stacked PR when the
-work has two or more independently reviewable layers. Split by dependency and
-reviewer concern, not file count: each layer must be coherent, testable against
-its immediate parent, free of unrelated cleanup, and small enough for a human
-to review on its own. Each stack branch names its layer's outcome.
+## Branch names
 
-## Commits
+Use `<type>/<short-kebab-case-intent>`, normally `feat`, `fix`, `refactor`,
+`perf`, `test`, `docs`, `ci`, `build`, or `chore`. Name the outcome, not the
+agent, issue number alone, or position in a stack: `fix/cluster-df`, for example.
 
-Use `type(scope): imperative summary`, with the scope omitted when it adds no
-information. Keep the subject precise, normally about 50–60 characters, with
-no trailing period or hand-written PR number.
+## Approval and handoff
 
-Each commit addresses one reviewer concern, is small enough to review
-independently, and passes its applicable targeted checks. Pair tests with the
-behavior they establish. A body is optional; when needed, explain why the
-change exists, an important constraint, or a non-obvious compatibility choice.
-Do not narrate mechanics already visible in the diff.
+Never commit to `master` or rewrite contributor-owned history. Rewriting
+agent-owned history requires explicit approval for that specific rewrite in
+the current conversation, including unpushed history. A request to implement,
+commit, push, or prepare a PR is not rewrite approval. Reuse approval already
+given; do not ask again for the same action.
 
-Prefer `fix(vcov): preserve clustered degrees of freedom` to `fix tests`, and
-`test: cover weighted Poisson inference` to `add more tests`.
+Before an unapproved rewrite, prepare the affected branches, immediate
+parents, original tip SHAs, ownership, pushed/review state, dependent branches,
+and exact commands. Proceed with a clean worktree on named branches other
+than `master`, verified parents, and recoverable recorded tips. Verify that
+history-only cleanup preserves the final tree. Never rewrite silently after
+review starts.
+
+Submit agent-authored work as draft PRs. Human maintainer review is required
+for every PR and stack layer. Agents never merge their own work or invoke
+`gh stack merge`. A review-ready handoff may have required long checks visibly
+running in CI, with their status reported; merge readiness requires the
+[testing evidence](testing.md#verification-reporting) to be complete.
+
+## Stacks and commits
+
+Prefer small, self-contained PRs, each addressing one coherent reviewer
+concern with its implementation, tests, and necessary documentation together.
+Each PR should be understandable and testable against its declared base.
+When a PR grows too large to review comfortably or mixes separable concerns,
+narrow it or split it into smaller coherent PRs. Choose boundaries by behavior,
+dependency, and reviewability; use no fixed file- or line-count limit.
+
+Keep independent changes in separate PRs; stack only when one layer actually
+depends on another. Each layer must work and pass its applicable targeted
+checks against its immediate parent. Sharing a file is not by itself a
+dependency. Broad checks can run once at the cumulative tip unless layers
+must be independently releasable.
+
+Use `type(scope): imperative summary`; omit an unhelpful scope. Keep the
+subject short and precise, with no trailing period or hand-written PR number.
+Each commit addresses one reviewer concern, pairs behavior with its tests,
+and passes its applicable targeted checks.
+An optional body explains a non-obvious reason or constraint, not the mechanics
+already visible in the diff. No fixed commit sequence is required.
 
 ## Pull-request opening
 
-Open with the outcome and motivation. The first one or two paragraphs should
-say what changes, why it matters, where it belongs architecturally, and any
-important non-goals. Do not begin with a file list, implementation diary, or
-test-command dump.
+Start with the problem and resulting behavior. A concrete before/after example
+often explains more than a list of files. Use a short paragraph or a few
+bullets, then the applicable parts of the repository PR template. Scale detail
+to the change; omit implementation diaries and internal workflow checklists.
 
-For example:
-
-> Adds ORIV as a standalone estimator for measurement-error correction. It
-> preserves the shared estimation core and follows the existing estimator API
-> conventions.
->
-> The implementation is validated against Stata. Fixed effects are supported;
-> weights and multiple estimation remain explicitly unsupported.
-
-After the opening, complete only the applicable sections of the repository PR
-template. Keep ordinary PR bodies under about 200 words: one outcome-first
-paragraph and at most a few bullets for material review risks or non-obvious
-decisions. Use a longer body only when a support matrix or numerical deviation
-genuinely needs it.
-
-For numerical or estimator changes, add only the material facts: `fixest`
-parity or the intentional deviation and its support limits, the external
-reference and tolerance rationale, failed or deferred verification, and any
-performance impact. Link to the tests or policy instead of copying the support
-matrix into the body. Documentation, CI, and maintenance PRs carry none of
-that boilerplate.
-
-GitHub already shows the files, commits, branches, and base SHA; do not repeat
-them as file lists, commit-by-commit narratives, or implementation diaries.
-Mention them only when a non-obvious stack relationship affects review or
-verification reporting requires them. Follow
-[Verification reporting](testing.md#verification-reporting) for check summaries
-and details of failures or deferrals. Human approval is represented by GitHub
-review state, not by an author checkbox.
+Include only material compatibility differences, support limits, numerical
+references, tolerance decisions, performance effects, and verification gaps.
+Link tests or longer explanations instead of copying a support matrix. Follow
+[verification reporting](testing.md#verification-reporting) for a compact check
+summary. If scope changes, rewrite the title and body around the final diff.
+Human approval belongs in GitHub review state, not an author checkbox.
 
 ## Issues
 
-GitHub issue bodies must contain at most two short sentences unless the user
-explicitly requests more detail: state the concrete problem or proposed change,
-then the desired outcome and any relevant issue/PR link. Omit headings,
-checklists, implementation plans, and background narratives; do not move
-overflow into comments.
+Use at most two short sentences unless the user asks for more: the concrete
+problem or proposed change, then the desired outcome and relevant issue/PR
+link. Omit headings, checklists, implementation plans, and background stories;
+do not move overflow into comments. Include a reproduction when requested.

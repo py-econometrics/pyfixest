@@ -38,6 +38,7 @@ _rpy2_test_files = [
     "test_quantreg.py",
     "test_savi_vs_avlm.py",
     "test_vs_r_fast.py",
+    "test_varying_slopes_vs_fixest.py",
     "test_vs_fixest.py",
     "test_wald_test.py",
 ]

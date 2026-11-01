@@ -7,13 +7,16 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
-from within import PreconditionerConfig, Solver
+from within import Effect, PreconditionerConfig, Solver
 from within.config import Staleness
 
 import pyfixest as pf
 import pyfixest.demeaners as demeaners
 from pyfixest.core import demean as demean_rs
-from pyfixest.core.demean import demean_within, within_preconditioner_name
+from pyfixest.core.demean import (
+    demean_within,
+    within_preconditioner_name,
+)
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner, _resolve_preconditioner
 from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
 from pyfixest.estimation.numba.demean_nb import demean as demean_numba
@@ -303,6 +306,83 @@ def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     )
     assert success_reused
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "intercepts",
+    [(True,), (False,), (True, True), (False, True)],
+    ids=["f[z]", "f[[z]]", "f[z]+h", "f[[z]]+h"],
+)
+def test_demean_within_varying_slopes_match_explicit_design(intercepts):
+    """Weighted residuals equal those of the explicit dummy-and-slope design."""
+    rng = np.random.default_rng(7)
+    n_obs = 500
+    f = rng.integers(0, 20, n_obs)
+    h = rng.integers(0, 7, n_obs)
+    z = rng.normal(size=n_obs)
+    weights = rng.uniform(0.5, 2, n_obs)
+    x = rng.normal(size=(n_obs, 2))
+    flist = np.column_stack([f, h][: len(intercepts)]).astype(np.uint32)
+    effects = [
+        Effect(
+            levels=np.ascontiguousarray(flist[:, column]),
+            intercept=intercept,
+            slopes=[z] if column == 0 else [],
+        )
+        for column, intercept in enumerate(intercepts)
+    ]
+
+    demeaned, success, _ = demean_within(
+        x=x,
+        flist=effects,
+        weights=weights,
+        tol=1e-12,
+        maxiter=10_000,
+    )
+
+    f_dummies = np.eye(20)[f]
+    columns = [f_dummies * z[:, None]]
+    if intercepts[0]:
+        columns.append(f_dummies)
+    if len(intercepts) == 2:
+        columns.append(np.eye(7)[h])
+    design = np.hstack(columns)
+    sqrt_weights = np.sqrt(weights)[:, None]
+    coef = np.linalg.lstsq(design * sqrt_weights, x * sqrt_weights, rcond=None)[0]
+    assert success
+    # Allow projection error from LSMR's normal-equation stopping criterion.
+    np.testing.assert_allclose(
+        demeaned,
+        x - design @ coef,
+        rtol=0,
+        atol=1e-9,
+        err_msg="Weighted within residuals differ from explicit dummy-and-slope projection",
+    )
+
+
+@pytest.mark.parametrize(
+    "demeaner,backend",
+    [
+        (MapDemeaner(backend="rust"), "MAP"),
+        (MapDemeaner(backend="numba"), "MAP"),
+        (LsmrDemeaner(backend="torch"), "torch LSMR"),
+    ],
+)
+def test_demeaner_rejects_explicit_effects(demean_data, demeaner, backend):
+    x, flist, weights = demean_data
+    effects = [
+        Effect(
+            levels=np.ascontiguousarray(flist[:, column], dtype=np.uint32),
+            intercept=True,
+            slopes=[np.ascontiguousarray(x[:, 0])] if column == 0 else [],
+        )
+        for column in range(flist.shape[1])
+    ]
+
+    with pytest.raises(
+        TypeError, match=rf"not supported by the {backend}.*LsmrDemeaner"
+    ):
+        demeaner.demean(x=x, flist=effects, weights=weights)
 
 
 def test_demean_within_rejects_invalid_preconditioner():

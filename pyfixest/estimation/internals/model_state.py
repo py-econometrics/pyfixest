@@ -454,6 +454,12 @@ class FixedEffectCounts:
         Number of levels of each fixed effect after sample filtering, in the
         order of `ModelDescription.fixed_effects`. A fixed effect left with a
         single level, e.g. by the GLM separation check, still counts.
+    has_intercept_by_fe : tuple[bool, ...]
+        Whether each fixed effect has level-specific intercepts. Slope-only
+        effects such as `f1[[z]]` have none.
+    n_slopes_by_fe : tuple[int, ...]
+        Number of varying-slope covariates of each fixed effect; `f1[z1, z2]`
+        has two.
 
     Examples
     --------
@@ -467,21 +473,52 @@ class FixedEffectCounts:
     """
 
     n_levels_by_fe: tuple[int, ...] = ()
+    has_intercept_by_fe: tuple[bool, ...] = ()
+    n_slopes_by_fe: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not (
+            len(self.n_levels_by_fe)
+            == len(self.has_intercept_by_fe)
+            == len(self.n_slopes_by_fe)
+        ):
+            raise ValueError("Fixed-effect counts must describe every fixed effect.")
 
     @property
     def n_fixef(self) -> int:
-        """Number of fixed effects; ``Y ~ X | f1 + f2`` has two."""
-        return len(self.n_levels_by_fe)
+        """Number of fixed effects with intercepts; ``Y ~ X | f1 + f2[[z]]`` has one."""
+        return sum(self.has_intercept_by_fe)
 
     @property
     def n_levels(self) -> int:
-        """Levels summed over all fixed effects, ``sum(n_levels_by_fe)``."""
-        return sum(self.n_levels_by_fe)
+        """Levels summed over the fixed effects with intercepts."""
+        return sum(
+            n_levels
+            for n_levels, has_intercept in zip(
+                self.n_levels_by_fe, self.has_intercept_by_fe, strict=True
+            )
+            if has_intercept
+        )
+
+    @property
+    def n_slope_coefficients(self) -> int:
+        """Number of varying-slope coefficients, one per level and slope."""
+        return sum(
+            n_levels * n_slopes
+            for n_levels, n_slopes in zip(
+                self.n_levels_by_fe, self.n_slopes_by_fe, strict=True
+            )
+        )
 
     @property
     def fixef_dof(self) -> int:
-        """Degrees of freedom consumed by the fixed effects, ``sum(n_levels_by_fe - 1) + 1``."""
-        return self.n_levels - self.n_fixef + 1 if self.n_levels_by_fe else 0
+        """Degrees of freedom consumed by the fixed effects.
+
+        Intercepts consume ``sum(n_levels - 1) + 1`` over the effects with
+        intercepts; every varying-slope coefficient consumes one more.
+        """
+        intercept_dof = self.n_levels - self.n_fixef + 1 if self.n_fixef else 0
+        return intercept_dof + self.n_slope_coefficients
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
