@@ -3,6 +3,7 @@ import pandas as pd
 import polars as pl
 import pytest
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation import feols, fepois
 from pyfixest.report.utils import (
     rename_categoricals,
@@ -132,7 +133,8 @@ def test_coef_update():
 
 def test_rename_categoricals():
     coefnames = ["C(var)[T.1]", "C(var)[T.2]", "C(var2)[T.1]", "C(var2)[T.2]"]
-    renamed = rename_categoricals(coefnames)
+    with pytest.warns(PyfixestDeprecationWarning, match="deprecated"):
+        renamed = rename_categoricals(coefnames)
     assert renamed == {
         "C(var)[T.1]": "var::1",
         "C(var)[T.2]": "var::2",
@@ -219,7 +221,8 @@ def test_rename_event_study_coefs():
         "Intercept",
     ]
 
-    renamed = rename_event_study_coefs(coefnames)
+    with pytest.warns(PyfixestDeprecationWarning, match="deprecated"):
+        renamed = rename_event_study_coefs(coefnames)
     assert renamed == {
         "C(rel_year, contr.treatment(base=-1.0))[T.-20.0]": "rel_year::-20.0",
         "C(rel_year, contr.treatment(base=-1.0))[T.-19.0]": "rel_year::-19.0",

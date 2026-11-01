@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 import pandas as pd
 
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -64,7 +65,7 @@ class FixestMulti(TidyColumnAccessors):
             "`FixestFormulaDict` is deprecated and will be removed in a future "
             "release. Use `fit.model.parsed_formula` on the models returned by "
             "`to_list()` instead.",
-            FutureWarning,
+            PyfixestDeprecationWarning,
             stacklevel=2,
         )
         return self._formula_dict

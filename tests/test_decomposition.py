@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.utils.dgps import gelbach_data
 
 # Set matplotlib backend for headless testing
@@ -24,7 +25,10 @@ def gelbach_decomposition():
     """Fixture providing a standard Gelbach decomposition for testing."""
     data = gelbach_data(nobs=200)
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
-    gb = fit.decompose(param="x1", seed=98765, reps=25)
+    with pytest.warns(
+        PyfixestDeprecationWarning, match="'param' argument is deprecated"
+    ):
+        gb = fit.decompose(param="x1", seed=98765, reps=25)
     return gb
 
 

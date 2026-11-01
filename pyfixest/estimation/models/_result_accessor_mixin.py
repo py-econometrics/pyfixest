@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from pyfixest.errors import EmptyVcovError
+from pyfixest.errors import EmptyVcovError, PyfixestDeprecationWarning
 from pyfixest.estimation.internals.model_state import CoefficientTable
 from pyfixest.estimation.internals.retention import require_retained
 
@@ -355,7 +355,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         if joint:
             warnings.warn(
                 "joint=True is deprecated. Use inference_type='simult' instead.",
-                FutureWarning,
+                PyfixestDeprecationWarning,
                 stacklevel=3,
             )
             if inference_type not in ("regular", "simult"):
