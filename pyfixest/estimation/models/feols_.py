@@ -210,8 +210,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     fitted_values : FittedValues
         In-sample predictions on the link and the response scale, set in
         get_fit().
-    _u_hat : np.ndarray
-        Residuals of the regression model.
+    _residuals : np.ndarray
+        Response-unit residuals without square-root observation weighting.
     variance_covariance : VarianceCovariance
         Covariance estimate published by `vcov()`: the adjusted matrix, the
         meat where a sandwich exists, small-sample factors, degrees of
@@ -244,7 +244,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
     Notes
     -----
-    The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_N`,
+    The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_X`,
     now live in the typed components above. Their old names still work as
     deprecated aliases or raise an informative `AttributeError`; see
     [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
@@ -562,7 +562,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             # Fixed-effects-only model: no coefficients, residuals are the
             # within-transformed response, and the plan skips vcov().
             self._beta_hat = np.empty(0)
-            self._u_hat = within_data.response.flatten()
+            self._residuals = within_data.response.flatten()
         else:
             fit = fit_ols(
                 X=within_data.design,
@@ -572,7 +572,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
             self._beta_hat = fit.beta
-            self._u_hat = fit.residuals
+            self._residuals = fit.residuals
             self.sandwich = fit.sandwich
 
         # The response minus the residual carries the fixed-effect
@@ -599,7 +599,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         return linear_fit_statistics(
             Y=self.model_matrix.dependent.to_numpy(),
             Y_within=self.within_data.response,
-            residuals=self._u_hat,
+            residuals=self._residuals,
             weights=self.observation_weights.values,
             N=self.sample_info.n_obs,
             k=self._k,
@@ -850,7 +850,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
     def _vcov_iid(self) -> VcovTerm:
         vcov = vcov_iid_ols(
-            residuals=self._u_hat,
+            residuals=self._residuals,
             bread=self.sandwich.bread,
             N=self.sample_info.n_obs,
             weights=self.observation_weights.values,

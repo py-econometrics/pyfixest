@@ -1,9 +1,10 @@
 """Check the deprecation shims that keep 0.60 fitted-model attributes readable.
 
 Every row of `DEPRECATED_ATTRIBUTES` is exercised on a fit of each class it
-names. Metadata values are compared with pyfixest 0.60.0 in
-`test_release_contract.py`; these tests cover access, warnings, defaults, and
-retention without changing the estimator's array representations.
+names. The values the shims rebuild are compared with pyfixest 0.60.0 in
+`test_release_contract.py`; the checks here pin the 0.60 identities between
+the square-root-weighted arrays, which only a weighted fit distinguishes from
+the unweighted typed state.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.errors import PyfixestDeprecationWarning
+from pyfixest.estimation.internals.retention import omitted_attributes
 from pyfixest.estimation.models._deprecated_attributes import (
     DEPRECATED_ATTRIBUTES,
     Alias,
@@ -31,8 +33,8 @@ from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 
 MODEL_CLASSES = {cls.__name__: cls for cls in (Feols, Feiv, Feglm, Fepois, Quantreg)}
 
-# Rows whose 0.60 value is a rebuilt form of the replacement (a list,
-# a `None` default, or padding) rather than the
+# Rows whose 0.60 value is a rebuilt form of the replacement (a square-root
+# weighting, a list or `None` default, a reshape, or padding) rather than the
 # replacement itself. The release contract compares them with 0.60.0.
 REBUILT = {
     "get_performance",
@@ -42,11 +44,20 @@ REBUILT = {
     "_fixef",
     "_icovars",
     "_ssc_dict",
+    "_weights",
+    "_Y",
+    "_X",
+    "_Z",
+    "_u_hat",
     "_clustervar",
     "_G",
+    "_ssc",
     "deviance",
     "_loglik_null",
     "_pseudo_r2",
+    "_sumFE",
+    "_X_hat",
+    "_v_hat",
     "_non_exo_instruments",
     "_p_iv",
     "_collin_vars",
@@ -260,6 +271,161 @@ def test_get_performance_deprecated_call(class_name, fits):
     )
 
 
+def test_weighted_ols_rebuilds_square_root_weighted_arrays(fits, data):
+    fit = fits["Feols"]
+    sqrt_w = np.sqrt(data["w"].to_numpy())
+    within = fit.within_data
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+        X, Y, Z = fit._X, fit._Y, fit._Z
+        np.testing.assert_allclose(X, within.design * sqrt_w[:, None])
+        np.testing.assert_allclose(Y, within.response * sqrt_w[:, None])
+        np.testing.assert_allclose(Z, X)
+        np.testing.assert_allclose(fit._weights.flatten(), data["w"])
+        # 0.60 identities between the stored arrays
+        u_hat_weighted = Y.flatten() - X @ fit._beta_hat
+        np.testing.assert_allclose(u_hat_weighted, sqrt_w * fit.resid())
+        np.testing.assert_allclose(fit._u_hat, u_hat_weighted)
+        np.testing.assert_allclose(fit._scores, X * u_hat_weighted[:, None])
+        np.testing.assert_allclose(fit._hessian, X.T @ X)
+        np.testing.assert_allclose(fit._tZX, X.T @ X)
+        np.testing.assert_allclose(fit._bread @ fit._hessian, np.eye(2), atol=1e-12)
+        np.testing.assert_allclose(fit._sumFE, sqrt_w * fit.fixef_estimates.sumFE)
+
+
+def test_weighted_iv_rebuilds_square_root_weighted_arrays(fits, data):
+    fit = fits["Feiv"]
+    sqrt_w = np.sqrt(data["w"].to_numpy())
+    within = fit.within_data
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+        X, Y, Z = fit._X, fit._Y, fit._Z
+        np.testing.assert_allclose(X, within.design * sqrt_w[:, None])
+        np.testing.assert_allclose(Y, within.response * sqrt_w[:, None])
+        np.testing.assert_allclose(Z, within.instruments * sqrt_w[:, None])
+        # 0.60: the 2SLS residual on the weighted scale
+        np.testing.assert_allclose(
+            Y.flatten() - X @ fit._beta_hat, sqrt_w * fit.resid()
+        )
+        np.testing.assert_allclose(fit._u_hat, sqrt_w * fit.resid())
+        # 0.60: the weighted first stage splits the endogenous regressor
+        np.testing.assert_allclose(
+            fit._X_hat + fit._v_hat, sqrt_w * within.endogenous.flatten()
+        )
+        assert fit._non_exo_instruments == ["Z1"]
+        assert fit._p_iv == 1
+
+
+def test_glm_rebuilds_working_weighted_arrays(fits, data):
+    """0.60 GLMs stored the final IRLS arrays weighted by sqrt(working weights)."""
+    weighted_glm = pf.feglm(
+        "Y_bin ~ X1 + X2 | f1", data, family="logit", weights="w", vcov="hetero"
+    )
+    weighted_glm.fixef(atol=1e-12, btol=1e-12)
+    for fit in (fits["Feglm"], fits["Fepois"], weighted_glm):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+            X, Y, u_hat = fit._X, fit._Y.flatten(), fit._u_hat
+            np.testing.assert_allclose(u_hat, Y - X @ fit._beta_hat, atol=1e-10)
+            np.testing.assert_allclose(fit._scores, X * u_hat[:, None], atol=1e-10)
+            np.testing.assert_allclose(fit._hessian, X.T @ X)
+            np.testing.assert_allclose(
+                fit._weights.flatten(), fit.working_state.working_weights
+            )
+            assert fit._weights.shape == (fit.sample_info.n_rows, 1)
+            np.testing.assert_array_equal(
+                fit._Z, X, err_msg="GLM _Z is the solver design"
+            )
+            if not isinstance(fit, Fepois):
+                # Weighted non-Poisson GLMs postdate 0.60: this is the intended
+                # current contract, not a claim of historical weighted parity.
+                # Fixed effects live on link scale; only weighted fits scale
+                # the legacy sum by sqrt(final IRLS weights).
+                sum_fe = fit.fitted_values.link - (
+                    fit.model_matrix.independent.to_numpy() @ fit.coef().to_numpy()
+                )
+                if fit.options.has_weights:
+                    sum_fe *= np.sqrt(fit.working_state.working_weights)
+                # FE recovery uses an iterative solver, so allow its residual error.
+                np.testing.assert_allclose(
+                    fit._sumFE,
+                    sum_fe,
+                    atol=1e-8,
+                    err_msg="GLM _sumFE link-scale identity",
+                )
+                assert fit._sumFE.shape == (fit.sample_info.n_rows,)
+                np.testing.assert_array_equal(
+                    fit._Y_hat_link, fit.fitted_values.link, err_msg="GLM _Y_hat_link"
+                )
+                np.testing.assert_allclose(
+                    fit._Y_hat_response,
+                    1 / (1 + np.exp(-fit._Y_hat_link)),
+                    err_msg="logit _Y_hat_response is inverse link",
+                )
+                assert not np.allclose(fit._Y_hat_link, fit._Y_hat_response)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+        assert fits["Fepois"]._Y.shape == (fits["Fepois"].sample_info.n_rows, 1)
+        assert fits["Feglm"]._Y.ndim == 1
+        # weighted Poisson fits had no null model in 0.60
+        assert fits["Fepois"]._loglik_null is None
+        assert fits["Fepois"]._pseudo_r2 is None
+
+
+def test_cluster_counts_keep_min_padding(data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+        oneway = pf.feols("Y ~ X1", data, vcov={"CRV1": "f1"})
+        G = oneway.variance_covariance.G[0]
+        assert oneway._G == [G, G, G]
+        assert oneway._ssc.shape == (1, 1)
+        conventional = pf.feols(
+            "Y ~ X1 | f2 + f1",
+            data,
+            vcov={"CRV1": "f1+f2"},
+            ssc=pf.ssc(k_adj=False, k_fixef="full", G_adj=False, G_df="conventional"),
+        )
+        assert list(conventional.variance_covariance.G) == conventional._G
+        assert len(conventional._G) == 3
+        multiway = pf.feols(
+            "Y ~ X1", data, vcov={"CRV1": "f1+f2"}, ssc=pf.ssc(G_df="min")
+        )
+        counts = [
+            data.f1.nunique(),
+            data.f2.nunique(),
+            len(data[["f1", "f2"]].drop_duplicates()),
+        ]
+        # Padding must choose a minimum, not the first count.
+        assert counts[0] > counts[1]
+        assert [min(counts)] * 3 == multiway._G
+        unclustered = pf.feols("Y ~ X1", data, vcov="hetero")
+        assert unclustered._G == []
+        for fit, fixef, clusters, expected_ssc in (
+            (
+                conventional,
+                "f2+f1",
+                ["f1", "f2"],
+                {
+                    "k_adj": False,
+                    "k_fixef": "full",
+                    "G_adj": False,
+                    "G_df": "conventional",
+                },
+            ),
+            (
+                unclustered,
+                None,
+                None,
+                {"k_adj": True, "k_fixef": "nonnested", "G_adj": True, "G_df": "min"},
+            ),
+        ):
+            assert fit._fixef == fixef
+            assert fit._clustervar == clusters
+            assert fit._ssc_dict == expected_ssc
+            assert isinstance(fit._ssc_dict, dict)
+        assert isinstance(conventional._clustervar, list)
+
+
 def test_legacy_defaults_and_capabilities(fits):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", PyfixestDeprecationWarning)
@@ -307,6 +473,107 @@ def test_collinearity_legacy_lists(data, dropped):
             # Typed state retains full all-False masks; legacy access returns [].
             assert fit.collinearity.mask == (False, False)
             assert fit.collinearity_instruments.mask == (False, False)
+
+
+@pytest.mark.parametrize("store_data,lean", [(True, True), (False, False)])
+def test_retention_keeps_shims(data, fits, store_data, lean):
+    """Retention cleanup drops instance state but never the class descriptors."""
+    fit = pf.feols("Y ~ X1 | f1", data, weights="w", store_data=store_data, lean=lean)
+    glm = pf.feglm(
+        "Y_bin ~ X1 | f1", data, family="logit", store_data=store_data, lean=lean
+    )
+    assert "_X" in vars(Feols)
+    assert "_u_hat" in vars(Feglm)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+        assert hasattr(fit, "_se")
+        assert hasattr(fit, "_X") is not lean
+        assert hasattr(fit, "_u_hat") is not lean
+        assert hasattr(glm, "_u_hat") is not lean
+        assert fit._N_rows == fit.sample_info.n_rows
+        assert fit._has_weights
+        assert fit._store_data is store_data
+        assert fit._lean is lean
+        assert fit._copy_data is fit.options.copy_data
+        assert fit._demeaner is fit.options.demeaner
+        assert fit._model_spec is fit.model.model_spec
+    if lean:
+        assert "within_data" not in vars(fit)
+        assert "working_state" not in vars(glm)
+
+    iv = pf.feols(
+        "Y ~ X2 + [X1 ~ Z1] | f1",
+        data,
+        weights="w",
+        vcov={"CRV1": "f1"},
+        store_data=store_data,
+        lean=lean,
+    )
+    quantile = pf.quantreg(
+        "Y ~ X1 + X2",
+        data,
+        quantile=0.4,
+        vcov="nid",
+        store_data=store_data,
+        lean=lean,
+    )
+    for name, model in (("Feiv", iv), ("Quantreg", quantile)):
+        omitted = set(omitted_attributes(model.options.retention))
+        assert "model_matrix" in omitted
+        assert not hasattr(model, "model_matrix")
+        # Array aliases need both the array's owner and any scaling state.
+        # Quantile residual access reads _residuals directly, not resid().
+        sources = {
+            "_Y": ("within_data",),
+            "_X": ("within_data",),
+            "_Z": ("within_data",),
+            "_u_hat": ("_residuals",),
+            "_se": ("coeftable",),
+            "_N_rows": ("sample_info",),
+            "_fixef": ("model",),
+            "_ssc_dict": ("options",),
+            "_collin_vars": ("collinearity",),
+        }
+        if name == "Feiv":
+            for alias in ("_Y", "_X", "_Z", "_u_hat"):
+                sources[alias] += ("observation_weights",)
+            sources.update(
+                {
+                    "_pi_hat": ("first_stage",),
+                    "_X_hat": ("first_stage", "observation_weights"),
+                    "_v_hat": ("first_stage", "observation_weights"),
+                    "_non_exo_instruments": ("first_stage",),
+                }
+            )
+        else:
+            sources["_quantile"] = ("options",)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", PyfixestDeprecationWarning)
+            for alias, dependencies in sources.items():
+                for source in dependencies:
+                    assert hasattr(model, source) == (source not in omitted), source
+                missing = [
+                    source for source in dependencies if not hasattr(model, source)
+                ]
+                if missing:
+                    with pytest.raises(
+                        AttributeError, match=rf"fit\.{alias}.*not available"
+                    ) as excinfo:
+                        getattr(model, alias)
+                    message = str(excinfo.value)
+                    assert any(source in message for source in missing), message
+                    assert "deprecated; use `fit." in message
+                else:
+                    _assert_same(
+                        getattr(model, alias),
+                        getattr(fits[name], alias),
+                        name=f"{name}.{alias}",
+                    )
+        # The first stage survives lean cleanup even though legacy fitted and
+        # residual arrays cannot be scaled without observation_weights.
+        if name == "Feiv":
+            assert model.first_stage.fitted_values is not None
+            assert model.first_stage.residuals is not None
 
 
 def test_alpha_rejects_changed_categorical_layout():

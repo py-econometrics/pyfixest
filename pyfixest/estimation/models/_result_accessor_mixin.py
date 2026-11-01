@@ -134,7 +134,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
     variance_covariance: "VarianceCovariance"
     coeftable: CoefficientTable
     _beta_hat: np.ndarray
-    _u_hat: np.ndarray
+    _residuals: np.ndarray
     model_matrix: "ModelMatrix"
     options: "EstimationOptions"
     observation_weights: "ObservationWeights"
@@ -533,5 +533,5 @@ class ResultAccessorMixin(TidyColumnAccessors):
         fit.resid()[:5]
         ```
         """
-        require_retained(self, "resid", "_u_hat")
-        return self._u_hat.flatten()
+        require_retained(self, "resid", "_residuals")
+        return self._residuals.flatten()

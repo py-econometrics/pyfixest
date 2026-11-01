@@ -30,11 +30,15 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+from numpy.typing import NDArray
+
 from pyfixest.errors import PyfixestDeprecationWarning
 
 if TYPE_CHECKING:
     from pyfixest.did.saturated_twfe import EventStudyDesign
     from pyfixest.estimation.internals.model_state import CollinearityCheck
+    from pyfixest.estimation.models.feglm_ import Feglm
     from pyfixest.estimation.models.feiv_ import Feiv
     from pyfixest.estimation.models.feols_ import Feols
     from pyfixest.estimation.models.fepois_ import Fepois
@@ -178,8 +182,56 @@ class DeprecatedAttributes:
 # ---------------------------------------------------------------------------
 # Rebuilding 0.60 values.
 #
-# Metadata conversions preserve the former defaults, types, and availability.
+# pyfixest 0.60 stored the OLS and IV arrays premultiplied by sqrt(w), and the
+# GLM arrays premultiplied by the square root of the final IRLS weights.
 # ---------------------------------------------------------------------------
+
+
+def _sqrt_weighted(fit: Feols, values: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Premultiply rows by the square root of the observation weights."""
+    weights = fit.observation_weights.values
+    if weights is None:
+        return values
+    sqrt_weights = np.sqrt(weights)
+    return values * (sqrt_weights if values.ndim == 1 else sqrt_weights[:, None])
+
+
+def _sqrt_working_weighted(
+    fit: Feglm, values: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    """Premultiply rows by the square root of the final IRLS weights."""
+    sqrt_weights = np.sqrt(fit.working_state.working_weights.reshape(-1))
+    return values * (sqrt_weights if values.ndim == 1 else sqrt_weights[:, None])
+
+
+def _linear_weights(fit: Feols) -> NDArray[np.float64]:
+    """0.60 `_weights`: the observation weights as a column, ones if unweighted."""
+    weights = fit.observation_weights.values
+    if weights is None:
+        return np.ones((fit.sample_info.n_rows, 1))
+    return weights.reshape((-1, 1))
+
+
+def _linear_residuals(fit: Feols) -> NDArray[np.float64]:
+    """Rebuild solver-scale residuals; FE-only OLS kept a column in 0.60."""
+    residuals = _sqrt_weighted(fit, fit._residuals)
+    return residuals.reshape((-1, 1)) if fit._X_is_empty else residuals
+
+
+def _glm_sum_fe(fit: Feglm) -> NDArray[np.float64]:
+    """0.60 GLM `_sumFE`: weighted fits scaled it by sqrt(IRLS weights)."""
+    sum_fe = fit.fixef_estimates.sumFE
+    if not fit.options.has_weights:
+        return sum_fe
+    return _sqrt_working_weighted(fit, sum_fe)
+
+
+def _clustered_ssc(fit: Feols) -> NDArray[np.float64]:
+    """0.60 `_ssc`: one-way clustered fits stored a (1, 1) array."""
+    covariance = fit.variance_covariance
+    if len(covariance.spec.clustervar) == 1:
+        return covariance.ssc.reshape((1, 1))
+    return covariance.ssc
 
 
 def _cluster_counts(fit: Feols) -> list[int]:
@@ -243,6 +295,20 @@ def _collin_index(collinearity: CollinearityCheck) -> list[bool]:
 def _poisson_null_measure(fit: Fepois, value: float) -> float | None:
     """0.60 left the Poisson null measures `None` for weighted fits."""
     return None if fit.options.has_weights else value
+
+
+_NO_SANDWICH_Q = (
+    "quantile regression fits carry no sandwich components; compute them from "
+    "`fit.within_data`"
+)
+_IV_PROJECTED = (
+    "IV fits now score the first-stage projection of the design, as fixest "
+    "does, instead of the instruments"
+)
+_NO_CROSS_PRODUCTS = (
+    "the solver's weighted cross products are no longer retained; compute them "
+    "from `fit.within_data` and `fit.observation_weights`"
+)
 
 
 def _row(name: str, *, silent: bool = False, **classes: Alias | Removed):
@@ -448,6 +514,14 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         Fepois=_alias("fit.fixef_counts.n_fixef", _poisson_n_fe),
     ),
     _row(
+        "_weights",
+        Feols=_alias("fit.observation_weights.values", _linear_weights),
+        Feglm=_alias(
+            "fit.working_state.working_weights",
+            lambda fit: fit.working_state.working_weights.reshape((-1, 1)),
+        ),
+    ),
+    _row(
         "_fe",
         Feols=_removed(
             "fit.model_matrix.fixed_effects",
@@ -464,6 +538,58 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         ),
     ),
     # fit.within_data and fit.working_state
+    _row(
+        "_Y",
+        Feols=_alias(
+            "fit.within_data.response",
+            lambda fit: _sqrt_weighted(fit, fit.within_data.response),
+        ),
+        Feglm=_alias(
+            "fit.working_state.working_response_within",
+            lambda fit: _sqrt_working_weighted(
+                fit, fit.working_state.working_response_within
+            ),
+        ),
+        Fepois=_alias(
+            "fit.working_state.working_response_within",
+            lambda fit: _sqrt_working_weighted(
+                fit, fit.working_state.working_response_within
+            ).reshape((-1, 1)),
+        ),
+        Quantreg=_alias(
+            "fit.within_data.response", lambda fit: fit.within_data.response
+        ),
+    ),
+    _row(
+        "_X",
+        Feols=_alias(
+            "fit.within_data.design",
+            lambda fit: _sqrt_weighted(fit, fit.within_data.design),
+        ),
+        Feglm=_alias(
+            "fit.working_state.design_within",
+            lambda fit: _sqrt_working_weighted(fit, fit.working_state.design_within),
+        ),
+        Quantreg=_alias("fit.within_data.design", lambda fit: fit.within_data.design),
+    ),
+    _row(
+        "_Z",
+        Feols=_alias(
+            "fit.within_data.design",
+            lambda fit: (
+                None if fit._X_is_empty else _sqrt_weighted(fit, fit.within_data.design)
+            ),
+        ),
+        Feiv=_alias(
+            "fit.within_data.instruments",
+            lambda fit: _sqrt_weighted(fit, fit.within_data.instruments),
+        ),
+        Feglm=_alias(
+            "fit.working_state.design_within",
+            lambda fit: _sqrt_working_weighted(fit, fit.working_state.design_within),
+        ),
+        Quantreg=_alias("fit.within_data.design", lambda fit: fit.within_data.design),
+    ),
     _row(
         "_Yd",
         Feols=_removed(
@@ -492,8 +618,55 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             "it held the demeaned endogenous variables before the collinearity check",
         ),
     ),
+    _row(
+        "_u_hat",
+        Feols=_alias("fit.resid()", _linear_residuals),
+        Feglm=_alias(
+            "fit.working_state.working_residuals",
+            lambda fit: _sqrt_working_weighted(
+                fit, fit.working_state.working_residuals.reshape(-1)
+            ),
+        ),
+        Quantreg=_alias("fit.resid()", lambda fit: fit._residuals),
+    ),
     # fit.fitted_values
+    _row(
+        "_Y_hat_link",
+        Feols=_alias("fit.fitted_values.link", lambda fit: fit.fitted_values.link),
+    ),
+    _row(
+        "_Y_hat_response",
+        Feols=_alias(
+            "fit.fitted_values.response", lambda fit: fit.fitted_values.response
+        ),
+    ),
     # fit.sandwich
+    _row(
+        "_scores",
+        Feols=_alias("fit.sandwich.scores", lambda fit: fit.sandwich.scores),
+        Feiv=_removed("fit.sandwich.scores", _IV_PROJECTED),
+        Quantreg=_removed("fit.variance_covariance", _NO_SANDWICH_Q),
+    ),
+    _row(
+        "_hessian",
+        Feols=_alias("fit.sandwich.hessian", lambda fit: fit.sandwich.hessian),
+        Feiv=_removed("fit.sandwich.hessian", _IV_PROJECTED),
+        Quantreg=_removed("fit.variance_covariance", _NO_SANDWICH_Q),
+    ),
+    _row(
+        "_bread",
+        Feols=_alias("fit.sandwich.bread", lambda fit: fit.sandwich.bread),
+        Quantreg=_removed("fit.variance_covariance", _NO_SANDWICH_Q),
+    ),
+    _row(
+        "_tZX",
+        Feols=_alias("fit.sandwich.hessian", lambda fit: fit.sandwich.hessian),
+        Feiv=_removed("fit.sandwich.hessian", _NO_CROSS_PRODUCTS),
+        Quantreg=_removed("fit.variance_covariance", _NO_SANDWICH_Q),
+    ),
+    _row("_tXZ", Feols=_removed("fit.sandwich", _NO_CROSS_PRODUCTS)),
+    _row("_tZy", Feols=_removed("fit.sandwich", _NO_CROSS_PRODUCTS)),
+    _row("_tZZinv", Feols=_removed("fit.sandwich", _NO_CROSS_PRODUCTS)),
     # fit.variance_covariance
     _row(
         "_vcov",
@@ -537,6 +710,7 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         silent=True,
         Feols=_alias("fit.variance_covariance.G", _cluster_counts),
     ),
+    _row("_ssc", Feols=_alias("fit.variance_covariance.ssc", _clustered_ssc)),
     _row(
         "_df_k",
         Feols=_alias(
@@ -650,7 +824,35 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             "levels; fixef() returns coefficients labelled by fixed-effect term and level",
         ),
     ),
+    _row(
+        "_sumFE",
+        Feols=_alias(
+            "fit.fixef_estimates.sumFE",
+            lambda fit: _sqrt_weighted(fit, fit.fixef_estimates.sumFE),
+        ),
+        Feglm=_alias("fit.fixef_estimates.sumFE", _glm_sum_fe),
+    ),
     # fit.first_stage
+    _row(
+        "_pi_hat",
+        Feiv=_alias(
+            "fit.first_stage.coefficients", lambda fit: fit.first_stage.coefficients
+        ),
+    ),
+    _row(
+        "_X_hat",
+        Feiv=_alias(
+            "fit.first_stage.fitted_values",
+            lambda fit: _sqrt_weighted(fit, fit.first_stage.fitted_values),
+        ),
+    ),
+    _row(
+        "_v_hat",
+        Feiv=_alias(
+            "fit.first_stage.residuals",
+            lambda fit: _sqrt_weighted(fit, fit.first_stage.residuals),
+        ),
+    ),
     _row(
         "_model_1st_stage",
         Feiv=_alias("fit.first_stage.model", lambda fit: fit.first_stage.model),

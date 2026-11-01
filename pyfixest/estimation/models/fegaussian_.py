@@ -31,7 +31,7 @@ class Fegaussian(Feglm):
         """Add the linear fit statistics to the deviance.
 
         Gaussian fits retain their demeaned response and residuals in
-        working_state rather than the linear model's within_data and _u_hat.
+        working_state rather than the linear model's within_data and _residuals.
         The identity link puts those arrays in the units of Y, so they can
         be passed to the same kernel used for OLS. The original response
         comes from model_matrix for the overall R².

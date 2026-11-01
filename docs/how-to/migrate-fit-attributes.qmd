@@ -9,7 +9,7 @@ toc-location: left
 ---
 
 PyFixest 0.70 moves the state of a fitted model out of loose private attributes
-such as `fit._se`, `fit._vcov`, or `fit._N` into typed components: `fit.model`,
+such as `fit._se`, `fit._vcov`, or `fit._X` into typed components: `fit.model`,
 `fit.options`, `fit.sample_info`, `fit.coeftable`, `fit.variance_covariance`,
 `fit.fitstat`, `fit.sandwich`, `fit.first_stage`, and others. Each component is
 documented in the [API reference](/reference/index.qmd).
@@ -22,6 +22,8 @@ The compatibility layer preserves the names listed below while you migrate:
 - Some 0.60 representations are no longer supported. Their names are **removed**:
   reading them raises an `AttributeError` that explains why and names the
   replacement.
+- On weighted OLS and IV fits, `fit._u_hat` includes the square-root observation
+  weights, as in 0.60. Use `fit.resid()` for residuals in the outcome's units.
 
 Internal solver caches and other names outside this table are not covered by
 the compatibility layer. An alias also raises `AttributeError` if the required
@@ -64,6 +66,15 @@ The aliases reconstruct the former values where possible. The following
 conventions and explicit exceptions matter when moving to the new field named
 in the warning and in the "Use instead" column:
 
+- **Weighted arrays.** PyFixest 0.60 stored the arrays of weighted OLS and IV
+  fits multiplied by the square root of the weights (`_Y`, `_X`, `_Z`,
+  `_u_hat`, `_X_hat`, `_v_hat`, `_sumFE`), and the final IRLS arrays of GLMs multiplied
+  by the square root of the working weights (`_Y`, `_X`, `_Z`, `_u_hat`, and
+  `_sumFE` of weighted fits). The aliases apply the same scaling. The new components hold the unweighted
+  arrays: `fit.within_data`, `fit.working_state`, `fit.first_stage`, and
+  `fit.fixef_estimates`.
+  Fixed-effects-only OLS retains the former column shape of `_u_hat` and
+  returns `None` for `_Z`; `fit.resid()` always returns a flat array.
 - **Estimation changes.** Aliases reflect the numerical changes described in
   the [0.70 changelog](/changelog.qmd): weighted
   RMSE divides by the sum of weights; Gaussian GLMs now publish R² measures
@@ -71,7 +82,8 @@ in the warning and in the "Use instead" column:
   change Poisson, logit, and probit results slightly.
 - **Empty defaults.** PyFixest 0.60 set many attributes to an empty array,
   `None`, or `NaN`. An alias raises `AttributeError` when its component is
-  absent, for example `fit._eff_F` before `fit.IV_Diag()` runs. Some components are never published for a
+  absent, for example `fit._sumFE` before `fit.fixef()` runs or `fit._eff_F`
+  before `fit.IV_Diag()` runs. Some components are never published for a
   particular fit: FE-only fits have no coefficient inference (`_se`, `_vcov`,
   `_vcov_type`, `_G`), and fits other than saturated event studies have no
   event-study design (`_yname`, `_att`, and the other design names).
@@ -114,7 +126,9 @@ in the warning and in the "Use instead" column:
 - **DID2S metadata.** `_vcov_type` is now `"CRV"` instead of `"CRV1"`;
   `_clustervar` names the cluster variable and `_is_clustered` is true.
   `_G` now returns a list (padded under `G_df="min"`) instead of the old
-  integer count.
+  integer count. `_ssc` is a `(1, 1)` array containing `1.0`, rather than the
+  old one-dimensional OLS correction: the stored covariance already includes
+  the two-step GMM calculation.
 - **Methods.** `get_performance()` remains callable with a deprecation
   warning; read the automatically computed `fit.fitstat` instead.
   The former IV `first_stage()` method is now the `fit.first_stage` data
