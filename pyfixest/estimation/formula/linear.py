@@ -71,6 +71,47 @@ def _native_intercept(source: str) -> str:
     return "".join(result)
 
 
+_NO_INTERCEPT = re.compile(r"\s*-\s*1$")
+_BARE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|`((?:``|[^`])*)`")
+_VARIABLE_TOKENS = re.compile(
+    r"""`((?:``|[^`])*)`|'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|(?<![\w.])([A-Za-z_][A-Za-z0-9_]*)\s*(\(|=(?!=))?"""
+)
+
+
+def rhs_terms(source: str) -> list[str]:
+    """Split a canonical right-hand side into its terms, without intercept markers."""
+    return [
+        term
+        for term in split_top_level(_NO_INTERCEPT.sub("", source), "+")
+        if term not in ("1", "-1")
+    ]
+
+
+def bare_name(term: str) -> str | None:
+    """Return the input column a canonical term passes through unchanged, if any."""
+    match = _BARE_NAME.fullmatch(term.strip())
+    if match is None:
+        return None
+    quoted = match.group(1)
+    return match.group(0) if quoted is None else quoted.replace("``", "`")
+
+
+def required_variables(source: str) -> frozenset[str]:
+    """Name the input columns a canonical expression reads.
+
+    Function names and keyword names are not inputs. Literal words such as
+    ``false`` may be reported, which only makes callers more conservative.
+    """
+    names = set()
+    for match in _VARIABLE_TOKENS.finditer(source):
+        quoted, name, follower = match.groups()
+        if quoted is not None:
+            names.add(quoted.replace("``", "`"))
+        elif name is not None and follower is None:
+            names.add(name)
+    return frozenset(names)
+
+
 def categorical_calls(source: str) -> list[str]:
     """Find C() calls, ignoring quoted column names and string arguments."""
     tokens = re.finditer(

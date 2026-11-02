@@ -1,7 +1,9 @@
 """Public OLS/IV contracts for the Rust formula engine."""
 
+import formula
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytest
 
 import pyfixest as pf
@@ -156,16 +158,89 @@ def test_multiple_responses_with_iv(data, source):
     )
 
 
-def test_reference_only_category_preserves_validity(data):
+@pytest.mark.parametrize(
+    "source",
+    [
+        "y ~ x + C(category, reference=1.0)",
+        "y ~ x + C(category, reference=1.0):x",
+        "y ~ x + [d ~ z + C(category, reference=1.0)]",
+    ],
+)
+def test_reference_only_category_is_rejected(data, source):
+    # Such a term emits no column, so its nulls could not mark invalid rows.
     data["category"] = 1.0
     data.loc[0, "category"] = np.nan
-    fit = pf.feols("y ~ x + C(category, reference=1.0)", data)
-    assert fit.model_matrix.dropped_row_index == frozenset([0])
-    new = data.iloc[1:4].copy()
-    new["category"] = [1.0, 2.0, np.nan]
-    prediction = fit.predict(new)
-    assert np.isfinite(prediction[0])
-    assert np.isnan(prediction[1:]).all()
+    with pytest.raises(ValueError, match="encodes no columns"):
+        pf.feols(source, data)
+
+
+def test_formula_nulls_mark_invalid_rows():
+    """Engine contract: invalid inputs null every column of their term."""
+    training = pl.DataFrame(
+        {
+            "y": [1.0, 2.0, 3.0, 4.0],
+            "x": [1.0, 2.0, 3.0, 4.0],
+            "g": ["a", "b", "a", "b"],
+            "f": ["u", "v", "u", "w"],
+        }
+    )
+    model = formula.parse("y ~ x + C(g, reference='a') + C(g):x | f").fit(training)[0]
+    predictors = model.select([formula.Role.Independent, formula.Role.FixedEffect])
+    new = pl.DataFrame(
+        {
+            "x": [1.0, 2.0, None, 4.0],
+            "g": ["a", "c", "b", None],
+            "f": ["u", "u", "v", "zz"],
+        }
+    )
+    nulls = predictors.transform(new).frame().select(pl.all().is_null()).to_pandas()
+    pd.testing.assert_frame_equal(
+        nulls,
+        pd.DataFrame(
+            {
+                "x": [False, False, True, False],
+                "C(g, reference='a')[T.b]": [False, True, False, True],
+                "C(g)[a]:x": [False, True, True, True],
+                "C(g)[b]:x": [False, True, True, True],
+                "f": [False, False, False, True],
+            }
+        ),
+    )
+    training_nulls = model.transform(training.with_columns(g=pl.lit(None, pl.String)))
+    assert training_nulls.frame()["C(g)[a]:x"].is_null().all()
+
+
+def test_formula_fixed_effect_codes_and_term_state_are_stable():
+    """Engine contract behind FE decoding and label-keyed demeaning caches."""
+    data = pl.DataFrame(
+        {
+            "y": [1.0, 2.0, None, 4.0, 3.0],
+            "x": [1.0, 2.0, 3.0, 5.0, 8.0],
+            "f": ["u", "v", "u", "w", "v"],
+        }
+    )
+    model = formula.parse("y ~ poly(x, degree=2) | f").fit(data)[0]
+    reordered = model.transform(data.reverse()).frame()
+    np.testing.assert_array_equal(
+        reordered["f"].to_numpy(), model.frame()["f"].to_numpy()[::-1]
+    )
+    column = "poly(x, degree=2, raw=false)[1]"
+    other = formula.parse("x ~ 1 + poly(x, degree=2)").fit(data)[0].frame()
+    np.testing.assert_array_equal(other[column], model.frame()[column])
+
+
+def test_demeaned_columns_shared_across_specifications_by_label(data):
+    # The data column `log(x)` and the expression log(x) share a label.
+    data["x"] = data.x.abs() + 1
+    data["log(x)"] = data.z
+    fits = pf.feols("y ~ x + sw(`log(x)`, log(x), poly(x, degree=2)) | group", data)
+    for fit in fits.to_list():
+        np.testing.assert_allclose(
+            fit.coef(),
+            pf.feols(fit.model.formula, data).coef(),
+            atol=1e-10,
+            err_msg=fit.model.formula,
+        )
 
 
 @pytest.mark.parametrize(

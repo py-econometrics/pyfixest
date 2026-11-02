@@ -1,4 +1,20 @@
-"""Materialize regression roles with the Rust formula engine."""
+"""Materialize regression roles with the Rust formula engine.
+
+The adapter relies on behavior of the pinned ``formula`` revision that its
+public API does not document. ``tests/test_formula_engine.py`` checks each
+assumption, so a revision that changes one fails there first:
+
+- A missing input, an unseen category, or an unseen fixed-effect level yields
+  null in every column of the affected term, after both ``fit`` and
+  ``transform``. Row validity is therefore the absence of nulls, provided
+  every term emits a column.
+- ``transform`` reuses the fixed-effect codes assigned by ``fit``.
+- A term's fitted state depends only on its own input columns, so equal labels
+  fitted on equal input data hold equal values across specifications.
+- ``Model.formula`` renders a canonical formula: top-level ``+`` separates
+  terms, quoted names keep their backticks, and categorical columns are
+  labelled ``<canonical C() call>[<level>]``.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +30,9 @@ import polars as pl
 from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation.formula.linear import (
     LinearFormula,
+    bare_name,
     categorical_calls,
+    rhs_terms,
     split_top_level,
 )
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -97,19 +115,7 @@ class FittedRole:
     factor_contrasts: dict[str, Any] = field(default_factory=dict)
     transform_state: dict[str, Any] = field(default_factory=dict)
     renames: dict[str, str] = field(default_factory=dict)
-    categorical_guards: tuple[formula.Model, ...] = ()
-
-    def invalid_categories(self, data: pd.DataFrame | None = None) -> np.ndarray | None:
-        """Retain validity even when a reference-only C() emits no columns."""
-        invalid = None
-        native = (
-            to_polars(data) if data is not None and self.categorical_guards else None
-        )
-        for guard in self.categorical_guards:
-            model = guard if native is None else guard.transform(native)
-            missing = _numeric_frame(model).isna().any(axis=1).to_numpy()
-            invalid = missing if invalid is None else invalid | missing
-        return invalid
+    bare_columns: frozenset[str] = frozenset()
 
     def __deepcopy__(self, memo):
         """Share read-only fitted state; native transforms return new models."""
@@ -135,12 +141,6 @@ class FittedRole:
         )
         result.index = data.index
         result = result.rename(columns=self.renames)
-        invalid = self.invalid_categories(data)
-        if invalid is not None:
-            if na_action == "drop":
-                result = result.loc[~invalid]
-            else:
-                result.loc[invalid] = np.nan
         return result.dropna() if na_action == "drop" else result
 
 
@@ -182,24 +182,27 @@ def _role(
         return FittedRole(None, ()), pd.DataFrame(index=data.index)
     frame = _numeric_frame(selected)
     frame.index = data.index
-    guards = []
+    bare_columns: frozenset[str] = frozenset()
     if role != formula.Role.FixedEffect:
         equation = split_top_level(model.formula, "|")[0]
-        sides = split_top_level(equation, "~")
-        calls = categorical_calls(sides[0 if role == formula.Role.Dependent else 1])
+        side = split_top_level(equation, "~")[
+            0 if role == formula.Role.Dependent else 1
+        ]
+        calls = categorical_calls(side)
         if role == formula.Role.Dependent and calls:
             raise TypeError("The dependent and endogenous variables must be numeric.")
         for call in calls:
-            # Native C() can omit every indicator when only its reference occurs.
-            # A companion native encoder without that omission owns row validity.
-            arguments = split_top_level(call[call.index("(") + 1 : -1], ",")
-            arguments = [
-                arg for arg in arguments if arg.split("=", 1)[0].strip() != "reference"
-            ]
-            guard = formula.parse(f"{sides[0]} ~ C({', '.join(arguments)}) - 1").fit(
-                to_polars(data)
-            )[0]
-            guards.append(guard.select(formula.Role.Independent))
+            # Nulls mark invalid rows only in emitted columns. A C() term with
+            # no column could not mark missing or unseen categories.
+            if not any(f"{call}[" in column for column in frame.columns):
+                raise ValueError(
+                    f"`{call}` encodes no columns: the estimation data contain no "
+                    "level other than its reference. Remove the term or choose "
+                    "another reference."
+                )
+        bare_columns = frozenset(
+            name for term in rhs_terms(side) if (name := bare_name(term)) is not None
+        )
     if role != formula.Role.FixedEffect:
         for column in frame:
             if not pd.api.types.is_numeric_dtype(frame[column]):
@@ -210,9 +213,7 @@ def _role(
                 raise TypeError(
                     f"Use C({column}) explicitly for a categorical regressor."
                 )
-    return FittedRole(
-        selected, tuple(frame.columns), categorical_guards=tuple(guards)
-    ), frame
+    return FittedRole(selected, tuple(frame.columns), bare_columns=bare_columns), frame
 
 
 class LinearModelMatrix(ModelMatrix):
@@ -268,7 +269,6 @@ class LinearModelMatrix(ModelMatrix):
             "second_stage": FittedStage(lhs, rhs)
         }
         frames = [dependent, independent]
-        fitted_roles = [lhs, rhs]
         self._dependent_column_names = list(dependent.columns)
         self._independent_column_names = list(independent.columns)
         self._endogenous_column_names = self._instruments_column_names = None
@@ -277,7 +277,6 @@ class LinearModelMatrix(ModelMatrix):
         self._fixed_effect_specification_by_column = {}
         self._slope_column_by_term = {}
         self._drop_intercept = drop_intercept
-        self._formula_key = specification.render()
         if len(fixed_effects.columns):
             # The normalized native formula preserves quoted lookup names.
             fe_source = split_top_level(main.formula, "|")[-1]
@@ -327,7 +326,6 @@ class LinearModelMatrix(ModelMatrix):
                     "The instruments add no explanatory power: all instruments are covariates."
                 )
             frames.extend([endogenous, instruments])
-            fitted_roles.extend([endog_spec, instrument_spec])
         self.specification = _normalized_specification(main, first)
         if weights is not None:
             weight_frame = _get_weights(data, weights).to_frame()
@@ -335,20 +333,30 @@ class LinearModelMatrix(ModelMatrix):
             frames.append(weight_frame)
         joined = pd.concat(frames, axis=1)
         missing = joined.isna().any(axis=1)
-        for role in fitted_roles:
-            invalid = role.invalid_categories()
-            if invalid is not None:
-                missing |= invalid
         self._data = joined.loc[~missing, ~joined.columns.duplicated()]
         self._dropped_row_index = frozenset(data.index[missing].tolist())
         self._dropped_by_stage = DroppedRowCounts(missing=int(missing.sum()))
         self._process(drop_singletons=drop_singletons)
 
     def column_keys(self, role):
-        """Keep different fitted transforms out of each other's demeaning cache."""
+        """Key columns by label so different specifications share demeaned columns.
+
+        Models sharing a demeaning cache transform the same input rows, and a
+        native term's state depends only on its own inputs, so a label fixes
+        the column's values. An input column and an expression can share a
+        label, e.g. a data column named ``log(x)``; the key keeps them apart.
+        """
         frame = getattr(self, role)
-        return (
-            ()
-            if frame is None
-            else tuple((self._formula_key, column) for column in frame)
+        if frame is None:
+            return ()
+        stage, side = {
+            "dependent": ("second_stage", "lhs"),
+            "independent": ("second_stage", "rhs"),
+            "endogenous": ("first_stage", "lhs"),
+            "instruments": ("first_stage", "rhs"),
+        }[role]
+        bare_columns = getattr(self._model_spec[stage], side).bare_columns
+        return tuple(
+            ("column" if column in bare_columns else "expression", column)
+            for column in frame
         )

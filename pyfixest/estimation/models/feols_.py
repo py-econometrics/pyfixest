@@ -26,7 +26,12 @@ from pyfixest.estimation.formula.formulaic_compat import (
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
-from pyfixest.estimation.formula.linear import LinearFormula
+from pyfixest.estimation.formula.linear import (
+    LinearFormula,
+    bare_name,
+    required_variables,
+    rhs_terms,
+)
 from pyfixest.estimation.formula.model_matrix import (
     ModelMatrix,
     _ModelMatrixKey,
@@ -2301,7 +2306,24 @@ class Feols(ResultAccessorMixin):
         # depends on the assignment.
         parsed_formula = self.model.parsed_formula
         if isinstance(parsed_formula, LinearFormula):
-            requires_refit = True
+            sources = [
+                term
+                for term in rhs_terms(parsed_formula.exogenous)
+                if bare_name(term) != resampvar_
+            ]
+            sources += [
+                source
+                for source in (
+                    parsed_formula.dependent,
+                    parsed_formula.fixed_effects_key,
+                    parsed_formula.endogenous,
+                    parsed_formula.instruments,
+                )
+                if source is not None
+            ]
+            requires_refit = any(
+                resampvar_ in required_variables(source) for source in sources
+            )
         else:
             other_terms = formulaic.formula.SimpleFormula(
                 [term for term in parsed_formula.exogenous if term != resampvar_]
