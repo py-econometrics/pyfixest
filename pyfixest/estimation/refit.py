@@ -16,6 +16,7 @@ from within import PreconditionerConfig
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.estimation.config import EstimationConfig
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
 
@@ -30,7 +31,7 @@ def refit(
     fit: Feols,
     *,
     data: pd.DataFrame,
-    formula: Formula | None = None,
+    formula: Formula | LinearFormula | None = None,
     vcov: VcovSpec,
     same_sample: bool = False,
 ) -> Feols:

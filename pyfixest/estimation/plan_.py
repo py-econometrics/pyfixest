@@ -8,6 +8,7 @@ import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -116,7 +117,7 @@ class ParsedFormula:
     `is_multiple_estimation` if multiple estimation syntax is used.
     """
 
-    formula_dict: dict[str | None, list[Formula]]
+    formula_dict: dict[str | None, list[Formula | LinearFormula]]
     is_iv: bool
     is_multiple_estimation: bool
 
@@ -124,7 +125,7 @@ class ParsedFormula:
 def plan_formulas(config: EstimationConfig) -> ParsedFormula:
     """Group parsed formulas and account for sample and quantile fan-out."""
     run_split = config.split is not None or config.fsplit is not None
-    formula_dictionary: dict[str | None, list[Formula]] = {}
+    formula_dictionary: dict[str | None, list[Formula | LinearFormula]] = {}
     for formula in config.formulas:
         key = formula.fixed_effects_key
         formula_dictionary.setdefault(key, []).append(formula)
@@ -160,7 +161,7 @@ class ModelSpec:
 
     method: EstimationMethod
     model_cls: ModelFactory
-    formula: Formula
+    formula: Formula | LinearFormula
     fixef_key: str | None
     data: pd.DataFrame
     options: EstimationOptions
@@ -203,7 +204,7 @@ def build_all_splits(
 def expand_specs(
     *,
     config: EstimationConfig,
-    formula_dict: Mapping[str | None, list[Formula]],
+    formula_dict: Mapping[str | None, list[Formula | LinearFormula]],
     data: pd.DataFrame,
     splits: list[SampleSplit | None],
     is_iv: bool,

@@ -14,7 +14,9 @@ from pyfixest.estimation.internals.families import NORMAL_DIST, T_DIST
 )
 def test_matrix_time_fields_survive_retention(retention):
     data = pf.get_data().rename(columns={"X1": "a::b"})
-    fit = pf.feols("Y ~ Q('a::b') + i(f2) | f1 + f3", data, **retention)
+    fit = pf.feglm(
+        "Y ~ Q('a::b') + i(f2) | f1 + f3", data, family="gaussian", **retention
+    )
 
     assert fit.model.depvar == "Y"
     assert fit.model.fixed_effects == ("f1", "f3")

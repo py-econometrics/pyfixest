@@ -4,6 +4,7 @@ import polars as pl
 import pytest
 
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.api.feols import _feols_formulaic as formulaic_feols
 from pyfixest.report.utils import (
     rename_categoricals,
     rename_event_study_coefs,
@@ -246,7 +247,7 @@ def test_predict_newdata_i_transform(fml):
     data = get_data(N=500, seed=42).dropna()
     newdata = data.iloc[:100]
 
-    fit = feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
@@ -257,9 +258,9 @@ def test_predict_newdata_i_transform(fml):
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y ~ poly(X1, 2)",
-        "Y ~ poly(X1, 2) | f1",
-        "Y ~ poly(X1, 2) + X2 | f1 + f2",
+        "Y ~ poly(X1, degree=2)",
+        "Y ~ poly(X1, degree=2) | f1",
+        "Y ~ poly(X1, degree=2) + X2 | f1 + f2",
     ],
 )
 def test_predict_newdata_poly_transform(fml):
@@ -267,7 +268,7 @@ def test_predict_newdata_poly_transform(fml):
     data = get_data(N=500, seed=42).dropna()
     newdata = data.iloc[:100]
 
-    fit = feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
@@ -287,7 +288,7 @@ def test_predict_newdata_fe_interaction(fml):
     data = get_data(N=500, seed=42).dropna()
     newdata = data.iloc[:100]
 
-    fit = feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
     pred_full = fit.predict()
     pred_new = fit.predict(newdata=newdata)
 
@@ -315,7 +316,7 @@ def test_predict_newdata_unseen_category(fml):
     newdata = data.iloc[:100].copy()
     newdata.iloc[0, newdata.columns.get_loc("f1")] = 999999.0  # unseen level
 
-    fit = feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
     pred_new = fit.predict(newdata=newdata)
 
     assert np.isnan(pred_new[0]), "unseen categorical level should predict NaN"
@@ -332,7 +333,7 @@ def test_i_bin_bin2_separate_state():
     data["f1"] = data["f1"].astype(int).astype(str)
     data["f2"] = data["f2"].astype(int).astype(str)
 
-    fit = feols(
+    fit = formulaic_feols(
         "Y ~ i(f1, f2, bin={'low': ['0', '1']}, bin2={'hi': ['0', '1']})",
         data=data,
     )
@@ -355,7 +356,7 @@ def test_predict_decoy_column_not_flagged_unseen():
     """
     data = get_data(N=500, seed=42).dropna()
     data["base"] = np.random.default_rng(99).normal(size=len(data))
-    fit = feols("Y ~ X1 + C(f1, contr.treatment(base=1.0))", data=data)
+    fit = formulaic_feols("Y ~ X1 + C(f1, contr.treatment(base=1.0))", data=data)
     pred = fit.predict(newdata=data.iloc[:100])
     assert np.all(np.isfinite(pred)), "decoy column should not cause NaN predictions"
 
@@ -373,7 +374,7 @@ def test_predict_binned_i_not_flagged_unseen():
             "f1": np.random.default_rng(2).choice(["a", "b", "c", "d"], size=200),
         }
     )
-    fit = feols("Y ~ i(f1, bin={'low': ['a', 'b']})", data=data)
+    fit = formulaic_feols("Y ~ i(f1, bin={'low': ['a', 'b']})", data=data)
     pred = fit.predict(newdata=data.iloc[:50])
     assert np.all(np.isfinite(pred)), "valid binned levels should not be NaN"
 
@@ -493,8 +494,7 @@ def test_fixef_interacted_labels():
 
     newdata = df.iloc[:2].copy()
     newdata.iloc[0, newdata.columns.get_loc("g")] = "unseen"
-    with pytest.warns(UserWarning, match=r"fixed effect `g:h`"):
-        prediction = fit.predict(newdata=newdata)
+    prediction = fit.predict(newdata=newdata)
     assert np.isnan(prediction[0])
 
 

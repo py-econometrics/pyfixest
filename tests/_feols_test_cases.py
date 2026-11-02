@@ -3,6 +3,21 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+
+def native_linear_formula(fml: str) -> str | None:
+    """Spell shared reference cases for formula; i() remains legacy-only."""
+    if "i(" in fml:
+        return None
+    for old, new in (
+        ("I(X2 ** 2)", "mul(X2, X2)"),
+        ("I(X1 ** 2)", "mul(X1, X1)"),
+        ("I(X2**4)", "mul(mul(X2, X2), mul(X2, X2))"),
+        ("poly(X2, 2)", "poly(X2, degree=2)"),
+    ):
+        fml = fml.replace(old, new)
+    return fml
+
+
 ols_fmls = (
     "Y~X1",
     "Y~X1+X2",

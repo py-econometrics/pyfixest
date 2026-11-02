@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from pyfixest.estimation import feols
+from pyfixest.estimation.api.feols import _feols_formulaic as feols
 from pyfixest.estimation.internals.model_state import WaldTest
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.utils.dev_utils import _find_stack_level
@@ -433,7 +433,7 @@ def _saturated_event_study(
 ):
     covariates = f" + {xfml}" if xfml is not None else ""
     ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0){covariates} | {unit_id} + {time_id}"
-    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
+    m = feols(fml=ff, data=df, vcov={"CRV1": cluster})
     res = m.tidy().reset_index()
     res = res.join(
         res["Coefficient"].str.extract(

@@ -11,7 +11,7 @@ authors = [
     { name = "Styfen Schär" },
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -21,7 +21,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -36,12 +35,14 @@ urls.Documentation = "https://pyfixest.com"
 urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 
 dependencies = [
+    "formula-py @ git+https://github.com/py-econometrics/formula.git@cf9086841a03908b7e70167f32741a8fcf562811",
     "formulaic>=1.2.2,<1.3",
     "joblib>=1.4.2",
     "maketables>=0.1.4",
     "narwhals>=1.17",
     "numpy>=1.25.2",
     "pandas>=2.3.3",
+    "pyarrow>=14.0",
     "scipy>=1.6",
     "seaborn>=0.13.2",
     "tabulate>=0.9.0",
@@ -189,8 +190,8 @@ platforms = [
 ]
 
 [tool.pixi.dependencies]
-python = ">=3.10,<3.15"
-rust = "*"
+python = ">=3.11,<3.15"
+rust = ">=1.95"
 pip = "*"
 pixi-pycharm = "*"
 pytest = ">=8.0"
@@ -200,7 +201,7 @@ pytest-benchmark = ">=5.1.0"
 pyhdfe = ">=0.2.0"
 ipykernel = ">=6.29.5"
 duckdb = ">=1.0.0"
-polars = ">=1.0.0"
+polars = "==2.1.0"
 pyarrow = ">=14.0"
 doubleml = ">=0.10.1"
 pytest-sugar = ">=1.1.1"
@@ -230,9 +231,6 @@ cmd = "python scripts/setup_maturin_hook.py"
 inputs = ["scripts/setup_maturin_hook.py"]
 
 # -- python version features ------------------------------------------------------------
-
-[tool.pixi.feature.py310.dependencies]
-python = "~=3.10.0"
 
 [tool.pixi.feature.py311.dependencies]
 python = "~=3.11.0"
@@ -353,12 +351,10 @@ torch = { version = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" 
 # -- environments ----------------------------------------------------------------------
 
 [tool.pixi.environments]
-py310 = ["py310", "torch"]
 py311 = ["py311", "torch"]
 py312 = ["py312", "torch", "ty"]
 py313 = ["py313", "torch"]
 py314 = ["py314", "torch"]
-py310-r = { features = ["py310", "torch", "r"], solve-group = "py310" }
 py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }
 docs = { features = ["docs", "py312", "r"], solve-group = "py312" }

@@ -19,11 +19,14 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.errors import VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
+from pyfixest.estimation.formula.engine import FittedRole, LinearModelMatrix
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
+    get_fixed_effect_encoding,
     i_term_columns,
     materialize_model_spec_with_unseen_mask,
 )
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.model_matrix import (
     ModelMatrix,
     _ModelMatrixKey,
@@ -285,7 +288,7 @@ class Feols(ResultAccessorMixin):
 
     def __init__(
         self,
-        FixestFormula: FixestFormula,
+        FixestFormula: FixestFormula | LinearFormula,
         data: pd.DataFrame,
         *,
         options: EstimationOptions,
@@ -341,7 +344,7 @@ class Feols(ResultAccessorMixin):
     def _describe_model(
         self,
         *,
-        parsed_formula: FixestFormula,
+        parsed_formula: FixestFormula | LinearFormula,
         sample_split: SampleSplit | None,
     ) -> ModelDescription:
         """Describe the model this class fits, before its model matrix exists.
@@ -369,6 +372,25 @@ class Feols(ResultAccessorMixin):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
+        if isinstance(self.model.parsed_formula, LinearFormula):
+            model_matrix = LinearModelMatrix(
+                specification=self.model.parsed_formula,
+                data=self._data,
+                drop_singletons=self.options.drop_singletons,
+                drop_intercept=self.options.drop_intercept,
+                weights=self.options.weights,
+            )
+            self.model = self._describe_model(
+                parsed_formula=model_matrix.specification,
+                sample_split=self.model.sample_split,
+            )
+            self._model_name_plot = self.model.model_name
+            self._publish_model_matrix(model_matrix)
+            if model_matrix.dropped_row_index:
+                self._data.drop(
+                    index=list(model_matrix.dropped_row_index), inplace=True
+                )
+            return model_matrix
         model_matrix = create_model_matrix(
             formula=self.model.parsed_formula,
             data=self._data,
@@ -397,7 +419,11 @@ class Feols(ResultAccessorMixin):
             depvar=model_matrix.dependent.columns[0],
             fixed_effects=_fixed_effect_names(model_matrix=model_matrix),
             interacted_covariates=(
-                tuple(i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs))
+                ()
+                if isinstance(model_matrix, LinearModelMatrix)
+                else tuple(
+                    i_term_columns(model_matrix.model_spec[_ModelMatrixKey.main].rhs)
+                )
             ),
             model_spec=model_matrix.model_spec,
         )
@@ -1405,7 +1431,7 @@ class Feols(ResultAccessorMixin):
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = float(self.coef().xs(treatment))  # type: ignore[arg-type]
+        tau_full = float(cast(float, self.coef().xs(treatment)))
 
         N = self.sample_info.n_obs
         G = len(unique_clusters)
@@ -1496,7 +1522,46 @@ class Feols(ResultAccessorMixin):
         Tuple[np.ndarray, np.ndarray, list[str]]
             A tuple with the dependent variable, the model matrix, and the column names.
         """
-        if self.model.has_fixef:
+        if self.model.has_fixef and isinstance(self.model_matrix, LinearModelMatrix):
+            codes = self.model_matrix.fixed_effects
+            assert codes is not None
+            codes = codes.copy()
+            labels = {}
+            fe_spec = self.model_matrix.model_spec["fe"]
+            for column, encoded in zip(codes, fe_spec.column_names, strict=True):
+                encoding = get_fixed_effect_encoding(
+                    transform_state=fe_spec.transform_state, column=encoded
+                )
+                values = list(
+                    zip(
+                        *encoding.decode(codes=codes[column].to_numpy(dtype=np.int64)),
+                        strict=True,
+                    )
+                )
+                codes[column], levels = pd.factorize(
+                    pd.MultiIndex.from_tuples(values), sort=True
+                )
+                labels[column] = [
+                    f"C({encoding.name})[{','.join(map(str, level))}]"
+                    for level in levels
+                ]
+            dummies = build_fixed_effect_dummies(
+                codes=codes,
+                formulaic_columns=codes.columns.tolist(),
+            )
+            Y = self.model_matrix.dependent.to_numpy().flatten()
+            X = np.column_stack(
+                [
+                    self.model_matrix.independent[self._coefnames],
+                    dummies.matrix.toarray(),
+                ]
+            )
+            xnames = self._coefnames + [
+                labels[column][code]
+                for column, positions in dummies.coefficient_positions.items()
+                for code in positions.coefficient_codes
+            ]
+        elif self.model.has_fixef:
             fml_linear, fixef = self.model.formula.split("|")
             fixef_vars = fixef.split("+")
             fixef_vars_C = [f"C({x})" for x in fixef_vars]
@@ -1994,9 +2059,14 @@ class Feols(ResultAccessorMixin):
                 "predict() runs after the model matrix is built"
             )
             rhs_spec = model_spec[_ModelMatrixKey.main].rhs
-            X_mm, unseen = materialize_model_spec_with_unseen_mask(
-                rhs_spec, newdata, context
-            )
+            if isinstance(rhs_spec, FittedRole):
+                context = {}
+                X_mm = rhs_spec.get_model_matrix(newdata)
+                unseen = np.zeros(len(newdata), dtype=bool)
+            else:
+                X_mm, unseen = materialize_model_spec_with_unseen_mask(
+                    rhs_spec, newdata, context
+                )
             valid_idx = X_mm.index.to_numpy()
             # rows with a categorical level unseen during fitting (in C()/i()) would
             # be silently encoded as the reference level -> drop them to NaN instead,
@@ -2230,13 +2300,16 @@ class Feols(ResultAccessorMixin):
         # refits must rebuild interactions, transforms, and a response that
         # depends on the assignment.
         parsed_formula = self.model.parsed_formula
-        other_terms = formulaic.formula.SimpleFormula(
-            [term for term in parsed_formula.exogenous if term != resampvar_]
-        )
-        requires_refit = resampvar_ in formula_required_variables(other_terms)
-        requires_refit |= resampvar_ in formula_required_variables(
-            parsed_formula.dependent
-        )
+        if isinstance(parsed_formula, LinearFormula):
+            requires_refit = True
+        else:
+            other_terms = formulaic.formula.SimpleFormula(
+                [term for term in parsed_formula.exogenous if term != resampvar_]
+            )
+            requires_refit = resampvar_ in formula_required_variables(other_terms)
+            requires_refit |= resampvar_ in formula_required_variables(
+                parsed_formula.dependent
+            )
         if requires_refit:
             choose_algorithm = "slow"
 

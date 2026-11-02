@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [py310, py314]
+        environment: [py311, py314]
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7

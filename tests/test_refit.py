@@ -17,6 +17,7 @@ import pytest
 
 from pyfixest.demeaners import LsmrDemeaner, MapDemeaner
 from pyfixest.estimation import feols, fepois
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VcovSpec
 from pyfixest.estimation.post_estimation.ccv import _compute_CCV
@@ -38,7 +39,6 @@ _COMMON_OPTIONS = {
     "collin_tol": 1e-7,
     "solver": "np.linalg.solve",
     "demeaner": MapDemeaner(fixef_tol=1e-9),
-    "context": {"log1p_abs": _log1p_abs},
 }
 CASES = {
     "feols-weights": (feols, {**_COMMON_OPTIONS, "weights": "weights"}),
@@ -46,6 +46,7 @@ CASES = {
         fepois,
         {
             **_COMMON_OPTIONS,
+            "context": {"log1p_abs": _log1p_abs},
             "offset": "off",
             "iwls_tol": 1e-10,
             "iwls_maxiter": 40,
@@ -54,7 +55,7 @@ CASES = {
         },
     ),
 }
-FML = "Y ~ log1p_abs(X1) + X2 | f3"
+FML = "Y ~ log1p_X1 + X2 | f3"
 CLUSTER = "f1"
 IID = VcovSpec(vcov_type="iid", vcov_type_detail="iid")
 
@@ -72,6 +73,7 @@ def data():
     data.index = data.index * 2 + 5
     rng = np.random.default_rng(8123)
     data["off"] = np.log(rng.uniform(0.5, 2.0, size=len(data)))
+    data["log1p_X1"] = _log1p_abs(data["X1"])
     return data
 
 
@@ -80,9 +82,7 @@ def case(request):
     return CASES[request.param]
 
 
-@pytest.mark.parametrize(
-    "fml", [FML, "Y ~ log1p_abs(X1) + X2 - 1", "Y ~ {X1 * X2} + X2"]
-)
+@pytest.mark.parametrize("fml", [FML, "Y ~ log1p_X1 + X2 - 1", "Y ~ X1:X2 + X2"])
 def test_refit_replays_options(data, case, fml, monkeypatch):
     "A refit on a subsample equals a public fit with the same options on it."
     estimator, options = case
@@ -90,13 +90,14 @@ def test_refit_replays_options(data, case, fml, monkeypatch):
     subsample = data[data[CLUSTER] != data[CLUSTER].iloc[0]]
 
     expected_data = subsample.assign(product=subsample["X1"] * subsample["X2"])
-    expected_fml = fml.replace("{X1 * X2}", "product")
+    expected_fml = fml.replace("X1:X2", "product")
     expected = estimator(expected_fml, data=expected_data, **options)
 
     def fail_on_reparse(*args, **kwargs):
         raise AssertionError("A refit must reuse the parsed formula.")
 
     monkeypatch.setattr(Formula, "parse", fail_on_reparse)
+    monkeypatch.setattr(LinearFormula, "parse", fail_on_reparse)
     monkeypatch.setattr(
         Formula, "render", lambda self: "descriptive text, not a formula"
     )
@@ -106,7 +107,10 @@ def test_refit_replays_options(data, case, fml, monkeypatch):
     assert refitted.options == replace(fit.options, copy_data=False)
     np.testing.assert_allclose(
         refitted.coef().to_numpy(),
-        expected.coef().to_numpy(),
+        expected.coef()
+        .rename(index={"product": "X1:X2"})
+        .reindex(refitted.coef().index)
+        .to_numpy(),
         rtol=1e-12,
         err_msg="coef",
     )
@@ -138,7 +142,7 @@ def test_refit_on_the_fit_sample_keeps_every_row(data, case):
         refit(fit, data=fit._data.iloc[1:], vcov=IID, same_sample=True)
 
 
-@pytest.mark.parametrize("fml", [FML, "Y ~ log1p_abs(X1) + X2 - 1"])
+@pytest.mark.parametrize("fml", [FML, "Y ~ log1p_X1 + X2 - 1"])
 def test_crv3_is_the_leave_one_cluster_out_jackknife(data, case, fml):
     "CRV3 sums the outer products of the leave-one-cluster-out deviations."
     estimator, options = case
@@ -188,7 +192,7 @@ def test_ccv_refits_replay_options(data, drop_intercept):
     # ccv rejects fixed effects and weights; without an intercept, split
     # coefficients that ignored `drop_intercept` would not match the design
     options = {**_COMMON_OPTIONS, "drop_intercept": drop_intercept}
-    fml = "Y ~ D + log1p_abs(X1) + X2"
+    fml = "Y ~ D + log1p_X1 + X2"
     if not drop_intercept:
         fml += " - 1"
     rng = np.random.default_rng(41)
@@ -234,6 +238,20 @@ def test_refits_leave_data_untouched(data, case):
 
     pd.testing.assert_frame_equal(fit._data, sample_before)
     pd.testing.assert_frame_equal(data, data_before)
+
+
+def test_poisson_refit_retains_custom_context(data):
+    options = CASES["fepois-offset"][1]
+    fit = fepois("Y ~ log1p_abs(X1) + X2 | f3", data, **options)
+    subsample = data.iloc[10:]
+    actual = refit(fit, data=subsample, vcov=IID)
+    expected = fepois(FML, subsample, **options)
+    np.testing.assert_allclose(
+        actual.coef(),
+        expected.coef(),
+        rtol=1e-12,
+        err_msg="Formulaic context in Poisson refit",
+    )
 
 
 @pytest.mark.parametrize("variant", ["additive", "diagonal"])

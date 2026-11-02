@@ -82,5 +82,6 @@ def test_multicollinearity_with_fixed_effects(data_nested_fe, model, fml):
 
     # The main effect terms of unit_fixed_effect should be dropped
     # as they are collinear with the unit_id fixed effects
-    assert "C(unit_fixed_effect)[T.1]" in fit.collinearity.dropped_coef_names
-    assert "C(unit_fixed_effect)[T.2]" in fit.collinearity.dropped_coef_names
+    prefix = "" if model is feols else "T."
+    assert f"C(unit_fixed_effect)[{prefix}1]" in fit.collinearity.dropped_coef_names
+    assert f"C(unit_fixed_effect)[{prefix}2]" in fit.collinearity.dropped_coef_names

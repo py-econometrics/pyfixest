@@ -232,23 +232,23 @@ def test_iv_Fstat_ivDiag(has_weight, adj_vcov, r_results):
             False,
         ),
         (
-            "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
+            "Y ~ 0 + C(category) | X1 ~ Z1 + Z2",
             "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
             False,
         ),
         (
-            "Y ~ 0 + i(category) + [X1 ~ Z1 + Z2]",
+            "Y ~ 0 + C(category) + [X1 ~ Z1 + Z2]",
             "Y ~ 0 + i(category) | X1 ~ Z1 + Z2",
             False,
         ),
         # Explicit references align categorical instrument coding with fixest.
         (
-            "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
+            "Y ~ 0 + X2 | X1 ~ Z1 + C(category, reference='a')",
             "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
             False,
         ),
         (
-            "Y ~ 0 + X2 + [X1 ~ Z1 + i(category, ref='a')]",
+            "Y ~ 0 + X2 + [X1 ~ Z1 + C(category, reference='a')]",
             "Y ~ 0 + X2 | X1 ~ Z1 + i(category, ref='a')",
             False,
         ),
@@ -299,13 +299,13 @@ def test_first_stage_vs_fixest(
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
-    reason="Pre-existing: default i() instrument coding differs from fixest without an intercept (#1917).",
+    reason="C() without a reference retains all instrument levels; fixest i() omits one without an intercept (#1917).",
 )
 @pytest.mark.parametrize(
     "fml",
     [
-        "Y ~ 0 + X2 | X1 ~ Z1 + i(category)",
-        "Y ~ 0 + X2 + [X1 ~ Z1 + i(category)]",
+        "Y ~ 0 + X2 | X1 ~ Z1 + C(category)",
+        "Y ~ 0 + X2 + [X1 ~ Z1 + C(category)]",
     ],
     ids=["pipe", "bracket"],
 )
@@ -347,14 +347,27 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
     first_stage_r = ro.r("function(fit) summary(fit, stage = 1)")(fit_r)
     first_stage = fit.first_stage.model
 
+    def native_name(name, columns):
+        name = name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+        if name.startswith("category::"):
+            level = name.removeprefix("category::")
+            matches = [
+                column
+                for column in columns
+                if column.startswith("C(category")
+                and column.endswith((f"[{level}]", f"[T.{level}]"))
+            ]
+            assert len(matches) == 1, f"Cannot align category coefficient {name}"
+            return matches[0]
+        return name
+
     names_r = list(ro.r("function(fit) names(coef(fit))")(first_stage_r))
     has_intercept_r = "(Intercept)" in names_r
     assert ("Intercept" in fit.model_matrix.instruments.columns) == has_intercept_r
     assert ("Intercept" in first_stage.coef().index) == has_intercept_r
     second_stage_names_r = list(ro.r("function(fit) names(coef(fit))")(fit_r))
     second_stage_names = [
-        name.replace("(Intercept)", "Intercept").removeprefix("fit_")
-        for name in second_stage_names_r
+        native_name(name, fit.coef().index) for name in second_stage_names_r
     ]
     assert sorted(fit.coef().index) == sorted(second_stage_names)
     np.testing.assert_allclose(
@@ -369,7 +382,7 @@ def _assert_iv_stages_match_fixest(fit, fit_r):
     assert fit.sample_info.n_obs == n_obs_r, "second-stage n_obs != fixest"
     assert first_stage.sample_info.n_obs == n_obs_r, "first-stage n_obs != fixest"
 
-    names_r = [name.replace("(Intercept)", "Intercept") for name in names_r]
+    names_r = [native_name(name, first_stage.coef().index) for name in names_r]
     assert sorted(first_stage.coef().index) == sorted(names_r), "coefnames differ"
     np.testing.assert_allclose(
         first_stage.coef()[names_r],
@@ -461,9 +474,9 @@ def test_iv_generated_name_collision_against_fixest(
 @pytest.mark.parametrize(
     "formula, reference_formula",
     [
-        ("Y ~ I(X1**2) + [X1 ~ Z1]", "Y ~ I(X1^2) | X1 ~ Z1"),
-        ("Y ~ X1 + [I(X1**2) ~ Z1]", "Y ~ X1 | I(X1^2) ~ Z1"),
-        ("Y ~ X1 + [X2 ~ Z1 + I(X1**2)]", "Y ~ X1 | X2 ~ Z1 + I(X1^2)"),
+        ("Y ~ mul(X1, X1) + [X1 ~ Z1]", "Y ~ I(X1^2) | X1 ~ Z1"),
+        ("Y ~ X1 + [mul(X1, X1) ~ Z1]", "Y ~ X1 | I(X1^2) ~ Z1"),
+        ("Y ~ X1 + [X2 ~ Z1 + mul(X1, X1)]", "Y ~ X1 | X2 ~ Z1 + I(X1^2)"),
         ("Y ~ X1 + [X2 ~ Z1 + Z1:X1]", "Y ~ X1 | X2 ~ Z1 + Z1:X1"),
         ("Y ~ X1 + [X2 ~ Z1 + X1]", "Y ~ X1 | X2 ~ Z1 + X1"),
     ],
@@ -490,7 +503,8 @@ def test_iv_transformed_terms_against_fixest(
     names = [
         name.removeprefix("fit_")
         .replace("(Intercept)", "Intercept")
-        .replace("I(I(X1^2))", "I(X1 ** 2)")
+        .replace("I(I(X1^2))", "mul(X1, X1)")
+        .replace("I(X1^2)", "mul(X1, X1)")
         for name in names_r
     ]
     assert sorted(fit.coef().index) == sorted(names)

@@ -6,6 +6,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation import feols
+from pyfixest.estimation.api.feols import _feols_formulaic as formulaic_feols
 from pyfixest.report.visualize import _HAS_LETS_PLOT, coefplot, iplot, set_figsize
 from pyfixest.utils.utils import get_data
 
@@ -21,27 +22,27 @@ def data():
 
 @pytest.fixture
 def fit1(data):
-    return feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
+    return formulaic_feols(fml="Y ~ i(f2, X1) | f1", data=data, vcov="iid")
 
 
 @pytest.fixture
 def fit2(data):
-    return feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
+    return formulaic_feols(fml="Y ~ i(f2, X1) | f2", data=data, vcov="iid")
 
 
 @pytest.fixture
 def fit3(data):
-    return feols(fml="Y ~ i(f2, X1, ref=1.0)", data=data, vcov="iid")
+    return formulaic_feols(fml="Y ~ i(f2, X1, ref=1.0)", data=data, vcov="iid")
 
 
 @pytest.fixture
 def fit4(data):
-    return feols(fml="Y ~ i(f2)", data=data, vcov="iid")
+    return formulaic_feols(fml="Y ~ i(f2)", data=data, vcov="iid")
 
 
 @pytest.fixture
 def fit_multi(data):
-    return feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
+    return formulaic_feols(fml="Y + Y2 ~ i(f2, X1)", data=data)
 
 
 @pytest.mark.extended
@@ -155,7 +156,9 @@ def test_iplot(
 @pytest.mark.parametrize("preceding_model", [False, True])
 def test_iplot_error(data, preceding_model):
     fit = feols(fml="Y ~ X1", data=data, vcov="iid")
-    models = [feols(fml="Y ~ i(f2)", data=data), fit] if preceding_model else [fit]
+    models = (
+        [formulaic_feols(fml="Y ~ i(f2)", data=data), fit] if preceding_model else [fit]
+    )
     with pytest.raises(
         ValueError, match=f"Model {len(models)} cannot be plotted"
     ) as exc:
@@ -170,7 +173,7 @@ def test_iplot_error(data, preceding_model):
 def test_iplot_rejects_double_colon_column_without_i(data):
     """A '::' in a column name must not be mistaken for i() syntax."""
     renamed = data.rename(columns={"X1": "a::b"})
-    fit = feols(fml="Y ~ Q('a::b') + X2", data=renamed, vcov="iid")
+    fit = formulaic_feols(fml="Y ~ Q('a::b') + X2", data=renamed, vcov="iid")
     with pytest.raises(ValueError, match="does not use the `i` syntax"):
         fit.iplot()
 
@@ -292,8 +295,8 @@ def test_rename_models():
         pytest.skip("lets-plot is not installed")
 
     df = pf.get_data()
-    fit1 = pf.feols("Y ~ i(f1)", data=df)
-    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+    fit1 = formulaic_feols("Y ~ i(f1)", data=df)
+    fit2 = formulaic_feols("Y ~ i(f1) + f2", data=df)
 
     pf.iplot(
         models=[fit1, fit2],
@@ -322,8 +325,8 @@ def test_rename_models():
 def test_rename_models_matplotlib():
     """Test rename_models functionality with matplotlib backend."""
     df = pf.get_data()
-    fit1 = pf.feols("Y ~ i(f1)", data=df)
-    fit2 = pf.feols("Y ~ i(f1) + f2", data=df)
+    fit1 = formulaic_feols("Y ~ i(f1)", data=df)
+    fit2 = formulaic_feols("Y ~ i(f1) + f2", data=df)
 
     pf.iplot(
         models=[fit1, fit2],

@@ -383,7 +383,6 @@ def spline_data():
         *[
             (method, family, fixed_effects, None)
             for method, family in [
-                ("feols", None),
                 ("feglm", "logit"),
                 ("feglm", "probit"),
                 ("feglm", "gaussian"),
@@ -425,13 +424,6 @@ def test_context_capture(spline_data, method, family, fixed_effects, separation_
             explicit_fit.sample_info.dropped_row_index,
         )
 
-    # FactorEvaluationError for `feols` when context is not set
-    if method == "feols":
-        with pytest.raises(
-            FactorEvaluationError, match="Unable to evaluate factor `_lspline"
-        ):
-            pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=spline_data)
-
 
 def test_fepois_context_excludes_wrapper_scope(spline_data):
     # `fepois` delegates to `feglm`; `context=0` must capture the caller's
@@ -466,23 +458,9 @@ def test_fepois_context_matches_feglm_poisson(spline_data):
 
 @pytest.mark.parametrize("context", [0, {"_lspline": _lspline}])
 def test_context_capture_iv_first_stage(spline_data, context):
-    # The first stage is refitted from its own formula, so it needs the
-    # captured context to evaluate a user transform of the instruments.
-    # The bracketed IV syntax needs identifier column names.
-    data = spline_data.rename(columns={"0_X2_1": "X2_1", "1_X2": "X2_2"})
-    explicit_fit = pf.feols("Y ~ 1 + [X1 ~ X2_0 + X2_1 + X2_2] | f1", data=data)
-    context_fit = pf.feols(
-        "Y ~ 1 + [X1 ~ _lspline(X2,[0,1])] | f1", data=data, context=context
-    )
-
-    np.testing.assert_allclose(context_fit.coef(), explicit_fit.coef(), rtol=1e-12)
-    np.testing.assert_allclose(
-        context_fit.first_stage.model.coef(),
-        explicit_fit.first_stage.model.coef(),
-        rtol=1e-12,
-    )
-    np.testing.assert_allclose(
-        context_fit.first_stage.diagnostics.f_stat,
-        explicit_fit.first_stage.diagnostics.f_stat,
-        rtol=1e-12,
-    )
+    with pytest.raises(NotImplementedError, match="does not support context"):
+        pf.feols(
+            "Y ~ 1 + [X1 ~ _lspline(X2,[0,1])] | f1",
+            data=spline_data,
+            context=context,
+        )

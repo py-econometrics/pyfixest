@@ -13,12 +13,10 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
-    FixedEffectEvaluationError,
     FormulaSyntaxError,
     IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
-    UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
 from pyfixest.estimation import feols, fepois
@@ -252,7 +250,7 @@ def test_depvar_numeric():
     "fml,categorical_endogenous,error_message",
     [
         (
-            "two_columns(Y) ~ X1",
+            "poly(Y, degree=2) ~ X1",
             False,
             "exactly one dependent variable",
         ),
@@ -262,12 +260,12 @@ def test_depvar_numeric():
             "endogenous variable must be numeric",
         ),
         (
-            "Y ~ X1 + [two_columns(X2) ~ Z1]",
+            "Y ~ X1 + [poly(X2, degree=2) ~ Z1]",
             False,
             "exactly one endogenous variable",
         ),
         (
-            "Y ~ X1 + [poly(X1, 2) ~ Z1]",
+            "Y ~ X1 + [poly(X1, degree=2) ~ Z1]",
             False,
             "exactly one endogenous variable",
         ),
@@ -280,22 +278,19 @@ def test_dependent_and_endogenous_model_matrix_errors(
     if categorical_endogenous:
         data["X2"] = pd.Categorical(data["X2"] > 0)
 
-    def two_columns(x):
-        return np.column_stack((x, x))
-
     with pytest.raises(TypeError, match=error_message):
-        feols(fml=fml, data=data, context={"two_columns": two_columns})
+        feols(fml=fml, data=data)
 
 
 @pytest.mark.parametrize(
     "fml, message",
     [
-        ("Y ~ center(X1) + [X1 ~ Z1]", "fully explained"),
-        ("Y ~ poly(X1, 2) + [X1 ~ Z1]", "fully explained"),
-        ("Y ~ X1.fillna(0) + [X1 ~ Z1]", "fully explained"),
-        ("Y ~ X1 + [center(X1) ~ Z1]", "fully explained"),
-        ("Y ~ X1 + [center(X1) ~ Z1] | f1", "fully explained"),
-        ("Y ~ center(X1) + [X2 ~ X1]", "no explanatory power"),
+        ("Y ~ sub(X1, 1) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ poly(X1, degree=2) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ add(X1, 0) + [X1 ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [sub(X1, 1) ~ Z1]", "fully explained"),
+        ("Y ~ X1 + [sub(X1, 1) ~ Z1] | f1", "fully explained"),
+        ("Y ~ sub(X1, 1) + [X2 ~ X1]", "no explanatory power"),
     ],
 )
 def test_iv_rejects_invalid_transformed_specifications(fml, message):
@@ -308,19 +303,19 @@ def test_iv_rejects_invalid_transformed_specifications(fml, message):
     "fml",
     [
         "Y ~ X1 + [X2 ~ X1]",
-        "Y ~ center(X1) + [X2 ~ center(X1)]",
-        "Y ~ I(X1**2) + [X2 ~ I(X1**2)]",
+        "Y ~ sub(X1, 1) + [X2 ~ sub(X1, 1)]",
+        "Y ~ mul(X1, X1) + [X2 ~ mul(X1, X1)]",
         "Y ~ X1:Z1 + [X2 ~ X1:Z1]",
-        "Y ~ center(X1) + [X2 ~ center(X1)] | f1",
+        "Y ~ sub(X1, 1) + [X2 ~ sub(X1, 1)] | f1",
     ],
 )
-def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
-    """Missing formula columns must not mask the instrument specification error."""
-    with pytest.raises(IVIdentificationError, match="all instrument terms"):
-        feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
+def test_iv_rejects_no_excluded_instrument(fml):
+    """Included covariates alone cannot identify the first stage."""
+    with pytest.raises(IVIdentificationError, match="all instruments are covariates"):
+        feols(fml=fml, data=get_data().dropna())
 
 
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
+@pytest.mark.parametrize("term", ["X1", "sub(X1, 1)", "mul(X1, X1)", "X1:Z1"])
 def test_iv_allows_identical_instrument_covariate_terms(term):
     fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
     assert "X2" in fit.coef().index
@@ -330,18 +325,18 @@ def test_iv_errors():
     data = get_data()
 
     # under determined
-    with pytest.raises(FormulaSyntaxError):
+    with pytest.raises(TypeError, match="exactly one endogenous"):
         feols(fml="Y ~ X1 | Z1 + Z2 ~ X2", data=data)
-    with pytest.raises(UnderDeterminedIVError):
+    with pytest.raises(IVIdentificationError):
         feols(fml="Y ~ X1 | Z1 ~ 1", data=data)
 
     # instrument specified as covariate
     # with pytest.raises(InstrumentsAsCovarsError):
     #    fixest.feols('Y ~ X1 | Z1 + Z2 ~ X3 + X4')
     # underdetermined IV
-    # with pytest.raises(UnderDeterminedIVError):
+    # with pytest.raises(IVIdentificationError):
     #    fixest.feols('Y ~ X1 + X2 | X1 + X2 ~ X4 ')
-    # with pytest.raises(UnderDeterminedIVError):
+    # with pytest.raises(IVIdentificationError):
     #    fixest.feols('Y ~ X1 | Z1 + Z2 ~ X2 + X3 ')
     # CRV3 inference
     with pytest.raises(VcovTypeNotSupportedError):
@@ -487,11 +482,14 @@ def test_misplaced_iv_syntax_errors(estimator, fml, reason):
     data = pd.DataFrame({"unused": [1.0, 2.0]})
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
-        with pytest.raises(FormulaSyntaxError, match=reason) as caught:
+        with pytest.raises(
+            FormulaSyntaxError, match=reason if estimator is fepois else None
+        ) as caught:
             estimator(fml=fml, data=data)
-    assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
-        caught.value
-    )
+    if estimator is fepois:
+        assert "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`." in str(
+            caught.value
+        )
 
 
 @pytest.mark.skip("Not yet implemented.")
@@ -642,35 +640,29 @@ def test_rwolf_error():
 
 
 def test_predict_fe_dtype_mismatch():
-    """Prediction requires the fitted FE dtype; unseen labels still warn."""
+    """Native prediction rejects mismatched FE dtypes and masks unseen levels."""
     data = get_data()
     fit = feols("Y ~ X1 | f1", data=data)
 
     # Equal numeric labels still require the fitted dtype.
     newdata = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata["f1"] = newdata["f1"].astype(int)
-    with pytest.raises(
-        FixedEffectEvaluationError, match=r"`f1` has dtype .* fitted on dtype"
-    ):
+    with pytest.raises(ValueError, match=r"input.*expected"):
         fit.predict(newdata=newdata)
 
     # Explicit string dtype is also a mismatch.
     newdata_str = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_str["f1"] = newdata_str["f1"].astype("string")
     with pytest.raises(
-        FixedEffectEvaluationError,
-        match=r"`f1` has dtype .* fitted on dtype",
+        ValueError,
+        match=r"input.*expected",
     ):
         fit.predict(newdata=newdata_str)
 
-    # no matching FE level at all: warning + all-NaN predictions
+    # No matching FE level at all: all-NaN predictions.
     newdata_shift = data.dropna(subset=["f1"]).iloc[0:100].copy()
     newdata_shift["f1"] = newdata_shift["f1"] + 1000
-    with pytest.warns(
-        UserWarning,
-        match=f"{newdata_shift['f1'].dropna().nunique()} unseen level",
-    ):
-        pred_shift = fit.predict(newdata=newdata_shift)
+    pred_shift = fit.predict(newdata=newdata_shift)
     assert np.all(np.isnan(pred_shift))
 
 
@@ -955,11 +947,11 @@ def test_i_error():
 
     with pytest.raises(FactorEvaluationError):
         # Incorrectly specified reference (a instead of 'a')
-        feols("Y ~ i(f1, X1, ref=a)", data)
+        pf.feglm("Y ~ i(f1, X1, ref=a)", data, family="gaussian")
 
     with pytest.raises(ValueError):
         # Reference level not in data
-        feols("Y ~ i(f1, X1, ref='a')", data)
+        pf.feglm("Y ~ i(f1, X1, ref='a')", data, family="gaussian")
 
 
 @pytest.mark.parametrize(
@@ -996,7 +988,7 @@ def test_i_bin_invalid_values(fml, match):
     data = get_data()
     data["f_str"] = np.random.default_rng(1).choice(["a1", "a2", "a3"], len(data))
     with pytest.raises(ValueError, match=match):
-        feols(fml, data)
+        pf.feglm(fml, data, family="gaussian")
 
 
 def test_plot_error():
@@ -1007,7 +999,7 @@ def test_plot_error():
     ):
         fit.coefplot(plot_backend="plotnine")
 
-    fit_multi = feols("Y + Y2 ~ i(f1)", data=df)
+    fit_multi = pf.feglm("sw(Y, Y2) ~ i(f1)", data=df, family="gaussian")
     with pytest.raises(ValueError):
         fit_multi.coefplot(joint=True)
 
@@ -1099,7 +1091,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "setting full_enumeration to True",
         ),
         (
-            lambda d: feols("Y ~ X1 + I(2 * X1)", data=d),
+            lambda d: feols("Y ~ X1 + mul(2, X1)", data=d),
             UserWarning,
             "dropped due to multicollinearity",
         ),
@@ -1123,7 +1115,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
             "observations removed because of separation",
         ),
         (
-            lambda d: feols("Y + Y2 ~ X1", data=d),
+            lambda d: pf.feglm("Y + Y2 ~ X1", data=d, family="gaussian"),
             DeprecationWarning,
             "Specifiying multiple dependent variables",
         ),
