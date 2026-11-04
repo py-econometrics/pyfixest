@@ -215,7 +215,8 @@ def _run_ri(
     fval : np.ndarray
         The fixed effects decoded as integers.
     weights : np.ndarray
-        The sample weights.
+        The regression weights, ones for an unweighted fit. They demean the
+        permuted treatment and WLS-transform all columns before each solve.
     X_demean2 : np.ndarray
         The demeaned design matrix.
     Y_demean : np.ndarray
@@ -231,7 +232,11 @@ def _run_ri(
     """
     ri_coefs = np.zeros(reps)
 
-    X_demean2 = np.ascontiguousarray(X_demean2)
+    # The demeaned data are not WLS-transformed, so apply the square-root
+    # weights here, as `fit_ols` does. Unit weights leave the data unchanged.
+    sqrt_weights = np.sqrt(weights).reshape((-1, 1))
+    X_solver = np.ascontiguousarray(X_demean2 * sqrt_weights)
+    Y_solver = Y_demean * sqrt_weights.ravel()
 
     for i in range(reps):
         D2 = rng.permutation(assignment)[unit_codes].reshape((-1, 1))
@@ -239,7 +244,7 @@ def _run_ri(
         D2_demean = demean_fn(D2, fval, weights)[0] if fval is not None else D2
 
         ri_coefs[i] = lstsq_numba(
-            np.concatenate((D2_demean, X_demean2), axis=1), Y_demean
+            np.concatenate((D2_demean * sqrt_weights, X_solver), axis=1), Y_solver
         )[0]
 
     return ri_coefs
