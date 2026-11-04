@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import warnings
 from collections.abc import Mapping
@@ -244,16 +246,46 @@ class SaturatedEventStudy(DID):
 
     def test_treatment_heterogeneity(self) -> WaldTest:
         """
-        Test for treatment heterogeneity in the event study design.
+        Test equality of post-treatment effects across adoption cohorts.
 
-        Parameters
-        ----------
-        by : str, optional
+        At each observed event time greater than or equal to zero, compare
+        the estimated effects of cohorts with identified coefficients at that
+        event time. Effects may vary across event times under the null; they
+        need not be zero. Event times observed for only one cohort impose no
+        restriction. Pre-treatment coefficients are unrestricted.
 
-                The type of test to perform. Can be either "cohort" or "time".
-                Default is "cohort". If "cohort", tests for treatment heterogeneity
-                across cohorts as in Lal (2025). See https://arxiv.org/abs/2503.05125
-                for details.
+        Returns
+        -------
+        WaldTest
+            Joint chi-squared test of the across-cohort equality restrictions,
+            using the fitted model's current covariance estimate.
+
+        Raises
+        ------
+        ValueError
+            If no post-treatment event time has identified effects for at
+            least two cohorts.
+
+        Notes
+        -----
+        Implements the across-cohort null of
+        [Lal (2025)](https://arxiv.org/abs/2503.05125) using differences of
+        cohort coefficients, equivalent to testing cohort-specific deviations
+        from common event-time effects. The comparison includes treatment
+        onset (event time zero).
+
+        Examples
+        --------
+        ```{python}
+        import pyfixest as pf
+
+        fit = pf.event_study(
+            pf.get_motherhood_event_study_data(),
+            yname="log_earnings", idname="unit", tname="year", gname="g",
+            estimator="saturated",
+        )
+        fit.test_treatment_heterogeneity()
+        ```
         """
         return _test_treatment_heterogeneity(
             model=self.mod if isinstance(self, SaturatedEventStudy) else self,
@@ -456,7 +488,9 @@ def _test_treatment_heterogeneity(
     """
     Test for treatment heterogeneity in the event study design.
 
-    For details, see https://github.com/apoorvalal/TestingInEventStudies
+    Implements the across-cohort null in Lal (2025),
+    https://arxiv.org/abs/2503.05125, by contrasting identified cohort effects
+    at the same post-treatment event time, including event time zero.
 
     Parameters
     ----------
@@ -470,21 +504,27 @@ def _test_treatment_heterogeneity(
             The chi2 test statistic of the joint null of no heterogeneity and
             its p-value.
     """
-    mmres = model.tidy().reset_index()
-    P = mmres.shape[0]
-    mmres[["time", "cohort"]] = mmres["Coefficient"].str.extract(
-        r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True
-    )
-    mmres["time"] = mmres["time"].astype(float)
-    # indices of coefficients that are deviations from common event study coefs
-    event_study_coefs = mmres.loc[~(mmres.cohort.isna()) & (mmres.time > 0)].index
-    # Method 2 (K x P) - more efficient
-    K = len(event_study_coefs)
-    R2 = np.zeros((K, P))
-    for i, idx in enumerate(event_study_coefs):
-        R2[i, idx] = 1
+    coefnames = model.coef().index.to_series().reset_index(drop=True)
+    terms = coefnames.str.extract(r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True)
+    terms["time"] = terms["time"].astype(float)
+    post = terms.loc[terms["cohort"].notna() & (terms["time"] >= 0)]
+    contrasts = []
+    for _, group in post.groupby("time"):
+        baseline, *others = group.index
+        # A spanning set of differences has full row rank, unlike all pairs.
+        for idx in others:
+            contrast = np.zeros(len(coefnames))
+            contrast[idx] = 1
+            contrast[baseline] = -1
+            contrasts.append(contrast)
 
-    return model.wald_test(R=R2, distribution="chi2")
+    if not contrasts:
+        raise ValueError(
+            "Treatment heterogeneity requires at least two cohorts with "
+            "identified effects at the same post-treatment event time."
+        )
+
+    return model.wald_test(R=np.asarray(contrasts), distribution="chi2")
 
 
 def compute_period_weights(

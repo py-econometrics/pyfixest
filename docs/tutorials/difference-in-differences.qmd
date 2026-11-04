@@ -295,14 +295,13 @@ We will motivate this section by lazily quoting the abstract of [Lal (2025)](htt
 
 > The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.
 
-You can employ the proposed test after running a saturated event study by calling the `test_treatment_heterogeneity()` method:
+You can test whether cohorts have equal treatment effects at each shared post-treatment event time by calling `test_treatment_heterogeneity()` after a saturated event study. The joint chi-squared test includes event time zero and leaves pre-treatment effects unrestricted. Effects may vary over event time and may be nonzero under the null. Event times with an identified coefficient for only one cohort contribute no restriction; the test requires at least one shared post-treatment event time.
 
 ```{python}
 fit_saturated.test_treatment_heterogeneity()
 ```
 
-In this case, we might be willing to rely on the simple TWFE model to produce unbiased estimates. If we're not, two "new" difference-in-differences
-estimators are implemented (beyond the already-presented saturated Sun-Abraham approach) that produce unbiased estimates under staggered assignment and heterogeneous treatment effects: Gardner's 2-Step Estimator and the Local Projections estimator from Dube et al.
+Rejection provides evidence of differences across cohorts. Failure to reject does not establish homogeneous effects or guarantee that TWFE is unbiased. Beyond the saturated Sun-Abraham approach, PyFixest implements two further estimators designed for staggered assignment and heterogeneous effects: Gardner's 2-Step Estimator and the Local Projections estimator from Dube et al.
 
 ### Gardner's 2-Step Estimator
 
