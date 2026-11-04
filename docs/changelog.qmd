@@ -17,6 +17,18 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+OLS and IV now use the Rust `formula` engine. Both bracketed and pipe IV
+specifications remain available, along with ordinary fixed effects, weights,
+and stepwise estimation. OLS/IV no longer support `context`, arbitrary Python
+expressions, `i()`, or varying slopes. Use the engine's built-in transforms or
+precompute columns in the input data. Categorical terms require explicit
+`C()`; choose a reference with `C(group, reference=...)`. A `C()` term whose
+data contain no level other than its reference raises a `ValueError`.
+Other estimators continue to use Formulaic during this initial port.
+The new dependency requires Python 3.11 or later. Until `formula-py` is
+published, installation uses a pinned Git revision and requires Rust >=1.95
+to build it. Native fitted formula state does not yet support pickling.
+
 Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 `fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR
@@ -27,7 +39,7 @@ the same error.
 
 ### Varying Slopes
 
-`feols()`, including IV, `fepois()`, and `feglm()` now support slopes that vary
+`fepois()` and `feglm()` support slopes that vary
 across fixed-effect levels: `f1[X2]` adds a slope on `X2` for each level of
 `f1`, and `f1[[X2]]` includes only the slopes. Varying slopes require the
 default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`,
@@ -36,7 +48,7 @@ Slope-only models such as `Y ~ X1 | f1[[X2]]` keep and report an `Intercept`. `d
 stage.
 
 ```{python}
-pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()
+pf.feglm("Y ~ X1 | f1[X2] + f2", data=df, family="gaussian").tidy()
 ```
 
 ### Word Regression Tables

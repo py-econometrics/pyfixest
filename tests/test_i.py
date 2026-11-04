@@ -22,7 +22,9 @@ from rpy2.rinterface_lib.embedded import RRuntimeError
 from rpy2.robjects.packages import importr
 
 from pyfixest.errors import FormulaSyntaxError
-from pyfixest.estimation import feols
+
+# The Formulaic integration still serves DiD and non-linear estimators.
+from pyfixest.estimation.api.feols import _feols_formulaic as feols
 
 fixest = importr("fixest")
 stats = importr("stats")

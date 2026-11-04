@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 from pyfixest.core.collinear import find_collinear_variables
 from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import IVIdentificationError
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -153,7 +154,7 @@ class Feiv(Feols):
     # Constructor and methods implementation...
     def __init__(
         self,
-        FixestFormula: FixestFormula,
+        FixestFormula: FixestFormula | LinearFormula,
         data: pd.DataFrame,
         *,
         options: EstimationOptions,

@@ -459,7 +459,7 @@ def test_undefined_fit_statistics_are_nan(
     "estimator,formula,kwargs",
     [
         (pf.feols, "y ~ x + x2", {}),
-        (pf.feols, "y ~ x + I(2 * x)", {}),
+        (pf.feols, "y ~ x + mul(2, x)", {}),
         (pf.feols, "y ~ x + [endog ~ z]", {"weights": "weight"}),
         (pf.feols, "y ~ x + [endog ~ z] | fe", {"weights": "weight"}),
         (pf.feglm, "y ~ x", {"family": "gaussian", "weights": "weight"}),

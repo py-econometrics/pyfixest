@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -131,7 +133,8 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     data.loc[data.f1 == groups[0], "Y"] = 0
     data.loc[data.f1 == groups[1], "Y"] = -1
 
-    fit_ols = pf.feols(fml=fml, data=data, vcov=inference, weights=weights)
+    native_fml = fml.replace("C(f1)", f"C(f1, reference={data.f1.min()})")
+    fit_ols = pf.feols(fml=native_fml, data=data, vcov=inference, weights=weights)
     fit_gaussian = pf.feglm(
         fml=fml,
         data=data,
@@ -141,6 +144,14 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
     )
 
     assert fit_gaussian.sample_info.n_obs == fit_ols.sample_info.n_obs
+    # Native indicators retain first-observed order. Align the same explicitly
+    # chosen reference basis before comparing score vectors and covariance blocks.
+    native_names = [
+        re.sub(r"C\(f1, reference=[^)]+\)", "C(f1)", name)
+        for name in fit_ols._coefnames
+    ]
+    positions = [native_names.index(name) for name in fit_gaussian._coefnames]
+    native_vcov = fit_ols.variance_covariance.vcov[np.ix_(positions, positions)]
 
     check_absolute_diff(
         fit_ols.coef().xs("X1"), fit_gaussian.coef().xs("X1"), tol=1e-10
@@ -160,24 +171,23 @@ def test_ols_vs_gaussian_glm(fml, inference, dropna, weights):
         tol=1e-10,
     )
     check_absolute_diff(
-        fit_ols.sandwich.scores[0, :], fit_gaussian.sandwich.scores[0, :], tol=1e-10
+        fit_ols.sandwich.scores[0, positions],
+        fit_gaussian.sandwich.scores[0, :],
+        tol=1e-10,
     )
 
     if inference == "iid":
         # iid inference different: follows iid-glm; just the bread and not bread x sigma2
-        scaling_factor = (
-            fit_ols.variance_covariance.vcov[0, 0]
-            / fit_gaussian.variance_covariance.vcov[0, 0]
-        )
+        scaling_factor = native_vcov[0, 0] / fit_gaussian.variance_covariance.vcov[0, 0]
         # Check that all elements follow the same scaling
         check_absolute_diff(
-            fit_ols.variance_covariance.vcov,
+            native_vcov,
             scaling_factor * fit_gaussian.variance_covariance.vcov,
             tol=1e-10,
         )
     else:
         check_absolute_diff(
-            fit_ols.variance_covariance.vcov,
+            native_vcov,
             fit_gaussian.variance_covariance.vcov,
             tol=1e-10,
         )

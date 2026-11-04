@@ -5,6 +5,7 @@ counts, degrees of freedom, and fit statistics of models with `f[z]` and
 `f[[z]]` fixed effects.
 """
 
+# Public feols rejects this syntax; these checks cover the retained Formulaic path.
 from __future__ import annotations
 
 import numpy as np
@@ -14,6 +15,7 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 
 import pyfixest as pf
+from pyfixest.estimation.api.feols import _feols_formulaic as formulaic_feols
 
 fixest = importr("fixest")
 stats = importr("stats")
@@ -83,7 +85,7 @@ def _assert_matches_fixest(fit, fit_r) -> None:
 @pytest.mark.parametrize("vcov", VCOVS, ids=str)
 @pytest.mark.parametrize(("fml", "fml_r"), OLS_FORMULAS + IV_FORMULAS)
 def test_varying_slopes_against_fixest(data, fml, fml_r, vcov, weights):
-    fit = pf.feols(fml, data=data, vcov=vcov, weights=weights, demeaner=DEMEANER)
+    fit = formulaic_feols(fml, data=data, vcov=vcov, weights=weights, demeaner=DEMEANER)
     r_kwargs = {} if weights is None else {"weights": ro.Formula(f"~{weights}")}
     fit_r = fixest.feols(
         ro.Formula(fml_r),
@@ -99,7 +101,7 @@ def test_varying_slopes_against_fixest(data, fml, fml_r, vcov, weights):
 @pytest.mark.against_r_core
 @pytest.mark.parametrize(("fml", "fml_r"), OLS_FORMULAS)
 def test_varying_slopes_fit_statistics_against_fixest(data, fml, fml_r):
-    fit = pf.feols(fml, data=data, demeaner=DEMEANER)
+    fit = formulaic_feols(fml, data=data, demeaner=DEMEANER)
     fit_r = fixest.feols(ro.Formula(fml_r), data=data, fixef_tol=R_FIXEF_TOL)
     r2 = fixest.r2(fit_r, ro.StrVector(["r2", "ar2", "wr2", "war2"]))
 
@@ -143,9 +145,9 @@ def test_varying_slopes_singletons_against_fixest(
 
     if n_dropped:
         with pytest.warns(UserWarning, match="1 singleton"):
-            fit = pf.feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
+            fit = formulaic_feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
     else:
-        fit = pf.feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
+        fit = formulaic_feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
     fit_r = fixest.feols(
         ro.Formula(fml),
         data=data,
@@ -170,7 +172,7 @@ def test_varying_slopes_frequency_weights_against_fixest(data, fml, fml_r, vcov)
     data["fweights"] = rng.integers(1, 4, size=len(data))
     expanded = data.loc[data.index.repeat(data["fweights"])].reset_index(drop=True)
 
-    fit = pf.feols(
+    fit = formulaic_feols(
         fml,
         data=data,
         vcov=vcov,

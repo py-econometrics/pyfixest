@@ -9,7 +9,7 @@ from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.estimation import feols
+from pyfixest.estimation.api.feols import _feols_formulaic as feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec

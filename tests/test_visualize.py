@@ -38,7 +38,7 @@ def test_visualize(plot_backend):
     fit3.coefplot()
 
     # iplot
-    fit5 = feols("Y ~ i(f1)", data=data)
+    fit5 = pf.feglm("Y ~ i(f1)", data=data, family="gaussian")
     iplot(fit5)
 
     # FixestMulti

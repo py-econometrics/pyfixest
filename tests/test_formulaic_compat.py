@@ -15,12 +15,12 @@ from formulaic.materializers.base import FormulaMaterializer
 from formulaic.parser import DefaultOperatorResolver
 from formulaic.utils.variables import Variable
 
-import pyfixest as pf
 from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.errors import (
     FixedEffectEvaluationError,
     FormulaSyntaxError,
 )
+from pyfixest.estimation.api.feols import _feols_formulaic as formulaic_feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     FormulaicCompatibilityError,
@@ -63,7 +63,7 @@ def data() -> pd.DataFrame:
 
 def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     """IV formulas parse to StructuredFormula with .deps[0].lhs/.rhs."""
-    fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
+    fit = formulaic_feols("Y ~ X1 + [X2 ~ Z1]", data=data)
     rhs = fit.model.parsed_formula._right_hand_side
 
     import formulaic.formula
@@ -101,7 +101,7 @@ def test_terms_without_intercept(formula: str, expected: list[str]) -> None:
 
 def test_multistage_excludes_endogenous_placeholders(data: pd.DataFrame) -> None:
     """The endogenous term is excluded from controls without generated covariates."""
-    fit = pf.feols("Y ~ X1 + [X2 ~ Z1]", data=data)
+    fit = formulaic_feols("Y ~ X1 + [X2 ~ Z1]", data=data)
 
     exog_vars = {str(v) for v in fit.model.parsed_formula.exogenous.required_variables}
 
@@ -112,7 +112,7 @@ def test_multistage_excludes_endogenous_placeholders(data: pd.DataFrame) -> None
 
 def test_multistage_preserves_transformed_endogenous(data: pd.DataFrame) -> None:
     """The original endogenous term is appended when constructing the second stage."""
-    fit = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
+    fit = formulaic_feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
 
     exog_terms = {str(term) for term in fit.model.parsed_formula.exogenous}
 
@@ -127,8 +127,8 @@ def test_transformed_endogenous_matches_precomputed_column(data: pd.DataFrame) -
     """Transforming the endogenous variable inline equals transforming it in the data."""
     precomputed = data.assign(exp_X2=np.exp(data["X2"]))
 
-    inline = pf.feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
-    column = pf.feols("Y ~ X1 + [exp_X2 ~ Z1]", data=precomputed)
+    inline = formulaic_feols("Y ~ X1 + [np.exp(X2) ~ Z1]", data=data)
+    column = formulaic_feols("Y ~ X1 + [exp_X2 ~ Z1]", data=precomputed)
 
     np.testing.assert_allclose(inline.coef().to_numpy(), column.coef().to_numpy())
     np.testing.assert_allclose(inline.se().to_numpy(), column.se().to_numpy())
@@ -140,8 +140,8 @@ def test_multisource_endogenous_term_matches_precomputed_column(
     """One endogenous term may depend on multiple source columns."""
     precomputed = data.assign(X1_plus_X2=data["X1"] + data["X2"])
 
-    inline = pf.feols("Y ~ 1 + [I(X1 + X2) ~ Z1]", data=data)
-    column = pf.feols("Y ~ 1 + [X1_plus_X2 ~ Z1]", data=precomputed)
+    inline = formulaic_feols("Y ~ 1 + [I(X1 + X2) ~ Z1]", data=data)
+    column = formulaic_feols("Y ~ 1 + [X1_plus_X2 ~ Z1]", data=precomputed)
 
     np.testing.assert_allclose(inline.coef().to_numpy(), column.coef().to_numpy())
     np.testing.assert_allclose(inline.se().to_numpy(), column.se().to_numpy())
@@ -170,7 +170,7 @@ def test_multistage_operator_guard_raises_loudly(monkeypatch, count) -> None:
 
 def test_encoder_state_tuple_shape(data: pd.DataFrame) -> None:
     """encoder_state values are (Factor.Kind, state_dict) 2-tuples."""
-    fit = pf.feols("Y ~ X1 + C(f1)", data=data)
+    fit = formulaic_feols("Y ~ X1 + C(f1)", data=data)
 
     from formulaic.parser.types import Factor
 
@@ -207,7 +207,7 @@ def test_encoder_state_guard_raises_loudly() -> None:
 )
 def test_i_term_columns(data: pd.DataFrame, fml: str, expected: list[str]) -> None:
     """i_term_columns returns exactly the columns produced by i() terms."""
-    fit = pf.feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
 
     columns = i_term_columns(fit.model.model_spec["second_stage"].rhs)
 
@@ -218,7 +218,7 @@ def test_i_term_columns(data: pd.DataFrame, fml: str, expected: list[str]) -> No
 def test_i_term_columns_ignores_double_colon_names(data: pd.DataFrame) -> None:
     """A user column named with '::' is not an i() term."""
     renamed = data.rename(columns={"X1": "a::b"})
-    fit = pf.feols("Y ~ Q('a::b') + X2", data=renamed)
+    fit = formulaic_feols("Y ~ Q('a::b') + X2", data=renamed)
 
     assert "Q('a::b')" in fit._coefnames
     assert i_term_columns(fit.model.model_spec["second_stage"].rhs) == []
@@ -226,7 +226,7 @@ def test_i_term_columns_ignores_double_colon_names(data: pd.DataFrame) -> None:
 
 def test_i_term_columns_survives_lean(data: pd.DataFrame) -> None:
     """The i() registry lives on the retained model spec, not the model matrix."""
-    fit = pf.feols("Y ~ i(f1, ref=1)", data=data, lean=True, store_data=False)
+    fit = formulaic_feols("Y ~ i(f1, ref=1)", data=data, lean=True, store_data=False)
 
     assert i_term_columns(fit.model.model_spec["second_stage"].rhs) == [
         "f1::0",
@@ -238,7 +238,7 @@ def test_i_term_columns_survives_lean(data: pd.DataFrame) -> None:
 
 def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
     """i() stores contrast state under __contrasts_<var>__."""
-    fit = pf.feols("Y ~ X1 + i(f1, X2)", data=data)
+    fit = formulaic_feols("Y ~ X1 + i(f1, X2)", data=data)
 
     rhs_spec = fit.model.model_spec["second_stage"].rhs
     i_state = None
@@ -254,7 +254,7 @@ def test_contrasts_state_key_format(data: pd.DataFrame) -> None:
 
 def test_fe_transform_state_has_encoding(data: pd.DataFrame) -> None:
     """FE transform_state stores the fitted level indexes and combinations."""
-    fit = pf.feols("Y ~ X1 | f1", data=data)
+    fit = formulaic_feols("Y ~ X1 | f1", data=data)
 
     fe_spec = fit.model.model_spec["fe"]
     (factor,) = fe_spec.formula[0].factors
@@ -271,7 +271,7 @@ def test_materializer_cache_contains_evaluated_factor_values(
     data: pd.DataFrame,
 ) -> None:
     """The materializer cache stores evaluated rather than source values."""
-    fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
+    fit = formulaic_feols("Y ~ C(np.floor(X2))", data=data)
     rhs_spec = fit.model.model_spec["second_stage"].rhs
     context = FORMULAIC_TRANSFORMS | {**fit.options.context}
 
@@ -287,7 +287,7 @@ def test_materializer_cache_contains_evaluated_factor_values(
 
 def test_evaluated_factor_cache_guard_raises_loudly(data: pd.DataFrame) -> None:
     """A missing evaluated factor must fail before unseen levels are skipped."""
-    fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
+    fit = formulaic_feols("Y ~ C(np.floor(X2))", data=data)
     rhs_spec = fit.model.model_spec["second_stage"].rhs
 
     with pytest.raises(FormulaicCompatibilityError, match="evaluated factor"):
@@ -327,7 +327,7 @@ def test_model_spec_get_model_matrix_prediction_roundtrip(
     data: pd.DataFrame, fml: str
 ) -> None:
     """Stored ModelSpec round-trips: seen rows predict, and match in-sample fits."""
-    fit = pf.feols(fml, data=data)
+    fit = formulaic_feols(fml, data=data)
     pred = fit.predict(newdata=data.iloc[:20])
 
     assert pred.shape[0] == 20
@@ -348,7 +348,7 @@ def test_prediction_preserves_fitted_reference() -> None:
         }
     )
     # Ignore unused a0 and fit with a1 as the reference.
-    fit = pf.feols("Y ~ i(f)", data=train)
+    fit = formulaic_feols("Y ~ i(f)", data=train)
 
     # Omit fitted reference a1 and reverse the remaining category order.
     newdata = pd.DataFrame({"f": pd.Categorical(["a2", "a3"], categories=["a3", "a2"])})
@@ -363,7 +363,7 @@ def test_prediction_preserves_fitted_reference() -> None:
 
 def test_unseen_level_of_transformed_categorical_is_nan(data: pd.DataFrame) -> None:
     """Only rows whose *evaluated* level is unseen are dropped to NaN."""
-    fit = pf.feols("Y ~ C(np.floor(X2))", data=data)
+    fit = formulaic_feols("Y ~ C(np.floor(X2))", data=data)
 
     newdata = data.iloc[:20].copy()
     newdata.loc[newdata.index[0], "X2"] = 1e6
@@ -388,7 +388,7 @@ def test_fe_index_codes_preserve_groupby_order(data, arity, kind):
     frame.loc[0, "f1"] = np.nan
     names = ["f1", "f2", "f3"][:arity]
     expected = frame.groupby(names).ngroup().dropna()
-    fit = pf.feols(f"Y ~ X1 | {':'.join(names)}", data=frame, fixef_rm="none")
+    fit = formulaic_feols(f"Y ~ X1 | {':'.join(names)}", data=frame, fixef_rm="none")
     np.testing.assert_array_equal(
         fit.model_matrix.fixed_effects.iloc[:, 0],
         expected,
@@ -416,7 +416,7 @@ def test_fe_prediction_requires_fitted_dtype(data, term, dtype, query_dtype):
     """Equal label values do not bypass the fitted dtype contract."""
     frame = data.copy()
     frame["f1"] = (frame.f1 % 2).astype(dtype)
-    fit = pf.feols(f"Y ~ X1 | {term}", data=frame)
+    fit = formulaic_feols(f"Y ~ X1 | {term}", data=frame)
     newdata = frame.iloc[:10].copy()
     np.testing.assert_allclose(
         fit.predict(newdata=newdata),
@@ -438,7 +438,7 @@ def test_fe_prediction_requires_fitted_dtype(data, term, dtype, query_dtype):
 def test_fe_rejects_object_dtype(data, term, prediction, kind):
     """Object columns are rejected before factorization or prediction lookup."""
     frame = data.copy()
-    fit = pf.feols(f"Y ~ X1 | {term}", data=frame) if prediction else None
+    fit = formulaic_feols(f"Y ~ X1 | {term}", data=frame) if prediction else None
     frame["f1"] = frame.f1.astype(object)
     if kind == "string":
         frame["f1"] = frame.f1.astype(str).astype(object)
@@ -453,7 +453,7 @@ def test_fe_rejects_object_dtype(data, term, prediction, kind):
         if fit is not None:
             fit.predict(newdata=frame.iloc[:10])
         else:
-            pf.feols(f"Y ~ X1 | {term}", data=frame)
+            formulaic_feols(f"Y ~ X1 | {term}", data=frame)
 
 
 @pytest.mark.parametrize(
@@ -476,7 +476,7 @@ def test_fe_rejects_non_lookup_terms(data, expression):
         FormulaSyntaxError,
         match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",
     ):
-        pf.feols(f"Y ~ X1 | {expression}", data=data)
+        formulaic_feols(f"Y ~ X1 | {expression}", data=data)
 
 
 @pytest.mark.parametrize(
@@ -605,7 +605,7 @@ def test_fe_unseen_combination_predicts_nan(data):
     """Reject new pairs of individually seen levels."""
     frame = data.copy()
     frame["f2"] = frame.f1 % 2
-    fit = pf.feols("Y ~ X1 | f1:f2", data=frame)
+    fit = formulaic_feols("Y ~ X1 | f1:f2", data=frame)
     newdata = frame.iloc[:10].copy()
     newdata.loc[0, "f2"] = 1 - newdata.loc[0, "f2"]
     with pytest.warns(UserWarning, match="1 unseen level"):
@@ -627,7 +627,7 @@ def test_fe_rejects_context_only_columns(data, expression):
     frame.index = np.random.default_rng(312).permutation(len(frame))
     frame.iloc[0, frame.columns.get_loc("Y")] = np.nan
     with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
-        pf.feols(f"Y ~ X1 | {expression}", data=frame, context={"z": frame.f1})
+        formulaic_feols(f"Y ~ X1 | {expression}", data=frame, context={"z": frame.f1})
 
 
 @pytest.mark.parametrize("expression", ["z", "z:f2"])
@@ -636,7 +636,7 @@ def test_fe_split_rejects_full_sample_context_series(data, expression):
     frame = data.copy()
     frame.index = np.random.default_rng(312).permutation(len(frame))
     with pytest.raises(FixedEffectEvaluationError, match=r"Column `z`.*is missing"):
-        pf.feols(
+        formulaic_feols(
             f"Y ~ X1 | {expression}",
             data=frame,
             context={"z": frame.f1},
@@ -647,7 +647,7 @@ def test_fe_split_rejects_full_sample_context_series(data, expression):
 @pytest.mark.parametrize("expression", ["f1", "f1:f2"])
 def test_fe_prediction_requires_data_columns(data, expression):
     """Prediction cannot substitute a captured training Series for newdata."""
-    fit = pf.feols(f"Y ~ X1 | {expression}", data=data, context={"f1": data.f1})
+    fit = formulaic_feols(f"Y ~ X1 | {expression}", data=data, context={"f1": data.f1})
     with pytest.raises(FixedEffectEvaluationError, match=r"Column `f1`.*is missing"):
         fit.predict(newdata=data.iloc[:5].drop(columns="f1"))
 
@@ -661,7 +661,7 @@ def test_fe_prediction_requires_data_columns(data, expression):
 def test_fe_dummy_names_decode_levels(data, output, interaction):
     data = data.assign(firm=data.f1.map(lambda value: f"firm_{value}"))
     term = "firm:f2" if interaction else "firm"
-    fit = pf.feols(f"Y ~ X1 | {term}", data=data, fixef_rm="none")
+    fit = formulaic_feols(f"Y ~ X1 | {term}", data=data, fixef_rm="none")
     _, design, names = fit._model_matrix_one_hot(output=output)
     design = design.toarray() if output == "sparse" else design
     levels = (
@@ -795,7 +795,7 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, inter
     expression = f"`{name}`" if quoted else name
     expression += ":f2" if interaction else ""
     # A context vector with the same name cannot replace the actual data column.
-    fit = pf.feols(
+    fit = formulaic_feols(
         f"Y ~ X1 | {expression}",
         data=renamed,
         context={name: renamed[name].iloc[::-1]},
@@ -807,7 +807,7 @@ def test_fe_metadata_preserves_lookup_and_dependencies(data, name, quoted, inter
     assert factor.metadata["term"] == fit.model.parsed_formula.fixed_effects[0]
     assert set(fit.fixef().variable) == {f"{name}:f2" if interaction else name}
     baseline_data = renamed.rename(columns={name: "f1"})
-    baseline = pf.feols(
+    baseline = formulaic_feols(
         "Y ~ X1 | " + ("f1:f2" if interaction else "f1"), data=baseline_data
     )
     np.testing.assert_allclose(
@@ -837,7 +837,7 @@ def test_fe_rejects_invalid_column_names(data, name, message):
     """Reject names requiring aliases or Python's identifier normalization."""
     renamed = data.rename(columns={"f1": name})
     with pytest.raises(FormulaSyntaxError, match=message):
-        pf.feols(f"Y ~ X1 | `{name}`:f2", data=renamed)
+        formulaic_feols(f"Y ~ X1 | `{name}`:f2", data=renamed)
 
 
 def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
@@ -858,7 +858,7 @@ def test_fe_dependencies_on_every_materialization_path(data, monkeypatch):
         return evaluated
 
     monkeypatch.setattr(FormulaMaterializer, "_evaluate_factor", check_variables)
-    fit = pf.feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
+    fit = formulaic_feols("Y ~ X1 | f1:f2", data=data, fixef_rm="none")
     path = "fixef"
     fit.fixef()
     path = "predict"
@@ -874,6 +874,6 @@ def test_fe_encoding_error_names_term(data, monkeypatch):
     with pytest.raises(
         FixedEffectEvaluationError, match="Unable to encode fixed effect `f1`"
     ) as exc:
-        pf.feols("Y ~ X1 | f1", data=data)
+        formulaic_feols("Y ~ X1 | f1", data=data)
     assert "__fixed_effect__" not in str(exc.value)
     assert isinstance(exc.value.__cause__, TypeError)

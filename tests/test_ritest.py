@@ -6,6 +6,8 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.estimation.api.feols import _feols_formulaic
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.post_estimation.ritest import _assignment_units
 
@@ -17,10 +19,10 @@ matplotlib.use("Agg")  # Use a non-interactive backend
     "fml",
     [
         "y ~ D*x",
-        "y ~ D + {D*x}",
-        "y ~ D + I(D**2) + x",
+        "y ~ D + mul(D, x)",
+        "y ~ D + mul(D, D) + x",
         "y ~ D*x | g",
-        "I(y-D) ~ D + x",
+        "sub(y, D) ~ D + x",
     ],
 )
 def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
@@ -34,7 +36,7 @@ def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
             "g": np.repeat(np.arange(12), 20),
         }
     )
-    if "D**2" not in fml:
+    if "mul(D, D)" not in fml:
         data["D"] = (data.D > 0).astype(float)
     data["y"] = 0.4 * data.D + data.D * data.x + rng.normal(size=n)
     fit = pf.feols(fml, data=data)
@@ -70,7 +72,7 @@ def test_fast_ritest_requires_numba(monkeypatch):
 
     monkeypatch.setattr(ritest, "nb", None)
 
-    fit = pf.feols("Y ~ X1", data=pf.get_data(N=50))
+    fit = _feols_formulaic("Y ~ X1", data=pf.get_data(N=50))
 
     with pytest.raises(ImportError, match=r"pyfixest\[numba\]"):
         fit.ritest("X1", reps=10, choose_algorithm="fast")
@@ -278,6 +280,8 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
     # should be overwritten or substituted in the formula.
     data["D_resampled"] = data.X1
     fml = "Y ~ D + D_control + {D * D_control} - 1"
+    if estimator is pf.feols:
+        fml = fml.replace("{D * D_control}", "mul(D, D_control)")
     fit = estimator(fml, data=data)
     original = fit._data.copy(deep=True)
     reps = 5
@@ -296,11 +300,12 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
         )
         expected.append(values["D"])
 
+    parser = LinearFormula if estimator is pf.feols else Formula
     monkeypatch.setattr(
-        Formula, "render", lambda self: "descriptive text, not a formula"
+        parser, "render", lambda self: "descriptive text, not a formula"
     )
     assert fit.model.formula == fit._fml == "descriptive text, not a formula"
-    monkeypatch.setattr(Formula, "parse", _fail_on_reparse)
+    monkeypatch.setattr(parser, "parse", _fail_on_reparse)
     fit.ritest(
         "D",
         reps=reps,

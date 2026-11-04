@@ -7,7 +7,11 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
-from tests._feols_test_cases import FEOLS_FORMULA_F3_CASES, build_feols_data_variants
+from tests._feols_test_cases import (
+    FEOLS_FORMULA_F3_CASES,
+    build_feols_data_variants,
+    native_linear_formula,
+)
 from tests._torch_test_utils import torch_param
 
 pytestmark = [
@@ -278,6 +282,9 @@ def test_feols_demeaner_backends_match_reference(
     fml,
     f3_type,
 ):
+    fml = native_linear_formula(fml)
+    if fml is None:
+        pytest.skip("i() is outside the native OLS/IV port.")
     data = backend_data[(dropna, f3_type)]
     fit_kwargs = {
         "fml": fml,

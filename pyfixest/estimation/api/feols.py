@@ -11,6 +11,7 @@ from pyfixest.estimation.api.utils import (
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
@@ -67,9 +68,8 @@ def feols(
         from the fixed effects; instruments go into a "[endogenous ~ instruments]"
         block on the right-hand side. Special syntax includes stepwise regressions,
         cumulative stepwise regression, multiple dependent variables via sw(),
-        interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2),
-        and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1,
-        and "FE1[[Z]]" adds only the slopes.
+        interactions (X1:X2), and interacted fixed effects (fe1:fe2).
+        The formula engine does not yet support i() or varying slopes.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
@@ -165,11 +165,10 @@ def feols(
     reps: int
         Deprecated legacy argument for compressed regression bootstrap inference.
 
-    context : int or Mapping[str, Any]
-        A dictionary containing additional context variables to be used by
-        formulaic during the creation of the model matrix. This can include
-        custom factorization functions, transformations, or any other
-        variables that need to be available in the formula environment.
+    context : None
+        Formula context is no longer supported by OLS or IV. Supplying this
+        argument raises NotImplementedError. Create transformed columns in
+        data before estimation instead.
 
     seed: Optional[int]
         Deprecated legacy argument for compressed regression bootstrap inference.
@@ -342,10 +341,9 @@ def feols(
     pf.etable(fit)
     ```
 
-    In general, using muliple estimation syntax can improve the estimation time
-    as covariates that are demeaned in one model and are used in another model do
-    not need to be demeaned again: `feols()` implements a caching mechanism that
-    stores the demeaned covariates.
+    Multiple estimation can reuse fixed-effect preconditioners across models.
+    The initial formula integration keeps demeaned columns separate across
+    distinct specifications until the engine exposes fitted term metadata.
 
     Additionally, you can fit models on different samples via the split and fsplit
     arguments. The split argument splits the sample according to the variable
@@ -401,59 +399,11 @@ def feols(
     pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
 
-    Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
-    `f1[[X2]]` to include only the slopes. Separate several slopes with commas,
-    as in `f1[X2, Z1]`:
-
-    ```{python}
-    fit_vs = pf.feols("Y ~ X1 | f1[X2] + f2", data)
-    fit_vs_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data)
-    pf.etable([fit_vs, fit_vs_only])
-    ```
-
-    Varying slopes require the default `within` demeaner. `predict()`,
-    `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC
-    inference are not yet supported for these models. Slope-only effects such as
-    `f1[[X2]]` do not absorb the constant, so the model keeps and reports an
-    `Intercept`; write `0 +` in the formula to drop it.
-
-    Last, `feols()` supports interaction of variables via the `i()` syntax.
-    For a compact overview of formula features including `i()`, see the
-    [formula syntax tutorial](/tutorials/formula-syntax.html).
-
-    You can pass custom transforms via the `context` argument. If you set `context = 0`, all
-    functions from the level of the call to `feols()` will be available:
-
-    ```{python}
-    def _lspline(series: pd.Series, knots: list[float]) -> np.array:
-        'Generate a linear spline design matrix for the input series based on knots.'
-        vector = series.values
-        columns = []
-
-        for i, knot in enumerate(knots):
-            column = np.minimum(vector, knot if i == 0 else knot - knots[i - 1])
-            columns.append(column)
-            vector = vector - column
-
-        # Add the remainder as the last column
-        columns.append(vector)
-
-        # Combine columns into a design matrix
-        return np.column_stack(columns)
-
-    spline_split = _lspline(data["X2"], [0, 1])
-    data["X2_0"] = spline_split[:, 0]
-    data["0_X2_1"] = spline_split[:, 1]
-    data["1_X2"] = spline_split[:, 2]
-
-    explicit_fit = pf.feols("Y ~ X2_0 + 0_X2_1 + 1_X2 | f1 + f2", data=data)
-    # set context = 0 to make _lspline available for feols' internal call to Formulaic.model_matrix
-    context_captured_fit = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = 0)
-    # or provide it as a dict / mapping
-    context_captured_fit_map = pf.feols("Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data, context = {"_lspline":_lspline})
-
-    pf.etable([explicit_fit, context_captured_fit, context_captured_fit_map])
-    ```
+    OLS and IV use the Rust `formula` engine. Its built-in transforms include
+    `log`, `sqrt`, `exp`, `add`, `sub`, `mul`, `div`, `C`, and `poly`.
+    Use `C(group, reference=0)` to choose a categorical reference explicitly.
+    Python expressions, custom context, `i()`, and varying slopes are not
+    supported on this path. Precompute other transformations in `data`.
 
     After fitting a model via `feols()`, you can use the `predict()` method to
     get the predicted values:
@@ -535,8 +485,64 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
+    return _feols(
+        fml=fml,
+        data=data,
+        vcov=vcov,
+        vcov_kwargs=vcov_kwargs,
+        weights=weights,
+        ssc=ssc,
+        fixef_rm=fixef_rm,
+        collin_tol=collin_tol,
+        drop_intercept=drop_intercept,
+        copy_data=copy_data,
+        store_data=store_data,
+        lean=lean,
+        weights_type=weights_type,
+        solver=solver,
+        demeaner=demeaner,
+        use_compression=use_compression,
+        reps=reps,
+        context=context,
+        seed=seed,
+        split=split,
+        fsplit=fsplit,
+    )
+
+
+def _feols(
+    fml: str,
+    data: DataFrameType,
+    vcov: VcovTypeOptions | dict[str, str] | None = None,
+    vcov_kwargs: dict[str, str | int] | None = None,
+    weights: str | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
+    fixef_rm: FixedRmOptions = "singleton",
+    collin_tol: float = 1e-09,
+    drop_intercept: bool = False,
+    copy_data: bool = True,
+    store_data: bool = True,
+    lean: bool = False,
+    weights_type: WeightsTypeOptions = "aweights",
+    solver: SolverOptions = "scipy.linalg.solve",
+    demeaner: AnyDemeaner | None = None,
+    use_compression: bool = False,
+    reps: int = 100,
+    context: int | Mapping[str, Any] | None = None,
+    seed: int | None = None,
+    split: str | None = None,
+    fsplit: str | None = None,
+    *,
+    _formulaic: bool = False,
+) -> Feols | FixestMulti:
+    """Run linear estimation with the parser selected by its entry point."""
     ssc = _resolve_ssc(ssc)
     vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
+    if context is not None and not _formulaic:
+        raise NotImplementedError(
+            "feols() uses the formula engine, which does not support context. "
+            "Add transformed variables to data before estimation."
+        )
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
@@ -588,7 +594,7 @@ def feols(
     config = EstimationConfig(
         method="feols",
         data=data,
-        formulas=tuple(Formula.parse(fml)),
+        formulas=tuple(Formula.parse(fml) if _formulaic else LinearFormula.parse(fml)),
         options=options,
         vcov=vcov_spec,
         split=split,
@@ -597,3 +603,10 @@ def feols(
 
     plan = plan_formulas(config)
     return run_estimation(config, plan, apply_retention=True)
+
+
+def _feols_formulaic(
+    fml: str, data: DataFrameType, **kwargs: Any
+) -> Feols | FixestMulti:
+    """Keep internal DiD fits on their existing engine during the linear port."""
+    return _feols(fml, data, _formulaic=True, **kwargs)

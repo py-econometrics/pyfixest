@@ -18,7 +18,26 @@ data = pf.get_data()
 data.head()
 ```
 
-`PyFixest` specifies different regression models by Wilkinson Formulas via the `formulaic` package. Wilkinson formulas should be familiar to you if you have used R's `lm()` or `statsmodels` formula API. Many additional ideas implemented in `PyFixest`  have been developed in the `fixest` package (most notably multiple estimation syntax, the i-operator, sample splitting). By default, all formula options presented here are supported by all models available via the `pf.feols()`, `pf.feglm()`, and `pf.fepois()` APIs.
+OLS and IV (`feols`) use the Rust [`formula`](https://github.com/py-econometrics/formula)
+engine. GLM, Poisson, and quantile estimation continue to use Formulaic during
+this initial migration. Both engines accept Wilkinson formulas and ordinary
+fixed effects. OLS/IV support the native `log`, `sqrt`, `exp`, `add`, `sub`,
+`mul`, `div`, `C`, and `poly` transforms; Python expressions and `context`
+are unavailable. Precompute other transformed columns in `data`.
+
+`i()` and varying slopes remain available only on the Formulaic estimators.
+DiD estimators retain their existing Formulaic integration, including event-study
+formulas generated internally.
+
+For OLS/IV, encode categorical regressors explicitly with `C(group)`.
+This produces indicators for all observed levels in first-observed order.
+Use `C(group, reference=...)` to choose the omitted category explicitly;
+without it, pyfixest's collinearity removal determines which indicator is
+omitted when an intercept is present. Prediction reuses fitted encodings and
+returns missing values for unseen levels.
+Reference values must match the column's type: use `reference=1.0` for a
+floating-point category and `reference="a"` for a string. Boolean regressors
+are converted to 0/1, so their categorical references use 0 or 1.
 
 ## Basic Syntax
 
@@ -29,9 +48,7 @@ fit1 = pf.feols("Y ~ X1 + X2", data=data)
 fit1.summary()
 ```
 
-In the covariate part of the formula, transformations supported by `formulaic`
-are also supported by `PyFixest`. To name just a few important ones,
-you can create categorical variables via the `C()` operator:
+Create categorical indicators with the `C()` operator:
 
 ```{python}
 fit2 = pf.feols("Y ~ X1 + X2 + C(f1)", data=data)
@@ -51,13 +68,13 @@ To create logarithms of a function, just use
 fit5 = pf.feols("Y ~ log(X1)", data=data)
 ```
 
-or use any `numpy` transforms, e.g.
+Use native arithmetic transforms, for example to square a variable:
 
 ```{python}
-fit5 = pf.feols("Y ~ X1  + np.power(X1,2)", data=data)
+fit5 = pf.feols("Y ~ X1 + mul(X1, X1)", data=data)
 ```
 
-Note - for the logarithm, we suggest to not rely on `np.log` but use the internal `log` operator.
+For transformations outside the native set, create a column before calling `feols()`.
 
 ## Fixed Effects Syntax
 
@@ -67,9 +84,7 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
 
-We can interact two fixed effects via the `:` operator. If you are coming from
-`fixest`, note that its `^` operator is deprecated here: see
-[Deprecated spellings](#deprecated-spellings).
+We can interact two fixed effects via the `:` operator.
 
 ```{python}
 fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
@@ -77,10 +92,10 @@ fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](ols-fixed-effects.qmd) vignette.
 
-Fixed effects must be data columns or interactions of data columns. Their names
-must be valid Python identifiers, cannot be Python keywords, and must use
-Python's normalized identifier spelling. Rename FE columns containing spaces
-or punctuation before estimation. FE transforms such as `I(f1 + f2)` and `C(f1)`
+Fixed effects must be data columns or interactions of data columns. With
+Formulaic estimators, their names must be normalized Python identifiers and
+cannot be Python keywords. The native engine also accepts backtick-quoted FE
+names. FE transforms such as `I(f1 + f2)` and `C(f1)`
 are unsupported; create the transformed column in `data` first.
 
 Outcome, covariate, and instrument names can still be quoted with backticks,
@@ -88,18 +103,21 @@ for example ``"Y ~ `my covariate` | firm"``.
 
 ### Varying slopes
 
+This section uses the Formulaic Gaussian GLM API. OLS/IV do not yet support this syntax.
+
+
 Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
 `f1[[X2]]` to include only the slopes. Separate several slopes with commas,
 as in `f1[X2, Z1]`. Slopes also work with interacted groups (`f1:f2[X2]`)
 and arithmetic expressions (`f1[X2**2]`).
 
 ```{python}
-fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
-fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
+fit_slopes = pf.feglm("Y ~ X1 | f1[X2] + f2", data=data, family="gaussian")
+fit_slopes_only = pf.feglm("Y ~ X1 | f1[[X2, Z1]]", data=data, family="gaussian")
 pf.etable([fit_slopes, fit_slopes_only])
 ```
 
-Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`,
+Varying slopes work with `fepois()` and `feglm()`,
 and require the default `within` demeaner. `predict()`, `fixef()`,
 `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not
 yet supported for these models.
@@ -110,12 +128,12 @@ as `f1[X2]`, absorb it. Write `0 +` on the right-hand side to drop the
 intercept of a slope-only model:
 
 ```{python}
-pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
+pf.feglm("Y ~ X1 | f1[[X2]]", data=data, family="gaussian").coef()
 ```
 
 ## Instrumental Variables (IV) Syntax
 
-For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
+For IV estimation, `PyFixest` supports bracketed multistage syntax.
 The endogenous variable and its instruments go
 in a square-bracket block on the right-hand side. Fixed effects stay behind the
 `|`, exactly as in a model without instruments:
@@ -131,23 +149,24 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 fit_iv.summary()
 ```
 
-The former fixest-style syntax, such as `Y ~ X2 | f1 + f2 | X1 ~ Z1`, is
-deprecated: it raises a `DeprecationWarning` in 0.70 and will become an error
-in a future release. See the [formula-parsing changelog](/changelog.qmd#formula-parsing-on-formulaic)
-for details.
+The fixest-style pipe syntax, such as `Y ~ X2 | f1 + f2 | X1 ~ Z1`,
+also works with the native engine.
 
 For details on IV estimation, take a look at the
 [Instrumental Variables](instrumental-variables.qmd) vignette.
 
 ## The `i()` operator for interacting fixed effects
 
+This section uses the Formulaic Gaussian GLM API. OLS/IV do not yet support this syntax.
+
+
 For interacting fixed effects, we include a specialised operator `i()`
 
 If you simply wrap a variable into `i()`, it will be treated just as the `C()` operator (see above).
 
 ```{python}
-fit_i = pf.feols("Y ~ i(f1)", data=data)
-fit_c = pf.feols("Y ~ C(f1)", data=data)
+fit_i = pf.feglm("Y ~ i(f1)", data=data, family="gaussian")
+fit_c = pf.feglm("Y ~ C(f1)", data=data, family="gaussian")
 ```
 
 But overall, `i()` is more powerful than `C()`. Most importantly, you can easily set the reference
@@ -155,21 +174,21 @@ level of the categorical variable:
 
 ```{python}
 # set 1 as reference level
-fit_i1 = pf.feols("Y ~ i(f1, ref = 1)", data=data)
+fit_i1 = pf.feglm("Y ~ i(f1, ref = 1)", data=data, family="gaussian")
 ```
 
 You can also easily interact variables:
 
 ```{python}
 # set 1 as reference level
-fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
+fit_i2 = pf.feglm("Y ~ i(f1, f2)", data=data, family="gaussian")
 ```
 
 and set reference levels for both via the `ref` and `ref2` levels.
 
 ```{python}
 # set 1 as reference level
-fit_i3 = pf.feols("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data)
+fit_i3 = pf.feglm("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data, family="gaussian")
 ```
 
 This is in particular useful for difference-in-differences models.
@@ -177,16 +196,19 @@ This is in particular useful for difference-in-differences models.
 Last, you can bin levels of a variable via the `bin` argument. This groups multiple levels into a single category.
 
 ```{python}
-fit_bin = pf.feols(
+fit_bin = pf.feglm(
     "Y ~ i(f1, bin={'low': list(range(0, 10)), 'mid': list(range(10, 20)), 'high': list(range(20, 30))}, ref='low')",
-    data=data,
+    data=data, family="gaussian",
 )
 fit_bin.summary()
 ```
 
 ## Multiple Estimation Syntax
 
-Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
+`PyFixest` provides syntax to fit multiple estimations in one call. Models on
+the same sample with the same fixed effects can share an LSMR preconditioner.
+The native OLS/IV integration currently keeps demeaned columns separate across
+distinct specifications; Formulaic estimators can also share those columns.
 
 For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 
@@ -258,6 +280,11 @@ pf.etable(fit_combo)
 ```
 
 ### Multiple Estimation, caching and performance
+
+The column-sharing calculation below describes the existing Formulaic path
+and the potential benefit of adding fitted term metadata upstream in `formula`.
+Native OLS/IV currently share preconditioners only, so the executable benchmark
+below does not realize the described column-sharing savings.
 
 The speedup from multiple-estimation syntax is most visible when models have the
 same fixed effects and overlapping covariates. Below, we therefore benchmark
@@ -411,22 +438,15 @@ fit_fsplit = pf.feols("Y ~ X1 + X2 | f1", data=data, fsplit="f2")
 pf.etable(fit_fsplit)
 ```
 
-## Deprecated spellings
+## Spelling differences between engines
 
-We are deprecating multiple `fixest`-style syntax features with `PyFixest` 0.70.0. Our stated goal is to
-"mimic fixest syntax as much as Python allows". Most of the changes below stem from the fact that our
-model matrix engine `formulaic` supports the novel syntax better / easier, which leads to cleaner and
-less buggy code.
+Use `:` for interacted fixed effects and `sw(Y, Y2)` for several responses.
+The native engine also accepts `Y + Y2` and either bracketed or pipe IV
+notation. The IV equation must be the final pipe part. The old `^` spelling
+for interacted fixed effects is unavailable on the native path.
 
-| Deprecated | Use instead |
-|---|---|
-| `Y ~ X1 | f1^f2` | `Y ~ X1 | f1:f2` |
-| `Y ~ X1 | f1 | X2 ~ Z1` | `Y ~ X1 + [X2 ~ Z1] | f1` |
-| `Y + Y2 ~ X1` | `sw(Y, Y2) ~ X1` |
-
-The instrument block moves onto the right-hand side, so an IV model without
-fixed effects reads `Y ~ X1 + [X2 ~ Z1]`. The `|` separator is now reserved
-for fixed effects.
+Formulaic estimators retain their existing deprecation warnings for legacy
+spellings during this staged migration.
 
 ## Where to Go Next
 

@@ -1151,11 +1151,11 @@ class TestEdgeCases:
         assert result[0].second_stage == formulaic.Formula(expected_second_stage)
 
     def test_transformed_dependent_matches_precomputed_column(self, test_data):
-        """`I(Y + Y2)` estimates the summed outcome, not two separate models."""
+        """Native add() estimates the summed outcome, not two separate models."""
         data = test_data.dropna().copy()
         data["Y_sum"] = data["Y"] + data["Y2"]
 
-        transformed = pf.feols("I(Y + Y2) ~ X1", data)
+        transformed = pf.feols("add(Y, Y2) ~ X1", data)
         precomputed = pf.feols("Y_sum ~ X1", data)
 
         np.testing.assert_allclose(

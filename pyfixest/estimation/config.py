@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import (
     EstimationMethod,
@@ -47,7 +48,7 @@ class EstimationConfig:
 
     method: EstimationMethod
     data: Any
-    formulas: tuple[Formula, ...]
+    formulas: tuple[Formula | LinearFormula, ...]
     options: EstimationOptions
     vcov: VcovSpec
     split: str | None = None

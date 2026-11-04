@@ -7,6 +7,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.demeaners import MapDemeaner
+from pyfixest.estimation.api.feols import _feols_formulaic as formulaic_feols
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.literals import EstimationMethod
@@ -588,9 +589,9 @@ def test_quantreg_multi_prepares_children_in_lifecycle_hook():
 def test_distinct_structures_with_same_display_survive(weights):
     """#1776: model identity and demean-cache scopes use parsed semantics."""
     data = pf.get_data(N=400, seed=123).dropna()
-    references = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
+    references = ["Y ~ add(X1, X2) | f1", "Y ~ X1 + X2 | f1"]
     multi = pf.feols(
-        "Y ~ sw({X1 + X2}, X1 + X2) | f1",
+        "Y ~ sw(add(X1, X2), X1 + X2) | f1",
         data=data,
         weights=weights,
         fixef_rm="none",
@@ -615,7 +616,7 @@ def test_distinct_structures_with_same_display_survive(weights):
 @pytest.mark.parametrize(
     "first_term, second_term",
     [
-        pytest.param("`X1 ** 2`", "{X1 ** 2}", id="literal_vs_expression"),
+        pytest.param("`mul(X1, X1)`", "mul(X1, X1)", id="literal_vs_expression"),
         pytest.param("i(f3, X2)", "i(f3, np.exp(X2 / 5))", id="transformed_i"),
         pytest.param("i(f3, log(X2 + 10))", "i(f3, log(X2 + 20))", id="shifted_log_i"),
     ],
@@ -633,16 +634,18 @@ def test_demean_cache_distinguishes_colliding_columns(
     """
     data = pf.get_data(N=1000, seed=7).dropna().reset_index(drop=True)
     # The literal column must differ from the calculated square.
-    data["X1 ** 2"] = 3 * np.sin(data.X1)
+    data["mul(X1, X1)"] = 3 * np.sin(data.X1)
     if reverse_order:
         first_term, second_term = second_term, first_term
 
+    estimator = formulaic_feols if first_term.startswith("i(") else pf.feols
+
     # Separate calls cannot reuse each other's demeaned columns.
-    first_alone = pf.feols(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
-    second_alone = pf.feols(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
+    first_alone = estimator(f"Y ~ {first_term} | f1", data=data, fixef_rm="none")
+    second_alone = estimator(f"Y ~ {second_term} | f1", data=data, fixef_rm="none")
 
     # These models share a cache because they use the same fixed effects.
-    stepwise_fits = pf.feols(
+    stepwise_fits = estimator(
         f"Y ~ sw({first_term}, {second_term}) | f1", data=data, fixef_rm="none"
     ).to_list()
 
@@ -710,8 +713,8 @@ def test_quantile_models_support_name_lookup():
 
 def test_expanded_models_have_unambiguous_string_keys():
     data = pf.get_data(N=200, seed=17).dropna()
-    names = ["Y ~ {X1 + X2} | f1", "Y ~ X1 + X2 | f1"]
-    multi = pf.feols("Y ~ sw({X1 + X2}, X1 + X2) | f1", data=data, fixef_rm="none")
+    names = ["Y ~ add(X1, X2) | f1", "Y ~ X1 + X2 | f1"]
+    multi = pf.feols("Y ~ sw(add(X1, X2), X1 + X2) | f1", data=data, fixef_rm="none")
     assert list(multi.all_fitted_models) == names
     for fit, name in zip(multi.to_list(), names, strict=True):
         assert fit.model.model_name == name
@@ -721,14 +724,14 @@ def test_expanded_models_have_unambiguous_string_keys():
 @pytest.mark.parametrize(
     "estimator, fml, preserved",
     [
-        (pf.feols, "Y ~ X1 - 1", "0 + X1"),
+        (pf.feols, "Y ~ X1 - 1", "X1 - 1"),
         (pf.fepois, "Y ~ X1 - 1", "0 + X1"),
         (pf.feglm, "Y ~ X1 - 1", "0 + X1"),
         (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
-        (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
+        (pf.feols, "Y ~ add(X1, X2)", "add(X1, X2)"),
         (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
-        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ 0 + Z1]"),
-        (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
+        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "X1 - 1 + [X2 ~ Z1]"),
+        (pf.feols, "Y ~ add(X1, mul(X1, X1)) | f1 | X2 ~ add(Z1, Z2)", "add(Z1, Z2)"),
     ],
 )
 def test_public_formula_roundtrip_preserves_estimation(estimator, fml, preserved):

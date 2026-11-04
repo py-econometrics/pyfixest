@@ -22,6 +22,7 @@ from tests._feols_test_cases import (
     fixed_effect_interactions_to_legacy,
     glm_fmls,
     iv_fmls,
+    native_linear_formula,
     ols_fmls,
     ssc_formula_vcov_dropna_case_ids,
     ssc_formula_vcov_dropna_cases,
@@ -192,6 +193,11 @@ def test_single_fit_feols(
     k_adj,
     G_adj,
 ):
+    native_fml = native_linear_formula(fml)
+    if native_fml is None:
+        pytest.skip(
+            "i() is outside the native OLS/IV port; see retained Formulaic/R tests."
+        )
     ssc_ = ssc(k_adj=k_adj, G_adj=G_adj)
     data = data_feols_variants[(dropna, f3_type)]
 
@@ -201,7 +207,7 @@ def test_single_fit_feols(
     r_inference = _get_r_inference(inference)
 
     mod = pf.feols(
-        fml=fml,
+        fml=native_fml,
         data=data,
         vcov=inference,
         weights=weights,

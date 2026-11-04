@@ -12,6 +12,7 @@ from rpy2.robjects.packages import importr
 import pyfixest as pf
 from pyfixest.did.estimation import did2s as did2s_pyfixest
 from pyfixest.did.estimation import event_study, lpdid
+from pyfixest.estimation.api.feols import _feols_formulaic
 from pyfixest.utils.check_r_install import check_r_install
 
 # Core Packages
@@ -322,7 +323,9 @@ def test_event_study_crv3_refits_with_feols(data, estimator):
     )
     fit.vcov({"CRV3": "state"})
 
-    expected = pf.feols(fit.model.formula, data=fit._data, vcov={"CRV3": "state"})
+    expected = _feols_formulaic(
+        fit.model.formula, data=fit._data, vcov={"CRV3": "state"}
+    )
 
     np.testing.assert_allclose(
         fit.se().to_numpy(), expected.se().to_numpy(), rtol=1e-12, atol=0

@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 import pandas as pd
 
+from pyfixest.estimation.formula.linear import LinearFormula
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.models._result_accessor_mixin import TidyColumnAccessors
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -43,7 +44,7 @@ class FixestMulti(TidyColumnAccessors):
     """
 
     def __init__(
-        self, *, formula_dict: Mapping[str | None, list[FixestFormula]]
+        self, *, formula_dict: Mapping[str | None, list[FixestFormula | LinearFormula]]
     ) -> None:
         """.
 
@@ -58,7 +59,9 @@ class FixestMulti(TidyColumnAccessors):
         self.all_fitted_models: dict[str, Feols | Fepois | Feiv] = {}
 
     @property
-    def FixestFormulaDict(self) -> Mapping[str | None, list[FixestFormula]]:
+    def FixestFormulaDict(
+        self,
+    ) -> Mapping[str | None, list[FixestFormula | LinearFormula]]:
         """Parsed formula dict keyed by fixed-effects spec (deprecated)."""
         warnings.warn(
             "`FixestFormulaDict` is deprecated and will be removed in a future "

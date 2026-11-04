@@ -422,7 +422,7 @@ def test_categorical_covariate_predict():
 
     df_sub = df.query("x == 1 or x == 2 or x == 3").copy()
 
-    py_fit = pf.feols("y ~ C(x, contr.treatment(base=1))", df)
+    py_fit = pf.feols("y ~ C(x, reference=1)", df)
     py_predict = py_fit.predict(df_sub)
 
     r_predict = np.array(
@@ -507,14 +507,20 @@ def test_context_capture_with_out_of_sample_predict():
     data_train = data.iloc[:1000]
     data_test = data.iloc[1000:]
 
-    explicit_fit = pf.feols("Y ~ X2_0 + X2_0_1 + X2_1 | f1 + f2", data=data_train)
-    context_captured_fit = pf.feols(
-        "Y ~ _lspline(X2,[0,1]) | f1 + f2", data=data_train, context=0
+    explicit_fit = pf.feglm(
+        "Y ~ X2_0 + X2_0_1 + X2_1 | f1 + f2", data=data_train, family="gaussian"
     )
-    context_captured_fit_map = pf.feols(
+    context_captured_fit = pf.feglm(
+        "Y ~ _lspline(X2,[0,1]) | f1 + f2",
+        data=data_train,
+        context=0,
+        family="gaussian",
+    )
+    context_captured_fit_map = pf.feglm(
         "Y ~ _lspline(X2,[0,1]) | f1 + f2",
         data=data_train,
         context={"_lspline": _lspline},
+        family="gaussian",
     )
 
     for context_fit in [context_captured_fit, context_captured_fit_map]:
