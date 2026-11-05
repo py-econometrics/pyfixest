@@ -115,7 +115,7 @@ def _interaction_without_iv(
     *,
     operator: Operator,
     context: Mapping[str, Any],
-) -> Any:
+) -> OrderedSet[Term] | Structured[OrderedSet[Term]]:
     """Reject implicit exogenous interactions with an endogenous IV block."""
     has_iv = any(
         isinstance(terms, Structured) and count_multistage_blocks(terms)
@@ -245,7 +245,7 @@ def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
 def count_multistage_blocks(
     rhs: formulaic.formula.Formula | Structured[OrderedSet[Term]],
 ) -> int:
-    """Count formulaic MULTISTAGE deps on a StructuredFormula RHS."""
+    """Count formulaic MULTISTAGE deps on a parsed RHS or structured term set."""
     # formulaic internal: MULTISTAGE stores the parsed first-stage formulas in
     # `.deps`; formulaic does not currently expose a documented accessor.
     deps = getattr(rhs, "deps", ())
