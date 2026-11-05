@@ -511,6 +511,94 @@ def test_iv_transformed_terms_against_fixest(
     )
 
 
+@pytest.mark.parametrize(
+    "fml, reference_fml",
+    [
+        ("Y ~ X1 + [X2 ~ center(X1) + Z2]", "Y ~ X1 + [X2 ~ Z2]"),
+        # The control has a higher degree than the instrument; with fixed
+        # effects the controls are also rebuilt without the intercept.
+        ("Y ~ X1:Z1 + [X2 ~ I(X1 * Z1) + Z2] | f1", "Y ~ X1:Z1 + [X2 ~ Z2] | f1"),
+    ],
+)
+def test_iv_redundant_instruments_match_omitted_terms(fml, reference_fml):
+    """Redundant instruments add no identifying variation, even under another name."""
+    data = get_data().dropna()
+    fit = feols(fml, data=data)
+    reference = feols(reference_fml, data=data)
+
+    assert list(fit.coef().index) == list(reference.coef().index)
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), rtol=1e-12, err_msg="IV coefficients"
+    )
+    np.testing.assert_allclose(
+        fit.se(), reference.se(), rtol=1e-12, err_msg="IV standard errors"
+    )
+    # fixest 0.14.2 counts the redundant instrument in the first-stage tests'
+    # numerator degrees of freedom; see docs/developer/fixest-compatibility.md.
+    assert fit.first_stage.instruments == ("Z2",)
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        reference.first_stage.diagnostics.f_stat,
+        rtol=1e-12,
+        err_msg="first-stage F statistic",
+    )
+    fit.eff_F()
+    reference.eff_F()
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.eff_f,
+        reference.first_stage.diagnostics.eff_f,
+        rtol=1e-12,
+        err_msg="effective F statistic",
+    )
+
+
+@pytest.mark.parametrize(
+    "fml", ["Y ~ 0 + C(g) + [X1 ~ i(f)]", "Y ~ 0 + C(g) + [X1 ~ C(f)]"]
+)
+def test_first_stage_f_conditions_on_controls(fml):
+    """The first-stage F tests the instruments given every control direction.
+
+    The levels of `g` span the constant, so `f` adds two restrictions in every
+    equivalent first-stage basis: all `f` levels via `i(f)`, or the full-rank
+    `C(f)` encoding.
+    """
+    data = get_data()
+    data["f"] = pd.Categorical(np.take(["a", "b", "c"], data.index % 3))
+    data["g"] = pd.Categorical(np.take(["u", "v"], data.index // 3 % 2))
+    fit = feols(fml, data=data)
+    sample = data.drop(index=list(fit.sample_info.dropped_row_index))
+    # Compute the iid partial F test from independent least-squares fits.
+    controls = np.column_stack([sample["g"] == level for level in ("u", "v")])
+    instruments = np.column_stack([sample["f"] == level for level in ("a", "b", "c")])
+    unrestricted = np.column_stack((controls, instruments)).astype(float)
+    controls = controls.astype(float)
+    response = sample["X1"].to_numpy()
+    residual_restricted = (
+        response - controls @ np.linalg.lstsq(controls, response, rcond=None)[0]
+    )
+    residual_unrestricted = (
+        response - unrestricted @ np.linalg.lstsq(unrestricted, response, rcond=None)[0]
+    )
+    ssr_restricted = residual_restricted @ residual_restricted
+    ssr_unrestricted = residual_unrestricted @ residual_unrestricted
+    rank_restricted = np.linalg.matrix_rank(controls)
+    rank_unrestricted = np.linalg.matrix_rank(unrestricted)
+    restrictions = rank_unrestricted - rank_restricted
+    statistic = ((ssr_restricted - ssr_unrestricted) / restrictions) / (
+        ssr_unrestricted / (len(sample) - rank_unrestricted)
+    )
+
+    assert len(fit.first_stage.instruments) == restrictions == 2
+    # Both sides solve the same well-conditioned least-squares problem; only
+    # accumulation order differs.
+    np.testing.assert_allclose(
+        fit.first_stage.diagnostics.f_stat,
+        statistic,
+        rtol=1e-8,
+        err_msg="first-stage F statistic != NumPy partial F test",
+    )
+
+
 @pytest.mark.parametrize("seed", [293, 912])
 @pytest.mark.parametrize("sd", [0.1, 0.2, 0.3])
 @pytest.mark.parametrize("has_weight", [0.0, 1.0])

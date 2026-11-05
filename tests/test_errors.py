@@ -342,12 +342,6 @@ def test_iv_rejects_implicit_endogenous_interactions(rhs):
         feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-def test_iv_allows_identical_instrument_covariate_terms(term):
-    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
-    assert "X2" in fit.coef().index
-
-
 def test_iv_errors():
     data = get_data()
 

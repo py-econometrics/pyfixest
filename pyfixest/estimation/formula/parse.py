@@ -548,7 +548,9 @@ class Formula:
             # Drop the intercept for fixed effects regressions, except for
             # intercept-only specifications such as `Y ~ 1 | f1`; these can be
             # used to demean dependent variables.
-            exogenous = formulaic.formula.SimpleFormula(exogenous_terms)
+            exogenous = formulaic.formula.SimpleFormula(
+                exogenous_terms, _ordering=exogenous.ordering
+            )
 
         return exogenous
 
@@ -628,7 +630,10 @@ class Formula:
         if self.absorbs_intercept and terms and not any(term == "1" for term in terms):
             terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
         return formulaic.formula.StructuredFormula(
-            lhs=self.dependent, rhs=formulaic.formula.SimpleFormula(terms)
+            lhs=self.dependent,
+            rhs=formulaic.formula.SimpleFormula(
+                terms, _ordering=self.exogenous.ordering
+            ),
         )
 
     def as_first_stage(self) -> Formula:
@@ -640,8 +645,12 @@ class Formula:
             if any(term == "1" for term in self.exogenous)
             else terms_without_intercept(self.instruments)
         )
+        # Controls must survive collinearity selection before excluded instruments.
+        # Preserve this order even when a control is an interaction and a
+        # redundant instrument is a degree-one transform of that interaction.
         rhs = formulaic.formula.SimpleFormula(
-            itertools.chain(instruments, self.exogenous)
+            dict.fromkeys(itertools.chain(self.exogenous, instruments)),
+            _ordering="none",
         )
         return Formula(
             _formula=formulaic.formula.StructuredFormula(
