@@ -213,6 +213,27 @@ def test_unidentified_zero_group_slope_inference_against_fixest(fixed_effects, v
 
 
 @pytest.mark.against_r_core
+def test_within_group_collinear_slopes_match_fixest():
+    """Match fixest's inference when two slopes are collinear in one group."""
+    rng = np.random.default_rng(712)
+    groups = np.repeat(np.arange(8), 30)
+    z1 = rng.normal(size=groups.size)
+    z2 = rng.normal(size=groups.size)
+    z2[groups == 0] = 2 * z1[groups == 0]
+    x = rng.normal(size=groups.size)
+    y = 1 + 1.3 * x + 0.2 * z1 + 0.3 * z2 + rng.normal(size=groups.size)
+    data = pd.DataFrame({"y": y, "x": x, "g": groups, "z1": z1, "z2": z2})
+    fml = "y ~ x | g[z1, z2]"
+
+    fit = pf.feols(fml, data=data, vcov="iid", demeaner=DEMEANER)
+    fit_r = fixest.feols(ro.Formula(fml), data=data, vcov="iid", fixef_tol=R_FIXEF_TOL)
+
+    _assert_matches_fixest(fit, fit_r)
+    # Both packages count the nominal slopes, including the unidentified one.
+    assert fit.variance_covariance.df_k == 25
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "f1"}], ids=str)
 @pytest.mark.parametrize(
     ("fml", "fml_r"),

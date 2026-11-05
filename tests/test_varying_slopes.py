@@ -79,26 +79,6 @@ def test_varying_slopes_reject_categorical_slopes(data, slope):
         pf.feols(f"Y ~ X1 | f1[{slope}]", data=data)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=pytest.fail.Exception,
-    reason="Within-group collinear slopes are not rejected and overcount df_k",
-)
-def test_varying_slopes_reject_within_group_collinearity():
-    """Distinct slopes collinear in one group must not silently miscount df_k."""
-    rng = np.random.default_rng(712)
-    groups = np.repeat(np.arange(8), 30)
-    z1 = rng.normal(size=groups.size)
-    z2 = rng.normal(size=groups.size)
-    z2[groups == 0] = 2 * z1[groups == 0]
-    x = rng.normal(size=groups.size)
-    y = 1 + 1.3 * x + 0.2 * z1 + 0.3 * z2 + rng.normal(size=groups.size)
-    data = pd.DataFrame({"y": y, "x": x, "g": groups, "z1": z1, "z2": z2})
-
-    with pytest.raises(ValueError, match=r"(?i)collinear|rank.deficient"):
-        pf.feols("y ~ x | g[z1, z2]", data=data, vcov="iid")
-
-
 @pytest.mark.parametrize(
     ("vcov", "vcov_kwargs", "error"),
     [
