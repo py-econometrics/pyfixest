@@ -425,18 +425,16 @@ class Formula:
                 "Formula operations removed or transformed the endogenous terms "
                 f"{missing_endogenous}, but their IV specification remains."
             )
-        underdetermined = len(self.endogenous) > len(
-            tuple(terms_without_intercept(self.instruments))
-        )
+        underdetermined = len(self.endogenous) > len(self.instruments)
         if underdetermined:
             raise UnderDeterminedIVError(
                 "The IV system is underdetermined. "
                 "Please provide at least as many instruments as endogenous variables."
             )
         # Redundant instruments are allowed if an excluded instrument remains.
-        excluded_instruments = set(
-            terms_without_intercept(self.instruments)
-        ).difference(terms_without_intercept(self.exogenous))
+        excluded_instruments = set(self.instruments).difference(
+            terms_without_intercept(self.exogenous)
+        )
         if not excluded_instruments:
             raise IVIdentificationError(
                 "The instruments add no explanatory power for the endogenous variable: "
@@ -463,7 +461,7 @@ class Formula:
         )
         result = f"{_render_formula_part(self.dependent)} ~ {exogenous}"
         if self.is_instrumental_variable:
-            result += f" + [{_render_formula_part(self.endogenous)} ~ {_render_formula_part(self.instruments, explicit_no_intercept=True)}]"
+            result += f" + [{_render_formula_part(self.endogenous)} ~ {_render_formula_part(self.instruments)}]"
         if self.is_fixed_effects:
             result += " | " + _render_formula_part(self.fixed_effects)
         return result
@@ -563,12 +561,19 @@ class Formula:
 
     @property
     def instruments(self) -> formulaic.formula.SimpleFormula:
-        """Instruments of an instrumental variable specification."""
+        """Instruments of an instrumental variable specification.
+
+        The main formula sets the intercept of both stages, so this excludes
+        the intercept Formulaic adds to every IV block.
+        """
         if not self.is_instrumental_variable:
             raise AttributeError(
                 "Instruments are available only in instrumental variables specifications."
             )
-        return get_first_multistage_rhs(self._right_hand_side)
+        instruments = get_first_multistage_rhs(self._right_hand_side)
+        return formulaic.formula.SimpleFormula(
+            terms_without_intercept(instruments), _ordering=instruments.ordering
+        )
 
     @property
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
@@ -635,13 +640,8 @@ class Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        instruments = (
-            self.instruments
-            if any(term == "1" for term in self.exogenous)
-            else terms_without_intercept(self.instruments)
-        )
         rhs = formulaic.formula.SimpleFormula(
-            itertools.chain(instruments, self.exogenous)
+            itertools.chain(self.instruments, self.exogenous)
         )
         return Formula(
             _formula=formulaic.formula.StructuredFormula(
