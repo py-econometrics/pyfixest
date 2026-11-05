@@ -148,25 +148,27 @@ class DeprecatedAttributes:
                 ),
             )
 
-    def __getattr__(self, name: str) -> Any:
-        """Explain missing 0.60 private attributes without shadowing live state."""
-        # Python calls __getattr__ after a descriptor raises AttributeError;
-        # re-run our descriptor to preserve its specific migration message.
-        for cls in type(self).__mro__:
-            descriptor = cls.__dict__.get(name)
-            if isinstance(descriptor, _DeprecatedAttributeDescriptor):
-                return descriptor.__get__(self, type(self))
-        if name in REMOVED_PRIVATE_ATTRIBUTES:
+    if not TYPE_CHECKING:
+        # A catch-all __getattr__ would make unknown attributes type-check as Any.
+        def __getattr__(self, name: str) -> Any:
+            """Explain missing 0.60 private attributes without shadowing live state."""
+            # Python calls __getattr__ after a descriptor raises AttributeError;
+            # re-run our descriptor to preserve its specific migration message.
+            for cls in type(self).__mro__:
+                descriptor = cls.__dict__.get(name)
+                if isinstance(descriptor, _DeprecatedAttributeDescriptor):
+                    return descriptor.__get__(self, type(self))
+            if name in REMOVED_PRIVATE_ATTRIBUTES:
+                raise AttributeError(
+                    f"`fit.{name}` was a private attribute in pyfixest 0.60 and "
+                    f"is not supported in {REMOVED_IN}; see the migration guide: "
+                    "https://pyfixest.org/how-to/migrate-fit-attributes.html"
+                )
+            # An unrelated property's internal AttributeError is replaced by this
+            # fallback too; properties should avoid raising AttributeError internally.
             raise AttributeError(
-                f"`fit.{name}` was a private attribute in pyfixest 0.60 and "
-                f"is not supported in {REMOVED_IN}; see the migration guide: "
-                "https://pyfixest.org/how-to/migrate-fit-attributes.html"
+                f"{type(self).__name__!r} object has no attribute {name!r}"
             )
-        # An unrelated property's internal AttributeError is replaced by this
-        # fallback too; properties should avoid raising AttributeError internally.
-        raise AttributeError(
-            f"{type(self).__name__!r} object has no attribute {name!r}"
-        )
 
 
 def _cluster_counts(fit: Feols) -> list[int]:
