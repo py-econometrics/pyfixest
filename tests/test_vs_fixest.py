@@ -1410,6 +1410,10 @@ def test_glm_vs_fixest(N, seed, dropna, fml, demeaner, weights, inference, famil
         ("Y + Y2 ~ sw(X1, X2) | csw(f1, f2)"),
         ("Y + Y2 ~ csw(X1, X2) | sw(f1, f2)"),
         ("Y + Y2 ~ sw0(X1, X2) | csw0(f1, f2)"),
+        # Varying slopes with intercepts; slope-only models are compared with
+        # single fits in tests/test_varying_slopes_vs_fixest.py.
+        ("Y ~ X1 | sw(f1[X2], f1[X2, Z1])"),
+        ("Y ~ X1 | csw0(f2[X2], f1)"),
         # ("Y ~ i(f1,X2) | csw0(f2)"),
         # ("Y ~ i(f1,X2) | sw0(f2)"),
         # ("Y ~ i(f1,X2) | csw(f2, f3)"),
@@ -1886,6 +1890,14 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
 
+    mixed_slope = fml == "Y ~ X1 + X2 | f1[[Z1]] + f2"
+    if mixed_slope:
+        # Mixed effects need tighter solver tolerances for inference comparisons.
+        r_kwargs["fixef_tol"] = 1e-10
+        py_kwargs["demeaner"] = pf.LsmrDemeaner(
+            fixef_atol=1e-12, fixef_btol=1e-12, fixef_maxiter=10_000
+        )
+
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
         py_kwargs["weights"] = weights
@@ -1894,9 +1906,9 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         r_fit = fixest.feols(**r_kwargs)
         py_fit = pf.feols(**py_kwargs)
     else:
-        r_kwargs["glm_tol"] = 1e-10
+        r_kwargs["glm_tol"] = 1e-12 if mixed_slope else 1e-10
         r_kwargs["glm_iter"] = 100
-        py_kwargs["iwls_tol"] = 1e-10
+        py_kwargs["iwls_tol"] = 1e-12 if mixed_slope else 1e-10
         py_kwargs["iwls_maxiter"] = 100
 
         r_fit = fixest.fepois(**r_kwargs)

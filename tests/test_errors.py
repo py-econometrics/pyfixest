@@ -320,10 +320,26 @@ def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
         feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-def test_iv_allows_identical_instrument_covariate_terms(term):
-    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
-    assert "X2" in fit.coef().index
+@pytest.mark.parametrize(
+    "rhs",
+    [
+        "X1 * [X2 ~ Z1]",
+        "[X2 ~ Z1] * X1",
+        "X1 * (X3 + [X2 ~ Z1])",
+        "X1 : [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1]) : X3 + X2",
+        "[X2 ~ Z1] / X1",
+        "X1 %in% [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1])^2",
+        "(X1 + [X2 ~ Z1])**2",
+    ],
+)
+def test_iv_rejects_implicit_endogenous_interactions(rhs):
+    """IV-block algebra must not silently make an endogenous interaction exogenous."""
+    with pytest.raises(
+        FormulaSyntaxError, match="Interactions around an instrumental-variable block"
+    ):
+        feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
 def test_iv_errors():
@@ -707,7 +723,8 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -719,7 +736,7 @@ def test_errors_etable():
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
