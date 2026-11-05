@@ -72,6 +72,7 @@ def test_multistage_iv_parse_structure(data: pd.DataFrame) -> None:
     assert "Z1" in {str(v) for v in rhs.deps[0].rhs.required_variables}
 
     matrix = fit.model_matrix
+    assert matrix.effects is None
     for role in ("dependent", "independent", "endogenous", "instruments"):
         keys = matrix.column_keys(role)
         assert tuple(name for _, name in keys) == tuple(getattr(matrix, role).columns)
@@ -460,14 +461,13 @@ def test_fe_rejects_object_dtype(data, term, prediction, kind):
         "C(f1)",
         "Q('f1')",
         "f1:relabel(f2)",
-        "f1[X1]",
-        "f1[[X1]]",
-        "f1:f2[X1, X2]",
         "f1:2",
+        "C(f1)[X1]",
+        "f1:C(f2)[[X1]]",
     ],
 )
 def test_fe_rejects_non_lookup_terms(data, expression):
-    """Estimation rejects transforms and varying slopes before materialization."""
+    """Estimation rejects fixed-effect transforms, including slope levels."""
     with pytest.raises(
         FormulaSyntaxError,
         match=r"Unsupported fixed-effect term.*existing data column.*specified with `:`",

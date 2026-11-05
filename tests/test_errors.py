@@ -94,7 +94,7 @@ def test_cluster_na():
             "Y ~ X1",
             {},
             {"store_data": False},
-            lambda fit, data: fit.vcov("iid", data=data),
+            lambda fit, data: fit.vcov({"CRV1": "f1"}),
             "vcov",
         ),
         (
@@ -213,6 +213,14 @@ def test_missing_unrelated_to_retention_remains_attribute_error():
         fit.vcov("iid")
 
 
+def test_vcov_rejects_data():
+    """`vcov(data=...)` raises instead of pairing rows by position (#1825)."""
+    data = get_data().dropna()
+    fit = feols("Y ~ X1 + X2", data=data)
+    with pytest.raises(ValueError, match=r"`data` argument of `vcov\(\)`"):
+        fit.vcov({"CRV1": "f1"}, data=data)
+
+
 def test_error_hc23_fe():
     """
     Test if HC2 & HC3 inference with fixed effects regressions raises an error.
@@ -310,6 +318,28 @@ def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
     """Missing formula columns must not mask the instrument specification error."""
     with pytest.raises(IVIdentificationError, match="all instrument terms"):
         feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
+
+
+@pytest.mark.parametrize(
+    "rhs",
+    [
+        "X1 * [X2 ~ Z1]",
+        "[X2 ~ Z1] * X1",
+        "X1 * (X3 + [X2 ~ Z1])",
+        "X1 : [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1]) : X3 + X2",
+        "[X2 ~ Z1] / X1",
+        "X1 %in% [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1])^2",
+        "(X1 + [X2 ~ Z1])**2",
+    ],
+)
+def test_iv_rejects_implicit_endogenous_interactions(rhs):
+    """IV-block algebra must not silently make an endogenous interaction exogenous."""
+    with pytest.raises(
+        FormulaSyntaxError, match="Interactions around an instrumental-variable block"
+    ):
+        feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
 def test_iv_errors():
@@ -693,7 +723,8 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -705,7 +736,7 @@ def test_errors_etable():
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pyhdfe
 import pytest
-from within import PreconditionerConfig, Solver
+from within import Effect, PreconditionerConfig, Solver
 from within.config import Staleness
 
 import pyfixest as pf
@@ -303,6 +303,27 @@ def test_demean_within_preconditioner_pickle_roundtrip(demean_data):
     )
     assert success_reused
     np.testing.assert_allclose(result_reused, result, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "demeaner,backend",
+    [(MapDemeaner(), "MAP"), (LsmrDemeaner(backend="torch"), "torch LSMR")],
+)
+def test_demeaner_rejects_explicit_effects(demean_data, demeaner, backend):
+    x, flist, weights = demean_data
+    effects = [
+        Effect(
+            levels=np.ascontiguousarray(flist[:, column], dtype=np.uint32),
+            intercept=True,
+            slopes=[np.ascontiguousarray(x[:, 0])] if column == 0 else [],
+        )
+        for column in range(flist.shape[1])
+    ]
+
+    with pytest.raises(
+        TypeError, match=rf"not supported by the {backend}.*LsmrDemeaner"
+    ):
+        demeaner.demean(x=x, flist=effects, weights=weights)
 
 
 def test_demean_within_rejects_invalid_preconditioner():
@@ -1018,7 +1039,7 @@ def test_demean_model_caching(benchmark, demeaner):
     [
         pytest.param(MapDemeaner(backend="numba", fixef_maxiter=1), id="numba"),
         pytest.param(MapDemeaner(backend="rust", fixef_maxiter=1), id="rust"),
-        pytest.param(
+        torch_param(
             LsmrDemeaner(backend="torch", device="cpu", fixef_maxiter=1),
             id="lsmr_torch_cpu",
         ),

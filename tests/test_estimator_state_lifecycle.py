@@ -451,7 +451,6 @@ def test_undefined_fit_statistics_are_nan(
 ) -> None:
     fit = estimator(formula, lifecycle_data, **kwargs)
     assert all(np.isnan(value) for value in astuple(fit.fitstat))
-    assert not hasattr(fit, "get_performance")
 
 
 @pytest.mark.parametrize("copy_data", [False, True])
@@ -529,7 +528,8 @@ def test_published_components_preserve_inputs(
         "_w_final",
         "_y_final",
     )
-    assert not any(hasattr(fit, name) for name in removed)
+    # Compatibility accessors do not duplicate the retained instance state.
+    assert not set(removed) & set(vars(fit))
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")
