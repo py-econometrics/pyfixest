@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from pyfixest.errors import PyfixestDeprecationWarning
+from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 
 if TYPE_CHECKING:
     from pyfixest.estimation.models.feols_ import Feols
@@ -156,12 +157,12 @@ def _cluster_counts(fit: Feols) -> list[int]:
     return counts
 
 
-def _sample_split_value(fit: Feols) -> str | int | float | None:
+def _sample_split_value(fit: Feols) -> str | int | float | _AllSampleSentinel:
     """Rebuild the 0.60 sample-split value."""
     split = fit.model.sample_split
-    if split is None:
-        return None
-    return "all" if split.value is None else split.value
+    if split is None or split.value is None:
+        return _ALL_SAMPLE
+    return split.value
 
 
 def _attribute_spec(name: str, *, silent: bool = False, **classes: Alias | Removed):
