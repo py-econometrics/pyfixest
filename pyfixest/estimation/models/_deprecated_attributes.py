@@ -156,15 +156,15 @@ def _cluster_counts(fit: Feols) -> list[int]:
     return counts
 
 
-def _sample_split_value(fit: Feols) -> str | int | float:
-    """0.60 `_sample_split_value`; unsplit and full-sample fits held a sentinel."""
+def _sample_split_value(fit: Feols) -> str | int | float | None:
+    """Rebuild the 0.60 sample-split value."""
     split = fit.model.sample_split
     if split is None:
-        raise AttributeError("this fit is not estimated on one value of a split")
+        return None
     return "all" if split.value is None else split.value
 
 
-def _row(name: str, *, silent: bool = False, **classes: Alias | Removed):
+def _attribute_spec(name: str, *, silent: bool = False, **classes: Alias | Removed):
     return DeprecatedAttributeSpec(name=name, classes=classes, silent=silent)
 
 
@@ -173,37 +173,37 @@ def _alias(replacement: str, read: Callable[[Any], Any]) -> Alias:
 
 
 DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
-    _row(
+    _attribute_spec(
         "_fml",
         silent=True,
         Feols=_alias("fit.model.formula", lambda fit: fit.model.formula),
     ),
-    _row(
+    _attribute_spec(
         "_method",
         silent=True,
         Feols=_alias("fit.model.method", lambda fit: fit.model.method),
     ),
-    _row(
+    _attribute_spec(
         "_fixef",
         silent=True,
         Feols=_alias("fit.model.fixef", lambda fit: fit.model.fixef or None),
     ),
-    _row(
+    _attribute_spec(
         "_has_fixef",
         silent=True,
         Feols=_alias("fit.model.has_fixef", lambda fit: fit.model.has_fixef),
     ),
-    _row(
+    _attribute_spec(
         "_depvar",
         silent=True,
         Feols=_alias("fit.model.depvar", lambda fit: fit.model.depvar),
     ),
-    _row(
+    _attribute_spec(
         "_sample_split_value",
         silent=True,
         Feols=_alias("fit.model.sample_split.value", _sample_split_value),
     ),
-    _row(
+    _attribute_spec(
         "_sample_split_var",
         silent=True,
         Feols=_alias(
@@ -213,19 +213,19 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             ),
         ),
     ),
-    _row(
+    _attribute_spec(
         "_N",
         silent=True,
         Feols=_alias("fit.sample_info.n_obs", lambda fit: fit.sample_info.n_obs),
     ),
-    _row(
+    _attribute_spec(
         "_vcov",
         silent=True,
         Feols=_alias(
             "fit.variance_covariance.vcov", lambda fit: fit.variance_covariance.vcov
         ),
     ),
-    _row(
+    _attribute_spec(
         "_vcov_type",
         silent=True,
         Feols=_alias(
@@ -233,7 +233,7 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             lambda fit: fit.variance_covariance.spec.vcov_type,
         ),
     ),
-    _row(
+    _attribute_spec(
         "_clustervar",
         silent=True,
         Feols=_alias(
@@ -241,49 +241,54 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             lambda fit: list(fit.variance_covariance.spec.clustervar) or None,
         ),
     ),
-    _row(
+    _attribute_spec(
         "_G",
         silent=True,
         Feols=_alias("fit.variance_covariance.G", _cluster_counts),
     ),
-    _row(
+    _attribute_spec(
         "_pvalue",
         silent=True,
         Feols=_alias("fit.coeftable.pvalue", lambda fit: fit.coeftable.pvalue),
     ),
-    _row(
+    _attribute_spec(
         "_rmse",
         silent=True,
         Feols=_alias("fit.fitstat.rmse", lambda fit: fit.fitstat.rmse),
     ),
-    _row(
+    _attribute_spec(
         "_r2", silent=True, Feols=_alias("fit.fitstat.r2", lambda fit: fit.fitstat.r2)
     ),
-    _row(
+    _attribute_spec(
         "_r2_within",
         silent=True,
         Feols=_alias("fit.fitstat.r2_within", lambda fit: fit.fitstat.r2_within),
     ),
-    _row(
+    _attribute_spec(
         "_adj_r2",
         silent=True,
         Feols=_alias("fit.fitstat.adj_r2", lambda fit: fit.fitstat.adj_r2),
     ),
-    _row(
+    _attribute_spec(
+        "_r2_adj",
+        silent=True,
+        Feols=_alias("fit.fitstat.adj_r2", lambda fit: fit.fitstat.adj_r2),
+    ),
+    _attribute_spec(
         "_adj_r2_within",
         silent=True,
         Feols=_alias(
             "fit.fitstat.adj_r2_within", lambda fit: fit.fitstat.adj_r2_within
         ),
     ),
-    _row(
+    _attribute_spec(
         "deviance",
         silent=True,
         # 0.60 left the deviance `None` for linear and quantile fits.
         Feols=_alias("fit.fitstat.deviance", lambda fit: None),
         Feglm=_alias("fit.fitstat.deviance", lambda fit: fit.fitstat.deviance),
     ),
-    _row(
+    _attribute_spec(
         "_f_stat_1st_stage",
         silent=True,
         Feiv=_alias(
