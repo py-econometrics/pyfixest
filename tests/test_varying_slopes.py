@@ -114,7 +114,7 @@ def test_varying_slopes_column_type_invariance(data, level_type, slope_type):
     variant_data = baseline_data.assign(
         f1={
             "float": levels.astype(float),
-            "str": levels.astype(str),
+            "str": levels.astype("string"),
             "categorical": pd.Categorical(levels),
         }[level_type],
         s=slopes.astype(slope_type),
