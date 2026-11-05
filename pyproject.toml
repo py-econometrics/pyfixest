@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
@@ -56,7 +57,8 @@ torch = [
     "torch>=2.0",
 ]
 plots = [
-    "lets-plot>=4.0.0",
+    # lets-plot publishes neither cp315 wheels nor an sdist.
+    "lets-plot>=4.0.0; python_version < '3.15'",
 ]
 benchmarks = [
     "linearmodels",
@@ -188,7 +190,7 @@ platforms = [
 ]
 
 [tool.pixi.dependencies]
-python = ">=3.11,<3.15"
+python = ">=3.11,<3.16"
 rust = "*"
 pip = "*"
 pixi-pycharm = "*"
@@ -241,6 +243,9 @@ python = "~=3.13.0"
 
 [tool.pixi.feature.py314.dependencies]
 python = "~=3.14.0"
+
+[tool.pixi.feature.py315.dependencies]
+python = "~=3.15.0"
 
 # -- torch feature ----------------------------------------------------------------------
 
@@ -353,6 +358,8 @@ py311 = ["py311", "torch"]
 py312 = ["py312", "torch", "ty"]
 py313 = ["py313", "torch"]
 py314 = ["py314", "torch"]
+# conda-forge has no pytorch build for Python 3.15 yet.
+py315 = ["py315"]
 py311-r = { features = ["py311", "torch", "r"], solve-group = "py311" }
 py312-r = { features = ["py312", "torch", "r"], solve-group = "py312" }
 docs = { features = ["docs", "py312", "r"], solve-group = "py312" }
