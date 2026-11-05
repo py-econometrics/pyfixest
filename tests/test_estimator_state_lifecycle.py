@@ -529,7 +529,8 @@ def test_published_components_preserve_inputs(
         "_w_final",
         "_y_final",
     )
-    assert not any(hasattr(fit, name) for name in removed)
+    # Compatibility accessors do not duplicate retained instance state.
+    assert not set(removed) & set(vars(fit))
     if estimator is pf.quantreg:
         # Quantile inference follows R quantreg and never reads a sandwich.
         assert not hasattr(fit, "sandwich")

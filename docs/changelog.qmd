@@ -50,6 +50,8 @@ with per-call formatting through `docx_style`.
 
 ### Fitted Model State
 
+Fitted-model metadata used by released table integrations remains readable through legacy aliases. This restores table rows such as observations, R², and fixed effects; new code should use the typed fitted-model components.
+
 Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
 
 ### `within` LSMR Backend via `within-py`
