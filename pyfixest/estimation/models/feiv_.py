@@ -561,11 +561,27 @@ class Feiv(Feols):
         else:
             vcv = model.variance_covariance.vcov
 
+        # Montiel Olea and Pflueger (2013) partial out all included exogenous
+        # regressors before forming Q_zz, in addition to absorbing the FE.
+        design = model.within_data.design
+        instruments = design[:, instrument_positions]
+        exogenous_positions = [
+            i for i in range(design.shape[1]) if i not in instrument_positions
+        ]
+        weights = model.observation_weights.values
+        if exogenous_positions:
+            exogenous = design[:, exogenous_positions]
+            weights_sqrt = 1.0 if weights is None else np.sqrt(weights)[:, None]
+            projection = np.linalg.lstsq(
+                exogenous * weights_sqrt, instruments * weights_sqrt, rcond=None
+            )[0]
+            instruments = instruments - exogenous @ projection
+
         eff_f = effective_f_statistic(
             pi_hat=model._beta_hat[instrument_positions],
-            instruments_within=model.within_data.design[:, instrument_positions],
+            instruments_within=instruments,
             instrument_vcov=vcv[np.ix_(instrument_positions, instrument_positions)],
-            weights=model.observation_weights.values,
+            weights=weights,
         )
         self.first_stage = replace(
             published, diagnostics=replace(published.diagnostics, eff_f=eff_f)
@@ -627,7 +643,8 @@ def effective_f_statistic(
 ) -> float:
     """Compute the effective F statistic of Olea and Pflueger (2013).
 
-    With the excluded instruments Z on within scale, the first-stage
+    With the excluded instruments Z on within scale and partialled out of
+    the included exogenous regressors, the first-stage
     coefficients pi on those instruments, and their covariance Sigma,
 
         F_eff = pi' Q_zz pi / trace(Sigma Q_zz),   Q_zz = Z' W Z.
@@ -640,7 +657,8 @@ def effective_f_statistic(
     pi_hat : NDArray[np.float64]
         First-stage coefficients on the excluded instruments, shape (p_iv,).
     instruments_within : NDArray[np.float64]
-        Within-scale excluded instruments, shape (n_rows, p_iv).
+        Excluded instruments residualized on fixed effects and included
+        exogenous regressors, shape (n_rows, p_iv).
     instrument_vcov : NDArray[np.float64]
         Heteroskedasticity-robust covariance of `pi_hat`, shape (p_iv, p_iv).
     weights : NDArray[np.float64] or None
