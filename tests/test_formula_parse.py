@@ -1162,6 +1162,10 @@ class TestEdgeCases:
             parsed.as_first_stage().second_stage
             == reference.as_first_stage().second_stage
         )
+        # Formulaic keeps repeated terms, such as the intercept of the controls
+        # and the instruments, unless the first stage removes them.
+        first_stage_terms = list(parsed.as_first_stage().exogenous)
+        assert len(first_stage_terms) == len(set(first_stage_terms))
         assert parsed.instruments == reference.instruments
         assert parsed.render() == reference.render()
 
