@@ -308,6 +308,14 @@ def test_binning_with_continuous(df_test):
             "Y ~ i(f_str, g, ref='apple', ref2='X')",
         ),
         ("Y ~ i(f_str, i.g, ref2='X')", "Y ~ i(f_str, g, ref2='X')"),
+        # C() marks a numeric second variable as a factor (#1770)
+        ("Y ~ i(f_str, i.f_int)", "Y ~ i(f_str, C(f_int))"),
+        ("Y ~ i(f_str, i.f_int, ref2=10)", "Y ~ i(f_str, C(f_int), ref2=10)"),
+        ("Y ~ i(f_str, i.f_float)", "Y ~ i(f_str, C(f_float))"),
+        (
+            "Y ~ i(f_str, i.f_int, bin2=list(low=c(1, 2)), ref2='low')",
+            "Y ~ i(f_str, C(f_int), bin2={'low': [1, 2]}, ref2='low')",
+        ),
         # Without an intercept, every cell is kept (#1767)
         ("Y ~ X1 + i(f_str, i.g) - 1", "Y ~ X1 + i(f_str, g) - 1"),
         ("Y ~ 0 + X1 + i(f_str, i.g)", "Y ~ 0 + X1 + i(f_str, g)"),
@@ -333,6 +341,7 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
         ("Y ~ i(f_str, i.g):X1 | fe1", "Y ~ i(f_str, g):X1 | fe1"),
         ("Y ~ i(f_str, i.g, ref='apple') | fe1", "Y ~ i(f_str, g, ref='apple') | fe1"),
         ("Y ~ i(f_str, i.g, ref2='X') | fe1", "Y ~ i(f_str, g, ref2='X') | fe1"),
+        ("Y ~ i(f_str, i.f_int) | fe1", "Y ~ i(f_str, C(f_int)) | fe1"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X') | fe1",
             "Y ~ i(f_str, g, ref='apple', ref2='X') | fe1",
