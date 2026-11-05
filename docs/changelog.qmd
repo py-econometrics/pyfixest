@@ -17,6 +17,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+PyFixest now supports Python 3.15. On Python 3.15, the `plots` extra does not
+install `lets-plot`, which has no compatible release yet, so plots use the
+matplotlib backend.
+
 Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
 
 `fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR
@@ -354,6 +358,8 @@ Behaviour that changed as a result:
   operator itself is unaffected; only the import path changed.
 
 ### Deprecations and Removals
+
+Python 3.10 is no longer supported. PyFixest now requires Python 3.11 or newer.
 
 Formula syntax:
 

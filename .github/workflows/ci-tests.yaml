@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [py310, py314]
+        environment: [py311, py315]
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
@@ -40,7 +40,7 @@ jobs:
           PYTEST_ADDOPTS: ${{ runner.os == 'macOS' && '-k "not mps"' || '' }}
 
       - name: Upload coverage to Codecov (partial)
-        if: matrix.environment == 'py314' && matrix.os == 'ubuntu-latest'
+        if: matrix.environment == 'py311' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
