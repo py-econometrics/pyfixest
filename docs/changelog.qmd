@@ -353,6 +353,8 @@ Behaviour that changed as a result:
 
 ### Deprecations and Removals
 
+Python 3.10 is no longer supported. PyFixest now requires Python 3.11 or newer.
+
 Formula syntax:
 
 - Using `^` for a fixed-effect interaction (`Y ~ X1 | f1^f2`) is deprecated in
