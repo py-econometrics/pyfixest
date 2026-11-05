@@ -1,12 +1,7 @@
-"""Compatibility aliases and removals for fitted-model attributes.
-
-Add entries to `DEPRECATED_ATTRIBUTES`; model descriptors, migration docs, and
-tests use the same registry.
-"""
+"""Compatibility for documented fitted-model attributes from pyfixest 0.60."""
 
 from __future__ import annotations
 
-import dataclasses
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -16,13 +11,9 @@ from pyfixest.errors import PyfixestDeprecationWarning
 from pyfixest.estimation.api.utils import _ALL_SAMPLE, _AllSampleSentinel
 
 if TYPE_CHECKING:
-    from pyfixest.did.saturated_twfe import EventStudyDesign
-    from pyfixest.estimation.internals.model_state import CollinearityCheck
     from pyfixest.estimation.models.feiv_ import Feiv
     from pyfixest.estimation.models.feols_ import Feols
-    from pyfixest.estimation.models.fepois_ import Fepois
 
-# The release that moved the attributes into typed state.
 REMOVED_IN = "0.70.0"
 
 
@@ -157,6 +148,26 @@ class DeprecatedAttributes:
                 ),
             )
 
+    def __getattr__(self, name: str) -> Any:
+        """Explain missing 0.60 private attributes without shadowing live state."""
+        # Python calls __getattr__ after a descriptor raises AttributeError;
+        # re-run our descriptor to preserve its specific migration message.
+        for cls in type(self).__mro__:
+            descriptor = cls.__dict__.get(name)
+            if isinstance(descriptor, _DeprecatedAttributeDescriptor):
+                return descriptor.__get__(self, type(self))
+        if name in REMOVED_PRIVATE_ATTRIBUTES:
+            raise AttributeError(
+                f"`fit.{name}` was a private attribute in pyfixest 0.60 and "
+                f"is not supported in {REMOVED_IN}; see the migration guide: "
+                "https://pyfixest.org/how-to/migrate-fit-attributes.html"
+            )
+        # An unrelated property's internal AttributeError is replaced by this
+        # fallback too; properties should avoid raising AttributeError internally.
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
+
 
 def _cluster_counts(fit: Feols) -> list[int]:
     """0.60 `_G`: the `G_df="min"` rule padded the minimum to three entries."""
@@ -174,66 +185,12 @@ def _sample_split_value(fit: Feols) -> str | int | float | _AllSampleSentinel:
     return split.value
 
 
-def _na_index(fit: Feols) -> frozenset[int]:
-    """Rebuild the 0.60 index of rows dropped before separation.
-
-    The current index also includes rows dropped for separation. If separation
-    occurred, the earlier set cannot be recovered from the retained state.
-    """
-    if fit.sample_info.dropped_by_stage.separation:
-        raise AttributeError(
-            "the row positions before separation are no longer retained; "
-            "fit.sample_info.dropped_row_index includes all filtering stages"
-        )
-    return fit.sample_info.dropped_row_index
-
-
-def _poisson_n_fe(fit: Fepois) -> int:
-    """Rebuild the 0.60 Poisson fixed-effect count.
-
-    After separation, 0.60 counted only fixed effects with multiple remaining
-    levels. The current count includes every fixed effect, even with one level.
-    """
-    counts = fit.fixef_counts
-    if fit.sample_info.dropped_by_stage.separation:
-        return sum(n > 1 for n in counts.n_levels_by_fe)
-    return counts.n_fixef
-
-
 def _eff_f(fit: Feiv) -> float:
     """0.60 `_eff_F`, set only once `IV_Diag()` or `eff_F()` ran."""
     eff_f = fit.first_stage.diagnostics.eff_f
     if eff_f is None:
         raise AttributeError("run `IV_Diag()` or `eff_F()` first")
     return eff_f
-
-
-def _event_study_design(fit: Feols) -> EventStudyDesign:
-    """Return the design of a saturated event study; other fits carry none."""
-    try:
-        # Saturated event studies attach this state dynamically.
-        return getattr(fit, "event_study_design")  # noqa: B009
-    except AttributeError:
-        raise AttributeError(
-            "only `event_study(estimator='saturated')` fits record their design"
-        ) from None
-
-
-def _collin_index(collinearity: CollinearityCheck) -> list[bool]:
-    """Rebuild the 0.60 mask, which was empty when no column was dropped.
-
-    The current mask includes one entry per column even when all are retained.
-    """
-    return list(collinearity.mask) if collinearity.any_dropped else []
-
-
-def _poisson_null_measure(fit: Fepois, null_measure: float) -> float | None:
-    """Return the selected null measure, or the 0.60 default for weighted fits.
-
-    Both `_loglik_null` and `_pseudo_r2` use this rule; their callers select
-    the corresponding value from `fit.fitstat`.
-    """
-    return None if fit.options.has_weights else null_measure
 
 
 def _attribute_spec(name: str, *, silent: bool = False, **classes: Alias | Removed):
@@ -248,19 +205,146 @@ def _removed(replacement: str, reason: str) -> Removed:
     return Removed(replacement=replacement, reason=reason)
 
 
-# Keep rows grouped by the typed state that replaces them.
+REMOVED_PRIVATE_ATTRIBUTES = frozenset(
+    {
+        "_N_rows",
+        "_P",
+        "_X",
+        "_X_hat",
+        "_X_untransformed",
+        "_Xbeta",
+        "_Xd",
+        "_Y",
+        "_Y_hat_link",
+        "_Y_hat_response",
+        "_Y_untransformed",
+        "_Yd",
+        "_Z",
+        "_Zd",
+        "_accelerate",
+        "_alpha",
+        "_att",
+        "_bread",
+        "_chol",
+        "_cluster_df",
+        "_coefnames_z",
+        "_collin_index",
+        "_collin_index_z",
+        "_collin_tol",
+        "_collin_vars",
+        "_collin_vars_z",
+        "_conf_int",
+        "_context",
+        "_convergence",
+        "_copy_data",
+        "_demeaner",
+        "_df_k",
+        "_df_t",
+        "_dfd",
+        "_dfn",
+        "_drop_intercept",
+        "_drop_singletons",
+        "_endogvar",
+        "_endogvard",
+        "_f_statistic",
+        "_fe",
+        "_fixef_dict",
+        "_fixef_maxiter",
+        "_fixef_tol",
+        "_gname",
+        "_has_converged",
+        "_has_weights",
+        "_hessian",
+        "_icovars",
+        "_idname",
+        "_irls_weights",
+        "_is_clustered",
+        "_is_iv",
+        "_is_sorted",
+        "_it",
+        "_iv_loc",
+        "_k_fe",
+        "_lag",
+        "_lean",
+        "_loglik",
+        "_loglik_null",
+        "_lookup_demeaned_data",
+        "_model_name",
+        "_model_spec",
+        "_n_fe",
+        "_na_index",
+        "_non_exo_instruments",
+        "_offset",
+        "_offset_df",
+        "_offset_name",
+        "_p_iv",
+        "_p_value",
+        "_p_value_1st_stage",
+        "_panel_id",
+        "_pearson_chi2",
+        "_pi_hat",
+        "_preconditioner",
+        "_pseudo_r2",
+        "_quantile",
+        "_quantile_maxiter",
+        "_quantile_tol",
+        "_res_cohort_eventtime_dict",
+        "_ritest_pvalue",
+        "_ritest_sample_stat",
+        "_ritest_statistics",
+        "_s_final",
+        "_scores",
+        "_scores_response",
+        "_scores_working",
+        "_se",
+        "_seed",
+        "_solver",
+        "_ssc",
+        "_ssc_dict",
+        "_store_data",
+        "_sumFE",
+        "_support_crv3_inference",
+        "_support_decomposition",
+        "_support_hac_inference",
+        "_support_iid_inference",
+        "_supports_cluster_causal_variance",
+        "_supports_wildboottest",
+        "_tXZ",
+        "_tZX",
+        "_tZXinv",
+        "_tZZinv",
+        "_tZy",
+        "_time_id",
+        "_tname",
+        "_tstat",
+        "_u_hat",
+        "_u_hat_response",
+        "_u_hat_working",
+        "_use_mundlak",
+        "_v_hat",
+        "_vcov_type_detail",
+        "_w_final",
+        "_wald_statistic",
+        "_weights",
+        "_weights_df",
+        "_weights_name",
+        "_weights_type",
+        "_x_final",
+        "_y_final",
+        "_y_hat_null",
+        "_yname",
+        "_z_final",
+    }
+)
+
+
 DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
-    # fit.model
     _attribute_spec(
         "FixestFormula",
         Feols=_removed(
             "fit.model.parsed_formula",
             "the parsed formula interface changed, including its stages and fixed effects",
         ),
-    ),
-    _attribute_spec(
-        "_model_spec",
-        Feols=_alias("fit.model.model_spec", lambda fit: fit.model.model_spec),
     ),
     _attribute_spec(
         "_fml",
@@ -273,13 +357,6 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         Feols=_alias("fit.model.method", lambda fit: fit.model.method),
     ),
     _attribute_spec(
-        "_is_iv", Feols=_alias("fit.model.is_iv", lambda fit: fit.model.is_iv)
-    ),
-    _attribute_spec(
-        "_model_name",
-        Feols=_alias("fit.model.model_name", lambda fit: fit.model.model_name),
-    ),
-    _attribute_spec(
         "_fixef",
         silent=True,
         Feols=_alias("fit.model.fixef", lambda fit: fit.model.fixef or None),
@@ -288,13 +365,6 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         "_has_fixef",
         silent=True,
         Feols=_alias("fit.model.has_fixef", lambda fit: fit.model.has_fixef),
-    ),
-    _attribute_spec(
-        "_icovars",
-        Feols=_alias(
-            "fit.model.interacted_covariates",
-            lambda fit: list(fit.model.interacted_covariates) or None,
-        ),
     ),
     _attribute_spec(
         "_depvar",
@@ -310,70 +380,11 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         "_sample_split_var",
         silent=True,
         Feols=_alias(
-            "fit.model.sample_split",
+            "fit.model.sample_split.var",
             lambda fit: (
                 None if fit.model.sample_split is None else fit.model.sample_split.var
             ),
         ),
-    ),
-    # fit.options
-    *(
-        _attribute_spec(
-            f"_{name}",
-            Feols=_alias(
-                f"fit.options.{name}",
-                lambda fit, name=name: getattr(fit.options, name),
-            ),
-        )
-        for name in (
-            "drop_singletons",
-            "drop_intercept",
-            "fixef_tol",
-            "store_data",
-            "copy_data",
-            "lean",
-            "context",
-            "demeaner",
-        )
-    ),
-    _attribute_spec(
-        "_offset_name",
-        Feols=_alias("fit.options.offset", lambda fit: fit.options.offset),
-    ),
-    _attribute_spec(
-        "_fixef_maxiter",
-        Feols=_alias(
-            "fit.options.demeaner.fixef_maxiter",
-            lambda fit: fit.options.demeaner.fixef_maxiter,
-        ),
-    ),
-    *(
-        _attribute_spec(
-            f"_{name}",
-            Quantreg=_alias(
-                f"fit.options.{name}",
-                lambda fit, name=name: getattr(fit.options, name),
-            ),
-        )
-        for name in ("quantile_tol", "quantile_maxiter", "seed")
-    ),
-    _attribute_spec(
-        "_accelerate",
-        Feglm=_alias("fit.options.accelerate", lambda fit: fit.options.accelerate),
-    ),
-    _attribute_spec(
-        "_ssc_dict",
-        Feols=_alias(
-            "fit.options.ssc", lambda fit: dataclasses.asdict(fit.options.ssc)
-        ),
-    ),
-    _attribute_spec(
-        "_collin_tol",
-        Feols=_alias("fit.options.collin_tol", lambda fit: fit.options.collin_tol),
-    ),
-    _attribute_spec(
-        "_solver",
-        Feols=_alias("fit.options.solver", lambda fit: fit.options.solver),
     ),
     _attribute_spec(
         "maxiter",
@@ -389,67 +400,15 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         ),
     ),
     _attribute_spec(
-        "_has_weights",
-        Feols=_alias("fit.options.has_weights", lambda fit: fit.options.has_weights),
-    ),
-    _attribute_spec(
-        "_weights_name",
-        Feols=_alias("fit.options.weights", lambda fit: fit.options.weights),
-    ),
-    _attribute_spec(
-        "_weights_type",
-        Feols=_alias("fit.options.weights_type", lambda fit: fit.options.weights_type),
-    ),
-    _attribute_spec(
-        "_quantile",
-        Quantreg=_alias("fit.options.quantile", lambda fit: fit.options.quantile),
-    ),
-    # fit.sample_info, fit.observation_weights, fit.model_matrix
-    _attribute_spec(
         "_N",
         silent=True,
         Feols=_alias("fit.sample_info.n_obs", lambda fit: fit.sample_info.n_obs),
-    ),
-    _attribute_spec(
-        "_N_rows",
-        Feols=_alias("fit.sample_info.n_rows", lambda fit: fit.sample_info.n_rows),
-        Feglm=_alias(
-            "fit.sample_info",
-            lambda fit: (
-                fit.sample_info.n_rows + fit.sample_info.dropped_by_stage.separation
-            ),
-        ),
-        Fepois=_alias("fit.sample_info.n_rows", lambda fit: fit.sample_info.n_rows),
-    ),
-    _attribute_spec(
-        "_na_index", Feols=_alias("fit.sample_info.dropped_row_index", _na_index)
     ),
     _attribute_spec(
         "n_separation_na",
         Feols=_alias(
             "fit.sample_info.dropped_by_stage.separation",
             lambda fit: fit.sample_info.dropped_by_stage.separation,
-        ),
-    ),
-    _attribute_spec(
-        "_k_fe",
-        Feols=_removed(
-            "fit.fixef_counts.n_levels_by_fe",
-            "its encoded Series labels and process-dependent ordering are no "
-            "longer supported",
-        ),
-    ),
-    _attribute_spec(
-        "_n_fe",
-        Feols=_alias("fit.fixef_counts.n_fixef", lambda fit: fit.fixef_counts.n_fixef),
-        Fepois=_alias("fit.fixef_counts.n_fixef", _poisson_n_fe),
-    ),
-    _attribute_spec(
-        "_fe",
-        Feols=_removed(
-            "fit.model_matrix.fixed_effects",
-            "the fixed-effect codes are now numbered by sorted level instead of "
-            "by first appearance, and GLM fits no longer hold them as an array",
         ),
     ),
     _attribute_spec(
@@ -460,38 +419,6 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             "in the already filtered data",
         ),
     ),
-    # fit.within_data and fit.working_state
-    _attribute_spec(
-        "_Yd",
-        Feols=_removed(
-            "fit.model_matrix.dependent",
-            "it held the demeaned response before the collinearity check",
-        ),
-    ),
-    _attribute_spec(
-        "_Xd",
-        Feols=_removed(
-            "fit.model_matrix.independent",
-            "it held the demeaned design before the collinearity check",
-        ),
-    ),
-    _attribute_spec(
-        "_Zd",
-        Feiv=_removed(
-            "fit.model_matrix.instruments",
-            "it held the demeaned instruments before the collinearity check",
-        ),
-    ),
-    _attribute_spec(
-        "_endogvard",
-        Feiv=_removed(
-            "fit.model_matrix.endogenous",
-            "it held the demeaned endogenous variables before the collinearity check",
-        ),
-    ),
-    # fit.fitted_values
-    # fit.sandwich
-    # fit.variance_covariance
     _attribute_spec(
         "_vcov",
         silent=True,
@@ -508,20 +435,6 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         ),
     ),
     _attribute_spec(
-        "_vcov_type_detail",
-        Feols=_alias(
-            "fit.variance_covariance.spec.vcov_type_detail",
-            lambda fit: fit.variance_covariance.spec.vcov_type_detail,
-        ),
-    ),
-    _attribute_spec(
-        "_is_clustered",
-        Feols=_alias(
-            "fit.variance_covariance.spec.is_clustered",
-            lambda fit: fit.variance_covariance.spec.is_clustered,
-        ),
-    ),
-    _attribute_spec(
         "_clustervar",
         silent=True,
         Feols=_alias(
@@ -535,34 +448,10 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         Feols=_alias("fit.variance_covariance.G", _cluster_counts),
     ),
     _attribute_spec(
-        "_df_k",
-        Feols=_alias(
-            "fit.variance_covariance.df_k", lambda fit: fit.variance_covariance.df_k
-        ),
-    ),
-    _attribute_spec(
-        "_df_t",
-        Feols=_alias(
-            "fit.variance_covariance.df_t", lambda fit: fit.variance_covariance.df_t
-        ),
-    ),
-    # fit.coeftable
-    _attribute_spec(
-        "_se", Feols=_alias("fit.coeftable.se", lambda fit: fit.coeftable.se)
-    ),
-    _attribute_spec(
-        "_tstat", Feols=_alias("fit.coeftable.tstat", lambda fit: fit.coeftable.tstat)
-    ),
-    _attribute_spec(
         "_pvalue",
         silent=True,
         Feols=_alias("fit.coeftable.pvalue", lambda fit: fit.coeftable.pvalue),
     ),
-    _attribute_spec(
-        "_conf_int",
-        Feols=_alias("fit.coeftable.conf_int", lambda fit: fit.coeftable.conf_int),
-    ),
-    # fit.fitstat
     _attribute_spec(
         "get_performance",
         Feols=_alias("fit.fitstat", lambda fit: fit._publish_fit_statistics),
@@ -605,75 +494,8 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
         Feglm=_alias("fit.fitstat.deviance", lambda fit: fit.fitstat.deviance),
     ),
     _attribute_spec(
-        "_loglik",
-        Fepois=_alias("fit.fitstat.loglik", lambda fit: fit.fitstat.loglik),
-    ),
-    _attribute_spec(
-        "_loglik_null",
-        Fepois=_alias(
-            "fit.fitstat.loglik_null",
-            lambda fit: _poisson_null_measure(fit, fit.fitstat.loglik_null),
-        ),
-    ),
-    _attribute_spec(
-        "_pseudo_r2",
-        Fepois=_alias(
-            "fit.fitstat.pseudo_r2",
-            lambda fit: _poisson_null_measure(fit, fit.fitstat.pseudo_r2),
-        ),
-    ),
-    _attribute_spec(
-        "_pearson_chi2",
-        Fepois=_alias("fit.fitstat.pearson_chi2", lambda fit: fit.fitstat.pearson_chi2),
-    ),
-    # fit.wald
-    _attribute_spec("_dfn", Feols=_alias("fit.wald.df1", lambda fit: fit.wald.df1)),
-    _attribute_spec("_dfd", Feols=_alias("fit.wald.df2", lambda fit: fit.wald.df2)),
-    _attribute_spec(
-        "_wald_statistic",
-        Feols=_alias("fit.wald.wald_statistic", lambda fit: fit.wald.wald_statistic),
-    ),
-    _attribute_spec(
-        "_f_statistic",
-        Feols=_alias("fit.wald.f_statistic", lambda fit: fit.wald.f_statistic),
-    ),
-    _attribute_spec(
-        "_p_value", Feols=_alias("fit.wald.pvalue", lambda fit: fit.wald.pvalue)
-    ),
-    # fit.fixef_estimates
-    _attribute_spec(
-        "_fixef_dict",
-        Feols=_removed(
-            "fit.fixef_estimates",
-            "`fixef()` now returns a data frame, and the nested-dict layout is gone",
-        ),
-    ),
-    _attribute_spec(
-        "_alpha",
-        Feols=_removed(
-            "fit.fixef()",
-            "the dummy-coefficient layout changed, including unused categorical "
-            "levels; fixef() returns coefficients labelled by fixed-effect term and level",
-        ),
-    ),
-    # fit.first_stage
-    _attribute_spec(
         "_model_1st_stage",
         Feiv=_alias("fit.first_stage.model", lambda fit: fit.first_stage.model),
-    ),
-    _attribute_spec(
-        "_non_exo_instruments",
-        Feiv=_alias(
-            "fit.first_stage.instruments",
-            lambda fit: list(fit.first_stage.instruments),
-        ),
-    ),
-    _attribute_spec(
-        "_p_iv",
-        Feiv=_alias(
-            "fit.first_stage.instruments",
-            lambda fit: len(fit.first_stage.instruments),
-        ),
     ),
     _attribute_spec(
         "_f_stat_1st_stage",
@@ -683,99 +505,5 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
             lambda fit: fit.first_stage.diagnostics.f_stat,
         ),
     ),
-    _attribute_spec(
-        "_p_value_1st_stage",
-        Feiv=_alias(
-            "fit.first_stage.diagnostics.p_value",
-            lambda fit: fit.first_stage.diagnostics.p_value,
-        ),
-    ),
     _attribute_spec("_eff_F", Feiv=_alias("fit.first_stage.diagnostics.eff_f", _eff_f)),
-    # fit.collinearity and fit.collinearity_instruments
-    _attribute_spec(
-        "_collin_vars",
-        Feols=_alias(
-            "fit.collinearity.dropped_coef_names",
-            lambda fit: list(fit.collinearity.dropped_coef_names),
-        ),
-    ),
-    _attribute_spec(
-        "_collin_index",
-        Feols=_alias(
-            "fit.collinearity.mask", lambda fit: _collin_index(fit.collinearity)
-        ),
-    ),
-    _attribute_spec(
-        "_collin_vars_z",
-        Feiv=_alias(
-            "fit.collinearity_instruments.dropped_coef_names",
-            lambda fit: list(fit.collinearity_instruments.dropped_coef_names),
-        ),
-    ),
-    _attribute_spec(
-        "_collin_index_z",
-        Feiv=_alias(
-            "fit.collinearity_instruments.mask",
-            lambda fit: _collin_index(fit.collinearity_instruments),
-        ),
-    ),
-    # fit.capabilities
-    *(
-        _attribute_spec(
-            name,
-            Feols=_alias(
-                f"fit.capabilities.{field}",
-                lambda fit, field=field: getattr(fit.capabilities, field),
-            ),
-        )
-        for name, field in (
-            ("_support_hac_inference", "hac_inference"),
-            ("_support_decomposition", "decomposition"),
-            ("_supports_wildboottest", "wildboottest"),
-            ("_supports_cluster_causal_variance", "cluster_causal_variance"),
-        )
-    ),
-    _attribute_spec(
-        "_support_crv3_inference",
-        Feols=_alias(
-            "fit.capabilities.crv3_inference",
-            lambda fit: fit.capabilities.crv3_inference,
-        ),
-    ),
-    _attribute_spec(
-        "_support_iid_inference",
-        # Every IV and GLM fit supported iid inference; 0.60 never read it.
-        # There is no IID capability field: vcov validates the requested type.
-        Feiv=_alias("fit.vcov", lambda fit: True),
-        Feglm=_alias("fit.vcov", lambda fit: True),
-    ),
-    # fit.ritest_statistics
-    *(
-        _attribute_spec(
-            f"_ritest_{name}",
-            Feols=_alias(
-                f"fit.ritest_statistics.{name}",
-                lambda fit, name=name: getattr(fit.ritest_statistics, name),
-            ),
-        )
-        for name in ("statistics", "sample_stat", "pvalue")
-    ),
-    # fit.event_study_design
-    _attribute_spec(
-        "_res_cohort_eventtime_dict",
-        Feols=_alias(
-            "fit.event_study_design.cohort_event_times",
-            lambda fit: _event_study_design(fit).cohort_event_times,
-        ),
-    ),
-    *(
-        _attribute_spec(
-            f"_{name}",
-            Feols=_alias(
-                f"fit.event_study_design.{name}",
-                lambda fit, name=name: getattr(_event_study_design(fit), name),
-            ),
-        )
-        for name in ("yname", "gname", "tname", "idname", "att")
-    ),
 )

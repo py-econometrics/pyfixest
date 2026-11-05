@@ -1,6 +1,6 @@
 ---
 title: "Migrating Fitted-Model Attributes from PyFixest 0.60"
-description: "Where the private attributes of fitted models live since PyFixest 0.70, and how to update code that reads them."
+description: "How to migrate fitted-model attributes to PyFixest 0.70."
 categories: [migration, fitted models]
 jupyter: python3
 toc: true
@@ -8,80 +8,78 @@ toc-title: "On this page"
 toc-location: left
 ---
 
-PyFixest 0.70 moves the state of a fitted model out of loose private attributes
-such as `fit._se`, `fit._vcov`, or `fit._N` into typed components: `fit.model`,
-`fit.options`, `fit.sample_info`, `fit.coeftable`, `fit.variance_covariance`,
-`fit.fitstat`, `fit.sandwich`, `fit.first_stage`, and others. Each component is
-documented in the [API reference](/reference/index.qmd).
+PyFixest 0.70 exposes fitted-model state through typed components. Private
+attributes from 0.60 are not supported, except for the compatibility names
+listed below. Accessing a removed private name raises an `AttributeError` with
+a link to this guide. Some private names are still used internally; their
+presence does not make them part of the supported API.
 
-The compatibility layer preserves the names listed below while you migrate:
+## Find the replacement
 
-- Most listed names are **deprecated aliases**. They reconstruct the former
-  representation from the current fit and emit a `PyfixestDeprecationWarning`
-  that names the replacement. They do not rerun the 0.60 estimator.
-- Some 0.60 representations are no longer supported. Their names are **removed**:
-  reading them raises an `AttributeError` that explains why and names the
-  replacement.
+Use the component that owns the information your code needs:
 
-```{python}
-import warnings
+| Information | Component or method |
+|---|---|
+| Formula, dependent variable and fixed effects | `fit.model` |
+| Estimation options | `fit.options` |
+| Supported operations (`_support_*`, `_supports_*`) | `fit.capabilities` |
+| Observation counts and dropped rows | `fit.sample_info` |
+| Fixed-effect counts (`_k_fe`, `_n_fe`) | `fit.fixef_counts` |
+| Original model inputs | `fit.model_matrix` |
+| Observation weights (`_weights`) | `fit.observation_weights` |
+| Demeaned inputs for linear and IV models | `fit.within_data` |
+| Within preconditioner (`_preconditioner`) | `fit.preconditioner` |
+| GLM working values | `fit.working_state` |
+| GLM convergence (`_convergence`) | `fit.convergence` |
+| Quantile solver state (`_it`, `_x_final`, etc.) | `fit.solution` |
+| Collinear regressors or instruments (`_collin_*`) | `fit.collinearity`, `fit.collinearity_instruments` |
+| Coefficients, standard errors and confidence intervals | `fit.coeftable` |
+| Covariance matrix and inference settings | `fit.variance_covariance` |
+| Fit statistics and fitted values | `fit.fitstat`, `fit.fitted_values` |
+| Sandwich components, when available | `fit.sandwich` |
+| IV first stage and diagnostics | `fit.first_stage` |
+| Wald test results (`_dfn`, `_dfd`, `_f_statistic`, etc.) | `fit.wald` |
+| Randomization inference results (`_ritest_*`) | `fit.ritest_statistics` |
+| Saturated event-study design (`_yname`, `_att`, etc.) | `fit.event_study_design` |
+| Fixed-effect estimates (`_fixef_dict`) | `fit.fixef()`, `fit.fixef_estimates` |
 
-import pyfixest as pf
-from pyfixest.errors import PyfixestDeprecationWarning
+Components differ between estimators, and some data may be unavailable when
+storage options such as `lean=True` are used. Their shapes, weighting, and
+contents may also differ from the 0.60 private attributes. See the [API
+reference](/reference/index.qmd) for each component's contract. In particular,
+`fit.resid()` returns response residuals; the old `_u_hat` on weighted linear
+and IV fits was multiplied by the square root of the observation weights.
+`fit.fixef_estimates` is available after calling `fit.fixef()`.
 
-data = pf.get_data()
-fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
+## Compatibility names
 
-with warnings.catch_warnings(record=True) as caught:
-    warnings.simplefilter("always")
-    old = fit._se
+Names without a leading underscore and three documented IV names remain as
+deprecated aliases or raise a specific removal message. Names read by released versions of
+[marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects) and
+[maketables](https://github.com/py-econometrics/maketables) remain available
+without a warning. These aliases can reflect estimation or inference changes
+since 0.60; see the [changelog](/changelog.qmd).
 
-print(caught[0].message)
-print((old == fit.coeftable.se).all())
-```
+After compatible releases of both packages use typed state, the plan is to turn
+on warnings for their aliases. No removal version is scheduled yet.
 
-## How to find deprecated attributes in your code
-
-`PyfixestDeprecationWarning` is a `FutureWarning`, so Python shows it by
-default. To find reads of aliases whose warnings are enabled, turn the
-warning into an error, for example in your test suite:
+Other retained aliases emit `PyfixestDeprecationWarning` (a `FutureWarning`).
+To find their use in your test suite, turn the warning into an error:
 
 ```{python}
 #| eval: false
+import warnings
+from pyfixest.errors import PyfixestDeprecationWarning
+
 warnings.simplefilter("error", PyfixestDeprecationWarning)
 ```
 
 With pytest, add `"error::pyfixest.errors.PyfixestDeprecationWarning"` to the
-`filterwarnings` setting instead.
+`filterwarnings` setting. Silent aliases do not emit a warning, while removed
+names raise `AttributeError`.
 
-## Attributes no longer supported
-
-`FixestFormula`, `_k_fe`, `_fe`, `na_index`, `_Yd`, `_Xd`, `_Zd`,
-`_endogvard`, `_fixef_dict`, and `_alpha` raise `AttributeError`. The table
-below lists their replacements. In particular, use `fit.fixef()` for labelled
-fixed-effect coefficients and `fit.fixef_counts.n_levels_by_fe` for counts.
-The former IV `first_stage()` method is now the `fit.first_stage` component.
-
-## Attributes whose values can change
-
-- `_fml`, `_model_name`, `_fixef`, and `_model_spec` reflect the current
-  formula and fixed-effect encoding. `_na_index` raises after separation;
-  use `fit.sample_info.dropped_row_index` for all dropped rows.
-- `_support_crv3_inference` and other capability aliases reflect current
-  support. For DID2S, `_vcov_type`, `_clustervar`, `_is_clustered`, and `_G`
-  reflect current clustering. Numerical aliases such as `_rmse` and `_se`
-  reflect estimation and inference changes in the [changelog](/changelog.qmd).
-
-## Names still read by other packages
-
-Aliases used by released versions of [marginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
-and [maketables](https://github.com/py-econometrics/maketables) are marked
-silent in the table and do not warn yet. No removal version is scheduled.
-
-## All deprecated names
-
-The table shows which model classes each name applies to. Entries for `Feols`
-also apply to IV, GLM, and quantile models, unless a more specific entry is listed.
+The table lists the retained compatibility names. Entries for `Feols` also
+apply to IV, GLM, and quantile models, unless a more specific entry is listed.
 
 ```{python}
 #| echo: false
@@ -95,12 +93,8 @@ print("| Old attribute | Model classes | Use instead | Status |")
 print("|---|---|---|---|")
 for attribute in DEPRECATED_ATTRIBUTES:
     for class_name, entry in attribute.classes.items():
-        if isinstance(entry, Removed):
-            status = f"Removed: {entry.reason}"
-        else:
-            status = "Deprecated alias" + (" (silent)" if attribute.silent else "")
-        print(
-            f"| `fit.{attribute.name}` | `{class_name}` "
-            f"| `{entry.replacement}` | {status} |"
+        status = f"removed: {entry.reason}" if isinstance(entry, Removed) else (
+            "silent alias" if attribute.silent else "deprecated alias"
         )
+        print(f"| `{attribute.name}` | `{class_name}` | `{entry.replacement}` | {status} |")
 ```

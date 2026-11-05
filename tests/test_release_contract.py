@@ -17,7 +17,6 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import pyfixest as pf
@@ -514,241 +513,45 @@ def test_quantreg(data_quantreg, fml, quantile, method, vcov, baseline):
     baseline.check("resid", mod.resid()[0:5])
 
 
-def _check_legacy_metadata(baseline, mod):
-    """Check an explicit release inventory, independent of the alias registry."""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        for name in (
-            "_N_rows",
-            "n_separation_na",
-            "_weights_name",
-            "_weights_type",
-            "_has_weights",
-            "_sample_split_var",
-            "_n_fe",
-        ):
-            baseline.check_exact(name, getattr(mod, name))
-        # 0.60's set omits GLM separation, which the current sample includes.
-        if mod.n_separation_na == 0:
-            baseline.check_exact("_na_index", sorted(mod._na_index))
-            baseline.check_exact("_na_index_type", type(mod._na_index).__name__)
-        baseline.skip(
-            "_k_fe",
-            reason="The legacy encoded Series is removed; use "
-            "fit.fixef_counts.n_levels_by_fe for final-sample level counts.",
-        )
-
-
-@pytest.mark.parametrize(
-    "vcov,G_df,weights,weights_type,fixef,split,rhs",
-    [
-        ({"CRV1": "group_id"}, "min", "weights", "aweights", " | f1", None, "X1 + X2"),
-        (
-            {"CRV1": "group_id+f2"},
-            "conventional",
-            "weights",
-            "aweights",
-            " | f2 + f1",
-            None,
-            "X1 + X2",
-        ),
-        ("iid", "min", None, "aweights", "", None, "X1 + X2"),
-        ("hetero", "min", "fweights", "fweights", " | f1", "f2", "X1 + X2"),
-        ("iid", "min", "weights", "aweights", " | f1", None, "0"),
-    ],
-)
-def test_deprecated_attributes_feols(
-    data_feols_variants, vcov, G_df, weights, weights_type, fixef, split, rhs, baseline
-):
-    mod = pf.feols(
-        fml=f"Y ~ {rhs}{fixef}",
-        data=data_feols_variants[(True, "str")],
-        vcov=vcov,
-        weights=weights,
-        weights_type=weights_type,
-        split=split,
-        ssc=ssc(G_df=G_df),
-    )
-    if split:
-        mod = mod.to_list()[0]
-    if fixef:
-        mod.fixef()
-
-    _check_legacy_metadata(baseline, mod)
-    if rhs != "0":
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            baseline.check_exact("G", [int(g) for g in mod._G])
-
-
-@pytest.mark.parametrize("weights,weights_type", IV_WEIGHTS)
-def test_deprecated_attributes_iv(data_feols_variants, weights, weights_type, baseline):
-    mod = pf.feols(
-        fml="Y ~ X2 | f1 | X1 ~ Z1",
-        data=data_feols_variants[(True, "str")],
-        vcov={"CRV1": "group_id"},
-        weights=weights,
-        weights_type=weights_type,
-    )
-
-    _check_legacy_metadata(baseline, mod)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        baseline.check_exact("G", [int(g) for g in mod._G])
-
-
-@pytest.mark.parametrize(
-    "weights,separated", [(None, False), ("weights", False), (None, True)]
-)
-def test_deprecated_attributes_fepois(data_fepois, weights, separated, baseline):
-    data = data_fepois.copy()
-    if separated:
-        group = data["f1"].dropna().iloc[0]
-        data.loc[data["f1"] == group, "Y"] = 0
-    mod = pf.fepois(
-        fml="Y ~ X1 + X2 | f1",
-        data=data,
-        vcov={"CRV1": "group_id"},
-        weights=weights,
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
-    )
-    mod.fixef()
-    _check_legacy_metadata(baseline, mod)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        baseline.check_exact("separation_check", mod.separation_check)
-        baseline.check("_pearson_chi2", mod._pearson_chi2, **FEPOIS_TOLERANCE)
-        for name in ("_loglik_null", "_pseudo_r2"):
-            value = getattr(mod, name)
-            if weights is None:
-                assert np.isfinite(value), name
-                baseline.check(name, value, **FEPOIS_TOLERANCE)
-            else:
-                assert value is None, name
-                baseline.check_exact(name, value)
-
-
-@pytest.mark.parametrize("family", ["logit", "probit"])
-def test_deprecated_attributes_feglm(data_fepois, family, baseline):
-    mod = pf.feglm(
-        fml="Y_bin ~ X1 + X2 | f1",
-        data=data_fepois,
-        family=family,
-        vcov="hetero",
-        iwls_tol=1e-10,
-        iwls_maxiter=100,
-    )
-    mod.fixef()
-    _check_legacy_metadata(baseline, mod)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        baseline.check_exact("separation_check", mod.separation_check)
-
-
 # Explicit inventory: this module must also run with the 0.60 wheel, which does
 # not have the current alias registry. The registry test checks for omissions.
 ALIAS_EXACT = {
-    "OLS": ("_dfn", "_dfd"),
     "Feols": (
         "_fml",
         "_method",
-        "_is_iv",
-        "_model_name",
         "_fixef",
         "_has_fixef",
-        "_icovars",
         "_depvar",
         "_sample_split_var",
-        "_drop_singletons",
-        "_drop_intercept",
-        "_store_data",
-        "_copy_data",
-        "_lean",
-        "_context",
-        "_offset_name",
-        "_ssc_dict",
-        "_solver",
-        "_has_weights",
-        "_weights_name",
-        "_weights_type",
         "_N",
-        "_N_rows",
         "n_separation_na",
-        "_n_fe",
         "_vcov_type",
-        "_vcov_type_detail",
-        "_is_clustered",
         "_clustervar",
         "_G",
-        "_df_k",
-        "_df_t",
-        "_collin_vars",
-        "_collin_index",
-        "_support_hac_inference",
-        "_support_decomposition",
-        "_supports_wildboottest",
-        "_supports_cluster_causal_variance",
-        "_support_crv3_inference",
         "deviance",
     ),
-    "Feiv": (
-        "_non_exo_instruments",
-        "_p_iv",
-        "_collin_vars_z",
-        "_collin_index_z",
-        "_support_iid_inference",
-    ),
-    "Feglm": (
-        "_accelerate",
-        "maxiter",
-        "tol",
-        "separation_check",
-        "_support_iid_inference",
-    ),
-    "Quantreg": ("_quantile", "_quantile_tol", "_quantile_maxiter", "_seed"),
+    "Feglm": ("maxiter", "tol", "separation_check"),
 }
 ALIAS_NUMERIC = {
     "Feols": (
-        "_collin_tol",
         "_vcov",
-        "_se",
-        "_tstat",
         "_pvalue",
-        "_conf_int",
         "_rmse",
         "_r2",
         "_r2_within",
         "_adj_r2",
         "_adj_r2_within",
     ),
-    # Only plain feols fits ran the joint Wald test.
-    "OLS": ("_wald_statistic", "_f_statistic", "_p_value"),
-    "Feiv": ("_f_stat_1st_stage", "_p_value_1st_stage", "_eff_F"),
+    "Feiv": ("_f_stat_1st_stage", "_eff_F"),
     "Feglm": ("deviance",),
-    "Fepois": ("_loglik", "_loglik_null", "_pseudo_r2", "_pearson_chi2"),
 }
 ALIAS_SPECIAL = {
-    "_na_index": "Compare the sorted set and its type in the existing release cases.",
     "_sample_split_value": "Compare the split value separately; the unsplit sentinel changed.",
     "_model_1st_stage": "Compare the first-stage model's coefficients, not its identity.",
     "get_performance": "Compare the callable's result and resulting fit statistics.",
-    "_demeaner": "Compare the backend and options on a fit with an explicit MAP backend.",
-    "_fixef_tol": "Compare on a fit with an explicit MAP backend.",
-    "_fixef_maxiter": "Compare on a fit with an explicit MAP backend.",
-    "_ritest_sample_stat": "Compare after running randomization inference.",
-    "_res_cohort_eventtime_dict": "Compare saturated event-study design separately.",
-    "_yname": "Compare saturated event-study design separately.",
-    "_gname": "Compare saturated event-study design separately.",
-    "_tname": "Compare saturated event-study design separately.",
-    "_idname": "Compare saturated event-study design separately.",
-    "_att": "Compare saturated event-study design separately.",
 }
 ALIAS_EXCEPTIONS = {
-    "_model_spec": "The formulaic specification and fixed-effect encoding changed.",
     "_r2_adj": "This compatibility name was added for table integrations after 0.60.",
-    "_ritest_statistics": "The resampling implementation produces different draws for the same seed.",
-    "_ritest_pvalue": "The p-value depends on resampling draws that changed since 0.60.",
 }
 
 
@@ -830,78 +633,31 @@ FORMULA_SPELLING = (
     "fit.model.formula spells out the intercept and the IV stage "
     "(changelog: fit.model.formula)"
 )
-CAPABILITY = "Capability aliases report current support (changelog: fit.capabilities)."
-SEPARATED_LEVEL = (
-    "0.60 counted the separated fixed-effect level in df_k; "
-    "fit.fixef_counts counts the levels left after separation."
-)
-
-# Differences from the release, by case and alias.
+# Differences from the release for retained aliases.
 ALIAS_CHANGES = {
     **{
-        (case, name): FORMULA_SPELLING
+        (case, "_fml"): FORMULA_SPELLING
         for case in (
             "feols_collinear_no_fe",
             "feiv",
             "feiv_weighted_collinear_z",
             "quantreg",
         )
-        for name in ("_fml", "_model_name")
     },
     ("feols_i_twoway", "_fixef"): "fit.model.fixef joins terms with '+' and no spaces.",
     ("feols_weighted", "_rmse"): "Weighted RMSE divides by the sum of weights (#1883).",
-    ("feiv_weighted_collinear_z", "_vcov_type_detail"): (
-        "IV_Diag() no longer relabels the main model's covariance type."
-    ),
-    ("quantreg", "_drop_singletons"): (
-        "0.60 stored False on quantile fits, which have no fixed effects; the "
-        "option now keeps its default."
-    ),
     **dict.fromkeys(
-        [
-            ("feiv", "_supports_wildboottest"),
-            ("feglm", "_supports_wildboottest"),
-            ("feglm", "_support_crv3_inference"),
-            ("feglm_separated", "_supports_wildboottest"),
-            ("feglm_separated", "_support_crv3_inference"),
-            ("fepois", "_supports_wildboottest"),
-            ("fepois_offset", "_supports_wildboottest"),
-            ("quantreg", "_support_decomposition"),
-        ],
-        CAPABILITY,
+        [("feglm_separated", name) for name in ("_vcov", "_pvalue")],
+        "The degrees of freedom now count fixed-effect levels after separation.",
     ),
-    **dict.fromkeys(
-        [("fepois", "_accelerate"), ("fepois_offset", "_accelerate")],
-        "0.60 Poisson fits had no `_accelerate`; it now comes from the GLM options.",
-    ),
-    **{
-        ("feglm_separated", name): SEPARATED_LEVEL
-        for name in ("_df_k", "_df_t", "_vcov", "_se", "_tstat", "_pvalue", "_conf_int")
-    },
 }
 
-# 0.60 instance attributes with neither a current attribute nor a registry
-# entry. Reading them raises Python's default AttributeError.
+# Saturated event studies bind these methods on the fit in the release.
 UNREGISTERED_RELEASE_ATTRIBUTES = frozenset(
     {
-        # Model matrices, weights, and offsets.
-        *("_X", "_X_untransformed", "_Xbeta", "_Y", "_Y_untransformed", "_Z"),
-        *("_weights", "_weights_df", "_offset", "_offset_df", "_is_sorted"),
-        *("_lookup_demeaned_data", "_preconditioner", "_sumFE"),
-        # Fitted values, residuals, and scores.
-        *("_Y_hat_link", "_Y_hat_response", "_u_hat", "_u_hat_response"),
-        *("_u_hat_working", "_scores", "_scores_response", "_scores_working"),
-        # Sandwich and covariance state.
-        *("_bread", "_hessian", "_tXZ", "_tZX", "_tZXinv", "_tZZinv", "_tZy"),
-        *("_ssc", "_cluster_df", "_lag", "_time_id", "_panel_id", "_use_mundlak"),
-        # IV first stage.
-        *("_coefnames_z", "_endogvar", "_iv_loc", "_pi_hat", "_X_hat", "_v_hat"),
-        # IRLS and quantile solver state.
-        *("_irls_weights", "_y_hat_null", "_convergence", "_has_converged", "_it"),
-        "_chol",
-        *("_P", "_s_final", "_w_final", "_x_final", "_y_final", "_z_final"),
-        # Event-study methods 0.60 bound on every fit.
-        *("aggregate", "iplot_aggregate", "test_treatment_heterogeneity"),
+        "aggregate",
+        "iplot_aggregate",
+        "test_treatment_heterogeneity",
     }
 )
 
@@ -919,10 +675,13 @@ def _registered_names():
     try:
         from pyfixest.estimation.models._deprecated_attributes import (
             DEPRECATED_ATTRIBUTES,
+            REMOVED_PRIVATE_ATTRIBUTES,
         )
     except ImportError:  # The release has no registry.
         return set()
-    return {attribute.name for attribute in DEPRECATED_ATTRIBUTES}
+    return {
+        attribute.name for attribute in DEPRECATED_ATTRIBUTES
+    } | REMOVED_PRIVATE_ATTRIBUTES
 
 
 @pytest.mark.parametrize("case", LEGACY_ALIAS_CASES)
@@ -941,7 +700,7 @@ def test_legacy_aliases(data_feols, case, baseline):
             else:
                 baseline.check(name, getattr(fit, name), **tolerance.get(kind, {}))
 
-    released = baseline.recorded("vars", sorted(vars(fit)))
+    released = baseline.record_or_read_release_value("vars", sorted(vars(fit)))
     unhandled = {
         name
         for name in released
@@ -961,41 +720,7 @@ def test_legacy_alias_special_cases(data_feols, baseline):
         baseline.check("Feiv._model_1st_stage.coef", iv._model_1st_stage.coef())
         fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
         baseline.check_exact("get_performance.result", fit.get_performance())
-        map_fit = pf.feols("Y ~ X1 | f1", data, demeaner=pf.MapDemeaner())
-        for name in ("_fixef_tol", "_fixef_maxiter"):
-            baseline.check_exact(name, getattr(map_fit, name))
-        baseline.check_exact("_demeaner.type", type(map_fit._demeaner).__name__)
-        baseline.check_exact("_demeaner.backend", map_fit._demeaner.backend)
         split = pf.feols("Y ~ X1", data, split="f2").to_list()[0]
         baseline.check_exact("_sample_split_value", split._sample_split_value)
-        ri = pf.feols("Y ~ X1 + X2", data)
-        ri.ritest(
-            "X1",
-            reps=9,
-            rng=np.random.default_rng(2026),
-            store_ritest_statistics=True,
-            choose_algorithm="slow",
-        )
-        baseline.check("_ritest_sample_stat", ri._ritest_sample_stat)
-        event_data = pd.read_csv("pyfixest/did/data/df_het.csv")
-        event = pf.event_study(
-            event_data,
-            yname="dep_var",
-            idname="unit",
-            tname="year",
-            gname="g",
-            estimator="saturated",
-        )
-        for name in ("_yname", "_gname", "_tname", "_idname", "_att"):
-            baseline.check_exact(name, getattr(event, name))
-        cohorts = event._res_cohort_eventtime_dict
-        baseline.check_exact("event.cohorts", sorted(cohorts))
-        for cohort, values in cohorts.items():
-            baseline.check(f"event.{cohort}.time", values["time"])
-            estimates = values["est"]
-            baseline.check_exact(
-                f"event.{cohort}.coefficients", estimates["Coefficient"].tolist()
-            )
-            baseline.check(f"event.{cohort}.estimates", estimates["Estimate"])
         for name, reason in ALIAS_EXCEPTIONS.items():
             baseline.skip(name, reason=reason)

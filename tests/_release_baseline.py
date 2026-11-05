@@ -209,7 +209,7 @@ class Baseline:
             f"{entry[name]!r} != {expected[name]!r}"
         )
 
-    def recorded(self, name: str, value: Any) -> Any:
+    def record_or_read_release_value(self, name: str, value: Any) -> Any:
         """Record a release value without comparing it, and return the release's value."""
         if self._recording:
             self._recorded[name] = _jsonable(value)

@@ -245,8 +245,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     Notes
     -----
     The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_N`,
-    now live in the typed components above. Their old names still work as
-    deprecated aliases or raise an informative `AttributeError`; see
+    now live in the typed components above. Names read by table and
+    marginal-effects integrations remain as compatibility aliases; other 0.60
+    private attributes raise an `AttributeError`; see
     [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
     """
 
