@@ -209,6 +209,12 @@ class Baseline:
             f"{entry[name]!r} != {expected[name]!r}"
         )
 
+    def recorded(self, name: str, value: Any) -> Any:
+        """Record a release value without comparing it, and return the release's value."""
+        if self._recording:
+            self._recorded[name] = _jsonable(value)
+        return self._expect(name, [name])[name]
+
     def skip(self, name: str, *, reason: str) -> None:
         """Document a quantity with no comparable counterpart in the release."""
         if not reason:

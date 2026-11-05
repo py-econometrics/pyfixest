@@ -12,25 +12,34 @@ from pyfixest.estimation.models._deprecated_attributes import (
     Removed,
 )
 from tests.test_release_contract import (
-    ALIAS_EXACT,
+    ALIAS_CHANGES,
     ALIAS_EXCEPTIONS,
-    ALIAS_NUMERIC,
     ALIAS_SPECIAL,
+    LEGACY_ALIAS_CASES,
+    LEGACY_CLASSES,
+    legacy_aliases,
 )
 
 
-def test_every_alias_has_a_release_comparison_or_exception():
-    aliases = {
-        attribute.name
+def test_every_alias_entry_has_a_release_comparison_or_exception():
+    """Each class-specific entry, not just each name, must be compared."""
+    registry = {attribute.name: attribute for attribute in DEPRECATED_ATTRIBUTES}
+    compared = set()
+    for case, (kind, _) in LEGACY_ALIAS_CASES.items():
+        for name in legacy_aliases(kind):
+            if (case, name) not in ALIAS_CHANGES:
+                classes = registry[name].classes
+                owner = next(c for c in reversed(LEGACY_CLASSES[kind]) if c in classes)
+                compared.add((owner, name))
+    uncompared = set(ALIAS_SPECIAL) | set(ALIAS_EXCEPTIONS)
+    entries = {
+        (owner, attribute.name)
         for attribute in DEPRECATED_ATTRIBUTES
-        if any(isinstance(entry, Alias) for entry in attribute.classes.values())
+        for owner, entry in attribute.classes.items()
+        if isinstance(entry, Alias) and attribute.name not in uncompared
     }
-    compared = {
-        name
-        for names in (*ALIAS_EXACT.values(), *ALIAS_NUMERIC.values())
-        for name in names
-    }
-    assert aliases == compared | set(ALIAS_SPECIAL) | set(ALIAS_EXCEPTIONS)
+    assert sorted(entries - compared) == []
+    assert uncompared <= set(registry)
 
 
 def test_aliases_without_comparable_values_are_accessible():
