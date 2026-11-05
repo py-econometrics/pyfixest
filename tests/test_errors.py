@@ -707,7 +707,8 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -719,7 +720,7 @@ def test_errors_etable():
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
