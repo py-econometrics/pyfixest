@@ -55,6 +55,7 @@ Fitted models now expose their formula, observation-weight, within-transformed, 
 The fitted-model metadata and coefficient-summary names listed in the migration guide have read-only compatibility aliases or informative removal errors. Aliases such as `fit._se`, `fit._vcov`, and `fit._N` expose the current typed state. Estimation options, capability flags, stored randomization-inference results, and `get_performance()` also have deprecated aliases. `_alpha` raises an error directing users to labelled coefficients from `fit.fixef()`. Aliases normally emit `PyfixestDeprecationWarning`; names used by released marginaleffects and maketables versions, including `_adj_r2`, remain silent pending upstream releases and a later warning period. See [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
 
 `fit._k_fe` now raises `AttributeError`; use `fit.fixef_counts.n_levels_by_fe` for fixed-effect level counts. Its legacy encoded Series labels and process-dependent ordering are no longer supported.
+
 ### `within` LSMR Backend via `within-py`
 
 We now use the LSMR demeaner from the `within` package as the default backend, with adaptive preconditioning. Rust MAP remains available through `MapDemeaner()`.
