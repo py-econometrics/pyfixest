@@ -232,6 +232,91 @@ def test_release_data_is_unchanged(data_feols, data_fepois, ssc_data, baseline):
     baseline.check_exact("ssc_fepois", data_digest(ssc_data[("fepois", False)]))
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        "iid",
+        "implicit_intercept",
+        "fixed_effects",
+        "two_clusters",
+        "two_clusters_conventional",
+        "split_full",
+        "split_group",
+        "iv",
+        "poisson",
+    ],
+)
+def test_legacy_table_metadata(case, data_feols, data_fepois, baseline):
+    """Compare the legacy attributes table integrations read from fitted models."""
+    if case == "poisson":
+        mod = pf.fepois("Y ~ 1 + X1", data_fepois)
+    elif case == "iv":
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            mod = pf.feols("Y ~ X2 | X1 ~ Z1", data_feols)
+    elif case in ("split_full", "split_group"):
+        fits = pf.feols("Y ~ 1 + X1", data_feols, fsplit="f2").to_list()
+        mod = fits[0 if case == "split_full" else 1]
+    else:
+        formula = (
+            "Y ~ X1"
+            if case == "implicit_intercept"
+            else "Y ~ 1 + X1"
+            if case == "iid"
+            else "Y ~ X1 | f1"
+        )
+        vcov = "iid"
+        if case == "fixed_effects":
+            vcov = {"CRV1": "f1"}
+        elif case.startswith("two_clusters"):
+            vcov = {"CRV1": "f1+f2"}
+        options = (
+            {"ssc": ssc(G_df="conventional")} if case.endswith("conventional") else {}
+        )
+        mod = pf.feols(formula, data_feols, vcov=vcov, **options)
+
+    if case in ("iv", "implicit_intercept"):
+        baseline.skip(
+            "_fml",
+            reason="formula rendering now makes intercepts and IV syntax explicit",
+        )
+    else:
+        baseline.check_exact("_fml", mod._fml)
+    for name in (
+        "_method",
+        "_fixef",
+        "_has_fixef",
+        "_depvar",
+        "_sample_split_var",
+        "_N",
+        "_vcov_type",
+        "_clustervar",
+        "_G",
+    ):
+        baseline.check_exact(name, getattr(mod, name))
+    split_value = mod._sample_split_value
+    baseline.check_exact("split_value_type", type(split_value).__name__)
+    baseline.check_exact("split_value_repr", repr(split_value))
+    for name in (
+        "_vcov",
+        "_pvalue",
+        "_rmse",
+        "_r2",
+        "_r2_within",
+        "_adj_r2",
+        "_adj_r2_within",
+    ):
+        value = getattr(mod, name)
+        baseline.check_exact(f"{name}_shape", list(np.shape(value)))
+        baseline.check(name, value, **(FEPOIS_TOLERANCE if case == "poisson" else {}))
+    if case == "poisson":
+        baseline.check("deviance", mod.deviance, **FEPOIS_TOLERANCE)
+    else:
+        baseline.check_exact("deviance", mod.deviance)
+    if case == "iv":
+        baseline.check("_f_stat_1st_stage", mod._f_stat_1st_stage)
+
+
 @pytest.mark.parametrize("dropna", [False, True])
 @pytest.mark.parametrize("inference", INFERENCE)
 @pytest.mark.parametrize("weights", [None, "weights"])

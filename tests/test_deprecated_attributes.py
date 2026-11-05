@@ -18,6 +18,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.errors import PyfixestDeprecationWarning
+from pyfixest.estimation.api.utils import _ALL_SAMPLE
 from pyfixest.estimation.models._deprecated_attributes import (
     DEPRECATED_ATTRIBUTES,
     Alias,
@@ -164,10 +165,10 @@ def test_maketables_metadata_stays_silent(fits, split_fit, data):
             assert fit._adj_r2 == fit.fitstat.adj_r2
             split = fit.model.sample_split
             assert fit._sample_split_var == (None if split is None else split.var)
-            if split is not None:
-                assert fit._sample_split_value == (
-                    "all" if split.value is None else split.value
-                )
+            if split is None or split.value is None:
+                assert fit._sample_split_value is _ALL_SAMPLE
+            else:
+                assert fit._sample_split_value == split.value
         fit = fits["Feols"]
         table = pf.etable(fit, type="df")
         assert table.loc[("stats", "Observations")].iloc[0] == str(
@@ -232,7 +233,6 @@ def test_unpublished_state_stays_missing(data):
         for name in (
             "_alpha",
             "_sumFE",
-            "_sample_split_value",
             "_yname",
             "_ritest_statistics",
             "_ritest_sample_stat",

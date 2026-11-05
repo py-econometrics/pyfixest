@@ -1413,7 +1413,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         cluster_vec = data[cluster].to_numpy()
         unique_clusters = np.unique(cluster_vec)
 
-        tau_full = float(self.coef().xs(treatment))  # type: ignore[arg-type]
+        tau_full = float(self.coef().loc[treatment])
 
         N = self.sample_info.n_obs
         G = len(unique_clusters)
