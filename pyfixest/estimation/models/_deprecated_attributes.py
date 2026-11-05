@@ -1,25 +1,7 @@
-"""Deprecated fitted-model attributes of pyfixest 0.60.
+"""Compatibility aliases and removals for fitted-model attributes.
 
-pyfixest 0.70 moved the loose private attributes of fitted models into typed
-state such as `fit.model`, `fit.coeftable`, or `fit.variance_covariance`.
-`DEPRECATED_ATTRIBUTES` lists the compatibility aliases and explicit removals, and
-`DeprecatedAttributes` turns each row into a class-level data descriptor on the
-model classes it names:
-
-- an `Alias` rebuilds the 0.60 representation from current fitted state and
-  emits a `PyfixestDeprecationWarning` naming the replacement;
-- a `Removed` entry raises `AttributeError`, explaining why the 0.60
-  representation is no longer supported and naming the replacement.
-
-A row maps model-class names to entries. A subclass inherits the entry of its
-nearest listed ancestor, so a row names `Feols` for the common case and a
-subclass only where its 0.60 value meant something else. Rows marked
-`silent=True` are still read by released versions of marginaleffects and
-maketables; they return their value without a warning until those packages
-read the typed state.
-
-To deprecate another attribute, add one row to `DEPRECATED_ATTRIBUTES`; the
-docs migration page and the tests read the same table.
+Add entries to `DEPRECATED_ATTRIBUTES`; model descriptors, migration docs, and
+tests use the same registry.
 """
 
 from __future__ import annotations
@@ -176,13 +158,6 @@ class DeprecatedAttributes:
             )
 
 
-# ---------------------------------------------------------------------------
-# Rebuilding 0.60 values.
-#
-# Metadata conversions preserve the former defaults, types, and availability.
-# ---------------------------------------------------------------------------
-
-
 def _cluster_counts(fit: Feols) -> list[int]:
     """0.60 `_G`: the `G_df="min"` rule padded the minimum to three entries."""
     counts = list(fit.variance_covariance.G)
@@ -200,7 +175,11 @@ def _sample_split_value(fit: Feols) -> str | int | float | _AllSampleSentinel:
 
 
 def _na_index(fit: Feols) -> frozenset[int]:
-    """0.60 `_na_index` excluded rows subsequently dropped for separation."""
+    """Rebuild the 0.60 index of rows dropped before separation.
+
+    The current index also includes rows dropped for separation. If separation
+    occurred, the earlier set cannot be recovered from the retained state.
+    """
     if fit.sample_info.dropped_by_stage.separation:
         raise AttributeError(
             "the row positions before separation are no longer retained; "
@@ -210,7 +189,11 @@ def _na_index(fit: Feols) -> frozenset[int]:
 
 
 def _poisson_n_fe(fit: Fepois) -> int:
-    """After separation, 0.60 Poisson counted only FE with multiple levels."""
+    """Rebuild the 0.60 Poisson fixed-effect count.
+
+    After separation, 0.60 counted only fixed effects with multiple remaining
+    levels. The current count includes every fixed effect, even with one level.
+    """
     counts = fit.fixef_counts
     if fit.sample_info.dropped_by_stage.separation:
         return sum(n > 1 for n in counts.n_levels_by_fe)
@@ -237,13 +220,20 @@ def _event_study_design(fit: Feols) -> EventStudyDesign:
 
 
 def _collin_index(collinearity: CollinearityCheck) -> list[bool]:
-    """0.60 `_collin_index`: empty unless a column was dropped."""
+    """Rebuild the 0.60 mask, which was empty when no column was dropped.
+
+    The current mask includes one entry per column even when all are retained.
+    """
     return list(collinearity.mask) if collinearity.any_dropped else []
 
 
-def _poisson_null_measure(fit: Fepois, value: float) -> float | None:
-    """0.60 left the Poisson null measures `None` for weighted fits."""
-    return None if fit.options.has_weights else value
+def _poisson_null_measure(fit: Fepois, null_measure: float) -> float | None:
+    """Return the selected null measure, or the 0.60 default for weighted fits.
+
+    Both `_loglik_null` and `_pseudo_r2` use this rule; their callers select
+    the corresponding value from `fit.fitstat`.
+    """
+    return None if fit.options.has_weights else null_measure
 
 
 def _attribute_spec(name: str, *, silent: bool = False, **classes: Alias | Removed):

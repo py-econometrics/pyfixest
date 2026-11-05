@@ -17,6 +17,7 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import pyfixest as pf
@@ -643,3 +644,179 @@ def test_deprecated_attributes_feglm(data_fepois, family, baseline):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FutureWarning)
         baseline.check_exact("separation_check", mod.separation_check)
+
+
+# Explicit inventory: this module must also run with the 0.60 wheel, which does
+# not have the current alias registry. The registry test checks for omissions.
+ALIAS_EXACT = {
+    "Feols": (
+        "_fml",
+        "_method",
+        "_is_iv",
+        "_model_name",
+        "_fixef",
+        "_has_fixef",
+        "_icovars",
+        "_depvar",
+        "_sample_split_var",
+        "_drop_singletons",
+        "_drop_intercept",
+        "_store_data",
+        "_copy_data",
+        "_lean",
+        "_context",
+        "_offset_name",
+        "_ssc_dict",
+        "_solver",
+        "_has_weights",
+        "_weights_name",
+        "_weights_type",
+        "_N",
+        "_N_rows",
+        "n_separation_na",
+        "_n_fe",
+        "_vcov_type",
+        "_vcov_type_detail",
+        "_is_clustered",
+        "_clustervar",
+        "_G",
+        "_df_k",
+        "_df_t",
+        "_dfn",
+        "_dfd",
+        "_collin_vars",
+        "_collin_index",
+        "_support_hac_inference",
+        "_support_decomposition",
+        "_supports_wildboottest",
+        "_supports_cluster_causal_variance",
+        "_support_crv3_inference",
+        "deviance",
+    ),
+    "Feiv": (
+        "_non_exo_instruments",
+        "_p_iv",
+        "_collin_vars_z",
+        "_collin_index_z",
+        "_support_iid_inference",
+    ),
+    "Feglm": (
+        "_accelerate",
+        "maxiter",
+        "tol",
+        "separation_check",
+        "_support_iid_inference",
+    ),
+    "Quantreg": ("_quantile", "_quantile_tol", "_quantile_maxiter", "_seed"),
+}
+ALIAS_NUMERIC = {
+    "Feols": (
+        "_collin_tol",
+        "_vcov",
+        "_se",
+        "_tstat",
+        "_pvalue",
+        "_conf_int",
+        "_rmse",
+        "_r2",
+        "_r2_within",
+        "_adj_r2",
+        "_adj_r2_within",
+        "_wald_statistic",
+        "_f_statistic",
+        "_p_value",
+    ),
+    "Feiv": ("_f_stat_1st_stage", "_p_value_1st_stage", "_eff_F"),
+    "Feglm": ("deviance",),
+    "Fepois": ("_loglik", "_loglik_null", "_pseudo_r2", "_pearson_chi2"),
+}
+ALIAS_SPECIAL = {
+    "_na_index": "Compare the sorted set and its type in the existing release cases.",
+    "_sample_split_value": "Compare the split value separately; the unsplit sentinel changed.",
+    "_model_1st_stage": "Compare the first-stage model's coefficients, not its identity.",
+    "get_performance": "Compare the callable's result and resulting fit statistics.",
+    "_demeaner": "Compare the backend and options on a fit with an explicit MAP backend.",
+    "_fixef_tol": "Compare on a fit with an explicit MAP backend.",
+    "_fixef_maxiter": "Compare on a fit with an explicit MAP backend.",
+    "_ritest_sample_stat": "Compare after running randomization inference.",
+    "_res_cohort_eventtime_dict": "Compare saturated event-study design separately.",
+    "_yname": "Compare saturated event-study design separately.",
+    "_gname": "Compare saturated event-study design separately.",
+    "_tname": "Compare saturated event-study design separately.",
+    "_idname": "Compare saturated event-study design separately.",
+    "_att": "Compare saturated event-study design separately.",
+}
+ALIAS_EXCEPTIONS = {
+    "_model_spec": "The formulaic specification and fixed-effect encoding changed.",
+    "_r2_adj": "This compatibility name was added for table integrations after 0.60.",
+    "_ritest_statistics": "The resampling implementation produces different draws for the same seed.",
+    "_ritest_pvalue": "The p-value depends on resampling draws that changed since 0.60.",
+}
+
+
+def test_legacy_alias_release_inventory(data_feols, baseline):
+    """Compare alias values on representative fits with the released wheel."""
+    data = data_feols.dropna().reset_index(drop=True)
+    data["Y_bin"] = (data.Y > 0).astype(int)
+    data["Y_count"] = np.random.default_rng(2026).poisson(np.exp(0.3 * data.X1))
+    fits = {
+        "Feols": pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"}),
+        "Feiv": pf.feols("Y ~ X2 | f1 | X1 ~ Z1", data, vcov={"CRV1": "f1"}),
+        "Feglm": pf.feglm("Y_bin ~ X1 + X2 | f1", data, family="logit"),
+        "Fepois": pf.fepois("Y_count ~ X1 + X2 | f1", data),
+        "Quantreg": pf.quantreg("Y ~ X1 + X2", data, quantile=0.4, vcov="nid"),
+    }
+    fits["Feiv"].IV_Diag()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        for kind, names in ALIAS_EXACT.items():
+            for name in names:
+                baseline.check_exact(f"{kind}.{name}", getattr(fits[kind], name))
+        for kind, names in ALIAS_NUMERIC.items():
+            for name in names:
+                tolerance = FEPOIS_TOLERANCE if kind == "Fepois" else {}
+                if kind == "Feglm":
+                    tolerance = GLM_BINOMIAL_TOLERANCE
+                baseline.check(f"{kind}.{name}", getattr(fits[kind], name), **tolerance)
+        baseline.check(
+            "Feiv._model_1st_stage.coef", fits["Feiv"]._model_1st_stage.coef()
+        )
+        baseline.check_exact("get_performance.result", fits["Feols"].get_performance())
+        map_fit = pf.feols("Y ~ X1 | f1", data, demeaner=pf.MapDemeaner())
+        for name in ("_fixef_tol", "_fixef_maxiter"):
+            baseline.check_exact(name, getattr(map_fit, name))
+        baseline.check_exact("_demeaner.type", type(map_fit._demeaner).__name__)
+        baseline.check_exact("_demeaner.backend", map_fit._demeaner.backend)
+        split = pf.feols("Y ~ X1", data, split="f2").to_list()[0]
+        baseline.check_exact("_sample_split_value", split._sample_split_value)
+        ri = pf.feols("Y ~ X1 + X2", data)
+        ri.ritest(
+            "X1",
+            reps=9,
+            rng=np.random.default_rng(2026),
+            store_ritest_statistics=True,
+            choose_algorithm="slow",
+        )
+        baseline.check("_ritest_sample_stat", ri._ritest_sample_stat)
+        event_data = pd.read_csv("pyfixest/did/data/df_het.csv")
+        event = pf.event_study(
+            event_data,
+            yname="dep_var",
+            idname="unit",
+            tname="year",
+            gname="g",
+            estimator="saturated",
+        )
+        for name in ("_yname", "_gname", "_tname", "_idname", "_att"):
+            baseline.check_exact(name, getattr(event, name))
+        cohorts = event._res_cohort_eventtime_dict
+        baseline.check_exact("event.cohorts", sorted(cohorts))
+        for cohort, values in cohorts.items():
+            baseline.check(f"event.{cohort}.time", values["time"])
+            estimates = values["est"]
+            baseline.check_exact(
+                f"event.{cohort}.coefficients", estimates["Coefficient"].tolist()
+            )
+            baseline.check(f"event.{cohort}.estimates", estimates["Estimate"])
+        for name, reason in ALIAS_EXCEPTIONS.items():
+            baseline.skip(name, reason=reason)
