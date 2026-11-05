@@ -244,8 +244,11 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
     Notes
     -----
-    Selected legacy metadata names remain readable for table integrations.
-    New code should use the typed components described above.
+    The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_N`,
+    now live in the typed components above. Names read by table and
+    marginal-effects integrations remain as compatibility aliases; other 0.60
+    private attributes raise an `AttributeError`; see
+    [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
     """
 
     # Set in get_fit().

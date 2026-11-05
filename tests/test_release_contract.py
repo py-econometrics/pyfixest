@@ -511,3 +511,216 @@ def test_quantreg(data_quantreg, fml, quantile, method, vcov, baseline):
     _check_fit(baseline, mod, confint=False)
     baseline.skip("confint", reason=QUANTREG_T_REFERENCE)
     baseline.check("resid", mod.resid()[0:5])
+
+
+# Explicit inventory: this module must also run with the 0.60 wheel, which does
+# not have the current alias registry. The registry test checks for omissions.
+ALIAS_EXACT = {
+    "Feols": (
+        "_fml",
+        "_method",
+        "_fixef",
+        "_has_fixef",
+        "_depvar",
+        "_sample_split_var",
+        "_N",
+        "n_separation_na",
+        "_vcov_type",
+        "_clustervar",
+        "_G",
+        "deviance",
+    ),
+    "Feglm": ("maxiter", "tol", "separation_check"),
+}
+ALIAS_NUMERIC = {
+    "Feols": (
+        "_vcov",
+        "_pvalue",
+        "_rmse",
+        "_r2",
+        "_r2_within",
+        "_adj_r2",
+        "_adj_r2_within",
+    ),
+    "Feiv": ("_f_stat_1st_stage", "_eff_F"),
+    "Feglm": ("deviance",),
+}
+ALIAS_SPECIAL = {
+    "_sample_split_value": "Compare the split value separately; the unsplit sentinel changed.",
+    "_model_1st_stage": "Compare the first-stage model's coefficients, not its identity.",
+    "get_performance": "Compare the callable's result and resulting fit statistics.",
+}
+ALIAS_EXCEPTIONS = {
+    "_r2_adj": "This compatibility name was added for table integrations after 0.60.",
+}
+
+
+# Most general class first; an alias listed for a class applies to its subclasses.
+# "OLS" lists aliases that only plain feols fits carry.
+LEGACY_CLASSES = {
+    "Feols": ("Feols", "OLS"),
+    "Feiv": ("Feols", "Feiv"),
+    "Feglm": ("Feols", "Feglm"),
+    "Fepois": ("Feols", "Feglm", "Fepois"),
+    "Quantreg": ("Feols", "Quantreg"),
+}
+
+
+def _legacy_alias_data(data):
+    data = data.dropna().reset_index(drop=True)
+    rng = np.random.default_rng(2026)
+    data["Y_bin"] = (data.Y > 0).astype(int)
+    data["Y_count"] = rng.poisson(np.exp(0.3 * data.X1))
+    data["X3"] = 2 * data.X1
+    data["Z2"] = 3 * data.Z1
+    data["offset"] = 0.1 * rng.normal(size=len(data))
+    return data
+
+
+def _separated(data):
+    return data.assign(Y_bin=data.Y_bin.where(data.f1 != data.f1.iloc[0], 0))
+
+
+def _with_iv_diag(fit):
+    fit.IV_Diag()
+    return fit
+
+
+# Each case names its class explicitly: the release's class hierarchy differs.
+LEGACY_ALIAS_CASES = {
+    "feols": ("Feols", lambda d: pf.feols("Y ~ X1 + X2 | f1", d, vcov={"CRV1": "f1"})),
+    "feols_collinear_no_fe": (
+        "Feols",
+        lambda d: pf.feols("Y ~ X1 + X3 + X2", d, vcov="hetero"),
+    ),
+    "feols_i_twoway": (
+        "Feols",
+        lambda d: pf.feols("Y ~ i(f3, X1) + X2 | f1 + f2", d, vcov={"CRV1": "f1+f2"}),
+    ),
+    "feols_weighted": (
+        "Feols",
+        lambda d: pf.feols("Y ~ X1 | f1", d, weights="weights", vcov={"CRV1": "f1"}),
+    ),
+    "feiv": (
+        "Feiv",
+        lambda d: _with_iv_diag(
+            pf.feols("Y ~ X2 | f1 | X1 ~ Z1", d, vcov={"CRV1": "f1"})
+        ),
+    ),
+    "feiv_weighted_collinear_z": (
+        "Feiv",
+        lambda d: _with_iv_diag(
+            pf.feols("Y ~ X2 | f1 | X1 ~ Z1 + Z2", d, weights="weights")
+        ),
+    ),
+    "feglm": ("Feglm", lambda d: pf.feglm("Y_bin ~ X1 + X2 | f1", d, family="logit")),
+    "feglm_separated": (
+        "Feglm",
+        lambda d: pf.feglm("Y_bin ~ X1 + X2 | f1", _separated(d), family="logit"),
+    ),
+    "fepois": ("Fepois", lambda d: pf.fepois("Y_count ~ X1 + X2 | f1", d)),
+    "fepois_offset": (
+        "Fepois",
+        lambda d: pf.fepois("Y_count ~ X1 + X2 | f1", d, offset="offset"),
+    ),
+    "quantreg": (
+        "Quantreg",
+        lambda d: pf.quantreg("Y ~ X1 + X2", d, quantile=0.4, vcov="nid"),
+    ),
+}
+
+FORMULA_SPELLING = (
+    "fit.model.formula spells out the intercept and the IV stage "
+    "(changelog: fit.model.formula)"
+)
+# Differences from the release for retained aliases.
+ALIAS_CHANGES = {
+    **{
+        (case, "_fml"): FORMULA_SPELLING
+        for case in (
+            "feols_collinear_no_fe",
+            "feiv",
+            "feiv_weighted_collinear_z",
+            "quantreg",
+        )
+    },
+    ("feols_i_twoway", "_fixef"): "fit.model.fixef joins terms with '+' and no spaces.",
+    ("feols_weighted", "_rmse"): "Weighted RMSE divides by the sum of weights (#1883).",
+    **dict.fromkeys(
+        [("feglm_separated", name) for name in ("_vcov", "_pvalue")],
+        "The degrees of freedom now count fixed-effect levels after separation.",
+    ),
+}
+
+# Saturated event studies bind these methods on the fit in the release.
+UNREGISTERED_RELEASE_ATTRIBUTES = frozenset(
+    {
+        "aggregate",
+        "iplot_aggregate",
+        "test_treatment_heterogeneity",
+    }
+)
+
+
+def legacy_aliases(kind):
+    """Map each inventory alias that applies to `kind` to whether it is exact."""
+    aliases = {}
+    for owner in LEGACY_CLASSES[kind]:
+        aliases.update(dict.fromkeys(ALIAS_EXACT.get(owner, ()), True))
+        aliases.update(dict.fromkeys(ALIAS_NUMERIC.get(owner, ()), False))
+    return aliases
+
+
+def _registered_names():
+    try:
+        from pyfixest.estimation.models._deprecated_attributes import (
+            DEPRECATED_ATTRIBUTES,
+            REMOVED_PRIVATE_ATTRIBUTES,
+        )
+    except ImportError:  # The release has no registry.
+        return set()
+    return {
+        attribute.name for attribute in DEPRECATED_ATTRIBUTES
+    } | REMOVED_PRIVATE_ATTRIBUTES
+
+
+@pytest.mark.parametrize("case", LEGACY_ALIAS_CASES)
+def test_legacy_aliases(data_feols, case, baseline):
+    """Compare each applicable alias with the release, except documented changes."""
+    kind, build = LEGACY_ALIAS_CASES[case]
+    fit = build(_legacy_alias_data(data_feols))
+    tolerance = {"Feglm": GLM_BINOMIAL_TOLERANCE, "Fepois": FEPOIS_TOLERANCE}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        for name, exact in legacy_aliases(kind).items():
+            if (reason := ALIAS_CHANGES.get((case, name))) is not None:
+                baseline.skip(name, reason=reason)
+            elif exact:
+                baseline.check_exact(name, getattr(fit, name))
+            else:
+                baseline.check(name, getattr(fit, name), **tolerance.get(kind, {}))
+
+    released = baseline.record_or_read_release_value("vars", sorted(vars(fit)))
+    unhandled = {
+        name
+        for name in released
+        if not hasattr(fit, name) and name not in _registered_names()
+    }
+    assert unhandled <= UNREGISTERED_RELEASE_ATTRIBUTES, sorted(
+        unhandled - UNREGISTERED_RELEASE_ATTRIBUTES
+    )
+
+
+def test_legacy_alias_special_cases(data_feols, baseline):
+    """Compare aliases whose values need a dedicated fit or a derived form."""
+    data = _legacy_alias_data(data_feols)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        iv = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", data, vcov={"CRV1": "f1"})
+        baseline.check("Feiv._model_1st_stage.coef", iv._model_1st_stage.coef())
+        fit = pf.feols("Y ~ X1 + X2 | f1", data, vcov={"CRV1": "f1"})
+        baseline.check_exact("get_performance.result", fit.get_performance())
+        split = pf.feols("Y ~ X1", data, split="f2").to_list()[0]
+        baseline.check_exact("_sample_split_value", split._sample_split_value)
+        for name, reason in ALIAS_EXCEPTIONS.items():
+            baseline.skip(name, reason=reason)
