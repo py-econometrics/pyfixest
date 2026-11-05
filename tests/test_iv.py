@@ -569,7 +569,7 @@ def test_first_stage_f_conditions_on_controls(fml):
     sample = data.drop(index=list(fit.sample_info.dropped_row_index))
     # Compute the iid partial F test from independent least-squares fits.
     controls = np.column_stack([sample["g"] == level for level in ("u", "v")])
-    instruments = np.column_stack([sample["f"] == level for level in ("a", "b")])
+    instruments = np.column_stack([sample["f"] == level for level in ("a", "b", "c")])
     unrestricted = np.column_stack((controls, instruments)).astype(float)
     controls = controls.astype(float)
     response = sample["X1"].to_numpy()
