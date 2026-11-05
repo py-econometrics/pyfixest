@@ -102,8 +102,11 @@ ssc_fmls = (
     "Y ~ X1 + X2 | f1 + f2",
     "Y ~ X1 + X2 | f1 + f2 + f3",
     "Y ~ X1 + X2 | f1:f2",
+    # Representative slope structures for the SSC grid; the dedicated slope
+    # suite covers the wider range of formulas and estimation behavior.
     "Y ~ X1 + X2 | f1[Z1]",
     "Y ~ X1 + X2 | f1[[Z1]]",
+    "Y ~ X1 + X2 | f1[[Z1]] + f2",
 )
 
 

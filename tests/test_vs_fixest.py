@@ -1890,6 +1890,14 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         "vcov": vcov if vcov in ["iid", "hetero"] else {"CRV1": vcov},
     }
 
+    mixed_slope = fml == "Y ~ X1 + X2 | f1[[Z1]] + f2"
+    if mixed_slope:
+        # Mixed effects need tighter solver tolerances for inference comparisons.
+        r_kwargs["fixef_tol"] = 1e-10
+        py_kwargs["demeaner"] = pf.LsmrDemeaner(
+            fixef_atol=1e-12, fixef_btol=1e-12, fixef_maxiter=10_000
+        )
+
     if weights is not None:
         r_kwargs["weights"] = ro.Formula(f"~{weights}")
         py_kwargs["weights"] = weights
@@ -1898,9 +1906,9 @@ def test_ssc(ssc_data, fml, dropna, weights, vcov, k_adj, G_adj, k_fixef, model)
         r_fit = fixest.feols(**r_kwargs)
         py_fit = pf.feols(**py_kwargs)
     else:
-        r_kwargs["glm_tol"] = 1e-10
+        r_kwargs["glm_tol"] = 1e-12 if mixed_slope else 1e-10
         r_kwargs["glm_iter"] = 100
-        py_kwargs["iwls_tol"] = 1e-10
+        py_kwargs["iwls_tol"] = 1e-12 if mixed_slope else 1e-10
         py_kwargs["iwls_maxiter"] = 100
 
         r_fit = fixest.fepois(**r_kwargs)

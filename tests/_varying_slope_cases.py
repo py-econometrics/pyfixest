@@ -18,32 +18,40 @@ class SlopeCase(NamedTuple):
     fml_r: str
     effects: Effects
     # Cross with every vcov and weights option instead of only iid.
-    full_matrix: bool = False
+    full_inference_grid: bool = False
 
 
-def _same(fml: str, effects: Effects, *, full_matrix: bool = False) -> SlopeCase:
-    return SlopeCase(fml, fml, effects, full_matrix)
+def _same_formula(
+    fml: str, effects: Effects, *, full_inference_grid: bool = False
+) -> SlopeCase:
+    return SlopeCase(fml, fml, effects, full_inference_grid)
 
 
 OLS_SLOPE_CASES = (
-    _same("Y ~ X1 | f1[X2]", (("f1", True, ("X2",)),), full_matrix=True),
-    _same("Y ~ X1 | f1[[X2]]", (("f1", False, ("X2",)),), full_matrix=True),
-    _same(
+    _same_formula(
+        "Y ~ X1 | f1[X2]", (("f1", True, ("X2",)),), full_inference_grid=True
+    ),
+    _same_formula(
+        "Y ~ X1 | f1[[X2]]", (("f1", False, ("X2",)),), full_inference_grid=True
+    ),
+    _same_formula(
         "Y ~ X1 | f1[[X2, Z1]] + f2",
         (("f1", False, ("X2", "Z1")), ("f2", True, ())),
-        full_matrix=True,
+        full_inference_grid=True,
     ),
     SlopeCase(
         "Y ~ X1 | f1:f2[X2]",
         "Y ~ X1 | f1^f2[X2]",
         (("f1:f2", True, ("X2",)),),
-        full_matrix=True,
+        full_inference_grid=True,
     ),
-    _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
-    _same("Y ~ 1 | f1[X2]", (("f1", True, ("X2",)),)),
-    _same("Y ~ X1 | f1[[X2, Z1]]", (("f1", False, ("X2", "Z1")),)),
-    _same("Y ~ X1 | f1[X2, Z1] + f2", (("f1", True, ("X2", "Z1")), ("f2", True, ()))),
-    _same(
+    _same_formula("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
+    _same_formula("Y ~ 1 | f1[X2]", (("f1", True, ("X2",)),)),
+    _same_formula("Y ~ X1 | f1[[X2, Z1]]", (("f1", False, ("X2", "Z1")),)),
+    _same_formula(
+        "Y ~ X1 | f1[X2, Z1] + f2", (("f1", True, ("X2", "Z1")), ("f2", True, ()))
+    ),
+    _same_formula(
         "Y ~ X1 | f1[[X2]] + f2[[X2]]",
         (("f1", False, ("X2",)), ("f2", False, ("X2",))),
     ),
@@ -53,22 +61,22 @@ OLS_SLOPE_CASES = (
         (("f1:f2", False, ("X2",)),),
     ),
     # Effects on the same levels merge into one effect.
-    _same(
+    _same_formula(
         "Y ~ X1 | f1 + f1[[X2]] + f2[[Z1]]",
         (("f1", True, ("X2",)), ("f2", False, ("Z1",))),
     ),
-    _same("Y ~ X1 | f1[[X2]] + f1", (("f1", True, ("X2",)),)),
-    _same("Y ~ X1 | f1[X2, X2]", (("f1", True, ("X2",)),)),
-    _same("Y ~ X1 | f1[[X2, X2]]", (("f1", False, ("X2",)),)),
+    _same_formula("Y ~ X1 | f1[[X2]] + f1", (("f1", True, ("X2",)),)),
+    _same_formula("Y ~ X1 | f1[X2, X2]", (("f1", True, ("X2",)),)),
+    _same_formula("Y ~ X1 | f1[[X2, X2]]", (("f1", False, ("X2",)),)),
     # A slope repeated across terms is kept once.
     SlopeCase(
         "Y ~ X1 | f1[[Z1]] + f1[X2, Z1]",
         "Y ~ X1 | f1[Z1, X2]",
         (("f1", True, ("Z1", "X2")),),
     ),
-    _same("Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
-    _same("Y ~ X1 | f1[X2] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
-    _same(
+    _same_formula("Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
+    _same_formula("Y ~ X1 | f1[X2] + f1[Z1]", (("f1", True, ("X2", "Z1")),)),
+    _same_formula(
         "Y ~ X1 | f1[[X2]] + f2 + f1[[Z1]]",
         (("f1", False, ("X2", "Z1")), ("f2", True, ())),
     ),
@@ -88,10 +96,10 @@ OLS_SLOPE_CASES = (
         "Y ~ X1 | f1[exp(Z1)]",
         (("f1", True, ("np.exp(Z1)",)),),
     ),
-    _same("Y ~ X1 | f1[X2 * Z1]", (("f1", True, ("X2 * Z1",)),)),
-    _same("Y ~ X1 | f1[X2 + Z1]", (("f1", True, ("X2 + Z1",)),)),
+    _same_formula("Y ~ X1 | f1[X2 * Z1]", (("f1", True, ("X2 * Z1",)),)),
+    _same_formula("Y ~ X1 | f1[X2 + Z1]", (("f1", True, ("X2 + Z1",)),)),
     # Without an intercept, shifting the slope covariate changes the model.
-    _same("Y ~ X1 | f1[[X2 + 1]]", (("f1", False, ("X2 + 1",)),)),
+    _same_formula("Y ~ X1 | f1[[X2 + 1]]", (("f1", False, ("X2 + 1",)),)),
     # One column enters slopes of two effects, once transformed.
     SlopeCase(
         "Y ~ X1 | f1[Z1] + f2[[X2, Z1**2]]",
@@ -99,25 +107,24 @@ OLS_SLOPE_CASES = (
         (("f1", True, ("Z1",)), ("f2", False, ("X2", "Z1 ** 2"))),
     ),
     # A regressor equal to the slope covariate is collinear with the slopes.
-    _same("Y ~ X2 + X1 | f1[X2]", (("f1", True, ("X2",)),)),
-    _same("Y ~ X2 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
+    _same_formula("Y ~ X2 + X1 | f1[X2]", (("f1", True, ("X2",)),)),
+    _same_formula("Y ~ X2 + X1 | f1[[X2]]", (("f1", False, ("X2",)),)),
 )
 
 # fixest drops the intercept of slope-only IV models from its parameter count
-# and residuals; `test_varying_slopes_iv_intercept_differs_from_fixest` covers
-# `Y ~ X2 + [X1 ~ Z1] | f1[[Z2]]` against an explicit dummy-variable 2SLS fit.
+# and residuals; see the compatibility ledger for the explicit 2SLS comparison.
 IV_SLOPE_CASES = (
     SlopeCase(
         "Y ~ X2 + [X1 ~ Z1] | f1[Z2]",
         "Y ~ X2 | f1[Z2] | X1 ~ Z1",
         (("f1", True, ("Z2",)),),
-        full_matrix=True,
+        full_inference_grid=True,
     ),
     SlopeCase(
         "Y ~ X2 + [X1 ~ Z1] | f1[[Z2]] + f2",
         "Y ~ X2 | f1[[Z2]] + f2 | X1 ~ Z1",
         (("f1", False, ("Z2",)), ("f2", True, ())),
-        full_matrix=True,
+        full_inference_grid=True,
     ),
     SlopeCase(
         "Y ~ 0 + X2 + [X1 ~ Z1] | f1[[Z2]]",
@@ -131,11 +138,17 @@ GLM_SLOPE_CASES = (
     OLS_SLOPE_CASES[1],
     OLS_SLOPE_CASES[2],
     OLS_SLOPE_CASES[3],
-    _same(
-        "Y ~ X1 | f1[[X2]] + f1[Z1]", (("f1", True, ("X2", "Z1")),), full_matrix=True
+    _same_formula(
+        "Y ~ X1 | f1[[X2]] + f1[Z1]",
+        (("f1", True, ("X2", "Z1")),),
+        full_inference_grid=True,
     ),
-    _same("Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),), full_matrix=True),
-    _same("Y ~ X1 | f1[X2] + f2[Z1]", (("f1", True, ("X2",)), ("f2", True, ("Z1",)))),
+    _same_formula(
+        "Y ~ 0 + X1 | f1[[X2]]", (("f1", False, ("X2",)),), full_inference_grid=True
+    ),
+    _same_formula(
+        "Y ~ X1 | f1[X2] + f2[Z1]", (("f1", True, ("X2",)), ("f2", True, ("Z1",)))
+    ),
     SlopeCase(
         "Y ~ X1 | f1:f2[[X2]]",
         "Y ~ X1 | f1^f2[[X2]]",

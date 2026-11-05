@@ -646,6 +646,8 @@ class TestVaryingSlopeParsing:
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
             ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
             ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
+            ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
+            ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
             # Signs and scales leave fitted models unchanged, so only parsing
             # can detect a dropped operator.
             ("f1[-z]", [("f1", True, ("-z",))]),
@@ -725,6 +727,29 @@ class TestVaryingSlopeParsing:
         assert parsed.fixed_effect_specifications == ()
 
     @pytest.mark.parametrize(
+        "fixed_effects,expected_slopes",
+        [
+            ("f2[z2, z1] + f1[[z3]]", ("z2", "z1", "z3")),
+            ("firm[[z]] + region[[w]] + firm[[v]]", ("z", "v", "w")),
+        ],
+    )
+    def test_flattened_slope_order_follows_merged_effects(
+        self, fixed_effects, expected_slopes
+    ):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert tuple(map(str, parsed.fixed_effect_slopes)) == expected_slopes
+
+    def test_stepwise_varying_slopes_parse_each_effect(self):
+        parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
+
+        assert [
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+            for model in parsed
+            for spec in model.fixed_effect_specifications
+        ] == [("f1", True, ("z",)), ("f2", False, ("z",))]
+
+    @pytest.mark.parametrize(
         "fixed_effects,reason,example",
         [
             ("f1[[]]", "must specify at least one slope", "f1[[z]]"),
@@ -767,11 +792,18 @@ class TestVaryingSlopeParsing:
     @pytest.mark.parametrize(
         "fixed_effects",
         [
+            "f1[z1:z2]",  # slice
             "f1[0]",  # no column name
             'f1["z"]',
+            "f1[z, 0]",  # a constant among valid slopes
             "f1[z[0]]",  # unsupported syntax
             "f1[z > 0]",
+            "f1[z and z2]",
+            "f1[z & z2]",
+            "f1[z if flag else z2]",
             "f1[[x for x in z]]",
+            "f1[(lambda x: x)(z)]",
+            "f1[log(*z)]",  # positional unpacking
             "f1[log(z[0])]",  # nested inside a supported call
             "f1[transform(z, **options)]",  # keyword unpacking
         ],
