@@ -91,6 +91,7 @@ _MULTIPLE_ESTIMATION_PATTERN = re.compile(
 
 def _preprocess(formula: str) -> str:
     formula = _preprocess_fixest_instrumental_variable(formula)
+    _reject_intercept_in_instrumental_variable_block(formula)
     formula = _preprocess_fixed_effect_interactions(formula)
     formula = _preprocess_fixest_multiple_dependents(formula)
     return formula
@@ -131,6 +132,43 @@ def _count_formula_tildes(part: str) -> int:
             start, end = _get_position_of_first_parenthesis_pair(token.token)
             count += _count_formula_tildes(token.token[start:end])
     return count
+
+
+def _sets_intercept(token: Token) -> bool:
+    """Whether a token is `0` or `1`, also inside multiple-estimation arguments."""
+    if token.kind is Token.Kind.VALUE:
+        return token.token in {"0", "1"}
+    if token.kind is Token.Kind.PYTHON and _MULTIPLE_ESTIMATION_PATTERN.fullmatch(
+        token.token
+    ):
+        start, end = _get_position_of_first_parenthesis_pair(token.token)
+        return any(
+            _sets_intercept(argument) for argument in tokenize(token.token[start:end])
+        )
+    return False
+
+
+def _reject_intercept_in_instrumental_variable_block(formula: str) -> None:
+    """Reject `0`, `1` and `-1` inside an `[endogenous ~ instruments]` block.
+
+    The main formula sets the intercept of both IV stages. Formulaic inserts a
+    `1` after every `~`, so an explicit `1` in a block is visible only in the
+    tokens. Brackets only delimit IV blocks: subscripts and varying-slope
+    fixed effects such as `f1[z]` are single Python tokens.
+    """
+    depth = 0
+    for token in tokenize(formula):
+        if token.kind is Token.Kind.CONTEXT and token.token == "[":
+            depth += 1
+        elif token.kind is Token.Kind.CONTEXT and token.token == "]":
+            depth -= 1
+        elif depth > 0 and _sets_intercept(token):
+            raise FormulaSyntaxError(
+                "An IV block takes its intercept from the main formula, so "
+                "`[endogenous ~ instruments]` cannot contain `0`, `1` or `-1`. "
+                "To fit both stages without an intercept, write `0 +` in the "
+                f"main formula, as in `Y ~ 0 + X1 + [X2 ~ Z1]`. Received: {formula}"
+            )
 
 
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:

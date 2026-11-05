@@ -727,7 +727,7 @@ def test_expanded_models_have_unambiguous_string_keys():
         (pf.quantreg, "Y ~ X1 - 1", "0 + X1"),
         (pf.feols, "Y ~ {X1 + X2}", "{X1 + X2}"),
         (pf.feols, "`out come` ~ `X1 + X2`", "`out come` ~ 1 + `X1 + X2`"),
-        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1 - 1", "0 + X1 + [X2 ~ 0 + Z1]"),
+        (pf.feols, "Y ~ X1 - 1 | X2 ~ Z1", "0 + X1 + [X2 ~ Z1]"),
         (pf.feols, "Y ~ {X1 + X1 ** 2} | f1 | X2 ~ {Z1 + Z2}", "{Z1 + Z2}"),
     ],
 )
