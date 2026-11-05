@@ -94,7 +94,7 @@ def test_cluster_na():
             "Y ~ X1",
             {},
             {"store_data": False},
-            lambda fit, data: fit.vcov("iid", data=data),
+            lambda fit, data: fit.vcov({"CRV1": "f1"}),
             "vcov",
         ),
         (
@@ -211,6 +211,14 @@ def test_missing_unrelated_to_retention_remains_attribute_error():
     del fit._data
     with pytest.raises(AttributeError, match="_data"):
         fit.vcov("iid")
+
+
+def test_vcov_rejects_data():
+    """`vcov(data=...)` raises instead of pairing rows by position (#1825)."""
+    data = get_data().dropna()
+    fit = feols("Y ~ X1 + X2", data=data)
+    with pytest.raises(ValueError, match=r"`data` argument of `vcov\(\)`"):
+        fit.vcov({"CRV1": "f1"}, data=data)
 
 
 def test_error_hc23_fe():
@@ -721,7 +729,8 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -733,7 +742,7 @@ def test_errors_etable():
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={

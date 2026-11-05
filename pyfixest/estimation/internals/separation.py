@@ -6,6 +6,7 @@ from typing import Protocol
 
 import numpy as np
 import pandas as pd
+from within import Effect
 
 from pyfixest.demeaners import AnyDemeaner
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -19,6 +20,7 @@ def check_for_separation(
     Y: pd.DataFrame,
     X: pd.DataFrame,
     fe: pd.DataFrame,
+    effects: np.ndarray | list[Effect],
     outcome_bounds: tuple[float, ...],
     demeaner: AnyDemeaner,
     collin_tol: float,
@@ -39,7 +41,11 @@ def check_for_separation(
     X : pd.DataFrame
         Independent variables.
     fe : pd.DataFrame
-        Fixed effects.
+        Codes of the fixed effects that have level intercepts. Slope-only
+        effects are excluded, because they cannot diverge to fit a level of
+        outcomes at the bound.
+    effects : np.ndarray or list[within.Effect]
+        All fixed effects in the form the demeaner consumes.
     outcome_bounds : tuple[float, ...]
         Outcome values the family's inverse link attains only in the limit.
     demeaner : AnyDemeaner
@@ -56,9 +62,12 @@ def check_for_separation(
         List of indices of observations that are removed due to separation.
     """
     valid_methods: dict[str, _SeparationMethod] = {
-        "fe": _check_for_separation_fe,
+        "fe": partial(_check_for_separation_fe, fe=fe),
         "ir": partial(
-            _check_for_separation_ir, demeaner=demeaner, collin_tol=collin_tol
+            _check_for_separation_ir,
+            effects=effects,
+            demeaner=demeaner,
+            collin_tol=collin_tol,
         ),
     }
     if methods is None:
@@ -73,7 +82,7 @@ def check_for_separation(
     separation_na: set[int] = set()
     for method in methods:
         separation_na = separation_na.union(
-            valid_methods[method](Y=Y, X=X, fe=fe, outcome_bounds=outcome_bounds)
+            valid_methods[method](Y=Y, X=X, outcome_bounds=outcome_bounds)
         )
 
     if separation_na:
@@ -92,7 +101,6 @@ class _SeparationMethod(Protocol):
         *,
         Y: pd.DataFrame,
         X: pd.DataFrame,
-        fe: pd.DataFrame,
         outcome_bounds: tuple[float, ...],
     ) -> set[int]: ...
 
@@ -149,7 +157,7 @@ def _check_for_separation_ir(
     *,
     Y: pd.DataFrame,
     X: pd.DataFrame,
-    fe: pd.DataFrame,
+    effects: np.ndarray | list[Effect],
     outcome_bounds: tuple[float, ...],
     demeaner: AnyDemeaner,
     collin_tol: float,
@@ -174,8 +182,8 @@ def _check_for_separation_ir(
         Dependent variable.
     X : pd.DataFrame
         Independent variables.
-    fe : pd.DataFrame
-        Fixed effects.
+    effects : np.ndarray or list[within.Effect]
+        Fixed effects in the form the demeaner consumes.
     outcome_bounds : tuple[float, ...]
         The single outcome value the family's inverse link attains only in the
         limit.
@@ -203,7 +211,6 @@ def _check_for_separation_ir(
     # must not be reevaluated after the outer fit filters its rows.
     response = (~is_interior).to_numpy(dtype=np.float64)[:, None]
     weights = np.where(is_interior, is_interior.sum() / tol**2, 1.0)
-    fixed_effects = fe.to_numpy()
     cache = DemeanCache()
     sample = frozenset()
     design = X.to_numpy(dtype=np.float64)
@@ -211,7 +218,7 @@ def _check_for_separation_ir(
     if has_regressors:
         design = cache.demean_array(
             x=design,
-            flist=fixed_effects,
+            flist=effects,
             weights=weights,
             na_index=sample,
             demeaner=demeaner,
@@ -231,7 +238,7 @@ def _check_for_separation_ir(
         # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         response_demeaned = cache.demean_array(
             x=response,
-            flist=fixed_effects,
+            flist=effects,
             weights=weights,
             na_index=sample,
             demeaner=demeaner,

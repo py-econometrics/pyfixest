@@ -101,6 +101,7 @@ def feglm(
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
         - Interacted fixed effects (fe1:fe2)
+        - Varying slopes (fe1[x], fe1[[x]])
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
@@ -250,6 +251,11 @@ def feglm(
     `predict()` does not support `se_fit=True` for GLMs. Coefficients are on the
     link scale. For effects on the response scale, see the
     [marginal effects guide](/how-to/marginaleffects.qmd).
+
+    Varying slopes such as `f1[X2]` and `f1[[X2]]` are supported with the default
+    `within` demeaner, with the same restrictions as in
+    [feols()](/reference/estimation.api.feols.feols.qmd). A slope-only effect
+    like `f1[[X2]]` keeps the model's intercept.
 
     Examples
     --------

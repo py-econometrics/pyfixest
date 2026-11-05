@@ -110,6 +110,15 @@ class FixedEffectSpecification:
     intercept: bool
     slopes: tuple[Term, ...] = ()
 
+    @property
+    def name(self) -> str:
+        """Label the effect with fixest syntax, e.g. `f1`, `f1[z]`, or `f1[[z]]`."""
+        levels = ":".join(str(factor) for factor in self.levels.factors)
+        if not self.slopes:
+            return levels
+        slopes = ", ".join(str(slope) for slope in self.slopes)
+        return f"{levels}[{slopes}]" if self.intercept else f"{levels}[[{slopes}]]"
+
     @classmethod
     def from_term(cls, term: Term) -> FixedEffectSpecification:
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
@@ -202,6 +211,58 @@ class FixedEffectSpecification:
                 _term_from_ast(node, preserve_arithmetic=True) for node in slope_nodes
             ),
         )
+
+
+def _normalize_fixed_effect_specifications(
+    specifications: Iterable[FixedEffectSpecification],
+) -> tuple[FixedEffectSpecification, ...]:
+    """Normalize fixed effects by merging groups and deduplicating slopes.
+
+    Normalization follows these rules:
+
+    1. Combine specifications whose grouping levels compare equal as Formulaic
+       terms, including equivalent interactions such as `f1:f2` and `f2:f1`.
+    2. Keep each distinct slope once, removing duplicates both within a
+       specification and across specifications on the same levels.
+    3. Include group-specific intercepts if any component requests them: a
+       plain `firm` or single-bracket `firm[...]` does; `firm[[...]]` does not.
+       Combining only slope-only specifications keeps the result slope-only.
+    4. Preserve the first occurrence's position for each grouping and each
+       slope within it. This is the order received from the formula parser,
+       which may already have normalized or reordered the original formula.
+    5. Keep different grouping terms separate, even when they share a slope.
+       Equality is symbolic: no data values are compared and no algebraic
+       simplification of slope expressions is performed.
+
+    For example:
+
+    - `firm[z, z]` resolves to `firm[z]`.
+    - `firm[[z, z]]` resolves to `firm[[z]]`.
+    - `firm[[z]] + firm[w, w]` resolves to `firm[z, w]`.
+    - `firm[[z]] + firm[w, z]` resolves to `firm[z, w]`.
+    - `firm + firm[[z]]` resolves to `firm[z]`.
+    - `firm[[z]] + firm[[w]]` resolves to `firm[[z, w]]`.
+    - `firm[z] + firm[[w]]` resolves to `firm[z, w]`.
+    - `firm[z] + firm[w]` resolves to `firm[z, w]`.
+    - `firm[[z]] + region[[z]]` remains two separate slope-only effects.
+    """
+    merged: dict[Term, FixedEffectSpecification] = {}
+    for specification in specifications:
+        existing = merged.get(specification.levels)
+        if existing is None:
+            merged[specification.levels] = FixedEffectSpecification(
+                levels=specification.levels,
+                intercept=specification.intercept,
+                slopes=tuple(dict.fromkeys(specification.slopes)),
+            )
+            continue
+        slopes = tuple(dict.fromkeys(existing.slopes + specification.slopes))
+        merged[specification.levels] = FixedEffectSpecification(
+            levels=existing.levels,
+            intercept=existing.intercept or specification.intercept,
+            slopes=slopes,
+        )
+    return tuple(merged.values())
 
 
 def _is_slope_expression(node: ast.AST) -> bool:
@@ -398,7 +459,7 @@ class Formula:
         parsed stages.
         """
         exogenous = _render_formula_part(
-            self.exogenous, explicit_no_intercept=not self.is_fixed_effects
+            self.exogenous, explicit_no_intercept=not self.absorbs_intercept
         )
         result = f"{_render_formula_part(self.dependent)} ~ {exogenous}"
         if self.is_instrumental_variable:
@@ -442,6 +503,31 @@ class Formula:
         )
 
     @property
+    def absorbs_intercept(self) -> bool:
+        """Whether any fixed effect supplies group-specific intercepts.
+
+        Ordinary fixed effects such as `firm` absorb the model constant
+        through their group-specific intercepts. Effects with varying slopes
+        and intercepts, such as `firm[z]`, do so as well.
+
+        Returns False when there are no fixed effects or all effects are
+        slope-only, such as `firm[[z]]`. This describes the declared fixed
+        effects independently of whether the structural formula requests an
+        intercept; it does not inspect numerical values or matrix rank.
+        """
+        return any(
+            specification.intercept
+            for specification in self.fixed_effect_specifications
+        )
+
+    @property
+    def has_varying_slopes(self) -> bool:
+        """Whether any fixed effect has varying slopes, as in `f1[z]`."""
+        return any(
+            specification.slopes for specification in self.fixed_effect_specifications
+        )
+
+    @property
     def dependent(self) -> formulaic.formula.SimpleFormula:
         """The dependent variable."""
         return self._left_hand_side
@@ -458,7 +544,7 @@ class Formula:
             )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
-        if self.is_fixed_effects and exogenous_terms:
+        if self.absorbs_intercept and exogenous_terms:
             # Drop the intercept for fixed effects regressions, except for
             # intercept-only specifications such as `Y ~ 1 | f1`; these can be
             # used to demean dependent variables.
@@ -495,19 +581,41 @@ class Formula:
 
     @property
     def fixed_effect_specifications(self) -> tuple[FixedEffectSpecification, ...]:
-        """Fixed effects represented as symbolic `within::Effect` terms."""
+        """Fixed effects represented as symbolic `within::Effect` terms.
+
+        Effects on the same levels are merged, so `f1 + f1[[z]]` is `f1[z]`.
+        """
         if not self.is_fixed_effects:
             return ()
-        return tuple(
+        return _normalize_fixed_effect_specifications(
             FixedEffectSpecification.from_term(term) for term in self.fixed_effects
         )
 
     @property
     def formulaic_fixed_effects(self) -> formulaic.formula.SimpleFormula:
-        """Symbolic fixed-effect terms in Formulaic's internal representation."""
+        """Fixed-effect level terms in Formulaic's internal representation."""
         return formulaic.formula.SimpleFormula(
-            as_formulaic_fixed_effect_term(term=term) for term in self.fixed_effects
+            as_formulaic_fixed_effect_term(term=specification.levels)
+            for specification in self.fixed_effect_specifications
         )
+
+    @property
+    def fixed_effect_slopes(self) -> formulaic.formula.SimpleFormula:
+        """Distinct varying-slope terms in normalized specification order.
+
+        Visit normalized fixed-effect specifications in their stored order,
+        then each specification's slopes in order, keeping only the first
+        occurrence of each slope term across all specifications. This can
+        differ from textual order: `firm[[z]] + region[[w]] + firm[[v]]`
+        normalizes to firm slopes `(z, v)` followed by region slope `(w,)`,
+        so the returned formula contains `(z, v, w)`.
+        """
+        slopes: list[Term] = []
+        for specification in self.fixed_effect_specifications:
+            slopes.extend(
+                slope for slope in specification.slopes if slope not in slopes
+            )
+        return formulaic.formula.SimpleFormula(slopes)
 
     @property
     def second_stage(self) -> formulaic.formula.StructuredFormula:
@@ -517,7 +625,7 @@ class Formula:
             terms.extend(self.endogenous)
         # Preserve the existing reduced-rank categorical encoding for FE models.
         # ModelMatrix removes this encoding intercept after materialization.
-        if self.is_fixed_effects and terms and not any(term == "1" for term in terms):
+        if self.absorbs_intercept and terms and not any(term == "1" for term in terms):
             terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
         return formulaic.formula.StructuredFormula(
             lhs=self.dependent, rhs=formulaic.formula.SimpleFormula(terms)
