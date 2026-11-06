@@ -1188,6 +1188,19 @@ class TestEdgeCases:
         assert f"Received: {formula}" in str(excinfo.value)
 
     @pytest.mark.parametrize(
+        "formula, remedy",
+        [
+            ("Y ~ X2 + [X1 ~ 0 + Z1]", "write `0 +` in the main formula"),
+            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1]", "remove the `0` or `-1` from the main"),
+        ],
+    )
+    def test_iv_intercept_error_gives_matching_remedy(self, formula, remedy):
+        """The suggested main-formula change resolves the reported contradiction."""
+        with pytest.raises(FormulaSyntaxError) as excinfo:
+            Formula.parse(formula)
+        assert remedy in str(excinfo.value)
+
+    @pytest.mark.parametrize(
         "main, block",
         [
             ("X2", "Z1"),
@@ -1236,6 +1249,8 @@ class TestEdgeCases:
             "Z1:sw0(Z2)",
             "sw0(Z1):Z2 + Z3",
             "Z3 + (1 + Z1):Z2",
+            "Z1 + sw0(Z2)^2",
+            "Z1 + sw0(Z2)**2",
         ],
     )
     def test_iv_block_expressions_do_not_contradict(self, main, instruments):

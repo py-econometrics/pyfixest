@@ -347,19 +347,11 @@ Behaviour that changed as a result:
   The former `f1^f2` spelling remains accepted temporarily, but emits a
   `DeprecationWarning` and is immediately normalised to `f1:f2`.
 
-- **The main formula sets the intercept of both IV stages.** The IV block may
-  repeat that choice, as in `Y ~ 0 + X2 + [X1 ~ 0 + Z1]`, but a block that
-  contradicts it raises `FormulaSyntaxError`: a `0` or `-1` under a main
-  formula with an intercept, as in `Y ~ X2 + [X1 ~ 0 + Z1]` or
-  `Y ~ X2 | X1 ~ 0 + Z1`, or a `1` under one without, as in
-  `Y ~ 0 + X2 + [X1 ~ 1 + Z1]`. Write `Y ~ 0 + X2 + [X1 ~ Z1]` to fit both
-  stages without an intercept. Fixed effects with group intercepts, such as
-  `f1` or `f1[z]`, absorb the intercept, so nothing contradicts there;
-  slope-only effects such as `f1[[z]]` do not. A `0` inside a parenthesized group, a stepwise step or the
-  endogenous side of the block is scoped by Formulaic and has no effect. In
-  0.60.0, an inner `0` failed with a singular-matrix error when the main
-  formula had an intercept, and an inner `1` was ignored. IV model names write
-  the block without an intercept, as in `Y ~ 1 + X2 + [X1 ~ Z1]`.
+- **The main formula sets the intercept of both IV stages.** An intercept
+  choice in the IV block that contradicts it now raises `FormulaSyntaxError`.
+  For example, use `Y ~ 0 + X2 + [X1 ~ Z1]` to omit the intercept from both
+  stages. Fixed effects with group intercepts absorb it; slope-only effects
+  do not. IV model names no longer include an intercept inside the block.
 
 - **`predict(newdata=...)` works with `i()`, interacted fixed effects
   (`f1:f2`) and `poly()`.** These previously raised `NotImplementedError`; the

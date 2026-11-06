@@ -48,27 +48,10 @@ translating R's `I(X1^2)`.
 
 ### Categorical IV instruments without an intercept
 
-In an IV model, the main formula decides whether both stages have an
-intercept. An IV block may repeat that choice, but a `0` or `-1` in a block
-under a main formula with an intercept, or a `1` under one without, raises an
-error; `fixest` ignores such a contradiction. Without an intercept,
-fixed effects, or another term that spans the constant, PyFixest keeps every
-level of an unreferenced categorical instrument. For a factor `f` with levels
-`a`, `b`, and `c`:
-
-| Formula | PyFixest instruments | `fixest` 0.14 instruments |
-|---|---|---|
-| `Y ~ 0 + X2 + [X1 ~ i(f)]` | `f::a`, `f::b`, `f::c` | `f::b`, `f::c` |
-| `Y ~ 0 + [X1 ~ C(f)]` | all three levels | `b` and `c` |
-| `Y ~ X2 + [X1 ~ i(f)]` | `f::b`, `f::c` | `f::b`, `f::c` |
-
-Without an intercept, the remaining levels do not span the constant, so
-omitting one restricts the instruments instead of reparameterizing them, and
-the estimates differ. To request `fixest`'s reduced instruments in PyFixest,
-set the reference explicitly, as in `i(f, ref="a")`. To reproduce PyFixest in
-R, keep every level with `i(f, keep = c("a", "b", "c"))` or `0 + factor(f)`
-inside the IV part. See
-[#1917](https://github.com/py-econometrics/pyfixest/issues/1917).
+In IV models in PyFixest, the main formula decides whether both stages contain an
+intercept. An IV block may repeat the intercept choice of the main formula, but 
+not adjust it. In other words, it is not possible to ask for an intercept in the main 
+formula, but to ask to suppress it in the IV part, or vice versa. 
 
 ## Setup
 
