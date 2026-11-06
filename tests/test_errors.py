@@ -1063,9 +1063,15 @@ def test_ritest_error(data):
     with pytest.raises(NotImplementedError, match=r"randomization_inference is False"):
         fit_iv.ritest(resampvar="X1", reps=100)
 
-    fit_wls = pf.feols("Y ~ X1", data=data, weights="weights", store_data=False)
-    with pytest.raises(NotImplementedError, match="Weights are not supported"):
-        fit_wls.ritest(resampvar="X1", reps=100)
+    fit_fweights = pf.feols(
+        "Y ~ X1",
+        data=data,
+        weights="weights",
+        weights_type="fweights",
+        store_data=False,
+    )
+    with pytest.raises(NotImplementedError, match="aweights"):
+        fit_fweights.ritest(resampvar="X1", reps=100)
 
     with pytest.raises(ValueError):
         "Incorrect plot backend."
