@@ -589,7 +589,7 @@ class TestFixedEffectInteractions:
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
         assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
-        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+        assert str(iv_power.instruments) == "Z1 + Z2 + Z1:Z2"
 
 
 class TestInstrumentalVariableBoundaries:
@@ -1164,7 +1164,7 @@ class TestEdgeCases:
         parsed = Formula.parse(formula)[0]
         assert parsed.exogenous == formulaic.Formula("1 + X1")
         assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
-        assert parsed.instruments == formulaic.Formula("1 + Z1")
+        assert parsed.instruments == formulaic.Formula("0 + Z1")
         assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
 
         first_stage = parsed.as_first_stage().second_stage
@@ -1181,28 +1181,38 @@ class TestEdgeCases:
         ],
         ids=["pipe", "bracket"],
     )
-    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize(
+        "instruments",
+        ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1", "Z1 + 1", "Z1 + 0", "Z1 - 1"],
+    )
     @pytest.mark.parametrize(
         "exogenous, expected",
         [
             ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("1 + X2", "X1 ~ 1 + Z1 + X2"),
+            ("X2 + 1", "X1 ~ 1 + Z1 + X2"),
+            ("1", "X1 ~ 1 + Z1"),
             ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
             ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 + 0", "X1 ~ 0 + Z1 + X2"),
             ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
             ("0", "X1 ~ 0 + Z1"),
+            ("-1", "X1 ~ 0 + Z1"),
         ],
     )
     def test_iv_first_stage_preserves_intercept_choice(
         self, formula_template, instruments, exogenous, expected
     ):
-        """The instrument block's implicit intercept follows the main equation."""
+        """The main equation sets the first-stage intercept, whatever the block says."""
         formula = formula_template.format(exogenous=exogenous, instruments=instruments)
         parsed = Formula.parse(formula)[0]
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)
         assert first_stage.lhs == expected_stage.lhs
-        # Both parsed blocks can contribute the same intercept term.
         assert set(first_stage.rhs) == set(expected_stage.rhs)
+        plain_block = Formula.parse(f"Y ~ {exogenous} + [X1 ~ Z1]")[0]
+        assert parsed.second_stage == plain_block.second_stage
+        assert parsed.render() == plain_block.render()
         reparsed = Formula.parse(parsed.render())[0]
         assert (
             reparsed.as_first_stage().second_stage

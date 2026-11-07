@@ -342,6 +342,19 @@ def test_iv_rejects_implicit_endogenous_interactions(rhs):
         feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
+@pytest.mark.parametrize("block", ["0", "1", "-1", "0 + 1", "1 - 1"])
+@pytest.mark.parametrize("main", ["X2", "0 + X2", "X2 - 1"])
+def test_iv_block_of_intercepts_has_no_instrument(main, block):
+    with pytest.raises(UnderDeterminedIVError):
+        feols(f"Y ~ {main} + [X1 ~ {block}]", data=get_data())
+
+
+@pytest.mark.parametrize("endogenous", ["1 + X1", "X1 + 1"])
+def test_iv_endogenous_side_rejects_intercept(endogenous):
+    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous variables"):
+        feols(f"Y ~ X2 + [{endogenous} ~ Z1]", data=get_data())
+
+
 def test_iv_errors():
     data = get_data()
 

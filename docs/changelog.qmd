@@ -347,6 +347,11 @@ Behaviour that changed as a result:
   The former `f1^f2` spelling remains accepted temporarily, but emits a
   `DeprecationWarning` and is immediately normalised to `f1:f2`.
 
+- **The main formula sets the intercept of both IV stages.** A `0`, `-1` or `1`
+  inside the IV block has no effect: `Y ~ X2 + [X1 ~ 0 + Z1]` keeps the
+  intercept in both stages, and `Y ~ 0 + X2 + [X1 ~ 1 + Z1]` omits it from
+  both. IV model names no longer include an intercept inside the block.
+
 - **`predict(newdata=...)` works with `i()`, interacted fixed effects
   (`f1:f2`) and `poly()`.** These previously raised `NotImplementedError`; the
   stored `ModelSpec` now encodes `newdata` against the levels seen at fit time.
