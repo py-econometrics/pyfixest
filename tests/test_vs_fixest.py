@@ -2083,7 +2083,7 @@ def _skip_f3_checks(fml, f3_type):
             },
         ),
         (
-            "Y ~ 0 + X1 + i(f1, f3, bin2={0: [0], 1: [1]})",
+            "Y ~ 0 + X1 + i(f1, C(f3))",
             "Y ~ 0 + X1 + i(f1, i.f3)",
             {
                 f"f1::{i}:f3::{j}": f"f1::{i}.0:f3::{j}.0"
@@ -2092,7 +2092,7 @@ def _skip_f3_checks(fml, f3_type):
             },
         ),
         (
-            "Y ~ 0 + X1 + i(f1, X2) + i(f1, f3, bin2={0: [0], 1: [1]})",
+            "Y ~ 0 + X1 + i(f1, X2) + i(f1, C(f3))",
             "Y ~ 0 + X1 + i(f1, X2) + i(f1, i.f3, keep=0:13)",
             {
                 **{f"f1::{i}:X2": f"f1::{i}.0:X2" for i in range(14)},
@@ -2104,12 +2104,12 @@ def _skip_f3_checks(fml, f3_type):
             },
         ),
         (
-            "Y ~ 0 + X1 + i(f1, f3, ref2=0)",
+            "Y ~ 0 + X1 + i(f1, C(f3), ref2=0)",
             "Y ~ 0 + X1 + i(f1, i.f3, ref2=0)",
             {f"f1::{i}:f3::1": f"f1::{i}.0:f3::1.0" for i in range(14)},
         ),
         (
-            "Y ~ X1 + i(f1, f3, bin2={0: [0], 1: [1]})",
+            "Y ~ X1 + i(f1, C(f3))",
             "Y ~ X1 + i(f1, i.f3)",
             {
                 f"f1::{i}:f3::{j}": f"f1::{i}.0:f3::{j}.0"
