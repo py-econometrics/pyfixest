@@ -173,22 +173,13 @@ def fits_vs_fixest(fixest_data, estimator, fml, weights):
         "Y ~ 1 | f1",
     ],
 )
-def test_vs_fixest(request, fits_vs_fixest, fixest_data, estimator, fml):
+def test_vs_fixest(fits_vs_fixest, fixest_data, estimator, fml):
     """Compare fixef, predict, and resid with fixest.
 
     `Y ~ 1 | f1` covers fixed effects recovered without covariates; GLM fixed
-    effects live on the link scale net of the offset.
+    effects live on the link scale net of the offset. Logit `Y ~ X1 | f1:f2`
+    covers fixed-effect groups with only 1 outcomes.
     """
-    if estimator == "logit" and fml == "Y ~ X1 | f1:f2":
-        request.applymarker(
-            pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    "The binomial separation check drops only all-zero FE groups; "
-                    "fixest also drops all-one groups (#1623)."
-                ),
-            )
-        )
     fit, fit_r = fits_vs_fixest
     tol = {"rtol": 1e-6, "atol": 1e-6}
 

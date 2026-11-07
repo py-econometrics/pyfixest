@@ -219,7 +219,8 @@ def did2s(
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with '~'. It must not contain
+        varying slopes such as `unit[year]`.
     second_stage : str
         The formula for the second stage, starting with '~'.
     treatment : str
@@ -309,6 +310,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         cluster_causal_variance=False,
         decomposition=False,
         prediction=False,
+        prediction_inference=False,
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,

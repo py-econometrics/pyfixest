@@ -188,6 +188,7 @@ allows us to group individual contributions into a single number. In the `decomp
 gb2 = fit_full.decompose(
     decomp_var="gender[T.male]",
     combine_covariates={
+        "education": ["education"],
         "experience": re.compile("experience"),
         "occupation": re.compile("occupation"),
         "industry": re.compile("industry"),

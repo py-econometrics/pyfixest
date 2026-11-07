@@ -180,6 +180,7 @@ class SaturatedEventStudy(DID):
             time_id=self._tname,
             unit_id=self._idname,
             cluster=self._cluster,
+            xfml=self._xfml,
         )
         self.mod.event_study_design = EventStudyDesign(
             yname=self._yname,
@@ -428,8 +429,10 @@ def _saturated_event_study(
     time_id: str,
     unit_id: str,
     cluster: str | None = None,
+    xfml: str | None = None,
 ):
-    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
+    covariates = f" + {xfml}" if xfml is not None else ""
+    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0){covariates} | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
     res = m.tidy().reset_index()
     res = res.join(

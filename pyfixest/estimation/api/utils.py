@@ -10,6 +10,16 @@ from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
 from pyfixest.utils.utils import Ssc
 
 
+class _AllSampleSentinel:
+    """Represent the full sample in legacy fitted-model metadata."""
+
+    def __repr__(self) -> str:
+        return "all"
+
+
+_ALL_SAMPLE = _AllSampleSentinel()
+
+
 def _resolve_ssc(ssc: Ssc | Mapping[str, Any] | None) -> Ssc:
     """Return the small-sample options as an `Ssc`, defaulting to `ssc()`."""
     if ssc is None:

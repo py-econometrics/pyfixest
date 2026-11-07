@@ -1,93 +1,58 @@
 ---
 name: pr-review
-description: Review pyfixest diffs for correctness and repository policy, during explicit PR review or self-review before handoff.
+description: Review a pyfixest diff for defects and scope, self-review a change, or guide a requested walkthrough. Explanations use the walkthrough mode rather than launching a full audit.
 ---
 
-# Review a pyfixest PR
+# Review or explain a pyfixest diff
 
-Input: the complete diff against the
-[resolved base](../../../docs/developer/git-and-pr-style.md#establish-the-base),
-including uncommitted and untracked files, plus the head SHA and its CI results.
-Output: actionable findings and remaining uncertainty.
+Resolve the [intended base](../../../docs/developer/git-and-pr-style.md#establish-the-base)
+and include the relevant working changes. For a stack, distinguish the current
+layer from its ancestors and the cumulative result. If the displayed diff
+contains unrelated files, fix the comparison before explaining them.
 
-## Choose the review scope
+## Guided walkthrough
 
-For documentation or workflow-metadata-only changes, check accuracy, links,
-instruction consistency, scope, and the applicable
-[Selection matrix](../../../docs/developer/testing.md#selection-matrix) rows.
-Then report findings; numerical tracing and estimator checks do not apply.
-For code changes, use the relevant priorities below.
+When the user wants to review together, follow their pace. Start with the
+concrete problem and the before/after behavior, then suggest the first changed
+function to inspect. Explain one function or hunk at a time when requested.
 
-## Priorities
+Use a small, consistent example: show the formula or input, the relevant
+intermediate values, and how the result changes. Define names before using
+them. Connect numerical code to its equation, including shapes, scales,
+ordering, and weights where they matter. Distinguish outputs you ran from
+illustrations. Answer the current question directly; a syntax question does
+not require a fresh review or a test run. Explain tests by the behavior and
+failure they distinguish, unless the user asks for their mechanics.
 
-A silently wrong number is the highest review concern, so order findings by
-their ability to produce one:
+Questions about alternatives call for an assessment, not an unsolicited
+rewrite. Apply requested edits and use the checks appropriate to those edits.
 
-1. weights, fixed effects, IV, multiple estimation, vcov/SSC, or stripped-data
-   paths with undefined or untested behavior;
-2. numerical changes without a permanent external reference;
-3. public behavior that differs from `fixest` without an entry in
-   `docs/developer/fixest-compatibility.md`;
-4. estimator-specific logic leaking into shared runners or model classes;
-5. input mutation, unstable RNG, unjustified tolerances, missing convergence
-   checks, or an undeclared behaviour change in
-   `tests/test_release_contract.py`;
-6. avoidable test-suite growth by the rules under "Test design" in
-   `docs/developer/testing.md`;
-7. optional-dependency failures, export or docs gaps, generated churn, and
-   unmeasured performance claims.
+## Defect review and self-review
 
-## Trace numerical changes through the code
+For guidance or documentation, check accuracy, links, consistency, and scope.
+Numerical tracing applies only to code that can affect results or state.
 
-For numerical changes and estimator-state refactors, trace each changed value
-through construction, fitting, inference, post-estimation, and cleanup:
-its mathematical role and scale, row and column ordering, ownership, and
-lifetime. Map changed scores, weights, projections, and covariance expressions
-to the estimator equations, including weight factors already folded into
-another value. For copies, shared views, read-only flags, and frozen objects,
-distinguish attribute rebinding from element mutation and state who may mutate
-the underlying data. Identify the concrete guarantee or avoided work behind an
-optimization; performance claims need measurements.
+Prioritize silently wrong results. Trace the changed values through their
+callers: construction, fitting, inference, post-estimation, and cleanup as
+applicable. Check mathematical meaning, row/column alignment, weight factors
+already applied, ownership, and lifetime. Frozen fields do not make contained
+arrays immutable. Before deleting a wrapper or accessor, inspect subclass
+overrides and callers; fewer functions alone do not prove a better design.
 
-Check whether accurate econometric names, meaningful intermediate results, and
-control flow expose the invariants a reader needs to verify the
-implementation. Enduring contracts and useful mathematical explanations belong
-in code documentation; migration history and review-only motivation belong in
-the PR or a design note. Before a wrapper or shared accessor is removed, audit
-its callers, subclass overrides, and supported estimator paths; fewer
-abstractions are not automatically clearer or safer.
+Check the [supported paths](../../../docs/developer/architecture.md#result-and-numerical-boundaries),
+independent [numerical evidence](../../../docs/developer/testing.md#choosing-a-numerical-reference),
+and documented compatibility decisions. Audit tests for distinct failures they
+catch, not just their count or agreement with the implementation. Apply the
+[scope policy](../../../docs/developer/git-and-pr-style.md#change-scope) to
+independent improvements discovered in review.
 
-Separate demonstrated defects, pre-existing issues, intentional compatibility
-decisions, questions, and optional maintainability improvements. Answer
-questions directly and support disagreements with evidence rather than
-treating unfamiliar syntax or a naming preference as a correctness bug.
+Use [existing verification evidence](../../../docs/developer/testing.md#runtime-tiers)
+before rerunning checks. A green suite does not rebut a demonstrated defect.
+For a cumulative stack review, a later layer's fix resolves the final-stack
+finding; it does not make the earlier layer independently acceptable.
 
-## Confirm change scope
-
-Apply the [change-scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
-Flag independent improvements for removal or follow-up.
-
-## Spend verification budget on unresolved risk
-
-Review differs from authoring in what to re-run. Treat checks named in a PR
-brief as evidence requirements, not commands to repeat. Inventory the CI
-completed for the exact head SHA first, then run only the cheapest check that
-answers each remaining question. Escalate to a broad suite only when a narrow
-check fails or leaves material uncertainty, the diff crosses subsystems,
-equivalent exact-head CI is missing or stale, or the "Selection matrix" in
-`testing.md` requires it. Before starting a multi-minute local check, state
-which unresolved risk it addresses and why existing CI is insufficient.
-
-For a stack, review every layer's diff. When the stated acceptance boundary
-is the cumulative stack, an issue that a later layer fixes is a layering
-observation, not a blocker for that cumulative stack. It remains a blocker
-for an affected layer being accepted independently.
-
-## Output
-
-Report actionable findings first, ordered by severity, each with a file and
-line reference and the concrete failure mode. Separate questions from
-findings, and say when no findings remain. Use
-[Verification reporting](../../../docs/developer/testing.md#verification-reporting)
-and explain remaining uncertainty. A green suite never overrides a concrete
-code finding; human maintainer review is still required before merge.
+Report actionable findings first, with file/line references and a concrete
+failure mode. Separate introduced defects, pre-existing issues, compatibility
+decisions, questions, and optional cleanup. Say when no findings remain; do
+not manufacture blockers from naming preferences or unfamiliar syntax.
+Summarize verification and remaining uncertainty without a second checklist.

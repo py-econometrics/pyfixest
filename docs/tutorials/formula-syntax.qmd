@@ -86,6 +86,33 @@ are unsupported; create the transformed column in `data` first.
 Outcome, covariate, and instrument names can still be quoted with backticks,
 for example ``"Y ~ `my covariate` | firm"``.
 
+### Varying slopes
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+`f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+as in `f1[X2, Z1]`. Slopes also work with interacted groups (`f1:f2[X2]`)
+and arithmetic expressions (`f1[X2**2]`).
+
+```{python}
+fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
+fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
+pf.etable([fit_slopes, fit_slopes_only])
+```
+
+Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`,
+and require the default `within` demeaner. `predict()`, `fixef()`,
+`wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not
+yet supported for these models.
+
+Slope-only effects such as `f1[[X2]]` do not absorb the constant, so the model
+keeps and reports an `Intercept`. Effects with level-specific intercepts, such
+as `f1[X2]`, absorb it. Write `0 +` on the right-hand side to drop the
+intercept of a slope-only model:
+
+```{python}
+pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
+```
+
 ## Instrumental Variables (IV) Syntax
 
 For IV estimation, `PyFixest` 0.70 uses Formulaic's bracketed multistage syntax.
@@ -104,12 +131,17 @@ fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 fit_iv.summary()
 ```
 
-The former fixest-style syntax, such as `Y ~ X2 | f1 + f2 | X1 ~ Z1`, is
+The main formula decides whether both stages have an intercept:
+`Y ~ 0 + [X1 ~ Z1]` omits it from the first and second stage. A `0`, `-1` or `1`
+inside the brackets has no effect.
+
+Before version `0.70.0`, `PyFixest` supported instrumental variables syntax similar to `fixest`'s. For
+example, the IV model above would have been written as `Y ~ X2 | f1 + f2 | X1 ~ Z1`. This syntax is
 deprecated: it raises a `DeprecationWarning` in 0.70 and will become an error
 in a future release. See the [formula-parsing changelog](/changelog.qmd#formula-parsing-on-formulaic)
 for details.
 
-For details on IV estimation, take a look at the
+For all the details on IV estimation, take a look at the
 [Instrumental Variables](instrumental-variables.qmd) vignette.
 
 ## The `i()` operator for interacting fixed effects

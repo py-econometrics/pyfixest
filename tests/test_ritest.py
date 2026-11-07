@@ -7,9 +7,61 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.post_estimation.ritest import _resample
+from pyfixest.estimation.post_estimation.ritest import _assignment_units
 
 matplotlib.use("Agg")  # Use a non-interactive backend
+
+
+@pytest.mark.parametrize("algorithm", ["auto", "fast", "slow"])
+@pytest.mark.parametrize(
+    "fml",
+    [
+        "y ~ D*x",
+        "y ~ D + {D*x}",
+        "y ~ D + I(D**2) + x",
+        "y ~ D*x | g",
+        "I(y-D) ~ D + x",
+    ],
+)
+def test_ritest_rebuilds_treatment_dependencies(fml, algorithm):
+    """Every draw must evaluate treatment-dependent terms on its new assignment."""
+    rng = np.random.default_rng(4321)
+    n = 240
+    data = pd.DataFrame(
+        {
+            "D": rng.normal(size=n),
+            "x": rng.normal(size=n),
+            "g": np.repeat(np.arange(12), 20),
+        }
+    )
+    if "D**2" not in fml:
+        data["D"] = (data.D > 0).astype(float)
+    data["y"] = 0.4 * data.D + data.D * data.x + rng.normal(size=n)
+    fit = pf.feols(fml, data=data)
+    original = fit._data.copy(deep=True)
+    reps = 7
+    expected = []
+    rng = np.random.default_rng(31)
+    # Direct formula fits rebuild every column without ritest's algorithm selection.
+    for _ in range(reps):
+        draw = data.assign(D=rng.permutation(data.D.to_numpy()))
+        expected.append(pf.feols(fml, data=draw).coef().loc["D"])
+
+    fit.ritest(
+        "D",
+        reps=reps,
+        choose_algorithm=algorithm,
+        rng=np.random.default_rng(31),
+        store_ritest_statistics=True,
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-9,
+        err_msg="RI coefficients differ from direct feols formula refits",
+    )
+    pd.testing.assert_frame_equal(fit._data, original)
 
 
 def test_fast_ritest_requires_numba(monkeypatch):
@@ -24,11 +76,33 @@ def test_fast_ritest_requires_numba(monkeypatch):
         fit.ritest("X1", reps=10, choose_algorithm="fast")
 
 
+def test_assignment_units():
+    """Keep each unit's treatment and map observations to their assignment unit."""
+    D = np.repeat([1.0, 0.0], [10, 90])
+    cluster = np.repeat(np.arange(20), 5)
+    D_cluster = np.repeat(np.repeat([1.0, 0.0], [3, 17]), 5)
+
+    assignment, unit_codes = _assignment_units(resampvar_arr=D)
+    np.testing.assert_array_equal(assignment, D)
+    np.testing.assert_array_equal(unit_codes, np.arange(len(D)))
+
+    assignment, unit_codes = _assignment_units(
+        resampvar_arr=D_cluster, clustervar_arr=cluster
+    )
+    np.testing.assert_array_equal(assignment, np.repeat([1.0, 0.0], [3, 17]))
+    np.testing.assert_array_equal(unit_codes, cluster)
+    np.testing.assert_array_equal(assignment[unit_codes], D_cluster)
+
+
 @pytest.mark.extended
-@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3"])
+@pytest.mark.parametrize(
+    "fml", ["Y~X1+D_cluster", "Y~X1+D_cluster|f1", "Y~X1+D_cluster|f1+f2"]
+)
+@pytest.mark.parametrize(
+    "resampvar, cluster",
+    [("X1", None), ("D_cluster", None), ("D_cluster", "group_id")],
+)
 @pytest.mark.parametrize("reps", [111, 212])
-@pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_algos_internally(data, fml, resampvar, reps, cluster):
     fit = pf.feols(fml, data=data)
 
@@ -68,6 +142,9 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
 @pytest.mark.parametrize("cluster", [None, "group_id"])
 def test_randomization_t_vs_c(fml, resampvar, cluster):
     data = pf.get_data(N=300)
+    if cluster is not None:
+        # cluster random assignment needs a cluster-level treatment
+        data["X1"] = data.groupby("group_id").X1.transform("first")
 
     fit1 = pf.feols(fml, data=data)
     fit2 = pf.feols(fml, data=data)
@@ -113,16 +190,38 @@ def ritest_results():
 
 @pytest.fixture
 def data():
-    return pf.get_data(N=1000, seed=2999)
+    data = pf.get_data(N=1000, seed=2999)
+    # unbalanced treatments, as in tests/r_test_comparisons.R
+    data["D_unit"] = (np.arange(len(data)) % 5 == 0).astype(float)
+    data["D_cluster"] = (data.group_id % 4 == 0).astype(float)
+    return data
+
+
+_FIXEF = ["", "|f1", "|f1+f2"]
+_R_CASES = (
+    [
+        (f"Y~X1+f3{fe}", resampvar, None)
+        for resampvar in ["X1", "f3", "X1=-0.75", "f3>0.05"]
+        for fe in _FIXEF
+    ]
+    + [
+        (f"Y~D_unit+f3{fe}", resampvar, None)
+        for resampvar in ["D_unit", "D_unit=0.2"]
+        for fe in _FIXEF
+    ]
+    + [
+        (f"Y~D_cluster+f3{fe}", resampvar, "group_id")
+        for resampvar in ["D_cluster", "D_cluster=0.2"]
+        for fe in _FIXEF
+    ]
+)
 
 
 @pytest.mark.extended
-@pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1", "Y~X1+f3|f1+f2"])
-@pytest.mark.parametrize("resampvar", ["X1", "f3", "X1=-0.75", "f3>0.05"])
-@pytest.mark.parametrize("cluster", [None, "group_id"])
+@pytest.mark.parametrize("fml, resampvar, cluster", _R_CASES)
 def test_vs_r(data, fml, resampvar, cluster, ritest_results):
     fit = pf.feols(fml, data=data)
-    reps = 4000
+    reps = 10_000
 
     rng1 = np.random.default_rng(1234)
 
@@ -140,30 +239,15 @@ def test_vs_r(data, fml, resampvar, cluster, ritest_results):
 
     res1 = fit.ritest(**kwargs1)
 
-    if cluster is not None:
-        pval = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["pval"].to_numpy()
-        se = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["se"].to_numpy()
-        ci_lower = ritest_results.xs(
-            (fml, resampvar, cluster), level=("formula", "resampvar", "cluster")
-        )["ci_lower"].to_numpy()
-    else:
-        pval = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["pval"].to_numpy()
-        se = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["se"].to_numpy()
-        ci_lower = ritest_results.xs(
-            (fml, resampvar, "none"), level=("formula", "resampvar", "cluster")
-        )["ci_lower"].to_numpy()
+    expected = ritest_results.loc[(fml, resampvar, cluster or "none")]
+    pval = expected["pval"]
+    # four Monte Carlo standard errors of the difference of two estimates,
+    # each from 10,000 draws
+    atol = 4 * np.sqrt(pval * (1 - pval) * 2 / reps) + 1e-3
 
-    assert np.allclose(res1["Pr(>|t|)"], pval, rtol=0.005, atol=0.005)
-    assert np.allclose(res1["Std. Error (Pr(>|t|))"], se, rtol=0.005, atol=0.005)
-    assert np.allclose(res1["2.5% (Pr(>|t|))"], ci_lower, rtol=0.005, atol=0.005)
+    assert np.isclose(res1["Pr(>|t|)"], pval, rtol=0, atol=atol)
+    assert np.isclose(res1["Std. Error (Pr(>|t|))"], expected["se"], rtol=0, atol=atol)
+    assert np.isclose(res1["2.5% (Pr(>|t|))"], expected["ci_lower"], rtol=0, atol=atol)
 
 
 @pytest.mark.extended
@@ -201,13 +285,11 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
     expected = []
     for _ in range(reps):
         resampled = original.copy(deep=False)
-        resampled["D"] = _resample(
-            resampvar_arr=original.D.to_numpy(), rng=rng
-        ).flatten()
+        resampled["D"] = rng.permutation(original.D.to_numpy())
         reference = estimator(
             fml,
             data=resampled,
-            vcov="iid" if statistic == "randomization-c" else "hetero",
+            vcov="iid",
         )
         values = (
             reference.coef() if statistic == "randomization-c" else reference.tstat()
@@ -233,3 +315,124 @@ def test_ritest_preserves_treatment_names(estimator, statistic, monkeypatch):
 
 def _fail_on_reparse(*args, **kwargs):
     raise AssertionError("Randomization inference must reuse the parsed formula.")
+
+
+@pytest.mark.parametrize("h0", [-0.25, 0.25])
+@pytest.mark.parametrize(
+    "statistic,algorithm",
+    [
+        ("randomization-t", "slow"),
+        ("randomization-c", "slow"),
+        ("randomization-c", "fast"),
+    ],
+)
+def test_ritest_nonzero_null_scale(h0, statistic, algorithm):
+    """Explicit centering and direct refits bypass ritest's statistic handling."""
+    rng = np.random.default_rng(8)
+    data = pd.DataFrame({"D": rng.integers(0, 2, 120).astype(float)})
+    data["y"] = 0.3 * data.D + rng.normal(size=len(data)) * (1 + data.D)
+    fit = pf.feols("y ~ D", data=data, vcov="iid")
+    expected_sample = fit.coef().loc["D"] - h0
+    if statistic == "randomization-t":
+        expected_sample /= fit.se().loc["D"]
+    result = fit.ritest(
+        f"D={h0}",
+        type=statistic,
+        choose_algorithm=algorithm,
+        reps=7,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    draw_rng = np.random.default_rng(1)
+    expected_draws = []
+    for _ in range(7):
+        draw = pf.feols(
+            "y ~ D",
+            data=data.assign(D=draw_rng.permutation(data.D.to_numpy())),
+            vcov="iid",
+        )
+        values = draw.tstat() if statistic == "randomization-t" else draw.coef()
+        expected_draws.append(values.loc["D"])
+    # Fast and direct solvers differ by less than 1e-10 on this two-column design.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected_draws,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="Permutation statistics changed with the null hypothesis",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        expected_sample,
+        rtol=1e-9,
+        atol=1e-10,
+        err_msg="The null was subtracted on the wrong statistic scale",
+    )
+    expected_pvalue = np.mean(np.abs(expected_draws[1:]) >= abs(expected_sample))
+    assert result["Pr(>|t|)"] == expected_pvalue
+
+
+@pytest.mark.parametrize("h0", [0.0, 0.25])
+@pytest.mark.parametrize(
+    "initial_vcov", ["iid", {"CRV1": "g1"}, {"CRV1": "g2"}, {"CRV3": "g2"}]
+)
+@pytest.mark.parametrize("statistic", ["randomization-c", "randomization-t"])
+def test_ritest_cluster_override_preserves_fit(initial_vcov, statistic, h0):
+    """Direct CRV1 fits bypass the override and leave its numerical contract explicit."""
+    rng = np.random.default_rng(9)
+    assignments = rng.integers(0, 2, 12).astype(float)
+    data = pd.DataFrame(
+        {
+            "D": np.repeat(assignments, 10),
+            "x": rng.normal(size=120),
+            "g1": np.repeat(np.arange(12), 10),
+            "g2": np.tile(np.arange(10), 12),
+        }
+    )
+    data["y"] = 0.4 * data.D + data.x + rng.normal(size=12)[data.g1]
+    data["y"] += rng.normal(size=len(data))
+    correction = pf.ssc(k_adj=False, G_adj=False)
+    fit = pf.feols("y ~ D + x", data=data, vcov=initial_vcov, ssc=correction)
+    covariance = fit.variance_covariance
+    original = fit.tidy().copy(deep=True)
+
+    def reference(draw_data, *, null=0.0):
+        draw_fit = pf.feols(
+            "y ~ D + x", data=draw_data, vcov={"CRV1": "g1"}, ssc=correction
+        )
+        value = draw_fit.coef().loc["D"] - null
+        if statistic == "randomization-t":
+            value /= draw_fit.se().loc["D"]
+        return value
+
+    draw_rng = np.random.default_rng(1)
+    expected = [
+        reference(data.assign(D=np.repeat(draw_rng.permutation(assignments), 10)))
+        for _ in range(5)
+    ]
+    fit.ritest(
+        f"D={h0}",
+        cluster="g1",
+        type=statistic,
+        choose_algorithm="slow",
+        reps=5,
+        rng=np.random.default_rng(1),
+        store_ritest_statistics=True,
+    )
+    assert fit.variance_covariance is covariance
+    pd.testing.assert_frame_equal(fit.tidy(), original)
+    # The same estimator and rows differ only by cluster-score accumulation rounding.
+    np.testing.assert_allclose(
+        fit.ritest_statistics.statistics,
+        expected,
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override permutation statistics differ from direct CRV1 fits",
+    )
+    np.testing.assert_allclose(
+        fit.ritest_statistics.sample_stat,
+        reference(data, null=h0),
+        rtol=0,
+        atol=1e-10,
+        err_msg="Cluster override observed statistic differs from the direct CRV1 fit",
+    )

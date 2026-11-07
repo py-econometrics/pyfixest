@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -30,7 +31,7 @@ from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.plan_ import plan_formulas
 from pyfixest.estimation.runner import run_estimation
-from pyfixest.utils.dev_utils import DataFrameType
+from pyfixest.utils.dev_utils import DataFrameType, _find_stack_level
 from pyfixest.utils.utils import Ssc, capture_context
 
 # Poisson goes through the Fepois model class (a Feglm subclass); the other
@@ -100,6 +101,7 @@ def feglm(
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
         - Interacted fixed effects (fe1:fe2)
+        - Varying slopes (fe1[x], fe1[[x]])
         Compatible with formula parsing via the formulaic module.
 
     data : DataFrameType
@@ -161,6 +163,10 @@ def feglm(
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default (when None).
+        "fe" drops fixed-effect groups whose outcomes are all 0, and for logit
+        and probit also groups whose outcomes are all 1. "ir" detects
+        separation by the regressors at outcome 0 and applies only to Poisson;
+        logit and probit fits warn and skip it. Gaussian fits skip both checks.
 
     solver : SolverOptions, optional.
         The solver to use for the regression. Can be "np.linalg.lstsq",
@@ -246,6 +252,11 @@ def feglm(
     link scale. For effects on the response scale, see the
     [marginal effects guide](/how-to/marginaleffects.qmd).
 
+    Varying slopes such as `f1[X2]` and `f1[[X2]]` are supported with the default
+    `within` demeaner, with the same restrictions as in
+    [feols()](/reference/estimation.api.feols.feols.qmd). A slope-only effect
+    like `f1[[X2]]` keeps the model's intercept.
+
     Examples
     --------
     The example below fits a logit model with fixed effects. As in `feols()`,
@@ -323,6 +334,14 @@ def feglm(
         fsplit=fsplit,
         separation_check=separation_check,
     )
+    if family in ("logit", "probit") and "ir" in separation_check:
+        warnings.warn(
+            "separation_check='ir' is not applied to logit and probit models "
+            "and is ignored.",
+            UserWarning,
+            stacklevel=_find_stack_level(),
+        )
+        separation_check = [method for method in separation_check if method != "ir"]
 
     options = GlmEstimationOptions(
         ssc=ssc,

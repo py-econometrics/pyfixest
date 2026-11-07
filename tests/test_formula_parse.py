@@ -16,7 +16,7 @@ import pytest
 from formulaic.parser.types import Factor, Term
 
 import pyfixest as pf
-from pyfixest.errors import EndogVarsAsCovarsError, FormulaSyntaxError
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
@@ -26,6 +26,7 @@ from pyfixest.estimation.formula.utils import (
     _get_position_of_first_parenthesis_pair,
     _preprocess_fixed_effect_interactions,
 )
+from tests._varying_slope_cases import ALL_SLOPE_CASES
 
 # =============================================================================
 # Fixtures
@@ -588,7 +589,7 @@ class TestFixedEffectInteractions:
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
         assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
-        assert str(iv_power.instruments) == "1 + Z1 + Z2 + Z1:Z2"
+        assert str(iv_power.instruments) == "Z1 + Z2 + Z1:Z2"
 
 
 class TestInstrumentalVariableBoundaries:
@@ -642,26 +643,17 @@ class TestVaryingSlopeParsing:
             ("f1[(z1, z2)]", [("f1", True, ("z1", "z2"))]),
             ("f1[[z]]", [("f1", False, ("z",))]),
             ("f1[[z1, z2]]", [("f1", False, ("z1", "z2"))]),
-            ("f1:f2[z]", [("f1:f2", True, ("z",))]),
-            ("f1:f2[z1, z2]", [("f1:f2", True, ("z1", "z2"))]),
             ("f1:f2[[z1, z2]]", [("f1:f2", False, ("z1", "z2"))]),
-            ("f1[z**2]", [("f1", True, ("z ** 2",))]),
-            ("f1[I(z**2)]", [("f1", True, ("I(z ** 2)",))]),
+            ("f1[z, z + 0]", [("f1", True, ("z", "z + 0"))]),
             ("f1[np.log(z)]", [("f1", True, ("np.log(z)",))]),
-            ("f1[z1 + z2]", [("f1", True, ("z1 + z2",))]),
-            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
-            ("f1[z1 * z2]", [("f1", True, ("z1 * z2",))]),
-            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
-            ("f1[-z]", [("f1", True, ("-z",))]),
-            ("f1[z + 1]", [("f1", True, ("z + 1",))]),
-            ("f1[z - 1]", [("f1", True, ("z - 1",))]),
-            ("f1[z + z]", [("f1", True, ("z + z",))]),
             ("f1[(z1 + z2)**2]", [("f1", True, ("(z1 + z2) ** 2",))]),
             ("f1[[z**2]]", [("f1", False, ("z ** 2",))]),
-            ("f1[z1**2, z2 + 1]", [("f1", True, ("z1 ** 2", "z2 + 1"))]),
-            ("f1[[z1**2, z2 + 1]]", [("f1", False, ("z1 ** 2", "z2 + 1"))]),
-            ("f1:f2[z**2]", [("f1:f2", True, ("z ** 2",))]),
+            # Signs and scales leave fitted models unchanged, so only parsing
+            # can detect a dropped operator.
+            ("f1[-z]", [("f1", True, ("-z",))]),
             ("f1[+z]", [("f1", True, ("+z",))]),
+            ("f1[z1 - z2]", [("f1", True, ("z1 - z2",))]),
+            ("f1[z / 2]", [("f1", True, ("z / 2",))]),
             ("f1[z // 2]", [("f1", True, ("z // 2",))]),
             ("f1[z % 2]", [("f1", True, ("z % 2",))]),
             (
@@ -686,59 +678,76 @@ class TestVaryingSlopeParsing:
             for spec in parsed.fixed_effect_specifications
         ] == expected
 
+    @pytest.mark.parametrize(
+        "case",
+        ALL_SLOPE_CASES,
+        ids=lambda case: case.fml,
+    )
+    def test_varying_slope_formulas_parse(self, case):
+        """The formulas compared with R fixest parse to the expected effects."""
+        parsed = Formula.parse(case.fml)[0]
+
+        assert (
+            tuple(
+                (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
+                for spec in parsed.fixed_effect_specifications
+            )
+            == case.effects
+        )
+
+    @pytest.mark.parametrize(
+        "fixed_effects,expected",
+        [
+            ("f1 + f2:f3", ["f1", "f2:f3"]),
+            ("f1[z]", ["f1[z]"]),
+            ("f1:f2[[z1, z2**2]]", ["f1:f2[[z1, z2 ** 2]]"]),
+            ("f1 + f1[[z]] + f2", ["f1[z]", "f2"]),
+        ],
+    )
+    def test_effect_names_use_fixest_syntax(self, fixed_effects, expected):
+        parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
+
+        assert [spec.name for spec in parsed.fixed_effect_specifications] == expected
+
+    @pytest.mark.parametrize(
+        "formula,expected",
+        [
+            ("Y ~ X1 | f1[[z]]", "Y ~ 1 + X1 | f1[[z]]"),
+            ("Y ~ 0 + X1 | f1[[z]]", "Y ~ 0 + X1 | f1[[z]]"),
+            ("Y ~ X1 | f1[z]", "Y ~ X1 | f1[z]"),
+        ],
+    )
+    def test_slope_only_models_render_their_intercept(self, formula, expected):
+        """Slope-only effects absorb no constant, so the name shows the choice."""
+        assert Formula.parse(formula)[0].render() == expected
+
     def test_no_fixed_effects_have_no_specs(self):
         parsed = Formula.parse("Y ~ X1")[0]
 
         assert parsed.fixed_effect_specifications == ()
 
-    def test_distinct_terms_with_shared_levels_remain_distinct(self):
-        parsed = Formula.parse("Y ~ X1 | f1 + f1[[z]]")[0]
-
-        assert [
-            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
-            for spec in parsed.fixed_effect_specifications
-        ] == [
-            ("f1", True, ()),
-            ("f1", False, ("z",)),
-        ]
-
     @pytest.mark.parametrize(
-        "fixed_effects",
-        ["f1 + f1", "f1[[z]] + f1[[z]]"],
+        "fixed_effects,expected_slopes",
+        [
+            ("f2[z2, z1] + f1[[z3]]", ("z2", "z1", "z3")),
+            ("firm[[z]] + region[[w]] + firm[[v]]", ("z", "v", "w")),
+        ],
     )
-    def test_formulaic_deduplicates_identical_terms(self, fixed_effects):
+    def test_flattened_slope_order_follows_merged_effects(
+        self, fixed_effects, expected_slopes
+    ):
         parsed = Formula.parse(f"Y ~ X1 | {fixed_effects}")[0]
 
-        assert len(parsed.fixed_effect_specifications) == 1
+        assert tuple(map(str, parsed.fixed_effect_slopes)) == expected_slopes
 
-    def test_effect_and_slope_order_follow_formulaic(self):
-        parsed = Formula.parse("Y ~ X1 | f2[z2, z1] + f1[[z3]]")[0]
-
-        assert [
-            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
-            for spec in parsed.fixed_effect_specifications
-        ] == [
-            ("f2", True, ("z2", "z1")),
-            ("f1", False, ("z3",)),
-        ]
-
-    def test_formulaic_transform_is_preserved_as_a_slope_term(self):
-        parsed = Formula.parse("Y ~ X1 | f1[log(z)]")[0]
-
-        assert tuple(map(str, parsed.fixed_effect_specifications[0].slopes)) == (
-            "log(z)",
-        )
-
-    def test_stepwise_varying_slopes(self):
+    def test_stepwise_varying_slopes_parse_each_effect(self):
         parsed = Formula.parse("Y ~ X1 | sw(f1[z], f2[[z]])")
 
         assert [
-            (
-                str(model.fixed_effect_specifications[0].levels),
-                model.fixed_effect_specifications[0].intercept,
-            )
+            (str(spec.levels), spec.intercept, tuple(map(str, spec.slopes)))
             for model in parsed
-        ] == [("f1", True), ("f2", False)]
+            for spec in model.fixed_effect_specifications
+        ] == [("f1", True, ("z",)), ("f2", False, ("z",))]
 
     @pytest.mark.parametrize(
         "fixed_effects,reason,example",
@@ -766,18 +775,7 @@ class TestVaryingSlopeParsing:
 
     @pytest.mark.parametrize(
         "expression",
-        [
-            "f1 + f2",
-            "f1 - f1",
-            "f1 - f2",
-            "f1 ** 2",
-            "f1 * f2",
-            "f1 / 2",
-            "f1 // 2",
-            "f1 % 2",
-            "+f1",
-            "-f1",
-        ],
+        ["f1 + f2", "-f1"],
     )
     def test_varying_slope_level_rejects_arithmetic(self, expression):
         parsed = Formula.parse(f"Y ~ X1 | {{({expression})[z]}}")[0]
@@ -794,37 +792,20 @@ class TestVaryingSlopeParsing:
     @pytest.mark.parametrize(
         "fixed_effects",
         [
-            "f1[z1:z2]",
-            "f1[:]",
-            "f1[::2]",
-            "f1[z, z1:z2]",
-            "f1[0]",
+            "f1[z1:z2]",  # slice
+            "f1[0]",  # no column name
             'f1["z"]',
-            "f1[[0]]",
-            "f1[z, 0]",
-            'f1[[z, "z"]]',
-            "f1[True]",
-            "f1[None]",
-            "f1[...]",
-            "f1[-1]",
-            "f1[1 + 2]",
-            "f1[z[0]]",
-            "f1[[[z]]]",
-            "f1[[(z1, z2)]]",
-            "f1[{z}]",
-            "f1[{'z': z}]",
-            "f1[[x for x in z]]",
-            "f1[(x for x in z)]",
-            "f1[z if flag else z2]",
+            "f1[z, 0]",  # a constant among valid slopes
+            "f1[z[0]]",  # unsupported syntax
             "f1[z > 0]",
             "f1[z and z2]",
             "f1[z & z2]",
-            "f1[~z]",
-            "f1[(z := z2)]",
+            "f1[z if flag else z2]",
+            "f1[[x for x in z]]",
             "f1[(lambda x: x)(z)]",
-            "f1[log(z[0])]",
-            "f1[log(*z)]",
-            "f1[transform(z, **options)]",
+            "f1[log(*z)]",  # positional unpacking
+            "f1[log(z[0])]",  # nested inside a supported call
+            "f1[transform(z, **options)]",  # keyword unpacking
         ],
     )
     def test_unsupported_slope_expressions(self, fixed_effects):
@@ -1112,29 +1093,18 @@ class TestEdgeCases:
             Formula.parse(formula)
 
     @pytest.mark.parametrize(
-        "rhs, error, match",
+        "rhs",
         [
-            (
-                "X1 : [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "X1 - [X2 ~ Z1]",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            (
-                "-([X2 ~ Z1])",
-                FormulaSyntaxError,
-                "removed or transformed the endogenous terms.*X2.*IV specification remains",
-            ),
-            ("X1 * [X2 ~ Z1]", EndogVarsAsCovarsError, "X2"),
+            "X1 - [X2 ~ Z1]",
+            "-([X2 ~ Z1])",
         ],
     )
-    def test_reject_unsupported_iv_second_stage(self, rhs, error, match):
-        """Algebra must preserve the endogenous term without creating invalid controls."""
-        with pytest.raises(error, match=match):
+    def test_reject_unsupported_iv_second_stage(self, rhs):
+        """Algebra must preserve the declared endogenous term in the regression."""
+        with pytest.raises(
+            FormulaSyntaxError,
+            match=r"removed or transformed the endogenous terms.*X2.*IV specification remains",
+        ):
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
@@ -1145,6 +1115,9 @@ class TestEdgeCases:
             ("Y ~ X2 | X2 ~ Z1", "Y ~ 1 + [X2 ~ Z1]"),
             ("Y ~ log(X2) + [log(X2) ~ Z1]", "Y ~ 1 + [log(X2) ~ Z1]"),
             ("Y ~ X2:Z2 + [X2:Z2 ~ Z1]", "Y ~ 1 + [X2:Z2 ~ Z1]"),
+            ("Y ~ `my var` + [`my var` ~ Z1]", "Y ~ 1 + [`my var` ~ Z1]"),
+            ("Y ~ I(`my var`) + [I(`my var`) ~ Z1]", "Y ~ 1 + [I(`my var`) ~ Z1]"),
+            ("Y ~ Q('my var') + [Q('my var') ~ Z1]", "Y ~ 1 + [Q('my var') ~ Z1]"),
             ("Y ~ [X2 ~ Z1]^2", "Y ~ 1 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - 1", "Y ~ 0 + X1 + [X2 ~ Z1]"),
             ("Y ~ X1 + [X2 ~ Z1] - X1", "Y ~ 1 + [X2 ~ Z1]"),
@@ -1162,11 +1135,16 @@ class TestEdgeCases:
         """Equivalent evaluated terms define the same IV stages, controls and intercept."""
         parsed = Formula.parse(formula)[0]
         reference = Formula.parse(expected)[0]
+        assert set(parsed.exogenous).isdisjoint(parsed.endogenous)
         assert parsed.second_stage == reference.second_stage
         assert (
             parsed.as_first_stage().second_stage
             == reference.as_first_stage().second_stage
         )
+        # Formulaic keeps repeated terms, such as the intercept of the controls
+        # and the instruments, unless the first stage removes them.
+        first_stage_terms = list(parsed.as_first_stage().exogenous)
+        assert len(first_stage_terms) == len(set(first_stage_terms))
         assert parsed.instruments == reference.instruments
         assert parsed.render() == reference.render()
 
@@ -1186,7 +1164,7 @@ class TestEdgeCases:
         parsed = Formula.parse(formula)[0]
         assert parsed.exogenous == formulaic.Formula("1 + X1")
         assert parsed.endogenous == formulaic.Formula("0 + X2:Z2")
-        assert parsed.instruments == formulaic.Formula("1 + Z1")
+        assert parsed.instruments == formulaic.Formula("0 + Z1")
         assert parsed.second_stage == formulaic.Formula("Y ~ X1 + X2:Z2")
 
         first_stage = parsed.as_first_stage().second_stage
@@ -1203,28 +1181,38 @@ class TestEdgeCases:
         ],
         ids=["pipe", "bracket"],
     )
-    @pytest.mark.parametrize("instruments", ["Z1", "0 + Z1", "-1 + Z1"])
+    @pytest.mark.parametrize(
+        "instruments",
+        ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1", "Z1 + 1", "Z1 + 0", "Z1 - 1"],
+    )
     @pytest.mark.parametrize(
         "exogenous, expected",
         [
             ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("1 + X2", "X1 ~ 1 + Z1 + X2"),
+            ("X2 + 1", "X1 ~ 1 + Z1 + X2"),
+            ("1", "X1 ~ 1 + Z1"),
             ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
             ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 + 0", "X1 ~ 0 + Z1 + X2"),
             ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
             ("0", "X1 ~ 0 + Z1"),
+            ("-1", "X1 ~ 0 + Z1"),
         ],
     )
     def test_iv_first_stage_preserves_intercept_choice(
         self, formula_template, instruments, exogenous, expected
     ):
-        """The instrument block's implicit intercept follows the main equation."""
+        """The main equation sets the first-stage intercept, whatever the block says."""
         formula = formula_template.format(exogenous=exogenous, instruments=instruments)
         parsed = Formula.parse(formula)[0]
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)
         assert first_stage.lhs == expected_stage.lhs
-        # Both parsed blocks can contribute the same intercept term.
         assert set(first_stage.rhs) == set(expected_stage.rhs)
+        plain_block = Formula.parse(f"Y ~ {exogenous} + [X1 ~ Z1]")[0]
+        assert parsed.second_stage == plain_block.second_stage
+        assert parsed.render() == plain_block.render()
         reparsed = Formula.parse(parsed.render())[0]
         assert (
             reparsed.as_first_stage().second_stage
@@ -1240,7 +1228,7 @@ class TestEdgeCases:
         first_stage = f.as_first_stage()
         assert not first_stage.is_instrumental_variable
         assert first_stage.fixed_effects == f.fixed_effects
-        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + W1 + X1")
+        assert first_stage.second_stage == formulaic.Formula("Z1 ~ 1 + X1 + W1")
 
     def test_explicit_no_fe_syntax(self):
         """Y ~ X1 | 0 and Y ~ X1 should produce equivalent formulas."""

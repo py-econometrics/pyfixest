@@ -5,6 +5,7 @@ from typing import Any, ClassVar, cast
 
 import numpy as np
 import pandas as pd
+from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
@@ -77,6 +78,7 @@ class Feglm(Feols):
         cluster_causal_variance=False,
         decomposition=False,
         prediction=True,
+        prediction_inference=False,
         fixed_effect_recovery=True,
         randomization_inference=False,
         sherman_morrison_update=False,
@@ -123,14 +125,24 @@ class Feglm(Feols):
         # check for separation
         na_separation: list[int] = []
         if (
-            model_matrix.fixed_effects is not None
+            # Families without outcome bounds, such as Gaussian, cannot separate.
+            self._family.outcome_bounds
+            and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
             and self.options.separation_check  # not an empty list
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
                 X=model_matrix.independent,
-                fe=model_matrix.fixed_effects,
+                fe=model_matrix.fixed_effects.loc[
+                    :,
+                    [
+                        spec.intercept
+                        for spec in model_matrix.fixed_effect_specifications
+                    ],
+                ],
+                effects=self._fixed_effects_for_demeaning(),
+                outcome_bounds=self._family.outcome_bounds,
                 demeaner=self.options.demeaner,
                 collin_tol=self.options.collin_tol,
                 methods=self.options.separation_check,
@@ -142,8 +154,12 @@ class Feglm(Feols):
             self._publish_model_matrix(model_matrix)
 
             # possible to have dropped fixed effects level due to separation
-            self._n_fe_after_separation = int(
-                np.sum(np.asarray(self.fixef_counts.n_levels_by_fe) > 1)
+            counts = self.fixef_counts
+            self._n_fe_after_separation = sum(
+                n_levels > 1 and has_intercept
+                for n_levels, has_intercept in zip(
+                    counts.n_levels_by_fe, counts.has_intercept_by_fe, strict=True
+                )
             )
 
         return model_matrix
@@ -163,7 +179,7 @@ class Feglm(Feols):
         fixed_effect_frame = model_matrix.fixed_effects
         offset_frame = model_matrix.offset
         fixed_effects = (
-            None if fixed_effect_frame is None else fixed_effect_frame.to_numpy()
+            None if fixed_effect_frame is None else self._fixed_effects_for_demeaning()
         )
         offset = (
             None if offset_frame is None else offset_frame.to_numpy().reshape((-1, 1))
@@ -299,7 +315,7 @@ class Feglm(Feols):
         self,
         v: np.ndarray,
         X: np.ndarray,
-        flist: np.ndarray | None,
+        flist: np.ndarray | list[Effect] | None,
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -362,27 +378,29 @@ class Feglm(Feols):
             Another stopping tolerance for scipy.sparse.linalg.lsqr().
             See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html
         se_fit: Optional[bool], optional
-            If True, the standard error of the prediction is computed. Only feasible
-            for models without fixed effects. GLMs are not supported. Defaults to False.
+            Prediction standard errors are not supported for GLMs. Passing True
+            raises NotImplementedError. Defaults to False.
         interval: str, optional
-            The type of interval to compute. Can be either 'prediction' or None.
+            Prediction intervals are not supported for GLMs. Passing 'prediction'
+            raises NotImplementedError. Defaults to None.
         alpha: float, optional
             The alpha level for the confidence interval. Defaults to 0.05. Only
             used if interval = "prediction" is not None.
 
         Returns
         -------
-        Union[np.ndarray, pd.DataFrame]
-            Returns a pd.Dataframe with columns "fit", "se_fit" and CIs if argument "interval=prediction".
-            Otherwise, returns a np.ndarray with the predicted values of the model or the prediction
-            standard errors if argument "se_fit=True".
+        np.ndarray
+            Predicted values on the requested scale.
         """
-        if se_fit:
-            raise NotImplementedError(
-                "Prediction with standard errors is not implemented for GLMs."
-            )
-
-        yhat = super().predict(newdata=newdata, type="link", atol=atol, btol=btol)
+        yhat = super().predict(
+            newdata=newdata,
+            type="link",
+            atol=atol,
+            btol=btol,
+            se_fit=se_fit,
+            interval=interval,
+            alpha=alpha,
+        )
         if type == "response":
             return self._family.inv_link(
                 yhat.to_numpy() if isinstance(yhat, pd.DataFrame) else yhat

@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix, hstack
 from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
+from pyfixest.errors import NanInClusterVarError
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
@@ -177,6 +178,19 @@ def _did2s_estimate(
     object
         A fitted model object of class feols with the two-stage covariance.
     """
+    # Gardner's cluster score sum must include every estimation observation.
+    # Validate before either stage, rather than silently omitting NA clusters
+    # from the covariance while retaining their outcomes in the fit.
+    if cluster not in data.columns:
+        raise ValueError(f"The cluster variable {cluster} is not in the data.")
+    if data[cluster].isna().any():
+        raise NanInClusterVarError(
+            f"The cluster variable {cluster} contains missing values. "
+            "Drop those observations before calling did2s()."
+        )
+    if data[cluster].nunique() < 2:
+        raise ValueError("did2s() requires at least two clusters.")
+
     _first_stage_full = f"{yname} {_first_stage}"
     _second_stage_full = f"{yname}_hat {_second_stage}"
 
@@ -195,6 +209,12 @@ def _did2s_estimate(
             raise ValueError(f"{name} must not contain instrumental variables.")
     if not first_formulas[0].is_fixed_effects:
         raise ValueError("First stage formula must contain fixed effects.")
+    if first_formulas[0].has_varying_slopes:
+        raise ValueError(
+            "First stage formula must not contain varying slopes such as "
+            "`unit[year]`. did2s() imputes untreated outcomes from the estimated "
+            "fixed effects, which are not available for varying slopes."
+        )
     if second_formulas[0].is_fixed_effects:
         raise ValueError("Second stage formula must not contain fixed effects.")
     if not any(term == "1" for term in second_formulas[0].exogenous):

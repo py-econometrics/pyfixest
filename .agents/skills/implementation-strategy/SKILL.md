@@ -1,46 +1,32 @@
 ---
 name: implementation-strategy
-description: Plan estimator, API behavior, inference, formula, post-estimation, and shared-core changes in pyfixest. Includes invariant refactors; excludes prose-only edits.
+description: Choose the implementation and numerical evidence for pyfixest estimator, inference, formula, post-estimation, public API, or shared-core changes. Includes invariant refactors; excludes explanations and prose-only edits.
 ---
 
-# Choose the implementation strategy
+# Implement a pyfixest change
 
-Input: the requested change. Output: a short plan of material decisions,
-updated only when the scope or design changes. Apply the
-[change-scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
+Find the nearest implementation, its callers, and its tests. Use the
+[architecture seams](../../../docs/developer/architecture.md#repository-map-and-extension-seams)
+to choose where the change belongs. Apply the
+[scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
 
-## Placement and precedent
+Resolve the decisions that affect this change:
 
-Find the nearest implementation and its tests. Choose the primary placement:
-estimator add-on, post-estimation module, shared primitive, backend kernel, or
-shared-core change. Use the
-[extension seams](../../../docs/developer/architecture.md#repository-map-and-extension-seams)
-and read the applicable architecture sections:
+- The user-visible outcome or invariant, and the simplest implementation that
+  preserves the relevant contracts. Read "Stable core" for contract changes;
+  an already-authorized design does not need another approval.
+- Affected support paths under
+  [result boundaries](../../../docs/developer/architecture.md#result-and-numerical-boundaries).
+  New estimators need a complete support matrix; existing features need only
+  the affected paths reconsidered. Reject unsupported combinations explicitly.
+- For numerical work, an independent reference under
+  [reference selection](../../../docs/developer/testing.md#choosing-a-numerical-reference),
+  and whether results must stay invariant. Read "Release contract" for the
+  applicable baseline check; do not silently turn a refactor into a behavior fix.
+- Necessary exports, user documentation, and compatibility decisions.
 
-- New estimators: "Estimator add-ons" and "Result and numerical boundaries".
-- Shared-core changes: "Stable core", including its design-approval boundary.
-- Estimator-state changes: "Formula-state and lifecycle boundaries" and
-  "Implemented array and weight domains".
-- New or changed public entries: "Public documentation".
-
-## Decisions before implementation
-
-Record only applicable decisions; link existing contracts that remain unchanged.
-
-- Target module, precedent, reused primitives, and public API/result impact.
-- For estimator or inference behavior: supported weights, FE, IV, multiple
-  estimation, retained-data modes, and backends, plus explicit unsupported
-  errors, under "Result and numerical boundaries". New estimators need a
-  complete support matrix; existing features need the affected paths reviewed.
-- For new estimators or numerical changes: the permanent external reference
-  and test location, selected through
-  [External numerical references](../../../docs/developer/testing.md#external-numerical-references).
-  Resolve missing support or reference decisions before implementing that path.
-- For changes that can affect numerical results: whether results must remain
-  invariant or which quantities and estimators may change. Apply
-  [Release contract](../../../docs/developer/testing.md#release-contract);
-  intentional differences from its baseline require explicit reasons.
-- Applicable exports, documentation, compatibility-ledger, and changelog work.
-
-Carry only decisions that matter to reviewers into the PR; do not reproduce
-this checklist or an unchanged support matrix.
+For a small fix, these decisions can be a brief explanation in the ongoing
+work. Write a separate plan only when it helps coordinate substantial work or
+the user asks for one. Implement once the material choices are clear; reuse
+settled decisions. Verify through `change-verification` and review the final
+diff through `pr-review`, without restarting the workflow at handoff.
