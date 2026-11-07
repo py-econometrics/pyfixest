@@ -145,21 +145,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     model: "ModelDescription"
     _k: int
 
-    @property
-    def _fml(self) -> str:
-        """Formula string. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.formula` instead."""
-        return self.model.formula
-
-    @property
-    def _method(self) -> str:
-        """Estimator name. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.method` instead."""
-        return self.model.method
-
-    @property
-    def _vcov(self) -> np.ndarray:
-        """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
-        return self.variance_covariance.vcov
-
     def evalue(
         self: "Feols",
         mixture_precision: float = 1.0,

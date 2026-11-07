@@ -8,10 +8,12 @@ import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
 from scipy.sparse import csc_matrix, diags, hstack, vstack
-from scipy.sparse.linalg import lsqr
 from tqdm import tqdm
 
+from pyfixest.estimation.internals.solvers import solve_lsqr
 from pyfixest.utils.dev_utils import _find_stack_level
+
+_GELBACH_TASK = "The Gelbach decomposition"
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -134,9 +136,9 @@ class GelbachDecomposition:
     only_coef : bool, optional
         If True, skip bootstrap inference and only compute point estimates, by default True.
     atol : float, optional
-        Absolute tolerance for linear solver, by default None.
+        Absolute tolerance for linear solver, by default 1e-6.
     btol : float, optional
-        Relative tolerance for linear solver, by default None.
+        Relative tolerance for linear solver, by default 1e-6.
 
     Attributes
     ----------
@@ -161,8 +163,8 @@ class GelbachDecomposition:
     combine_covariates: dict[str, list[str]] | None = None
     agg_first: bool | None = False
     only_coef: bool = True
-    atol: float | None = None
-    btol: float | None = None
+    atol: float = 1e-6
+    btol: float = 1e-6
 
     # Define attributes initialized post-creation
     cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
@@ -479,11 +481,15 @@ class GelbachDecomposition:
         N = X1.shape[0]
 
         # Compute direct effect
-        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
+        direct_effect = solve_lsqr(
+            A=X1, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
 
         # Compute beta_full and beta2
-        beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
+        beta_full = solve_lsqr(
+            A=X, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         beta2 = beta_full[self.mask]
 
         mediator_effects = {}
@@ -500,7 +506,9 @@ class GelbachDecomposition:
             # Compute delta
             delta = np.array(
                 [
-                    lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(A=X1, b=Hg[:, j], task=_GELBACH_TASK)[
+                        self.decomp_var_in_X1_idx
+                    ]
                     for j in range(Hg.shape[1])
                 ]
             )
@@ -510,7 +518,9 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(
+                        A=X1, b=X2[:, j].toarray().flatten(), task=_GELBACH_TASK
+                    )[self.decomp_var_in_X1_idx]
                     for j in range(X2.shape[1])
                 ]
             )

@@ -17,7 +17,31 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## PyFixest 0.70.0 (In Development)
 
+PyFixest now supports Python 3.15. On Python 3.15, the `plots` extra does not
+install `lets-plot`, which has no compatible release yet, so plots use the
+matplotlib backend.
+
 Invalid Wald-test restrictions raise the intended `ValueError` with NumPy 1.25.
+
+`fixef()`, and `predict()` on new data, raise `NonConvergenceError` when LSQR
+stops at its iteration limit or because the problem is too ill-conditioned while
+recovering the fixed effects, instead of returning unconverged estimates. The
+`solver="scipy.sparse.linalg.lsqr"` coefficient solver and `decompose()` raise
+the same error.
+
+### Varying Slopes
+
+`feols()`, including IV, `fepois()`, and `feglm()` now support slopes that vary
+across fixed-effect levels: `f1[X2]` adds a slope on `X2` for each level of
+`f1`, and `f1[[X2]]` includes only the slopes. Varying slopes require the
+default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`,
+`decompose()`, and CRV3 or HAC inference are not yet supported for these models.
+Slope-only models such as `Y ~ X1 | f1[[X2]]` keep and report an `Intercept`. `did2s()` rejects varying slopes in its first
+stage.
+
+```{python}
+pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()
+```
 
 ### Word Regression Tables
 
@@ -26,7 +50,11 @@ with per-call formatting through `docx_style`.
 
 ### Fitted Model State
 
-Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection, replacing the old private array aliases.
+Fitted models now expose their formula, observation-weight, within-transformed, and GLM working-state components for inspection.
+
+Private fitted-model attributes from 0.60 are unsupported except for names read by released marginaleffects and maketables versions and the documented IV attributes `_model_1st_stage`, `_f_stat_1st_stage`, and `_eff_F`. Removed private names such as `fit._se` raise an error pointing to the migration guide; use `fit.coeftable.se` instead. Previously public names such as `get_performance()` retain migration guidance. Integration aliases such as `_vcov`, `_N`, and `_adj_r2` remain silent until upstream packages adopt the typed state and a warning period begins; no removal version is scheduled. See [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
+
+`fit._k_fe` now raises `AttributeError`; use `fit.fixef_counts.n_levels_by_fe` for fixed-effect level counts. Its legacy encoded Series labels and process-dependent ordering are no longer supported.
 
 ### `within` LSMR Backend via `within-py`
 
@@ -68,9 +96,13 @@ Other things:
 
 - IV estimation allows valid transformed controls and redundant instruments, and raises `IVIdentificationError` when an endogenous variable's first-stage SSR is below `1e-10`, or when the instruments reduce it by less than `1e-10` relative to the exogenous variables alone, matching R `fixest`. The thresholds are absolute, so endogenous variables on a very small scale can be rejected. Validation reuses the first-stage projection and respects control rescaling, observation weights, and fixed effects. Fixes [#1891](https://github.com/py-econometrics/pyfixest/issues/1891).
 
+- Redundant IV instruments no longer change the first-stage F or effective-F statistic. This covers instruments written differently from a control, such as `center(X1)` alongside control `X1`, and instruments that overlap the controls only jointly, such as `i(f)` given every level of `g` without an intercept. The first-stage regression now lists controls before instruments, so controls are kept when collinear columns are dropped; `fit.first_stage.coefficients` and the first-stage coefficient table follow this order.
+
+- Subtracting an IV block or creating implicit interactions around one raises `FormulaSyntaxError`.
+
 - Fixed-effect columns, recovered effects, dummy levels and evaluation errors show the original terms and levels instead of internal encoding names. Fixed-effect recovery builds dummies directly from retained estimation-sample codes, without reevaluating formula expressions.
 
-- Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Varying-slope syntax is parsed but estimation remains unsupported. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
+- Formulaic 1.2.2 is now required. Fixed effects retain parsed factors and saved level indexes for fitting and prediction. FE terms must look up data columns or interact them with `:`; column names must be normalized Python identifiers and cannot be Python keywords. FE transforms, names requiring quoting, and context-only FE vectors are rejected; rename or precompute columns in `data` and supply them in `newdata`. Fixed-effect columns with `object` dtype are rejected; convert them to an explicit dtype such as `string`. Prediction requires each fixed-effect column to have the same dtype as during fitting, including the categorical schema. Unseen labels with the fitted dtype predict `NaN` with a warning.
 
 - pandas 2.3.3 and narwhals 1.17 are now the minimum supported versions. pandas 2.3.3 supports Python 3.10 and handles nullable numeric formula inputs without a pandas 1.x compatibility workaround. narwhals 1.17 is required by formulaic 1.2.x. See [#1785](https://github.com/py-econometrics/pyfixest/issues/1785).
 
@@ -95,9 +127,7 @@ Other things:
 - The RMSE of weighted `feols()` and Gaussian `feglm()` fits, `fit.fitstat.rmse`, now divides the weighted sum of squared residuals by the sum of the weights, as R `fixest` does. It divided by the number of observations, so it changed with the scale of the weights. See [#1883](https://github.com/py-econometrics/pyfixest/issues/1883).
 - `weights=` accepts column names containing spaces or formula operators, such as `my w`, `w-x`, and `w+1`. See [#1815](https://github.com/py-econometrics/pyfixest/issues/1815).
 - Iterative-rectifier separation checks now preserve the user's formula context in auxiliary refits, so custom transforms work with `separation_check=["ir"]`. See [#1799](https://github.com/py-econometrics/pyfixest/issues/1799).
-- Factor-by-factor `i(a, b)` without an intercept (`- 1` or `0 +`) keeps every interaction cell when earlier terms do not span an intercept, instead of forcing the first cell to zero. This also applies to IV controls and instruments. An unreferenced `i(a, b)` instrument without an intercept, or an `i(a, b)` term after slopes such as `i(f, x)`, therefore keeps a cell that `fixest` drops, and its estimates can differ from `fixest`; retaining all levels with `keep` in the R formula matches pyfixest. See [#1767](https://github.com/py-econometrics/pyfixest/issues/1767).
-- `i(a, b):x`, with categorical `a` and `b` and numeric `x`, now estimates a slope for every interaction cell, including in models with an intercept or fixed effects. Previously the first cell's slope was forced to zero. This matches `fixest`.
-- An `i()` term with an explicit `ref` or `ref2` no longer counts as spanning the intercept. Without an intercept, a later ordinary factor or `i()` term, as in `0 + i(f, ref='a') + C(g)`, now keeps its first level, matching `fixest`. A later `i()` term, as in `0 + i(f, ref='a') + i(g)`, also keeps its first level, which `fixest` drops by position; retaining all levels with `keep` in the R formula matches pyfixest.
+- Factor-by-factor `i(a, b)` without an intercept (`- 1` or `0 +`) keeps every interaction cell when earlier terms do not span an intercept, instead of forcing the first cell to zero. This can differ from `fixest` when an earlier `i()` term supplies only slopes: `fixest` drops a cell based on the term's position, which can change fitted values. See [#1767](https://github.com/py-econometrics/pyfixest/issues/1767). Also, `i(f, ref=...)` followed by an ordinary categorical term without an intercept no longer drops that term's first level.
 - `i()` decides whether its second variable is a factor from the variable itself. `C(k)` marks a numeric `k` as a factor, so `i(a, C(k))` interacts two factors; before, `C()` was ignored and `i(a, C(k))` fit continuous slopes. `ref2` and `bin2` no longer turn a numeric second variable into a factor: `i(a, k, ref2=3)` with numeric `k` raises `ValueError`. Write `i(a, C(k), ref2=3)` for the factor-by-factor model, or drop `ref2` for slopes; `fixest` silently ignores these arguments. Saturated event studies mark the cohort with `C()` internally; their estimates are unchanged. See [#1770](https://github.com/py-econometrics/pyfixest/issues/1770) and [#1804](https://github.com/py-econometrics/pyfixest/issues/1804).
 - The `log()` formula transform accepts nullable pandas columns (`Float64`, `Int64`) that contain `pd.NA`. Before, `Y ~ log(X)` on such a column raised `FactorEvaluationError`; it now drops the missing rows together with the non-positive ones and matches `Y ~ np.log(X)`. See [#1807](https://github.com/py-econometrics/pyfixest/issues/1807).
 - `log()` in formulas is now numpy's `np.log`, formulaic's default, instead of a pyfixest wrapper. The wrapper called zeros, negatives, and already-missing inputs "infinite values", booked all of them as missing, and warned that rows were "dropped from the model" even in `predict(newdata=...)`. Now zero and `inf` rows are counted under `fit.sample_info.dropped_by_stage.infinite` and negative or missing rows under `missing`, and negative or zero inputs raise numpy's `RuntimeWarning`s, as R's `log()` warns "NaNs produced". Estimates are unchanged; `predict(newdata=...)` returns `±inf` instead of NaN for a zero input, matching `fixest`. See [#1806](https://github.com/py-econometrics/pyfixest/issues/1806).
@@ -120,7 +150,7 @@ Other things:
 - Post-estimation methods now raise `MissingModelDataError` when `store_data=False` or `lean=True` removed required state, and these storage options also clean retained IV first-stage models.
 - Both multi-quantile methods now retain each child's design and response until `lean=True` cleanup, matching OLS and enabling child predictions and covariance updates.
 - GLM residuals are no longer retained with `lean=True`, matching OLS cleanup.
-- `iplot()` now selects `i()` coefficients from the formula's term registry instead of matching `::` in coefficient names, so a regressor whose column name contains `::` is no longer plotted as an interaction. The private `Feols._icovars` attribute was removed. The error for a model without `i()` syntax now identifies its one-based position and formula.
+- `iplot()` now selects `i()` coefficients from the formula's term registry instead of matching `::` in coefficient names, so a regressor whose column name contains `::` is no longer plotted as an interaction. The private `Feols._icovars` attribute remains readable through a deprecated alias. The error for a model without `i()` syntax now identifies its one-based position and formula.
 - Fitted models expose `fit.sample_info`, an `EstimationSample` component with the number of observations `n_obs` (the frequency-weight sum, as fixest's `nobs`), the physical row count, the positions of the dropped input rows, and `DroppedRowCounts` by filtering stage (missing, infinite, singleton, separation). It replaces the private `_N`, `_N_rows`, and `_na_index` fields and the public `n_separation_na` attribute of fitted models, and the count fields of `ObservationWeights`; `ModelMatrix.na_index` is now `dropped_row_index`. The sample survives `store_data=False` and `lean=True`.
 - Fitted models expose `fit.fitstat`, a `FitStatistics` component with the RMSE, R², adjusted and within R², deviance, and the Poisson log-likelihood, null log-likelihood, pseudo R², and Pearson chi² measures; a measure the estimator does not define is `NaN`. It replaces the private `_rmse`, `_r2`, `_adj_r2`, `_r2_within`, `_adj_r2_within`, `_loglik`, `_loglik_null`, `_pseudo_r2`, and `_pearson_chi2` fields, the public `deviance` attribute, and `get_performance()`. Gaussian `feglm()` fits now report their R² measures at fit time and in `summary()`.
 - OLS, IV, and GLM fits expose `fit.sandwich`, a `SandwichComponents` value with the weighted `scores`, the `hessian`, and `bread`. IV fits build it from the first-stage projection of the design, as fixest does, so the 2SLS sandwich takes the OLS form. It replaces the private attributes `_scores`, `_hessian`, `_bread`, `_tZX`, `_tXZ`, `_tZy`, and `_tZZinv`, and is dropped by `lean=True`.
@@ -136,7 +166,7 @@ Other things:
 - Fitted models expose `fit.fitted_values`, a `FittedValues` value with the in-sample predictions on the `link` and the `response` scale, as fixest's `fitted.values(type=)` distinguishes them. For OLS, IV, and quantile fits the two scales coincide; GLMs publish the linear predictor as `link` and its inverse-link mean as `response`. It replaces the private attributes `_Y_hat_link` and `_Y_hat_response`, and is dropped by `lean=True`.
 - `ritest(store_ritest_statistics=True)` publishes `fit.ritest_statistics`, a `RitestStatistics` value with the resampled `statistics`, the centered `sample_stat`, and the `pvalue`. It replaces the private attributes `_ritest_statistics`, `_ritest_sample_stat`, and `_ritest_pvalue`.
 - Fitted models publish the rank check that removes collinear columns: `fit.collinearity`, a `CollinearityCheck` value with the `dropped_coef_names` (fixest's `collin.var`), the column `mask`, and the retained `coefnames`, plus `fit.collinearity_instruments` for the IV instrument matrix. It replaces the private attributes `_collin_vars`, `_collin_index`, `_collin_vars_z`, and `_collin_index_z`, and survives `store_data=False` and `lean=True`.
-- Fitted models expose `fit.options`, an `EstimationOptions` value with the estimation options the fit was built with: the small-sample correction `ssc`, `drop_singletons`, `drop_intercept`, `weights`, `weights_type`, `offset`, `collin_tol`, `solver`, `demeaner` (with its `fixef_tol`), the formulaic `context`, and the storage options `store_data`, `copy_data`, and `lean` (also as `retention`). GLM fits publish a `GlmEstimationOptions` with the IRLS `maxiter`, `tol`, `separation_check`, and `accelerate`; quantile fits a `QuantregEstimationOptions` with `quantile`, `method`, `quantile_tol`, `quantile_maxiter`, and `seed`. It replaces the private attributes `_ssc`, `_drop_singletons`, `_drop_intercept`, `_weights_name`, `_weights_type`, `_has_weights`, `_offset_name`, `_collin_tol`, `_solver`, `_demeaner`, `_fixef_tol`, `_fixef_maxiter`, `_store_data`, `_copy_data`, `_lean`, `_context`, `_quantile`, `_quantile_tol`, `_quantile_maxiter`, `_seed`, and `_accelerate`, and the public `maxiter`, `tol`, and `separation_check` attributes of GLM fits. It survives `store_data=False` and `lean=True`, so the storage policy stays readable after cleanup.
+- Fitted models expose `fit.options`, an `EstimationOptions` value with the estimation options the fit was built with: the small-sample correction `ssc`, `drop_singletons`, `drop_intercept`, `weights`, `weights_type`, `offset`, `collin_tol`, `solver`, `demeaner` (with its `fixef_tol`), the formulaic `context`, and the storage options `store_data`, `copy_data`, and `lean` (also as `retention`). GLM fits publish a `GlmEstimationOptions` with the IRLS `maxiter`, `tol`, `separation_check`, and `accelerate`; quantile fits a `QuantregEstimationOptions` with `quantile`, `method`, `quantile_tol`, `quantile_maxiter`, and `seed`. It replaces the private attributes `_ssc_dict`, `_drop_singletons`, `_drop_intercept`, `_weights_name`, `_weights_type`, `_has_weights`, `_offset_name`, `_collin_tol`, `_solver`, `_demeaner`, `_fixef_tol`, `_fixef_maxiter`, `_store_data`, `_copy_data`, `_lean`, `_context`, `_quantile`, `_quantile_tol`, `_quantile_maxiter`, `_seed`, and `_accelerate`, and the public `maxiter`, `tol`, and `separation_check` attributes of GLM fits. It survives `store_data=False` and `lean=True`, so the storage policy stays readable after cleanup.
 - The model classes (`Feols`, `Feiv`, `Feglm` and its families, `Quantreg`, `QuantregMulti`) take the estimation options as a single `options=` constructor argument, built once by the estimation planner, instead of fifteen loose keyword arguments.
 - Fitted models expose `fit.capabilities`, a `Capabilities` value declaring which inference and post-estimation features the model class supports: `crv3_inference`, `hac_inference`, `multiway_clustering`, `wildboottest`, `cluster_causal_variance`, and `decomposition`. It replaces the private attributes `_support_crv3_inference`, `_support_hac_inference`, `_support_multiway_clustering`, `_supports_wildboottest`, `_supports_cluster_causal_variance`, `_support_decomposition`, and the unread `_support_iid_inference`, and survives `store_data=False` and `lean=True`. IV fits now report `wildboottest=False` and are rejected by `wildboottest()` at the capability guard; previously they claimed support and were rejected later.
 - `did2s()` fits now report `wildboottest=False`, `cluster_causal_variance=False`, and `decomposition=False`: the two-step GMM covariance does not resample from an estimated model the way `wildboottest()`, `ccv()`, and `decompose()` require. Previously these fits inherited the underlying second-stage OLS fit's default capabilities, so all three methods ran to completion on it as though it were an ordinary single-stage fit, silently ignoring the first-stage residualization.
@@ -145,7 +175,7 @@ Other things:
 - `Capabilities` gains `anytime_valid_inference`, which `evalue()`, `pvalue_savi()`, and `confint(inference_type="savi")` check instead of the estimator name. Only `feols()` fits without instruments report it; IV, GLM, `quantreg()`, `did2s()`, and `event_study()` fits do not, so supported combinations are unchanged. SAVI still additionally requires an unweighted fit without fixed effects and an iid or heteroskedasticity-robust covariance. The rejection message now names the method, the estimator, and the capability, e.g. "evalue() is not supported for 'fepois' fits: fit.capabilities.anytime_valid_inference is False."
 - Post-estimation `vcov()` updates on `did2s()` and `event_study(estimator="did2s")` fits now raise `VcovTypeNotSupportedError`; refit with the desired `cluster` argument instead. Initial GMM inference is unchanged. `Capabilities` gains `covariance_update`; DID2S fits report it, `crv3_inference`, `hac_inference`, and `multiway_clustering` as `False`. Previously updates ignored first-stage estimation; CRV3 additionally used Poisson refits of the second stage, causing misleading errors or incorrect standard errors.
 - `vcov({"CRV3": ...})` on `event_study()` fits with `estimator="twfe"` or `estimator="saturated"` now refits each leave-one-cluster-out sample with `feols`. Previously it refit with the Poisson estimator, which failed for outcomes with negative values and otherwise silently returned standard errors from Poisson jackknife refits.
-- Fitted models expose `fit.model`, a `ModelDescription` value describing what the model estimates: the `formula` and the parsed `parsed_formula`, the estimator `method` and the `inference_dist` of its coefficient tests, `is_iv`, the `model_name` a multiple estimation stores the fit under, the `sample_split_var` and `sample_split_value` (`None` for an unsplit fit), the dependent variable `depvar`, the absorbed `fixed_effects` (with `has_fixef` and the `+`-joined `fixef`), the `i()` `interacted_covariates`, and the formulaic `model_spec`. It replaces the private attributes `_fml`, `_method`, `_is_iv`, `_model_name`, `_sample_split_var`, `_sample_split_value`, `_inference_dist`, `_depvar`, `_has_fixef`, `_fixef`, `_icovars`, and `_model_spec`, and the public `FixestFormula` attribute of fitted models, and survives `store_data=False` and `lean=True`. `event_study()` and `did2s()` record their estimator (`"twfe"`, `"saturated"`, `"did2s"`) as `fit.model.method`, where they previously overwrote `_method`.
+- Fitted models expose `fit.model`, a `ModelDescription` value describing what the model estimates: the `formula` and the parsed `parsed_formula`, the estimator `method` and the `inference_dist` of its coefficient tests, `is_iv`, the `model_name` a multiple estimation stores the fit under, the `sample_split` with its `var` and `value` (`sample_split=None` for an unsplit fit), the dependent variable `depvar`, the absorbed `fixed_effects` (with `has_fixef` and the `+`-joined `fixef`), the `i()` `interacted_covariates`, and the formulaic `model_spec`. It replaces the private attributes `_fml`, `_method`, `_is_iv`, `_model_name`, `_sample_split_var`, `_sample_split_value`, `_inference_dist`, `_depvar`, `_has_fixef`, `_fixef`, `_icovars`, and `_model_spec`, and the public `FixestFormula` attribute of fitted models, and survives `store_data=False` and `lean=True`. `event_study()` and `did2s()` record their estimator (`"twfe"`, `"saturated"`, `"did2s"`) as `fit.model.method`, where they previously overwrote `_method`.
 - Fitted models expose `fit.fixef_counts`, a `FixedEffectCounts` value with the level count of each fixed effect in the estimation sample as `n_levels_by_fe`, and the counts that inference derives from it: `n_fixef`, `n_levels`, and `fixef_dof` (`sum(n_levels_by_fe - 1) + 1`). It replaces the private attributes `_k_fe` and `_n_fe` and the `_n_fixef_coefficients()` method, and survives `store_data=False` and `lean=True`.
 
 ### Contributor Workflow
@@ -319,13 +349,10 @@ Behaviour that changed as a result:
   The former `f1^f2` spelling remains accepted temporarily, but emits a
   `DeprecationWarning` and is immediately normalised to `f1:f2`.
 
-- **The main formula sets the intercept of both IV stages.** A `0`, `1` or `-1`
-  inside the IV block, as in `Y ~ X2 + [X1 ~ 0 + Z1]` or
-  `Y ~ X2 | X1 ~ 0 + Z1`, raises `FormulaSyntaxError`; write
-  `Y ~ 0 + X2 + [X1 ~ Z1]` to fit both stages without an intercept. In 0.60.0,
-  an inner `0` failed with a singular-matrix error when the main formula had
-  an intercept, and an inner `1` was ignored. IV model names write the block
-  without an intercept, as in `Y ~ 1 + X2 + [X1 ~ Z1]`.
+- **The main formula sets the intercept of both IV stages.** A `0`, `-1` or `1`
+  inside the IV block has no effect: `Y ~ X2 + [X1 ~ 0 + Z1]` keeps the
+  intercept in both stages, and `Y ~ 0 + X2 + [X1 ~ 1 + Z1]` omits it from
+  both. IV model names no longer include an intercept inside the block.
 
 - **`predict(newdata=...)` works with `i()`, interacted fixed effects
   (`f1:f2`) and `poly()`.** These previously raised `NotImplementedError`; the
@@ -344,6 +371,8 @@ Behaviour that changed as a result:
   operator itself is unaffected; only the import path changed.
 
 ### Deprecations and Removals
+
+Python 3.10 is no longer supported. PyFixest now requires Python 3.11 or newer.
 
 Formula syntax:
 

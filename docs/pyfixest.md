@@ -9,7 +9,7 @@ toc: false
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit)
-![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue)
+![Python Versions](https://img.shields.io/badge/Python-3.11–3.15-blue)
 [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Downloads](https://img.shields.io/pepy/dt/pyfixest)](https://pepy.tech/project/pyfixest)
@@ -44,7 +44,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
 - **Post-Estimation & Reporting**
-  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
+  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
 ## Installation
 

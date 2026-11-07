@@ -1,371 +1,261 @@
 # Testing and verification
 
-Pyfixest testing is risk-based: use fast checks while editing, broaden the
-evidence once the implementation stabilizes, and require the affected
-long-running suites before merge. Always use `pixi run`; bare Python or pytest
-may not have the compiled extension or the right optional dependencies.
-
-## Contents
-
-- [Runtime tiers](#runtime-tiers): edit, stabilized, merge, and exhaustive
-  stages; what exact-head CI means; deferral semantics
-- [Commands](#commands): the `pixi run` tasks for each stage
-- [Selection matrix](#selection-matrix): which checks each kind of change
-  requires
-- [Estimation benchmarks](#estimation-benchmarks): when and how to time a
-  performance-relevant change
-- [Verification reporting](#verification-reporting): concise evidence and status
-- [Release contract](#release-contract): regression checks and declared differences
-- [Choosing a numerical reference](#choosing-a-numerical-reference): when internal
-  comparisons suffice and when external evidence is required
-- [External numerical references](#external-numerical-references): reference
-  preference order, rpy2 rules, and the [tolerance contract](#tolerance-contract)
-- [Test design](#test-design): controlling suite growth, error-path tests,
-  fixtures, and edge coverage
-- [Release-baseline maintenance](#release-baseline-maintenance): recording and
-  rolling the pin
+Select evidence for the changed behavior and its risks. Use `pixi run` for
+every Python, pytest, lint, docs, and R command; bare tools can miss the
+compiled extension or optional dependencies. This file owns check selection,
+numerical references, and reporting. Skills apply these decisions.
 
 ## Runtime tiers
 
-Runtime labels are qualitative because machine, compiler cache, and test
-selection affect wall time.
+Use targeted tests while editing. Once the implementation stabilizes, broaden
+coverage once as required below. Reuse passing checks after changes that do
+not invalidate them; preparing a PR is not a reason to rerun the same tests.
 
-| Stage | Purpose | Typical scale | Examples |
-|---|---|---|---|
-| Edit feedback | Exercise the changed seam repeatedly | Seconds to a few minutes | targeted pytest, release contract, targeted or fast live-R checks, changed-file Ruff, `pixi run ty` |
-| Stabilized implementation | Broaden local confidence once | Minutes | selected subsystem checks, `pixi run test-py` when required |
-| Merge evidence | Validate the exact PR head in affected environments | May take tens of minutes | canonical R, HAC, no-JIT, docs, plots, Rust, platform CI |
-| Exhaustive or release | Exercise everything available | Potentially substantially longer | `test-all`, CRAN-only dependencies, platform CI, benchmarks |
+| Stage | Evidence |
+|---|---|
+| Editing | Targeted regression, relevant release-contract or live-R cases, changed-file lint, type check |
+| Stabilized implementation | Affected subsystem and Python baseline when required |
+| Before merge | Affected long suites and platform CI on the exact PR head SHA |
+| Exhaustive/release | All available suites, explicitly installed CRAN references, platform CI, relevant benchmarks |
 
-Merge evidence must run against the exact PR head SHA. This document and the
-skills call a CI run on that SHA *exact-head CI*; a run on an older head is
-stale and does not count.
+Do not repeatedly run canonical R suites or `test-all` while iterating. A
+required long check may be deferred at implementation handoff to CI on the
+exact head when targeted checks pass and another local run would add no
+diagnostic value. Report the reason and destination. Never defer a failure or
+a targeted check needed to resolve material uncertainty. Scheduled or running
+CI is not a pass; the change is not merge-ready until required evidence is
+green. An older-head CI run does not establish the final head's readiness.
 
-Run edit checks repeatedly, but do not repeatedly launch `test-r-fixest`,
-`test-r-core`, or `test-all` while iterating. Use a targeted test or
-`test-r-fixest-fast` instead. Once the design is stable, run the selected
-baseline once. A required long check may be deferred to exact-head CI at
-implementation handoff when a local run would add no diagnostic value and
-targeted checks have passed, and the report follows "Verification reporting".
-Never defer a failing check or a targeted check needed to resolve a material
-uncertainty. The change is not merge-ready until all required merge evidence
-is green.
-
-`test-py` is the broad Python-only regression baseline. A passing baseline alone
-does not establish numerical correctness or parity with external software. Use
-the targeted evidence selected under
-[Choosing a numerical reference](#choosing-a-numerical-reference), and run the
-applicable external-reference suites required by the selection matrix.
-
-`test-all` collects every test supported by the current Pixi environment. It
-does not install the CRAN-only packages from `r_test_requirements.R`, so those
-tests can skip. Exhaustive release evidence requires installing those packages,
-running `test-r-extended`, and combining the available suite with the relevant
-platform CI and benchmarks.
+`test-py` is the broad Python baseline, not proof of numerical correctness.
+`test-all` collects what the current environment supports; CRAN-only tests
+can skip unless their packages are installed. Neither replaces the affected
+external comparisons selected below.
 
 ## Commands
 
+Use `pixi task list` for the full task inventory.
+
 ```bash
-# Targeted, without the repository-wide coverage report
+# Targeted edit feedback, without a repository-wide coverage report
 pixi run -e py312-r pytest tests/test_<feature>.py -x -q --no-cov
-
-# Release contract: regression alarm against the pinned pyfixest release
-pixi run -e py312 test-release-contract
-
-# Targeted live-R edit feedback
-pixi run -e py312-r pytest -q tests/test_vs_r_fast.py --no-cov -k feols
+pixi run -e py312-r pytest tests/test_vs_r_fast.py -q --no-cov -k feols
 pixi run -e py312-r test-r-fixest-fast
 
-# Python baseline
+# Invariance and broad Python regression
+pixi run -e py312 test-release-contract
 pixi run test-py
 
-# Canonical external-reference evidence
+# Canonical external comparisons: choose affected suites
 pixi run -e py312-r test-r-core
 pixi run -e py312-r test-r-fixest
 pixi run -e py312-r test-r-hac
 
-# All tests available in the current environment
+# Exhaustive available coverage; install CRAN references explicitly
 pixi run -e py312-r test-all
-
-# CRAN-only reference tests require an explicit installation first
 pixi run -e py312-r Rscript r_test_requirements.R
 pixi run -e py312-r test-r-extended
 
-# Changed-file quality checks
+# Changed Python files; ty checks the whole package
 pixi run -e lint prek run ruff-format --files <changed files>
 pixi run -e lint prek run ruff-check --files <changed files>
-
-# Whole-package type check (ty has no changed-file mode)
 pixi run ty
 
-# Estimation benchmarks (opt-in, single-threaded, about 2 minutes per run)
-pixi run -e py312 bench-estimation --benchmark-save=base       # on the merge-base
-pixi run -e py312 bench-estimation --benchmark-compare         # on the branch
+# Benchmarks: use shared storage when comparing different worktrees
+pixi run -e py312 bench-estimation --benchmark-save=base
+pixi run -e py312 bench-estimation --benchmark-compare
 
-# Documentation (costly; run only when the selection matrix calls for it)
+# Documentation, only when selected below
 pixi run docs-build
 pixi run docs-render
 ```
 
-`test-r-core` remains the convenient local aggregate for all canonical
-conda-forge R comparisons. CI partitions that population into
-`test-r-fixest` and the internal `test-r-core-other` shard so
-`tests/test_vs_fixest.py` is not executed twice. The fast suite runs once as a
-preflight in the canonical `fixest` job.
+`test-r-core` aggregates the conda-forge R comparisons. CI partitions them
+into `test-r-fixest` and `test-r-core-other`, excluding both
+`test_vs_fixest.py` and `test_multiway_clustering_vs_fixest.py` from the latter.
+It runs `test-r-python` for non-R tests in rpy2-importing files separately,
+and the fast live-R suite as preflight in the canonical fixest job.
 
 ## Selection matrix
 
-This matrix is authoritative for which checks a change requires.
+Apply all relevant rows, not every row. Unknown cross-cutting code paths need
+the Python baseline rather than silently selecting no tests.
 
-| Change | Required edit or handoff evidence | Merge or long evidence |
+| Change | Required edit/handoff evidence | Required merge/long evidence |
 |---|---|---|
-| Public docstrings or API-reference configuration | `git diff --check`; execute changed examples; `docs-build` | affected reference-page render when applicable |
-| Rendered content under `docs/` (excluding `docs/developer/`) | `git diff --check`; execute changed examples; render the affected page when practical | `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
-| Repository guidance (including `docs/developer/`) or workflow metadata | `git diff --check`; validate changed links and applicable skills, templates, or configuration | affected CI workflow only; no docs build or render |
-| Python API or internals | targeted public tests; changed-file lint; `pixi run ty` | Python baseline |
-| Internal or backend refactor with unchanged results | release contract green (passed, not skipped); targeted tests; changed-file lint; `pixi run ty` | Python baseline; applicable external suite for every estimator the refactor touches |
-| Input preparation or orchestration around an unchanged numerical method | targeted independent regression and edge tests under [Choosing a numerical reference](#choosing-a-numerical-reference); release contract with every intended difference declared by `reason`; changed-file lint; `pixi run ty` | Python baseline; existing applicable external suites |
-| Changes to estimation or inference equations or numerical algorithms | targeted integration and edge tests; release contract with every intended difference declared by `reason` | applicable live external-reference suite |
-| New estimator | complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
-| HAC | targeted HAC/meat tests | single-threaded `test-r-hac` |
-| Rust | kernel/reference integration tests | Python baseline, platform CI, and relevant benchmarks |
-| Optional backend | targeted dependency-present and dependency-absent paths | backend/platform CI |
-| Performance-sensitive loop | correctness tests and before/after benchmark | relevant benchmark environment |
-| Demeaning, IRLS, solvers, vcov, model-matrix construction, or Rust kernels | correctness tests | [estimation benchmarks](#estimation-benchmarks) on merge-base and branch |
-| Dependency or workflow | targeted environment/config validation | affected CI workflow |
+| Contributor guidance, including `docs/developer/` | `git diff --check`; validate affected links and skills/templates/configuration | Affected workflow only; no docs build/render or numerical suites |
+| Rendered prose under `docs/` | `git diff --check`; execute changed examples; render affected page when practical | Full `docs-render` only for site-wide configuration, navigation, templates, or cross-page changes |
+| Public docstrings or reference configuration | `git diff --check`; execute changed examples; `docs-build` | Affected reference-page render when applicable |
+| Python API or internals | Targeted tests through [core user-facing functions](#test-design), changed-file lint, `pixi run ty` | Python baseline |
+| Invariant internal/backend refactor | Above, plus passed release contract and affected-path tests | Python baseline; applicable external suites for every touched estimator |
+| Input preparation, indexing, or orchestration around an unchanged method | Independent regression and edge evidence; release contract with intentional differences declared by `reason`; lint and type check | Python baseline and existing applicable external suites |
+| Estimation/inference equations or numerical algorithms | Targeted integration/edge tests; release contract with intentional differences declared | Applicable live external-reference suite |
+| New estimator | Complete support matrix and permanent external comparison | Python baseline, external suite, full platform CI |
+| HAC | Targeted HAC/meat tests | Single-threaded `test-r-hac` |
+| Rust | Kernel/reference integration tests | Python baseline, platform CI, relevant benchmarks |
+| Optional backend | Dependency-present and dependency-absent paths | Backend/platform CI |
+| Demeaning, IRLS, solvers, vcov, model-matrix construction, Rust kernels, or other performance-sensitive loops | Correctness tests and before/after benchmark | Relevant benchmark environment |
+| Dependency or workflow | Targeted environment/configuration validation | Affected CI workflow |
 
-Unknown or cross-cutting paths receive the PR baseline rather than silently
-selecting no tests.
-
-Documentation builds are opt-in. `docs-build` regenerates API-reference inputs;
-it is not a general Markdown validator. Do not run it for changes limited to
-`AGENTS.md`, `.agents/`, `docs/developer/`, `.github/` templates, or contributor
-workflow metadata. For rendered prose under `docs/`, prefer an affected-page
-render. Reserve the full `docs-render` task for changes that can affect the site
-broadly.
+`docs-build` regenerates API-reference inputs; it is not a Markdown validator.
+Do not run it for contributor guidance or workflow metadata. Local required
+checks must pass before handoff, subject only to the long-check deferral above.
 
 ## Estimation benchmarks
 
-`benchmarks/test_estimation.py` times single-model OLS, Poisson, logit, and IV
-fits on the simple and difficult `base_dgp` panels with the `within` LSMR
-demeaner under the additive and the diagonal preconditioner. Run it when a
-change can move estimation wall time: save a run on the merge-base, then run
-the branch with `--benchmark-compare` to compare against the latest saved run.
-Saved runs live in `.benchmarks/` under the working directory, so pass the same
-`--benchmark-storage` when the two runs use different worktrees.
+Run `bench-estimation` on the merge-base and branch for the performance paths
+in the matrix. It times OLS, Poisson, logit, and IV on simple and difficult
+`base_dgp` panels with the within LSMR demeaner and additive/diagonal
+preconditioners. The opt-in, single-threaded suite takes about two minutes and
+does not run in CI. It measures speed, not numerical agreement.
 
-Run both sides on an otherwise idle machine; wall times of the millisecond OLS
-cases move by 20% between identical runs under load. Rerun any case whose
-median is more than 15% slower on both sides (`-k <case id>`) before reporting
-it, and explain a confirmed slowdown in the PR. Report the median ratio of the
-affected case groups. The suite is opt-in and never runs in CI; it measures
-speed and never establishes numerical agreement.
+Save the baseline with `--benchmark-save=base`, then compare on the branch
+with `--benchmark-compare`. Worktrees need the same `--benchmark-storage`:
+the default `.benchmarks/` is local to each working directory. Use an otherwise
+idle machine. Rerun both sides of any case more than 15% slower before
+reporting a regression; millisecond cases can vary by 20% under load. Report
+median ratios for affected case groups and explain confirmed slowdowns.
 
 ## Verification reporting
 
-Account for every applicable check as **passed**, **failed**, **deferred**, or
-**not run**. Group successful checks in a concise sentence with recognizable
-suite names or test selections; link detailed output when available. Identify
-which results came from CI on the exact head. Do not count duplicate local and
-CI runs as independent evidence.
+Account for applicable checks as **passed**, **failed**, **deferred**, or
+**not run**. Group successes in a concise sentence naming the suites or test
+selections. Identify evidence from CI on the exact head; local and CI runs of
+the same check are not independent evidence. Do not reproduce a second
+checklist or a command-by-command success log in the handoff or PR.
 
-Give exact commands and details for failures, deferrals, and checks not run:
-reason, unresolved risk, and, for deferrals, destination and head SHA. Include
-elapsed time when it explains a deferral or supports a runtime claim. For the
-release contract, always give the passed case count or skip reason; skipped
-comparisons are not passes. Deferred or merely scheduled CI is not a pass.
-
-Use this format in handoffs and PR bodies without a second checklist or a
-command-by-command success log. Required local checks must pass and be reported
-before implementation handoff. All required merge evidence must pass on the
-exact PR head before claiming merge readiness.
+For failures, deferrals, and missing checks, give the command, reason, and
+unresolved risk. Deferrals also need their destination and head SHA. Include
+elapsed time when it explains a deferral or supports a runtime claim. Always
+give the release-contract passed count or skip reason: skips are not passes.
+Distinguish review-ready work with outstanding merge evidence from a
+merge-ready change.
 
 ## Release contract
 
-`tests/test_release_contract.py` compares public estimator results with a
-pinned pyfixest release, using the same fixtures and shared formula matrix as
-its recorder. This is an invariance check, not an external correctness oracle:
-existing release bugs are recorded, not caught.
+`tests/test_release_contract.py` compares public results with a pinned pyfixest
+release using shared deterministic cases. It detects drift, not pre-existing
+bugs in that release. `test-release-contract` records a missing/stale baseline
+before testing; `test-py` uses a valid existing baseline or skips those cases.
+CI does not record it, so canonical R suites remain its merge evidence.
 
-`pixi run -e py312 test-release-contract` records a missing or stale baseline
-before testing. `test-py` runs these comparisons only when a valid baseline
-exists and skips the release-contract cases otherwise; it never records one.
-CI does not record a baseline, so these cases skip there and the canonical R
-suites remain the merge evidence. Only passed comparisons establish invariance.
-
-For an invariant refactor, run the contract early and after edits that can
-affect results. Reuse evidence after unrelated prose or metadata edits.
-Unexplained drift is a regression: fix it, or explicitly reclassify the change
-as numerics. An intentional change needs a `reason` in
-`tests/test_release_contract.py`, an independent regression test selected under
-[Choosing a numerical reference](#choosing-a-numerical-reference), and a
-changelog entry. Widen an individual `baseline.check(...)` or use
-`baseline.skip(...)` only for a documented behavior change since the pinned
-release, never simply to make a failure pass. The default comparison is near
-machine precision.
-
-For baseline setup, invalidation, or release rolls, read
-[Release-baseline maintenance](#release-baseline-maintenance).
+For an invariant refactor, run the contract early and after result-affecting
+edits. Unexplained drift is a regression. Fix it or explicitly reclassify the
+change as numerical. An intentional change needs a `reason` in the contract,
+an independent regression test under the next section, and a changelog entry.
+Widen an individual `baseline.check(...)` or use `baseline.skip(...)` only for
+a documented behavior change since the pin, never simply to pass a failure.
+Default comparisons are near machine precision.
 
 ## Choosing a numerical reference
 
-Choose a reference that independently checks the behavior being changed.
-Independence means bypassing the faulty or modified path; it does not
-necessarily mean using another package.
+Independence means bypassing the faulty or modified path, not necessarily
+using a different package. For input preparation, formula rebuilding,
+algorithm selection, indexing, or orchestration around an unchanged
+estimator, prefer an explicit calculation or direct public-API refit when:
 
-For fixes to input preparation, formula rebuilding, algorithm selection,
-indexing, or orchestration around an established estimator, prefer an explicit
-calculation or direct public-API refit within pyfixest when it provides an
-independent reference. This is sufficient even when correcting the bug changes
-numerical results, provided that:
+- the estimator and statistical definition stay unchanged;
+- the reference explicitly constructs expected inputs and bypasses the path;
+- the test would fail on the buggy implementation.
 
-- the underlying estimator and statistical definition are unchanged;
-- the reference constructs the expected inputs explicitly and bypasses the
-  behavior under test;
-- the comparison would fail on the buggy implementation.
+This can suffice even when fixing the bug changes numerical results. For
+example, test `ritest()` rebuilding by permuting raw treatment data, refitting
+with `feols()`, and comparing treatment coefficients. Comparing two `ritest()`
+modes that share the rebuilding code is insufficient.
 
-For example, test `ritest()` formula rebuilding by explicitly permuting the
-treatment in the raw data, calling `feols()` for each draw, and comparing the
-resulting treatment coefficients. Comparing two `ritest()` modes alone is
-insufficient if both could share the faulty behavior.
-
-New estimators require permanent external comparisons. Changes to estimation
-or inference equations or numerical algorithms require external evidence
-wherever overlapping software exists. Apply the same requirement when an
-internal comparison could reproduce the numerical error being tested.
-
-State briefly in the test what makes the reference independent of the failure,
-and follow the [Tolerance contract](#tolerance-contract). Add an external
-comparison when it resolves additional uncertainty; an adequate internal
-reference needs no duplicate external regression test. Existing external
-compatibility tests and applicable CI suites remain required.
+New estimators need permanent external comparisons. Changes to equations or
+numerical algorithms need external evidence wherever overlapping software
+exists, as does a comparison that could share the numerical error under test.
+State briefly what makes the reference independent. An adequate internal
+regression needs no duplicate external test, but existing compatibility
+coverage and applicable external suites remain required. Keep additional
+external coverage when it tests a distinct uncertainty, such as sample
+selection or covariance behavior absent from the internal reference.
 
 ## External numerical references
 
-When [Choosing a numerical reference](#choosing-a-numerical-reference) requires
-external evidence, simulations, shape checks, and internal reimplementations do
-not substitute for it. Choose the external reference in this order:
+When external evidence is required, prefer live R `fixest`, another
+established R package, or an established Python package in a maintained
+environment. Next prefer CRAN-only R references, then stored Stata/other
+established output with its generating script and exact version. Use stored
+results only when the live implementation is unavailable/unreliable in the
+environment or measured per-case runtime makes regular runs impractical.
+First try affected live cases instead of replacing a reference merely to
+avoid a full suite during editing. Simulations, shapes, and internal
+reimplementations do not substitute for required external evidence.
 
-1. live R `fixest`, another established R package, or a well-established Python
-   package available in a maintained environment;
-2. a CRAN-only R package in the extended environment;
-3. stored output from Stata or other established software, with the generating
-   script and exact version committed;
-4. another established external package with its exact version recorded.
+Use `against_r_core` for conda-forge references and `against_r_extended` for
+CRAN-only dependencies. List every rpy2-importing file in `_rpy2_test_files`
+in `tests/conftest.py`, with the strict marker matching its dependencies.
+HAC uses single-threaded BLAS.
 
-Use `against_r_core` when the reference is available on conda-forge and
-`against_r_extended` for CRAN-only dependencies. Do not replace an available
-live reference merely to avoid running the complete canonical suite while
-editing; first select the affected live cases or use the fast matrix. Reach for
-a stored result only when the external implementation is unavailable or
-unreliable in the test environment, or when measured per-case runtime makes
-regular execution impractical.
-
-Any test file importing rpy2 must be listed in `_rpy2_test_files` in
-`tests/conftest.py` so non-R environments skip it safely, and must use the
-strict R marker matching dependency availability. HAC tests use single-threaded
-BLAS to avoid oversubscription.
-
-Use the same deterministic rows and model specification on both sides. Compare
-named numerical quantities through the public API so ordering differences cannot
-hide discrepancies. Record deterministic data or seeds, formulas, weights,
-vcov/SSC, package versions, and explicit `rtol`/`atol` with a numerical
-justification. Compare the quantities the method promises: coefficients, vcov,
+Both sides need the same deterministic rows and specification. Record seeds
+or data, formulas, weights, vcov/SSC, package versions, and justified explicit
+tolerances. Compare named quantities through public APIs: coefficients, vcov,
 standard errors, degrees of freedom, observations, dropped terms, convergence,
-or deterministic prediction subsets as applicable. Add edge, brute-force,
-closed-form, and simulation tests as needed, but never substitute them for the
-external comparison required for a new estimator.
+and deterministic prediction subsets as relevant. Supplement with edge,
+closed-form, brute-force, or simulation checks where useful.
 
-`pixi run -e py312-r test-r-fixest-fast` runs representative rpy2 cases directly
-against R `fixest` for `feols`, `fepois`, and `feglm`, and R `quantreg` for
-`quantreg`. See `tests/test_vs_r_fast.py` for the exact cases it covers. This is
-edit feedback, not a second permanent reference framework or complete merge
-evidence; extend the canonical suites when a change needs new coverage.
-`quantreg` does not support fixed effects, and its inference contract follows R
-`quantreg` rather than the `fixest` IID/heteroskedastic/CRV1 matrix.
+The fast suite in `tests/test_vs_r_fast.py` is edit feedback, not complete
+merge evidence or a separate permanent reference framework. Extend canonical
+coverage for new behavior. Quantreg has no absorbed FE support; its inference
+and tolerances follow R `quantreg`, not the fixest IID/heteroskedastic/CRV1 matrix.
 
 ### Tolerance contract
 
-Every numerical assertion must identify the quantity that failed in `err_msg`.
-Align named coefficients and covariance rows/columns before comparing them;
-compare observation counts, degrees of freedom, dropped-term sets, and other
-discrete structure exactly.
+Name the failed quantity in numerical assertions' `err_msg`. Align coefficient
+names and covariance rows/columns; compare discrete structure exactly.
+Choose separate tolerances for coefficients, vcov/inference, residuals, and
+predictions, with coefficients normally strictest. Explain looser tolerances
+next to the assertion through a concrete numerical cause, such as stopping
+error, FE recovery, or clustered accumulation order. “Implementations differ”
+is not a justification. Do not copy the loosest tolerance from another test.
 
-Do not prescribe one tolerance for every estimator or copy the loosest
-tolerance in a test. Use separate, numerically justified tolerances for
-coefficients, vcov/standard errors and derived inference, residuals, and
-predictions. Coefficients normally receive the strictest tolerance. Iterative
-algorithms, fixed-effect recovery, and cluster inference may require looser
-tolerances. A looser tolerance must be explained next to the assertion with a
-specific numerical reason, such as solver stopping error, fixed-effect recovery
-error, or floating-point accumulation order in clustered reductions. Merely
-noting that two implementations differ is not a justification.
-
-Treat `tests/test_vs_fixest.py` as the source of truth for the current
-`feols`, `fepois`, and `feglm` comparison standards, including the formulas,
-parameters, quantities, and absolute-error tolerances being tested. Follow
-`tests/test_quantreg.py` for `quantreg`, whose solver-specific relative and
-absolute tolerances are different.
+Use `tests/test_vs_fixest.py` for current OLS/Poisson/GLM comparison standards
+and `tests/test_quantreg.py` for quantreg's solver-specific standards.
 
 ## Test design
 
-Prefer a small number of heavily parametrized integration tests over many thin
-wrapper tests. Extend an existing formula/vcov/weights/SSC matrix when the new
-case fits it. Unit-test internal seams only when the public API cannot exercise
-them cleanly.
+Prefer tests through the core user-facing functions, such as `feols`, `feglm`,
+`fepois`, `quantreg`, `etable`, `coefplot`, and `summary`. This is what “tests
+through the public API” means in this guide. Fit models or produce tables,
+plots, and summaries through the relevant entry point, then assert the
+resulting behavior.
 
-Every behavioral change needs regression evidence, but it does not necessarily
-need a new test. Control suite growth in this order:
+Use an internal seam when it isolates a meaningful contract these entry points
+cannot exercise cleanly, not merely because a helper was added. Before adding
+coverage, check whether an existing test already distinguishes the regression.
+Otherwise extend a coherent parametrized test with the smallest discriminating case. Use a new
+function or file when its setup, assertion, dependency, or fixture lifecycle
+warrants one. Do not force a distinct regression into a huge Cartesian matrix.
 
-1. If an existing test already exercises the changed behavior, identify it and
-   do not duplicate it.
-2. If an existing parametrized matrix can represent the regression, add the
-   smallest case that would catch it.
-3. Add a test function only when the setup or assertion contract is genuinely
-   different.
-4. Add a test file only for a distinct subsystem, dependency marker, or fixture
-   lifecycle.
-
-Every new or changed error or warning path needs a test that triggers it.
-Extend `tests/test_errors.py` or the nearest subsystem suite, and assert the
-exception or warning category plus stable message text with
+New or changed errors/warnings need triggering tests in `tests/test_errors.py`
+or the nearest subsystem suite. Assert category and stable message text with
 `pytest.raises(..., match=...)` or `pytest.warns(..., match=...)`.
 
-Reuse seeded fixtures, external-reference adapters, and assertion helpers. A
-new test file or unusually large test diff must explain why an existing matrix
-cannot cover the behavior coherently and report the runtime impact. Do not add
-duplicate coverage merely to give one edge case its own test function. Avoid
-hard line-count limits: review whether the test remains legible and whether its
-maintenance and runtime cost are proportional to the regression it prevents.
-
-For predictions and residuals, compare a small deterministic subset rather
-than an entire vector and give each quantity its own tolerance. Cover singleton
-clusters, collinearity, tiny samples, invalid inputs, and every supported
-weights/FE/IV/multiple-estimation path. Unsupported paths must raise a specific
-informative error.
+Reuse seeded fixtures, external adapters, and assertion helpers. Explain a
+new test file or unusually large test diff by the behavior it distinguishes
+and its runtime impact, not a line-count target. Check relevant singleton,
+collinearity, tiny-sample, invalid-input, weights/FE/IV/multiple-estimation
+paths; unsupported paths must fail informatively. For predictions/residuals,
+prefer a small deterministic subset with quantity-specific tolerances.
 
 ## Release-baseline maintenance
 
-The recorder runs the same test file under the pinned release wheel in the
-locked workspace `tests/snapshots/release/`. Recordings are gitignored and local
-to each worktree and platform. A fingerprint of the test file, baseline module,
-shared case lists, release lockfile, and platform invalidates stale recordings.
-To record without running the checkout's tests:
+The recorder uses the pinned release wheel in `tests/snapshots/release/`.
+Recordings are gitignored and local to a worktree/platform. The test file,
+baseline module, shared cases, release lockfile, and platform fingerprint
+invalidate stale recordings. To record without testing the checkout:
 
 ```bash
 pixi run --locked --manifest-path tests/snapshots/release/pixi.toml record
 ```
 
-Recording requires pixi 0.71.0 or newer for the v7 lockfile. Do not add
-`--clean-env`, which pixi does not support on Windows;
-`scripts/record_release_baseline.py` guards the release import.
-
-The pin lives in the `pyfixest` entry of `tests/snapshots/release/pixi.toml`.
-Change it only through `roll-release-baseline`, for a deliberate roll to a
-stable release. Roll just after tagging a release, then reassess the declared
-differences; the suite warns when a newer release tag exists than the pin.
+Use pixi 0.71.0 or newer for the v7 lockfile. Do not add `--clean-env` (unsupported
+on Windows); `scripts/record_release_baseline.py` guards the release import.
+Roll the pin only deliberately, normally just after a stable release, through
+the task below. Reassess declared differences; the suite warns about newer tags.
 
 ```bash
 pixi run roll-release-baseline          # newest release tag in this checkout
-pixi run roll-release-baseline 0.61.0   # a specific release
+pixi run roll-release-baseline 0.61.0   # explicit release
 ```

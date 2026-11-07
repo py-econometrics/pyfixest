@@ -9,6 +9,7 @@ from types import ModuleType
 from typing import ClassVar, Literal, cast, get_args
 
 import numpy as np
+from within import Effect
 
 from pyfixest.core.demean import (
     Preconditioner,
@@ -50,6 +51,18 @@ def _resolve_preconditioner(backend: LsmrBackend, requested: LsmrPreconditioner)
         stacklevel=_find_stack_level(),
     )
     return default
+
+
+def _require_fixed_effect_codes(
+    flist: np.ndarray | list[Effect], backend: str
+) -> np.ndarray:
+    """Require group codes for backends without explicit-effect support."""
+    if isinstance(flist, list):
+        raise TypeError(
+            f"Explicit fixed effects are not supported by the {backend} "
+            "demeaner. Use `LsmrDemeaner(backend='within')`, the default demeaner."
+        )
+    return flist
 
 
 def _validate_unit_interval_float(value: float, name: str) -> None:
@@ -165,7 +178,7 @@ class MapDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
@@ -173,8 +186,11 @@ class MapDemeaner(BaseDemeaner):
 
         `cached_preconditioner` is accepted for interface uniformity with
         :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a
-        preconditioner, so the third return value is always `None`.
+        preconditioner, so the third return value is always `None`. MAP requires
+        a group-code array and raises `TypeError` for explicit `within.Effect`
+        objects.
         """
+        flist = _require_fixed_effect_codes(flist=flist, backend="MAP")
         if weights is None:
             weights = np.ones(x.shape[0], dtype=np.float64)
 
@@ -257,6 +273,8 @@ class LsmrDemeaner(BaseDemeaner):
       provides no benefits. Passing a preconditioner to any other backend raises `ValueError`
       at construction time.
 
+    Varying slopes such as `f1[z]` and `f1[[z]]` require `backend="within"`.
+
     In ``fepois`` and ``feglm``, IWLS reuses the first preconditioner while
     solving each projection with its current working weights. If an adaptive
     solve escalates, subsequent iterations reuse the additive replacement.
@@ -332,7 +350,7 @@ class LsmrDemeaner(BaseDemeaner):
     def demean(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None = None,
         cached_preconditioner: Preconditioner | None = None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
@@ -340,6 +358,10 @@ class LsmrDemeaner(BaseDemeaner):
 
         Parameters
         ----------
+        flist : np.ndarray or list[within.Effect]
+            Encoded group identifiers, or complete effects containing group
+            codes, intercept flags, and slope covariates. Only the ``within``
+            backend accepts explicit effects; ``torch`` raises ``TypeError``.
         cached_preconditioner : Preconditioner or None, optional
             A preconditioner saved by the caller from an earlier within solve
             on the same fixed-effect design. This is separate from
@@ -373,13 +395,14 @@ class LsmrDemeaner(BaseDemeaner):
                 cached_preconditioner=cached_preconditioner,
             )
         if self.backend == "torch":
+            flist = _require_fixed_effect_codes(flist=flist, backend="torch LSMR")
             return self._demean_torch(x=x, flist=flist, weights=weights)
         raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
 
     def _demean_within(
         self,
         x: np.ndarray,
-        flist: np.ndarray,
+        flist: np.ndarray | list[Effect],
         weights: np.ndarray | None,
         cached_preconditioner: Preconditioner | None,
     ) -> tuple[np.ndarray, bool, Preconditioner | None]:
@@ -404,7 +427,9 @@ class LsmrDemeaner(BaseDemeaner):
 
         return demean_within(
             x=x,
-            flist=flist.astype(np.uint32, copy=False),
+            flist=flist.astype(np.uint32, copy=False)
+            if isinstance(flist, np.ndarray)
+            else flist,
             weights=weights,
             tol=max(self.fixef_atol, self.fixef_btol),
             maxiter=self.fixef_maxiter,
