@@ -58,7 +58,7 @@ fixed-effect level. `f1[X2]` absorbs `f1` and a slope on `X2` for each of its
 levels; `f1[[X2]]` absorbs only the slopes. Varying slopes need the default
 `within` demeaner, and `predict()`, `fixef()`, `wildboottest()`, `ritest()`,
 `decompose()`, `did2s()` and CRV3 or HAC inference don't support them yet
-([#1932](https://github.com/py-econometrics/pyfixest/pull/1932), [#1999](https://github.com/py-econometrics/pyfixest/pull/1999)).
+([#1929](https://github.com/py-econometrics/pyfixest/pull/1929), [#1930](https://github.com/py-econometrics/pyfixest/pull/1930), [#1931](https://github.com/py-econometrics/pyfixest/pull/1931), [#1999](https://github.com/py-econometrics/pyfixest/pull/1999)).
 
 ```{python}
 pf.feols("Y ~ X1 | f1[X2] + f2", data=df).tidy()
@@ -70,7 +70,7 @@ We no longer split formula strings by hand. Formulas go to `formulaic`, and
 the fitted `ModelSpec` is reused to build model matrices for `predict()` and
 `fixef()`. This removes a class of bugs where new data was encoded differently
 from the estimation data. Most terms now follow `formulaic`'s syntax
-([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)).
+([#1362](https://github.com/py-econometrics/pyfixest/pull/1362), [#1437](https://github.com/py-econometrics/pyfixest/pull/1437)).
 
 - `predict(newdata=...)` works with `i()`, `poly()` and interacted fixed
   effects. Unseen levels predict `NaN`.
@@ -88,7 +88,7 @@ that come with the new parser are listed under
 Instrumental variables are written as a bracketed block in the main formula,
 `Y ~ X1 + [X2 ~ Z1]`, combined with fixed effects as
 `Y ~ X1 + [X2 ~ Z1] | f1`
-([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)). The block
+([#1362](https://github.com/py-econometrics/pyfixest/pull/1362)). The block
 accepts interacted endogenous terms such as `X2:Z2`
 ([#1890](https://github.com/py-econometrics/pyfixest/pull/1890)), and the main
 formula sets the intercept of both stages
@@ -108,7 +108,7 @@ The default `preconditioner="auto"` now selects `within`'s adaptive
 preconditioner. It starts with the cheap diagonal preconditioner and builds
 additive Schwarz only when convergence stalls, which skips Schwarz's setup
 cost on well-connected fixed effects where it rarely pays off. `fepois()` and
-`feglm()` reuse the preconditioner across IRLS iterations ([#1920](https://github.com/py-econometrics/pyfixest/pull/1920), [#1922](https://github.com/py-econometrics/pyfixest/pull/1922),
+`feglm()` still reuse the preconditioner across IRLS iterations ([#1920](https://github.com/py-econometrics/pyfixest/pull/1920), [#1922](https://github.com/py-econometrics/pyfixest/pull/1922),
 [#1923](https://github.com/py-econometrics/pyfixest/pull/1923)).
 
 #### Typed Fitted-Model State
@@ -129,7 +129,7 @@ private attributes ([#1533](https://github.com/py-econometrics/pyfixest/pull/153
 | `fit.collinearity` | columns dropped as collinear |
 | `fit.fixef_counts`, `fit.fixef_estimates` | fixed-effect level counts; fixed-effect estimates after `fixef()` |
 | `fit.first_stage` | IV first stage and its diagnostics |
-| `fit.wald` | result of the last `wald_test()` |
+| `fit.wald` | joint Wald test from fitting, replaced by each `wald_test()` call |
 | `fit.capabilities` | inference and post-estimation methods the model supports |
 | `fit.solution` | quantile-regression solver state |
 
@@ -154,9 +154,9 @@ fit.confint(inference_type="savi")
   `docx_style` ([#1541](https://github.com/py-econometrics/pyfixest/pull/1541)).
 - `feglm()` accepts `weights`, `weights_type`, `offset` and
   `family="poisson"`. Offsets can be expressions such as
-  `offset="log(exposure)"` ([#1353](https://github.com/py-econometrics/pyfixest/pull/1353), [#1458](https://github.com/py-econometrics/pyfixest/pull/1458)).
+  `offset="log(exposure)"` ([#1349](https://github.com/py-econometrics/pyfixest/pull/1349), [#1458](https://github.com/py-econometrics/pyfixest/pull/1458)).
 - `fepois()` converges faster thanks to step-halving and warm starts
-  ([#1353](https://github.com/py-econometrics/pyfixest/pull/1353)).
+  ([#1347](https://github.com/py-econometrics/pyfixest/pull/1347)).
 - Cluster-robust inference accepts three or more cluster variables, e.g.
   `vcov={"CRV1": "firm + year + region"}` ([#1599](https://github.com/py-econometrics/pyfixest/pull/1599)).
 - `tidy()`, `confint()` and `summary()` gain an `inference_type` argument.
@@ -171,7 +171,7 @@ fit.confint(inference_type="savi")
 
 - Python 3.11 or newer ([#2029](https://github.com/py-econometrics/pyfixest/pull/2029)).
 - `formulaic>=1.2.2,<1.3`, `pandas>=2.3.3`, `narwhals>=1.17` and the new
-  `within-py>=0.4,<0.5` ([#1899](https://github.com/py-econometrics/pyfixest/pull/1899), [#1954](https://github.com/py-econometrics/pyfixest/pull/1954), [#1920](https://github.com/py-econometrics/pyfixest/pull/1920)).
+  `within-py>=0.4,<0.5` ([#1895](https://github.com/py-econometrics/pyfixest/pull/1895), [#1946](https://github.com/py-econometrics/pyfixest/pull/1946), [#1954](https://github.com/py-econometrics/pyfixest/pull/1954), [#1920](https://github.com/py-econometrics/pyfixest/pull/1920)).
 
 #### Formulas and Model Names
 
@@ -179,37 +179,42 @@ fit.confint(inference_type="savi")
   `"Y ~ sw(X2+X1, X1)"` now names its models `"Y ~ 1 + X2 + X1"` and
   `"Y ~ 1 + X1"`. Update `rename_models` mappings and lookups into
   `all_fitted_models`. Expansions that produce the same model twice estimate
-  it once and warn ([#1427](https://github.com/py-econometrics/pyfixest/pull/1427), [#1873](https://github.com/py-econometrics/pyfixest/pull/1873), [#1890](https://github.com/py-econometrics/pyfixest/pull/1890)).
+  it once and warn ([#1362](https://github.com/py-econometrics/pyfixest/pull/1362), [#1873](https://github.com/py-econometrics/pyfixest/pull/1873), [#1890](https://github.com/py-econometrics/pyfixest/pull/1890)).
 - `fixef()` returns a DataFrame with columns `variable`, `code`, `level` and
-  `coefficient` instead of a nested dict ([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)).
+  `coefficient` instead of a nested dict. With two or more fixed effects, the
+  reference levels of the second and later ones are listed with coefficient 0
+  ([#1362](https://github.com/py-econometrics/pyfixest/pull/1362)).
 - The main formula sets the intercept for both IV stages; a `0` or `1` inside
   the IV block is ignored ([#1998](https://github.com/py-econometrics/pyfixest/pull/1998)).
 - Fixed effects must be data columns, or `:` interactions of them, whose names
   are valid Python identifiers. Transforms and `object`-dtype columns are
-  rejected, and `predict()` requires the same dtype as at fit time ([#1899](https://github.com/py-econometrics/pyfixest/pull/1899)).
+  rejected, and `predict()` requires the same dtype as at fit time ([#1898](https://github.com/py-econometrics/pyfixest/pull/1898), [#1902](https://github.com/py-econometrics/pyfixest/pull/1902)).
 - `log()` in formulas is now `np.log`. Zeros are counted as infinite rather
   than missing, and numpy warns on zero or negative inputs. Estimates are
   unchanged ([#1806](https://github.com/py-econometrics/pyfixest/issues/1806), [#1869](https://github.com/py-econometrics/pyfixest/pull/1869)).
 - Some malformed formulas raise `formulaic.errors.FormulaSyntaxError`, which is
-  unrelated to `pyfixest.errors.FormulaSyntaxError`; catch both ([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)).
+  unrelated to `pyfixest.errors.FormulaSyntaxError`; catch both ([#1362](https://github.com/py-econometrics/pyfixest/pull/1362)).
 - `factor_interaction` moved to
-  `pyfixest.estimation.formula.transforms.factor_interaction` ([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)).
+  `pyfixest.estimation.formula.transforms.factor_interaction` ([#1362](https://github.com/py-econometrics/pyfixest/pull/1362)).
 
 #### Fitted Models and Post-Estimation
 
 - Most private attributes from 0.60 are removed. Accessing one, e.g.
-  `fit._se`, raises an error that names its replacement (`fit.coeftable.se`).
-  Names used by released versions of marginaleffects and maketables, and the
-  IV attributes `_model_1st_stage`, `_f_stat_1st_stage` and `_eff_F`, keep
-  working. See [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd)
+  `fit._se`, raises an `AttributeError` that points to the migration guide;
+  use `fit.coeftable.se` instead. Names used by released versions of
+  marginaleffects and maketables keep working, and the IV attributes
+  `_model_1st_stage`, `_f_stat_1st_stage` and `_eff_F` keep working with a
+  deprecation warning. See [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd)
   ([#2028](https://github.com/py-econometrics/pyfixest/pull/2028)).
 - `pf.ssc()` returns a frozen `Ssc` instead of a dict (dicts are still accepted
-  as input), and `wald_test()` returns a `WaldTest` instead of a Series
+  as input). `pf.get_ssc()` takes an `Ssc` and `DegreesOfFreedomCounts` and
+  returns a `SmallSampleCorrection`. `wald_test()` returns a `WaldTest`
+  instead of a Series
   ([#1595](https://github.com/py-econometrics/pyfixest/pull/1595), [#1591](https://github.com/py-econometrics/pyfixest/pull/1591)).
 - `feglm().resid()` returns response residuals `y - mu` by default; the old
-  working residuals are `resid(type="working")` ([#1496](https://github.com/py-econometrics/pyfixest/pull/1496)).
+  working residuals are `resid(type="working")` ([#1349](https://github.com/py-econometrics/pyfixest/pull/1349)).
 - `feglm(family="gaussian")` now reproduces `feols()` exactly, including its
-  small-sample correction ([#1353](https://github.com/py-econometrics/pyfixest/pull/1353)).
+  small-sample correction ([#1352](https://github.com/py-econometrics/pyfixest/pull/1352)).
 - Passing `data` to `vcov()` raises `ValueError`. It silently misaligned rows
   in cluster-robust standard errors ([#1825](https://github.com/py-econometrics/pyfixest/issues/1825), [#1956](https://github.com/py-econometrics/pyfixest/pull/1956)).
 - `vcov` and `vcov_kwargs` are checked before fitting, so a misspelled
@@ -224,9 +229,8 @@ fit.confint(inference_type="savi")
   fits; and `predict(se_fit=True)` for GLMs and quantile regression ([#1516](https://github.com/py-econometrics/pyfixest/pull/1516),
   [#1620](https://github.com/py-econometrics/pyfixest/pull/1620), [#1726](https://github.com/py-econometrics/pyfixest/pull/1726), [#1698](https://github.com/py-econometrics/pyfixest/pull/1698), [#1652](https://github.com/py-econometrics/pyfixest/issues/1652), [#1983](https://github.com/py-econometrics/pyfixest/pull/1983)).
 - Invalid arguments to `ccv()`, `ritest()`, `event_study()`, `did2s()` and
-  `lpdid()` raise `ValueError` or `TypeError` instead of `AssertionError`
-  ([#1723](https://github.com/py-econometrics/pyfixest/pull/1723)). Every warning now has an explicit category and points at your
-  code rather than pyfixest internals ([#1723](https://github.com/py-econometrics/pyfixest/pull/1723)).
+  `lpdid()` raise `ValueError` or `TypeError` instead of `AssertionError`.
+  Every warning now has an explicit category and points at your code rather than pyfixest internals ([#1723](https://github.com/py-econometrics/pyfixest/pull/1723)).
 - Methods that need data removed by `store_data=False` or `lean=True` raise
   `MissingModelDataError` ([#1540](https://github.com/py-econometrics/pyfixest/pull/1540)).
 - pyfixest no longer uses or reseeds NumPy's global random generator. Data from
@@ -235,6 +239,8 @@ fit.confint(inference_type="savi")
   reproducible ([#1705](https://github.com/py-econometrics/pyfixest/pull/1705)).
 - The model classes take `options=` and `sample_split=` constructor arguments
   instead of many loose keyword arguments ([#1598](https://github.com/py-econometrics/pyfixest/pull/1598), [#1719](https://github.com/py-econometrics/pyfixest/pull/1719)).
+- `did2s()` rejects a second stage without an intercept, IV formulas and
+  multiple estimation ([#1918](https://github.com/py-econometrics/pyfixest/pull/1918)).
 
 #### Demeaner
 
@@ -246,24 +252,30 @@ fit.confint(inference_type="savi")
 
 #### Deprecated
 
-These still work and emit a warning ([#1427](https://github.com/py-econometrics/pyfixest/pull/1427), [#1398](https://github.com/py-econometrics/pyfixest/pull/1398), [#1704](https://github.com/py-econometrics/pyfixest/pull/1704)):
+These still work and emit a warning ([#1362](https://github.com/py-econometrics/pyfixest/pull/1362), [#1437](https://github.com/py-econometrics/pyfixest/pull/1437), [#1398](https://github.com/py-econometrics/pyfixest/pull/1398), [#1704](https://github.com/py-econometrics/pyfixest/pull/1704), [#2028](https://github.com/py-econometrics/pyfixest/pull/2028)):
 
 - `Y ~ X1 | f1^f2`: write `Y ~ X1 | f1:f2`.
 - `Y ~ X1 | X2 ~ Z1`: write `Y ~ X1 + [X2 ~ Z1]`.
 - `Y + Y2 ~ X1`: write `sw(Y, Y2) ~ X1`.
 - `confint(joint=True)`: use `confint(inference_type="simult")`.
 - `FixestMulti.FixestFormulaDict`: use `fit.model.parsed_formula`.
+- `fit.get_performance()`: use `fit.fitstat`.
+- `fit.n_separation_na`: use `fit.sample_info`.
+- `maxiter`, `tol` and `separation_check` on GLM fits: use `fit.options`.
 
 #### Removed
 
 - The `demeaner_backend`, `fixef_tol` and `fixef_maxiter` arguments; use the
-  `Demeaner` API from 0.60 ([#1353](https://github.com/py-econometrics/pyfixest/pull/1353)).
+  `Demeaner` API from 0.60 ([#1332](https://github.com/py-econometrics/pyfixest/pull/1332)).
 - The JAX demeaner and solver, and the SciPy and CuPy LSMR backends. On GPU,
-  use `LsmrDemeaner(backend="torch", device="cuda")` ([#1353](https://github.com/py-econometrics/pyfixest/pull/1353), [#1718](https://github.com/py-econometrics/pyfixest/pull/1718)).
-- `FeolsCompressed` and `pf.dtable()`; use `maketables.DTable()` instead ([#1404](https://github.com/py-econometrics/pyfixest/pull/1404)).
+  use `LsmrDemeaner(backend="torch", device="cuda")` ([#1333](https://github.com/py-econometrics/pyfixest/pull/1333), [#1334](https://github.com/py-econometrics/pyfixest/pull/1334), [#1718](https://github.com/py-econometrics/pyfixest/pull/1718)).
+- `FeolsCompressed` ([#1336](https://github.com/py-econometrics/pyfixest/pull/1336)) and `pf.dtable()`; use `maketables.DTable()`
+  instead ([#1404](https://github.com/py-econometrics/pyfixest/pull/1404)).
+- The `fit.FixestFormula` attribute (use `fit.model`) and the callable
+  `Feiv.first_stage()`; `fit.first_stage` is now a component ([#1610](https://github.com/py-econometrics/pyfixest/pull/1610), [#1588](https://github.com/py-econometrics/pyfixest/pull/1588)).
 - `FixestFormulaParser`, `model_matrix_fixest()`, the
-  `pyfixest.estimation.feols_`, `feiv_` and `fepois_` modules (import from
-  `pyfixest` instead), and several unused helpers in `pyfixest.utils`
+  `pyfixest.estimation.feols_`, `feiv_` and `fepois_` modules (import `Feols`,
+  `Feiv` and `Fepois` from `pyfixest.estimation` instead), and several unused helpers in `pyfixest.utils`
   ([#1607](https://github.com/py-econometrics/pyfixest/pull/1607), [#1704](https://github.com/py-econometrics/pyfixest/pull/1704)).
 
 ### Bug Fixes {#v0700-bug-fixes}
@@ -273,13 +285,14 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
 - `ritest()` now permutes the observed treatment. It used to draw treatments
   uniformly from the distinct values, which changed the share treated and
   typically made p-values too small. This also affects `rwolf()` and `wyoung()`
-  with `sampling_method="ri"` ([#1964](https://github.com/py-econometrics/pyfixest/issues/1964), [#1965](https://github.com/py-econometrics/pyfixest/pull/1965)).
+  with `sampling_method="ri"`. With `cluster=`, a treatment that varies within a
+  cluster raises `ValueError` ([#1964](https://github.com/py-econometrics/pyfixest/issues/1964), [#1965](https://github.com/py-econometrics/pyfixest/pull/1965)).
 - `ritest(type="randomization-t")`, `ritest(cluster=...)` and `ccv()` keep the
   fitted model's covariance estimator and small-sample corrections, and the
-  randomization t-statistic is centred at the null ([#1960](https://github.com/py-econometrics/pyfixest/issues/1960), [#1986](https://github.com/py-econometrics/pyfixest/pull/1986)–[#1989](https://github.com/py-econometrics/pyfixest/pull/1989)).
+  randomization t-statistic is centred at the null ([#1986](https://github.com/py-econometrics/pyfixest/pull/1986)–[#1989](https://github.com/py-econometrics/pyfixest/pull/1989)).
 - `ritest()` rebuilds treatment-dependent interactions on every draw ([#1979](https://github.com/py-econometrics/pyfixest/pull/1979)),
   and its fast algorithm works with interacted fixed effects ([#1780](https://github.com/py-econometrics/pyfixest/issues/1780),
-  [#1898](https://github.com/py-econometrics/pyfixest/pull/1898)).
+  [#1866](https://github.com/py-econometrics/pyfixest/pull/1866)).
 - `vcov({"CRV3": ...})`, `ritest()` and `ccv()` refit with all the original
   estimation options. Before, a Poisson `offset` and options such as
   `context` or `drop_intercept` were dropped ([#1709](https://github.com/py-econometrics/pyfixest/pull/1709), [#1711](https://github.com/py-econometrics/pyfixest/pull/1711)).
@@ -299,9 +312,9 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
   `vcov="NW"` or `"DK"` failed ([#1710](https://github.com/py-econometrics/pyfixest/pull/1710)).
 - Redundant instruments no longer change the first-stage F or effective F
   ([#1996](https://github.com/py-econometrics/pyfixest/pull/1996)). Instruments that don't identify an endogenous variable raise
-  `IVIdentificationError` ([#1891](https://github.com/py-econometrics/pyfixest/issues/1891), [#1993](https://github.com/py-econometrics/pyfixest/pull/1993)).
+  `IVIdentificationError` ([#1891](https://github.com/py-econometrics/pyfixest/issues/1891), [#1992](https://github.com/py-econometrics/pyfixest/pull/1992), [#1993](https://github.com/py-econometrics/pyfixest/pull/1993)).
 - Covariates named like generated values (`X2_hat`), misplaced IV blocks, and
-  `|` inside IV expressions are handled correctly ([#1736](https://github.com/py-econometrics/pyfixest/issues/1736), [#1808](https://github.com/py-econometrics/pyfixest/issues/1808), [#1766](https://github.com/py-econometrics/pyfixest/issues/1766),
+  `|` inside IV expressions are handled correctly ([#1736](https://github.com/py-econometrics/pyfixest/issues/1736), [#1766](https://github.com/py-econometrics/pyfixest/issues/1766),
   [#1890](https://github.com/py-econometrics/pyfixest/pull/1890), [#1834](https://github.com/py-econometrics/pyfixest/pull/1834)).
 
 #### Formulas
@@ -351,8 +364,8 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
 #### DiD and Decomposition
 
 - `did2s()` standard errors use the first-stage fixed-effect encoding, handle
-  collinear second-stage columns, and require at least two non-missing
-  clusters ([#1758](https://github.com/py-econometrics/pyfixest/issues/1758), [#1811](https://github.com/py-econometrics/pyfixest/issues/1811), [#1812](https://github.com/py-econometrics/pyfixest/issues/1812), [#1918](https://github.com/py-econometrics/pyfixest/pull/1918), [#1865](https://github.com/py-econometrics/pyfixest/pull/1865), [#1980](https://github.com/py-econometrics/pyfixest/pull/1980)). It also
+  collinear second-stage columns, and reject missing cluster IDs or fewer
+  than two clusters ([#1758](https://github.com/py-econometrics/pyfixest/issues/1758), [#1811](https://github.com/py-econometrics/pyfixest/issues/1811), [#1812](https://github.com/py-econometrics/pyfixest/issues/1812), [#1918](https://github.com/py-econometrics/pyfixest/pull/1918), [#1865](https://github.com/py-econometrics/pyfixest/pull/1865), [#1980](https://github.com/py-econometrics/pyfixest/pull/1980)). It also
   explains which first-stage fixed effects can't be estimated ([#1244](https://github.com/py-econometrics/pyfixest/issues/1244),
   [#1368](https://github.com/py-econometrics/pyfixest/pull/1368)).
 - `event_study(estimator="saturated")` uses the `xfml` covariates, which it
@@ -370,7 +383,8 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
   instead of silently using MAP ([#1718](https://github.com/py-econometrics/pyfixest/pull/1718)).
 - `iplot()` no longer mistakes regressors with `::` in their name for `i()`
   terms ([#1564](https://github.com/py-econometrics/pyfixest/pull/1564)).
-- Importing pyfixest no longer loads the plotting libraries ([#1483](https://github.com/py-econometrics/pyfixest/pull/1483)).
+- Fitting models no longer imports Matplotlib, Seaborn or Lets-Plot; they load
+  only when you plot ([#1483](https://github.com/py-econometrics/pyfixest/pull/1483)).
 
 ### Documentation
 
@@ -382,7 +396,7 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
 - New pixi tasks: `bench-estimation` for before/after timing,
   `test-r-fixest-fast` for a quick comparison with R, and
   `test-release-contract` for a comparison with pyfixest 0.60.0 ([#1732](https://github.com/py-econometrics/pyfixest/pull/1732),
-  [#1476](https://github.com/py-econometrics/pyfixest/pull/1476)).
+  [#1476](https://github.com/py-econometrics/pyfixest/pull/1476), [#1495](https://github.com/py-econometrics/pyfixest/pull/1495)).
 - Only the default demeaner is tested against `fixest` in the main test suite;
   the other backends run in a separate workflow ([#1485](https://github.com/py-econometrics/pyfixest/pull/1485)).
 - Repository-local skills and developer guides for contributors and coding
@@ -390,7 +404,7 @@ These still work and emit a warning ([#1427](https://github.com/py-econometrics/
 - `pixi.lock` uses the v7 format, which needs pixi 0.71.0 or newer ([#1498](https://github.com/py-econometrics/pyfixest/pull/1498)).
 - Internals: fitted models keep the formula `ModelMatrix`, the demeaning cache
   hands out read-only `float64` arrays, and weighting happens inside the
-  solver instead of on stored arrays ([#1499](https://github.com/py-econometrics/pyfixest/pull/1499), [#1914](https://github.com/py-econometrics/pyfixest/pull/1914), [#1520](https://github.com/py-econometrics/pyfixest/pull/1520)).
+  solver instead of on stored arrays ([#1499](https://github.com/py-econometrics/pyfixest/pull/1499), [#1516](https://github.com/py-econometrics/pyfixest/pull/1516), [#1520](https://github.com/py-econometrics/pyfixest/pull/1520)).
 
 ## PyFixest 0.60.0
 
