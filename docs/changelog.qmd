@@ -25,15 +25,14 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `predict()` and `fixef()`, so new data is encoded exactly like the estimation
   data, and `predict(newdata=...)` now works with `i()`, `poly()` and
   interacted fixed effects. Along with it come new formula spellings:
-  - Instrumental variables use bracket syntax, `Y ~ X1 + [X2 ~ Z1]`, which
-    also accepts interacted endogenous terms such as `X2:Z2`
-    ([#1890](https://github.com/py-econometrics/pyfixest/pull/1890)). The old
-    `Y ~ X1 | X2 ~ Z1` syntax still works, but it emits a deprecation warning
-    and will be removed in a future release.
   - Fixed-effect interactions are written `f1:f2`.
   - `sw()`, `csw()`, `sw0()` and `csw0()` accept a single argument, so
     `| sw0(f1)` fits models with and without `f1`
     ([#1830](https://github.com/py-econometrics/pyfixest/pull/1830)).
+- **New IV syntax.** Instrumental variables are written in brackets,
+  `Y ~ X1 + [X2 ~ Z1]`, which also accepts interacted endogenous terms such as
+  `X2:Z2`. The old `Y ~ X1 | X2 ~ Z1` syntax still works, but it emits a
+  deprecation warning and will be removed in a future release.
 - **New default demeaner.** LSMR from the `within` package with an adaptive
   preconditioner.
 - **Typed results.** Fitted models expose their state as documented components
@@ -75,8 +74,6 @@ from the estimation data. Most terms now follow `formulaic`'s syntax
 
 - `predict(newdata=...)` works with `i()`, `poly()` and interacted fixed
   effects. Unseen levels predict `NaN`.
-- Instrumental variables use bracket syntax, `Y ~ X1 + [X2 ~ Z1]`, which also
-  accepts interacted endogenous terms such as `X2:Z2` ([#1890](https://github.com/py-econometrics/pyfixest/pull/1890)).
 - Fixed-effect interactions are written `f1:f2`.
 - `sw()`, `csw()`, `sw0()` and `csw0()` accept a single argument, so
   `| sw0(f1)` fits models with and without `f1` ([#1830](https://github.com/py-econometrics/pyfixest/pull/1830)).
@@ -85,6 +82,20 @@ The old spellings still work with a deprecation warning and will be removed
 in a future release. The behaviour changes
 that come with the new parser are listed under
 [Breaking changes](#v0700-breaking-changes).
+
+#### New IV Syntax
+
+Instrumental variables are written as a bracketed block in the main formula,
+`Y ~ X1 + [X2 ~ Z1]`, combined with fixed effects as
+`Y ~ X1 + [X2 ~ Z1] | f1`
+([#1427](https://github.com/py-econometrics/pyfixest/pull/1427)). The block
+accepts interacted endogenous terms such as `X2:Z2`
+([#1890](https://github.com/py-econometrics/pyfixest/pull/1890)), and the main
+formula sets the intercept of both stages
+([#1998](https://github.com/py-econometrics/pyfixest/pull/1998)).
+
+The old `Y ~ X1 | X2 ~ Z1` syntax still works, but it emits a deprecation
+warning and will be removed in a future release.
 
 #### `within` LSMR Is the Default Demeaner
 
