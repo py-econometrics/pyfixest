@@ -170,10 +170,9 @@ You can also easily interact variables:
 fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 
-A numeric second variable such as `f2` enters as a continuous slope, one per
-level of `f1`. Wrap it in `C()` to interact two factors, and set reference
-levels for both via the `ref` and `ref2` arguments. `ref2` and `bin2` raise a
-`ValueError` for a numeric second variable without `C()`.
+A numeric second variable such as `f2` by default enters as a continuous slope.
+To enforce that it is treated as a categorical, you can Wrap it in `C()`, and set reference
+levels for both via the `ref` and `ref2` arguments.
 
 ```{python}
 # set 1 and 2 as reference levels
