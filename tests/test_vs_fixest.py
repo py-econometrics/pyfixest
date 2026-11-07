@@ -2058,6 +2058,14 @@ def _skip_f3_checks(fml, f3_type):
 @pytest.mark.parametrize(
     "fml, fml_r, renamed_terms",
     [
+        (
+            "Y ~ 0 + X1 + i(f1, ref=1) + C(f2)",
+            "Y ~ 0 + X1 + i(f1, ref=1) + factor(f2)",
+            {
+                **{f"f1::{i}": f"f1::{i}.0" for i in range(14) if i != 1},
+                **{f"factor(f2){i}": f"C(f2)[{i}.0]" for i in range(18)},
+            },
+        ),
         ("Y ~ {X1 * X2}", "Y ~ I(X1 * X2)", {"I(X1 * X2)": "X1 * X2"}),
         ("Y ~ X1 + {X1 ** 2}", "Y ~ X1 + I(X1^2)", {"I(I(X1^2))": "X1 ** 2"}),
         ("Y ~ X2 + [X1 ~ {Z1 * Z2}]", "Y ~ X2 | X1 ~ I(Z1 * Z2)", {}),
