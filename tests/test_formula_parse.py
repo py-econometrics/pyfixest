@@ -1014,44 +1014,6 @@ def test_explicit_no_fe_iv_coefficients_match(test_data):
     assert np.allclose(fit_implicit.se().values, fit_explicit.se().values)
 
 
-@pytest.mark.parametrize("main", ["X2", "0 + X2"])
-@pytest.mark.parametrize(
-    "instruments",
-    ["(Z1 + Z2)^1", "(Z1 + Z2)**(1)", "1:Z1 + Z2", "Z1:(1) + Z2"],
-)
-def test_iv_instrument_powers_and_scales_match_plain_terms(
-    test_data, main, instruments
-):
-    """Unit exponents and scales specify instruments without setting an intercept."""
-    fit = pf.feols(f"Y ~ {main} + [X1 ~ {instruments}]", data=test_data)
-    reference = pf.feols(f"Y ~ {main} + [X1 ~ Z1 + Z2]", data=test_data)
-    for model, expected in [
-        (fit, reference),
-        (fit.first_stage.model, reference.first_stage.model),
-    ]:
-        np.testing.assert_allclose(
-            model.resid()[::50],
-            expected.resid()[::50],
-            rtol=0,
-            atol=1e-10,
-            err_msg="IV stage residuals differ from plain instrument terms",
-        )
-    np.testing.assert_allclose(
-        fit.coef(),
-        reference.coef(),
-        rtol=0,
-        atol=1e-10,
-        err_msg="IV coefficients differ from plain instrument terms",
-    )
-    np.testing.assert_allclose(
-        fit.se(),
-        reference.se(),
-        rtol=0,
-        atol=1e-10,
-        err_msg="IV standard errors differ from plain instrument terms",
-    )
-
-
 def test_interacted_fixed_effect_matches_manual_interaction(test_data):
     """Interacted fixed effects match an explicitly constructed group."""
     data = test_data.dropna(subset=["Y", "X1", "f1", "f2"]).copy()
@@ -1146,162 +1108,6 @@ class TestEdgeCases:
             Formula.parse(f"Y ~ {rhs}")
 
     @pytest.mark.parametrize(
-        "formula, message",
-        [
-            ("Y ~ X2 + [X1 ~ 0 + Z1]", "has an intercept, but the IV block removes"),
-            ("Y ~ X2 + [X1 ~ -1 + Z1]", "has an intercept, but the IV block removes"),
-            ("Y ~ X2 + [X1 ~ Z1 - 1]", "has an intercept, but the IV block removes"),
-            ("Y ~ X2 + [X1 ~ Z1 + 0]", "has an intercept, but the IV block removes"),
-            (
-                "Y ~ 1 + X2 + [X1 ~ 0 + Z1]",
-                "has an intercept, but the IV block removes",
-            ),
-            ("Y ~ X2 + sw([X1 ~ Z1 + 0], [X1 ~ Z2])", "IV block removes"),
-            ("Y ~ sw([X1 ~ Z1 - 1], [X1 ~ Z2])", "IV block removes"),
-            ("Y ~ sw(X2 + [X1 ~ 0 + Z1], X3)", "IV block removes"),
-            ("Y ~ X2 + csw0([X1 ~ Z1 - 1])", "IV block removes"),
-            ("Y ~ X2 | X1 ~ 0 + Z1", "has an intercept, but the IV block removes"),
-            ("Y ~ X2 | X1 ~ Z1 - 1", "has an intercept, but the IV block removes"),
-            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1]", "has no intercept, but the IV block adds"),
-            ("Y ~ X2 - 1 + [X1 ~ Z1 + 1]", "has no intercept, but the IV block adds"),
-            ("Y ~ 0 + X2 + [X1 ~ Z1 + {1}]", "has no intercept, but the IV block adds"),
-            ("Y ~ 0 + X2 + [X1 ~ Z1 + `1`]", "has no intercept, but the IV block adds"),
-            (
-                "Y ~ 0 + X2 + [X1 ~ Z1 + {(1)}]",
-                "has no intercept, but the IV block adds",
-            ),
-            ("Y ~ 0 + X2 + [X1 ~ Z1^1 + 1]", "has no intercept, but the IV block adds"),
-            ("Y ~ 0 + X2 + [X1 ~ sw(Z1, 1 + Z2)]", "IV block adds"),
-            ("Y ~ 0 + X2 + sw([X1 ~ Z1 + 1], [X1 ~ Z2])", "IV block adds"),
-            ("Y ~ 0 + X2 + [X1 ~ Z3 + (1 + Z1):sw0(Z2)]", "IV block adds"),
-            ("Y ~ 0 + X2 | X1 ~ 1 + Z1", "has no intercept, but the IV block adds"),
-            ("Y + Y2 ~ 0 + X2 + [X1 ~ 1 + Z1]", "IV block adds"),
-            ("Y ~ X2 + [X1 ~ 0 + Z1] | f1[[X2]]", "IV block removes"),
-            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1] | f1[[X2]]", "IV block adds"),
-            ("Y ~ X2 | f1[[X2]] | X1 ~ 0 + Z1", "IV block removes"),
-        ],
-    )
-    def test_reject_iv_intercept_contradicting_main_formula(self, formula, message):
-        """A block may not add or remove the intercept the main formula sets."""
-        with pytest.raises(FormulaSyntaxError, match=message) as excinfo:
-            Formula.parse(formula)
-        assert f"Received: {formula}" in str(excinfo.value)
-
-    @pytest.mark.parametrize(
-        "formula, remedy",
-        [
-            ("Y ~ X2 + [X1 ~ 0 + Z1]", "write `0 +` in the main formula"),
-            ("Y ~ 0 + X2 + [X1 ~ 1 + Z1]", "remove the `0` or `-1` from the main"),
-        ],
-    )
-    def test_iv_intercept_error_gives_matching_remedy(self, formula, remedy):
-        """The suggested main-formula change resolves the reported contradiction."""
-        with pytest.raises(FormulaSyntaxError) as excinfo:
-            Formula.parse(formula)
-        assert remedy in str(excinfo.value)
-
-    @pytest.mark.parametrize(
-        "main, block",
-        [
-            ("X2", "Z1"),
-            ("X2", "1 + Z1"),
-            ("X2", "Z1 + 1"),
-            ("0 + X2", "Z1"),
-            ("0 + X2", "0 + Z1"),
-            ("0 + X2", "Z1 - 1"),
-            ("X2 - 1", "-1 + Z1"),
-            ("-1 + X2", "Z1 + 0"),
-            ("0", "0 + Z1"),
-        ],
-    )
-    @pytest.mark.parametrize("syntax", ["bracket", "pipe"])
-    def test_iv_block_may_repeat_main_intercept(self, syntax, main, block):
-        """A block that repeats the main formula's intercept choice is accepted."""
-        template = "Y ~ {main} + [X1 ~ {block}]" if syntax == "bracket" else None
-        formula = (
-            template.format(main=main, block=block)
-            if template
-            else f"Y ~ {main} | X1 ~ {block}"
-        )
-        reference = f"Y ~ {main} + [X1 ~ Z1]"
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            parsed = Formula.parse(formula)[0]
-        assert (
-            parsed.as_first_stage().second_stage
-            == Formula.parse(reference)[0].as_first_stage().second_stage
-        )
-        assert parsed.second_stage == Formula.parse(reference)[0].second_stage
-
-    @pytest.mark.parametrize("main", ["X2", "0 + X2"])
-    @pytest.mark.parametrize(
-        "instruments",
-        [
-            "(1 + Z1):Z2",
-            "(1:1):Z1 + Z2",
-            "1:Z1 + Z2",
-            "Z1:(1) + Z2",
-            "(Z1 + Z2)^1",
-            "I(Z1 + 1) + {Z2 - 0}",
-            "Z1 + sw0(Z2)",
-            "Z1 + csw0(Z2, Z3)",
-            "Z1 + mvsw(Z2, Z3)",
-            "Z1:sw0(Z2)",
-            "sw0(Z1):Z2 + Z3",
-            "Z3 + (1 + Z1):Z2",
-            "Z1 + sw0(Z2)^2",
-            "Z1 + sw0(Z2)**2",
-        ],
-    )
-    def test_iv_block_expressions_do_not_contradict(self, main, instruments):
-        """Constants that are not an intercept of the block are not contradictions."""
-        parsed = Formula.parse(f"Y ~ {main} + [X1 ~ {instruments}]")
-        assert all(model.is_instrumental_variable for model in parsed)
-
-    @pytest.mark.parametrize("main", ["X2", "0 + X2"])
-    def test_iv_zero_step_in_product_keeps_the_instrument(self, main):
-        """The zero step of `sw0` is the identity of a product, not a deleted term."""
-        parsed = Formula.parse(f"Y ~ {main} + [X1 ~ Z1:sw0(Z2)]")
-        assert [str(model.instruments) for model in parsed] == ["Z1:1", "Z1:Z2"]
-
-    @pytest.mark.parametrize(
-        "formula",
-        [
-            "Y ~ X2 + [X1 ~ sw(Z1, 0 + Z2)]",
-            "Y ~ X2 + [X1 ~ (Z1 + 0)]",
-            "Y ~ X2 + [X1 ~ Z1 + (0)]",
-            "Y ~ X2 + [0 + X1 ~ Z1]",
-            "Y ~ sw(X2 - 1, X3) + [X1 ~ Z1]",
-        ],
-    )
-    def test_iv_intercept_without_scope_over_block_is_ignored(self, formula):
-        """A `0` Formulaic scopes to a group, step or the endogenous side has no effect.
-
-        The main formula keeps setting the intercept of both stages.
-        """
-        for parsed in Formula.parse(formula):
-            first_stage = parsed.as_first_stage().second_stage
-            assert any(term == "1" for term in first_stage.rhs)
-            assert any(term == "1" for term in parsed.second_stage.rhs)
-
-    @pytest.mark.parametrize(
-        "formula",
-        [
-            "Y ~ X2 + [X1 ~ 0 + Z1] | f1",
-            "Y ~ 0 + X2 + [X1 ~ 1 + Z1] | f1",
-            "Y ~ X2 | f1 | X1 ~ 0 + Z1",
-            "Y ~ 0 + X2 | f1 | X1 ~ 1 + Z1",
-            "Y ~ X2 + [X1 ~ 0 + Z1] | f1[X2]",
-            "Y ~ X2 + [X1 ~ 0 + Z1] | f1 + f2[[X2]]",
-        ],
-    )
-    def test_iv_block_intercept_is_moot_with_fixed_effects(self, formula):
-        """Fixed effects with group intercepts absorb the intercept of both stages."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            assert Formula.parse(formula)[0].is_instrumental_variable
-
-    @pytest.mark.parametrize(
         "formula, expected",
         [
             ("Y ~ X2 + [X2 ~ Z1]", "Y ~ 1 + [X2 ~ Z1]"),
@@ -1369,29 +1175,44 @@ class TestEdgeCases:
 
     @pytest.mark.parametrize(
         "formula_template",
-        ["Y ~ {exogenous} | X1 ~ Z1", "Y ~ {exogenous} + [X1 ~ Z1]"],
+        [
+            "Y ~ {exogenous} | X1 ~ {instruments}",
+            "Y ~ {exogenous} + [X1 ~ {instruments}]",
+        ],
         ids=["pipe", "bracket"],
+    )
+    @pytest.mark.parametrize(
+        "instruments",
+        ["Z1", "1 + Z1", "0 + Z1", "-1 + Z1", "Z1 + 1", "Z1 + 0", "Z1 - 1"],
     )
     @pytest.mark.parametrize(
         "exogenous, expected",
         [
             ("X2", "X1 ~ 1 + Z1 + X2"),
+            ("1 + X2", "X1 ~ 1 + Z1 + X2"),
+            ("X2 + 1", "X1 ~ 1 + Z1 + X2"),
+            ("1", "X1 ~ 1 + Z1"),
             ("-1 + X2", "X1 ~ 0 + Z1 + X2"),
             ("0 + X2", "X1 ~ 0 + Z1 + X2"),
+            ("X2 + 0", "X1 ~ 0 + Z1 + X2"),
             ("X2 - 1", "X1 ~ 0 + Z1 + X2"),
             ("0", "X1 ~ 0 + Z1"),
+            ("-1", "X1 ~ 0 + Z1"),
         ],
     )
     def test_iv_first_stage_preserves_intercept_choice(
-        self, formula_template, exogenous, expected
+        self, formula_template, instruments, exogenous, expected
     ):
-        """The main equation sets the intercept of both stages."""
-        formula = formula_template.format(exogenous=exogenous)
+        """The main equation sets the first-stage intercept, whatever the block says."""
+        formula = formula_template.format(exogenous=exogenous, instruments=instruments)
         parsed = Formula.parse(formula)[0]
         first_stage = parsed.as_first_stage().second_stage
         expected_stage = formulaic.Formula(expected)
         assert first_stage.lhs == expected_stage.lhs
         assert set(first_stage.rhs) == set(expected_stage.rhs)
+        plain_block = Formula.parse(f"Y ~ {exogenous} + [X1 ~ Z1]")[0]
+        assert parsed.second_stage == plain_block.second_stage
+        assert parsed.render() == plain_block.render()
         reparsed = Formula.parse(parsed.render())[0]
         assert (
             reparsed.as_first_stage().second_stage
@@ -1481,7 +1302,7 @@ class TestEdgeCases:
         'Y ~ log(X1) + np.log(X2) | Q("my fe")',
         "Y ~ {X1 ** 2} + {np.pi} | f1",
         "Y ~ X2 + [X1 ~ Z1] | f1",
-        "Y ~ X2 - 1 + [X1 ~ Z1]",
+        "Y ~ X2 - 1 + [X1 ~ Z1 - 1]",
         "Y ~ `say \"hi\"` + `path\\name` | `say 'hello'`",
         "Y ~ `tick\\`name` | f1",
         "Y ~ X1 | f1[z]",

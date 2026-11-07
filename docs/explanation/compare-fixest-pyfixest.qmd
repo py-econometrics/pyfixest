@@ -46,13 +46,6 @@ Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
 translating R's `I(X1^2)`.
 
-### Categorical IV instruments without an intercept
-
-In IV models in PyFixest, the main formula decides whether both stages contain an
-intercept. An IV block may repeat the intercept choice of the main formula, but 
-not adjust it. In other words, it is not possible to ask for an intercept in the main 
-formula, but to ask to suppress it in the IV part, or vice versa. 
-
 ## Setup
 
 

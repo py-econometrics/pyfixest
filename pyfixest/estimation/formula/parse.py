@@ -43,14 +43,6 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
     feature_flags=FORMULAIC_FEATURE_FLAG,
     include_intercept=True,
 )
-# Parse the whole formula without implicit intercepts so we can inspect the IV
-# block for an explicitly added `1`. This second parse checks whether the block
-# contradicts the main formula's intercept choice; it is not used for fitting.
-_PARSER_WITHOUT_IMPLICIT_INTERCEPTS: Final[FormulaParser] = DefaultFormulaParser(
-    operator_resolver=PyfixestOperatorResolver(),
-    feature_flags=FORMULAIC_FEATURE_FLAG,
-    include_intercept=False,
-)
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
@@ -673,114 +665,15 @@ class Formula:
         Parse fixest-style formula. In case of multiple estimation syntax,
         returns a list of multiple regression formulas.
         """
-        preprocessed = _preprocess(formula)
-        formulas = [
+        formula = _preprocess(formula)
+        return [
             Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
-            for formulaic_compliant in _expand_all_multiple_estimation(preprocessed)
+            for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
-        if any(parsed.is_instrumental_variable for parsed in formulas):
-            for model_formula, formula_for_intercept_check in zip(
-                formulas,
-                _expand_all_multiple_estimation(preprocessed, for_intercept_check=True),
-                strict=True,
-            ):
-                if (
-                    model_formula.is_instrumental_variable
-                    and not model_formula.absorbs_intercept
-                ):
-                    _reject_contradicting_iv_intercept(
-                        model_formula,
-                        formulaic.Formula(
-                            formula_for_intercept_check,
-                            _parser=_PARSER_WITHOUT_IMPLICIT_INTERCEPTS,
-                        ),
-                        original_input=formula,
-                    )
-        return formulas
 
 
-def _reject_contradicting_iv_intercept(
-    model_formula: Formula,
-    written_formula: formulaic.Formula,
-    *,
-    original_input: str,
-) -> None:
-    """Reject an IV block whose intercept contradicts the main formula.
-
-    The main formula sets the intercept of both IV stages, and a block may
-    repeat that choice. Formulaic inserts a `1` into every block, so `0` and
-    `-1` show as a block without `1` in `model_formula`, and a written `1`
-    shows as a block with `1` in `written_formula`, which was parsed without
-    the implicit one. `written_formula` is only inspected, so it skips the
-    identification checks.
-    Callers skip fixed effects with group intercepts, which absorb the
-    intercept of both stages; slope-only effects such as `f1[[z]]` do not.
-    """
-    written_rhs = (
-        written_formula.rhs[0]
-        if isinstance(written_formula.rhs, tuple)
-        else written_formula.rhs
-    )
-    main_has_intercept = any(
-        term == "1" for term in model_formula._right_hand_side.root
-    )
-    # Formulaic adds a `1` to every block, so a missing `1` means the user removed it.
-    block_removes_intercept = not any(
-        term == "1" for term in get_first_multistage_rhs(model_formula._right_hand_side)
-    )
-    # `written_formula` has no added `1`, so any `1` here was written by the user.
-    block_writes_intercept = any(
-        term == "1" for term in get_first_multistage_rhs(written_rhs)
-    )
-    if main_has_intercept and block_removes_intercept:
-        contradiction = (
-            "The main formula has an intercept, but the IV block removes it "
-            "with `0` or `-1`."
-        )
-        remedy = (
-            "Remove the `0` or `-1` from the block, or write `0 +` in the main "
-            "formula to fit both stages without an intercept."
-        )
-    elif not main_has_intercept and block_writes_intercept:
-        contradiction = (
-            "The main formula has no intercept, but the IV block adds one with `1`."
-        )
-        remedy = (
-            "Remove the `1` from the block, or remove the `0` or `-1` from the "
-            "main formula to fit both stages with an intercept."
-        )
-    else:
-        return
-    raise FormulaSyntaxError(
-        f"{contradiction} The main formula sets the intercept of both IV "
-        f"stages. {remedy} Received: {original_input}"
-    )
-
-
-def _is_factor_of_product(formula: str, start: int, end: int) -> bool:
-    """Whether `formula[start:end]` is an operand of `:`, `*` or `/`.
-
-    The base of a power is not: `sw0(a)^2` adds nothing in its zero step.
-    """
-    before = formula[:start].rstrip()[-1:]
-    after = formula[end:].lstrip()
-    return before in {":", "*", "/"} or (
-        after[:1] in {":", "*", "/"} and not after.startswith("**")
-    )
-
-
-def _expand_first_multiple_estimation(
-    formula: str, *, for_intercept_check: bool = False
-) -> list[str] | None:
+def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     """Expand the first multiple estimation syntax in formula.
-
-    The zero step of `sw0` is `1`. For the intercept check, it is `1` only as
-    an operand of a product, where it is the identity, and `0` as an addend,
-    where it adds nothing. This avoids mistaking generated `1`s for user input
-    in the additive case.
-    Two zero steps that meet in one product, as in `sw0(a):sw0(b)`, and
-    identical calls in different positions are not told apart, so they can
-    report a `1` that nobody wrote.
 
     The call may have a space before its parenthesis and arguments on several
     lines, as in `csw (X1,` followed by `X2)` on the next line.
@@ -816,15 +709,7 @@ def _expand_first_multiple_estimation(
         or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
     ):
         # Add zero step
-        zero_step = (
-            "0"
-            if for_intercept_check
-            and not _is_factor_of_product(
-                formula, match.start(), parenthesis_closed + 1
-            )
-            else "1"
-        )
-        arguments = [zero_step, *arguments]
+        arguments = ["1", *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
         formula.replace(multiple_estimation_call, f"({argument})")
@@ -832,18 +717,12 @@ def _expand_first_multiple_estimation(
     ]
 
 
-def _expand_all_multiple_estimation(
-    formula: str, *, for_intercept_check: bool = False
-) -> Iterator[str]:
+def _expand_all_multiple_estimation(formula: str) -> Iterator[str]:
     """Recursively expand all multiple estimation calls."""
-    expansion = _expand_first_multiple_estimation(
-        formula, for_intercept_check=for_intercept_check
-    )
+    expansion = _expand_first_multiple_estimation(formula)
     if expansion is None:
         # No multiple estimation syntax present
         yield formula
     else:
         for formula_expanded in expansion:
-            yield from _expand_all_multiple_estimation(
-                formula_expanded, for_intercept_check=for_intercept_check
-            )
+            yield from _expand_all_multiple_estimation(formula_expanded)
