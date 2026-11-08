@@ -110,17 +110,47 @@ class TestMultipleEstimationExpansion:
             ),
             # sw0() cases
             ("Y ~ sw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)"]),
-            ("Y ~ A + sw0(X1, X2)", ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)"]),
+            ("Y ~ A + sw0(X1, X2)", ["Y ~ A", "Y ~ A + (X1)", "Y ~ A + (X2)"]),
             # csw0() cases
             ("Y ~ csw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X1 + X2)"]),
             (
                 "Y ~ A + csw0(X1, X2, X3)",
                 [
-                    "Y ~ A + (1)",
+                    "Y ~ A",
                     "Y ~ A + (X1)",
                     "Y ~ A + (X1 + X2)",
                     "Y ~ A + (X1 + X2 + X3)",
                 ],
+            ),
+            # The zero step adds no terms, so it keeps the main formula's
+            # intercept choice, but stays the identity in products
+            (
+                "Y ~ 0 + sw0(X2) + X1",
+                ["Y ~ 0 + X1", "Y ~ 0 + (X2) + X1"],
+            ),
+            (
+                "Y ~ -1 + csw0(X1, X2)",
+                ["Y ~ -1", "Y ~ -1 + (X1)", "Y ~ -1 + (X1 + X2)"],
+            ),
+            (
+                "Y ~ sw0(X1) + X2 - 1",
+                ["Y ~ X2 - 1", "Y ~ (X1) + X2 - 1"],
+            ),
+            (
+                "Y ~ X1 + X2 - csw0(X1, X2)",
+                ["Y ~ X1 + X2", "Y ~ X1 + X2 - (X1)", "Y ~ X1 + X2 - (X1 + X2)"],
+            ),
+            (
+                "Y ~ 0 + Z1:sw0(Z2)",
+                ["Y ~ 0 + Z1:(1)", "Y ~ 0 + Z1:(Z2)"],
+            ),
+            (
+                "Y ~ 0 + sw0(X2) + [X1 ~ Z1]",
+                ["Y ~ 0 + [X1 ~ Z1]", "Y ~ 0 + (X2) + [X1 ~ Z1]"],
+            ),
+            (
+                "Y ~ X1 | f1 + sw0(f2)",
+                ["Y ~ X1 | f1", "Y ~ X1 | f1 + (f2)"],
             ),
             # mvsw() cases - all combinations of arguments, with zero step
             (
@@ -142,12 +172,12 @@ class TestMultipleEstimationExpansion:
             ),
             (
                 "Y ~ A + mvsw(X1, X2)",
-                ["Y ~ A + (1)", "Y ~ A + (X1)", "Y ~ A + (X2)", "Y ~ A + (X1 + X2)"],
+                ["Y ~ A", "Y ~ A + (X1)", "Y ~ A + (X2)", "Y ~ A + (X1 + X2)"],
             ),
             (
                 "Y ~ A + mvsw(X1, X2, X3)",
                 [
-                    "Y ~ A + (1)",
+                    "Y ~ A",
                     "Y ~ A + (X1)",
                     "Y ~ A + (X2)",
                     "Y ~ A + (X3)",
@@ -198,16 +228,16 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4) + sw0(X5, X6)",
                 [
-                    "Y ~ (X1) + (X3) + (1)",
+                    "Y ~ (X1) + (X3)",
                     "Y ~ (X1) + (X3) + (X5)",
                     "Y ~ (X1) + (X3) + (X6)",
-                    "Y ~ (X1) + (X3 + X4) + (1)",
+                    "Y ~ (X1) + (X3 + X4)",
                     "Y ~ (X1) + (X3 + X4) + (X5)",
                     "Y ~ (X1) + (X3 + X4) + (X6)",
-                    "Y ~ (X2) + (X3) + (1)",
+                    "Y ~ (X2) + (X3)",
                     "Y ~ (X2) + (X3) + (X5)",
                     "Y ~ (X2) + (X3) + (X6)",
-                    "Y ~ (X2) + (X3 + X4) + (1)",
+                    "Y ~ (X2) + (X3 + X4)",
                     "Y ~ (X2) + (X3 + X4) + (X5)",
                     "Y ~ (X2) + (X3 + X4) + (X6)",
                 ],
@@ -1006,6 +1036,26 @@ def test_stepwise_call_over_several_lines_matches_single_line(test_data):
         fit_multiline, fit_single_line, strict=True
     ):
         np.testing.assert_allclose(multiline_fit.coef(), single_line_fit.coef())
+
+
+@pytest.mark.parametrize(
+    "formula,zero_step",
+    [
+        ("Y ~ 0 + sw0(X2) + X1", "Y ~ 0 + X1"),
+        ("Y ~ -1 + csw0(X2, Z1) + X1", "Y ~ -1 + X1"),
+        ("Y ~ 0 + sw0(X2) + [X1 ~ Z1]", "Y ~ 0 + [X1 ~ Z1]"),
+    ],
+)
+def test_zero_step_keeps_main_formula_intercept(test_data, formula, zero_step):
+    """The zero step of sw0/csw0 fits the main formula without its stepwise terms."""
+    fit = pf.feols(formula, data=test_data).to_list()[0]
+    expected = pf.feols(zero_step, data=test_data)
+
+    assert "Intercept" not in fit.coef().index
+    assert fit.model.formula == expected.model.formula
+    np.testing.assert_allclose(
+        fit.coef(), expected.coef(), err_msg="zero-step coefficients"
+    )
 
 
 def test_explicit_no_fe_coefficients_match(test_data):

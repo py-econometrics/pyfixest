@@ -23,6 +23,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated
   `AttributeError` ([#1809](https://github.com/py-econometrics/pyfixest/issues/1809)).
+- The zero step of `sw0()`, `csw0()`, and `mvsw()` now keeps the main
+  formula's intercept choice, as in `fixest`. Before, `Y ~ 0 + sw0(X2) + X1`
+  fit its zero step with an intercept because the step expanded to
+  `Y ~ 0 + (1) + X1`; it now fits `Y ~ 0 + X1`. In products such as
+  `Z1:sw0(Z2)`, the zero step still leaves `Z1`
+  ([#2031](https://github.com/py-econometrics/pyfixest/issues/2031)).
 
 ## PyFixest 0.70.0
 
