@@ -102,7 +102,7 @@ The default demeaner is now LSMR from the
 into pyfixest. Rust MAP is still available through `MapDemeaner()`.
 
 The default `preconditioner="auto"` now selects `within`'s adaptive
-preconditioner. It starts with the cheap diagonal preconditioner and builds
+preconditioner. It starts with a cheap diagonal preconditioner and builds
 additive Schwarz only when convergence stalls, which skips Schwarz's setup
 cost on well-connected fixed effects where it rarely pays off. `fepois()` and
 `feglm()` still reuse the preconditioner across IRLS iterations ([#1920](https://github.com/py-econometrics/pyfixest/pull/1920), [#1922](https://github.com/py-econometrics/pyfixest/pull/1922),
