@@ -23,7 +23,7 @@ Run a wild cluster bootstrap based on an object of type “Feols”.
 | Name | Type | Description | Default |
 |----|----|----|----|
 | reps | int | The number of bootstrap iterations to run. | *required* |
-| cluster | Union\[str, None\] | The variable used for clustering. Defaults to None. If None, then uses the variable specified in the model’s `clustervar` attribute. If no `_clustervar` attribute is found, runs a heteroskedasticity- robust bootstrap. | `None` |
+| cluster | Union\[str, None\] | The variable used for clustering. Defaults to None. If None, then uses the variable specified in the model’s `clustervar` attribute. If the model is not clustered, runs a heteroskedasticity- robust bootstrap. | `None` |
 | param | Union\[str, None\] | A string of length one, containing the test parameter of interest. Defaults to None. | `None` |
 | weights_type | str | The type of bootstrap weights. Options are ‘rademacher’, ‘mammen’, ‘webb’, or ‘normal’. Defaults to ‘rademacher’. | `'rademacher'` |
 | impose_null | bool | Indicates whether to impose the null hypothesis on the bootstrap DGP. Defaults to True. | `True` |

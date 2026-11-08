@@ -115,9 +115,9 @@ Estimate the model.
 
 #### Returns
 
-| Name | Type  | Description                    |
-|------|-------|--------------------------------|
-|      | Feols | The fitted Feols model object. |
+| Name | Type | Description |
+|----|----|----|
+|  | Feols | The fitted Feols model object. It carries the event-study design as `event_study_design`. |
 
 ### SaturatedEventStudy.iplot
 

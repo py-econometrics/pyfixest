@@ -1,7 +1,7 @@
 # ssc
 
 ``` python
-ssc(k_adj=True, k_fixef='nonnested', G_adj=True, G_df='min', *args, **kwargs)
+ssc(k_adj=True, k_fixef='nonnested', G_adj=True, G_df='min', **kwargs)
 ```
 
 Set the small sample correction factor applied in `get_ssc()`.
@@ -43,7 +43,7 @@ If G_df = “min”, then V += \[V x min(G) / (min(G) - 1) for i in \[1, 2, 12\]
 
 | Name | Type | Description |
 |----|----|----|
-|  | dict | A dictionary with encoded info on how to form small sample corrections |
+|  | Ssc | The validated options; see [Ssc](../reference/utils.utils.Ssc.llms.md). |
 
 ## Examples
 

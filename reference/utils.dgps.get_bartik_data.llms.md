@@ -40,7 +40,7 @@ data = pf.get_bartik_data()
 pf.etable(
     [
         pf.feols("wages ~ immigration + log_population", data),
-        pf.feols("wages ~ log_population | immigration ~ bartik_instrument", data),
+        pf.feols("wages ~ log_population + [immigration ~ bartik_instrument]", data),
     ]
 )
 ```

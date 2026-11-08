@@ -1,7 +1,7 @@
 # FixestMulti
 
 ``` python
-FixestMulti(config, parsed, data, context)
+FixestMulti(formula_dict)
 ```
 
 Results container holding every model fitted by one public-API call.
@@ -40,18 +40,30 @@ fit.tidy()
 
 | Name | Description |
 |----|----|
-| [FixestMulti.FixestFormulaDict](#pyfixest.estimation.FixestMulti_.FixestMulti.FixestFormulaDict) | Parsed formula dict keyed by fixed-effects spec. |
+| [FixestMulti.FixestFormulaDict](#pyfixest.estimation.FixestMulti_.FixestMulti.FixestFormulaDict) | Parsed formula dict keyed by fixed-effects spec (deprecated). |
 
 ## Methods
 
 | Name | Description |
 |----|----|
+| [FixestMulti.coefplot](#pyfixest.estimation.FixestMulti_.FixestMulti.coefplot) | Plot the coefficients of all models. See [`pyfixest.coefplot`](../reference/report.coefplot.llms.md) for the arguments. |
 | [FixestMulti.confint](#pyfixest.estimation.FixestMulti_.FixestMulti.confint) | Obtain confidence intervals for the fitted models. |
+| [FixestMulti.etable](#pyfixest.estimation.FixestMulti_.FixestMulti.etable) | Create a regression table of all models. See [`pyfixest.etable`](../reference/report.etable.llms.md) for the arguments. |
 | [FixestMulti.fetch_model](#pyfixest.estimation.FixestMulti_.FixestMulti.fetch_model) | Fetch a model of class Feols from the Fixest class. |
+| [FixestMulti.iplot](#pyfixest.estimation.FixestMulti_.FixestMulti.iplot) | Plot the `i()` interaction coefficients of all models. See [`pyfixest.iplot`](../reference/report.iplot.llms.md) for the arguments. |
+| [FixestMulti.summary](#pyfixest.estimation.FixestMulti_.FixestMulti.summary) | Print a summary of all models. See [`pyfixest.summary`](../reference/report.summary.llms.md) for the arguments. |
 | [FixestMulti.tidy](#pyfixest.estimation.FixestMulti_.FixestMulti.tidy) | Return the results of an estimation using `feols()` as a tidy Pandas DataFrame. |
 | [FixestMulti.to_list](#pyfixest.estimation.FixestMulti_.FixestMulti.to_list) | Return a list of all fitted models. |
 | [FixestMulti.vcov](#pyfixest.estimation.FixestMulti_.FixestMulti.vcov) | Update regression inference “on the fly”. |
 | [FixestMulti.wildboottest](#pyfixest.estimation.FixestMulti_.FixestMulti.wildboottest) | Run a wild cluster bootstrap for all regressions in the Fixest object. |
+
+### FixestMulti.coefplot
+
+``` python
+coefplot(**kwargs)
+```
+
+Plot the coefficients of all models. See [`pyfixest.coefplot`](../reference/report.coefplot.llms.md) for the arguments.
 
 ### FixestMulti.confint
 
@@ -66,6 +78,14 @@ Obtain confidence intervals for the fitted models.
 | Name | Type | Description |
 |----|----|----|
 |  | pandas.Series | A pd.Series with coefficient names and confidence intervals. The key indicates which models the estimated statistic derives from. |
+
+### FixestMulti.etable
+
+``` python
+etable(**kwargs)
+```
+
+Create a regression table of all models. See [`pyfixest.etable`](../reference/report.etable.llms.md) for the arguments.
 
 ### FixestMulti.fetch_model
 
@@ -87,6 +107,22 @@ Fetch a model of class Feols from the Fixest class.
 | Name | Type            | Description |
 |------|-----------------|-------------|
 |      | A Feols object. |             |
+
+### FixestMulti.iplot
+
+``` python
+iplot(**kwargs)
+```
+
+Plot the `i()` interaction coefficients of all models. See [`pyfixest.iplot`](../reference/report.iplot.llms.md) for the arguments.
+
+### FixestMulti.summary
+
+``` python
+summary(**kwargs)
+```
+
+Print a summary of all models. See [`pyfixest.summary`](../reference/report.summary.llms.md) for the arguments.
 
 ### FixestMulti.tidy
 
@@ -163,7 +199,7 @@ Run a wild cluster bootstrap for all regressions in the Fixest object.
 |----|----|----|----|
 | B | int | The number of bootstrap iterations to run. | *required* |
 | param | Union\[str, None\] | A string of length one, containing the test parameter of interest. Default is None. | `None` |
-| cluster | Union\[str, None\] | The name of the cluster variable. Default is None. If None, uses the `self._clustervar` attribute as the cluster variable. If the `self._clustervar` attribute is None, a heteroskedasticity-robust wild bootstrap is run. | `None` |
+| cluster | Union\[str, None\] | The name of the cluster variable. Default is None. If None, uses each model’s cluster variables. If a model is not clustered, a heteroskedasticity-robust wild bootstrap is run. | `None` |
 | weights_type | str | The type of bootstrap weights. Either ‘rademacher’, ‘mammen’, ‘webb’, or ‘normal’. Default is ‘rademacher’. | `'rademacher'` |
 | impose_null | bool | Should the null hypothesis be imposed on the bootstrap dgp, or not? Default is True. | `True` |
 | bootstrap_type | str | A string of length one. Allows choosing the bootstrap type to be run. Either ‘11’, ‘31’, ‘13’, or ‘33’. Default is ‘11’. | `'11'` |

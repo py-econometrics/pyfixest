@@ -21,20 +21,21 @@ etable(
     model_heads=None,
     head_order='dh',
     file_name=None,
+    docx_style=None,
     **kwargs,
 )
 ```
 
 Generate a table summarizing the results of multiple regression models.
 
-This function uses the maketables package internally to create publication-ready regression tables. It supports various output formats including HTML (via Great Tables), markdown, and LaTeX.
+This function uses the maketables package internally to create publication-ready regression tables. It supports various output formats including HTML (via Great Tables), markdown, LaTeX, Typst, and Word.
 
 ## Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
 | models | Feols, Fepois, Feiv, FixestMulti, or list | A fitted model object, or a list of Feols, Fepois, and Feiv models. The models to be summarized in the table. | *required* |
-| type | str | Type of output. Either “df” for pandas DataFrame, “md” for markdown, “gt” for great_tables, “tex” for LaTeX table, or “typst” for Typst table. Default is “gt”. | `'gt'` |
+| type | str | Type of output. Either “df” for pandas DataFrame, “md” for markdown, “gt” for great_tables, “tex” for LaTeX, “typst” for Typst, or “docx” for an editable Word document. Default is “gt”. | `'gt'` |
 | signif_code | list | Significance levels for the stars. Default is None, which sets \[0.001, 0.01, 0.05\]. Note that stars are only rendered if `coef_fmt` includes `*` on a statistic token, for example `b*` or `b:.3f*`. | `None` |
 | coef_fmt | str | The format of the coefficient (b), standard error (se), t-stats (t), and p-value (p). Default is inherited from maketables. To render significance stars, include `*` on the relevant token, following maketables syntax, for example `"b:.3f* \n (se:.3f)"` with 3 decimal places. Spaces , parentheses `()`, brackets `[]`, newlines `\n` are supported. For further available formatting rules, see `maketables.ETable`. | `None` |
 | custom_stats | dict \| None | A dictionary of custom statistics that can be used in the coef_fmt string to be displayed in the coefficuent cells analogously to “b”, “se” etc. The keys are the names of the custom statistics, and the values are lists of lists, where each inner list contains the custom statistic values for all coefficients each model. Note that “b”, “se”, “t”, or “p” are reserved and cannot be used as keys. | `None` |
@@ -55,17 +56,18 @@ This function uses the maketables package internally to create publication-ready
 | notes | str | Custom table notes. Default shows the significance levels and the format of the coefficient cell. | `''` |
 | model_heads | list \| None | Add custom headlines to models when output as df or latex. Length of list must correspond to number of models. Default is None. | `None` |
 | head_order | str \| None | String to determine the display of the table header when output as df or latex. Allowed values are “dh”, “hd”, “d”, “h”, or ““. When head_order is”dh”, the dependent variable is displayed first, followed by the custom model_heads (provided the user has specified them). With “hd” it is the other way around. When head_order is “d”, only the dependent variable and model numbers are displayed and with “” only the model numbers. Default is “dh”. | `'dh'` |
-| file_name | str \| None | The name/path of the file to save the LaTeX table to. Default is None. | `None` |
+| file_name | str \| None | The name/path of the file to save when type is “gt”, “tex”, “typst”, or “docx”. Default is None, which returns the output without saving it. | `None` |
+| docx_style | dict\[str, object\] \| None | Word style overrides, used only when type is “docx”. Passed to `maketables.MTable.make` as `docx_style`. For example, `{"font_name": "Arial", "font_size_pt": 12, "notes_font_size_pt": 9}`. See `maketables.MTable.DEFAULT_DOCX_STYLE` for supported options. Default is None, which uses maketables’ Word style defaults. | `None` |
 
 ## Returns
 
 | Name | Type | Description |
 |----|----|----|
-|  | pandas.DataFrame | A styled DataFrame with the coefficients and standard errors of the models. When output is “tex”, the LaTeX code is returned as a string. |
+|  | pandas.DataFrame, great_tables.GT, docx.document.Document, str, or None | A DataFrame for “df”, a GT object for “gt”, a string for “html”, “tex”, or “typst”, or a Word Document for “docx”. Markdown output is printed and returns None. Word output is returned even when saved via `file_name`, so it can be edited further with python-docx. |
 
 ## Examples
 
-For more examples, take a look at the [regression tables and summary statistics vignette](https://pyfixest.org/table-layout.html).
+For more examples, see the [regression tables tutorial](../tutorials/regression-tables.llms.md).
 
 ``` python
 import pyfixest as pf
@@ -79,3 +81,15 @@ pf.etable([fit1, fit2])
 ```
 
 [TABLE]
+
+``` python
+document = pf.etable(
+    [fit1, fit2],
+    type="docx",
+    docx_style={"font_name": "Arial", "font_size_pt": 12},
+)
+# Save directly with file_name="results.docx", or edit the document first.
+document.add_paragraph("Additional discussion of the estimates.")
+```
+
+    <docx.text.paragraph.Paragraph at 0x7ff6f830a690>

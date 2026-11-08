@@ -68,16 +68,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
+<link href="../reference/report.iplot.html" rel="next">
+<link href="../reference/report.etable.html" rel="prev">
+<link href="../figures/pyfixest-logo.png" rel="icon" type="image/png">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-4a0610749eeff5ab924a4729b5181608.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-13b6b3b40dd80034e3da90124acc42ea.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-739820889637912ae7e84db58e97c720.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,7 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
+<body class="nav-sidebar floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -135,86 +138,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../tutorials/index.html"> 
+<span class="menu-text">Tutorials</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../how-to/index.html"> 
+<span class="menu-text">Guides</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tutorials</span>
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">More</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
-        <li>
-    <a class="dropdown-item" href="../tutorials/index.html">
- <span class="dropdown-text">All Tutorials</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
- <span class="dropdown-text">OLS with Fixed Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
- <span class="dropdown-text">Formula Syntax</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
- <span class="dropdown-text">Instrumental Variables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/regression-tables.html">
- <span class="dropdown-text">Regression Tables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Guides</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
-        <li>
-    <a class="dropdown-item" href="../how-to/index.html">
- <span class="dropdown-text">All Guides</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
- <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/marginaleffects.html">
- <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/anytime-valid-inference.html">
- <span class="dropdown-text">When to Use Anytime-Valid Inference</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Explanation</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-more">    
+        <li class="dropdown-header">Explanation</li>
         <li>
     <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
  <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
@@ -231,61 +171,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../explanation/blog-posts.html">
  <span class="dropdown-text">Case Studies &amp; Blog Posts</span></a>
   </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Textbook Replications</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li><hr class="dropdown-divider"></li>
         <li>
     <a class="dropdown-item" href="../textbook-replications/index.html">
- <span class="dropdown-text">All Textbook Replications</span></a>
+ <span class="dropdown-text">Textbook Replications</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../changelog.html">
+ <span class="dropdown-text">Changelog</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../contributing.html">
+ <span class="dropdown-text">Contributing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../acknowledgements.html">
+ <span class="dropdown-text">Acknowledgements</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
- <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+    <a class="dropdown-item" href="../skills.html">
+ <span class="dropdown-text">Skills.md</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
- <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
- <span class="dropdown-text">The Effect</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/resources.html">
- <span class="dropdown-text">Other Resources</span></a>
+    <a class="dropdown-item" href="../llms.txt">
+ <span class="dropdown-text">llms.txt</span></a>
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="../changelog.html"> 
-<span class="menu-text">Changelog</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
-<span class="menu-text">Contributing</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../acknowledgements.html"> 
-<span class="menu-text">Acknowledgements</span></a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
-</i> 
-<span class="menu-text">llms.txt</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../skills.html"> 
-<span class="menu-text">Skills.md</span></a>
-  </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img" aria-label="PyFixest on GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -384,6 +301,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/did.saturated_twfe.SaturatedEventStudy.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">SaturatedEventStudy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.saturated_twfe.EventStudyDesign.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EventStudyDesign</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,12 +464,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feols_.Feols.get_performance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Feols.get_performance</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.models.feols_.Feols.wald_test.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Feols.wald_test</span></a>
   </div>
@@ -692,12 +609,185 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
- <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+ <span class="menu-text">Fitted State</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelDescription.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelDescription</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelMatrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelMatrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ObservationWeights.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ObservationWeights</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationSample.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationSample</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.DroppedRowCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DroppedRowCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinLinearData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinLinearData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinIvData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinIvData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CollinearityCheck.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CollinearityCheck</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmWorkingState.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmWorkingState</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FitStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FitStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FittedValues.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FittedValues</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.SandwichComponents.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SandwichComponents</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VarianceCovariance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VarianceCovariance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WaldTest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WaldTest</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStage</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStageDiagnostics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStageDiagnostics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregSolution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregSolution</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VcovSpec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VcovSpec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectEstimates.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectEstimates</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffect.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffect</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.RitestStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RitestStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CoefficientTable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CoefficientTable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.Capabilities.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capabilities</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link">
@@ -712,12 +802,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ModelMatrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
@@ -726,13 +810,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
  <span class="menu-text">Demeaning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
@@ -767,13 +851,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true">
  <span class="menu-text">Misc / Utilities</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
@@ -788,8 +872,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.Ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">get_ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.DegreesOfFreedomCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DegreesOfFreedomCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.SmallSampleCorrection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SmallSampleCorrection</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -805,7 +907,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#parameters" id="toc-parameters" class="nav-link active" data-scroll-target="#parameters">Parameters</a></li>
+  <li><a href="#returns" id="toc-returns" class="nav-link" data-scroll-target="#returns">Returns</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -986,7 +1098,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="5b2a1c24" class="cell" data-execution_count="1">
+<div id="3dfdf464" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pf.get_data()</span>
@@ -1014,7 +1126,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>pf.iplot([fit1], joint <span class="op">=</span> <span class="st">"both"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 
-        <div id="1T94Xm"></div>
+        <div id="GvIJtf"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1025,7 +1137,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1038,9 +1150,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("1T94Xm").appendChild(div);
+                    document.getElementById("GvIJtf").appendChild(div);
                 };
-                var e = document.getElementById("1T94Xm");
+                var e = document.getElementById("GvIJtf");
                 e.appendChild(script);
             })()
         </script>
@@ -1048,7 +1160,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="1uaHJX"></div>
+        <div id="l6wRXn"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1059,7 +1171,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1072,9 +1184,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("1uaHJX").appendChild(div);
+                    document.getElementById("l6wRXn").appendChild(div);
                 };
-                var e = document.getElementById("1uaHJX");
+                var e = document.getElementById("l6wRXn");
                 e.appendChild(script);
             })()
         </script>
@@ -1082,7 +1194,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="HOcZZZ"></div>
+        <div id="2gYrpV"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1093,7 +1205,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1106,9 +1218,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("HOcZZZ").appendChild(div);
+                    document.getElementById("2gYrpV").appendChild(div);
                 };
-                var e = document.getElementById("HOcZZZ");
+                var e = document.getElementById("2gYrpV");
                 e.appendChild(script);
             })()
         </script>
@@ -1116,7 +1228,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display">
 
-        <div id="KFVGoQ"></div>
+        <div id="9QSxnM"></div>
         <script type="text/javascript" data-lets-plot-script="library">
             if(!window.letsPlotCallQueue) {
                 window.letsPlotCallQueue = [];
@@ -1127,7 +1239,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
             (function() {
                 var script = document.createElement("script");
                 script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.11.0/js-package/distr/lets-plot.min.js";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
                 script.onload = function() {
                     window.letsPlotCall = function(f) {f();};
                     window.letsPlotCallQueue.forEach(function(f) {f();});
@@ -1140,16 +1252,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                     var div = document.createElement("div");
                     div.style.color = 'darkred';
                     div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("KFVGoQ").appendChild(div);
+                    document.getElementById("9QSxnM").appendChild(div);
                 };
-                var e = document.getElementById("KFVGoQ");
+                var e = document.getElementById("9QSxnM");
                 e.appendChild(script);
             })()
         </script>
         
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-   <div id="vsITCt"></div>
+   <div id="xTqmVp"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -1174,7 +1286,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
        };
    }
    
-   const containerDiv = document.getElementById("vsITCt");
+   const containerDiv = document.getElementById("xTqmVp");
    let fig = null;
    
    function renderPlot() {
@@ -1182,9 +1294,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
            const plotSpec = {
 "data":{
 "Coefficient":["f1::1.0","f1::2.0","f1::3.0","f1::4.0","f1::5.0","f1::6.0","f1::7.0","f1::8.0","f1::9.0","f1::10.0","f1::11.0","f1::12.0","f1::13.0","f1::14.0","f1::15.0","f1::16.0","f1::17.0","f1::18.0","f1::19.0","f1::20.0","f1::21.0","f1::22.0","f1::23.0","f1::24.0","f1::25.0","f1::26.0","f1::27.0","f1::28.0","f1::29.0","f1::1.0","f1::2.0","f1::3.0","f1::4.0","f1::5.0","f1::6.0","f1::7.0","f1::8.0","f1::9.0","f1::10.0","f1::11.0","f1::12.0","f1::13.0","f1::14.0","f1::15.0","f1::16.0","f1::17.0","f1::18.0","f1::19.0","f1::20.0","f1::21.0","f1::22.0","f1::23.0","f1::24.0","f1::25.0","f1::26.0","f1::27.0","f1::28.0","f1::29.0"],
-"Estimate":[2.5442879837380525,-1.6346807837677462,-0.46398054159365026,-1.7627122198272667,1.4348086119364776,-0.8992225420858201,0.8901916963536614,-0.4708119794251332,0.0839289566193797,0.2887817438084817,1.2881639264088698,0.687308071550841,1.8043009738995897,-0.21656684189387942,1.3903698819526786,2.240478065436782,-0.32636978306830733,1.6520823541202068,0.5883570616384396,2.791607486899843,-1.4464082114876404,-1.0659170994410585,-0.5480905346838385,-0.9775601740834341,-1.701917517882296,1.0750127541094714,-0.48200420903080426,1.5173786526283028,0.2115121440950514,2.5442879837380525,-1.6346807837677462,-0.46398054159365026,-1.7627122198272667,1.4348086119364776,-0.8992225420858201,0.8901916963536614,-0.4708119794251332,0.0839289566193797,0.2887817438084817,1.2881639264088698,0.687308071550841,1.8043009738995897,-0.21656684189387942,1.3903698819526786,2.240478065436782,-0.32636978306830733,1.6520823541202068,0.5883570616384396,2.791607486899843,-1.4464082114876404,-1.0659170994410585,-0.5480905346838385,-0.9775601740834341,-1.701917517882296,1.0750127541094714,-0.48200420903080426,1.5173786526283028,0.2115121440950514],
-"2.5%":[1.6988810797044143,-2.5213510250223603,-1.3779393065398173,-2.655693360946181,0.47709529217549485,-1.8291701365228226,-0.009423320741528185,-1.3574822206797474,-0.7967298916533339,-0.5978884974461325,0.38854890931368047,-0.24263952288616153,0.8825710451114356,-1.1552192837893167,0.46042228751567627,1.3538078241821678,-1.274260142446296,0.759101213001293,-0.341590532798563,1.9622034224441032,-2.3393893526065543,-1.930136348758146,-1.5394180012195666,-1.8771751911786236,-2.7060920965771826,0.11729943434848866,-1.411951803467807,0.6675596211308388,-0.7363782152829372,1.2493256841272484,-2.9928487016463245,-1.8639479872782982,-3.130546935270302,-0.032180404841450905,-2.323681071657705,-0.4878045392385264,-1.8289798973037117,-1.2650309370018094,-1.0693861740700967,-0.08983230918331775,-0.7371504580210441,0.39242995355585486,-1.654359127351543,-0.03408864761920638,0.8823101475582036,-1.7783123608996694,0.28424763867717195,-0.8361014679334456,1.5211577312974014,-2.8142429269306755,-2.3896954375690482,-2.066568429301766,-2.355556409675622,-3.240074132682901,-0.3919762626684571,-1.9064627386026896,0.21565802315353477,-1.2404304337363108],
-"97.5%":[3.389694887771691,-0.7480105425131318,0.44997822335251686,-0.8697310787083528,2.3925219316974604,0.03072505235118239,1.789806713448851,0.41585826182948105,0.9645878048920933,1.1754519850630958,2.187778943504059,1.6172556659878434,2.726030902687744,0.722085600001558,2.3203174763896808,3.1271483066913968,0.6215205763096813,2.5450634952391207,1.518304656075442,3.6210115513555827,-0.5534270703687265,-0.20169785012397112,0.4432369318518897,-0.07794515698824456,-0.6977429391874093,2.032726073870454,0.4479433854061983,2.3671976841257667,1.15940250347304,3.8392502833488567,-0.27651286588916757,0.9359869040909978,-0.39487750438423164,2.901797628714406,0.5252359874860649,2.268187931945849,0.8873559384534454,1.4328888502405688,1.64694966168706,2.6661601620010575,2.111766601122726,3.2161719942433242,1.221225443563784,2.8148284115245636,3.598645983315361,1.125572794763055,3.019917069563242,2.012815591210325,4.062057242502284,-0.0785734960446054,0.257861238686931,0.9703873599340889,0.40043606150875366,-0.1637609030816911,2.5420017708874,0.9424543205410809,2.819099282103071,1.6634547219264135],
+"Estimate":[2.5442879837380574,-1.6346807837677426,-0.4639805415936461,-1.7627122198272627,1.4348086119364807,-0.8992225420858163,0.8901916963536649,-0.4708119794251299,0.08392895661938289,0.28878174380848526,1.2881639264088733,0.6873080715508445,1.804300973899594,-0.216566841893876,1.390369881952682,2.2404780654367853,-0.3263697830683038,1.65208235412021,0.588357061638443,2.791607486899846,-1.4464082114876378,-1.0659170994410552,-0.5480905346838351,-0.977560174083431,-1.701917517882292,1.075012754109475,-0.48200420903080105,1.5173786526283068,0.21151214409505475,2.5442879837380574,-1.6346807837677426,-0.4639805415936461,-1.7627122198272627,1.4348086119364807,-0.8992225420858163,0.8901916963536649,-0.4708119794251299,0.08392895661938289,0.28878174380848526,1.2881639264088733,0.6873080715508445,1.804300973899594,-0.216566841893876,1.390369881952682,2.2404780654367853,-0.3263697830683038,1.65208235412021,0.588357061638443,2.791607486899846,-1.4464082114876378,-1.0659170994410552,-0.5480905346838351,-0.977560174083431,-1.701917517882292,1.075012754109475,-0.48200420903080105,1.5173786526283068,0.21151214409505475],
+"2.5%":[1.6988810797044187,-2.521351025022357,-1.3779393065398136,-2.6556933609461764,0.47709529217549795,-1.8291701365228188,-0.009423320741524854,-1.3574822206797443,-0.7967298916533307,-0.5978884974461292,0.3885489093136837,-0.2426395228861582,0.8825710451114398,-1.1552192837893136,0.46042228751567926,1.3538078241821705,-1.2742601424462925,0.7591012130012961,-0.34159053279855967,1.962203422444106,-2.3393893526065517,-1.9301363487581429,-1.5394180012195635,-1.8771751911786208,-2.706092096577179,0.117299434348492,-1.4119518034678038,0.6675596211308424,-0.7363782152829341,1.2462413246195074,-2.9960836051889825,-1.8672824495270635,-3.1338048633280247,-0.03567450001550543,-2.3270738671162214,-0.4910866701485608,-1.8322148008463697,-1.2682439087421482,-1.0726210776127545,-0.09311444009335212,-0.7405432534795607,0.38906713920472624,-1.657783681338283,-0.037481443077723275,0.8790752440155452,-1.78177061825278,0.2809897106194479,-0.8394942633919622,1.5181317561134295,-2.8175008549884,-2.392848431524606,-2.070185161412785,-2.3588385405856567,-3.243737735847783,-0.3954703578425116,-1.9098555340612062,0.2125575665602033,-1.2438886910894216],
+"97.5%":[3.389694887771696,-0.748010542513128,0.44997822335252124,-0.8697310787083488,2.3925219316974635,0.030725052351186277,1.7898067134488547,0.41585826182948454,0.9645878048920966,1.1754519850630998,2.187778943504063,1.6172556659878472,2.7260309026877483,0.7220856000015616,2.3203174763896848,3.1271483066914003,0.6215205763096849,2.5450634952391242,1.5183046560754456,3.6210115513555863,-0.5534270703687237,-0.20169785012396735,0.4432369318518934,-0.07794515698824112,-0.697742939187405,2.032726073870458,0.44794338540620177,2.367197684125771,1.1594025034730435,3.842334642856607,-0.2732779623465027,0.9393213663397711,-0.3916195763265007,2.9052917238884666,0.5286287829445887,2.2714700628558906,0.8905908419961097,1.4361018219809139,1.650184565229725,2.669442292911099,2.11515939658125,3.219534808594462,1.224649997550531,2.818221206983087,3.6018808868580257,1.1290310521161722,3.0231749976209725,2.0162083866688483,4.065083217686263,-0.07531556798687555,0.261014232642496,0.9740040920451148,0.4037181924187947,-0.16009729991680133,2.5454958660614615,0.9458471159996042,2.82219973869641,1.666912979279531],
 "Model":["Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)","Y ~ 1 + i(f1) (joint CIs)"]
 },
 "mapping":{
@@ -1725,7 +1837,48 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../reference/report.etable.html" class="pagination-link" aria-label="etable">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">etable</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../reference/report.iplot.html" class="pagination-link" aria-label="iplot">
+        <span class="nav-page-text">iplot</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>PyFixest</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="../changelog.html">
+<p>Changelog</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">
+<p>Contributing</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/">
+<p>GitHub</p>
+</a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
 
 
 

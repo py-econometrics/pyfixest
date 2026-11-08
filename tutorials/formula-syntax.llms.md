@@ -48,7 +48,7 @@ fit1.summary()
     ---
     RMSE: 2.09 R2: 0.177 
 
-All transformations that are supported via `formulaic` are also supported via `PyFixest`. To name just a few important ones, you can create categorical variables via the `C()` operator:
+In the covariate part of the formula, transformations supported by `formulaic` are also supported by `PyFixest`. To name just a few important ones, you can create categorical variables via the `C()` operator:
 
 ``` python
 fit2 = pf.feols("Y ~ X1 + X2 + C(f1)", data=data)
@@ -86,7 +86,7 @@ We can add fixed effects behind the `|` operator: here we add two fixed effects 
 fit6 = pf.feols("Y ~ X1 + X2 | f1 + f2", data=data)
 ```
 
-We can interact two fixed effects via the `:` operator.
+We can interact two fixed effects via the `:` operator. If you are coming from `fixest`, note that its `^` operator is deprecated here: see [Deprecated spellings](#deprecated-spellings).
 
 ``` python
 fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
@@ -94,18 +94,47 @@ fit7 = pf.feols("Y ~ X1 + X2 | f1:f2", data=data)
 
 For details on fixed effects regression, take a look at the [OLS with Fixed Effects](../tutorials/ols-fixed-effects.llms.md) vignette.
 
-## Instrumental Variables (IV) Syntax
+Fixed effects must be data columns or interactions of data columns. Their names must be valid Python identifiers, cannot be Python keywords, and must use Python’s normalized identifier spelling. Rename FE columns containing spaces or punctuation before estimation. FE transforms such as `I(f1 + f2)` and `C(f1)` are unsupported; create the transformed column in `data` first.
 
-For IV estimation, `PyFixest` uses a three-part formula syntax:
+Outcome, covariate, and instrument names can still be quoted with backticks, for example `` "Y ~ `my covariate` | firm" ``.
+
+### Varying slopes
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or `f1[[X2]]` to include only the slopes. Separate several slopes with commas, as in `f1[X2, Z1]`. Slopes also work with interacted groups (`f1:f2[X2]`) and arithmetic expressions (`f1[X2**2]`).
 
 ``` python
-"Y ~ exogenous_controls | fixed_effects | endogenous ~ instruments"
+fit_slopes = pf.feols("Y ~ X1 | f1[X2] + f2", data=data)
+fit_slopes_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data=data)
+pf.etable([fit_slopes, fit_slopes_only])
+```
+
+[TABLE]
+
+Varying slopes work with `feols()`, including IV, `fepois()`, and `feglm()`, and require the default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not yet supported for these models.
+
+Slope-only effects such as `f1[[X2]]` do not absorb the constant, so the model keeps and reports an `Intercept`. Effects with level-specific intercepts, such as `f1[X2]`, absorb it. Write `0 +` on the right-hand side to drop the intercept of a slope-only model:
+
+``` python
+pf.feols("Y ~ X1 | f1[[X2]]", data=data).coef()
+```
+
+    Coefficient
+    Intercept    0.874957
+    X1          -0.991049
+    Name: Estimate, dtype: float64
+
+## Instrumental Variables (IV) Syntax
+
+For IV estimation, `PyFixest` 0.70 uses Formulaic’s bracketed multistage syntax. The endogenous variable and its instruments go in a square-bracket block on the right-hand side. Fixed effects stay behind the `|`, exactly as in a model without instruments:
+
+``` python
+"Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects"
 ```
 
 Here is a minimal example with fixed effects:
 
 ``` python
-fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data=data)
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
 fit_iv.summary()
 ```
 
@@ -123,7 +152,11 @@ fit_iv.summary()
     | X1            |     -1.050 |        0.089 |   -11.793 |      0.000 | -1.225 |  -0.875 |
     ---
 
-For details on IV estimation, take a look at the [Instrumental Variables](../tutorials/instrumental-variables.llms.md) vignette.
+The main formula decides whether both stages have an intercept: `Y ~ 0 + [X1 ~ Z1]` omits it from the first and second stage. A `0`, `-1` or `1` inside the brackets has no effect.
+
+Before version `0.70.0`, `PyFixest` supported instrumental variables syntax similar to `fixest`’s. For example, the IV model above would have been written as `Y ~ X2 | f1 + f2 | X1 ~ Z1`. This syntax is deprecated: it raises a `DeprecationWarning` in 0.70 and will become an error in a future release. See the [formula-parsing changelog](../changelog.llms.md#formula-parsing-on-formulaic) for details.
+
+For all the details on IV estimation, take a look at the [Instrumental Variables](../tutorials/instrumental-variables.llms.md) vignette.
 
 ## The `i()` operator for interacting fixed effects
 
@@ -150,11 +183,11 @@ You can also easily interact variables:
 fit_i2 = pf.feols("Y ~ i(f1, f2)", data=data)
 ```
 
-and set reference levels for both via the `ref` and `ref2` levels.
+A numeric second variable such as `f2` by default enters as a continuous slope. To enforce that it is treated as a categorical, you can Wrap it in `C()`, and set reference levels for both via the `ref` and `ref2` arguments.
 
 ``` python
-# set 1 as reference level
-fit_i3 = pf.feols("Y ~ i(f1, f2, ref = 1, ref2 = 2)", data=data)
+# set 1 and 2 as reference levels
+fit_i3 = pf.feols("Y ~ i(f1, C(f2), ref = 1, ref2 = 2)", data=data)
 ```
 
 This is in particular useful for difference-in-differences models.
@@ -189,14 +222,14 @@ fit_bin.summary()
 
 Last, `PyFixest` provides syntactic sugar to fit multiple estimations in one go. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping covariates or dependent variables, and performance is poor, we highly recommend you to try out multiple estimations.
 
-For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. In addition, it is possible to specify multiple dependent variables.
+For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 
 ### Multiple dependent variables
 
-Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
+You can wrap several dependent variables in `sw()`, e.g. via `"sw(Y1, Y2) ~ X1"`, to fit one model per dependent variable.
 
 ``` python
-fit_multi_dep = pf.feols("Y + Y2 ~ X1 + X2", data=data)
+fit_multi_dep = pf.feols("sw(Y, Y2) ~ X1 + X2", data=data)
 pf.etable(fit_multi_dep)
 ```
 
@@ -227,6 +260,8 @@ pf.etable(fit_sw0)
 ### `csw()`: cumulative stepwise
 
 `y ~ x1 + csw(x2, x3)` expands to `y ~ x1 + x2` and `y ~ x1 + x2 + x3`.
+
+Stepwise replacements are grouped with parentheses: `y ~ csw(x1, x2):z` expands to `y ~ (x1):z` and `y ~ (x1 + x2):z`. This also works with `*`, subtraction, and fixed-effect interactions.
 
 ``` python
 fit_csw = pf.feols("Y ~ X1 + csw(X2, Z1)", data=data)
@@ -391,12 +426,12 @@ for dgp_name in ["simple", "difficult"]:
 
 |     | DGP       | Demeaner      | Separate fits (s) | Multiple estimation (s) | Speedup |
 |-----|-----------|---------------|-------------------|-------------------------|---------|
-| 0   | simple    | MAP (rust)    | 1.378             | 0.956                   | 1.44x   |
-| 1   | simple    | LSMR diagonal | 1.888             | 1.007                   | 1.88x   |
-| 2   | simple    | LSMR additive | 3.129             | 1.140                   | 2.75x   |
-| 3   | difficult | MAP (rust)    | 58.880            | 13.666                  | 4.31x   |
-| 4   | difficult | LSMR diagonal | 7.795             | 2.135                   | 3.65x   |
-| 5   | difficult | LSMR additive | 3.166             | 1.210                   | 2.62x   |
+| 0   | simple    | MAP (rust)    | 0.677             | 0.504                   | 1.34x   |
+| 1   | simple    | LSMR diagonal | 0.847             | 0.439                   | 1.93x   |
+| 2   | simple    | LSMR additive | 2.117             | 0.602                   | 3.52x   |
+| 3   | difficult | MAP (rust)    | 32.995            | 7.350                   | 4.49x   |
+| 4   | difficult | LSMR diagonal | 3.498             | 1.103                   | 3.17x   |
+| 5   | difficult | LSMR additive | 2.051             | 0.601                   | 3.41x   |
 
 Absolute timings depend on your machine, but the direction is the important part: multiple estimation avoids recomputing the same within-transform work for every formula.
 
@@ -420,6 +455,18 @@ pf.etable(fit_fsplit)
 ```
 
 [TABLE]
+
+## Deprecated spellings
+
+We are deprecating multiple `fixest`-style syntax features with `PyFixest` 0.70.0. Our stated goal is to “mimic fixest syntax as much as Python allows”. Most of the changes below stem from the fact that our model matrix engine `formulaic` supports the novel syntax better / easier, which leads to cleaner and less buggy code.
+
+| Deprecated              | Use instead               |
+|-------------------------|---------------------------|
+| `Y ~ X1 | f1^f2`        | `Y ~ X1 | f1:f2`          |
+| `Y ~ X1 | f1 | X2 ~ Z1` | `Y ~ X1 + [X2 ~ Z1] | f1` |
+| `Y + Y2 ~ X1`           | `sw(Y, Y2) ~ X1`          |
+
+The instrument block moves onto the right-hand side, so an IV model without fixed effects reads `Y ~ X1 + [X2 ~ Z1]`. The `|` separator is now reserved for fixed effects.
 
 ## Where to Go Next
 

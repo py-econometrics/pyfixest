@@ -4,26 +4,10 @@
 Quantreg(
     FixestFormula,
     data,
-    ssc_dict,
-    drop_singletons,
-    drop_intercept,
-    weights,
-    weights_type,
-    collin_tol,
+    *,
+    options,
     lookup_demeaned_data,
-    solver='np.linalg.solve',
-    demeaner=None,
-    store_data=True,
-    copy_data=True,
-    lean=False,
-    context=0,
-    sample_split_var=None,
-    sample_split_value=None,
-    quantile=0.5,
-    method='fn',
-    quantile_tol=1e-06,
-    quantile_maxiter=None,
-    seed=None,
+    sample_split=None,
 )
 ```
 
@@ -62,20 +46,30 @@ See the [quantile regression tutorial](../tutorials/quantile-regression.llms.md)
 
 ## Attributes
 
-| Name | Description |
-|----|----|
-| [Quantreg.objective_value](#pyfixest.estimation.quantreg.quantreg_.Quantreg.objective_value) | Compute the total loss of the quantile regression model. |
+| Name | Type | Description |
+|----|----|----|
+| solution | QuantregSolution | Output of the interior point solver: coefficients, convergence flag, number of iterations, and final primal and dual iterates. With `multi_method="cfm2"`, the solver runs only for the central quantile; the other quantiles get a single Newton step and have no solution. Dropped by `lean=True`. |
 
 ## Methods
 
 | Name | Description |
 |----|----|
+| [Quantreg.drop_multicol_vars](#pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars) | Remove collinear regressors using the same rank check as OLS. |
 | [Quantreg.fit_qreg_fn](#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn) | Fit a quantile regression model using the Frisch-Newton Interior Point Solver. |
 | [Quantreg.fit_qreg_pfn](#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn) | Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing. |
 | [Quantreg.get_fit](#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit) | Fit a quantile regression model using the interior point method. |
-| [Quantreg.get_performance](#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance) | Compute performance metrics for the quantile regression model. |
 | [Quantreg.prepare_model_matrix](#pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix) | Prepare model inputs for estimation. |
-| [Quantreg.to_array](#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array) | Turn estimation DataFrames to np arrays. |
+| [Quantreg.to_array](#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array) | Publish quantile-regression arrays from the formula state. |
+
+### Quantreg.drop_multicol_vars
+
+``` python
+drop_multicol_vars()
+```
+
+Remove collinear regressors using the same rank check as OLS.
+
+Quantile models do not support fixed effects, so within_data holds the original response and regressor arrays without demeaning.
 
 ### Quantreg.fit_qreg_fn
 
@@ -111,14 +105,6 @@ get_fit()
 
 Fit a quantile regression model using the interior point method.
 
-### Quantreg.get_performance
-
-``` python
-get_performance()
-```
-
-Compute performance metrics for the quantile regression model.
-
 ### Quantreg.prepare_model_matrix
 
 ``` python
@@ -133,4 +119,4 @@ Prepare model inputs for estimation.
 to_array()
 ```
 
-Turn estimation DataFrames to np arrays.
+Publish quantile-regression arrays from the formula state.

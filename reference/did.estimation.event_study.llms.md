@@ -27,7 +27,7 @@ This function allows for the estimation of treatment effects using different est
 | idname | str | The name of the id variable. | *required* |
 | tname | str | Variable name for calendar period. | *required* |
 | gname | str | Unit-specific time of initial treatment. | *required* |
-| cluster | str \| None | The name of the cluster variable. If None, defaults to idname. | `None` |
+| cluster | str \| None | The name of the cluster variable. If None, defaults to idname. With `estimator="did2s"`, inference is fixed at estimation time, and post-estimation `vcov()` updates are rejected. | `None` |
 | xfml | str | The formula for the covariates. | `None` |
 | estimator | str | The estimator to use. Options are “did2s”, “twfe”, and “saturated”. | `'twfe'` |
 | att | bool | If True, estimates the average treatment effect on the treated (ATT). If False, estimates the canonical event study design with all leads and lags. Default is True. | `True` |
@@ -36,7 +36,7 @@ This function allows for the estimation of treatment effects using different est
 
 | Name | Type | Description |
 |----|----|----|
-|  | object | A fitted model object of class [Feols](../reference/estimation.models.feols_.Feols.llms.md). |
+|  | object | A fitted model object of class [Feols](../reference/estimation.models.feols_.Feols.llms.md). With `estimator = "saturated"`, the fit additionally carries its [EventStudyDesign](../reference/did.saturated_twfe.EventStudyDesign.llms.md) as `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`, `iplot()`, and `test_treatment_heterogeneity()` methods. |
 
 ## Examples
 

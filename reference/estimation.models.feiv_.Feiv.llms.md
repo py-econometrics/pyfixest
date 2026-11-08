@@ -4,45 +4,28 @@
 Feiv(
     FixestFormula,
     data,
-    ssc_dict,
-    drop_singletons,
-    drop_intercept,
-    weights,
-    weights_type,
-    collin_tol,
+    *,
+    options,
     lookup_demeaned_data,
-    solver='scipy.linalg.solve',
-    demeaner=None,
     lookup_preconditioner=None,
-    store_data=True,
-    copy_data=True,
-    lean=False,
-    context=0,
-    sample_split_var=None,
-    sample_split_value=None,
+    sample_split=None,
 )
 ```
 
 Non user-facing class to estimate an IV model using a 2SLS estimator.
 
-Inherits from the Feols class. Users should not directly instantiate this class, but rather use the [feols()](../reference/estimation.api.feols.feols.llms.md) function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
+Inherits from the Feols class. Users should not directly instantiate this class, but rather use the [feols()](../reference/estimation.api.feols.feols.llms.md) function. This class constructs the second-stage and instrument within arrays through the shared `DemeanCache` supplied by the estimation runner.
 
 ## Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| Y | np.ndarray | Dependent variable, a two-dimensional np.array. | *required* |
-| X | np.ndarray | Independent variables, a two-dimensional np.array. | *required* |
-| endgvar | np.ndarray | Endogenous Indenpendent variables, a two-dimensional np.array. | *required* |
-| Z | np.ndarray | Instruments, a two-dimensional np.array. | *required* |
-| weights | np.ndarray | Weights, a one-dimensional np.array. | *required* |
-| coefnames_x | list | Names of the coefficients of X. | *required* |
-| coefnames_z | list | Names of the coefficients of Z. | *required* |
-| collin_tol | float | Tolerance for collinearity check. | *required* |
-| solver | Literal\['np.linalg.lstsq', 'np.linalg.solve', 'scipy.linalg.solve', 'scipy.sparse.linalg.lsqr'\] | “scipy.sparse.linalg.lsqr”\], default is “scipy.linalg.solve”. Solver to use for the estimation. | `'scipy.linalg.solve'` |
-| demeaner | Optional\[AnyDemeaner\] | Resolved typed demeaner configuration. | `None` |
-| weights_name | Optional\[str\] | Name of the weights variable. | *required* |
-| weights_type | Optional\[str\] | Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights. | *required* |
+| FixestFormula | Formula | Parsed fixest formula, including the first stage. | *required* |
+| data | pd.DataFrame | Estimation data, already converted to pandas and reindexed. | *required* |
+| options | EstimationOptions | Every estimation option the fit is built with, as built by the estimation function. | *required* |
+| lookup_demeaned_data | dict\[frozenset\[int\], DemeanedData\] | Demeaning cache shared across the models of one cache block. | *required* |
+| lookup_preconditioner | Optional\[dict\[frozenset\[int\], Preconditioner\]\] | Preconditioner cache shared across the models of one cache block. | `None` |
+| sample_split | SampleSplit or None | The variable and value by which the estimation sample was split. `None` if the model was fit on the entire input data set (minus dropping of missings etc). For all model classes. | `None` |
 
 ## Attributes
 
@@ -50,48 +33,30 @@ Inherits from the Feols class. Users should not directly instantiate this class,
 |----|----|----|
 | \_Z | np.ndarray | Processed instruments after handling multicollinearity. |
 | \_weights_type_feiv | str | Type of the weights variable defined in Feiv class. Either “aweights” for analytic weights or “fweights” for frequency weights. |
-| \_coefnames_z | list | Names of coefficients for Z after handling multicollinearity. |
-| \_collin_vars_z | list | Variables identified as collinear in Z. |
-| \_collin_index_z | list | Indices of collinear variables in Z. |
-| \_is_iv | bool | Indicator if instrumental variables are used. |
-| \_support_crv3_inference | bool | Indicator for supporting CRV3 inference. |
-| \_support_iid_inference | bool | Indicator for supporting IID inference. |
-| \_tZX | np.ndarray | Transpose of Z times X. |
-| \_tXZ | np.ndarray | Transpose of X times Z. |
-| \_tZy | np.ndarray | Transpose of Z times Y. |
-| \_tZZinv | np.ndarray | Inverse of transpose of Z times Z. |
+| \_coefnames_z | list\[str\] | Names of coefficients for Z after handling multicollinearity. |
+| collinearity_instruments | CollinearityCheck | Names and column mask of the instruments dropped by the rank check, set in get_fit(). |
+| capabilities | Capabilities | Inference and post-estimation features this model class supports. |
+| sandwich | SandwichComponents | Weighted scores of the first-stage projection X_hat, the 2SLS Hessian X_hat’ W X_hat, and its inverse, set in get_fit(). |
 | \_beta_hat | np.ndarray | Estimated regression coefficients. |
-| \_Y_hat_link | np.ndarray | Predicted values of the regression model. |
+| fitted_values | FittedValues | In-sample predictions on the link and the response scale, set in get_fit(). |
 | \_u_hat | np.ndarray | Residuals of the regression model. |
-| \_scores | np.ndarray | Scores used in the regression. |
-| \_hessian | np.ndarray | Hessian matrix used in the regression. |
-| \_bread | np.ndarray | Bread matrix used in the regression. |
-| \_pi_hat | np.ndarray | Estimated coefficients from 1st stage regression |
-| \_X_hat | np.ndarray | Predicted values of the 1st stage regression |
-| \_v_hat | np.ndarray | Residuals of the 1st stage regression |
-| \_model_1st_stage | Any | feols object of 1st stage regression. It contains various results and diagnostics from the fixed effects OLS regression. |
-| \_endogvar_1st_stage | np.ndarray | Unweihgted Endogenous independent variable vector |
-| \_Z_1st_stage | np.ndarray | Unweighted instruments vector to be used for 1st stage |
-| \_non_exo_instruments | list | List of instruments name excluding exogenous independent vars. |
-| \_\_p_iv | scalar | Number of instruments listed in \_non_exo_instruments |
-| \_f_stat_1st_stage | scalar | F-statistics of First Stage regression for evaluation of IV weakness. The computed F-statistics test the following null hypothesis : \# H0 : beta\_{z_1} = 0 & … & beta\_{z\_{p_iv}} = 0 where z_1, …, z\_{p_iv} \# are the instrument variables \# H1 : H0 does not hold Note that this F-statistics is adjusted to heteroskedasticity / clusters if users set specification of variance-covariance matrix type |
-| \_eff_F | scalar | Effective F-statistics of first stage regression as in Olea and Pflueger 2013 |
+| first_stage | FirstStage | First-stage regression fitted after second-stage inference: the coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the fitted first-stage model, the excluded instruments, and the instrument-strength `diagnostics`. |
 | \_data | pd.DataFrame | The data frame used in the estimation. None if arguments `lean = True` or `store_data = False`. |
 
 ## Raises
 
-| Name | Type       | Description                          |
-|------|------------|--------------------------------------|
-|      | ValueError | If Z is not a two-dimensional array. |
+| Name | Type | Description |
+|----|----|----|
+|  | IVIdentificationError | If the exogenous variables and instruments fully explain an endogenous variable, or the instruments add no explanatory power for it. |
 
 ## Examples
 
-`Feiv` is returned by [feols()](../reference/estimation.api.feols.feols.llms.md) when the formula includes an IV part, i.e. `depvar ~ exog | fe | endog ~ instrument`.
+`Feiv` is returned by [feols()](../reference/estimation.api.feols.feols.llms.md) when the formula includes an instrument block, i.e. `depvar ~ exog + [endog ~ instruments] | fe`.
 
 ``` python
 import pyfixest as pf
 
-fit = pf.feols("Y ~ X2 | f1 | X1 ~ Z1", pf.get_data())
+fit = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1", pf.get_data())
 fit.tidy()
 ```
 
@@ -104,10 +69,10 @@ fit.tidy()
 The first stage F-statistic is stored on the fitted object.
 
 ``` python
-fit._f_stat_1st_stage
+fit.first_stage.diagnostics.f_stat
 ```
 
-    647.270385160491
+    647.2703851604911
 
 See the [instrumental variables tutorial](../tutorials/instrumental-variables.llms.md) for details.
 
@@ -117,13 +82,8 @@ See the [instrumental variables tutorial](../tutorials/instrumental-variables.ll
 |----|----|
 | [Feiv.IV_Diag](#pyfixest.estimation.models.feiv_.Feiv.IV_Diag) | Implement IV diagnostic tests. |
 | [Feiv.IV_weakness_test](#pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test) | Implement IV weakness test (F-test). |
-| [Feiv.demean](#pyfixest.estimation.models.feiv_.Feiv.demean) | Demean instruments and endogeneous variable. |
-| [Feiv.drop_multicol_vars](#pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars) | Drop multicollinear variables in matrix of instruments Z. |
 | [Feiv.eff_F](#pyfixest.estimation.models.feiv_.Feiv.eff_F) | Compute Effective F stat (Olea and Pflueger 2013). |
-| [Feiv.first_stage](#pyfixest.estimation.models.feiv_.Feiv.first_stage) | Implement First stage regression. |
 | [Feiv.get_fit](#pyfixest.estimation.models.feiv_.Feiv.get_fit) | Fit a IV model using a 2SLS estimator. |
-| [Feiv.to_array](#pyfixest.estimation.models.feiv_.Feiv.to_array) | Transform estimation DataFrames to arrays. |
-| [Feiv.wls_transform](#pyfixest.estimation.models.feiv_.Feiv.wls_transform) | Transform variables for WLS estimation. |
 
 ### Feiv.IV_Diag
 
@@ -147,7 +107,7 @@ This method covers diagnostic tests related with IV regression. We currently hav
 
 The following is an example usage of this method:
 
-    ::: {#9456f9f7 .cell execution_count=3}
+    ::: {#3ccb8b88 .cell execution_count=3}
     ``` {.python .cell-code}
     import numpy as np
     import pandas as pd
@@ -196,13 +156,12 @@ The following is an example usage of this method:
     fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
 
     # Fit IV model
-    fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+    fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
              vcov=vcov_detail,
              weights="weights")
-    fit_iv.first_stage()
-    F_stat_pf = fit_iv._f_stat_1st_stage
+    F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
     fit_iv.IV_Diag()
-    F_stat_eff_pf = fit_iv._eff_F
+    F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
 
     print("(Unadjusted) F stat :", F_stat_pf)
     print("Effective F stat :", F_stat_eff_pf)
@@ -210,8 +169,8 @@ The following is an example usage of this method:
 
     ::: {.cell-output .cell-output-stdout}
     ```
-    (Unadjusted) F stat : 52.81535560457512
-    Effective F stat : 48.61288119858717
+    (Unadjusted) F stat : 52.81535560457478
+    Effective F stat : 48.612881198586784
     ```
     :::
     :::
@@ -224,36 +183,20 @@ IV_weakness_test(iv_diag_statistics=None)
 
 Implement IV weakness test (F-test).
 
-This method covers hetero-robust and clustered-robust F statistics. It produces two statistics:
+This method covers hetero-robust and clustered-robust F statistics. It republishes `first_stage` with two updated statistics:
 
-- self.\_f_stat_1st_stage: F statistics of first stage regression
-- self.\_eff_F: Effective F statistics (Olea and Pflueger 2013) of first stage regression
+- `first_stage.diagnostics.f_stat`: F statistic of the first stage
+- `first_stage.diagnostics.eff_f`: effective F statistic (Olea and Pflueger 2013) of the first stage
 
 #### Notes
 
-“self.\_f_stat_1st_stage” is adjusted to the specification of vcov. If vcov_detail = “iid”, F statistics is not adjusted, otherwise it is always adjusted.
+`f_stat` is adjusted to the specification of vcov.
 
 #### Parameters
 
 | Name               | Type | Description                    | Default |
 |--------------------|------|--------------------------------|---------|
 | iv_diag_statistics | list | List of IV weakness statistics | `None`  |
-
-### Feiv.demean
-
-``` python
-demean()
-```
-
-Demean instruments and endogeneous variable.
-
-### Feiv.drop_multicol_vars
-
-``` python
-drop_multicol_vars()
-```
-
-Drop multicollinear variables in matrix of instruments Z.
 
 ### Feiv.eff_F
 
@@ -263,14 +206,6 @@ eff_F()
 
 Compute Effective F stat (Olea and Pflueger 2013).
 
-### Feiv.first_stage
-
-``` python
-first_stage()
-```
-
-Implement First stage regression.
-
 ### Feiv.get_fit
 
 ``` python
@@ -278,19 +213,3 @@ get_fit()
 ```
 
 Fit a IV model using a 2SLS estimator.
-
-### Feiv.to_array
-
-``` python
-to_array()
-```
-
-Transform estimation DataFrames to arrays.
-
-### Feiv.wls_transform
-
-``` python
-wls_transform()
-```
-
-Transform variables for WLS estimation.

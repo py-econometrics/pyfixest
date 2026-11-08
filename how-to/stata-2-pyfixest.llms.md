@@ -2,7 +2,7 @@
 
 # How to Get Started
 
-This guide will focus on how to replicate the regression results you would get in Stata with the Python package `pyfixest` and assumes you know how to do things like install Python packages and load data into Pandas. For a broader introduction to doing econmetrics in Python you might check out Arthur Turrell’s [Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html), which includes a section on [Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html), or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section of [stata2r](https://stata2r.github.io/fixest/) as there is a lot of overlap between fixest and PyFixest syntax.
+This guide will focus on how to replicate the regression results you would get in Stata with the Python package `pyfixest` and assumes you know how to do things like install Python packages and load data into Pandas. For a broader introduction to doing econmetrics in Python you might check out Arthur Turrell’s [Coding for Economist](https://aeturrell.github.io/coding-for-economists/intro.html), which includes a section on [Coming from Stata](https://aeturrell.github.io/coding-for-economists/coming-from-stata.html), or [Tidy Finance with Python](https://www.tidy-finance.org/python/) by Christopher Scheuch, Stefan Voigt, Patrick Weiss, and Christoph Frey. You can also check out the fixest section of [stata2r](https://stata2r.github.io/fixest.html) as there is a lot of overlap between fixest and PyFixest syntax.
 
 # Data
 
@@ -592,7 +592,7 @@ fit11.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: f1 + f2
+    Dep. var.: Y, Fixed effects: f1+f2
     sample: None = all
     Inference:  iid
     Observations:  997

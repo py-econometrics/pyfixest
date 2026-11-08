@@ -25,8 +25,8 @@ from pyfixest.utils.dgps import get_sharkfin
 %autoreload 2
 ```
 
-    pandas  : 2.3.3
-    pyfixest: 0.40.1
+    pyfixest: 0.70.0
+    pandas  : 3.0.1
 
 ``` python
 # one-shot adoption data - parallel trends is true
@@ -34,13 +34,13 @@ df_one_cohort = get_sharkfin()
 df_one_cohort.head()
 ```
 
-|     | unit | year | treat | Y         | ever_treated |
-|-----|------|------|-------|-----------|--------------|
-| 0   | 0    | 0    | 0     | 1.629307  | 0            |
-| 1   | 0    | 1    | 0     | 0.825902  | 0            |
-| 2   | 0    | 2    | 0     | 0.208988  | 0            |
-| 3   | 0    | 3    | 0     | -0.244739 | 0            |
-| 4   | 0    | 4    | 0     | 0.804665  | 0            |
+|     | unit | year | treat | Y        | ever_treated |
+|-----|------|------|-------|----------|--------------|
+| 0   | 0    | 0    | 0     | 1.245972 | 0            |
+| 1   | 0    | 1    | 0     | 0.746735 | 0            |
+| 2   | 0    | 2    | 0     | 0.459708 | 0            |
+| 3   | 0    | 3    | 0     | 1.744166 | 0            |
+| 4   | 0    | 4    | 0     | 1.083833 | 0            |
 
 ``` python
 # multi-cohort adoption data
@@ -172,15 +172,16 @@ fit_static_twfe.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Y, Fixed effects: unit + year
+    Dep. var.: Y, Fixed effects: unit+year
+    sample: None = all
     Inference:  CRV1
     Observations:  30000
 
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-    | treat         |      0.206 |        0.052 |     3.927 |      0.000 |  0.103 |   0.308 |
+    | treat         |      0.228 |        0.053 |     4.310 |      0.000 |  0.124 |   0.332 |
     ---
-    RMSE: 0.701 R2: 0.905 R2 Within: 0.003 
+    RMSE: 0.705 R2: 0.909 R2 Within: 0.004 
 
 Since this is a single-cohort dataset, this estimate is consistent for the ATT under parallel trends. We can estimate heterogeneous effects by time by interacting time with the treated group:
 
@@ -351,9 +352,7 @@ You can employ the proposed test after running a saturated event study by callin
 fit_saturated.test_treatment_heterogeneity()
 ```
 
-    statistic    3256.497337
-    pvalue          0.000000
-    dtype: float64
+    WaldTest(stat=3256.497336589835, pvalue=0.0, df1=30, df2=1499, distribution='chi2', vcov_type='CRV1', wald_statistic=3256.497336589835, f_statistic=108.54991121966117)
 
 In this case, we might be willing to rely on the simple TWFE model to produce unbiased estimates. If we’re not, two “new” difference-in-differences estimators are implemented (beyond the already-presented saturated Sun-Abraham approach) that produce unbiased estimates under staggered assignment and heterogeneous treatment effects: Gardner’s 2-Step Estimator and the Local Projections estimator from Dube et al.
 
@@ -459,5 +458,5 @@ pd.concat(
 |  | Estimate | Std. Error | t value | Pr(\>\|t\|) | 2.5% | 97.5% | estimator |
 |----|----|----|----|----|----|----|----|
 | treat::True | 1.982540 | 0.019338 | 102.521988 | 0.0 | 1.943426 | 2.021655 | TWFE |
-| treat::True | 2.230482 | 0.024709 | 90.271446 | 0.0 | 2.182052 | 2.278911 | DID2s |
+| treat::True | 2.230482 | 0.024709 | 90.271433 | 0.0 | 2.182052 | 2.278911 | DID2s |
 | treat_diff | 2.506746 | 0.071420 | 35.098900 | 0.0 | 2.362287 | 2.651206 | LPDID |

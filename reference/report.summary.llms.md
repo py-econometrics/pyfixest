@@ -14,7 +14,7 @@ For each model, this method prints a header indicating the fixed-effects and the
 |----|----|----|----|
 | models | Feols, Fepois, Feiv, FixestMulti, or list | A fitted model object, or a list of Feols, Fepois, and Feiv models. | *required* |
 | digits | int | The number of decimal places to round the summary statistics to. Default is 3. | `3` |
-| inference_type | regular | Type of coefficient-wise inference to report, handled the same way as in `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`. | `"regular"` |
+| inference_type | 'regular' | Type of coefficient-wise inference to report, handled the same way as in `tidy()`. Only `"regular"` is currently available. Defaults to `"regular"`. | `"regular"` |
 
 ## Returns
 

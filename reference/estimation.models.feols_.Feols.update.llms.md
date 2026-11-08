@@ -12,7 +12,7 @@ Update coefficients for new observations using Sherman-Morrison formula.
 |----|----|----|----|
 | X_new | np.ndarray | Covariates for new data points. Users expected to ensure conformability with existing data. | *required* |
 | y_new | np.ndarray | Outcome values for new data points. | *required* |
-| inplace | bool | Whether to update the model object in place. Defaults to False. | `False` |
+| inplace | bool | Must be `False`. In-place updates are unsupported because appending design rows cannot reconstruct the complete fitted-result state. | `False` |
 
 ## Returns
 
@@ -22,7 +22,7 @@ Update coefficients for new observations using Sherman-Morrison formula.
 
 ## Notes
 
-Updates the coefficients in closed form via the Sherman-Morrison identity instead of refitting on the full sample. `X_new` has to include the intercept column. Models with fixed effects are not supported.
+Updates the coefficients in closed form via the Sherman-Morrison identity instead of refitting on the full sample. `X_new` has to include the intercept column. The returned coefficients do not mutate the fitted result. Models with fixed effects are not supported.
 
 ## Examples
 

@@ -69,16 +69,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
+<link href="../tutorials/formula-syntax.html" rel="next">
+<link href="../tutorials/index.html" rel="prev">
+<link href="../figures/pyfixest-logo.png" rel="icon" type="image/png">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-4a0610749eeff5ab924a4729b5181608.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-13b6b3b40dd80034e3da90124acc42ea.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-739820889637912ae7e84db58e97c720.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -143,7 +146,7 @@ window.Quarto = {
 
 </head>
 
-<body class="floating nav-fixed quarto-light">
+<body class="nav-sidebar floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -165,86 +168,23 @@ window.Quarto = {
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link active" href="../tutorials/index.html" aria-current="page"> 
+<span class="menu-text">Tutorials</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../how-to/index.html"> 
+<span class="menu-text">Guides</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tutorials</span>
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">More</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
-        <li>
-    <a class="dropdown-item" href="../tutorials/index.html">
- <span class="dropdown-text">All Tutorials</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
- <span class="dropdown-text">OLS with Fixed Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
- <span class="dropdown-text">Formula Syntax</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
- <span class="dropdown-text">Instrumental Variables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/regression-tables.html">
- <span class="dropdown-text">Regression Tables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Guides</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
-        <li>
-    <a class="dropdown-item" href="../how-to/index.html">
- <span class="dropdown-text">All Guides</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
- <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/marginaleffects.html">
- <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/anytime-valid-inference.html">
- <span class="dropdown-text">When to Use Anytime-Valid Inference</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Explanation</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-more">    
+        <li class="dropdown-header">Explanation</li>
         <li>
     <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
  <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
@@ -261,61 +201,38 @@ window.Quarto = {
     <a class="dropdown-item" href="../explanation/blog-posts.html">
  <span class="dropdown-text">Case Studies &amp; Blog Posts</span></a>
   </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Textbook Replications</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li><hr class="dropdown-divider"></li>
         <li>
     <a class="dropdown-item" href="../textbook-replications/index.html">
- <span class="dropdown-text">All Textbook Replications</span></a>
+ <span class="dropdown-text">Textbook Replications</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../changelog.html">
+ <span class="dropdown-text">Changelog</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../contributing.html">
+ <span class="dropdown-text">Contributing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../acknowledgements.html">
+ <span class="dropdown-text">Acknowledgements</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
- <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+    <a class="dropdown-item" href="../skills.html">
+ <span class="dropdown-text">Skills.md</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
- <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
- <span class="dropdown-text">The Effect</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/resources.html">
- <span class="dropdown-text">Other Resources</span></a>
+    <a class="dropdown-item" href="../llms.txt">
+ <span class="dropdown-text">llms.txt</span></a>
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="../changelog.html"> 
-<span class="menu-text">Changelog</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
-<span class="menu-text">Contributing</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../acknowledgements.html"> 
-<span class="menu-text">Acknowledgements</span></a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
-</i> 
-<span class="menu-text">llms.txt</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../skills.html"> 
-<span class="menu-text">Skills.md</span></a>
-  </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img" aria-label="PyFixest on GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -325,12 +242,72 @@ window.Quarto = {
 </div>
       </div> <!-- /container-fluid -->
     </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../tutorials/ols-fixed-effects.html">OLS with Fixed Effects</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <nav id="TOC" role="doc-toc" class="toc-active">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">All Tutorials</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/ols-fixed-effects.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">OLS with Fixed Effects</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/formula-syntax.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Formula Syntax</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/instrumental-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Instrumental Variables</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/regression-tables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Regression Tables</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/difference-in-differences.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Difference-in-Differences</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../tutorials/quantile-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quantile Regression</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
     <h2 id="toc-title">On this page</h2>
    
   <ul>
@@ -350,10 +327,6 @@ window.Quarto = {
   </ul></li>
   </ul>
 </nav>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -414,7 +387,7 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 <p>One of the most foundational question in the economics of education is “wow much does an extra year of education raise wages”? If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: <em>ability</em> drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.</p>
 <p>Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.</p>
 <p>In practice, twin fixed‑effects regressions compare each twin to their sibling, netting out shared genes and family background. The estimated coefficient on schooling then captures the causal return to education under the assumption that the only remaining differences between twins are not systematically related to both schooling and wages.</p>
-<div id="6d178986" class="cell" data-execution_count="1">
+<div id="acdd6c5f" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>twins <span class="op">=</span> pf.get_twin_data(N_pairs<span class="op">=</span><span class="dv">500</span>, seed<span class="op">=</span><span class="dv">42</span>)</span>
@@ -495,77 +468,9 @@ Y_{it} = \beta X_{it} + \alpha_i + \psi_t + \varepsilon_{it}
 <h3 class="anchored" data-anchor-id="naive-ols-biased">Naive OLS (biased)</h3>
 <p>In a first step, we estimate the “naive” regression and fit the relation between education and wages.</p>
 <p>Without controlling for ability, the coefficient on <code>educ</code> captures both the true return to education and the selection effect:</p>
-<div id="03e31a9c" class="cell" data-execution_count="2">
+<div id="818b7d64" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit_naive <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ educ + experience"</span>, data<span class="op">=</span>twins)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>fit_naive.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
-
-        <div id="K3Ba5d"></div>
-        <script type="text/javascript" data-lets-plot-script="library">
-            if(!window.letsPlotCallQueue) {
-                window.letsPlotCallQueue = [];
-            };
-            window.letsPlotCall = function(f) {
-                window.letsPlotCallQueue.push(f);
-            };
-            (function() {
-                var script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
-                script.onload = function() {
-                    window.letsPlotCall = function(f) {f();};
-                    window.letsPlotCallQueue.forEach(function(f) {f();});
-                    window.letsPlotCallQueue = [];
-                    
-                };
-                script.onerror = function(event) {
-                    window.letsPlotCall = function(f) {};    // noop
-                    window.letsPlotCallQueue = [];
-                    var div = document.createElement("div");
-                    div.style.color = 'darkred';
-                    div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("K3Ba5d").appendChild(div);
-                };
-                var e = document.getElementById("K3Ba5d");
-                e.appendChild(script);
-            })()
-        </script>
-        
-</div>
-<div class="cell-output cell-output-display">
-
-        <div id="GGZfXU"></div>
-        <script type="text/javascript" data-lets-plot-script="library">
-            if(!window.letsPlotCallQueue) {
-                window.letsPlotCallQueue = [];
-            };
-            window.letsPlotCall = function(f) {
-                window.letsPlotCallQueue.push(f);
-            };
-            (function() {
-                var script = document.createElement("script");
-                script.type = "text/javascript";
-                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
-                script.onload = function() {
-                    window.letsPlotCall = function(f) {f();};
-                    window.letsPlotCallQueue.forEach(function(f) {f();});
-                    window.letsPlotCallQueue = [];
-                    
-                };
-                script.onerror = function(event) {
-                    window.letsPlotCall = function(f) {};    // noop
-                    window.letsPlotCallQueue = [];
-                    var div = document.createElement("div");
-                    div.style.color = 'darkred';
-                    div.textContent = 'Error loading Lets-Plot JS';
-                    document.getElementById("GGZfXU").appendChild(div);
-                };
-                var e = document.getElementById("GGZfXU");
-                e.appendChild(script);
-            })()
-        </script>
-        
-</div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
@@ -588,7 +493,7 @@ RMSE: 0.407 R2: 0.283 </code></pre>
 <section id="twin-pair-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="twin-pair-fixed-effects">Twin-Pair Fixed Effects</h3>
 <p>In the next regression, we include a fixed effect for each twin pair. This controls for everything the twins share, including genes and environment, so the estimate uses only differences in education between the twins.</p>
-<div id="2932055f" class="cell" data-execution_count="3">
+<div id="b07c82c4" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_fe <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ educ + experience | twin_pair_id"</span>, data<span class="op">=</span>twins)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>fit_fe.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -612,7 +517,7 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
 <section id="compare-side-by-side" class="level3">
 <h3 class="anchored" data-anchor-id="compare-side-by-side">Compare Side by Side</h3>
 <p>The FE estimate (~0.08) is smaller than the “naive” OLS estimate. Indeed, part of the correlation between education and wages is that higher ability students obtain more years of education.</p>
-<div id="460f413f" class="cell" data-execution_count="4">
+<div id="dfbbf2b0" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    [fit_naive, fit_fe],</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"log_wage"</span>: <span class="st">"Log Hourly Wage"</span>, <span class="st">"educ"</span>: <span class="st">"Years of Education"</span>, <span class="st">"experience"</span>: <span class="st">"Experience"</span>},</span>
@@ -620,55 +525,55 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Returns to Education: Naive OLS vs Twin FE"</span>,</span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
-<div id="vurpvsmgcx" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="mxcovugnye" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#vurpvsmgcx table {
+#mxcovugnye table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#vurpvsmgcx thead, tbody, tfoot, tr, td, th { border-style: none; }
+#mxcovugnye thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#vurpvsmgcx p { margin: 0; padding: 0; }
- #vurpvsmgcx .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #vurpvsmgcx .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #vurpvsmgcx .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #vurpvsmgcx .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #vurpvsmgcx .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #vurpvsmgcx .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #vurpvsmgcx .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #vurpvsmgcx .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #vurpvsmgcx .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #vurpvsmgcx .gt_column_spanner_outer:first-child { padding-left: 0; }
- #vurpvsmgcx .gt_column_spanner_outer:last-child { padding-right: 0; }
- #vurpvsmgcx .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #vurpvsmgcx .gt_spanner_row { border-bottom-style: hidden; }
- #vurpvsmgcx .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #vurpvsmgcx .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #vurpvsmgcx .gt_from_md> :first-child { margin-top: 0; }
- #vurpvsmgcx .gt_from_md> :last-child { margin-bottom: 0; }
- #vurpvsmgcx .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #vurpvsmgcx .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #vurpvsmgcx .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #vurpvsmgcx .gt_row_group_first td { border-top-width: 0.25px; }
- #vurpvsmgcx .gt_row_group_first th { border-top-width: 0.25px; }
- #vurpvsmgcx .gt_striped { color: #333333; background-color: #F4F4F4; }
- #vurpvsmgcx .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #vurpvsmgcx .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #vurpvsmgcx .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #vurpvsmgcx .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #vurpvsmgcx .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #vurpvsmgcx .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #vurpvsmgcx .gt_left { text-align: left; }
- #vurpvsmgcx .gt_center { text-align: center; }
- #vurpvsmgcx .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #vurpvsmgcx .gt_font_normal { font-weight: normal; }
- #vurpvsmgcx .gt_font_bold { font-weight: bold; }
- #vurpvsmgcx .gt_font_italic { font-style: italic; }
- #vurpvsmgcx .gt_super { font-size: 65%; }
- #vurpvsmgcx .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #vurpvsmgcx .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#mxcovugnye p { margin: 0; padding: 0; }
+ #mxcovugnye .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #mxcovugnye .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #mxcovugnye .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #mxcovugnye .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #mxcovugnye .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #mxcovugnye .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #mxcovugnye .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #mxcovugnye .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #mxcovugnye .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #mxcovugnye .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #mxcovugnye .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #mxcovugnye .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #mxcovugnye .gt_spanner_row { border-bottom-style: hidden; }
+ #mxcovugnye .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #mxcovugnye .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #mxcovugnye .gt_from_md> :first-child { margin-top: 0; }
+ #mxcovugnye .gt_from_md> :last-child { margin-bottom: 0; }
+ #mxcovugnye .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #mxcovugnye .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #mxcovugnye .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #mxcovugnye .gt_row_group_first td { border-top-width: 0.25px; }
+ #mxcovugnye .gt_row_group_first th { border-top-width: 0.25px; }
+ #mxcovugnye .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #mxcovugnye .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #mxcovugnye .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #mxcovugnye .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #mxcovugnye .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #mxcovugnye .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #mxcovugnye .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #mxcovugnye .gt_left { text-align: left; }
+ #mxcovugnye .gt_center { text-align: center; }
+ #mxcovugnye .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #mxcovugnye .gt_font_normal { font-weight: normal; }
+ #mxcovugnye .gt_font_bold { font-weight: bold; }
+ #mxcovugnye .gt_font_italic { font-style: italic; }
+ #mxcovugnye .gt_super { font-size: 65%; }
+ #mxcovugnye .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #mxcovugnye .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -694,17 +599,17 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Years of Education</th>
-    <td class="gt_row gt_center">0.114 <br> (0.007)</td>
-    <td class="gt_row gt_center">0.088 <br> (0.007)</td>
+    <td class="gt_row gt_center">0.114*** <br> (0.007)</td>
+    <td class="gt_row gt_center">0.088*** <br> (0.007)</td>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Experience</th>
-    <td class="gt_row gt_center">0.019 <br> (0.001)</td>
-    <td class="gt_row gt_center">0.02 <br> (0.002)</td>
+    <td class="gt_row gt_center">0.019*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.020*** <br> (0.002)</td>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Intercept</th>
-    <td class="gt_row gt_center">1.113 <br> (0.091)</td>
+    <td class="gt_row gt_center">1.113*** <br> (0.091)</td>
     <td class="gt_row gt_center"></td>
   </tr>
   <tr class="gt_group_heading_row">
@@ -732,7 +637,7 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
   <tfoot class="gt_sourcenotes">
   
   <tr>
-    <td class="gt_sourcenote" colspan="3">Format of coefficient cell: Coefficient   (Std. Error)</td>
+    <td class="gt_sourcenote" colspan="3">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient   (Std. Error)</td>
   </tr>
 
 </tfoot>
@@ -743,10 +648,44 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
         
 </div>
 </div>
-<div id="1bd1bbe0" class="cell" data-execution_count="5">
+<div id="12674bad" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pf.coefplot([fit_naive, fit_fe], keep<span class="op">=</span><span class="st">"educ"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+
+        <div id="dLKAUl"></div>
+        <script type="text/javascript" data-lets-plot-script="library">
+            if(!window.letsPlotCallQueue) {
+                window.letsPlotCallQueue = [];
+            };
+            window.letsPlotCall = function(f) {
+                window.letsPlotCallQueue.push(f);
+            };
+            (function() {
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.src = "https://cdn.jsdelivr.net/gh/JetBrains/lets-plot@v4.8.2/js-package/distr/lets-plot.min.js";
+                script.onload = function() {
+                    window.letsPlotCall = function(f) {f();};
+                    window.letsPlotCallQueue.forEach(function(f) {f();});
+                    window.letsPlotCallQueue = [];
+                    
+                };
+                script.onerror = function(event) {
+                    window.letsPlotCall = function(f) {};    // noop
+                    window.letsPlotCallQueue = [];
+                    var div = document.createElement("div");
+                    div.style.color = 'darkred';
+                    div.textContent = 'Error loading Lets-Plot JS';
+                    document.getElementById("dLKAUl").appendChild(div);
+                };
+                var e = document.getElementById("dLKAUl");
+                e.appendChild(script);
+            })()
+        </script>
+        
+</div>
 <div class="cell-output cell-output-display" data-execution_count="5">
-   <div id="PkCqU9"></div>
+   <div id="MJ2TrB"></div>
    <script type="text/javascript" data-lets-plot-script="plot">
    
    (function() {
@@ -771,7 +710,7 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
        };
    }
    
-   const containerDiv = document.getElementById("PkCqU9");
+   const containerDiv = document.getElementById("MJ2TrB");
    let fig = null;
    
    function renderPlot() {
@@ -779,10 +718,10 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
            const plotSpec = {
 "data":{
 "Coefficient":["educ","educ","educ","educ"],
-"Estimate":[0.11421314363891215,0.08804913053082983,0.11421314363891215,0.08804913053082983],
-"2.5%":[0.10144129742596628,0.07346628392819338,0.10144129742596628,0.07346628392819338],
-"97.5%":[0.12698498985185802,0.10263197713346628,0.12698498985185802,0.10263197713346628],
-"Model":["log_wage ~ educ + experience","log_wage ~ educ + experience | twin_pair_id","log_wage ~ educ + experience","log_wage ~ educ + experience | twin_pair_id"]
+"Estimate":[0.11421314363891767,0.08804913053082986,0.11421314363891767,0.08804913053082986],
+"2.5%":[0.10144129742597152,0.0734662839281934,0.10144129742597152,0.0734662839281934],
+"97.5%":[0.12698498985186382,0.1026319771334663,0.12698498985186382,0.1026319771334663],
+"Model":["log_wage ~ 1 + educ + experience","log_wage ~ educ + experience | twin_pair_id","log_wage ~ 1 + educ + experience","log_wage ~ educ + experience | twin_pair_id"]
 },
 "mapping":{
 "x":"Coefficient",
@@ -934,7 +873,7 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
 <h2 class="anchored" data-anchor-id="application-2-akm-worker-firm-regressions">Application 2: AKM Worker-Firm Regressions</h2>
 <p>Wages of workers depend on both <em>worker characteristics</em> and <em>workplace characteristics</em>. Higher-skill worker might earn more, but there might also be workplace-premia. A two-way fixed effects model as formulated in Abowd, Kramarz &amp; Margolis (AKM, 1999) separates these unobserved effects.</p>
 <p>For some background reading on AKM models and their application, take a look at this slide deck: <a href="https://eml.berkeley.edu/~cle/e250a_f14/lecture11.pdf">AKM Lecture Slides</a>.</p>
-<div id="f7aa6b60" class="cell" data-execution_count="6">
+<div id="af2721da" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>panel <span class="op">=</span> pf.get_worker_panel(N_workers<span class="op">=</span><span class="dv">500</span>, N_firms<span class="op">=</span><span class="dv">50</span>, N_years<span class="op">=</span><span class="dv">11</span>, seed<span class="op">=</span><span class="dv">42</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>panel.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
@@ -1023,7 +962,7 @@ RMSE: 0.214 R2: 0.801 R2 Within: 0.34 </code></pre>
 </div>
 <section id="one-way-fe-worker-fixed-effects-only" class="level3">
 <h3 class="anchored" data-anchor-id="one-way-fe-worker-fixed-effects-only">One-Way FE: Worker Fixed Effects Only</h3>
-<div id="97146c82" class="cell" data-execution_count="7">
+<div id="d78004b2" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit_worker <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id"</span>, data<span class="op">=</span>panel)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>fit_worker.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
@@ -1046,14 +985,14 @@ RMSE: 0.299 R2: 0.776 R2 Within: 0.08 </code></pre>
 </section>
 <section id="two-way-fe-worker-firm-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="two-way-fe-worker-firm-fixed-effects">Two-Way FE: Worker + Firm Fixed Effects</h3>
-<div id="57ff304a" class="cell" data-execution_count="8">
+<div id="5db446b9" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit_twoway <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id + firm_id"</span>, data<span class="op">=</span>panel)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>fit_twoway.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
 Estimation:  OLS
-Dep. var.: log_wage, Fixed effects: worker_id + firm_id
+Dep. var.: log_wage, Fixed effects: worker_id+firm_id
 sample: None = all
 Inference:  iid
 Observations:  5500
@@ -1069,14 +1008,14 @@ RMSE: 0.192 R2: 0.908 R2 Within: 0.159 </code></pre>
 </section>
 <section id="adding-year-fixed-effects" class="level3">
 <h3 class="anchored" data-anchor-id="adding-year-fixed-effects">Adding Year Fixed Effects</h3>
-<div id="2ce0d6ad" class="cell" data-execution_count="9">
+<div id="3f215ca9" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit_full <span class="op">=</span> pf.feols(<span class="st">"log_wage ~ experience + tenure + female | worker_id + firm_id + year"</span>, data<span class="op">=</span>panel)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>fit_full.summary()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>###
 
 Estimation:  OLS
-Dep. var.: log_wage, Fixed effects: worker_id + firm_id + year
+Dep. var.: log_wage, Fixed effects: worker_id+firm_id+year
 sample: None = all
 Inference:  iid
 Observations:  5500
@@ -1093,7 +1032,7 @@ RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
 </section>
 <section id="compare-all-specifications" class="level3">
 <h3 class="anchored" data-anchor-id="compare-all-specifications">Compare All Specifications</h3>
-<div id="5748b682" class="cell" data-execution_count="10">
+<div id="3b9bf8da" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>pf.etable(</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    [fit_worker, fit_twoway, fit_full],</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>{<span class="st">"log_wage"</span>: <span class="st">"Log Wage"</span>, <span class="st">"experience"</span>: <span class="st">"Experience"</span>, <span class="st">"tenure"</span>: <span class="st">"Tenure"</span>, <span class="st">"female"</span>: <span class="st">"Female"</span>},</span>
@@ -1101,55 +1040,55 @@ RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    caption<span class="op">=</span><span class="st">"Worker-Firm Panel: Adding Fixed Effects Progressively"</span>,</span>
 <span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
-<div id="trnahzkxph" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="plvhwfkuwq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#trnahzkxph table {
+#plvhwfkuwq table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#trnahzkxph thead, tbody, tfoot, tr, td, th { border-style: none; }
+#plvhwfkuwq thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#trnahzkxph p { margin: 0; padding: 0; }
- #trnahzkxph .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #trnahzkxph .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #trnahzkxph .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #trnahzkxph .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #trnahzkxph .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #trnahzkxph .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #trnahzkxph .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #trnahzkxph .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #trnahzkxph .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #trnahzkxph .gt_column_spanner_outer:first-child { padding-left: 0; }
- #trnahzkxph .gt_column_spanner_outer:last-child { padding-right: 0; }
- #trnahzkxph .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #trnahzkxph .gt_spanner_row { border-bottom-style: hidden; }
- #trnahzkxph .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #trnahzkxph .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #trnahzkxph .gt_from_md> :first-child { margin-top: 0; }
- #trnahzkxph .gt_from_md> :last-child { margin-bottom: 0; }
- #trnahzkxph .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #trnahzkxph .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #trnahzkxph .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #trnahzkxph .gt_row_group_first td { border-top-width: 0.25px; }
- #trnahzkxph .gt_row_group_first th { border-top-width: 0.25px; }
- #trnahzkxph .gt_striped { color: #333333; background-color: #F4F4F4; }
- #trnahzkxph .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #trnahzkxph .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #trnahzkxph .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #trnahzkxph .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #trnahzkxph .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #trnahzkxph .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #trnahzkxph .gt_left { text-align: left; }
- #trnahzkxph .gt_center { text-align: center; }
- #trnahzkxph .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #trnahzkxph .gt_font_normal { font-weight: normal; }
- #trnahzkxph .gt_font_bold { font-weight: bold; }
- #trnahzkxph .gt_font_italic { font-style: italic; }
- #trnahzkxph .gt_super { font-size: 65%; }
- #trnahzkxph .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #trnahzkxph .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#plvhwfkuwq p { margin: 0; padding: 0; }
+ #plvhwfkuwq .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: hidden; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #plvhwfkuwq .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #plvhwfkuwq .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #plvhwfkuwq .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #plvhwfkuwq .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #plvhwfkuwq .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #plvhwfkuwq .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #plvhwfkuwq .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #plvhwfkuwq .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #plvhwfkuwq .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #plvhwfkuwq .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #plvhwfkuwq .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #plvhwfkuwq .gt_spanner_row { border-bottom-style: hidden; }
+ #plvhwfkuwq .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #plvhwfkuwq .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #plvhwfkuwq .gt_from_md> :first-child { margin-top: 0; }
+ #plvhwfkuwq .gt_from_md> :last-child { margin-bottom: 0; }
+ #plvhwfkuwq .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #plvhwfkuwq .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #plvhwfkuwq .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #plvhwfkuwq .gt_row_group_first td { border-top-width: 0.25px; }
+ #plvhwfkuwq .gt_row_group_first th { border-top-width: 0.25px; }
+ #plvhwfkuwq .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #plvhwfkuwq .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #plvhwfkuwq .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #plvhwfkuwq .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #plvhwfkuwq .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #plvhwfkuwq .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #plvhwfkuwq .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #plvhwfkuwq .gt_left { text-align: left; }
+ #plvhwfkuwq .gt_center { text-align: center; }
+ #plvhwfkuwq .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #plvhwfkuwq .gt_font_normal { font-weight: normal; }
+ #plvhwfkuwq .gt_font_bold { font-weight: bold; }
+ #plvhwfkuwq .gt_font_italic { font-style: italic; }
+ #plvhwfkuwq .gt_super { font-size: 65%; }
+ #plvhwfkuwq .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #plvhwfkuwq .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 <table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
@@ -1176,47 +1115,35 @@ RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Experience</th>
-    <td class="gt_row gt_center">0.021 <br> (0.001)</td>
-    <td class="gt_row gt_center">0.021 <br> (0.000921)</td>
-    <td class="gt_row gt_center">0.02 <br> (0.002)</td>
+    <td class="gt_row gt_center">0.021*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.021*** <br> (0.001)</td>
+    <td class="gt_row gt_center">0.020*** <br> (0.002)</td>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Tenure</th>
-    <td class="gt_row gt_center">0.013 <br> (0.002)</td>
-    <td class="gt_row gt_center">0.011 <br> (0.002)</td>
-    <td class="gt_row gt_center">0.01 <br> (0.002)</td>
+    <td class="gt_row gt_center">0.013*** <br> (0.002)</td>
+    <td class="gt_row gt_center">0.011*** <br> (0.002)</td>
+    <td class="gt_row gt_center">0.010*** <br> (0.002)</td>
   </tr>
   <tr class="gt_group_heading_row">
     <th class="gt_group_heading" colspan="4">fe</th>
   </tr>
   <tr>
-    <th class="gt_row gt_left gt_stub"> firm_id</th>
+    <th class="gt_row gt_left gt_stub">Firm FE</th>
     <td class="gt_row gt_center">-</td>
     <td class="gt_row gt_center">x</td>
-    <td class="gt_row gt_center">-</td>
-  </tr>
-  <tr>
-    <th class="gt_row gt_left gt_stub"> firm_id </th>
-    <td class="gt_row gt_center">-</td>
-    <td class="gt_row gt_center">-</td>
-    <td class="gt_row gt_center">x</td>
-  </tr>
-  <tr>
-    <th class="gt_row gt_left gt_stub"> year</th>
-    <td class="gt_row gt_center">-</td>
-    <td class="gt_row gt_center">-</td>
     <td class="gt_row gt_center">x</td>
   </tr>
   <tr>
     <th class="gt_row gt_left gt_stub">Worker FE</th>
     <td class="gt_row gt_center">x</td>
-    <td class="gt_row gt_center">-</td>
-    <td class="gt_row gt_center">-</td>
+    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">x</td>
   </tr>
   <tr>
-    <th class="gt_row gt_left gt_stub">worker_id </th>
+    <th class="gt_row gt_left gt_stub">Year FE</th>
     <td class="gt_row gt_center">-</td>
-    <td class="gt_row gt_center">x</td>
+    <td class="gt_row gt_center">-</td>
     <td class="gt_row gt_center">x</td>
   </tr>
   <tr class="gt_group_heading_row">
@@ -1238,7 +1165,7 @@ RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
   <tfoot class="gt_sourcenotes">
   
   <tr>
-    <td class="gt_sourcenote" colspan="4">Format of coefficient cell: Coefficient   (Std. Error)</td>
+    <td class="gt_sourcenote" colspan="4">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient   (Std. Error)</td>
   </tr>
 
 </tfoot>
@@ -1668,7 +1595,48 @@ RMSE: 0.191 R2: 0.908 R2 Within: 0.027 </code></pre>
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../tutorials/index.html" class="pagination-link" aria-label="All Tutorials">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">All Tutorials</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../tutorials/formula-syntax.html" class="pagination-link" aria-label="Formula Syntax">
+        <span class="nav-page-text">Formula Syntax</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>PyFixest</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="../changelog.html">
+<p>Changelog</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">
+<p>Contributing</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/">
+<p>GitHub</p>
+</a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
 
 
 

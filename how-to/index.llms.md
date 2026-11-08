@@ -21,3 +21,7 @@ How to pick the right fixed-effects demeaner for your problem.
 ##### Variance Reduction in AB Tests
 
 How to reduce the variance of estimators in AB tests and beyond using exogenous control variables via CUPED, linear regression, and fixed effects estimators.
+
+##### Migrating Fitted-Model Attributes from PyFixest 0.60
+
+How to migrate fitted-model attributes to PyFixest 0.70.

@@ -6,7 +6,7 @@ fixef(atol=1e-06, btol=1e-06)
 
 Compute the coefficients of (swept out) fixed effects for a regression model.
 
-This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects. - `_sumFE` (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).
+Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates` value holding the coefficient records, the dummy-coded solution `alpha`, and the per-observation contribution `sumFE`.
 
 ## Parameters
 
@@ -21,6 +21,12 @@ This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataF
 |----|----|----|
 |  | pd.DataFrame | A tidy DataFrame with columns `variable`, `code`, `level`, and `coefficient` containing the estimated fixed effects. |
 
+## Raises
+
+| Name | Type | Description |
+|----|----|----|
+|  | NonConvergenceError | If LSQR stops at its iteration limit or because the problem is too ill-conditioned, before meeting `atol` and `btol`. |
+
 ## Examples
 
 ``` python
@@ -33,8 +39,8 @@ fixed_effects.head()
 
 |     | variable | code | level | coefficient |
 |-----|----------|------|-------|-------------|
-| 0   | f1       | 15   | 15.0  | 1.887085    |
-| 1   | f1       | 6    | 6.0   | -0.254456   |
-| 2   | f1       | 1    | 1.0   | 3.066142    |
-| 3   | f1       | 19   | 19.0  | 1.123039    |
-| 4   | f1       | 13   | 13.0  | 2.013726    |
+| 0   | f1       | 0    | 0.0   | 0.483757    |
+| 1   | f1       | 1    | 1.0   | 3.066142    |
+| 2   | f1       | 2    | 2.0   | -1.094787   |
+| 3   | f1       | 3    | 3.0   | 0.331095    |
+| 4   | f1       | 4    | 4.0   | -1.287253   |

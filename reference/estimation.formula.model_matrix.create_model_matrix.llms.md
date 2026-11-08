@@ -26,7 +26,7 @@ This function constructs model matrices for econometric estimation by parsing fo
 | weights | str or None | Column name in data to use as observation weights. Weights must be non-negative numeric values. If None, no weighting is applied. | `None` |
 | offset | str or None | Formulaic expression that evaluates to one numeric offset column. The offset is added to the linear predictor with a fixed coefficient of 1. Rows with missing offset values are dropped together with missing rows in the rest of the formula. | `None` |
 | drop_singletons | bool | If True, observations that are singletons in any fixed effect category are dropped from the model. | `False` |
-| drop_intercept | bool | If True, the intercept column is removed from the independent variables and instruments matrices. The intercept is always removed when fixed effects are present, regardless of this parameter. | `False` |
+| drop_intercept | bool | If True, the intercept column is removed from the independent variables and instruments matrices. The intercept is always removed when a fixed effect has level-specific intercepts, regardless of this parameter; slope-only effects such as `f1[[z]]` keep it. | `False` |
 | ensure_full_rank | bool | If True, formulaic will ensure the design matrix is full rank by dropping collinear columns. | `True` |
 | context | int or Mapping\[str, Any\] | Additional context variables for formulaic during model matrix creation. Can be an integer (stack frame depth) or a dictionary of variables to make available in the formula environment (e.g., custom transformations). | `0` |
 

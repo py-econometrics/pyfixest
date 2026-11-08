@@ -23,28 +23,21 @@ What are **dense / well-connected** vs **sparse / weakly-connected** fixed-effec
 
 | Backend | When to use |
 |----|----|
-| `MapDemeaner(backend="rust")` | **Default.** Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
+| `MapDemeaner(backend="rust")` | Fast for dense fixed effects with well-connected graphs. No optional dependencies required. |
 | `MapDemeaner(backend="numba")` | An alternative MAP implementation written in `numba`. Requires installation via `pip install pyfixest[numba]`. |
-| `LsmrDemeaner()` | Uses modified LSMR with additive Schwarz preconditioning by default via the `within` crate. Best for **sparse** fixed-effect structures (e.g. matched employer-employee data). Also supports no preconditioner - which we never recommend - and a diagonal preconditioner, which can be a good choice for dense fixed effects. |
+| `LsmrDemeaner()` | **Default.** Uses modified LSMR from the [`within`](https://github.com/py-econometrics/within) Python package (`within-py`). Its adaptive preconditioner starts with diagonal preconditioning and switches to additive Schwarz if convergence stalls. Well suited to **sparse** fixed-effect structures (e.g. matched employer-employee data). You can also use additive Schwarz from the start or keep diagonal preconditioning throughout, which can work well for dense fixed effects. Disabling preconditioning is rarely useful outside benchmarking. |
 | `LsmrDemeaner(backend="torch", device="cpu")` | LSMR solver on CPU via PyTorch. Requires `pytorch`. |
 | `LsmrDemeaner(backend="torch", device="cuda")` | LSMR solver on CUDA GPUs via PyTorch. Experimental. Requires `pytorch`, plus a CUDA-enabled PyTorch build (see [PyTorch install instructions](https://pytorch.org/get-started/locally/)). |
 | `LsmrDemeaner(backend="torch", device="mps", precision="float32")` | LSMR solver on Apple Silicon GPUs via PyTorch MPS. Experimental. In our experience, MPS provides little performance improvement, but we’d love to hear about differing experiences! Requires `pytorch`. |
 
-Since release `0.60.0`, `pyfixest` defaults to the Rust-backed MAP demeaner. Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]` if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path. The torch-based LSMR backends require `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. For GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
-
-> **WARNING:**
->
-> The `cupy` / `scipy` LSMR demeaner backends are deprecated and will be removed in a future release. Switch to the recommendations above:
->
-> - Users running `LsmrDemeaner(backend="cupy", device="cuda")` on GPU should use `LsmrDemeaner(backend="torch", device="cuda")`.
-> - Users running the legacy `scipy` LSMR backend (which corresponds to `LsmrDemeaner(backend="cupy", device="cpu")`) should use `LsmrDemeaner()` (the default `within` backend).
+`pyfixest` defaults to `LsmrDemeaner(backend="within", preconditioner="auto")`. Numba is now an optional dependency: you can install it via `pip install pyfixest[numba]` if you want to use `MapDemeaner(backend="numba")` or the fast `ritest` path. The torch-based LSMR backends require `pytorch`, which you can install manually or via `pip install pyfixest[torch]`. For GPU acceleration on CUDA, you additionally need a CUDA-enabled PyTorch wheel from the [PyTorch installation guide](https://pytorch.org/get-started/locally/).
 
 ## Usage
 
 To select a demeaner backend, you need to pass an instance of the desired demeaner to the `demeaner` argument of `feols`:
 
 ``` python
-# Default (Rust MAP): best for dense FE / well-connected graphs
+# Default: within LSMR with adaptive preconditioning
 fit = pf.feols("Y ~ X1 | f1", data=df)
 
 # Rust MAP – explicit
@@ -54,10 +47,11 @@ fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="rust"))
 fit = pf.feols("Y ~ X1 | f1", data=df, demeaner=MapDemeaner(backend="numba"))
 
 # `within` LSMR backend – best for sparse multi-way FE structures.
-# Defaults to the additive Schwarz preconditioner.
+# Defaults to the adaptive preconditioner: diagonal first, escalating to
+# additive Schwarz only when convergence stalls.
 fit = pf.feols("Y ~ X1 | f1 + f2", data=df, demeaner=LsmrDemeaner())
 
-# `within` LSMR with the additive Schwarz preconditioner - the default;
+# `within` LSMR with the additive Schwarz preconditioner from the start;
 # best for sparse / weakly connected fixed effects.
 fit = pf.feols(
     "Y ~ X1 | f1 + f2",
@@ -85,6 +79,8 @@ fit = pf.feols(
 
 The `MapDemeaner` accepts `fixef_tol` and `fixef_maxiter` arguments to control convergence. `LsmrDemeaner` uses `fixef_atol` and `fixef_btol`. For the `within` backend the two tolerances are collapsed to `max(fixef_atol, fixef_btol)` (the solver takes a single tolerance); `torch` uses both independently (SciPy LSMR convention).
 
+Both LSMR tolerances default to `1e-8`, matching `within`’s default. They control solver convergence, not the error in each demeaned value or derived statistic. Small demeaning errors can be amplified in quantities such as large t-statistics. Lower both tolerances if you need a tighter solve.
+
 ``` python
 fit = pf.feols(
     "Y ~ X1 | f1",
@@ -95,7 +91,7 @@ fit = pf.feols(
 
 ## Caching and Pickling the `within` Preconditioner
 
-The `within` LSMR backend can build a preconditioner from the fixed-effect design before the iterative solve for two or more fixed-effect factors. The default is additive Schwarz; `preconditioner="diagonal"` uses a cheaper Jacobi preconditioner. For single fixed effects, PyFixest falls back to closed form demeaning (via the MAP algo, which converges in one iteration) and no preconditioner is computed or applied. For large multi-way FE problems, setting up the preconditioner can be a meaningful fraction of total runtime, so it is worth reusing the preconditioner across solves on the same design.
+The `within` LSMR backend can build a preconditioner from the fixed-effect design before the iterative solve for two or more fixed-effect factors. The default is adaptive: it starts with a cheap diagonal (Jacobi) preconditioner and builds the additive Schwarz preconditioner only when convergence stalls. `preconditioner="additive"` builds additive Schwarz up front, and `preconditioner="diagonal"` never escalates. For single fixed effects, PyFixest falls back to closed form demeaning (via the MAP algo, which converges in one iteration) and no preconditioner is computed or applied. For large multi-way FE problems, setting up the preconditioner can be a meaningful fraction of total runtime, so it is worth reusing the preconditioner across solves on the same design.
 
 ### Within a session
 
@@ -107,9 +103,9 @@ pre = fit.preconditioner
 print(pre)
 ```
 
-    Preconditioner(variant=Additive, nrows=60, ncols=60, build_time_seconds=0.00)
+    Preconditioner(Adaptive, n=60)
 
-The `preconditioner` instance returns the reusable preconditioner, along with metadata such as how long it took to build.
+The `preconditioner` instance returns the reusable preconditioner, along with metadata such as its configuration (`pre.config`) and how long it took to build (`pre.build_duration_seconds`). It is a `within.Preconditioner`, which `pyfixest` re-exports as `pf.Preconditioner`. An adaptive preconditioner that escalated during the solve is returned as the additive Schwarz preconditioner.
 
 After creating a preconditioner, you can pass that instance back through `LsmrDemeaner(preconditioner=...)` on a later fit to skip the setup phase:
 
@@ -125,9 +121,13 @@ pf.etable([fit, fit_reused], digits = 6)
 
 [TABLE]
 
-When you use multiple-estimation syntax, `FixestMulti` also shares compatible `within` preconditioners across sibling models that are fit on the same sample with identical fixed-effect structure. This happens automatically; you only need to use `LsmrDemeaner(backend="within")` or a `within` preconditioner option such as `preconditioner="diagonal"`.
+When you use multiple-estimation syntax, `FixestMulti` shares compatible `within` preconditioners across sibling models that are fit on the same sample with identical fixed-effect structure. This happens automatically; you only need to use `LsmrDemeaner(backend="within")` or a `within` preconditioner option such as `preconditioner="diagonal"`.
 
-For GLMs that rely on iterated weighted least squares (IWLS, in `fepois`, `feglm`), either the user-provided preconditioner or the preconditioner built in the first iteration is used across all IWLS iterations. Because the working weights change across iterations, the preconditioner is “stale” with respect to the changing problem. Reusing the preconditioner does not change the target solution — when LSMR converges, it converges to the correct demeaned values — but it can take more iterations per IWLS step, and on poorly conditioned problems may fail to converge within `fixef_maxiter`. The tradeoff is paying that potential extra iteration cost in exchange for skipping the costly setup phase on every IWLS iteration.
+For GLMs that rely on iterated weighted least squares (IWLS, in `fepois` and `feglm`), the first solve builds a preconditioner or uses the supplied prebuilt handle. Subsequent solves reuse it while projecting with their current working weights. Demeaned columns are recomputed each time because the weights change. The preconditioner can become less effective as the weights move, increasing the number of LSMR iterations, but reuse avoids paying its construction cost on every IWLS iteration. The current weights still determine the target projection.
+
+If an adaptive solve escalates to additive Schwarz, the cache retains the additive replacement, including when the original request was a prebuilt adaptive handle. Later iterations and compatible sibling models reuse it without repeating escalation and construction.
+
+As for OLS/IV, each GLM’s `fit.preconditioner` exposes the shared cache entry for its retained sample: the initial handle or its additive replacement. It can be inspected, serialized, or explicitly reused on the same fixed-effect design.
 
 ### Across sessions
 
@@ -160,4 +160,4 @@ pf.etable([fit, fit2], digits = 6)
 
 > **WARNING:**
 >
-> `Preconditioner` instances are tied to specific fixed effect structures. The `within` crate validates that the preconditioner’s DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user’s responsibility to ensure that the preconditioner is reused on the same FE structure.
+> `Preconditioner` instances are tied to specific fixed effect structures. `within` validates that the preconditioner’s DOF count matches the new design; a dimension mismatch raises `ValueError`. It does *not* check whether the FE *structure* matches when the dimensions happen to coincide; reusing on a different-but-same-size FE design will still run but may converge more slowly or fail to converge. It is the user’s responsibility to ensure that the preconditioner is reused on the same FE structure.

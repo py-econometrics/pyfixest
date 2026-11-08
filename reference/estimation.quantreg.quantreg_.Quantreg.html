@@ -68,16 +68,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
+<link href="../reference/estimation.models.feols_.Feols.tidy.html" rel="next">
+<link href="../reference/estimation.FixestMulti_.FixestMulti.html" rel="prev">
+<link href="../figures/pyfixest-logo.png" rel="icon" type="image/png">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-4a0610749eeff5ab924a4729b5181608.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-13b6b3b40dd80034e3da90124acc42ea.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-739820889637912ae7e84db58e97c720.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,7 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
+<body class="nav-sidebar floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -135,86 +138,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../tutorials/index.html"> 
+<span class="menu-text">Tutorials</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../how-to/index.html"> 
+<span class="menu-text">Guides</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tutorials</span>
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">More</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
-        <li>
-    <a class="dropdown-item" href="../tutorials/index.html">
- <span class="dropdown-text">All Tutorials</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
- <span class="dropdown-text">OLS with Fixed Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
- <span class="dropdown-text">Formula Syntax</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
- <span class="dropdown-text">Instrumental Variables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/regression-tables.html">
- <span class="dropdown-text">Regression Tables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Guides</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
-        <li>
-    <a class="dropdown-item" href="../how-to/index.html">
- <span class="dropdown-text">All Guides</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
- <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/marginaleffects.html">
- <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/anytime-valid-inference.html">
- <span class="dropdown-text">When to Use Anytime-Valid Inference</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Explanation</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-more">    
+        <li class="dropdown-header">Explanation</li>
         <li>
     <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
  <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
@@ -231,61 +171,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../explanation/blog-posts.html">
  <span class="dropdown-text">Case Studies &amp; Blog Posts</span></a>
   </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Textbook Replications</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li><hr class="dropdown-divider"></li>
         <li>
     <a class="dropdown-item" href="../textbook-replications/index.html">
- <span class="dropdown-text">All Textbook Replications</span></a>
+ <span class="dropdown-text">Textbook Replications</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../changelog.html">
+ <span class="dropdown-text">Changelog</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../contributing.html">
+ <span class="dropdown-text">Contributing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../acknowledgements.html">
+ <span class="dropdown-text">Acknowledgements</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
- <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+    <a class="dropdown-item" href="../skills.html">
+ <span class="dropdown-text">Skills.md</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
- <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
- <span class="dropdown-text">The Effect</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/resources.html">
- <span class="dropdown-text">Other Resources</span></a>
+    <a class="dropdown-item" href="../llms.txt">
+ <span class="dropdown-text">llms.txt</span></a>
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="../changelog.html"> 
-<span class="menu-text">Changelog</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
-<span class="menu-text">Contributing</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../acknowledgements.html"> 
-<span class="menu-text">Acknowledgements</span></a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
-</i> 
-<span class="menu-text">llms.txt</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../skills.html"> 
-<span class="menu-text">Skills.md</span></a>
-  </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img" aria-label="PyFixest on GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -384,6 +301,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/did.saturated_twfe.SaturatedEventStudy.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">SaturatedEventStudy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.saturated_twfe.EventStudyDesign.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EventStudyDesign</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,12 +464,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feols_.Feols.get_performance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Feols.get_performance</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.models.feols_.Feols.wald_test.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Feols.wald_test</span></a>
   </div>
@@ -692,12 +609,185 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
- <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+ <span class="menu-text">Fitted State</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelDescription.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelDescription</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelMatrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelMatrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ObservationWeights.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ObservationWeights</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationSample.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationSample</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.DroppedRowCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DroppedRowCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinLinearData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinLinearData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinIvData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinIvData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CollinearityCheck.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CollinearityCheck</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmWorkingState.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmWorkingState</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FitStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FitStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FittedValues.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FittedValues</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.SandwichComponents.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SandwichComponents</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VarianceCovariance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VarianceCovariance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WaldTest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WaldTest</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStage</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStageDiagnostics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStageDiagnostics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregSolution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregSolution</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VcovSpec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VcovSpec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectEstimates.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectEstimates</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffect.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffect</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.RitestStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RitestStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CoefficientTable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CoefficientTable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.Capabilities.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capabilities</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link">
@@ -712,12 +802,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ModelMatrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
@@ -726,13 +810,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
  <span class="menu-text">Demeaning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
@@ -767,13 +851,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true">
  <span class="menu-text">Misc / Utilities</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
@@ -788,8 +872,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.Ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">get_ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.DegreesOfFreedomCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DegreesOfFreedomCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.SmallSampleCorrection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SmallSampleCorrection</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -805,7 +907,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#examples" id="toc-examples" class="nav-link active" data-scroll-target="#examples">Examples</a></li>
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars">Quantreg.drop_multicol_vars</a></li>
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn">Quantreg.fit_qreg_fn</a></li>
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn">Quantreg.fit_qreg_pfn</a></li>
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit">Quantreg.get_fit</a></li>
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix">Quantreg.prepare_model_matrix</a></li>
+  <li><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array" id="toc-pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array" class="nav-link" data-scroll-target="#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array">Quantreg.to_array</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -831,32 +951,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Quantreg(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    FixestFormula,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    ssc_dict,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    drop_singletons,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_intercept,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    weights,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights_type,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    collin_tol,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'np.linalg.solve'</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    quantile<span class="op">=</span><span class="fl">0.5</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">'fn'</span>,</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    quantile_tol<span class="op">=</span><span class="fl">1e-06</span>,</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    quantile_maxiter<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    options,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    sample_split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Quantile regression model.</p>
 <p>Returned by <a href="../reference/estimation.api.quantreg.quantreg.html">quantreg()</a>. Fits the conditional quantile of the outcome instead of the conditional mean, which allows the effect of a covariate to differ across the outcome distribution. Estimated via the interior point algorithm of Portnoy and Koenker (1997), <a href="https://doi.org/10.1214/ss/1030037960">Statistical Science</a>.</p>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<div id="80df74ac" class="cell" data-execution_count="1">
+<div id="f4822bcd" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pf.get_data()</span>
@@ -923,71 +1027,59 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Several quantiles can be estimated in one call. <a href="../reference/report.qplot.html">qplot()</a> plots the resulting coefficients.</p>
-<div id="7946fe6d" class="cell" data-execution_count="2">
+<div id="8a4f8ef6" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fits <span class="op">=</span> pf.quantreg(<span class="st">"Y ~ X1 + X2"</span>, data, quantile<span class="op">=</span>[<span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>])</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pf.etable(fits)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<div id="toykcgwkqg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="gzkfbgjaec" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>
-#toykcgwkqg table {
+#gzkfbgjaec table {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
-#toykcgwkqg thead, tbody, tfoot, tr, td, th { border-style: none; }
+#gzkfbgjaec thead, tbody, tfoot, tr, td, th { border-style: none; }
  tr { background-color: transparent; }
-#toykcgwkqg p { margin: 0; padding: 0; }
- #toykcgwkqg .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
- #toykcgwkqg .gt_caption { padding-top: 4px; padding-bottom: 4px; }
- #toykcgwkqg .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
- #toykcgwkqg .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
- #toykcgwkqg .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #toykcgwkqg .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #toykcgwkqg .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
- #toykcgwkqg .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
- #toykcgwkqg .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
- #toykcgwkqg .gt_column_spanner_outer:first-child { padding-left: 0; }
- #toykcgwkqg .gt_column_spanner_outer:last-child { padding-right: 0; }
- #toykcgwkqg .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
- #toykcgwkqg .gt_spanner_row { border-bottom-style: hidden; }
- #toykcgwkqg .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
- #toykcgwkqg .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
- #toykcgwkqg .gt_from_md> :first-child { margin-top: 0; }
- #toykcgwkqg .gt_from_md> :last-child { margin-bottom: 0; }
- #toykcgwkqg .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
- #toykcgwkqg .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
- #toykcgwkqg .gt_indent_1 { text-indent: 5px; }
- #toykcgwkqg .gt_indent_2 { text-indent: calc(5px * 2); }
- #toykcgwkqg .gt_indent_3 { text-indent: calc(5px * 3); }
- #toykcgwkqg .gt_indent_4 { text-indent: calc(5px * 4); }
- #toykcgwkqg .gt_indent_5 { text-indent: calc(5px * 5); }
- #toykcgwkqg .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
- #toykcgwkqg .gt_row_group_first td { border-top-width: 0.25px; }
- #toykcgwkqg .gt_row_group_first th { border-top-width: 0.25px; }
- #toykcgwkqg .gt_striped { color: #333333; background-color: #F4F4F4; }
- #toykcgwkqg .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
- #toykcgwkqg .gt_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #toykcgwkqg .gt_first_summary_row { border-top-style: solid; border-top-width: 2px; border-top-color: #D3D3D3; }
- #toykcgwkqg .gt_last_summary_row_top { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
- #toykcgwkqg .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
- #toykcgwkqg .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
- #toykcgwkqg .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
- #toykcgwkqg .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #toykcgwkqg .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #toykcgwkqg .gt_left { text-align: left; }
- #toykcgwkqg .gt_center { text-align: center; }
- #toykcgwkqg .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
- #toykcgwkqg .gt_font_normal { font-weight: normal; }
- #toykcgwkqg .gt_font_bold { font-weight: bold; }
- #toykcgwkqg .gt_font_italic { font-style: italic; }
- #toykcgwkqg .gt_super { font-size: 65%; }
- #toykcgwkqg .gt_footnotes { color: font-color(#FFFFFF); background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #toykcgwkqg .gt_footnote { margin: 0px; font-size: 90%; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; }
- #toykcgwkqg .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
- #toykcgwkqg .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
- #toykcgwkqg .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
- #toykcgwkqg .gt_asterisk { font-size: 100%; vertical-align: 0; }
+#gzkfbgjaec p { margin: 0; padding: 0; }
+ #gzkfbgjaec .gt_table { display: table; border-collapse: collapse; line-height: normal; margin-left: auto; margin-right: auto; color: #333333; font-size: 16px; font-weight: normal; font-style: normal; background-color: #FFFFFF; width: auto; border-top-style: solid; border-top-width: 2px; border-top-color: #A8A8A8; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; border-bottom-style: hidden; border-bottom-width: 2px; border-bottom-color: #A8A8A8; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; }
+ #gzkfbgjaec .gt_caption { padding-top: 4px; padding-bottom: 4px; }
+ #gzkfbgjaec .gt_title { color: #333333; font-size: 16px; font-weight: initial; padding-top: 6px; padding-bottom: 6px; padding-left: 5px; padding-right: 5px; border-bottom-color: #FFFFFF; border-bottom-width: 0; }
+ #gzkfbgjaec .gt_subtitle { color: #333333; font-size: 85%; font-weight: initial; padding-top: 5px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; border-top-color: #FFFFFF; border-top-width: 0; }
+ #gzkfbgjaec .gt_heading { background-color: #FFFFFF; text-align: center; border-bottom-color: #FFFFFF; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #gzkfbgjaec .gt_bottom_border { border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: #D3D3D3; }
+ #gzkfbgjaec .gt_col_headings { border-top-style: solid; border-top-width: 2px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 1px; border-right-color: #D3D3D3; }
+ #gzkfbgjaec .gt_col_heading { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: bottom; padding-top: 2px; padding-bottom: 7px; padding-left: 5px; padding-right: 5px; overflow-x: hidden; }
+ #gzkfbgjaec .gt_column_spanner_outer { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: normal; text-transform: inherit; padding-top: 0; padding-bottom: 0; padding-left: 4px; padding-right: 4px; }
+ #gzkfbgjaec .gt_column_spanner_outer:first-child { padding-left: 0; }
+ #gzkfbgjaec .gt_column_spanner_outer:last-child { padding-right: 0; }
+ #gzkfbgjaec .gt_column_spanner { border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: bottom; padding-top: 2px; padding-bottom: 2px; overflow-x: hidden; display: inline-block; width: 100%; }
+ #gzkfbgjaec .gt_spanner_row { border-bottom-style: hidden; }
+ #gzkfbgjaec .gt_group_heading { padding-top: 0px; padding-bottom: 0px; padding-left: 5px; padding-right: 5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; text-transform: inherit; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; border-left-style: none; border-left-width: 1px; border-left-color: white; border-right-style: none; border-right-width: 1px; border-right-color: white; vertical-align: middle; text-align: left; }
+ #gzkfbgjaec .gt_empty_group_heading { padding: 0.5px; color: #333333; background-color: #FFFFFF; font-size: 0px; font-weight: initial; border-top-style: solid; border-top-width: 0.25px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 0.25px; border-bottom-color: black; vertical-align: middle; }
+ #gzkfbgjaec .gt_from_md> :first-child { margin-top: 0; }
+ #gzkfbgjaec .gt_from_md> :last-child { margin-bottom: 0; }
+ #gzkfbgjaec .gt_row { padding-top: 2px; padding-bottom: 2px; padding-left: 5px; padding-right: 5px; margin: 10px; border-top-style: none; border-top-width: 1px; border-top-color: #D3D3D3; border-left-style: none; border-left-width: 0px; border-left-color: white; border-right-style: none; border-right-width: 0px; border-right-color: white; vertical-align: middle; overflow-x: hidden; }
+ #gzkfbgjaec .gt_stub { color: #333333; background-color: #FFFFFF; font-size: 16px; font-weight: initial; text-transform: inherit; border-right-style: hidden; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; }
+ #gzkfbgjaec .gt_stub_row_group { color: #333333; background-color: #FFFFFF; font-size: 100%; font-weight: initial; text-transform: inherit; border-right-style: solid; border-right-width: 2px; border-right-color: #D3D3D3; padding-left: 5px; padding-right: 5px; vertical-align: top; }
+ #gzkfbgjaec .gt_row_group_first td { border-top-width: 0.25px; }
+ #gzkfbgjaec .gt_row_group_first th { border-top-width: 0.25px; }
+ #gzkfbgjaec .gt_striped { color: #333333; background-color: #F4F4F4; }
+ #gzkfbgjaec .gt_table_body { border-top-style: solid; border-top-width: 0px; border-top-color: black; border-bottom-style: solid; border-bottom-width: 2px; border-bottom-color: black; }
+ #gzkfbgjaec .gt_grand_summary_row { color: #333333; background-color: #FFFFFF; text-transform: inherit; padding-top: 8px; padding-bottom: 8px; padding-left: 5px; padding-right: 5px; }
+ #gzkfbgjaec .gt_first_grand_summary_row_bottom { border-top-style: double; border-top-width: 6px; border-top-color: #D3D3D3; }
+ #gzkfbgjaec .gt_last_grand_summary_row_top { border-bottom-style: double; border-bottom-width: 6px; border-bottom-color: #D3D3D3; }
+ #gzkfbgjaec .gt_sourcenotes { color: #333333; background-color: #FFFFFF; border-bottom-style: none; border-bottom-width: 2px; border-bottom-color: #D3D3D3; border-left-style: none; border-left-width: 2px; border-left-color: #D3D3D3; border-right-style: none; border-right-width: 2px; border-right-color: #D3D3D3; }
+ #gzkfbgjaec .gt_sourcenote { font-size: 10px; padding-top: 4px; padding-bottom: 4px; padding-left: 5px; padding-right: 5px; text-align: left; }
+ #gzkfbgjaec .gt_left { text-align: left; }
+ #gzkfbgjaec .gt_center { text-align: center; }
+ #gzkfbgjaec .gt_right { text-align: right; font-variant-numeric: tabular-nums; }
+ #gzkfbgjaec .gt_font_normal { font-weight: normal; }
+ #gzkfbgjaec .gt_font_bold { font-weight: bold; }
+ #gzkfbgjaec .gt_font_italic { font-style: italic; }
+ #gzkfbgjaec .gt_super { font-size: 65%; }
+ #gzkfbgjaec .gt_footnote_marks { font-size: 75%; vertical-align: 0.4em; position: initial; }
+ #gzkfbgjaec .gt_asterisk { font-size: 100%; vertical-align: 0; }
  
 </style>
 
@@ -1055,9 +1147,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td class="gt_row gt_center">-</td>
 <td class="gt_row gt_center">-</td>
 </tr>
-</tbody><tfoot>
-<tr class="gt_sourcenotes odd">
-<td colspan="4" class="gt_sourcenote"><span class="gt_from_md">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</span></td>
+</tbody><tfoot class="gt_sourcenotes">
+<tr class="odd">
+<td colspan="4" class="gt_sourcenote">Significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Format of coefficient cell: Coefficient (Std. Error)</td>
 </tr>
 </tfoot>
 
@@ -1069,19 +1161,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>See the <a href="../tutorials/quantile-regression.html">quantile regression tutorial</a> for details.</p>
 </section>
-<section id="attributes" class="level2">
-<h2 class="anchored" data-anchor-id="attributes">Attributes</h2>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 5%">
+<col style="width: 91%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
+<th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.objective_value">Quantreg.objective_value</a></td>
-<td>Compute the total loss of the quantile regression model.</td>
+<td>solution</td>
+<td>QuantregSolution</td>
+<td>Output of the interior point solver: coefficients, convergence flag, number of iterations, and final primal and dual iterates. With <code>multi_method="cfm2"</code>, the solver runs only for the central quantile; the other quantiles get a single Newton step and have no solution. Dropped by <code>lean=True</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -1097,20 +1196,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars">Quantreg.drop_multicol_vars</a></td>
+<td>Remove collinear regressors using the same rank check as OLS.</td>
+</tr>
+<tr class="even">
 <td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn">Quantreg.fit_qreg_fn</a></td>
 <td>Fit a quantile regression model using the Frisch-Newton Interior Point Solver.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn">Quantreg.fit_qreg_pfn</a></td>
 <td>Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit">Quantreg.get_fit</a></td>
 <td>Fit a quantile regression model using the interior point method.</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance">Quantreg.get_performance</a></td>
-<td>Compute performance metrics for the quantile regression model.</td>
 </tr>
 <tr class="odd">
 <td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix">Quantreg.prepare_model_matrix</a></td>
@@ -1118,39 +1217,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td><a href="#pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array">Quantreg.to_array</a></td>
-<td>Turn estimation DataFrames to np arrays.</td>
+<td>Publish quantile-regression arrays from the formula state.</td>
 </tr>
 </tbody>
 </table>
+<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars" class="level3">
+<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.drop_multicol_vars">Quantreg.drop_multicol_vars</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>drop_multicol_vars()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Remove collinear regressors using the same rank check as OLS.</p>
+<p>Quantile models do not support fixed effects, so within_data holds the original response and regressor arrays without demeaning.</p>
+</section>
 <section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_fn">Quantreg.fit_qreg_fn</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fit_qreg_fn(X, Y, q, tol<span class="op">=</span><span class="va">None</span>, maxiter<span class="op">=</span><span class="va">None</span>, beta_init<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_qreg_fn(X, Y, q, tol<span class="op">=</span><span class="va">None</span>, maxiter<span class="op">=</span><span class="va">None</span>, beta_init<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Fit a quantile regression model using the Frisch-Newton Interior Point Solver.</p>
 </section>
 <section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.fit_qreg_pfn">Quantreg.fit_qreg_pfn</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fit_qreg_pfn(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    X,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    Y,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    q,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    beta_init<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    rng<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    eta<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fit_qreg_pfn(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    X,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    Y,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    q,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    m<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    tol<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    maxiter<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    beta_init<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    rng<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    eta<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Fit a quantile regression model using the Frisch-Newton Interior Point Solver with pre-processing.</p>
 </section>
 <section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_fit">Quantreg.get_fit</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Fit a quantile regression model using the interior point method.</p>
-</section>
-<section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.get_performance">Quantreg.get_performance</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>get_performance()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Compute performance metrics for the quantile regression model.</p>
 </section>
 <section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.prepare_model_matrix">Quantreg.prepare_model_matrix</h3>
@@ -1160,7 +1260,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.quantreg.quantreg_.Quantreg.to_array">Quantreg.to_array</h3>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>to_array()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Turn estimation DataFrames to np arrays.</p>
+<p>Publish quantile-regression arrays from the formula state.</p>
 
 
 </section>
@@ -1567,7 +1667,48 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../reference/estimation.FixestMulti_.FixestMulti.html" class="pagination-link" aria-label="FixestMulti">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">FixestMulti</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../reference/estimation.models.feols_.Feols.tidy.html" class="pagination-link" aria-label="Feols.tidy">
+        <span class="nav-page-text">Feols.tidy</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>PyFixest</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="../changelog.html">
+<p>Changelog</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">
+<p>Contributing</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/">
+<p>GitHub</p>
+</a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
 
 
 

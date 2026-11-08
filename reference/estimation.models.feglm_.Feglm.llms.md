@@ -4,33 +4,17 @@
 Feglm(
     FixestFormula,
     data,
-    ssc_dict,
-    drop_singletons,
-    drop_intercept,
-    weights,
-    weights_type,
-    collin_tol,
+    *,
+    options,
     lookup_demeaned_data,
-    tol,
-    maxiter,
-    solver,
-    family,
-    demeaner=None,
     lookup_preconditioner=None,
-    store_data=True,
-    copy_data=True,
-    lean=False,
-    sample_split_var=None,
-    sample_split_value=None,
-    separation_check=None,
-    context=0,
-    accelerate=True,
+    sample_split=None,
 )
 ```
 
 Base class for the estimation of a fixed-effects GLM model.
 
-Returned by [feglm()](../reference/estimation.api.feglm.feglm.llms.md). Fixed effects are handled via iteratively reweighted least squares with demeaning, following Stammann (2018), [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The family is set with the `family` argument and implemented by a subclass. `poisson` dispatches to [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md).
+Returned by [feglm()](../reference/estimation.api.feglm.feglm.llms.md). Fixed effects are handled via iteratively reweighted least squares with demeaning, following Stammann (2018), [arXiv:1707.01815](https://arxiv.org/pdf/1707.01815). The `family` argument selects a subclass that declares its `GlmFamily`. `poisson` dispatches to [Fepois](../reference/estimation.models.fepois_.Fepois.llms.md).
 
 ## Examples
 
@@ -59,8 +43,7 @@ fit.tidy()
 | [Feglm.predict](#pyfixest.estimation.models.feglm_.Feglm.predict) | Return predicted values from regression model. |
 | [Feglm.prepare_model_matrix](#pyfixest.estimation.models.feglm_.Feglm.prepare_model_matrix) | Prepare model inputs for estimation. |
 | [Feglm.resid](#pyfixest.estimation.models.feglm_.Feglm.resid) | Return residuals from a fitted GLM. |
-| [Feglm.residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X by flist using weights. |
-| [Feglm.to_array](#pyfixest.estimation.models.feglm_.Feglm.to_array) | Turn estimation DataFrames to np arrays. |
+| [Feglm.residualize](#pyfixest.estimation.models.feglm_.Feglm.residualize) | Residualize v and X with current working weights and a reused preconditioner. |
 
 ### Feglm.get_fit
 
@@ -98,15 +81,15 @@ Return a flat np.array with predicted values of the regression model. If new fix
 | type | str | The type of prediction to be computed. Can be either “response” (default) or “link”. If type=“response”, the output is at the level of the response variable, i.e., it is the expected predictor E(Y\|X). If “link”, the output is at the level of the explanatory variables, i.e., the linear predictor X @ beta. | `'link'` |
 | atol | Float | Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
 | btol | Float | Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
-| se_fit | bool \| None | If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False. | `False` |
-| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either ‘prediction’ or None. | `None` |
+| se_fit | bool \| None | Prediction standard errors are not supported for GLMs. Passing True raises NotImplementedError. Defaults to False. | `False` |
+| interval | PredictionErrorOptions \| None | Prediction intervals are not supported for GLMs. Passing ‘prediction’ raises NotImplementedError. Defaults to None. | `None` |
 | alpha | float | The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = “prediction” is not None. | `0.05` |
 
 #### Returns
 
-| Name | Type | Description |
-|----|----|----|
-|  | Union\[np.ndarray, pd.DataFrame\] | Returns a pd.Dataframe with columns “fit”, “se_fit” and CIs if argument “interval=prediction”. Otherwise, returns a np.ndarray with the predicted values of the model or the prediction standard errors if argument “se_fit=True”. |
+| Name | Type       | Description                              |
+|------|------------|------------------------------------------|
+|      | np.ndarray | Predicted values on the requested scale. |
 
 ### Feglm.prepare_model_matrix
 
@@ -142,12 +125,4 @@ Return residuals from a fitted GLM.
 residualize(v, X, flist, weights, tol)
 ```
 
-Residualize v and X by flist using weights.
-
-### Feglm.to_array
-
-``` python
-to_array()
-```
-
-Turn estimation DataFrames to np arrays.
+Residualize v and X with current working weights and a reused preconditioner.

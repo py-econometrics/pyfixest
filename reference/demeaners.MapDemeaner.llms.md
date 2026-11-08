@@ -6,7 +6,7 @@ MapDemeaner(fixef_maxiter=10000, fixef_tol=1e-06, backend='rust')
 
 Method of Alternating Projections (MAP) demeaner.
 
-The default backend. Sweeps out the fixed effects by alternately projecting on each of them until convergence. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for when to use which backend.
+Projects out the fixed effects using the method of alternating projections until convergence. See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for when to use which backend.
 
 ## Examples
 
@@ -39,7 +39,7 @@ demean(x, flist, weights=None, cached_preconditioner=None)
 
 Demean `x` by the fixed effects in `flist` via MAP.
 
-`cached_preconditioner` is accepted for interface uniformity with :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a preconditioner, so the third return value is always `None`.
+`cached_preconditioner` is accepted for interface uniformity with :meth:`LsmrDemeaner.demean` and ignored: MAP does not use a preconditioner, so the third return value is always `None`. MAP requires a group-code array and raises `TypeError` for explicit `within.Effect` objects.
 
 ### MapDemeaner.with_tol
 

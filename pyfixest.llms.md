@@ -2,7 +2,7 @@
 
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit) ![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue) [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/) [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest) [![Downloads](https://img.shields.io/pepy/dt/pyfixest.png)](https://pepy.tech/project/pyfixest) [![Downloads](https://img.shields.io/pypi/dm/pyfixest.png)](https://pepy.tech/project/pyfixest)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit) ![Python Versions](https://img.shields.io/badge/Python-3.11–3.15-blue) [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/) [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest) [![Downloads](https://img.shields.io/pepy/dt/pyfixest.png)](https://pepy.tech/project/pyfixest) [![Downloads](https://img.shields.io/pypi/dm/pyfixest.png)](https://pepy.tech/project/pyfixest)
 
 [![](https://img.shields.io/discord/1259933360726216754.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&style=flat-square)](https://discord.gg/gBAydeDMVK)
 
@@ -32,7 +32,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **randomization inference**
   - The **causal cluster variance estimator (CCV)**
 - **Post-Estimation & Reporting**
-  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
+  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
 ## Installation
 
@@ -110,11 +110,11 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
 `PyFixest` also supports multiple estimation syntax:
 
 ``` python
-fit = pf.feols("Y + Y2 ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
+fit = pf.feols("sw(Y, Y2) ~ X1 | csw0(f1, f2)", data=data, vcov={"CRV1": "group_id"})
 fit.etable()
 ```
 
-For more examples, see the [quickstart](https://pyfixest.org/getting-started.html), the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html), and the [Poisson & GLMs tutorial](https://pyfixest.org/tutorials/poisson-glm.html).
+For more examples, see the [quickstart](https://pyfixest.org/getting-started.html) and the [formula syntax tutorial](https://pyfixest.org/tutorials/formula-syntax.html).
 
 ## Benchmarks
 

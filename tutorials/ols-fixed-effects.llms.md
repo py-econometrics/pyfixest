@@ -166,7 +166,7 @@ fit_twoway.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: log_wage, Fixed effects: worker_id + firm_id
+    Dep. var.: log_wage, Fixed effects: worker_id+firm_id
     sample: None = all
     Inference:  iid
     Observations:  5500
@@ -188,7 +188,7 @@ fit_full.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: log_wage, Fixed effects: worker_id + firm_id + year
+    Dep. var.: log_wage, Fixed effects: worker_id+firm_id+year
     sample: None = all
     Inference:  iid
     Observations:  5500

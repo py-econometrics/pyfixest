@@ -12,7 +12,11 @@ Compute covariance matrices for an estimated regression model.
 |----|----|----|----|
 | vcov | Union\[str, dict\[str, str\]\] | A string or dictionary specifying the type of variance-covariance matrix to use for inference. If a string, it can be one of “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW”, “DK”. If a dictionary, it should have the format {“CRV1”: “clustervar”} for CRV1 inference or {“CRV3”: “clustervar”} for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation. | *required* |
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments for the variance-covariance matrix. | `None` |
-| data | DataFrameType \| None | The data used for estimation. If None, tries to fetch the data from the model object. Defaults to None. | `None` |
+| data | Optional\[DataFrameType\] | No longer supported; passing a frame raises `ValueError`. The covariance matrix uses the estimation sample stored on the model. This argument will be removed in a future release. | `None` |
+
+## Notes
+
+Cluster and time variables are read from the stored estimation sample, so they need not appear in the formula. Models fitted with `store_data=False` or `lean=True` do not keep this sample; pass `vcov` when fitting them instead.
 
 ## Returns
 

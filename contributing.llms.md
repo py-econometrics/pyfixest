@@ -8,10 +8,10 @@ If you’d like to get involved, but are not yet sure how, please feel free to s
 
 The repository’s local developer guides are authoritative:
 
-- [Architecture](developer/architecture.llms.md)
-- [Testing and verification](developer/testing.llms.md)
-- [`fixest` compatibility](developer/fixest-compatibility.llms.md)
-- [Git and pull-request style](developer/git-and-pr-style.llms.md)
+- [Architecture](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/architecture.md)
+- [Testing and verification](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/testing.md)
+- [`fixest` compatibility](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/fixest-compatibility.md)
+- [Git and pull-request style](https://github.com/py-econometrics/pyfixest/blob/master/docs/developer/git-and-pr-style.md)
 
 The [DeepWiki](https://deepwiki.com/py-econometrics/pyfixest) is a useful generated overview, but it may lag the repository and is secondary to these maintained guides.
 
@@ -44,7 +44,7 @@ cd pyfixest
 
 `PyFixest` uses [pixi](https://pixi.sh/latest/) for package management. All configuration lives in `pyproject.toml` under `[tool.pixi.*]` sections.
 
-To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). Environments are installed automatically when you run a task (e.g. `pixi run test-py`). You do not need a global Rust installation – Rust is installed via conda.
+To install `pixi`, follow the [installation instructions](https://pixi.sh/latest/#installation). You need pixi 0.71.0 or newer, because `pixi.lock` is written in the v7 format and the `benchmark` environment declares its CUDA 12.8 requirement on a [named platform](https://pixi.sh/latest/workspace/multi_platform_configuration/). Environments are installed automatically when you run a task (e.g. `pixi run test-py`). You do not need a global Rust installation – Rust is installed via conda.
 
 To see all available tasks and their descriptions, run:
 
@@ -105,6 +105,14 @@ This installs prek as a git hook so checks run automatically on each commit.
 
 ``` bash
 pixi run lint
+```
+
+### Type checking
+
+We use [ty](https://github.com/astral-sh/ty) to type-check `pyfixest`. It runs as a blocking CI check but is not one of the `prek`/pre-commit hooks, so run it directly before pushing:
+
+``` bash
+pixi run ty
 ```
 
 ### Building the documentation

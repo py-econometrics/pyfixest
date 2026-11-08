@@ -92,13 +92,13 @@ fit_naive.tidy()
 | educ        | 0.114213 | 0.006975   | 16.374676 | 0.0         | 0.100509 | 0.127917 |
 | experience  | 0.019266 | 0.001527   | 12.618671 | 0.0         | 0.016266 | 0.022265 |
 
-Common model-level fit statistics are stored on the fitted object:
+Common model-level fit statistics are stored on the fitted object; the `fitstat` component holds the goodness-of-fit measures:
 
 ``` python
-fit_naive._N        # number of observations
-fit_naive._rmse     # root mean squared error
-fit_naive._r2       # R-squared
-fit_naive._adj_r2   # adjusted R-squared
+fit_naive.sample_info.n_obs  # number of observations
+fit_naive.fitstat.rmse       # root mean squared error
+fit_naive.fitstat.r2         # R-squared
+fit_naive.fitstat.adj_r2     # adjusted R-squared
 ```
 
     np.float64(0.28155300963422947)
@@ -106,8 +106,8 @@ fit_naive._adj_r2   # adjusted R-squared
 For models with fixed effects, within R-squared measures are also available:
 
 ``` python
-fit_fe._r2_within
-fit_fe._adj_r2_within
+fit_fe.fitstat.r2_within
+fit_fe.fitstat.adj_r2_within
 ```
 
     np.float64(0.33726588467888985)

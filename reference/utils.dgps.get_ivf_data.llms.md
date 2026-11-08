@@ -40,7 +40,7 @@ data = pf.get_ivf_data()
 pf.etable(
     [
         pf.feols("earnings ~ num_children", data),
-        pf.feols("earnings ~ 1 | num_children ~ ivf_success", data),
+        pf.feols("earnings ~ 1 + [num_children ~ ivf_success]", data),
     ]
 )
 ```

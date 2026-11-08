@@ -6,7 +6,7 @@ BaseDemeaner(fixef_maxiter=10000)
 
 Base configuration shared by all fixed-effects demeaners.
 
-Holds the settings shared by all backends, currently `fixef_maxiter`. This class is not passed to an estimation function directly. Use one of the concrete demeaners instead: [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md), the default, or [LsmrDemeaner](../reference/demeaners.LsmrDemeaner.llms.md). See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for a comparison.
+Holds the settings shared by all backends, currently `fixef_maxiter`. This class is not passed to an estimation function directly. Use one of the concrete demeaners instead: [LsmrDemeaner](../reference/demeaners.LsmrDemeaner.llms.md), the default, or [MapDemeaner](../reference/demeaners.MapDemeaner.llms.md). See [Choosing a Demeaner Backend](../how-to/demeaner-backends.llms.md) for a comparison.
 
 ## Examples
 

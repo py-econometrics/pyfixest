@@ -25,8 +25,8 @@ Return a flat np.array with predicted values of the regression model. If new fix
 | atol | Float | Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
 | btol | Float | Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
 | type | PredictionType | The type of prediction to be made. Can be either ‘link’ or ‘response’. Defaults to ‘link’. ‘link’ and ‘response’ lead to identical results for linear models. | `'link'` |
-| se_fit | bool \| None | If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False. | `False` |
-| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either ‘prediction’ or None. | `None` |
+| se_fit | bool \| None | If True, compute prediction standard errors. Supported only for OLS models without weights or fixed effects. Defaults to False. | `False` |
+| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either ‘prediction’ or None. Prediction intervals have the same support limits as `se_fit`. | `None` |
 | alpha | float | The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = “prediction” is not None. | `0.05` |
 
 ## Returns

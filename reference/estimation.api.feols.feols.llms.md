@@ -34,7 +34,7 @@ Returns an object of type [Feols](../reference/estimation.models.feols_.Feols.ll
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| fml | str | A three-sided formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 \| FE1 + FE2 \| X1 ~ Z1”. “\|” separates dependent variable, fixed effects, and instruments. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables, interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2). | *required* |
+| fml | str | A formula string using fixest formula syntax. Syntax: “Y ~ X1 + X2 + \[X_endog ~ Z1\] \| FE1 + FE2”. “\|” separates the model from the fixed effects; instruments go into a “\[endogenous ~ instruments\]” block on the right-hand side. Special syntax includes stepwise regressions, cumulative stepwise regression, multiple dependent variables via sw(), interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2), and varying slopes: “FE1\[Z\]” adds a slope on Z for every level of FE1, and “FE1\[\[Z\]\]” adds only the slopes. | *required* |
 | data | DataFrameType | A pandas or polars dataframe containing the variables in the formula. | *required* |
 | vcov | Union\[VcovTypeOptions, dict\[str, str\]\] | Type of variance-covariance matrix for inference. Options include “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW” for Newey-West HAC standard errors, “DK” for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference. Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument. For time-series HAC, you need to pass the ‘time_id’ column. For panel-HAC, you need to add pass both ‘time_id’ and ‘panel_id’. See `vcov_kwargs` for details. | `None` |
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments to pass to the vcov function. These keywoards include “lag” for the number of lag to use in the Newey-West (NW) and Driscoll-Kraay (DK) HAC standard errors. “time_id” for the time ID used for NW and DK standard errors, and “panel_id” for the panel identifier used for NW and DK standard errors. Currently, the the time difference between consecutive time periods is always treated as 1. More flexible time-step selection is work in progress. | `None` |
@@ -44,11 +44,11 @@ Returns an object of type [Feols](../reference/estimation.models.feols_.Feols.ll
 | collin_tol | float | Tolerance for collinearity check, by default 1e-10. | `1e-09` |
 | drop_intercept | bool | Whether to drop the intercept from the model, by default False. | `False` |
 | copy_data | bool | Whether to copy the data before estimation, by default True. If set to False, the data is not copied, which can save memory but may lead to unintended changes in the input data outside of `fepois`. For example, the input data set is re-index within the function. As far as I know, the only other relevant case is when using interacted fixed effects, in which case you’ll find a column with interacted fixed effects in the data set. | `True` |
-| store_data | bool | Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the `data` attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g. `predict()` or `vcov()`. | `True` |
-| lean | bool | False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards. | `False` |
+| store_data | bool | Whether to store the data in the model object, by default True. If set to False, the data is not stored in the model object, which can improve performance and save memory. However, it will no longer be possible to access the data via the `data` attribute of the model object. This has impact on post-estimation capabilities that rely on the data, e.g. `predict()` or `vcov()`. Such methods raise a `MissingModelDataError`. | `True` |
+| lean | bool | False by default. If True, then all large objects are removed from the returned result: this will save memory but will block the possibility to use many methods, which raise `MissingModelDataError` when required attributes were removed. It is recommended to use the argument vcov to obtain the appropriate standard-errors at estimation time, since obtaining different SEs won’t be possible afterwards. | `False` |
 | weights_type | WeightsTypeOptions | Options include `aweights` or `fweights`. `aweights` implement analytic or precision weights, while `fweights` implement frequency weights. For details see this blog post: https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/. | `'aweights'` |
 | solver | SolverOptions, optional. | The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve” and “scipy.sparse.linalg.lsqr”. Defaults to “scipy.linalg.solve”. | `'scipy.linalg.solve'` |
-| demeaner | AnyDemeaner \| None | Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a `MapDemeaner` or `LsmrDemeaner` instance. Defaults to `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd). .. deprecated:: The `cupy` / `scipy` LSMR backends are deprecated and will be removed in a future release. Replacements: - cupy LSMR on GPU → `LsmrDemeaner(backend="torch", device="cuda")`. - Scipy / cupy LSMR on CPU → `LsmrDemeaner()` (the default within backend). | `None` |
+| demeaner | AnyDemeaner \| None | Typed demeaner configuration. Controls the fixed-effects demeaning backend, tolerance, and iteration limits. Accepts a `MapDemeaner` or `LsmrDemeaner` instance. Defaults to `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8, maxiter=1_000). For other options - including the optional Numba backend and the torch-based LSMR backends - see the [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd). | `None` |
 | use_compression | bool | .. deprecated:: `use_compression` is deprecated and no longer supported. Passing `use_compression=True` raises a `NotImplementedError`. For out-of-memory regression on large datasets, consider using the `duckreg <https://github.com/py-econometrics/duckreg>`\_ package instead. | `False` |
 | reps | int | Deprecated legacy argument for compressed regression bootstrap inference. | `100` |
 | context | int or Mapping\[str, Any\] | A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment. | `None` |
@@ -122,7 +122,7 @@ fit2 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov="hetero")
 fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
 ```
 
-Supported inference types are “iid”, “hetero”, “HC1”, “HC2”, “HC3”, and “CRV1”/“CRV3”. Clustered standard errors are specified via a dictionary, e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way clustering, you can provide a formula string, e.g. `{"CRV1": "f1 + f2"}` for CRV1 inference with clustering by `f1`.
+Supported inference types are “iid”, “hetero”, “HC1”, “HC2”, “HC3”, and “CRV1”/“CRV3”. Clustered standard errors are specified via a dictionary, e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}` for CRV1 inference with clustering by `f1` and `f2`, or `{"CRV1": "f1 + f2 + f3"}` for three-way clustering.
 
 ``` python
 fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
@@ -204,7 +204,7 @@ pf.etable(fit)
 The `feols()` function also supports multiple dependent variables. The following example estimates two models, one with `Y1` as the dependent variable and one with `Y2` as the dependent variable.
 
 ``` python
-fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
+fit = pf.feols("sw(Y, Y2) ~ X1 | f1 + f2", data)
 pf.etable(fit)
 ```
 
@@ -213,7 +213,23 @@ pf.etable(fit)
 It is possible to combine different multiple estimation operators:
 
 ``` python
-fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
+pf.etable(fit)
+```
+
+[TABLE]
+
+As in `fixest`, the arguments of a multiple estimation operator may span several lines, for example in a triple-quoted string with one argument per line, and a space may separate the operator from its parenthesis, as in `csw (X1, X2)`:
+
+``` python
+fml = '''
+Y ~ csw (
+    X1,
+    X2
+)
+| f1
+'''
+fit = pf.feols(fml, data)
 pf.etable(fit)
 ```
 
@@ -230,19 +246,19 @@ pf.etable(fit)
 
 [TABLE]
 
-Besides OLS, `feols()` also supports IV estimation via three-part formulas. IV models return an instance of the [Feiv](../reference/estimation.models.feiv_.Feiv.llms.md) class (which inherits from [Feols](../reference/estimation.models.feols_.Feols.llms.md)).
+Besides OLS, `feols()` also supports IV estimation via an instrument block `[endogenous ~ instruments]` on the right-hand side of the formula. IV models return an instance of the [Feiv](../reference/estimation.models.feiv_.Feiv.llms.md) class (which inherits from [Feols](../reference/estimation.models.feols_.Feols.llms.md)).
 
 ``` python
-fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data)
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
 type(fit_iv)
 ```
 
     pyfixest.estimation.models.feiv_.Feiv
 
-Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2` are the fixed effects, as before. To estimate IV models without fixed effects, simply omit the fixed effects part of the formula:
+Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2` are the fixed effects, as before. To estimate IV models without fixed effects, simply omit the fixed effects:
 
 ``` python
-fit_iv2 = pf.feols("Y ~ X2 | X1 ~ Z1", data)
+fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
 fit_iv2.tidy()
 ```
 
@@ -266,21 +282,33 @@ To diagnose weak instruments, use the `IV_Diag()` method, which computes the fir
 
 ``` python
 fit_iv.IV_Diag()
-print("First-stage F-statistic:", round(fit_iv._f_stat_1st_stage, 3))
-print("Effective F-statistic:", round(fit_iv._eff_F, 3))
+diagnostics = fit_iv.first_stage.diagnostics
+print("First-stage F-statistic:", round(diagnostics.f_stat, 3))
+print("Effective F-statistic:", round(diagnostics.eff_f, 3))
 ```
 
     First-stage F-statistic: 620.086
     Effective F-statistic: 962.93
 
-You can also access the first-stage regression as a `Feols` object via `_model_1st_stage` and display both stages with `etable()`:
+You can also access the first-stage regression as a `Feols` object via `first_stage.model` and display both stages with `etable()`:
 
 ``` python
-first_stage = fit_iv._model_1st_stage
-pf.etable([first_stage, fit_iv])
+pf.etable([fit_iv.first_stage.model, fit_iv])
 ```
 
 [TABLE]
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or `f1[[X2]]` to include only the slopes. Separate several slopes with commas, as in `f1[X2, Z1]`:
+
+``` python
+fit_vs = pf.feols("Y ~ X1 | f1[X2] + f2", data)
+fit_vs_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data)
+pf.etable([fit_vs, fit_vs_only])
+```
+
+[TABLE]
+
+Varying slopes require the default `within` demeaner. `predict()`, `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC inference are not yet supported for these models. Slope-only effects such as `f1[[X2]]` do not absorb the constant, so the model keeps and reports an `Intercept`; write `0 +` in the formula to drop it.
 
 Last, `feols()` supports interaction of variables via the `i()` syntax. For a compact overview of formula features including `i()`, see the [formula syntax tutorial](../tutorials/formula-syntax.llms.md).
 
@@ -326,7 +354,7 @@ fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data)
 fit.predict()[0:5]
 ```
 
-    array([ 3.06336634, -0.69574135, -0.91240433, -0.46370256, -1.67331152])
+    array([ 3.0633662 , -0.69574129, -0.91240434, -0.46370256, -1.67331154])
 
 The `predict()` method also supports a `newdata` argument to predict on new data, which returns a numpy array of the predicted values:
 
@@ -407,7 +435,7 @@ fit.ritest(resampvar = "X1", reps=1000)
 
     H0                                      X1=0
     ri-type                      randomization-c
-    Estimate                 -0.9929357698186858
+    Estimate                 -0.9929357698186863
     Pr(>|t|)                                 0.0
     Std. Error (Pr(>|t|))                    0.0
     2.5% (Pr(>|t|))                          0.0
@@ -424,7 +452,7 @@ fit_D = pf.feols("Y ~ D", data = data)
 fit_D.ccv(treatment = "D", cluster = "group_id")
 ```
 
-|      | Estimate             | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
-|------|----------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.016087657906363885 | 0.268039   | 0.06002  | 0.952801    | -0.547042 | 0.579217 |
-| CRV1 | 0.016088             | 0.13378    | 0.120254 | 0.905614    | -0.264974 | 0.29715  |
+|      | Estimate | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
+|------|----------|------------|----------|-------------|-----------|----------|
+| CCV  | 0.016088 | 0.252836   | 0.063629 | 0.949967    | -0.515101 | 0.547277 |
+| CRV1 | 0.016088 | 0.133780   | 0.120254 | 0.905614    | -0.264974 | 0.297150 |

@@ -4,125 +4,76 @@
 Feols(
     FixestFormula,
     data,
-    ssc_dict,
-    drop_singletons,
-    drop_intercept,
-    weights,
-    weights_type,
-    collin_tol,
+    *,
+    options,
     lookup_demeaned_data,
-    solver='np.linalg.solve',
-    demeaner=None,
     lookup_preconditioner=None,
-    store_data=True,
-    copy_data=True,
-    lean=False,
-    context=0,
-    sample_split_var=None,
-    sample_split_value=None,
+    sample_split=None,
 )
 ```
 
 Non user-facing class to estimate a linear regression via OLS.
 
-Users should not directly instantiate this class, but rather use the [feols()](../reference/estimation.api.feols.feols.llms.md) function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).
+Users should not directly instantiate this class, but rather use the [feols()](../reference/estimation.api.feols.feols.llms.md) function. This class constructs within-scale arrays through a shared `DemeanCache`; the estimation runner supplies that cache for reuse across multiple fits.
 
 ## Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| Y | np.ndarray | Dependent variable, a two-dimensional numpy array. | *required* |
-| X | np.ndarray | Independent variables, a two-dimensional numpy array. | *required* |
-| weights | np.ndarray | Weights, a one-dimensional numpy array. | *required* |
-| collin_tol | float | Tolerance level for collinearity checks. | *required* |
-| coefnames | list\[str\] | Names of the coefficients (of the design matrix X). | *required* |
-| weights_name | Optional\[str\] | Name of the weights variable. | *required* |
-| weights_type | Optional\[str\] | Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights. | *required* |
-| solver | str, optional. | The solver to use for the regression. Can be “np.linalg.lstsq”, “np.linalg.solve”, “scipy.linalg.solve” and “scipy.sparse.linalg.lsqr”. Defaults to “scipy.linalg.solve”. | `'np.linalg.solve'` |
-| context | int or Mapping\[str, Any\] | A dictionary containing additional context variables to be used by formulaic during the creation of the model matrix. This can include custom factorization functions, transformations, or any other variables that need to be available in the formula environment. | `0` |
+| FixestFormula | Formula | Parsed fixest formula of the model to fit. | *required* |
+| data | pd.DataFrame | Estimation data, already converted to pandas and reindexed. | *required* |
+| options | EstimationOptions | Every estimation option the fit is built with, as built by the estimation function. | *required* |
+| lookup_demeaned_data | dict\[frozenset\[int\], DemeanedData\] | Demeaning cache shared across the models of one cache block. | *required* |
+| lookup_preconditioner | Optional\[dict\[frozenset\[int\], Preconditioner\]\] | Preconditioner cache shared across the models of one cache block. | `None` |
+| sample_split | SampleSplit or None | The variable and value by which the estimation sample was split. `None` if the model was fit on the entire input data set (minus dropping of missings etc). For all model classes. | `None` |
 
 ## Attributes
 
 | Name | Type | Description |
 |----|----|----|
-| \_method | str | Specifies the method used for regression, set to “feols”. |
-| \_is_iv | bool | Indicates whether instrumental variables are used, initialized as False. |
-| \_Y | np.ndarray | The demeaned dependent variable, a two-dimensional numpy array. |
-| \_X | np.ndarray | The demeaned independent variables, a two-dimensional numpy array. |
+| model | ModelDescription | What the model estimates: its formula, the estimation function and its inference distribution, the sample split, the dependent variable, the absorbed fixed effects, the `i()` interaction coefficients, and the formulaic model specification. |
+| model_matrix | ModelMatrix | Model frames containing the response, regressors, and other model inputs. |
+| within_data | WithinLinearData | Response and regressors after demeaning by fixed effects and removing collinear regressor columns, without multiplication by square-root weights. |
 | \_X_is_empty | bool | Indicates whether the X array is empty. |
-| \_collin_tol | float | Tolerance level for collinearity checks. |
+| options | EstimationOptions | The estimation options the model was built with: the small-sample correction, the sample, weight, and offset options, the collinearity tolerance, the solver, the demeaner, the storage policy, and the formulaic context. |
 | \_coefnames | list | Names of the coefficients (of the design matrix X). |
-| \_collin_vars | list | Variables identified as collinear. |
-| \_collin_index | list | Indices of collinear variables. |
-| \_Z | np.ndarray | Alias for the \_X array, used for calculations. |
-| \_solver | str | The solver used for the regression. |
-| \_weights | np.ndarray | Array of weights for each observation. |
-| \_N | int | Number of observations. |
+| collinearity | CollinearityCheck | Names and column mask of the regressors dropped by the rank check, set in get_fit(). |
+| observation_weights | ObservationWeights | User-scale weights and their analytic or frequency interpretation. |
+| sample_info | EstimationSample | Observation counts and the dropped rows, by position and by stage. |
+| fixef_counts | FixedEffectCounts | Level counts of the fixed effects in the estimation sample and the counts derived from them for inference. |
+| sandwich | SandwichComponents | Weighted scores, Hessian, and bread of the sandwich covariance, set in get_fit(). |
 | \_k | int | Number of independent variables (or features). |
-| \_support_crv3_inference | bool | Indicates support for CRV3 inference. |
-| \_data | Any | Data used in the regression, to be enriched outside of the class. |
-| \_fml | Any | Formula used in the regression, to be enriched outside of the class. |
-| \_has_fixef | bool | Indicates whether fixed effects are used. |
-| \_fixef | Any | Fixed effects used in the regression. |
-| \_icovars | Any | Internal covariates, to be enriched outside of the class. |
-| \_ssc_dict | dict | dictionary for sum of squares and cross products matrices. |
-| \_tZX | np.ndarray | Transpose of Z multiplied by X, set in get_fit(). |
-| \_tXZ | np.ndarray | Transpose of X multiplied by Z, set in get_fit(). |
-| \_tZy | np.ndarray | Transpose of Z multiplied by Y, set in get_fit(). |
-| \_tZZinv | np.ndarray | Inverse of the transpose of Z multiplied by Z, set in get_fit(). |
+| capabilities | Capabilities | Inference and post-estimation features this model class supports. |
 | \_beta_hat | np.ndarray | Estimated regression coefficients. |
-| \_Y_hat_link | np.ndarray | Prediction at the level of the explanatory variable, i.e., the linear predictor X @ beta. |
-| \_Y_hat_response | np.ndarray | Prediction at the level of the response variable, i.e., the expected predictor E(Y\|X). |
+| fitted_values | FittedValues | In-sample predictions on the link and the response scale, set in get_fit(). |
 | \_u_hat | np.ndarray | Residuals of the regression model. |
-| \_scores | np.ndarray | Scores used in the regression analysis. |
-| \_hessian | np.ndarray | Hessian matrix used in the regression. |
-| \_bread | np.ndarray | Bread matrix, used in calculating the variance-covariance matrix. |
-| \_vcov_type | Any | Type of variance-covariance matrix used. |
-| \_vcov_type_detail | Any | Detailed specification of the variance-covariance matrix type. |
-| \_is_clustered | bool | Indicates if clustering is used in the variance-covariance calculation. |
-| \_clustervar | Any | Variable used for clustering in the variance-covariance calculation. |
-| \_G | Any | Group information used in clustering. |
-| \_ssc | Any | Sum of squares and cross products matrix. |
-| \_vcov | np.ndarray | Variance-covariance matrix of the estimated coefficients. |
-| \_se | np.ndarray | Standard errors of the estimated coefficients. |
-| \_tstat | np.ndarray | T-statistics of the estimated coefficients. |
-| \_pvalue | np.ndarray | P-values associated with the t-statistics. |
-| \_conf_int | np.ndarray | Confidence intervals for the estimated coefficients. |
-| \_F_stat | Any | F-statistic for the model, set in get_Ftest(). |
-| \_fixef_coefficients | dict\[str, pyfixest.estimation.post_estimation.fixed_effects.FixedEffect\] | Fixed effect estimates grouped by fixed effect. |
-| \_alpha | pd.DataFrame | A DataFrame with the estimated fixed effects. |
-| \_sumFE | np.ndarray | Sum of all fixed effects for each observation. |
-| \_rmse | float | Root mean squared error of the model. |
-| \_r2 | float | R-squared value of the model. |
-| \_r2_within | float | R-squared value computed on demeaned dependent variable. |
-| \_adj_r2 | float | Adjusted R-squared value of the model. |
-| \_adj_r2_within | float | Adjusted R-squared value computed on demeaned dependent variable. |
-| \_solver | Literal\["np.linalg.lstsq", "np.linalg.solve", "scipy.linalg.solve", | “scipy.sparse.linalg.lsqr”\], default is “scipy.linalg.solve”. Solver to use for the estimation. |
-| \_data | pd.DataFrame | The data frame used in the estimation. None if arguments `lean = True` or `store_data = False`. |
-| \_model_name | str | The name of the model. Usually just the formula string. If split estimation is used, the model name will include the split variable and value. |
-| \_model_name_plot | str | The name of the model used when plotting and summarizing models. Usually identical to `_model_name`. This might be different when pf.summary() or pf.coefplot() are called and models with identical \_model_name attributes are passed. In this case, the \_model_name_plot attribute will be modified. |
-| \_quantile | Optional\[float\] | The quantile used for quantile regression. None if not a quantile regression. |
-| \# special for did |  |  |
-| \_res_cohort_eventtime_dict | Optional\[dict\[str, Any\]\] |  |
-| \_yname | Optional\[str\] |  |
-| \_gname | Optional\[str\] |  |
-| \_tname | Optional\[str\] |  |
-| \_idname | Optional\[str\] |  |
-| \_att | Optional\[Any\] |  |
-| test_treatment_heterogeneity | Callable\[…, Any\] |  |
-| aggregate | Callable\[…, Any\] |  |
-| iplot_aggregate | Callable\[…, Any\] |  |
+| variance_covariance | VarianceCovariance | Covariance estimate published by `vcov()`: the adjusted matrix, the meat where a sandwich exists, small-sample factors, degrees of freedom, and the requested estimator with its cluster variables. |
+| wald | WaldTest | Wald test published by `wald_test()`: the statistic of the reference distribution used, its p-value, both scalings of the quadratic form, and the degrees of freedom. |
+| ritest_statistics | RitestStatistics | Randomization-inference draws, the centered sample statistic, and the p-value, set by `ritest(store_ritest_statistics=True)`. |
+| coeftable | CoefficientTable | Coefficient table published by `get_inference()`: estimates, standard errors, t-statistics, p-values, and confidence bounds. |
+| fixef_estimates | FixedEffectEstimates | Fixed-effect estimates published by `fixef()`: the coefficient records grouped by fixed effect, the dummy-coded solution `alpha`, and the per-observation fixed-effect contribution `sumFE`. |
+| fitstat | FitStatistics | Goodness-of-fit measures computed by `_fit_statistics()` and published right after get_fit(); `NaN` where the estimator defines none. |
+| \_data | pd.DataFrame | The data frame used in the estimation. Absent when the fit was built with `lean=True` or `store_data=False`. |
+| \_model_name_plot | str | The name of the model used when plotting and summarizing models. Usually identical to `model.model_name`. This might be different when pf.summary() or pf.coefplot() are called and models with identical model names are passed. In this case, the \_model_name_plot attribute will be modified. |
+
+## Notes
+
+The private attributes of PyFixest 0.60, such as `_se`, `_vcov`, or `_N`, now live in the typed components above. Names read by table and marginal-effects integrations remain as compatibility aliases; other 0.60 private attributes raise an `AttributeError`; see [Migrating Fitted-Model Attributes](../how-to/migrate-fit-attributes.llms.md).
 
 ## Methods
 
 | Name | Description |
 |----|----|
 | [Feols.ccv](#pyfixest.estimation.models.feols_.Feols.ccv) | Compute the Causal Cluster Variance following Abadie et al (QJE 2023). |
+| [Feols.coefplot](#pyfixest.estimation.models.feols_.Feols.coefplot) | Plot the coefficients. See [`pyfixest.coefplot`](../reference/report.coefplot.llms.md) for the arguments. |
 | [Feols.decompose](#pyfixest.estimation.models.feols_.Feols.decompose) | Implement the Gelbach (2016) decomposition method for mediation analysis. |
+| [Feols.etable](#pyfixest.estimation.models.feols_.Feols.etable) | Create a regression table. See [`pyfixest.etable`](../reference/report.etable.llms.md) for the arguments. |
 | [Feols.fixef](#pyfixest.estimation.models.feols_.Feols.fixef) | Compute the coefficients of (swept out) fixed effects for a regression model. |
+| [Feols.iplot](#pyfixest.estimation.models.feols_.Feols.iplot) | Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](../reference/report.iplot.llms.md) for the arguments. |
 | [Feols.plot_ritest](#pyfixest.estimation.models.feols_.Feols.plot_ritest) | Plot the distribution of the Randomization Inference Statistics. |
 | [Feols.predict](#pyfixest.estimation.models.feols_.Feols.predict) | Predict values of the model on new data. |
 | [Feols.ritest](#pyfixest.estimation.models.feols_.Feols.ritest) | Conduct Randomization Inference (RI) test against a null hypothesis of |
+| [Feols.summary](#pyfixest.estimation.models.feols_.Feols.summary) | Print a summary of this model. See [`pyfixest.summary`](../reference/report.summary.llms.md) for the arguments. |
 | [Feols.update](#pyfixest.estimation.models.feols_.Feols.update) | Update coefficients for new observations using Sherman-Morrison formula. |
 | [Feols.vcov](#pyfixest.estimation.models.feols_.Feols.vcov) | Compute covariance matrices for an estimated regression model. |
 | [Feols.wald_test](#pyfixest.estimation.models.feols_.Feols.wald_test) | Conduct Wald test. |
@@ -166,10 +117,18 @@ fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
 fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
 ```
 
-|      | Estimate           | Std. Error | t value  | Pr(\>\|t\|) | 2.5%      | 97.5%    |
-|------|--------------------|------------|----------|-------------|-----------|----------|
-| CCV  | 0.1232903022602211 | 0.26822    | 0.459661 | 0.651263    | -0.44022  | 0.6868   |
-| CRV1 | 0.12329            | 0.205125   | 0.601049 | 0.555301    | -0.307662 | 0.554242 |
+|      | Estimate | Std. Error | t value   | Pr(\>\|t\|) | 2.5%      | 97.5%    |
+|------|----------|------------|-----------|-------------|-----------|----------|
+| CCV  | -0.26174 | 0.245327   | -1.066906 | 0.300116    | -0.777152 | 0.253672 |
+| CRV1 | -0.26174 | 0.173649   | -1.507300 | 0.149084    | -0.626563 | 0.103082 |
+
+### Feols.coefplot
+
+``` python
+coefplot(**kwargs)
+```
+
+Plot the coefficients. See [`pyfixest.coefplot`](../reference/report.coefplot.llms.md) for the arguments.
 
 ### Feols.decompose
 
@@ -206,7 +165,7 @@ When the initial regression is weighted, weights are interpreted as frequency we
 | x1_vars | list\[str\] | A list of covariates that are included in both the baseline and the full regressions. | `None` |
 | decomp_var | str | The name of the focal covariate whose effect is to be decomposed into direct and indirect components with respect to the rest of the right-hand side. | `None` |
 | type | str | The type of decomposition method to use. Defaults to “gelbach”, which currently is the only supported option. | `'gelbach'` |
-| cluster | str \| None | The name of the cluster variable. If None, uses the cluster variable from the model fit. Defaults to None. | `None` |
+| cluster | str \| None | The name of the cluster variable for the bootstrap. If None, uses the cluster variable from the model fit. Only one-way clustering is supported; a fit with multiway clustering raises `ValueError` unless a single cluster variable is passed here. Defaults to None. | `None` |
 | combine_covariates | dict\[str, list\[str\]\] \| None | A dictionary that specifies which covariates to combine into groups. See the example for how to use this argument. Defaults to None. | `None` |
 | reps | int | The number of bootstrap iterations to run. Defaults to 1000. | `1000` |
 | seed | int | An integer to set the random seed. Defaults to None. | `None` |
@@ -248,6 +207,14 @@ gb.etable()
 res = fit.decompose(decomp_var="x1", combine_covariates={"g1": re.compile("x2[1-2]"), "g2": re.compile("x23")})
 ```
 
+### Feols.etable
+
+``` python
+etable(**kwargs)
+```
+
+Create a regression table. See [`pyfixest.etable`](../reference/report.etable.llms.md) for the arguments.
+
 ### Feols.fixef
 
 ``` python
@@ -256,7 +223,7 @@ fixef(atol=1e-06, btol=1e-06)
 
 Compute the coefficients of (swept out) fixed effects for a regression model.
 
-This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataFrame with the estimated fixed effects. - `_sumFE` (np.array): An array with the sum of fixed effects for each observation (i = 1, …, N).
+Publishes the estimates as `fixef_estimates`, a `FixedEffectEstimates` value holding the coefficient records, the dummy-coded solution `alpha`, and the per-observation contribution `sumFE`.
 
 #### Parameters
 
@@ -271,6 +238,12 @@ This method creates the following attributes: - `_alpha` (pd.DataFrame): A DataF
 |----|----|----|
 |  | pd.DataFrame | A tidy DataFrame with columns `variable`, `code`, `level`, and `coefficient` containing the estimated fixed effects. |
 
+#### Raises
+
+| Name | Type | Description |
+|----|----|----|
+|  | NonConvergenceError | If LSQR stops at its iteration limit or because the problem is too ill-conditioned, before meeting `atol` and `btol`. |
+
 #### Examples
 
 ``` python
@@ -283,11 +256,19 @@ fixed_effects.head()
 
 |     | variable | code | level | coefficient |
 |-----|----------|------|-------|-------------|
-| 0   | f1       | 15   | 15.0  | 1.887085    |
-| 1   | f1       | 6    | 6.0   | -0.254456   |
-| 2   | f1       | 1    | 1.0   | 3.066142    |
-| 3   | f1       | 19   | 19.0  | 1.123039    |
-| 4   | f1       | 13   | 13.0  | 2.013726    |
+| 0   | f1       | 0    | 0.0   | 0.483757    |
+| 1   | f1       | 1    | 1.0   | 3.066142    |
+| 2   | f1       | 2    | 2.0   | -1.094787   |
+| 3   | f1       | 3    | 3.0   | 0.331095    |
+| 4   | f1       | 4    | 4.0   | -1.287253   |
+
+### Feols.iplot
+
+``` python
+iplot(**kwargs)
+```
+
+Plot the `i()` interaction coefficients. See [`pyfixest.iplot`](../reference/report.iplot.llms.md) for the arguments.
 
 ### Feols.plot_ritest
 
@@ -337,8 +318,8 @@ Return a flat np.array with predicted values of the regression model. If new fix
 | atol | Float | Stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
 | btol | Float | Another stopping tolerance for scipy.sparse.linalg.lsqr(). See https://docs.scipy.org/doc/ scipy/reference/generated/scipy.sparse.linalg.lsqr.html | `1e-6` |
 | type | PredictionType | The type of prediction to be made. Can be either ‘link’ or ‘response’. Defaults to ‘link’. ‘link’ and ‘response’ lead to identical results for linear models. | `'link'` |
-| se_fit | bool \| None | If True, the standard error of the prediction is computed. Only feasible for models without fixed effects. GLMs are not supported. Defaults to False. | `False` |
-| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either ‘prediction’ or None. | `None` |
+| se_fit | bool \| None | If True, compute prediction standard errors. Supported only for OLS models without weights or fixed effects. Defaults to False. | `False` |
+| interval | PredictionErrorOptions \| None | The type of interval to compute. Can be either ‘prediction’ or None. Prediction intervals have the same support limits as `se_fit`. | `None` |
 | alpha | float | The alpha level for the confidence interval. Defaults to 0.05. Only used if interval = “prediction” is not None. | `0.05` |
 
 #### Returns
@@ -386,18 +367,20 @@ ritest(
 
 Conduct Randomization Inference (RI) test against a null hypothesis of `resampvar = 0`.
 
+Each draw permutes the observed values of `resampvar` across observations, or across clusters if `cluster` is provided, so it keeps the number of treated units of the actual assignment.
+
 #### Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
 | resampvar | str | The name of the variable to be resampled. | *required* |
-| cluster | str | The name of the cluster variable in case of cluster random assignment. If provided, `resampvar` is held constant within each `cluster`. Defaults to None. | `None` |
+| cluster | str | The name of the cluster variable in case of cluster random assignment. If provided, `resampvar` must be constant within each `cluster`, and its cluster-level values are permuted across clusters. Defaults to None. | `None` |
 | reps | int | The number of randomization iterations. Defaults to 100. | `100` |
 | type | str | The type of the randomization inference test. Can be “randomization-c” or “randomization-t”. Note that the “randomization-c” is much faster, while the “randomization-t” is recommended by Wu & Ding (JASA, 2021). | `'randomization-c'` |
 | rng | np.random.Generator | A random number generator. Defaults to None. | `None` |
 | choose_algorithm | str | The algorithm to use for the computation. Defaults to “auto”. The alternatives are “fast” and “slow”. The fast algorithm requires the optional `numba` extra (install via `pip install pyfixest[numba]`); without it, the fast path raises an `ImportError`. The slow path does not require numba. | `'auto'` |
 | include_plot |  | Whether to include a plot of the distribution p-values. Defaults to False. | *required* |
-| store_ritest_statistics | bool | Whether to store the simulated statistics of the RI procedure. Defaults to False. If True, stores the simulated statistics in the model object via the `ritest_statistics` attribute as a numpy array. | `False` |
+| store_ritest_statistics | bool | Whether to store the simulated statistics of the RI procedure. Defaults to False. If True, publishes the draws, the centered sample statistic, and the p-value as a `RitestStatistics` value in the model’s `ritest_statistics` attribute. | `False` |
 | level | float | The level for the confidence interval of the randomization inference p-value. Defaults to 0.95. | `0.95` |
 
 #### Returns
@@ -427,12 +410,20 @@ fit.ritest("X1", reps=1000, store_ritest_statistics=True)
 
     H0                                      X1=0
     ri-type                      randomization-c
-    Estimate                 -0.9929357698186858
+    Estimate                 -0.9929357698186863
     Pr(>|t|)                                 0.0
     Std. Error (Pr(>|t|))                    0.0
     2.5% (Pr(>|t|))                          0.0
     97.5% (Pr(>|t|))                         0.0
     dtype: object
+
+### Feols.summary
+
+``` python
+summary(**kwargs)
+```
+
+Print a summary of this model. See [`pyfixest.summary`](../reference/report.summary.llms.md) for the arguments.
 
 ### Feols.update
 
@@ -448,7 +439,7 @@ Update coefficients for new observations using Sherman-Morrison formula.
 |----|----|----|----|
 | X_new | np.ndarray | Covariates for new data points. Users expected to ensure conformability with existing data. | *required* |
 | y_new | np.ndarray | Outcome values for new data points. | *required* |
-| inplace | bool | Whether to update the model object in place. Defaults to False. | `False` |
+| inplace | bool | Must be `False`. In-place updates are unsupported because appending design rows cannot reconstruct the complete fitted-result state. | `False` |
 
 #### Returns
 
@@ -458,7 +449,7 @@ Update coefficients for new observations using Sherman-Morrison formula.
 
 #### Notes
 
-Updates the coefficients in closed form via the Sherman-Morrison identity instead of refitting on the full sample. `X_new` has to include the intercept column. Models with fixed effects are not supported.
+Updates the coefficients in closed form via the Sherman-Morrison identity instead of refitting on the full sample. `X_new` has to include the intercept column. The returned coefficients do not mutate the fitted result. Models with fixed effects are not supported.
 
 #### Examples
 
@@ -496,7 +487,11 @@ Compute covariance matrices for an estimated regression model.
 |----|----|----|----|
 | vcov | Union\[str, dict\[str, str\]\] | A string or dictionary specifying the type of variance-covariance matrix to use for inference. If a string, it can be one of “iid”, “hetero”, “HC1”, “HC2”, “HC3”, “NW”, “DK”. If a dictionary, it should have the format {“CRV1”: “clustervar”} for CRV1 inference or {“CRV3”: “clustervar”} for CRV3 inference. Note that CRV3 inference is currently not supported for IV estimation. | *required* |
 | vcov_kwargs | Optional\[dict\[str, any\]\] | Additional keyword arguments for the variance-covariance matrix. | `None` |
-| data | DataFrameType \| None | The data used for estimation. If None, tries to fetch the data from the model object. Defaults to None. | `None` |
+| data | Optional\[DataFrameType\] | No longer supported; passing a frame raises `ValueError`. The covariance matrix uses the estimation sample stored on the model. This argument will be removed in a future release. | `None` |
+
+#### Notes
+
+Cluster and time variables are read from the stored estimation sample, so they need not appear in the formula. Models fitted with `store_data=False` or `lean=True` do not keep this sample; pass `vcov` when fitting them instead.
 
 #### Returns
 
@@ -544,29 +539,24 @@ Conduct Wald test.
 
 Compute a Wald test for a linear hypothesis of the form R \* beta = q. where R is m x k matrix, beta is a k x 1 vector of coefficients, and q is m x 1 vector. By default, tests the joint null hypothesis that all coefficients are zero.
 
-This method producues the following attriutes
-
-\_dfd : int degree of freedom in denominator \_dfn : int degree of freedom in numerator \_wald_statistic : scalar Wald-statistics computed for hypothesis testing \_f_statistic : scalar Wald-statistics(when R is an indentity matrix, and q being zero vector) computed for hypothesis testing \_p_value : scalar corresponding p-value for statistics
-
 #### Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
 | R | array - like | The matrix R of the linear hypothesis. If None, defaults to an identity matrix. | `None` |
 | q | array - like | The vector q of the linear hypothesis. If None, defaults to a vector of zeros. | `None` |
-| distribution | str | The distribution to use for the p-value. Can be either “F” or “chi2”. Defaults to “F”. | `'F'` |
+| distribution | str | The distribution to use for the p-value. Can be either “F” or “chi2”. Defaults to “F”. The F distribution is only used for the joint null that all coefficients are zero; any other restriction falls back to “chi2” with a warning. | `'F'` |
 
 #### Returns
 
-| Name | Type      | Description                                      |
-|------|-----------|--------------------------------------------------|
-|      | pd.Series | A pd.Series with the Wald statistic and p-value. |
+| Name | Type | Description |
+|----|----|----|
+|  | WaldTest | The test statistic of the reference distribution used, its p-value, both scalings of the Wald quadratic form, and the degrees of freedom. See [WaldTest](../reference/estimation.state.WaldTest.llms.md). |
 
 #### Examples
 
 ``` python
 import numpy as np
-import pandas as pd
 import pyfixest as pf
 
 data = pf.get_data()
@@ -576,16 +566,14 @@ R = np.array([[1,-1]] )
 q = np.array([0.0])
 
 # Wald test
-fit.wald_test(R=R, q=q, distribution = "chi2")
-f_stat = fit._f_statistic
-p_stat = fit._p_value
+wald = fit.wald_test(R=R, q=q, distribution = "chi2")
 
-print(f"Python f_stat: {f_stat}")
-print(f"Python p_stat: {p_stat}")
+print(f"Python statistic: {wald.stat}")
+print(f"Python p-value: {wald.pvalue}")
 ```
 
-    Python f_stat: 126.40650474043491
-    Python p_stat: 2.505309282814043e-29
+    Python statistic: 126.40650474043474
+    Python p-value: 2.5053092828142597e-29
 
 ### Feols.wildboottest
 
@@ -612,7 +600,7 @@ Run a wild cluster bootstrap based on an object of type “Feols”.
 | Name | Type | Description | Default |
 |----|----|----|----|
 | reps | int | The number of bootstrap iterations to run. | *required* |
-| cluster | Union\[str, None\] | The variable used for clustering. Defaults to None. If None, then uses the variable specified in the model’s `clustervar` attribute. If no `_clustervar` attribute is found, runs a heteroskedasticity- robust bootstrap. | `None` |
+| cluster | Union\[str, None\] | The variable used for clustering. Defaults to None. If None, then uses the variable specified in the model’s `clustervar` attribute. If the model is not clustered, runs a heteroskedasticity- robust bootstrap. | `None` |
 | param | Union\[str, None\] | A string of length one, containing the test parameter of interest. Defaults to None. | `None` |
 | weights_type | str | The type of bootstrap weights. Options are ‘rademacher’, ‘mammen’, ‘webb’, or ‘normal’. Defaults to ‘rademacher’. | `'rademacher'` |
 | impose_null | bool | Indicates whether to impose the null hypothesis on the bootstrap DGP. Defaults to True. | `True` |

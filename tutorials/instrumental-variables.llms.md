@@ -28,9 +28,21 @@ In Figure 1, the path from \\Z\\ to \\T\\ shows relevance, the absence of a dire
 
 `PyFixest` estimates the IV using two-stage least squares (2SLS) estimator where it first projects \\T\\ onto \\Z\\ (and all other exogenous variables) to obtain \\\hat{T}\\, then uses \\\hat{T}\\ to estimate the causal effect of \\T\\ on \\Y\\. Because \\\hat{T}\\ is not a function of \\U\\, we can think of the dashed path from the unobserved variable as blocked or removed.
 
-In `PyFixest`, the IV syntax is:
+## IV formula syntax in PyFixest 0.70
 
-    Y ~ exogenous_controls | fixed_effects | endogenous ~ instrument
+Starting with PyFixest 0.70, write an IV specification with Formulaic’s bracketed multistage syntax:
+
+    Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects
+
+For example, an IV regression with exogenous controls and fixed effects is specified as follows:
+
+``` python
+fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data=data)
+```
+
+> **WARNING:**
+>
+> The former fixest-style syntax, `Y ~ X2 | f1 + f2 | X1 ~ Z1`, still works in 0.70, but raises a `DeprecationWarning` and will become an error in a future release. Update formulas to the bracketed syntax above. See the [Formula Parsing on `formulaic` section of the changelog](../changelog.llms.md#formula-parsing-on-formulaic) for the full set of formula-parsing changes in 0.70.
 
 > **NOTE:**
 >
@@ -108,7 +120,7 @@ With a binary instrument, this simplifies to the **Wald estimator**:
 In `PyFixest`, we can fit the IV model using the formula interface:
 
 ``` python
-fit_iv = pf.feols("earnings ~ 1 | num_children ~ ivf_success", data=ivf_df)
+fit_iv = pf.feols("earnings ~ 1 + [num_children ~ ivf_success]", data=ivf_df)
 
 pf.etable([
     fit_ols,
@@ -128,13 +140,12 @@ The IV estimate is closer to the true effect of -0.15. The “naive” OLS estim
 
 In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for “weak instruments”, which aim to validate the “relevance” assumption.
 
-`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from Montiel Olea and Pflueger ([2013](#ref-oleapflueger2013)) that remains valid under heteroskedasticity. Both can be accessed via the `._model_1st_stage` attribute.
+`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from Montiel Olea and Pflueger ([2013](#ref-oleapflueger2013)) that remains valid under heteroskedasticity. Both live on the `.first_stage` attribute, which every IV fit carries.
 
 ``` python
-# first_stage() must be called before IV_Diag() — it fits the first-stage OLS
-# regression and stores the model in fit_iv._model_1st_stage, which IV_Diag() requires.
-fit_iv.first_stage()
-fit_iv._model_1st_stage.summary()
+# The first-stage OLS regression is fitted with the model and retained as
+# fit_iv.first_stage.model.
+fit_iv.first_stage.model.summary()
 ```
 
     ###
@@ -153,9 +164,11 @@ fit_iv._model_1st_stage.summary()
     RMSE: 0.622 R2: 0.286 
 
 ``` python
+# IV_Diag() adds the effective F-statistic to fit_iv.first_stage.diagnostics.
 fit_iv.IV_Diag()
-print(f"First-stage F-statistic : {fit_iv._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_iv._eff_F:.2f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"First-stage F-statistic : {diagnostics.f_stat:.2f}")
+print(f"Effective F-statistic   : {diagnostics.eff_f:.2f}")
 ```
 
     First-stage F-statistic : 800.12
@@ -208,7 +221,10 @@ fit_itt = pf.feols("revenue ~ assigned_treatment | user_type", data=ab_df)
 fit_fs = pf.feols("adopted_feature ~ assigned_treatment | user_type", data=ab_df)
 
 # IV / LATE
-fit_late = pf.feols("revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data=ab_df)
+fit_late = pf.feols(
+    "revenue ~ 1 + [adopted_feature ~ assigned_treatment] | user_type",
+    data=ab_df,
+)
 ```
 
 ### Compare All Three
@@ -242,11 +258,10 @@ pf.coefplot([fit_itt, fit_late], keep="assigned_treatment|adopted_feature")
 Since the instrument (`assigned_treatment`) is fully randomized, the first stage is expected to be very strong and both statistics should comfortably exceed 10.
 
 ``` python
-# first_stage() must be called before IV_Diag()
-fit_late.first_stage()
 fit_late.IV_Diag()
-print(f"First-stage F-statistic : {fit_late._f_stat_1st_stage:.2f}")
-print(f"Effective F-statistic   : {fit_late._eff_F:.2f}")
+diagnostics = fit_late.first_stage.diagnostics
+print(f"First-stage F-statistic : {diagnostics.f_stat:.2f}")
+print(f"Effective F-statistic   : {diagnostics.eff_f:.2f}")
 ```
 
     First-stage F-statistic : 1820.73
@@ -291,7 +306,7 @@ fit_ols_b = pf.feols("wages ~ immigration + log_population", data=bartik_df)
 
 # IV: using the Bartik instrument
 fit_iv_b = pf.feols(
-    "wages ~ log_population | immigration ~ bartik_instrument",
+    "wages ~ log_population + [immigration ~ bartik_instrument]",
     data=bartik_df,
 )
 ```
@@ -319,18 +334,14 @@ Weak instruments - instruments that are only loosely correlated with the endogen
 
 ### The First-Stage F-Statistic
 
-The `.first_stage()` method re-estimates the first-stage regression and computes the **first-stage F-statistic**, which tests \\H_0\colon \pi = 0\\ (all instrument coefficients are jointly zero). The classic rule of thumb is \\F \> 10\\ for iid errors (Stock and Yogo ([2005](#ref-stockyogo2005))).
+Every IV fit estimates its first stage and reports the **first-stage F-statistic**, which tests \\H_0\colon \pi = 0\\ (all instrument coefficients are jointly zero). The classic rule of thumb is \\F \> 10\\ for iid errors (Stock and Yogo ([2005](#ref-stockyogo2005))).
 
 ``` python
-# Re-use the motherhood penalty IV model
-# Note: IV_Diag() switches vcov to hetero internally for the effective F computation.
-# Reset to iid here to get the iid-based first-stage F-statistic.
-fit_iv.vcov("iid")
-fit_iv.first_stage()
+fit_iv.IV_Diag()
 
-# The F-stat is stored as an attribute after calling first_stage()
-print(f"First-stage F-statistic: {fit_iv._f_stat_1st_stage:.1f}")
-print(f"First-stage p-value:     {fit_iv._p_value_1st_stage:.4f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"First-stage F-statistic: {diagnostics.f_stat:.1f}")
+print(f"First-stage p-value:     {diagnostics.p_value:.4f}")
 ```
 
     First-stage F-statistic: 800.1
@@ -349,8 +360,9 @@ The `.IV_Diag()` method computes both the standard F-statistic and the effective
 ``` python
 fit_iv.IV_Diag()
 
-print(f"Standard F-statistic:  {fit_iv._f_stat_1st_stage:.1f}")
-print(f"Effective F-statistic: {fit_iv._eff_F:.1f}")
+diagnostics = fit_iv.first_stage.diagnostics
+print(f"Standard F-statistic:  {diagnostics.f_stat:.1f}")
+print(f"Effective F-statistic: {diagnostics.eff_f:.1f}")
 ```
 
     Standard F-statistic:  800.1

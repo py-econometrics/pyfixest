@@ -2,6 +2,33 @@
 
 This vignette compares estimation results from `fixest` with `pyfixest` via the `rpy2` package.
 
+## Intentional formula differences
+
+### Covariate powers
+
+For covariates, PyFixest prioritizes [Formulaic’s formula conventions](https://matthew.wardrop.casa/formulaic/latest/guides/grammar/) over `fixest`’s arithmetic-power convention. Outside a Python expression such as `I(...)`, both `^` and `**` expand interactions up to the specified order:
+
+| Covariate formula  | PyFixest interpretation            |
+|--------------------|------------------------------------|
+| `Y ~ X1 + X1^2`    | `Y ~ X1`; no squared term is added |
+| `Y ~ X1 + X1**2`   | `Y ~ X1`; no squared term is added |
+| `Y ~ (X1 + X2)^2`  | `Y ~ X1 + X2 + X1:X2`              |
+| `Y ~ (X1 + X2)**2` | `Y ~ X1 + X2 + X1:X2`              |
+
+In particular, a single-factor power such as `X1^2` reduces to `X1` under these formula rules. It does **not** square the values of `X1`, and adding it alongside `X1` has no effect. This also applies when the model has fixed effects. In contrast, `fixest` 0.14.0 interprets covariate `X1^2` as the arithmetic transformation `I(X1^2)`, and `(X1 + X2)^2` as `I((X1 + X2)^2)`. This is an intentional syntax difference; see [\#1765](https://github.com/py-econometrics/pyfixest/issues/1765).
+
+To include an arithmetic square in PyFixest, use `I(X1**2)`:
+
+``` python
+import pyfixest as pf
+
+data = pf.get_data()
+fit_squared = pf.feols("Y ~ X1 + I(X1**2)", data=data)
+fit_squared_fe = pf.feols("Y ~ X1 + I(X1**2) | f1", data=data)
+```
+
+Inside `I(...)`, expressions follow Python arithmetic: `**` means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when translating R’s `I(X1^2)`.
+
 ## Setup
 
 ``` python
@@ -83,22 +110,22 @@ r_fit_weights = fixest.feols(
 Let’s compare how close the covariance matrices are:
 
 ``` python
-fit_vcov = fit._vcov
+fit_vcov = fit.variance_covariance.vcov
 r_vcov = stats.vcov(r_fit)
 fit_vcov - r_vcov
 ```
 
-    array([[-8.13151629e-19, -3.73885637e-22],
-           [-3.74299227e-22, -1.42301535e-19]])
+    array([[-5.96311195e-19,  7.89957485e-23],
+           [ 7.85821582e-23, -1.32137140e-19]])
 
 And for WLS:
 
 ``` python
-fit_weights._vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-    array([[ 1.73472348e-18, -1.05879118e-21],
-           [-1.05879118e-21, -1.52465931e-19]])
+    array([[ 1.73472348e-18,  3.07049443e-21],
+           [ 3.07049443e-21, -1.35525272e-19]])
 
 We conclude by comparing all estimation results via the `tidy` methods:
 
@@ -169,18 +196,18 @@ r_fit_weights = fixest.feols(
 As before, we compare the variance covariance matrices:
 
 ``` python
-fit._vcov - stats.vcov(r_fit)
+fit.variance_covariance.vcov - stats.vcov(r_fit)
 ```
 
-    array([[-1.32623404e-14, -4.06509270e-16],
-           [-4.06509217e-16,  2.99402769e-15]])
+    array([[ 1.84896586e-14,  4.01031841e-15],
+           [ 4.01031841e-15, -4.47538328e-17]])
 
 ``` python
-fit_weights._vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-    array([[ 2.62574793e-14, -7.81578603e-15],
-           [-7.81578624e-15,  5.84581483e-16]])
+    array([[ 2.45021288e-13, -8.42544020e-14],
+           [-8.42544020e-14,  6.30967378e-15]])
 
 We conclude by comparing all estimation results via the `tidy` methods:
 
@@ -246,18 +273,18 @@ r_fit_weights = fixest.feols(
 ```
 
 ``` python
-fit._vcov - stats.vcov(r_fit)
+fit.variance_covariance.vcov - stats.vcov(r_fit)
 ```
 
-    array([[-2.46479432e-13,  9.20548936e-14],
-           [ 9.20548927e-14,  2.59982533e-15]])
+    array([[ 1.33663100e-13,  5.16681678e-14],
+           [ 5.16681678e-14, -5.09801552e-14]])
 
 ``` python
-fit_weights._vcov - stats.vcov(r_fit_weights)
+fit_weights.variance_covariance.vcov - stats.vcov(r_fit_weights)
 ```
 
-    array([[-3.05959522e-13,  1.25302228e-14],
-           [ 1.25302228e-14,  1.33040145e-14]])
+    array([[2.75766177e-12, 9.88699462e-13],
+           [9.88699462e-13, 9.33791754e-14]])
 
 We conclude by comparing all estimation results via the `tidy` methods:
 
@@ -334,25 +361,25 @@ fit_r_crv = fixest.fepois(
 ```
 
 ``` python
-fit_iid._vcov - stats.vcov(fit_r_iid)
+fit_iid.variance_covariance.vcov - stats.vcov(fit_r_iid)
 ```
 
-    array([[ 1.28424161e-08, -6.96633415e-10],
-           [-6.96633415e-10,  1.80690885e-09]])
+    array([[ 1.28417953e-08, -6.96933242e-10],
+           [-6.96933242e-10,  1.80681045e-09]])
 
 ``` python
-fit_hetero._vcov - stats.vcov(fit_r_hetero)
+fit_hetero.variance_covariance.vcov - stats.vcov(fit_r_hetero)
 ```
 
-    array([[ 2.31899949e-08, -7.84197943e-10],
-           [-7.84197943e-10,  3.26991733e-09]])
+    array([[ 2.31877603e-08, -7.85182460e-10],
+           [-7.85182460e-10,  3.26995553e-09]])
 
 ``` python
-fit_crv._vcov - stats.vcov(fit_r_crv)
+fit_crv.variance_covariance.vcov - stats.vcov(fit_r_crv)
 ```
 
-    array([[ 1.63355399e-08, -1.21542149e-10],
-           [-1.21542149e-10,  3.27686579e-09]])
+    array([[ 1.63388420e-08, -1.25332336e-10],
+           [-1.25332336e-10,  3.27770983e-09]])
 
 We conclude by comparing all estimation results via the `tidy` methods:
 

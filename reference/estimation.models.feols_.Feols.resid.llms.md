@@ -6,7 +6,7 @@ resid()
 
 Fitted model residuals.
 
-For weighted models the residuals are rescaled by the square root of the weights, so they are on the scale of the original dependent variable.
+Residuals are stored and returned on the scale of the original dependent variable. Observation weights are applied only where an estimating equation or diagnostic requires them.
 
 ## Returns
 

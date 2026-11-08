@@ -33,7 +33,7 @@ When the initial regression is weighted, weights are interpreted as frequency we
 | x1_vars | list\[str\] | A list of covariates that are included in both the baseline and the full regressions. | `None` |
 | decomp_var | str | The name of the focal covariate whose effect is to be decomposed into direct and indirect components with respect to the rest of the right-hand side. | `None` |
 | type | str | The type of decomposition method to use. Defaults to “gelbach”, which currently is the only supported option. | `'gelbach'` |
-| cluster | str \| None | The name of the cluster variable. If None, uses the cluster variable from the model fit. Defaults to None. | `None` |
+| cluster | str \| None | The name of the cluster variable for the bootstrap. If None, uses the cluster variable from the model fit. Only one-way clustering is supported; a fit with multiway clustering raises `ValueError` unless a single cluster variable is passed here. Defaults to None. | `None` |
 | combine_covariates | dict\[str, list\[str\]\] \| None | A dictionary that specifies which covariates to combine into groups. See the example for how to use this argument. Defaults to None. | `None` |
 | reps | int | The number of bootstrap iterations to run. Defaults to 1000. | `1000` |
 | seed | int | An integer to set the random seed. Defaults to None. | `None` |

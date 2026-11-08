@@ -11,11 +11,11 @@ Fixest-style i() operator for categorical encoding with interactions.
 | Name | Type | Description | Default |
 |----|----|----|----|
 | data | array - like | The categorical variable to encode. | *required* |
-| var2 | array - like | Optional second variable to interact with (continuous or categorical). | `None` |
+| var2 | array - like | Optional second variable to interact with. A numeric `var2` gives continuous slopes; a non-numeric `var2` is a factor. Wrap a numeric `var2` in `C()`, as in `i(f, C(k))`, to treat it as a factor. | `None` |
 | ref | Hashable | Reference level to drop from `data`. | `None` |
-| ref2 | Hashable | Reference level to drop from `var2` (only if `var2` is categorical). | `None` |
+| ref2 | Hashable | Reference level to drop from a factor `var2`. Raises `ValueError` for a continuous `var2`. | `None` |
 | bin | dict | Mapping of `new_level -> [old_levels]` for binning `data`. | `None` |
-| bin2 | dict | Mapping of `new_level -> [old_levels]` for binning `var2`. | `None` |
+| bin2 | dict | Mapping of `new_level -> [old_levels]` for binning a factor `var2`. Raises `ValueError` for a continuous `var2`. | `None` |
 
 ## Returns
 
@@ -68,3 +68,4 @@ Naming convention (matches R fixest)::
     i(cyl, ref=4)     -> cyl::6, cyl::8
     i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
     i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+    i(cyl, C(gear))   -> cyl::4:gear::3, ..., cyl::8:gear::5

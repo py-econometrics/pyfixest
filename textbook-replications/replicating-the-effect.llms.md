@@ -11,8 +11,8 @@ import pyfixest as pf
 %watermark --iversions
 ```
 
+    pyfixest  : 0.70.0
     causaldata: 0.1.5
-    pyfixest  : 0.40.1
 
 ## Chapter 4: Describing Relationships
 
@@ -28,13 +28,6 @@ dt.loc[:, "earn"] = dt["lwg"].apply("exp")
 fit = pf.feols(fml="lwg ~ csw(inc, wc, k5)", data=dt, vcov="iid")
 pf.etable(fit)
 ```
-
-    /var/folders/98/c353q4p95v5_fz62gr5c9td80000gn/T/ipykernel_48960/786816010.py:6: SettingWithCopyWarning: 
-    A value is trying to be set on a copy of a slice from a DataFrame.
-    Try using .loc[row_indexer,col_indexer] = value instead
-
-    See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
-      dt.loc[:, "earn"] = dt["lwg"].apply("exp")
 
 [TABLE]
 
@@ -79,6 +72,7 @@ pf.feols(fml="inspection_score ~ Year + Weekend", data=df, vcov="HC3").summary()
 
     Estimation:  OLS
     Dep. var.: inspection_score
+    sample: None = all
     Inference:  HC3
     Observations:  27178
 
@@ -103,7 +97,7 @@ pf.feols(
 | Coefficient |  |  |  |  |  |  |
 | Intercept | 185.380033 | 3.264345 | 56.789344 | 0.011209 | 143.902592 | 226.857474 |
 | Year | -0.045640 | 0.001624 | -28.107556 | 0.022640 | -0.066272 | -0.025008 |
-| Weekend | 2.057166 | 0.001401 | 1468.256802 | 0.000434 | 2.039364 | 2.074969 |
+| Weekend | 2.057166 | 0.001401 | 1468.256801 | 0.000434 | 2.039364 | 2.074969 |
 
 ### Example 5: Bootstrap Inference
 
@@ -154,12 +148,11 @@ fit = pf.feols(fml="lifeExp ~ np.log(gdpPercap) | country + year", data=gm)
 fit.summary()
 ```
 
-    OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
-
     ###
 
     Estimation:  OLS
-    Dep. var.: lifeExp, Fixed effects: country + year
+    Dep. var.: lifeExp, Fixed effects: country+year
+    sample: None = all
     Inference:  iid
     Observations:  1704
 
@@ -188,7 +181,8 @@ did.summary()
     ###
 
     Estimation:  OLS
-    Dep. var.: Rate, Fixed effects: State + Quarter
+    Dep. var.: Rate, Fixed effects: State+Quarter
+    sample: None = all
     Inference:  iid
     Observations:  162
 

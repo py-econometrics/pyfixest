@@ -20,10 +20,6 @@ In this tutorial, we showcase all of PyFixest formulas syntax; including syntax 
 
 IV estimation with fixed effects, first-stage diagnostics, and the effective F-statistic.
 
-##### Poisson & GLMs
-
-Poisson for nonnegative outcomes, DiD with counts, and logit/probit for propensity-score based AB testing.
-
 ##### Difference-in-Differences Estimation
 
 TWFE, Gardner’s two-stage DID2S, local projections, and event study designs with heterogeneous treatment effects.

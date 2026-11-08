@@ -10,7 +10,7 @@ Publication-ready tables with Great Tables or LaTeX booktabs — customize label
 >
 > Starting with pyfixest 0.41.0 (currently in development), the table functionality is powered by [maketables](https://py-econometrics.github.io/maketables/). The `pf.etable()` API remains unchanged and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 
-Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
+Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
 
 To begin, we load some libraries and fit a set of regression models.
 
@@ -52,7 +52,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6])
 You can also estimate and display multiple regressions with one line of code using the (py)fixest stepwise notation:
 
 ``` python
-pf.etable(pf.feols("Y+Y2~csw(X1,X2,X1:X2)", data=data))
+pf.etable(pf.feols("sw(Y, Y2) ~ csw(X1, X2, X1:X2)", data=data))
 ```
 
 [TABLE]
@@ -105,7 +105,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code=[0.01, 0.05, 0.1], d
 
 ## Other output formats
 
-By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/articles/intro.html)), but you can also opt to dataframe, markdown, or latex output via the `type` argument.
+By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/user-guide/introduction.html)), but you can also opt to DataFrame, Markdown, LaTeX, Typst, or Word output via the `type` argument.
 
 ``` python
 # Pandas styler output:
@@ -124,9 +124,8 @@ pf.etable(
 | coef | X1 | -0.94953 (0.06637) | -0.92405 (0.05606) | -0.92417 (0.05608) | -1.26655 (0.21078) | -1.23153 (0.21141) | -1.23100 (0.21149) |
 |  | X2 | -0.17423 (0.01760) | -0.17411 (0.01486) | -0.18550 (0.02502) | -0.13056 (0.05592) | -0.11767 (0.05610) | -0.07369 (0.09447) |
 |  | X1 × X2 |  |  | 0.01057 (0.01868) |  |  | -0.04082 (0.07054) |
-| fe | f2 | \- | x | x | \- | x | x |
-|  | f1 | x | \- | \- | x | \- | \- |
-|  | f1 | \- | x | x | \- | x | x |
+| fe | f1 | x | x | x | x | x | x |
+|  | f2 | \- | x | x | \- | x | x |
 | stats | Observations | 997 | 997 | 997 | 998 | 998 | 998 |
 |  | R² | 0.489 | 0.659 | 0.659 | 0.12 | 0.172 | 0.172 |
 
@@ -148,9 +147,8 @@ pf.etable(
     |                           |  (0.018)       |  (0.015)       |  (0.025)       |  (0.056)        |  (0.056)        |  (0.094)        |
     | ('coef', 'X1 × X2')       |                |                | 0.011          |                 |                 | -0.041          |
     |                           |                |                |  (0.019)       |                 |                 |  (0.071)        |
-    | ('fe', ' f2')             | -              | x              | x              | -               | x               | x               |
-    | ('fe', 'f1')              | x              | -              | -              | x               | -               | -               |
-    | ('fe', 'f1 ')             | -              | x              | x              | -               | x               | x               |
+    | ('fe', 'f1')              | x              | x              | x              | x               | x               | x               |
+    | ('fe', 'f2')              | -              | x              | x              | -               | x               | x               |
     | ('stats', 'Observations') | 997            | 997            | 997            | 998             | 998             | 998             |
     | ('stats', 'R²')           | 0.489          | 0.659          | 0.659          | 0.12            | 0.172           | 0.172           |
 
@@ -198,6 +196,30 @@ display(FileLink("latexdocs/SampleTableDoc.pdf"))
 ```
 
 Path (`latexdocs/SampleTableDoc.pdf`) doesn't exist. It may still be in the process of being generated, or you may have the incorrect path.
+
+### Word output
+
+Use `type="docx"` to create an editable Word table, including multi-level headers, coefficients and standard errors, fixed effects, statistics, and notes. The result is a `python-docx.Document` object. Pass `file_name` to save it directly; the same document is returned for further editing.
+
+``` python
+document = pf.etable(
+    [fit1, fit2, fit3, fit4, fit5, fit6],
+    type="docx",
+    file_name="regression_results.docx",
+    model_heads=["Baseline", "Two-way FE", "Interaction"] * 2,
+    coef_fmt="b:.3f*\n(se:.3f)",
+    docx_style={
+        "font_name": "Times New Roman",
+        "font_size_pt": 11,
+        "notes_font_size_pt": 9,
+        "first_col_width": "4cm",
+    },
+)
+```
+
+`docx_style` accepts the options in `maketables.MTable.DEFAULT_DOCX_STYLE` in the [maketables package](https://py-econometrics.github.io/maketables/). These settings apply only to Word output. Use `labels`, `felabels`, and `notes` to supply text in your preferred language. Font availability and pagination depend on the application opening the document.
+
+To add more content before saving, omit `file_name`, edit the returned document using python-docx, and call `document.save("regression_results.docx")`.
 
 ## Rename variables
 
@@ -276,13 +298,13 @@ Notice that this process will change the `_coefnames`. In this example, the new 
 fit9._coefnames
 ```
 
-    [np.str_('Intercept'),
-     np.str_('X1'),
-     np.str_('X2'),
-     np.str_('job::Admin'),
-     np.str_('job::Blue collar'),
-     np.str_('job::Admin:X2'),
-     np.str_('job::Blue collar:X2')]
+    ['Intercept',
+     'X1',
+     'X2',
+     'job::Admin',
+     'job::Blue collar',
+     'job::Admin:X2',
+     'job::Blue collar:X2']
 
 ## Custom model headlines
 
@@ -476,12 +498,12 @@ DTable(
 |  | Blue collar |  | White collar |  | Blue collar |  | White collar |  |
 |  | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. | Mean | Std. Dev. |
 | stats |  |  |  |  |  |  |  |  |
-| Wage | -0.16 | 2.30 | 0.10 | 2.27 | -0.26 | 2.38 | -0.20 | 2.29 |
-| Wealth | -0.65 | 5.57 | 0.65 | 5.73 | -0.76 | 5.50 | -0.55 | 5.47 |
-| Age | 1.08 | 0.78 | 0.99 | 0.82 | 1.06 | 0.81 | 1.05 | 0.82 |
-| Years of Schooling | -0.34 | 3.07 | 0.00 | 3.19 | 0.15 | 2.94 | -0.28 | 2.96 |
+| Wage | -0.21 | 2.50 | -0.10 | 2.15 | -0.15 | 2.21 | -0.06 | 2.36 |
+| Wealth | -0.56 | 5.40 | -0.24 | 5.57 | -0.24 | 5.44 | -0.23 | 5.93 |
+| Age | 1.08 | 0.81 | 1.05 | 0.80 | 0.99 | 0.81 | 1.06 | 0.81 |
+| Years of Schooling | -0.21 | 3.05 | -0.09 | 2.83 | -0.22 | 3.25 | -0.00 | 3.05 |
 | nobs |  |  |  |  |  |  |  |  |
-| Number of observations | 264.00 |  | 253.00 |  | 220.00 |  | 260.00 |  |
+| Number of observations | 249.00 |  | 235.00 |  | 251.00 |  | 262.00 |  |
 |  |  |  |  |  |  |  |  |  |
 
 You can also use custom aggregation functions to compute further statistics or affect how statistics are presented. Pyfixest provides two such functions `mean_std` and `mean_newline_std` which compute the mean and standard deviation and display both the same cell (either with line break between them or not). This allows to have more compact tables when you want to show statistics for many characteristcs in the columns.
@@ -523,15 +545,15 @@ DTable(
 |                        | EU     |       |           | US     |       |           |
 |                        | N      | Mean  | Std. Dev. | N      | Mean  | Std. Dev. |
 | Blue collar            |        |       |           |        |       |           |
-| Wage                   | 264.00 | -0.16 | 2.30      | 220.00 | -0.26 | 2.38      |
-| Wealth                 | 264.00 | -0.65 | 5.57      | 220.00 | -0.76 | 5.50      |
-| Age                    | 264.00 | 1.08  | 0.78      | 220.00 | 1.06  | 0.81      |
-| Years of Schooling     | 264.00 | -0.34 | 3.07      | 220.00 | 0.15  | 2.94      |
+| Wage                   | 249.00 | -0.21 | 2.50      | 251.00 | -0.15 | 2.21      |
+| Wealth                 | 249.00 | -0.56 | 5.40      | 251.00 | -0.24 | 5.44      |
+| Age                    | 249.00 | 1.08  | 0.81      | 251.00 | 0.99  | 0.81      |
+| Years of Schooling     | 249.00 | -0.21 | 3.05      | 251.00 | -0.22 | 3.25      |
 | White collar           |        |       |           |        |       |           |
-| Wage                   | 253.00 | 0.10  | 2.27      | 260.00 | -0.20 | 2.29      |
-| Wealth                 | 253.00 | 0.65  | 5.73      | 260.00 | -0.55 | 5.47      |
-| Age                    | 253.00 | 0.99  | 0.82      | 260.00 | 1.05  | 0.82      |
-| Years of Schooling     | 253.00 | 0.00  | 3.19      | 260.00 | -0.28 | 2.96      |
+| Wage                   | 235.00 | -0.10 | 2.15      | 262.00 | -0.06 | 2.36      |
+| Wealth                 | 235.00 | -0.24 | 5.57      | 262.00 | -0.23 | 5.93      |
+| Age                    | 235.00 | 1.05  | 0.80      | 262.00 | 1.06  | 0.81      |
+| Years of Schooling     | 235.00 | -0.09 | 2.83      | 262.00 | -0.00 | 3.05      |
 |                        |        |       |           |        |       |           |
 
 And you can again export descriptive statistics tables also to LaTex:
@@ -557,7 +579,7 @@ Path (`latexdocs/SampleTableDoc3.pdf`) doesn't exist. It may still be in the pro
 
 # Custom Styling with Great Tables
 
-You can use the rich set of methods offered by [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) to further customize the table display when the type is “gt”.
+You can use the rich set of methods offered by [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) to further customize the table display when the type is “gt”.
 
 ## Example Styling
 

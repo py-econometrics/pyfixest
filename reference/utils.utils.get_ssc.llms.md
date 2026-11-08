@@ -1,48 +1,24 @@
 # get_ssc
 
 ``` python
-get_ssc(
-    ssc_dict,
-    N,
-    k,
-    k_fe,
-    k_fe_nested,
-    n_fe,
-    n_fe_fully_nested,
-    G,
-    vcov_sign,
-    vcov_type,
-)
+get_ssc(ssc_options, counts, *, vcov_type)
 ```
 
-Compute small sample adjustment factors.
+Compute the small sample adjustment factor and the degrees of freedom.
 
 ## Parameters
 
 | Name | Type | Description | Default |
 |----|----|----|----|
-| ssc_dict | dict | A dictionary created via the ssc() function. | *required* |
-| N | int | The number of observations. | *required* |
-| k | int | The number of estimated parameters (as in the first part of the model formula) | *required* |
-| k_fe | int | The number of estimated fixed effects (as specified in the second part of the model formula). | *required* |
-| k_fe_nested | int | The number of estimated fixed effects nested within clusters. | *required* |
-| n_fe | int | The number of fixed effects in the model. I.e. ‘Y ~ X1 \| f1 + f2’ has 2 fixed effects. | *required* |
-| n_fe_fully_nested | int | The number of fixed effects that are fully nested within clusters. | *required* |
-| G | int | The number of clusters. | *required* |
-| vcov_sign | array - like | A vector that helps create the covariance matrix. | *required* |
-| vcov_type | str | The type of covariance matrix. Must be one of “iid”, “hetero”, “HAC”, or “CRV”. | *required* |
+| ssc_options | Ssc | The options created via the ssc() function. | *required* |
+| counts | DegreesOfFreedomCounts | Observation, coefficient, fixed-effect, and cluster counts. | *required* |
+| vcov_type | str | The type of covariance matrix: “iid”, “hetero”, “HAC”, or “CRV”. | *required* |
 
 ## Returns
 
 | Name | Type | Description |
 |----|----|----|
-|  | tuple of np.ndarray and int | A small sample adjustment factor and the effective number of coefficients k used in the adjustment. |
-
-## Raises
-
-| Name | Type | Description |
-|----|----|----|
-|  | ValueError | If vcov_type is not “iid”, “hetero”, or “CRV”, or if G_df is neither “conventional” nor “min”. |
+|  | SmallSampleCorrection | The factor `adj` that multiplies the covariance matrix, the parameter count `df_k` it used, and the degrees of freedom `df_t` of the t distribution. |
 
 ## Examples
 
@@ -50,24 +26,13 @@ Called internally by the estimation functions. Use it directly to reproduce an a
 
 ``` python
 import pyfixest as pf
-from pyfixest.utils.utils import get_ssc
+from pyfixest.utils.utils import DegreesOfFreedomCounts, get_ssc
 
 # cluster-robust adjustment: 1000 observations, 3 coefficients, 20 clusters
-adj, k_used, G_used = get_ssc(
-    ssc_dict=pf.ssc(),
-    N=1000,
-    k=3,
-    k_fe=0,
-    k_fe_nested=0,
-    n_fe=0,
-    n_fe_fully_nested=0,
-    G=20,
-    vcov_sign=1,
-    vcov_type="CRV",
-)
-adj, k_used, G_used
+counts = DegreesOfFreedomCounts(N=1000, k=3, k_fe=0, n_fe=0, G=20)
+get_ssc(pf.ssc(), counts, vcov_type="CRV")
 ```
 
-    (array([1.05474318]), 3, np.int64(19))
+    SmallSampleCorrection(adj=1.0547431768991185, df_k=3, df_t=19)
 
 Configure the behaviour with [ssc()](../reference/utils.utils.ssc.llms.md). See [On Small Sample Corrections](../explanation/ssc.llms.md) for the formulas.

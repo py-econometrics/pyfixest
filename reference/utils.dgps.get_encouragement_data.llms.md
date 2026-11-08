@@ -38,7 +38,7 @@ data = pf.get_encouragement_data()
 
 # instrument take-up with the randomized encouragement, LATE is 2.0
 fit = pf.feols(
-    "revenue ~ 1 | user_type | adopted_feature ~ assigned_treatment", data
+    "revenue ~ 1 + [adopted_feature ~ assigned_treatment] | user_type", data
 )
 fit.summary()
 ```

@@ -52,11 +52,11 @@ data.head()
 
 |     | user | day | treat | minutes_watched | ever_treated |
 |-----|------|-----|-------|-----------------|--------------|
-| 0   | 0    | 0   | 0     | 8.114488        | 0            |
-| 1   | 0    | 1   | 0     | 7.633058        | 0            |
-| 2   | 0    | 2   | 0     | 6.712332        | 0            |
-| 3   | 0    | 3   | 0     | 6.230820        | 0            |
-| 4   | 0    | 4   | 0     | 6.004489        | 0            |
+| 0   | 0    | 0   | 0     | -6.121534       | 0            |
+| 1   | 0    | 1   | 0     | -8.255474       | 0            |
+| 2   | 0    | 2   | 0     | -7.786222       | 0            |
+| 3   | 0    | 3   | 0     | -7.376325       | 0            |
+| 4   | 0    | 4   | 0     | -4.979141       | 0            |
 
 We can inspect the data generating process via the `panelview()` function:
 
@@ -75,7 +75,7 @@ pf.panelview(
 )
 ```
 
-![](panel_variance_reduction_files/figure-html/cell-4-output-3.png)
+![](panel_variance_reduction_files/figure-html/cell-4-output-1.png)
 
 We see that half of our users are treated after half the time.
 
@@ -131,11 +131,11 @@ def _difference_in_means_pd(data):
 _difference_in_means_pd(data)
 ```
 
-|       | user         | total_minutes_watched |
-|-------|--------------|-----------------------|
-| treat |              |                       |
-| 0     | NaN          | NaN                   |
-| 1     | -1387.630151 | 0.761514              |
+|       | user        | total_minutes_watched |
+|-------|-------------|-----------------------|
+| treat |             |                       |
+| 0     | NaN         | NaN                   |
+| 1     | -1351.98794 | -0.53604              |
 
 Because linear regression is just a fency way to compute and compare differences, we could also have estimated this via `pf.feols()`:
 
@@ -163,10 +163,10 @@ fit_difference_in_means.summary()
 
     | Coefficient   |   Estimate |   Std. Error |   t value |   Pr(>|t|) |   2.5% |   97.5% |
     |:--------------|-----------:|-------------:|----------:|-----------:|-------:|--------:|
-    | Intercept     |      0.357 |        0.015 |    24.163 |      0.000 |  0.328 |   0.386 |
-    | treat         |      0.762 |        0.209 |     3.641 |      0.000 |  0.352 |   1.171 |
+    | Intercept     |     -0.011 |        0.015 |    -0.744 |      0.457 | -0.040 |   0.018 |
+    | treat         |     -0.536 |        0.209 |    -2.566 |      0.010 | -0.946 |  -0.127 |
     ---
-    RMSE: 18.07 R2: 0.0 
+    RMSE: 18.049 R2: 0.0 
 
 Note that no aggregation step is needed and that we get identical point estimates. As a bonus, we get standard errors and confidence intervals in the process.
 
@@ -224,11 +224,11 @@ data_cuped.head()
 
 |     | user | minutes_post | minutes_pre | treat | minutes_pre_c |
 |-----|------|--------------|-------------|-------|---------------|
-| 0   | 0    | 7.747841     | 7.767178    | 0     | 7.894779      |
-| 1   | 1    | 25.595928    | 24.674535   | 0     | 24.802136     |
-| 2   | 2    | -32.224392   | -32.130334  | 0     | -32.002733    |
-| 3   | 3    | -12.269762   | -13.142435  | 0     | -13.014835    |
-| 4   | 4    | -1.448348    | -1.392043   | 0     | -1.264442     |
+| 0   | 0    | -6.487690    | -6.636825   | 0     | -6.928309     |
+| 1   | 1    | 53.571879    | 53.080042   | 0     | 52.788558     |
+| 2   | 2    | 2.537777     | 3.417942    | 0     | 3.126458      |
+| 3   | 3    | 10.929099    | 10.727383   | 0     | 10.435899     |
+| 4   | 4    | -6.343378    | -6.456675   | 0     | -6.748159     |
 
 We can compare with the previous results:
 
@@ -238,7 +238,7 @@ pf.etable([fit_difference_in_means, fit_cuped])
 
 [TABLE]
 
-Point estimates for the difference-in-means estimator is 0.762, while it is 0.192 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a regression model with covariates, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
+Point estimates for the difference-in-means estimator is -0.536, while it is 0.201 for the Cuped estimator. But most importantly, the standard errors are much smaller for the CUPED estimator (0.03 vs 0.209). Because we have fitted a regression model with covariates, we have used heteroskedasticity-robust standard errors, which should be more conservative than the iid errors used in the difference-in-means regression.
 
 ## Panel Estimator
 
@@ -376,8 +376,8 @@ display(se_sim_18)
 ```
 
     Difference-in-Means    0.029457
-    Cuped                  0.004184
-    Panel                  0.004185
+    Cuped                  0.004181
+    Panel                  0.004181
     dtype: float64
 
 So we manage to reduce our standard errors by around 6x! This is pretty fantastic news, as it implies that we can run our experiment on a much smaller sample, but still achieve the same level of power! This is what we want to verify in the last step.
@@ -448,11 +448,11 @@ display(power_df)
 
 |     | N      | Difference-in-Means | Cuped | Panel |
 |-----|--------|---------------------|-------|-------|
-| 0   | 100    | 0.5                 | 0.1   | 0.1   |
-| 1   | 500    | 0.4                 | 0.9   | 0.9   |
-| 2   | 1000   | 0.7                 | 1.0   | 1.0   |
-| 3   | 5000   | 0.5                 | 1.0   | 1.0   |
-| 4   | 10000  | 0.6                 | 1.0   | 1.0   |
+| 0   | 100    | 0.3                 | 0.1   | 0.1   |
+| 1   | 500    | 0.5                 | 0.9   | 0.9   |
+| 2   | 1000   | 0.4                 | 1.0   | 1.0   |
+| 3   | 5000   | 0.7                 | 1.0   | 1.0   |
+| 4   | 10000  | 0.7                 | 1.0   | 1.0   |
 | 5   | 100000 | 0.9                 | 1.0   | 1.0   |
 
 CUPED and the panel estimator achieve 90% power with 500 observations, while the difference in means-estimator requires a sample that is orders of magnitude larger. To conclude, we should mention that these effects stem from a stylized exmaple data set - in practice, the gains from CUPED / panel methods for variance reduction are much lower - companies with access to high quality panel data report reductions of 10% to 50% (see e.g. this paper by [Microsoft Bing](https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf)).
@@ -473,7 +473,7 @@ display(se_sim_1)
 
     Difference-in-Means    0.006852
     Cuped                  0.004174
-    Panel                  0.004186
+    Panel                  0.004185
     dtype: float64
 
 All of a sudden, the difference-in-means estimator has lower variance!
@@ -483,8 +483,8 @@ display(se_sim_18)
 ```
 
     Difference-in-Means    0.029457
-    Cuped                  0.004184
-    Panel                  0.004185
+    Cuped                  0.004181
+    Panel                  0.004181
     dtype: float64
 
 The reason we do not achieve variance reduction this time is that the addition of pre-treatment covariates / unit fixed effects simply explains less unobserved variance than before.

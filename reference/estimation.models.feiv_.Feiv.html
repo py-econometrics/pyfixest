@@ -68,16 +68,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
+<link href="../reference/estimation.models.feglm_.Feglm.html" rel="next">
+<link href="../reference/estimation.models.fepois_.Fepois.html" rel="prev">
+<link href="../figures/pyfixest-logo.png" rel="icon" type="image/png">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-4a0610749eeff5ab924a4729b5181608.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-13b6b3b40dd80034e3da90124acc42ea.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-739820889637912ae7e84db58e97c720.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -113,7 +116,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </head>
 
-<body class="nav-sidebar floating nav-fixed fullcontent quarto-light">
+<body class="nav-sidebar floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -135,86 +138,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span class="menu-text">Getting Started</span></a>
   </li>  
   <li class="nav-item">
+    <a class="nav-link" href="../tutorials/index.html"> 
+<span class="menu-text">Tutorials</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../how-to/index.html"> 
+<span class="menu-text">Guides</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
 <span class="menu-text">Function Reference</span></a>
   </li>  
   <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Tutorials</span>
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-more" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">More</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials">    
-        <li>
-    <a class="dropdown-item" href="../tutorials/index.html">
- <span class="dropdown-text">All Tutorials</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../tutorials/ols-fixed-effects.html">
- <span class="dropdown-text">OLS with Fixed Effects</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/formula-syntax.html">
- <span class="dropdown-text">Formula Syntax</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/instrumental-variables.html">
- <span class="dropdown-text">Instrumental Variables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/regression-tables.html">
- <span class="dropdown-text">Regression Tables</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/difference-in-differences.html">
- <span class="dropdown-text">Difference-in-Differences</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../tutorials/quantile-regression.html">
- <span class="dropdown-text">Quantile Regression</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-guides" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Guides</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-guides">    
-        <li>
-    <a class="dropdown-item" href="../how-to/index.html">
- <span class="dropdown-text">All Guides</span></a>
-  </li>  
-        <li><hr class="dropdown-divider"></li>
-        <li>
-    <a class="dropdown-item" href="../how-to/demeaner-backends.html">
- <span class="dropdown-text">Choosing a Demeaner Backend</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/marginaleffects.html">
- <span class="dropdown-text">Marginal Effects &amp; Hypothesis Testing</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/anytime-valid-inference.html">
- <span class="dropdown-text">When to Use Anytime-Valid Inference</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/regression_decomposition.html">
- <span class="dropdown-text">Regression Decomposition</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/stata-2-pyfixest.html">
- <span class="dropdown-text">Compare Stata &amp; PyFixest</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../how-to/panel_variance_reduction.html">
- <span class="dropdown-text">Variance Reduction in AB Tests</span></a>
-  </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-explanation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Explanation</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-explanation">    
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-more">    
+        <li class="dropdown-header">Explanation</li>
         <li>
     <a class="dropdown-item" href="../explanation/difficult-fixed-effects.html">
  <span class="dropdown-text">When Are Fixed Effects Problems Difficult?</span></a>
@@ -231,61 +171,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../explanation/blog-posts.html">
  <span class="dropdown-text">Case Studies &amp; Blog Posts</span></a>
   </li>  
-    </ul>
-  </li>
-  <li class="nav-item dropdown ">
-    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-textbook-replications" role="link" data-bs-toggle="dropdown" aria-expanded="false">
- <span class="menu-text">Textbook Replications</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-textbook-replications">    
+        <li><hr class="dropdown-divider"></li>
         <li>
     <a class="dropdown-item" href="../textbook-replications/index.html">
- <span class="dropdown-text">All Textbook Replications</span></a>
+ <span class="dropdown-text">Textbook Replications</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../changelog.html">
+ <span class="dropdown-text">Changelog</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../contributing.html">
+ <span class="dropdown-text">Contributing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../acknowledgements.html">
+ <span class="dropdown-text">Acknowledgements</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li>
-    <a class="dropdown-item" href="../textbook-replications/brave_true.html">
- <span class="dropdown-text">Causal Inference for the Brave and True</span></a>
+    <a class="dropdown-item" href="../skills.html">
+ <span class="dropdown-text">Skills.md</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../textbook-replications/mixtape.html">
- <span class="dropdown-text">Causal Inference: The Mixtape</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/replicating-the-effect.html">
- <span class="dropdown-text">The Effect</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../textbook-replications/resources.html">
- <span class="dropdown-text">Other Resources</span></a>
+    <a class="dropdown-item" href="../llms.txt">
+ <span class="dropdown-text">llms.txt</span></a>
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="../changelog.html"> 
-<span class="menu-text">Changelog</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../contributing.html"> 
-<span class="menu-text">Contributing</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../acknowledgements.html"> 
-<span class="menu-text">Acknowledgements</span></a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="../llms.txt"> <i class="bi bi-robot" role="img">
-</i> 
-<span class="menu-text">llms.txt</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="../skills.html"> 
-<span class="menu-text">Skills.md</span></a>
-  </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/"> <i class="bi bi-github" role="img" aria-label="PyFixest on GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -384,6 +301,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="../reference/did.saturated_twfe.SaturatedEventStudy.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">SaturatedEventStudy</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/did.saturated_twfe.EventStudyDesign.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EventStudyDesign</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,12 +464,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.models.feols_.Feols.get_performance.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Feols.get_performance</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.models.feols_.Feols.wald_test.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Feols.wald_test</span></a>
   </div>
@@ -692,12 +609,185 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true">
- <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+ <span class="menu-text">Fitted State</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregEstimationOptions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregEstimationOptions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelDescription.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelDescription</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ModelMatrix.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ModelMatrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.ObservationWeights.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">ObservationWeights</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.EstimationSample.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">EstimationSample</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.DroppedRowCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DroppedRowCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinLinearData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinLinearData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WithinIvData.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WithinIvData</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CollinearityCheck.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CollinearityCheck</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.GlmWorkingState.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GlmWorkingState</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FitStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FitStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FittedValues.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FittedValues</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.SandwichComponents.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SandwichComponents</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VarianceCovariance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VarianceCovariance</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.WaldTest.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">WaldTest</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStage</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FirstStageDiagnostics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FirstStageDiagnostics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.QuantregSolution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">QuantregSolution</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.VcovSpec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">VcovSpec</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffectEstimates.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffectEstimates</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.FixedEffect.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">FixedEffect</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.RitestStatistics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RitestStatistics</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.CoefficientTable.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">CoefficientTable</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/estimation.state.Capabilities.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Capabilities</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+ <span class="menu-text">Formula Parsing &amp; Model Matrix</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.parse.Formula.html" class="sidebar-item-text sidebar-link">
@@ -712,12 +802,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/estimation.formula.model_matrix.ModelMatrix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">ModelMatrix</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
   <a href="../reference/estimation.formula.transforms.factor_interaction.factor_interaction.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">factor_interaction</span></a>
   </div>
@@ -726,13 +810,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
  <span class="menu-text">Demeaning</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/estimation.demean.html" class="sidebar-item-text sidebar-link">
@@ -767,13 +851,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true">
  <span class="menu-text">Misc / Utilities</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/core.detect_singletons.detect_singletons.html" class="sidebar-item-text sidebar-link">
@@ -788,8 +872,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.Ssc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="../reference/utils.utils.get_ssc.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">get_ssc</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.DegreesOfFreedomCounts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DegreesOfFreedomCounts</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/utils.utils.SmallSampleCorrection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SmallSampleCorrection</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -805,7 +907,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#parameters" id="toc-parameters" class="nav-link active" data-scroll-target="#parameters">Parameters</a></li>
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#raises" id="toc-raises" class="nav-link" data-scroll-target="#raises">Raises</a></li>
+  <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#pyfixest.estimation.models.feiv_.Feiv.IV_Diag" id="toc-pyfixest.estimation.models.feiv_.Feiv.IV_Diag" class="nav-link" data-scroll-target="#pyfixest.estimation.models.feiv_.Feiv.IV_Diag">Feiv.IV_Diag</a></li>
+  <li><a href="#pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test" id="toc-pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test" class="nav-link" data-scroll-target="#pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test">Feiv.IV_weakness_test</a></li>
+  <li><a href="#pyfixest.estimation.models.feiv_.Feiv.eff_F" id="toc-pyfixest.estimation.models.feiv_.Feiv.eff_F" class="nav-link" data-scroll-target="#pyfixest.estimation.models.feiv_.Feiv.eff_F">Feiv.eff_F</a></li>
+  <li><a href="#pyfixest.estimation.models.feiv_.Feiv.get_fit" id="toc-pyfixest.estimation.models.feiv_.Feiv.get_fit" class="nav-link" data-scroll-target="#pyfixest.estimation.models.feiv_.Feiv.get_fit">Feiv.get_fit</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -831,33 +951,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>Feiv(</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    FixestFormula,</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    ssc_dict,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    drop_singletons,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    drop_intercept,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    weights,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    weights_type,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    collin_tol,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    solver<span class="op">=</span><span class="st">'scipy.linalg.solve'</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    demeaner<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    lookup_preconditioner<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    store_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    copy_data<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    lean<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    context<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    sample_split_var<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    sample_split_value<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    options,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    lookup_demeaned_data,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    lookup_preconditioner<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    sample_split<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Non user-facing class to estimate an IV model using a 2SLS estimator.</p>
-<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.feols.html">feols()</a> function. Note that no demeaning is performed in this class: demeaning is performed in the FixestMulti class (to allow for caching of demeaned variables for multiple estimation).</p>
+<p>Inherits from the Feols class. Users should not directly instantiate this class, but rather use the <a href="../reference/estimation.api.feols.feols.html">feols()</a> function. This class constructs the second-stage and instrument within arrays through the shared <code>DemeanCache</code> supplied by the estimation runner.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 42%">
-<col style="width: 42%">
-<col style="width: 9%">
+<col style="width: 8%">
+<col style="width: 19%">
+<col style="width: 67%">
+<col style="width: 4%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -869,76 +978,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>Y</td>
-<td>np.ndarray</td>
-<td>Dependent variable, a two-dimensional np.array.</td>
+<td>FixestFormula</td>
+<td>Formula</td>
+<td>Parsed fixest formula, including the first stage.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td>X</td>
-<td>np.ndarray</td>
-<td>Independent variables, a two-dimensional np.array.</td>
+<td>data</td>
+<td>pd.DataFrame</td>
+<td>Estimation data, already converted to pandas and reindexed.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td>endgvar</td>
-<td>np.ndarray</td>
-<td>Endogenous Indenpendent variables, a two-dimensional np.array.</td>
+<td>options</td>
+<td>EstimationOptions</td>
+<td>Every estimation option the fit is built with, as built by the estimation function.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
-<td>Z</td>
-<td>np.ndarray</td>
-<td>Instruments, a two-dimensional np.array.</td>
+<td>lookup_demeaned_data</td>
+<td>dict[frozenset[int], DemeanedData]</td>
+<td>Demeaning cache shared across the models of one cache block.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
-<td>weights</td>
-<td>np.ndarray</td>
-<td>Weights, a one-dimensional np.array.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>coefnames_x</td>
-<td>list</td>
-<td>Names of the coefficients of X.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td>coefnames_z</td>
-<td>list</td>
-<td>Names of the coefficients of Z.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>collin_tol</td>
-<td>float</td>
-<td>Tolerance for collinearity check.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td>solver</td>
-<td>Literal['np.linalg.lstsq', 'np.linalg.solve', 'scipy.linalg.solve', 'scipy.sparse.linalg.lsqr']</td>
-<td>“scipy.sparse.linalg.lsqr”], default is “scipy.linalg.solve”. Solver to use for the estimation.</td>
-<td><code>'scipy.linalg.solve'</code></td>
-</tr>
-<tr class="even">
-<td>demeaner</td>
-<td>Optional[AnyDemeaner]</td>
-<td>Resolved typed demeaner configuration.</td>
+<td>lookup_preconditioner</td>
+<td>Optional[dict[frozenset[int], Preconditioner]]</td>
+<td>Preconditioner cache shared across the models of one cache block.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
-<td>weights_name</td>
-<td>Optional[str]</td>
-<td>Name of the weights variable.</td>
-<td><em>required</em></td>
-</tr>
 <tr class="even">
-<td>weights_type</td>
-<td>Optional[str]</td>
-<td>Type of the weights variable. Either “aweights” for analytic weights or “fweights” for frequency weights.</td>
-<td><em>required</em></td>
+<td>sample_split</td>
+<td>SampleSplit or None</td>
+<td>The variable and value by which the estimation sample was split. <code>None</code> if the model was fit on the entire input data set (minus dropping of missings etc). For all model classes.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
@@ -947,9 +1020,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 3%">
-<col style="width: 91%">
+<col style="width: 9%">
+<col style="width: 7%">
+<col style="width: 83%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -971,53 +1044,23 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td>_coefnames_z</td>
-<td>list</td>
+<td>list[str]</td>
 <td>Names of coefficients for Z after handling multicollinearity.</td>
 </tr>
 <tr class="even">
-<td>_collin_vars_z</td>
-<td>list</td>
-<td>Variables identified as collinear in Z.</td>
+<td>collinearity_instruments</td>
+<td>CollinearityCheck</td>
+<td>Names and column mask of the instruments dropped by the rank check, set in get_fit().</td>
 </tr>
 <tr class="odd">
-<td>_collin_index_z</td>
-<td>list</td>
-<td>Indices of collinear variables in Z.</td>
+<td>capabilities</td>
+<td>Capabilities</td>
+<td>Inference and post-estimation features this model class supports.</td>
 </tr>
 <tr class="even">
-<td>_is_iv</td>
-<td>bool</td>
-<td>Indicator if instrumental variables are used.</td>
-</tr>
-<tr class="odd">
-<td>_support_crv3_inference</td>
-<td>bool</td>
-<td>Indicator for supporting CRV3 inference.</td>
-</tr>
-<tr class="even">
-<td>_support_iid_inference</td>
-<td>bool</td>
-<td>Indicator for supporting IID inference.</td>
-</tr>
-<tr class="odd">
-<td>_tZX</td>
-<td>np.ndarray</td>
-<td>Transpose of Z times X.</td>
-</tr>
-<tr class="even">
-<td>_tXZ</td>
-<td>np.ndarray</td>
-<td>Transpose of X times Z.</td>
-</tr>
-<tr class="odd">
-<td>_tZy</td>
-<td>np.ndarray</td>
-<td>Transpose of Z times Y.</td>
-</tr>
-<tr class="even">
-<td>_tZZinv</td>
-<td>np.ndarray</td>
-<td>Inverse of transpose of Z times Z.</td>
+<td>sandwich</td>
+<td>SandwichComponents</td>
+<td>Weighted scores of the first-stage projection X_hat, the 2SLS Hessian X_hat’ W X_hat, and its inverse, set in get_fit().</td>
 </tr>
 <tr class="odd">
 <td>_beta_hat</td>
@@ -1025,9 +1068,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Estimated regression coefficients.</td>
 </tr>
 <tr class="even">
-<td>_Y_hat_link</td>
-<td>np.ndarray</td>
-<td>Predicted values of the regression model.</td>
+<td>fitted_values</td>
+<td>FittedValues</td>
+<td>In-sample predictions on the link and the response scale, set in get_fit().</td>
 </tr>
 <tr class="odd">
 <td>_u_hat</td>
@@ -1035,69 +1078,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Residuals of the regression model.</td>
 </tr>
 <tr class="even">
-<td>_scores</td>
-<td>np.ndarray</td>
-<td>Scores used in the regression.</td>
-</tr>
-<tr class="odd">
-<td>_hessian</td>
-<td>np.ndarray</td>
-<td>Hessian matrix used in the regression.</td>
-</tr>
-<tr class="even">
-<td>_bread</td>
-<td>np.ndarray</td>
-<td>Bread matrix used in the regression.</td>
-</tr>
-<tr class="odd">
-<td>_pi_hat</td>
-<td>np.ndarray</td>
-<td>Estimated coefficients from 1st stage regression</td>
-</tr>
-<tr class="even">
-<td>_X_hat</td>
-<td>np.ndarray</td>
-<td>Predicted values of the 1st stage regression</td>
-</tr>
-<tr class="odd">
-<td>_v_hat</td>
-<td>np.ndarray</td>
-<td>Residuals of the 1st stage regression</td>
-</tr>
-<tr class="even">
-<td>_model_1st_stage</td>
-<td>Any</td>
-<td>feols object of 1st stage regression. It contains various results and diagnostics from the fixed effects OLS regression.</td>
-</tr>
-<tr class="odd">
-<td>_endogvar_1st_stage</td>
-<td>np.ndarray</td>
-<td>Unweihgted Endogenous independent variable vector</td>
-</tr>
-<tr class="even">
-<td>_Z_1st_stage</td>
-<td>np.ndarray</td>
-<td>Unweighted instruments vector to be used for 1st stage</td>
-</tr>
-<tr class="odd">
-<td>_non_exo_instruments</td>
-<td>list</td>
-<td>List of instruments name excluding exogenous independent vars.</td>
-</tr>
-<tr class="even">
-<td>__p_iv</td>
-<td>scalar</td>
-<td>Number of instruments listed in _non_exo_instruments</td>
-</tr>
-<tr class="odd">
-<td>_f_stat_1st_stage</td>
-<td>scalar</td>
-<td>F-statistics of First Stage regression for evaluation of IV weakness. The computed F-statistics test the following null hypothesis : # H0 : beta_{z_1} = 0 &amp; … &amp; beta_{z_{p_iv}} = 0 where z_1, …, z_{p_iv} # are the instrument variables # H1 : H0 does not hold Note that this F-statistics is adjusted to heteroskedasticity / clusters if users set specification of variance-covariance matrix type</td>
-</tr>
-<tr class="even">
-<td>_eff_F</td>
-<td>scalar</td>
-<td>Effective F-statistics of first stage regression as in Olea and Pflueger 2013</td>
+<td>first_stage</td>
+<td>FirstStage</td>
+<td>First-stage regression fitted after second-stage inference: the coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the fitted first-stage model, the excluded instruments, and the instrument-strength <code>diagnostics</code>.</td>
 </tr>
 <tr class="odd">
 <td>_data</td>
@@ -1110,6 +1093,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="raises" class="level2 doc-section doc-section-raises">
 <h2 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h2>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 4%">
+<col style="width: 13%">
+<col style="width: 81%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -1120,19 +1108,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>ValueError</td>
-<td>If Z is not a two-dimensional array.</td>
+<td>IVIdentificationError</td>
+<td>If the exogenous variables and instruments fully explain an endogenous variable, or the instruments add no explanatory power for it.</td>
 </tr>
 </tbody>
 </table>
 </section>
 <section id="examples" class="level2 doc-section doc-section-examples">
 <h2 class="doc-section doc-section-examples anchored" data-anchor-id="examples">Examples</h2>
-<p><code>Feiv</code> is returned by <a href="../reference/estimation.api.feols.feols.html">feols()</a> when the formula includes an IV part, i.e. <code>depvar ~ exog | fe | endog ~ instrument</code>.</p>
-<div id="c70ff85f" class="cell" data-execution_count="1">
+<p><code>Feiv</code> is returned by <a href="../reference/estimation.api.feols.feols.html">feols()</a> when the formula includes an instrument block, i.e. <code>depvar ~ exog + [endog ~ instruments] | fe</code>.</p>
+<div id="824ed7dc" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyfixest <span class="im">as</span> pf</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X2 | f1 | X1 ~ Z1"</span>, pf.get_data())</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fit <span class="op">=</span> pf.feols(<span class="st">"Y ~ X2 + [X1 ~ Z1] | f1"</span>, pf.get_data())</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fit.tidy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <div>
@@ -1185,10 +1173,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>The first stage F-statistic is stored on the fitted object.</p>
-<div id="81538b54" class="cell" data-execution_count="2">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit._f_stat_1st_stage</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="ee4bbb71" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fit.first_stage.diagnostics.f_stat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="2">
-<pre><code>647.270385160491</code></pre>
+<pre><code>647.2703851604911</code></pre>
 </div>
 </div>
 <p>See the <a href="../tutorials/instrumental-variables.html">instrumental variables tutorial</a> for details.</p>
@@ -1212,32 +1200,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Implement IV weakness test (F-test).</td>
 </tr>
 <tr class="odd">
-<td><a href="#pyfixest.estimation.models.feiv_.Feiv.demean">Feiv.demean</a></td>
-<td>Demean instruments and endogeneous variable.</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars">Feiv.drop_multicol_vars</a></td>
-<td>Drop multicollinear variables in matrix of instruments Z.</td>
-</tr>
-<tr class="odd">
 <td><a href="#pyfixest.estimation.models.feiv_.Feiv.eff_F">Feiv.eff_F</a></td>
 <td>Compute Effective F stat (Olea and Pflueger 2013).</td>
 </tr>
 <tr class="even">
-<td><a href="#pyfixest.estimation.models.feiv_.Feiv.first_stage">Feiv.first_stage</a></td>
-<td>Implement First stage regression.</td>
-</tr>
-<tr class="odd">
 <td><a href="#pyfixest.estimation.models.feiv_.Feiv.get_fit">Feiv.get_fit</a></td>
 <td>Fit a IV model using a 2SLS estimator.</td>
-</tr>
-<tr class="even">
-<td><a href="#pyfixest.estimation.models.feiv_.Feiv.to_array">Feiv.to_array</a></td>
-<td>Transform estimation DataFrames to arrays.</td>
-</tr>
-<tr class="odd">
-<td><a href="#pyfixest.estimation.models.feiv_.Feiv.wls_transform">Feiv.wls_transform</a></td>
-<td>Transform variables for WLS estimation.</td>
 </tr>
 </tbody>
 </table>
@@ -1279,7 +1247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example" class="level4 doc-section doc-section-example">
 <h4 class="doc-section doc-section-example anchored" data-anchor-id="example">Example</h4>
 <p>The following is an example usage of this method:</p>
-<pre><code>::: {#9456f9f7 .cell execution_count=3}
+<pre><code>::: {#3ccb8b88 .cell execution_count=3}
 ``` {.python .cell-code}
 import numpy as np
 import pandas as pd
@@ -1328,13 +1296,12 @@ vcov_detail = "iid"
 fit_ols = feols("y ~ 1 + d + c1 + c2", data=data, vcov=vcov_detail)
 
 # Fit IV model
-fit_iv = feols("y ~ 1 + c1 + c2 | d ~ z", data=data,
+fit_iv = feols("y ~ 1 + c1 + c2 + [d ~ z]", data=data,
          vcov=vcov_detail,
          weights="weights")
-fit_iv.first_stage()
-F_stat_pf = fit_iv._f_stat_1st_stage
+F_stat_pf = fit_iv.first_stage.diagnostics.f_stat
 fit_iv.IV_Diag()
-F_stat_eff_pf = fit_iv._eff_F
+F_stat_eff_pf = fit_iv.first_stage.diagnostics.eff_f
 
 print("(Unadjusted) F stat :", F_stat_pf)
 print("Effective F stat :", F_stat_eff_pf)
@@ -1342,8 +1309,8 @@ print("Effective F stat :", F_stat_eff_pf)
 
 ::: {.cell-output .cell-output-stdout}
 ```
-(Unadjusted) F stat : 52.81535560457512
-Effective F stat : 48.61288119858717
+(Unadjusted) F stat : 52.81535560457478
+Effective F stat : 48.612881198586784
 ```
 :::
 :::</code></pre>
@@ -1353,14 +1320,14 @@ Effective F stat : 48.61288119858717
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.IV_weakness_test">Feiv.IV_weakness_test</h3>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>IV_weakness_test(iv_diag_statistics<span class="op">=</span><span class="va">None</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Implement IV weakness test (F-test).</p>
-<p>This method covers hetero-robust and clustered-robust F statistics. It produces two statistics:</p>
+<p>This method covers hetero-robust and clustered-robust F statistics. It republishes <code>first_stage</code> with two updated statistics:</p>
 <ul>
-<li>self._f_stat_1st_stage: F statistics of first stage regression</li>
-<li>self._eff_F: Effective F statistics (Olea and Pflueger 2013) of first stage regression</li>
+<li><code>first_stage.diagnostics.f_stat</code>: F statistic of the first stage</li>
+<li><code>first_stage.diagnostics.eff_f</code>: effective F statistic (Olea and Pflueger 2013) of the first stage</li>
 </ul>
 <section id="notes-1" class="level4 doc-section doc-section-notes">
 <h4 class="doc-section doc-section-notes anchored" data-anchor-id="notes-1">Notes</h4>
-<p>“self._f_stat_1st_stage” is adjusted to the specification of vcov. If vcov_detail = “iid”, F statistics is not adjusted, otherwise it is always adjusted.</p>
+<p><code>f_stat</code> is adjusted to the specification of vcov.</p>
 </section>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
@@ -1390,40 +1357,15 @@ Effective F stat : 48.61288119858717
 </table>
 </section>
 </section>
-<section id="pyfixest.estimation.models.feiv_.Feiv.demean" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.demean">Feiv.demean</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>demean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Demean instruments and endogeneous variable.</p>
-</section>
-<section id="pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.drop_multicol_vars">Feiv.drop_multicol_vars</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>drop_multicol_vars()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Drop multicollinear variables in matrix of instruments Z.</p>
-</section>
 <section id="pyfixest.estimation.models.feiv_.Feiv.eff_F" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.eff_F">Feiv.eff_F</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>eff_F()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>eff_F()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Compute Effective F stat (Olea and Pflueger 2013).</p>
-</section>
-<section id="pyfixest.estimation.models.feiv_.Feiv.first_stage" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.first_stage">Feiv.first_stage</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>first_stage()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Implement First stage regression.</p>
 </section>
 <section id="pyfixest.estimation.models.feiv_.Feiv.get_fit" class="level3">
 <h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.get_fit">Feiv.get_fit</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>get_fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Fit a IV model using a 2SLS estimator.</p>
-</section>
-<section id="pyfixest.estimation.models.feiv_.Feiv.to_array" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.to_array">Feiv.to_array</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>to_array()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Transform estimation DataFrames to arrays.</p>
-</section>
-<section id="pyfixest.estimation.models.feiv_.Feiv.wls_transform" class="level3">
-<h3 class="anchored" data-anchor-id="pyfixest.estimation.models.feiv_.Feiv.wls_transform">Feiv.wls_transform</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>wls_transform()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Transform variables for WLS estimation.</p>
 
 
 </section>
@@ -1830,7 +1772,48 @@ Effective F stat : 48.61288119858717
     }
   });
   </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../reference/estimation.models.fepois_.Fepois.html" class="pagination-link" aria-label="Fepois">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Fepois</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../reference/estimation.models.feglm_.Feglm.html" class="pagination-link" aria-label="Feglm">
+        <span class="nav-page-text">Feglm</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>PyFixest</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      <ul class="footer-items list-unstyled">
+    <li class="nav-item">
+    <a class="nav-link" href="../changelog.html">
+<p>Changelog</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="../contributing.html">
+<p>Contributing</p>
+</a>
+  </li>  
+    <li class="nav-item">
+    <a class="nav-link" href="https://github.com/py-econometrics/pyfixest/">
+<p>GitHub</p>
+</a>
+  </li>  
+</ul>
+    </div>
+  </div>
+</footer>
 
 
 
