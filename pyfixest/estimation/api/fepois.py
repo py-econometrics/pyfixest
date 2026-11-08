@@ -131,7 +131,7 @@ def fepois(
         maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
-        [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
+        [Demeaner Backends vignette](/how-to/demeaner-backends.qmd).
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
