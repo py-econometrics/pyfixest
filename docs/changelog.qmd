@@ -26,9 +26,6 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   data, and `predict(newdata=...)` now works with `i()`, `poly()` and
   interacted fixed effects. Along with it come new formula spellings:
   - Fixed-effect interactions are written `f1:f2`.
-  - `sw()`, `csw()`, `sw0()` and `csw0()` accept a single argument, so
-    `| sw0(f1)` fits models with and without `f1`
-    ([#1830](https://github.com/py-econometrics/pyfixest/pull/1830)).
 - **New IV syntax.** Instrumental variables are written in brackets,
   `Y ~ X1 + [X2 ~ Z1]`, which also accepts interacted endogenous terms such as
   `X2:Z2`. The old `Y ~ X1 | X2 ~ Z1` syntax still works, but it emits a
@@ -37,7 +34,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   preconditioner.
 - **Typed results.** Fitted models expose their state as documented components
   such as `fit.coeftable`, `fit.variance_covariance` and `fit.model`.
-- **Also new:** anytime-valid inference (SAVI), Word tables from `etable()`,
+- **Also new:** anytime-valid inference (SAVI), Wor‹◊ tables from `etable()`,
   weights and offsets in `feglm()`, clustering on three or more variables, and
   Python 3.15.
 - **Many correctness fixes**, several of which change results: `ritest()`
