@@ -15,6 +15,14 @@ fit2 = pf.feols("Y ~ X1 + X2", data = df)
 fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 ```
 
+## PyFixest 0.80.0 (In Development)
+
+- `ritest()` supports regression weights on `feols` with `weights_type="aweights"`:
+  every draw is estimated by weighted least squares with the fit's weights, in both
+  the fast and the slow algorithm. Previously it raised `NotImplementedError` for any
+  weighted fit. Frequency weights and weighted `fepois` or `feglm` fits still raise
+  `NotImplementedError`. See [#463](https://github.com/py-econometrics/pyfixest/issues/463).
+
 ## PyFixest 0.70.0
 
 ### TL;DR
