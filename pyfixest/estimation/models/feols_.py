@@ -2086,6 +2086,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         observations, or across clusters if `cluster` is provided, so it keeps
         the number of treated units of the actual assignment.
 
+        For a weighted `feols` with `weights_type="aweights"`, every draw is
+        estimated by weighted least squares with the fit's weights. Frequency
+        weights and weighted non-OLS estimators raise a `NotImplementedError`.
+
         Parameters
         ----------
         resampvar : str
@@ -2166,11 +2170,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if resampvar_ not in self._coefnames:
             raise ValueError(f"{resampvar_} not found in the model's coefficients.")
 
-        if self.options.has_weights:
+        # Permuting a frequency-weighted row moves all of its copies together,
+        # and weighted non-OLS estimators have no reference results yet.
+        if self.options.has_weights and (
+            self.options.weights_type == "fweights" or not self._closed_form_ols
+        ):
             raise NotImplementedError(
-                """
-                Regression Weights are not supported with Randomization Inference.
-                """
+                "Randomization inference supports regression weights only for "
+                "`feols` with `weights_type='aweights'`."
             )
 
         require_retained(self, "ritest", "_data")

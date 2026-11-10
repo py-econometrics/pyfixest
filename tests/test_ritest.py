@@ -136,6 +136,48 @@ def test_algos_internally(data, fml, resampvar, reps, cluster):
     assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
 
 
+@pytest.mark.parametrize(
+    "fml", ["Y~X1+D_cluster", "Y~X1+D_cluster|f1", "Y~X1+D_cluster|f1+f2"]
+)
+@pytest.mark.parametrize(
+    "resampvar, cluster", [("X1", None), ("D_cluster", "group_id")]
+)
+def test_wls_algos_internally(data, fml, resampvar, cluster):
+    # The slow algorithm refits a weighted feols for every draw, so the fast
+    # algorithm must return the same WLS coefficients.
+    fit = pf.feols(fml, data=data, weights="weights")
+
+    results = {}
+    for algorithm in ["slow", "fast"]:
+        res = fit.ritest(
+            resampvar=resampvar,
+            cluster=cluster,
+            reps=50,
+            type="randomization-c",
+            rng=np.random.default_rng(1234),
+            choose_algorithm=algorithm,
+            store_ritest_statistics=True,
+        )
+        results[algorithm] = (res, fit.ritest_statistics.statistics.copy())
+
+    (res1, ritest_stats1), (res2, ritest_stats2) = results["slow"], results["fast"]
+    assert np.allclose(res1["Pr(>|t|)"], res2["Pr(>|t|)"], atol=1e-8, rtol=1e-8)
+    assert np.allclose(ritest_stats1, ritest_stats2, atol=1e-8, rtol=1e-8)
+
+
+def test_ritest_rejects_unsupported_weights():
+    data = pf.get_data(model="Fepois")
+    data["fweights"] = np.arange(len(data)) % 3 + 1
+
+    fits = [
+        pf.feols("Y ~ X1", data=data, weights="fweights", weights_type="fweights"),
+        pf.fepois("Y ~ X1", data=data, weights="weights"),
+    ]
+    for fit in fits:
+        with pytest.raises(NotImplementedError, match="aweights"):
+            fit.ritest(resampvar="X1", reps=10)
+
+
 @pytest.mark.extended
 @pytest.mark.parametrize("fml", ["Y~X1+f3", "Y~X1+f3|f1"])
 @pytest.mark.parametrize("resampvar", ["X1"])
