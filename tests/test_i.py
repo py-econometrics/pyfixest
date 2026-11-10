@@ -303,6 +303,14 @@ def test_binning_with_continuous(df_test):
             "Y ~ i(f_str, i.g, ref='apple', ref2='X')",
             "Y ~ i(f_str, g, ref='apple', ref2='X')",
         ),
+        # C() marks a numeric second variable as a factor (#1770)
+        ("Y ~ i(f_str, i.f_int)", "Y ~ i(f_str, C(f_int))"),
+        ("Y ~ i(f_str, i.f_int, ref2=10)", "Y ~ i(f_str, C(f_int), ref2=10)"),
+        ("Y ~ i(f_str, i.f_float)", "Y ~ i(f_str, C(f_float))"),
+        (
+            "Y ~ i(f_str, i.f_int, bin2=list(low=c(1, 2)), ref2='low')",
+            "Y ~ i(f_str, C(f_int), bin2={'low': [1, 2]}, ref2='low')",
+        ),
     ],
 )
 def test_factor_x_factor(df_test, r_fml, py_fml):
@@ -316,6 +324,7 @@ def test_factor_x_factor(df_test, r_fml, py_fml):
     "r_fml,py_fml",
     [
         ("Y ~ i(f_str, i.g) | fe1", "Y ~ i(f_str, g) | fe1"),
+        ("Y ~ i(f_str, i.f_int) | fe1", "Y ~ i(f_str, C(f_int)) | fe1"),
         (
             "Y ~ i(f_str, i.g, ref='apple', ref2='X') | fe1",
             "Y ~ i(f_str, g, ref='apple', ref2='X') | fe1",
@@ -326,6 +335,23 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
     """Test i(factor1, factor2) with fixed effects."""
     py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
     assert_models_match(py_names, py_values, r_names, r_values)
+
+
+@pytest.mark.against_r_core
+def test_numeric_second_variable_ref2_differs_from_fixest(df_test):
+    """`ref2` on a numeric second variable raises; fixest ignores it."""
+    with pytest.raises(ValueError, match=r"`f_int` is numeric.*C\(f_int\)"):
+        feols("Y ~ i(f_str, f_int, ref2=10)", df_test)
+
+    fit_r = fixest.feols(ro.Formula("Y ~ i(f_str, f_int, ref2 = 10)"), df_test)
+    fit_r_slopes = fixest.feols(ro.Formula("Y ~ i(f_str, f_int)"), df_test)
+    np.testing.assert_allclose(
+        get_r_coef_values(fit_r),
+        get_r_coef_values(fit_r_slopes),
+        rtol=0,
+        atol=1e-10,
+        err_msg="fixest no longer ignores ref2 on a numeric second variable",
+    )
 
 
 # =============================================================================

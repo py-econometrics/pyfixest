@@ -320,10 +320,39 @@ def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
         feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
-@pytest.mark.parametrize("term", ["X1", "center(X1)", "I(X1**2)", "X1:Z1"])
-def test_iv_allows_identical_instrument_covariate_terms(term):
-    fit = feols(fml=f"Y ~ {term} + [X2 ~ {term} + Z2]", data=get_data().dropna())
-    assert "X2" in fit.coef().index
+@pytest.mark.parametrize(
+    "rhs",
+    [
+        "X1 * [X2 ~ Z1]",
+        "[X2 ~ Z1] * X1",
+        "X1 * (X3 + [X2 ~ Z1])",
+        "X1 : [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1]) : X3 + X2",
+        "[X2 ~ Z1] / X1",
+        "X1 %in% [X2 ~ Z1]",
+        "(X1 + [X2 ~ Z1])^2",
+        "(X1 + [X2 ~ Z1])**2",
+    ],
+)
+def test_iv_rejects_implicit_endogenous_interactions(rhs):
+    """IV-block algebra must not silently make an endogenous interaction exogenous."""
+    with pytest.raises(
+        FormulaSyntaxError, match="Interactions around an instrumental-variable block"
+    ):
+        feols(fml=f"Y ~ {rhs}", data=pd.DataFrame({"unused": [1.0, 2.0]}))
+
+
+@pytest.mark.parametrize("block", ["0", "1", "-1", "0 + 1", "1 - 1"])
+@pytest.mark.parametrize("main", ["X2", "0 + X2", "X2 - 1"])
+def test_iv_block_of_intercepts_has_no_instrument(main, block):
+    with pytest.raises(UnderDeterminedIVError):
+        feols(f"Y ~ {main} + [X1 ~ {block}]", data=get_data())
+
+
+@pytest.mark.parametrize("endogenous", ["1 + X1", "X1 + 1"])
+def test_iv_endogenous_side_rejects_intercept(endogenous):
+    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous variables"):
+        feols(f"Y ~ X2 + [{endogenous} ~ Z1]", data=get_data())
 
 
 def test_iv_errors():
@@ -707,7 +736,8 @@ def test_errors_etable():
     with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
-    with pytest.raises(AssertionError):
+    # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -719,7 +749,7 @@ def test_errors_etable():
             coef_fmt="b se\n[conf_int_lb, conf_int_ub]",
         )
 
-    with pytest.raises(AssertionError):
+    with pytest.raises((AssertionError, ValueError)):
         etable(
             models=[fit1, fit2],
             custom_stats={
@@ -989,10 +1019,13 @@ def test_i_error():
             "Y ~ i(f1, f_str, bin2={'ax': 'a12'})",
             r"do not occur in the variable `f_str`. No match was found for \['a12'\]",
         ),
+        # A numeric second variable gives slopes; factor options need C().
+        ("Y ~ i(f_str, f1, ref2=1)", r"`f1` is numeric.*`i\(f_str, C\(f1\), ref2"),
+        ("Y ~ i(f_str, X1, bin2={'lo': [1]})", r"`X1` is numeric.*C\(X1\)"),
     ],
 )
 def test_i_bin_invalid_values(fml, match):
-    """Invalid i() bin values raise instead of fitting the un-binned model."""
+    """Invalid i() bins and references raise instead of fitting another model."""
     data = get_data()
     data["f_str"] = np.random.default_rng(1).choice(["a1", "a2", "a3"], len(data))
     with pytest.raises(ValueError, match=match):

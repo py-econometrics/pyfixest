@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Final
 import numpy as np
 import pandas as pd
 from formulaic import FactorValues
+from formulaic.parser.types import Factor
 from formulaic.transforms import encode_contrasts
 from formulaic.transforms.contrasts import TreatmentContrasts
 from formulaic.utils.sentinels import UNSET
@@ -31,15 +32,19 @@ def factor_interaction(
     data : array-like
         The categorical variable to encode.
     var2 : array-like, optional
-        Optional second variable to interact with (continuous or categorical).
+        Optional second variable to interact with. A numeric `var2` gives
+        continuous slopes; a non-numeric `var2` is a factor. Wrap a numeric
+        `var2` in `C()`, as in `i(f, C(k))`, to treat it as a factor.
     ref : Hashable, optional
         Reference level to drop from `data`.
     ref2 : Hashable, optional
-        Reference level to drop from `var2` (only if `var2` is categorical).
+        Reference level to drop from a factor `var2`. Raises `ValueError` for a
+        continuous `var2`.
     bin : dict, optional
         Mapping of `new_level -> [old_levels]` for binning `data`.
     bin2 : dict, optional
-        Mapping of `new_level -> [old_levels]` for binning `var2`.
+        Mapping of `new_level -> [old_levels]` for binning a factor `var2`.
+        Raises `ValueError` for a continuous `var2`.
 
     Returns
     -------
@@ -77,6 +82,7 @@ def factor_interaction(
         i(cyl, ref=4)     -> cyl::6, cyl::8
         i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
+        i(cyl, C(gear))   -> cyl::4:gear::3, ..., cyl::8:gear::5
     """
     # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
@@ -108,10 +114,15 @@ def factor_interaction(
     # will check both for null values. This ensures drop_rows is correctly populated.
     wrapped_data = {"__data__": data, "__var2__": var2} if var2 is not None else data
 
+    var2_is_factor = var2 is not None and _is_factor_interaction(var2=var2)
+    # Only a complete set of factor levels or interaction cells spans the
+    # intercept. Explicit references remove groups, and slopes on a numeric
+    # second variable never span it, so later terms keep their full rank.
+    spans_intercept = ref is None and ref2 is None and (var2 is None or var2_is_factor)
     return FactorValues(
         wrapped_data,
         kind="categorical",
-        spans_intercept=var2 is None,
+        spans_intercept=spans_intercept,
         encoder=encoder,
     )
 
@@ -156,9 +167,16 @@ def _encode_i(
     data.drop(index=data.index[drop_rows], inplace=True)
     var2_is_numeric = False
     if var2 is not None:
-        var2 = pd.Series(var2)
+        var2_is_numeric = not _is_factor_interaction(var2=var2)
+        if var2_is_numeric and (ref2 is not None or bin2 is not None):
+            raise ValueError(
+                f"`ref2` and `bin2` apply only to a categorical second variable "
+                f"of i(), but `{var2_name}` is numeric and gives continuous "
+                f"slopes. To interact two factors, wrap it in `C()`, as in "
+                f"`i({factor_name}, C({var2_name}), ref2=...)`."
+            )
+        var2 = pd.Series(unwrap_factor_values(var2))
         var2.name = var2_name
-        var2_is_numeric = ref2 is None and bin2 is None and _is_numeric(var2)
         if not var2_is_numeric:
             var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
         var2.drop(index=var2.index[drop_rows], inplace=True)
@@ -224,21 +242,23 @@ def _encode_i(
             ],
             index=dummies.index,
         )
-        # Drop reference level
-        if ref is None:
-            ref = get_contrast_levels(encoder_state, factor_name)[0]
-        if ref2 is None:
-            ref2 = get_contrast_levels(encoder_state, var2_name)[0]
-        interacted.drop(
-            f"{factor_name}::{ref}:{var2_name}::{ref2}",
-            axis=1,
-            inplace=True,
-            errors="ignore",
-        )
+        # Without ref/ref2 the cells span the intercept. Drop the first cell
+        # only when the model already spans it (intercept or an earlier
+        # full-rank term); otherwise keep every cell.
+        spans_intercept = ref is None and ref2 is None
+        if spans_intercept and reduced_rank:
+            first = get_contrast_levels(encoder_state, factor_name)[0]
+            first2 = get_contrast_levels(encoder_state, var2_name)[0]
+            interacted.drop(
+                f"{factor_name}::{first}:{var2_name}::{first2}",
+                axis=1,
+                inplace=True,
+                errors="ignore",
+            )
         return FactorValues(
             interacted,
             kind="categorical",
-            spans_intercept=True,
+            spans_intercept=spans_intercept and not reduced_rank,
             column_names=tuple(interacted.columns),
             format="{field}",  # Use column names directly
         )
@@ -296,6 +316,18 @@ def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
         left[:, :, None] * right[:, None, :],
         (len(left), -1),
     )
+
+
+def _is_factor_interaction(var2: Any) -> bool:
+    """Return whether `i(f, var2)` interacts two factors rather than a slope.
+
+    `C(var2)` marks a numeric second variable as a factor.
+    """
+    marked_factor = (
+        isinstance(var2, FactorValues)
+        and var2.__formulaic_metadata__.kind is Factor.Kind.CATEGORICAL
+    )
+    return marked_factor or not _is_numeric(pd.Series(unwrap_factor_values(var2)))
 
 
 def _is_numeric(series: pd.Series) -> bool:
