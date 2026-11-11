@@ -666,10 +666,21 @@ class Formula:
         returns a list of multiple regression formulas.
         """
         formula = _preprocess(formula)
-        return [
+        formulas = [
             Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
             for formulaic_compliant in _expand_all_multiple_estimation(formula)
         ]
+        is_iv = {f.is_instrumental_variable for f in formulas}
+        if len(is_iv) > 1:
+            # All models of one call are fitted with the same estimator class.
+            iv = [f.render() for f in formulas if f.is_instrumental_variable]
+            non_iv = [f.render() for f in formulas if not f.is_instrumental_variable]
+            raise FormulaSyntaxError(
+                "A multiple estimation call cannot mix IV and non-IV "
+                f"specifications. IV: {iv}; non-IV: {non_iv}. Fit the IV and "
+                "non-IV models in separate calls."
+            )
+        return formulas
 
 
 def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
