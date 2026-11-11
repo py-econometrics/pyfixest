@@ -858,6 +858,18 @@ class TestValidation:
         with pytest.raises(formulaic.errors.FormulaSyntaxError):
             Formula.parse("Y ~ X1 ~ X2 ~ X3")
 
+    @pytest.mark.parametrize(
+        "fml",
+        [
+            "Y ~ X1 + sw([X2 ~ Z1], Z2)",
+            "Y ~ X1 + sw0([X2 ~ Z1], [X2 ~ Z2]) | f1",
+        ],
+    )
+    def test_multiple_estimation_mixing_iv_and_non_iv(self, fml):
+        """One multiple estimation call cannot mix IV and non-IV models."""
+        with pytest.raises(FormulaSyntaxError, match="cannot mix IV and non-IV"):
+            Formula.parse(fml)
+
     def test_three_parts_without_iv(self):
         """Y ~ X | f1 | f2 should error (should be Y ~ X | f1 + f2)."""
         with pytest.raises(FormulaSyntaxError):
