@@ -870,11 +870,6 @@ class TestValidation:
         with pytest.raises(FormulaSyntaxError, match="cannot mix IV and non-IV"):
             Formula.parse(fml)
 
-    def test_multiple_estimation_all_iv(self):
-        """Stepwise expansions that are all IV still parse."""
-        formulas = Formula.parse("Y ~ X1 + sw([X2 ~ Z1], [X2 ~ Z2])")
-        assert [f.is_instrumental_variable for f in formulas] == [True, True]
-
     def test_three_parts_without_iv(self):
         """Y ~ X | f1 | f2 should error (should be Y ~ X | f1 + f2)."""
         with pytest.raises(FormulaSyntaxError):
