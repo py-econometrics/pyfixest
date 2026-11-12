@@ -714,18 +714,46 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
     elif kind is _MultipleEstimationType.csw or kind is _MultipleEstimationType.csw0:
         # Cumulative stepwise
         arguments = [" + ".join(arguments[: i + 1]) for i, _ in enumerate(arguments)]
+    multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
+    expansions = [
+        formula.replace(multiple_estimation_call, f"({argument})")
+        for argument in arguments
+    ]
     if (
         kind is _MultipleEstimationType.sw0
         or kind is _MultipleEstimationType.csw0
         or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
     ):
-        # Add zero step
-        arguments = ["1", *arguments]
-    multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
-    return [
-        formula.replace(multiple_estimation_call, f"({argument})")
-        for argument in arguments
-    ]
+        expansions.insert(0, _expand_zero_step(formula, multiple_estimation_call))
+    return expansions
+
+
+def _expand_zero_step(formula: str, call: str) -> str:
+    """Replace each occurrence of `call` with the zero step, which adds no terms.
+
+    A summand is removed together with its `+` or `-`, so the zero step keeps
+    the formula's intercept choice: `Y ~ 0 + sw0(X1) + X2` becomes `Y ~ 0 + X2`,
+    whereas `(1)` would add the intercept back after `0`. Elsewhere the call
+    becomes `(1)`, the identity of products such as `Z1:sw0(X1)` and an empty
+    formula part such as `| sw0(f1)`.
+    """
+    while (start := formula.find(call)) != -1:
+        before = formula[:start].rstrip()
+        after = formula[start + len(call) :]
+        next_symbol = after.lstrip()[:1]
+        if (
+            before[-1:] in ("+", "-")
+            and before[:-1].rstrip()[-1:] not in ("", "~", "(", "[", "|")
+            and next_symbol in ("", "+", "-", ")", "]", "|")
+        ):
+            # `A + sw0(X1)` -> `A`
+            formula = before[:-1].rstrip() + after
+        elif before[-1:] in ("", "~", "(", "[", "|") and next_symbol == "+":
+            # `~ sw0(X1) + A` -> `~ A`
+            formula = formula[:start] + after.lstrip()[1:].lstrip()
+        else:
+            formula = formula[:start] + "(1)" + after
+    return formula
 
 
 def _expand_all_multiple_estimation(formula: str) -> Iterator[str]:
