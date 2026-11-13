@@ -288,6 +288,29 @@ def test_binning_with_continuous(df_test):
     assert_models_match(py_names, py_values, r_names, r_values)
 
 
+@pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        (
+            "Y ~ i(f_cat, bin=list(fruit=c('apple','banana')))",
+            "Y ~ i(f_cat, bin={'fruit': ['apple','banana']})",
+        ),
+        (
+            "Y ~ i(f_cat, X1, bin=list(fruit=c('apple','cherry')))",
+            "Y ~ i(f_cat, X1, bin={'fruit': ['apple','cherry']})",
+        ),
+    ],
+)
+def test_binning_categorical(df_test, r_fml, py_fml):
+    """Test i() with bin on a pandas Categorical (an R factor)."""
+    df = df_test.copy()
+    # Non-alphabetical categories, so the bin's position among the levels matters.
+    df["f_cat"] = pd.Categorical(df["f_str"], categories=["cherry", "banana", "apple"])
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+
+
 # =============================================================================
 # Factor x Factor Tests
 # =============================================================================

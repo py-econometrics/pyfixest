@@ -343,6 +343,24 @@ def test_i_bin_bin2_separate_state():
     assert f2_binned, f"f2 should be binned to 'hi', got: {coefnames}"
 
 
+@pytest.mark.parametrize("ordered", [False, True])
+def test_i_bin_categorical(ordered):
+    """i(x, bin=...) bins a pandas Categorical in place of its first binned level."""
+    data = get_data(N=500, seed=42).dropna()
+    data["f_cat"] = pd.Categorical(
+        np.array(["a", "b", "c", "d"])[data["f1"].astype(int) % 4],
+        categories=["d", "c", "b", "a"],
+        ordered=ordered,
+    )
+    fit = feols("Y ~ i(f_cat, bin={'ab': ['a', 'b']})", data=data)
+    assert [str(c) for c in fit._coefnames] == ["Intercept", "f_cat::c", "f_cat::ab"]
+
+    data["f_str"] = data["f_cat"].astype(str).replace({"a": "ab", "b": "ab"})
+    data["f_str"] = pd.Categorical(data["f_str"], categories=["d", "c", "ab"])
+    expected = feols("Y ~ i(f_str)", data=data)
+    np.testing.assert_allclose(fit.coef().values, expected.coef().values)
+
+
 def test_predict_decoy_column_not_flagged_unseen():
     """A data column named like a contrast keyword arg must not cause NaN.
 

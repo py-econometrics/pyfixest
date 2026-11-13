@@ -387,7 +387,23 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
                 f"variable `{series.name}`. No match was found for {unmatched!r}."
             )
         state[bin_key] = mapping
-    return series.replace(state[bin_key])
+    mapping = state[bin_key]
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        # A Categorical cannot take values outside its categories, so rename
+        # the categories instead; a bin takes the place of its first level.
+        categories = list(
+            dict.fromkeys(mapping.get(level, level) for level in series.cat.categories)
+        )
+        return pd.Series(
+            pd.Categorical(
+                series.astype(object).map(lambda value: mapping.get(value, value)),
+                categories=categories,
+                ordered=series.cat.ordered,
+            ),
+            index=series.index,
+            name=series.name,
+        )
+    return series.replace(mapping)
 
 
 def get_or_create_contrast_state(
