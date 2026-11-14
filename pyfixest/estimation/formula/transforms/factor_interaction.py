@@ -390,10 +390,16 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
     mapping = state[bin_key]
     if isinstance(series.dtype, pd.CategoricalDtype):
         # A Categorical cannot take values outside its categories, so rename
-        # the categories instead; a bin takes the place of its first level.
-        categories = list(
-            dict.fromkeys(mapping.get(level, level) for level in series.cat.categories)
-        )
+        # the categories instead. As in fixest, a bin takes the place of the
+        # first value listed for it.
+        anchors = {}
+        for old, new_level in mapping.items():
+            anchors.setdefault(new_level, old)
+        categories = [
+            mapping.get(level, level)
+            for level in series.cat.categories
+            if level not in mapping or anchors[mapping[level]] == level
+        ]
         return pd.Series(
             pd.Categorical(
                 series.astype(object).map(lambda value: mapping.get(value, value)),
