@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+from dataclasses import replace
+
 import pandas as pd
 
-from pyfixest.did.did2s import DID2S, _did2s_estimate, _did2s_vcov
+from pyfixest.did.did2s import DID2S, _did2s_estimate
 from pyfixest.did.lpdid import LPDID
 from pyfixest.did.saturated_twfe import SaturatedEventStudy
 from pyfixest.did.twfe import TWFE
 from pyfixest.estimation.internals.literals import VcovTypeOptions
+from pyfixest.estimation.models.feols_ import Feols
 
 
 def event_study(
@@ -40,6 +45,8 @@ def event_study(
         Unit-specific time of initial treatment.
     cluster: Optional[str]
         The name of the cluster variable. If None, defaults to idname.
+        With ``estimator="did2s"``, inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
     xfml : str
         The formula for the covariates.
     estimator : str
@@ -53,6 +60,10 @@ def event_study(
     -------
     object
         A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        With `estimator = "saturated"`, the fit additionally carries its
+        [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
+        `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`,
+        `iplot()`, and `test_treatment_heterogeneity()` methods.
 
     Examples
     --------
@@ -89,15 +100,26 @@ def event_study(
     fit_twfe_saturated.iplot_aggregate()
     ```
     """
-    assert isinstance(data, pd.DataFrame), "data must be a pandas DataFrame"
-    assert isinstance(yname, str), "yname must be a string"
-    assert isinstance(idname, str), "idname must be a string"
-    assert isinstance(tname, str), "tname must be a string"
-    assert isinstance(gname, str), "gname must be a string"
-    assert isinstance(xfml, str) or xfml is None, "xfml must be a string or None"
-    assert isinstance(estimator, str), "estimator must be a string"
-    assert isinstance(att, bool), "att must be a boolean"
-    assert isinstance(cluster, str) or cluster is None, "cluster must be a string"
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be a pandas DataFrame.")
+    for name, value in (
+        ("yname", yname),
+        ("idname", idname),
+        ("tname", tname),
+        ("gname", gname),
+    ):
+        if not isinstance(value, str):
+            raise TypeError(f"{name} must be a string.")
+    if not (isinstance(xfml, str) or xfml is None):
+        raise TypeError("xfml must be a string or None.")
+    if not isinstance(estimator, str):
+        raise TypeError(
+            "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
+        )
+    if not isinstance(att, bool):
+        raise TypeError("att must be a boolean.")
+    if not (isinstance(cluster, str) or cluster is None):
+        raise TypeError("cluster must be a string or None.")
 
     cluster = idname if cluster is None else cluster
 
@@ -113,13 +135,8 @@ def event_study(
             cluster=cluster,
         )
 
-        fit, did2s._first_u, did2s._second_u = did2s.estimate()
-        vcov, _G = did2s.vcov()
-        fit._vcov = vcov
-        fit._G = _G
-        fit._vcov_type = "CRV1"
-        fit._vcov_type_detail = "CRV1 (GMM)"
-        fit._method = "did2s"
+        fit = did2s.estimate()
+        _mark_as_did2s(fit)
 
     elif estimator == "twfe":
         twfe = TWFE(
@@ -133,14 +150,16 @@ def event_study(
             cluster=cluster,
         )
         fit = twfe.estimate()
-        fit._yname = twfe._yname
-        fit._gname = twfe._gname
-        fit._tname = twfe._tname
-        fit._idname = twfe._idname
-        fit._att = twfe._att
 
-        vcov = fit.vcov(vcov={"CRV1": cluster})
-        fit._method = "twfe"
+        fit.vcov(vcov={"CRV1": cluster})
+        fit.model = replace(fit.model, method="twfe")
+        # ritest(), update(), and SAVI have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+            anytime_valid_inference=False,
+        )
 
     elif estimator == "saturated":
         saturated = SaturatedEventStudy(
@@ -154,22 +173,23 @@ def event_study(
             cluster=cluster,
         )
         fit = saturated.estimate()
-        vcov = fit.vcov(vcov={"CRV1": cluster})
+        fit.vcov(vcov={"CRV1": cluster})
 
-        fit._res_cohort_eventtime_dict = saturated._res_cohort_eventtime_dict
-        fit._yname = saturated._yname
-        fit._gname = saturated._gname
-        fit._tname = saturated._tname
-        fit._idname = saturated._idname
-        fit._att = saturated._att
-
-        fit._method = "saturated"
-        fit.iplot = saturated.iplot.__get__(fit, type(fit))
-        fit.test_treatment_heterogeneity = (
-            saturated.test_treatment_heterogeneity.__get__(fit, type(fit))
+        fit.model = replace(fit.model, method="saturated")
+        # ritest(), update(), and SAVI have not supported event-study fits.
+        fit.capabilities = replace(
+            fit.capabilities,
+            randomization_inference=False,
+            sherman_morrison_update=False,
+            anytime_valid_inference=False,
         )
-        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))
-        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))
+        fit.iplot = saturated.iplot.__get__(fit, type(fit))  # type: ignore
+        test_treatment_heterogeneity = saturated.test_treatment_heterogeneity.__get__(
+            fit, type(fit)
+        )
+        fit.test_treatment_heterogeneity = test_treatment_heterogeneity  # type: ignore
+        fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
+        fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
 
     else:
         raise NotImplementedError("Estimator not supported")
@@ -199,13 +219,16 @@ def did2s(
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with '~'. It must not contain
+        varying slopes such as `unit[year]`.
     second_stage : str
         The formula for the second stage, starting with '~'.
     treatment : str
         The name of the treatment variable.
     cluster : str
         The name of the cluster variable.
+        Inference is fixed at estimation time, and
+        post-estimation ``vcov()`` updates are rejected.
 
     Returns
     -------
@@ -260,54 +283,40 @@ def did2s(
     fit.tidy().head()
     ```
     """
-    first_stage = first_stage.replace(" ", "")
-    second_stage = second_stage.replace(" ", "")
-    assert first_stage[0] == "~", "First stage must start with ~"
-    assert second_stage[0] == "~", "Second stage must start with ~"
-
-    # assert that there is no 0, -1 or - 1 in the second stage formula
-    if "0" in second_stage.split("+") or "-1" in second_stage.split("+"):
-        raise ValueError(
-            """
-            The second stage formula should not contain '+0' or '-1'. Note that
-            the intercept is dropped automatically due to the presence of fixed
-            effects in the first stage.
-            """
-        )
-
-    data = data.copy()
-
-    fit, first_u, second_u = _did2s_estimate(
-        data=data,
+    fit = _did2s_estimate(
+        data=data.copy(),
         yname=yname,
         _first_stage=first_stage,
         _second_stage=second_stage,
         treatment=treatment,
-        weights=weights,
-    )
-
-    vcov, _G = _did2s_vcov(
-        data=data,
-        yname=yname,
-        first_stage=first_stage,
-        second_stage=second_stage,
-        treatment=treatment,
-        first_u=first_u,
-        second_u=second_u,
         cluster=cluster,
         weights=weights,
     )
-
-    fit._vcov = vcov
-    fit._G = _G
     fit.get_inference()  # update inference with correct vcov matrix
-
-    fit._vcov_type = "CRV1"
-    fit._vcov_type_detail = "CRV1 (GMM)"
-    # fit._G = did2s._G
-    fit._method = "did2s"
+    _mark_as_did2s(fit)
 
     return fit
+
+
+def _mark_as_did2s(fit: Feols) -> None:
+    """Record that a fit came from the DID2S estimator."""
+    fit.model = replace(fit.model, method="did2s")
+    fit.capabilities = replace(
+        fit.capabilities,
+        covariance_update=False,
+        hac_inference=False,
+        multiway_clustering=False,
+        wildboottest=False,
+        cluster_causal_variance=False,
+        decomposition=False,
+        prediction=False,
+        prediction_inference=False,
+        fixed_effect_recovery=False,
+        randomization_inference=False,
+        sherman_morrison_update=False,
+        crv3_inference=False,
+        anytime_valid_inference=False,
+    )
 
 
 def lpdid(

@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
+from scipy.stats import chi2, f
+
+from pyfixest.estimation.internals.literals import WaldDistributionOptions
+from pyfixest.estimation.internals.model_state import WaldTest
 
 
 def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarray:
@@ -55,3 +59,62 @@ def _wald_statistic(
     meat = np.linalg.pinv(R @ vcov @ R.T)
     wald_statistic = float(bread.T @ meat @ bread)
     return wald_statistic, R.shape[0]
+
+
+def wald_test(
+    *,
+    beta_hat: np.ndarray,
+    vcov: np.ndarray,
+    R: np.ndarray,
+    q: float | np.ndarray | None,
+    df2: int | float,
+    distribution: WaldDistributionOptions,
+    vcov_type: str,
+) -> WaldTest:
+    """Test the linear hypothesis R @ beta = q.
+
+    Parameters
+    ----------
+    beta_hat : np.ndarray
+        Estimated coefficients, shape (n_coefficients,).
+    vcov : np.ndarray
+        Covariance estimate of `beta_hat`, shape (n_coefficients,
+        n_coefficients).
+    R : np.ndarray
+        Restriction matrix of full row rank, shape (n_restrictions,
+        n_coefficients).
+    q : float or np.ndarray or None
+        Right-hand side of the restriction. `None` is a vector of zeros.
+    df2 : int or float
+        Denominator degrees of freedom of the F distribution.
+    distribution : {"F", "chi2"}
+        Reference distribution used for the p-value.
+    vcov_type : str
+        Name of the covariance estimator, recorded on the result.
+
+    Returns
+    -------
+    WaldTest
+        The statistic of `distribution`, its p-value, both scalings of the
+        quadratic form, and the degrees of freedom.
+    """
+    W, df1 = _wald_statistic(beta_hat=beta_hat, vcov=vcov, R=R, q=q)
+    f_statistic = W / df1
+
+    if distribution == "F":
+        stat = f_statistic
+        pvalue = 1 - f.cdf(f_statistic, dfn=df1, dfd=df2)
+    else:
+        stat = W
+        pvalue = chi2.sf(W, df1)
+
+    return WaldTest(
+        stat=float(stat),
+        pvalue=float(pvalue),
+        df1=df1,
+        df2=df2,
+        distribution=distribution,
+        vcov_type=vcov_type,
+        wald_statistic=W,
+        f_statistic=f_statistic,
+    )

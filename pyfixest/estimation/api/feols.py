@@ -4,12 +4,16 @@ from collections.abc import Mapping
 from typing import Any
 
 from pyfixest.demeaners import AnyDemeaner
-from pyfixest.estimation.api.utils import _estimation_input_checks
+from pyfixest.estimation.api.utils import (
+    _estimation_input_checks,
+    _resolve_ssc,
+    _resolve_vcov,
+)
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
+from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demeaner_options import (
     _resolve_demeaner,
-    _warn_if_deprecated_demeaner_backend,
     _warn_if_experimental_torch_demeaner,
 )
 from pyfixest.estimation.internals.literals import (
@@ -18,21 +22,21 @@ from pyfixest.estimation.internals.literals import (
     VcovTypeOptions,
     WeightsTypeOptions,
 )
+from pyfixest.estimation.internals.model_state import EstimationOptions
 from pyfixest.estimation.models.feols_ import Feols
-from pyfixest.estimation.plan_ import parse_formula
+from pyfixest.estimation.plan_ import plan_formulas
 from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType
-from pyfixest.utils.utils import capture_context
-from pyfixest.utils.utils import ssc as ssc_func
+from pyfixest.utils.utils import Ssc, capture_context
 
 
 def feols(
     fml: str,
-    data: DataFrameType,  # type: ignore
+    data: DataFrameType,
     vcov: VcovTypeOptions | dict[str, str] | None = None,
     vcov_kwargs: dict[str, str | int] | None = None,
     weights: str | None = None,
-    ssc: dict[str, str | bool] | None = None,
+    ssc: Ssc | Mapping[str, Any] | None = None,
     fixef_rm: FixedRmOptions = "singleton",
     collin_tol: float = 1e-09,
     drop_intercept: bool = False,
@@ -58,11 +62,14 @@ def feols(
     Parameters
     ----------
     fml : str
-        A three-sided formula string using fixest formula syntax.
-        Syntax: "Y ~ X1 + X2 | FE1 + FE2 | X1 ~ Z1". "|" separates dependent variable,
-        fixed effects, and instruments. Special syntax includes stepwise regressions,
-        cumulative stepwise regression, multiple dependent variables,
-        interaction of variables (i(X1,X2)), and interacted fixed effects (fe1:fe2).
+        A formula string using fixest formula syntax.
+        Syntax: "Y ~ X1 + X2 + [X_endog ~ Z1] | FE1 + FE2". "|" separates the model
+        from the fixed effects; instruments go into a "[endogenous ~ instruments]"
+        block on the right-hand side. Special syntax includes stepwise regressions,
+        cumulative stepwise regression, multiple dependent variables via sw(),
+        interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2),
+        and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1,
+        and "FE1[[Z]]" adds only the slopes.
 
     data : DataFrameType
         A pandas or polars dataframe containing the variables in the formula.
@@ -118,12 +125,13 @@ def feols(
         improve performance and save memory. However, it will no longer be possible
         to access the data via the `data` attribute of the model object. This has
         impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`.
+        or `vcov()`. Such methods raise a `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the
         returned result: this will save memory but will block the possibility
-        to use many methods. It is recommended to use the argument vcov
+        to use many methods, which raise `MissingModelDataError` when required
+        attributes were removed. It is recommended to use the argument vcov
         to obtain the appropriate standard-errors at estimation time,
         since obtaining different SEs won't be possible afterwards.
 
@@ -141,19 +149,11 @@ def feols(
         Typed demeaner configuration. Controls the fixed-effects demeaning
         backend, tolerance, and iteration limits. Accepts a `MapDemeaner`
         or `LsmrDemeaner` instance. Defaults to
-        `MapDemeaner()` (Rust MAP algorithm, tol=1e-6, maxiter=10_000).
+        `LsmrDemeaner()` (within LSMR, auto preconditioning, tol=1e-8,
+        maxiter=1_000).
         For other options - including the optional Numba backend and the
         torch-based LSMR backends - see the
         [Demeaner Backends vignette](../../how-to/demeaner-backends.qmd).
-
-        .. deprecated::
-            The ``cupy`` / ``scipy`` LSMR backends are deprecated and will
-            be removed in a future release. Replacements:
-
-            - cupy LSMR on GPU →
-              ``LsmrDemeaner(backend="torch", device="cuda")``.
-            - Scipy / cupy LSMR on CPU → ``LsmrDemeaner()``
-              (the default within backend).
 
     use_compression: bool
         .. deprecated::
@@ -254,9 +254,10 @@ def feols(
     Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
     "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
-    `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For two-way
-    clustering, you can provide a formula string, e.g. `{"CRV1": "f1 + f2"}` for
-    CRV1 inference with clustering by `f1`.
+    `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway
+    clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}`
+    for CRV1 inference with clustering by `f1` and `f2`, or
+    `{"CRV1": "f1 + f2 + f3"}` for three-way clustering.
 
     ```{python}
     fit4 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1 + f2"})
@@ -313,14 +314,31 @@ def feols(
     with `Y2` as the dependent variable.
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | f1 + f2", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | f1 + f2", data)
     pf.etable(fit)
     ```
 
     It is possible to combine different multiple estimation operators:
 
     ```{python}
-    fit = pf.feols("Y + Y2 ~ X1 | sw(f1, f2)", data)
+    fit = pf.feols("sw(Y, Y2) ~ X1 | sw(f1, f2)", data)
+    pf.etable(fit)
+    ```
+
+    As in `fixest`, the arguments of a multiple estimation operator may span
+    several lines, for example in a triple-quoted string with one argument per
+    line, and a space may separate the operator from its parenthesis, as in
+    `csw (X1, X2)`:
+
+    ```{python}
+    fml = '''
+    Y ~ csw (
+        X1,
+        X2
+    )
+    | f1
+    '''
+    fit = pf.feols(fml, data)
     pf.etable(fit)
     ```
 
@@ -339,21 +357,22 @@ def feols(
     pf.etable(fit)
     ```
 
-    Besides OLS, `feols()` also supports IV estimation via three-part formulas.
+    Besides OLS, `feols()` also supports IV estimation via an instrument block
+    `[endogenous ~ instruments]` on the right-hand side of the formula.
     IV models return an instance of the [Feiv](/reference/estimation.models.feiv_.Feiv.qmd)
     class (which inherits from [Feols](/reference/estimation.models.feols_.Feols.qmd)).
 
     ```{python}
-    fit_iv = pf.feols("Y ~ X2 | f1 + f2 | X1 ~ Z1", data)
+    fit_iv = pf.feols("Y ~ X2 + [X1 ~ Z1] | f1 + f2", data)
     type(fit_iv)
     ```
 
     Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
     are the fixed effects, as before. To estimate IV models without fixed effects,
-    simply omit the fixed effects part of the formula:
+    simply omit the fixed effects:
 
     ```{python}
-    fit_iv2 = pf.feols("Y ~ X2 | X1 ~ Z1", data)
+    fit_iv2 = pf.feols("Y ~ X2 + [X1 ~ Z1]", data)
     fit_iv2.tidy()
     ```
 
@@ -370,17 +389,33 @@ def feols(
 
     ```{python}
     fit_iv.IV_Diag()
-    print("First-stage F-statistic:", round(fit_iv._f_stat_1st_stage, 3))
-    print("Effective F-statistic:", round(fit_iv._eff_F, 3))
+    diagnostics = fit_iv.first_stage.diagnostics
+    print("First-stage F-statistic:", round(diagnostics.f_stat, 3))
+    print("Effective F-statistic:", round(diagnostics.eff_f, 3))
     ```
 
     You can also access the first-stage regression as a `Feols` object via
-    `_model_1st_stage` and display both stages with `etable()`:
+    `first_stage.model` and display both stages with `etable()`:
 
     ```{python}
-    first_stage = fit_iv._model_1st_stage
-    pf.etable([first_stage, fit_iv])
+    pf.etable([fit_iv.first_stage.model, fit_iv])
     ```
+
+    Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`, or
+    `f1[[X2]]` to include only the slopes. Separate several slopes with commas,
+    as in `f1[X2, Z1]`:
+
+    ```{python}
+    fit_vs = pf.feols("Y ~ X1 | f1[X2] + f2", data)
+    fit_vs_only = pf.feols("Y ~ X1 | f1[[X2, Z1]]", data)
+    pf.etable([fit_vs, fit_vs_only])
+    ```
+
+    Varying slopes require the default `within` demeaner. `predict()`,
+    `fixef()`, `wildboottest()`, `ritest()`, `decompose()`, and CRV3 or HAC
+    inference are not yet supported for these models. Slope-only effects such as
+    `f1[[X2]]` do not absorb the constant, so the model keeps and reports an
+    `Intercept`; write `0 +` in the formula to drop it.
 
     Last, `feols()` supports interaction of variables via the `i()` syntax.
     For a compact overview of formula features including `i()`, see the
@@ -500,12 +535,11 @@ def feols(
     fit_D.ccv(treatment = "D", cluster = "group_id")
     ```
     """
-    if ssc is None:
-        ssc = ssc_func()
+    ssc = _resolve_ssc(ssc)
+    vcov_spec = _resolve_vcov(vcov, vcov_kwargs)
     context = {} if context is None else capture_context(context)
     demeaner = _resolve_demeaner(demeaner)
     _warn_if_experimental_torch_demeaner(demeaner)
-    _warn_if_deprecated_demeaner_backend(demeaner)
 
     if not isinstance(use_compression, bool):
         raise TypeError("The function argument `use_compression` must be of type bool.")
@@ -513,8 +547,7 @@ def feols(
     _estimation_input_checks(
         fml=fml,
         data=data,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
+        vcov=vcov_spec,
         weights=weights,
         ssc=ssc,
         fixef_rm=fixef_rm,
@@ -537,27 +570,30 @@ def feols(
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
 
+    options = EstimationOptions(
+        ssc=ssc,
+        drop_singletons=fixef_rm == "singleton",
+        drop_intercept=drop_intercept,
+        weights=weights,
+        weights_type=weights_type,
+        offset=None,
+        collin_tol=collin_tol,
+        solver=solver,
+        demeaner=demeaner,
+        store_data=store_data,
+        copy_data=copy_data,
+        lean=lean,
+        context=context,
+    )
     config = EstimationConfig(
         method="feols",
         data=data,
-        fml=fml,
-        copy_data=copy_data,
-        store_data=store_data,
-        lean=lean,
-        fixef_rm=fixef_rm,
-        drop_intercept=drop_intercept,
-        vcov=vcov,
-        vcov_kwargs=vcov_kwargs,
-        ssc_dict=ssc,
-        solver=solver,
-        demeaner=demeaner,
-        collin_tol=collin_tol,
-        context=context,
-        weights=weights,
-        weights_type=weights_type,
+        formulas=tuple(Formula.parse(fml)),
+        options=options,
+        vcov=vcov_spec,
         split=split,
         fsplit=fsplit,
     )
 
-    parsed = parse_formula(config)
-    return run_estimation(config, parsed)
+    plan = plan_formulas(config)
+    return run_estimation(config, plan, apply_retention=True)

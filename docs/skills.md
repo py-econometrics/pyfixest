@@ -44,9 +44,9 @@ will become an error in a future release. See the
 Other syntax:
 - Multiple depvars are expanded to multiple estimations: `"Y1 + Y2 ~ X1"` behaves like `"sw(Y1, Y2) ~ X1"`.
 - `i()` creates indicator expansions and interactions. It expands categorical variables into dummies and can interact a categorical variable with a numeric or another categorical variable.
-  Examples: `i(cat)`, `i(cat, ref="Base")`, `i(cat, x)` (numeric `x` gives varying slopes; categorical `x` gives cat-by-x indicators), `i(cat1, cat2, ref2="Base")`.
+  Examples: `i(cat)`, `i(cat, ref="Base")`, `i(cat, x)` (numeric `x` gives varying slopes; categorical `x` gives cat-by-x indicators), `i(cat1, cat2, ref2="Base")`. Wrap a numeric second variable in `C()` to treat it as a factor; `ref2` and `bin2` raise a `ValueError` for a numeric second variable.
   Example (cat × numeric): `Y ~ i(industry, exposure)` creates industry-specific slopes on `exposure`.
-  Example (cat × cat): `Y ~ i(state, year, ref2=2000)` creates state-by-year indicators with 2000 as the base year.
+  Example (cat × cat): `Y ~ i(state, C(year), ref2=2000)` creates state-by-year indicators with 2000 as the base year.
 - Standard interactions work as well. `X1 * X2` expands to `X1 + X2 + X1:X2`, while `X1:X2` is the interaction term only.
 - Interacted FEs: `"Y ~ X1 | FE1:FE2"` (creates a combined FE).
 
@@ -116,10 +116,10 @@ Model objects support:
 - `.wald_test(R, q)` — Linear hypothesis testing
 - `.update(X_new, y_new)` — Online coefficient update (Sherman-Morrison)
 - `.evalue()` / `.pvalue_savi()` — Anytime-valid (SAVI) e-values and sequential p-values
-- `.first_stage()` — First-stage results (IV only)
+- `.first_stage` — First-stage model, coefficients, and F-statistics (IV only)
 - `.IV_Diag()` — IV diagnostic tests (IV only)
 
-For IV models, show first and second stage together: `pf.etable([fit._model_1st_stage, fit])`.
+For IV models, show first and second stage together: `pf.etable([fit.first_stage.model, fit])`.
 
 ## DiD / Causal Inference
 

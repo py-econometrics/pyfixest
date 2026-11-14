@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 import numpy as np
 from scipy.stats import norm
 
 from pyfixest.core.crv1 import crv1_vcov_qreg_loop
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
+from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
 
@@ -58,7 +58,7 @@ def vcov_nid_qreg(
     q: float,
     N: int,
     method: QuantregMethodOptions,
-    fit: Callable[..., tuple[Any, ...]],
+    fit: Callable[..., QuantregSolution],
 ) -> np.ndarray:
     """
     Compute nonparametric IID (NID) vcov matrix using the Hall-Sheather bandwidth.
@@ -69,8 +69,8 @@ def vcov_nid_qreg(
     h = get_hall_sheather_bandwidth(q=q, N=N)
     beta_init = beta_hat if method == "pfn" else None
 
-    beta_hat_plus = fit(X=X, Y=Y, q=q + h, beta_init=beta_init)[0]
-    beta_hat_minus = fit(X=X, Y=Y, q=q - h, beta_init=beta_init)[0]
+    beta_hat_plus = fit(X=X, Y=Y, q=q + h, beta_init=beta_init).beta
+    beta_hat_minus = fit(X=X, Y=Y, q=q - h, beta_init=beta_init).beta
 
     # eps: small tolerance parameter to avoid division by zero
     # when di = 0; set to sqrt of machine epsilon in quantreg

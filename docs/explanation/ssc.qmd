@@ -8,7 +8,6 @@ format:
     html-table-processing: none
 toc: true
 toc-title: "On this page"
-toc-location: left
 ---
 
 The `fixest` R package provides various options for small sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in `fixest` and how they are implemented in `pyfixest` in this document.

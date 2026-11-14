@@ -62,11 +62,82 @@ ols_but_not_poisson_fml = (
 )
 
 
+iv_fmls = (
+    "Y ~ 1 | X1 ~ Z1",
+    "Y ~  X2 | X1 ~ Z1",
+    "Y ~ X2 + C(f1) | X1 ~ Z1",
+    "Y2 ~ 1 | X1 ~ Z1",
+    "Y2 ~ X2 | X1 ~ Z1",
+    "Y2 ~ X2 + C(f1) | X1 ~ Z1",
+    "Y ~ 1 | f1 | X1 ~ Z1",
+    "Y ~ 1 | f1 + f3 | X1 ~ Z1",
+    "Y ~ 1 | f1:f2 | X1 ~ Z1",
+    "Y ~  X2| f3 | X1 ~ Z1",
+    "Y ~ 1 | X1 ~ Z1 + Z2",
+    "Y ~ X2 | X1 ~ Z1 + Z2",
+    "Y ~ X2 + C(f3) | X1 ~ Z1 + Z2",
+    "Y ~ 1 | f1 | X1 ~ Z1 + Z2",
+    "Y2 ~ 1 | f1 + f3 | X1 ~ Z1 + Z2",
+    "Y2 ~  X2| f2 | X1 ~ Z1 + Z2",
+)
+
+
+glm_fmls = (
+    "Y ~ X1",
+    "Y ~ X1 + X2",
+    "Y ~ X1*X2",
+    "Y ~ X1 + f1:X2",
+    "Y ~ X1 | f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1*X2 | f1",
+)
+
+
+ssc_fmls = (
+    "Y ~ X1 + X2 + f1",
+    "Y ~ X1 + X2 | f1",
+    "Y ~ X1 + X2 | f2",
+    "Y ~ X1 + X2 | f1 + f2",
+    "Y ~ X1 + X2 | f1 + f2 + f3",
+    "Y ~ X1 + X2 | f1:f2",
+    # Representative slope structures for the SSC grid; the dedicated slope
+    # suite covers the wider range of formulas and estimation behavior.
+    "Y ~ X1 + X2 | f1[Z1]",
+    "Y ~ X1 + X2 | f1[[Z1]]",
+    "Y ~ X1 + X2 | f1[[Z1]] + f2",
+)
+
+
+ssc_formula_vcov_dropna_cases = tuple(
+    (fml, dropna, vcov)
+    for fml in ssc_fmls
+    for dropna in (True, False)
+    for vcov in ("iid", "hetero", "f1", "f2", "f1+f2")
+    if dropna or vcov in ("iid", "hetero") or vcov in fml
+)
+ssc_formula_vcov_dropna_case_ids = tuple(
+    f"fml={ssc_fmls.index(fml)}-vcov={vcov}-dropna={dropna}"
+    for fml, dropna, vcov in ssc_formula_vcov_dropna_cases
+)
+
+
 ALL_F3_TYPES = ("str", "object", "int", "categorical", "float")
 
 
 def _deduplicate(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(items))
+
+
+def fixed_effect_interactions_to_legacy(fml: str) -> str:
+    """Translate ``:`` fixed-effect interactions to the legacy ``^`` spelling."""
+    parts = fml.split("|")
+    for index, part in enumerate(parts[1:], start=1):
+        if "~" not in part:
+            parts[index] = part.replace(":", "^")
+            break
+    return "|".join(parts)
 
 
 FEOLS_FORMULAS = _deduplicate(ols_fmls + ols_but_not_poisson_fml)
@@ -81,6 +152,8 @@ FEOLS_FORMULA_F3_CASES = (
         for fml in FEOLS_FORMULAS
         if "f3" in fml
         for f3_type in ALL_F3_TYPES[1:]
+        # Object fixed effects are intentionally rejected; covariates still allow them.
+        if f3_type != "object" or "f3" not in fml.partition("|")[2]
     ),
 )
 
@@ -92,7 +165,7 @@ def convert_f3(data: pd.DataFrame, f3_type: str) -> pd.DataFrame:
     elif f3_type == "int":
         data["f3"] = data["f3"].astype(float).astype(np.int32)
     elif f3_type == "str":
-        data["f3"] = data["f3"].astype(str)
+        data["f3"] = data["f3"].astype("string")
     elif f3_type == "object":
         data["f3"] = data["f3"].astype(object)
     elif f3_type == "float":

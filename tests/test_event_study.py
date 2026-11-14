@@ -4,6 +4,7 @@ import pytest
 
 import pyfixest as pf
 from pyfixest.did.estimation import did2s, event_study
+from pyfixest.errors import VcovTypeNotSupportedError
 
 
 @pytest.fixture
@@ -36,6 +37,7 @@ def test_event_study_twfe(data):
     assert np.allclose(twfe.pvalue().values, twfe_feols.pvalue().values), (
         "TWFE p-values are not the same."
     )
+    assert twfe.model.method == "twfe"
 
     # TODO - minor difference, likely due to how z statistic is
     # calculated
@@ -45,7 +47,10 @@ def test_event_study_twfe(data):
     # ), "TWFE confidence intervals are not the same."
 
 
-def test_event_study_did2s(data):
+@pytest.mark.parametrize("xfml", [None, "C(band)"])
+def test_event_study_did2s(data, xfml):
+    if xfml is not None:
+        data = data.assign(band=pd.Categorical((data["unit"] + data["year"]) % 3))
     event_study_did2s = event_study(
         data=data,
         yname="dep_var",
@@ -54,13 +59,14 @@ def test_event_study_did2s(data):
         gname="g",
         att=True,
         estimator="did2s",
+        xfml=xfml,
     )
 
     fit_did2s = did2s(
         data=data,
         yname="dep_var",
-        first_stage="~ 0 | state + year",
-        second_stage="~treat",
+        first_stage=f"~ {xfml or '0'} | state + year",
+        second_stage=f"~ treat + {xfml}" if xfml is not None else "~ treat",
         treatment="treat",
         cluster="state",
     )
@@ -78,6 +84,49 @@ def test_event_study_did2s(data):
         event_study_did2s.confint().values, fit_did2s.confint().values
     ), "DID2S confidence intervals are not the same."
 
+    for fit in (event_study_did2s, fit_did2s):
+        if xfml is not None:
+            assert [
+                name for name in fit.coef().index if name.startswith("C(band)")
+            ] == [
+                "C(band)[T.1]",
+                "C(band)[T.2]",
+            ]
+        covariance = fit.variance_covariance
+        inference = fit.tidy().copy()
+        for vcov in (
+            {"CRV1": "state"},
+            {"CRV1": "unit"},
+            {"CRV3": "state"},
+            "hetero",
+            "iid",
+        ):
+            with pytest.raises(
+                VcovTypeNotSupportedError,
+                match=r"vcov\(\) is not supported for 'did2s' fits: "
+                r"fit.capabilities.covariance_update is False\.",
+            ):
+                fit.vcov(vcov)
+            assert fit.variance_covariance is covariance
+            pd.testing.assert_frame_equal(fit.tidy(), inference)
+
+
+def test_did2s_quoted_reference(data):
+    """Preserve spaces in a quoted categorical reference level."""
+    fit = did2s(
+        data=data,
+        yname="dep_var",
+        first_stage="~ 0 | unit + year",
+        second_stage="~ treat + i(group, ref='Group 3')",
+        treatment="treat",
+        cluster="state",
+    )
+    assert fit.coef().index.tolist() == [
+        "treat",
+        "group::Group 1",
+        "group::Group 2",
+    ]
+
 
 # ---------------------------------------------------------------------------------
 # test errors
@@ -85,7 +134,7 @@ def test_event_study_did2s(data):
 
 # Test case for 'data' must be a pandas DataFrame
 def test_event_study_invalid_data_type(data):
-    with pytest.raises(AssertionError, match="data must be a pandas DataFrame"):
+    with pytest.raises(TypeError, match="data must be a pandas DataFrame"):
         event_study(
             data="invalid_data",  # Invalid data type, should be pd.DataFrame
             yname="dep_var",
@@ -98,7 +147,7 @@ def test_event_study_invalid_data_type(data):
 
 # Test case for 'yname' must be a string
 def test_event_study_invalid_yname_type(data):
-    with pytest.raises(AssertionError, match="yname must be a string"):
+    with pytest.raises(TypeError, match="yname must be a string"):
         event_study(
             data=data,
             yname=123,  # Invalid yname type, should be str
@@ -111,7 +160,7 @@ def test_event_study_invalid_yname_type(data):
 
 # Test case for 'idname' must be a string
 def test_event_study_invalid_idname_type(data):
-    with pytest.raises(AssertionError, match="idname must be a string"):
+    with pytest.raises(TypeError, match="idname must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -124,7 +173,7 @@ def test_event_study_invalid_idname_type(data):
 
 # Test case for 'tname' must be a string
 def test_event_study_invalid_tname_type(data):
-    with pytest.raises(AssertionError, match="tname must be a string"):
+    with pytest.raises(TypeError, match="tname must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -137,7 +186,7 @@ def test_event_study_invalid_tname_type(data):
 
 # Test case for 'gname' must be a string
 def test_event_study_invalid_gname_type(data):
-    with pytest.raises(AssertionError, match="gname must be a string"):
+    with pytest.raises(TypeError, match="gname must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -150,7 +199,7 @@ def test_event_study_invalid_gname_type(data):
 
 # Test case for 'xfml' must be a string or None
 def test_event_study_invalid_xfml_type(data):
-    with pytest.raises(AssertionError, match="xfml must be a string or None"):
+    with pytest.raises(TypeError, match="xfml must be a string or None"):
         event_study(
             data=data,
             yname="dep_var",
@@ -164,7 +213,7 @@ def test_event_study_invalid_xfml_type(data):
 
 # Test case for 'estimator' must be a string
 def test_event_study_invalid_estimator_type(data):
-    with pytest.raises(AssertionError, match="estimator must be a string"):
+    with pytest.raises(TypeError, match="estimator must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -177,7 +226,7 @@ def test_event_study_invalid_estimator_type(data):
 
 # Test case for 'att' must be a boolean
 def test_event_study_invalid_att_type(data):
-    with pytest.raises(AssertionError, match="att must be a boolean"):
+    with pytest.raises(TypeError, match="att must be a boolean"):
         event_study(
             data=data,
             yname="dep_var",
@@ -191,7 +240,7 @@ def test_event_study_invalid_att_type(data):
 
 # Test case for 'cluster' must be a string
 def test_event_study_invalid_cluster_type(data):
-    with pytest.raises(AssertionError, match="cluster must be a string"):
+    with pytest.raises(TypeError, match="cluster must be a string"):
         event_study(
             data=data,
             yname="dep_var",
@@ -200,6 +249,65 @@ def test_event_study_invalid_cluster_type(data):
             gname="g",
             estimator="twfe",
             cluster=123,  # Invalid cluster type, should be str
+        )
+
+
+@pytest.mark.parametrize(
+    "stages,match",
+    [
+        ({"first_stage": "0 | state + year"}, "first_stage must start with '~'"),
+        ({"second_stage": "i(treat)"}, "second_stage must start with '~'"),
+        *[
+            ({"second_stage": stage}, "must not remove the intercept")
+            for stage in (
+                "~ i(treat) + 0",
+                "~ 0 + i(treat)",
+                "~ i(treat) - 1",
+                "~ -1 + i(treat)",
+            )
+        ],
+        ({"first_stage": "~ X"}, "First stage formula must contain fixed effects"),
+        (
+            {"second_stage": "~ i(treat) | unit"},
+            "Second stage formula must not contain fixed effects",
+        ),
+        (
+            {"first_stage": "~ sw(X, weights) | unit + year"},
+            "first_stage must specify a single model",
+        ),
+        (
+            {"second_stage": "~ sw(X, weights)"},
+            "second_stage must specify a single model",
+        ),
+        (
+            {"first_stage": "~ [X ~ weights] | unit + year"},
+            "first_stage must not contain instrumental variables",
+        ),
+        (
+            {"second_stage": "~ [X ~ weights]"},
+            "second_stage must not contain instrumental variables",
+        ),
+    ],
+)
+def test_did2s_formula_validation(data, stages, match):
+    with pytest.raises(ValueError, match=match):
+        did2s(
+            data,
+            yname="dep_var",
+            **{
+                "first_stage": "~ 0 | state + year",
+                "second_stage": "~ i(treat)",
+                **stages,
+            },
+            treatment="treat",
+            cluster="state",
+        )
+
+
+def test_lpdid_invalid_xfml_type(data):
+    with pytest.raises(TypeError, match="xfml must be a string or None"):
+        pf.lpdid(
+            data, yname="dep_var", idname="unit", tname="year", gname="g", xfml=123
         )
 
 

@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from formulaic.errors import FactorEvaluationError
+
+
+class FixedEffectEvaluationError(FactorEvaluationError):
+    """A parsed fixed-effect factor or encoding could not be evaluated."""
+
+
 class FixedEffectInteractionError(Exception):  # noqa: D101
     pass
 
@@ -19,6 +28,10 @@ class InstrumentsAsCovarsError(Exception):  # noqa: D101
 
 
 class UnderDeterminedIVError(Exception):  # noqa: D101
+    pass
+
+
+class IVIdentificationError(Exception):  # noqa: D101
     pass
 
 
@@ -58,8 +71,20 @@ class EmptyVcovError(Exception):  # noqa: D101
     pass
 
 
+class MissingModelDataError(RuntimeError):
+    """Required model state was removed by fitted-model storage options."""
+
+
 class FormulaSyntaxError(Exception):  # noqa: D101
     pass
+
+
+class PyfixestDeprecationWarning(FutureWarning):
+    """A pyfixest feature is deprecated and will be removed in a future release.
+
+    A `FutureWarning` subclass, so Python shows it by default in scripts and
+    notebooks, and users can filter pyfixest's deprecations on their own.
+    """
 
 
 __all__ = [
@@ -72,10 +97,13 @@ __all__ = [
     "FeatureDeprecationError",
     "FixedEffectInteractionError",
     "FormulaSyntaxError",
+    "IVIdentificationError",
     "InstrumentsAsCovarsError",
     "MatrixNotFullRankError",
+    "MissingModelDataError",
     "NanInClusterVarError",
     "NonConvergenceError",
+    "PyfixestDeprecationWarning",
     "UnderDeterminedIVError",
     "UnsupportedMultipleEstimationSyntax",
     "VcovTypeNotSupportedError",

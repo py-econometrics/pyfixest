@@ -28,7 +28,7 @@ from pyfixest.errors import EmptyVcovError
 from pyfixest.utils.dev_utils import _select_coefnames_and_indices
 
 if TYPE_CHECKING:
-    from pyfixest.estimation.models._result_accessor_mixin import ResultAccessorMixin
+    from pyfixest.estimation.models.feols_ import Feols
 
 SAVI_REFERENCE = (
     "Lindon, Michael; Ham, Dae Woong; Tingley, Martin; and Bojinov, Iavor "
@@ -155,73 +155,62 @@ def optimal_mixture_precision(
     return float(result.x)
 
 
-def _validate_savi_model(model: ResultAccessorMixin) -> None:
+def _validate_savi_model(*, model: Feols, method: str) -> None:
     """Reject fitted-model configurations not supported by SAVI."""
-    if model._method != "feols" or model._is_iv:
-        raise NotImplementedError(
-            "SAVI inference is currently supported only for feols models."
-        )
-    if model._has_weights:
+    model._require_capability(capability="anytime_valid_inference", method=method)
+    if model.options.has_weights:
         raise NotImplementedError(
             "SAVI inference does not currently support weighted feols models."
         )
-    if model._has_fixef:
+    if model.model.has_fixef:
         raise NotImplementedError(
             "SAVI inference does not currently support feols models with fixed effects."
         )
-    if model._vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
+    if not hasattr(model, "variance_covariance"):
+        raise EmptyVcovError()
+    vcov_type = model.variance_covariance.spec.vcov_type
+    if vcov_type not in _SAVI_SUPPORTED_VCOV_TYPES:
         raise NotImplementedError(
-            f"SAVI inference does not support vcov type {model._vcov_type!r}. "
+            f"SAVI inference does not support vcov type {vcov_type!r}. "
             "Supported types are iid, hetero, HC1, HC2, and HC3."
         )
-    if len(model._vcov) == 0:
-        raise EmptyVcovError()
 
 
-def _coefficient_evalues(
-    model: ResultAccessorMixin, mixture_precision: float
+def _evalue(
+    model: Feols,
+    mixture_precision: float = 1.0,
 ) -> pd.Series:
-    """Compute coefficient-wise e-values for a validated model."""
+    """Compute coefficient-wise SAVI e-values for a validated model."""
+    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
     values = _savi_e_value(
-        model._tstat**2,
+        model.coeftable.tstat**2,
         dfn=1,
-        dfd=model._df_t,
-        nobs=model._N,
+        dfd=model.variance_covariance.df_t,
+        nobs=model.sample_info.n_obs,
         mixture_precision=mixture_precision,
     )
     return pd.Series(values, index=model._coefnames, name="e_value")
 
 
-def _evalue(
-    model: ResultAccessorMixin,
-    mixture_precision: float = 1.0,
-) -> pd.Series:
-    """Compute coefficient-wise SAVI e-values."""
-    _validate_savi_model(model)
-    mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
-    return _coefficient_evalues(model, mixture_precision)
-
-
 def _pvalue_savi(
-    model: ResultAccessorMixin,
+    model: Feols,
     mixture_precision: float = 1.0,
 ) -> pd.Series:
-    """Compute coefficient-wise SAVI sequential p-values."""
+    """Compute coefficient-wise SAVI sequential p-values for a validated model."""
     e_values = _evalue(model=model, mixture_precision=mixture_precision)
     values = np.minimum(1.0, 1.0 / e_values.to_numpy())
     return pd.Series(values, index=e_values.index, name="Pr(>|t|)")
 
 
 def _confint(
-    model: ResultAccessorMixin,
+    model: Feols,
     alpha: float = 0.05,
     mixture_precision: float = 1.0,
     keep: list | str | None = None,
     drop: list | str | None = None,
     exact_match: bool | None = False,
 ) -> pd.DataFrame:
-    """Compute coefficient-wise SAVI confidence sequences."""
-    _validate_savi_model(model)
+    """Compute coefficient-wise SAVI confidence sequences for a validated model."""
     alpha = _validate_alpha(alpha)
     mixture_precision = _validate_positive_float(mixture_precision, "mixture_precision")
 
@@ -231,10 +220,10 @@ def _confint(
     critical_value = _savi_confidence_radius(
         alpha=alpha,
         mixture_precision=mixture_precision,
-        nobs=model._N,
-        dfd=model._df_t,
+        nobs=model.sample_info.n_obs,
+        dfd=model.variance_covariance.df_t,
     )
-    standard_errors = model._se[coef_indices]
+    standard_errors = model.coeftable.se[coef_indices]
     estimates = model._beta_hat[coef_indices]
 
     df = pd.DataFrame(

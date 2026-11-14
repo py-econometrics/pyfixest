@@ -1,44 +1,32 @@
 ---
 name: implementation-strategy
-description: Classify and place pyfixest estimator, inference, formula, API, and core changes before implementation.
+description: Choose the implementation and numerical evidence for pyfixest estimator, inference, formula, post-estimation, public API, or shared-core changes. Includes invariant refactors; excludes explanations and prose-only edits.
 ---
 
-# Choose the implementation strategy
+# Implement a pyfixest change
 
-Use this skill before changing a public estimation surface or shared estimation
-code. Read `AGENTS.md` and the nearest implementation and tests first.
+Find the nearest implementation, its callers, and its tests. Use the
+[architecture seams](../../../docs/developer/architecture.md#repository-map-and-extension-seams)
+to choose where the change belongs. Apply the
+[scope policy](../../../docs/developer/git-and-pr-style.md#change-scope).
 
-## Classify the change
+Resolve the decisions that affect this change:
 
-Choose exactly one primary placement:
+- The user-visible outcome or invariant, and the simplest implementation that
+  preserves the relevant contracts. Read "Stable core" for contract changes;
+  an already-authorized design does not need another approval.
+- Affected support paths under
+  [result boundaries](../../../docs/developer/architecture.md#result-and-numerical-boundaries).
+  New estimators need a complete support matrix; existing features need only
+  the affected paths reconsidered. Reject unsupported combinations explicitly.
+- For numerical work, an independent reference under
+  [reference selection](../../../docs/developer/testing.md#choosing-a-numerical-reference),
+  and whether results must stay invariant. Read "Release contract" for the
+  applicable baseline check; do not silently turn a refactor into a behavior fix.
+- Necessary exports, user documentation, and compatibility decisions.
 
-- **Estimator add-on:** standalone API or domain module composing stable
-  primitives. This is the default for a new estimator.
-- **Post-estimation:** standalone numerical module with thin fitted-model
-  wrappers.
-- **Shared primitive:** generic internal operation with a real shared consumer.
-- **Backend kernel:** measured, non-vectorizable hot loop with a readable
-  reference implementation where feasible.
-- **Core change:** modification to formula planning, model matrices, generic fit
-  orchestration, inference contracts, or result interfaces.
-
-Do not put estimator-specific switches into the generic runner or numerical
-logic into model classes. Stop for maintainer design approval before expanding
-core merely to accommodate one new estimator.
-
-## Produce the strategy
-
-Before editing, record:
-
-1. the primary classification and target module;
-2. the nearest in-repo precedent;
-3. public API and result-object impact;
-4. reused primitives and any proposed shared primitive;
-5. behavior for `aweights`, `fweights`, fixed effects, IV, multiple
-   estimation, `lean`, `store_data`, and relevant backends;
-6. explicit unsupported paths and their errors;
-7. the external numerical reference and permanent-test location;
-8. documentation, exports, and changelog wiring.
-
-If the support matrix or external reference is unresolved, resolve it before
-implementation rather than allowing the code to choose policy implicitly.
+For a small fix, these decisions can be a brief explanation in the ongoing
+work. Write a separate plan only when it helps coordinate substantial work or
+the user asks for one. Implement once the material choices are clear; reuse
+settled decisions. Verify through `change-verification` and review the final
+diff through `pr-review`, without restarting the workflow at handoff.

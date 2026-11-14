@@ -1,15 +1,19 @@
 import itertools
 import warnings
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
-from scipy.sparse import diags, hstack, spmatrix, vstack
-from scipy.sparse.linalg import lsqr
+from scipy.sparse import csc_matrix, diags, hstack, vstack
 from tqdm import tqdm
+
+from pyfixest.estimation.internals.solvers import solve_lsqr
+from pyfixest.utils.dev_utils import _find_stack_level
+
+_GELBACH_TASK = "The Gelbach decomposition"
 
 # Panel name mappings for consistent API
 PANEL_ALIASES = {
@@ -132,9 +136,9 @@ class GelbachDecomposition:
     only_coef : bool, optional
         If True, skip bootstrap inference and only compute point estimates, by default True.
     atol : float, optional
-        Absolute tolerance for linear solver, by default None.
+        Absolute tolerance for linear solver, by default 1e-6.
     btol : float, optional
-        Relative tolerance for linear solver, by default None.
+        Relative tolerance for linear solver, by default 1e-6.
 
     Attributes
     ----------
@@ -159,13 +163,14 @@ class GelbachDecomposition:
     combine_covariates: dict[str, list[str]] | None = None
     agg_first: bool | None = False
     only_coef: bool = True
-    atol: float | None = None
-    btol: float | None = None
+    atol: float = 1e-6
+    btol: float = 1e-6
 
     # Define attributes initialized post-creation
     cluster_dict: dict[Any, Any] | None = field(init=False, default=None)
     unique_clusters: np.ndarray | None = field(init=False, default=None)
     mask: np.ndarray = field(init=False)
+    x1_indices: list[int] = field(init=False)
     mediator_names: list[str] = field(init=False)
     X_dict: dict[Any, Any] = field(init=False, default_factory=dict)
     X1_dict: dict[Any, Any] = field(init=False, default_factory=dict)
@@ -180,9 +185,9 @@ class GelbachDecomposition:
         )
 
         # build index for all variables in X1: decomp_var, x1_vars
-        x1_indices = [self.coefnames.index(var) for var in x1_variables]
+        self.x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
-        self.mask[x1_indices] = False
+        self.mask[self.x1_indices] = False
 
         self.mediator_names = [
             name for name in self.coefnames if self.mask[self.coefnames.index(name)]
@@ -190,7 +195,7 @@ class GelbachDecomposition:
 
         # Handle clustering setup if cluster_df is provided
         if self.cluster_df is not None and not self.only_coef:
-            self.unique_clusters = self.cluster_df.unique()
+            self.unique_clusters = cast(np.ndarray, self.cluster_df.unique())
             self.cluster_dict = {
                 cluster: self.cluster_df[self.cluster_df == cluster].index
                 for cluster in self.unique_clusters
@@ -204,15 +209,32 @@ class GelbachDecomposition:
                 x: [x] for x in self.mediator_names if x != "Intercept"
             }
         else:
-            self.combine_covariates_dict = self.combine_covariates
+            self.combine_covariates_dict = dict(self.combine_covariates)
 
         if self.combine_covariates is not None and not self.agg_first:
             warnings.warn(
-                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs)."
+                "You have provided combine_covariates, but agg_first is False. We recommend setting agg_first=True as this might massively decrease the computation time (in particular when boostrapping CIs).",
+                UserWarning,
+                stacklevel=_find_stack_level(),
             )
 
         self._check_covariates()
         self._check_combine_covariates()
+        self.combine_covariates_dict = {
+            name: list(covariates)
+            for name, covariates in self.combine_covariates_dict.items()
+        }
+
+        grouped = set(
+            itertools.chain.from_iterable(self.combine_covariates_dict.values())
+        )
+        remainder = [
+            name
+            for name in self.mediator_names
+            if name != "Intercept" and name not in grouped
+        ]
+        if remainder:
+            self.combine_covariates_dict.setdefault("Other", []).extend(remainder)
 
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
@@ -268,7 +290,7 @@ class GelbachDecomposition:
 
     def fit(
         self,
-        X: spmatrix,
+        X: csc_matrix,
         Y: np.ndarray,
         weights: np.ndarray | None = None,
         store: bool = True,
@@ -278,7 +300,8 @@ class GelbachDecomposition:
             self.X = X
             self.Y = Y
 
-            self.X1 = self.X[:, ~self.mask]
+            # keep X1 columns in the order of names_X1, not the formula order
+            self.X1 = self.X[:, self.x1_indices]
             self.X1 = hstack([np.ones((self.X1.shape[0], 1)), self.X1])
             self.X2 = self.X[:, self.mask]
 
@@ -337,7 +360,7 @@ class GelbachDecomposition:
         else:
             # need to compute X1, X2 in bootstrap sample
 
-            X1 = hstack([np.ones((X.shape[0], 1)), X[:, ~self.mask]])
+            X1 = hstack([np.ones((X.shape[0], 1)), X[:, self.x1_indices]])
             X2 = X[:, self.mask]
 
             results = self.compute_gelbach(
@@ -357,9 +380,8 @@ class GelbachDecomposition:
 
             return bootstrap_results
 
-    def bootstrap(self, rng: np.random.Generator, B: int = 1_000, alpha: float = 0.05):
-        "Bootstrap Confidence Intervals for Total, Mediated and Direct Effects."
-        self.alpha = alpha
+    def bootstrap(self, rng: np.random.Generator, B: int = 1_000):
+        """Draw bootstrap replications for Total, Mediated and Direct Effects."""
         self.B = B
 
         # convert to csr for easier vstacking
@@ -367,7 +389,7 @@ class GelbachDecomposition:
             self.X_dict = {g: self.X_dict[g].tocsr() for g in self.X_dict}
 
         _bootstrapped = Parallel(n_jobs=self.nthreads)(
-            delayed(self._bootstrap)(rng=rng) for _ in tqdm(range(B))
+            delayed(self._bootstrap)(rng=child_rng) for child_rng in tqdm(rng.spawn(B))
         )
 
         # unpack
@@ -376,15 +398,6 @@ class GelbachDecomposition:
             self._bootstrap_relative_explained_df,
             self._bootstrap_relative_direct_df,
         ) = self._unpack_bootstrap_results(_bootstrapped)
-
-        # compute ci
-        self._absolute_ci = self._compute_ci(self._bootstrap_absolute_df, alpha)
-        self._relative_explained_ci = self._compute_ci(
-            self._bootstrap_relative_explained_df, alpha
-        )
-        self._relative_direct_ci = self._compute_ci(
-            self._bootstrap_relative_direct_df, alpha
-        )
 
     def _compute_ci(self, bootstrap_df: pd.DataFrame, alpha: float) -> pd.DataFrame:
         """Compute confidence intervals from bootstrap DataFrame.
@@ -453,10 +466,10 @@ class GelbachDecomposition:
 
     def compute_gelbach(
         self,
-        X1: spmatrix,
-        X2: spmatrix,
+        X1: csc_matrix,
+        X2: csc_matrix,
         Y: np.ndarray,
-        X: spmatrix,
+        X: csc_matrix,
         agg_first: bool | None,
     ) -> tuple[
         np.ndarray,
@@ -468,11 +481,15 @@ class GelbachDecomposition:
         N = X1.shape[0]
 
         # Compute direct effect
-        direct_effect = lsqr(X1, Y, atol=self.atol, btol=self.btol)[0]
+        direct_effect = solve_lsqr(
+            A=X1, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         direct_effect_array = np.array([direct_effect[self.decomp_var_in_X1_idx]])
 
         # Compute beta_full and beta2
-        beta_full = lsqr(X, Y, atol=self.atol, btol=self.btol)[0]
+        beta_full = solve_lsqr(
+            A=X, b=Y, atol=self.atol, btol=self.btol, task=_GELBACH_TASK
+        )
         beta2 = beta_full[self.mask]
 
         mediator_effects = {}
@@ -489,7 +506,9 @@ class GelbachDecomposition:
             # Compute delta
             delta = np.array(
                 [
-                    lsqr(X1, Hg[:, j])[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(A=X1, b=Hg[:, j], task=_GELBACH_TASK)[
+                        self.decomp_var_in_X1_idx
+                    ]
                     for j in range(Hg.shape[1])
                 ]
             )
@@ -499,7 +518,9 @@ class GelbachDecomposition:
         else:
             gamma = np.array(
                 [
-                    lsqr(X1, X2[:, j].toarray().flatten())[0][self.decomp_var_in_X1_idx]
+                    solve_lsqr(
+                        A=X1, b=X2[:, j].toarray().flatten(), task=_GELBACH_TASK
+                    )[self.decomp_var_in_X1_idx]
                     for j in range(X2.shape[1])
                 ]
             )
@@ -552,7 +573,9 @@ class GelbachDecomposition:
         ----------
         alpha : float, optional
             The significance level for the confidence intervals, by default 0.05.
-            Computes a 95% confidence interval when alpha = 0.05.
+            Computes a 95% percentile bootstrap confidence interval when
+            alpha = 0.05. Ignored when the decomposition was fit with
+            `only_coef=True`.
         panels : str, optional
             Which panels to include. One of 'all', 'levels', 'share_explained',
             'share_full', by default "all". Also accepts full names for backward compatibility.
@@ -567,13 +590,25 @@ class GelbachDecomposition:
         relative_direct_df = self._dict_to_df(self.results.relative_to_direct)
 
         if not self.only_coef:
-            absolute_df = pd.concat([absolute_df, self._absolute_ci], axis=1)
+            if not 0 < alpha < 1:
+                raise ValueError(f"alpha must be in (0, 1). Got {alpha}.")
+            absolute_df = pd.concat(
+                [absolute_df, self._compute_ci(self._bootstrap_absolute_df, alpha)],
+                axis=1,
+            )
             relative_explained_df = pd.concat(
-                [relative_explained_df, self._relative_explained_ci],
+                [
+                    relative_explained_df,
+                    self._compute_ci(self._bootstrap_relative_explained_df, alpha),
+                ],
                 axis=1,
             )
             relative_direct_df = pd.concat(
-                [relative_direct_df, self._relative_direct_ci], axis=1
+                [
+                    relative_direct_df,
+                    self._compute_ci(self._bootstrap_relative_direct_df, alpha),
+                ],
+                axis=1,
             )
 
         absolute_df["panels"] = np.repeat("Levels (units)", len(absolute_df))

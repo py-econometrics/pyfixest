@@ -17,6 +17,8 @@ import warnings
 
 import torch
 
+from pyfixest.utils.dev_utils import _find_stack_level
+
 # Guard value for divisions that can be zero (e.g. normb, rho, rhodold).
 # Using clamp(..., min=_DIV_GUARD) or max(..., _DIV_GUARD) prevents 0/0 → NaN.
 _DIV_GUARD = 1e-30
@@ -324,7 +326,7 @@ def _get_compiled_step(device_type: str):
                     "torch.compile failed for LSMR scalar step; "
                     "falling back to eager mode.",
                     RuntimeWarning,
-                    stacklevel=3,
+                    stacklevel=_find_stack_level(),
                 )
                 _compiled_step_cache[device_type] = _scalar_step
     return _compiled_step_cache[device_type]

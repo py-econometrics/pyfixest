@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.stats import norm, t
 
+from pyfixest.estimation.internals.literals import EstimationMethod
+
 
 @dataclass(frozen=True, slots=True)
 class InferenceDist:
@@ -17,8 +19,8 @@ class InferenceDist:
     The `df_t` argument is ignored for the normal distribution.
     """
 
-    pvalue: Callable[[np.ndarray, int], np.ndarray]
-    crit_val: Callable[[float, int], float]
+    pvalue: Callable[[np.ndarray, float], np.ndarray]
+    crit_val: Callable[[float, float], float]
 
 
 T_DIST = InferenceDist(
@@ -38,9 +40,13 @@ class GlmFamily:
 
     Bundles the link function, inverse link, derivative of the link, variance function,
     deviance, initial mu, and dependent-variable validation into a single object.
+    `method` names the estimation function in `fit.model.method`.
+    `outcome_bounds` lists the outcome values the inverse link attains only as
+    the linear predictor diverges; outcomes stuck at such a bound are separated.
     """
 
     name: str
+    method: EstimationMethod
     link: Callable[[np.ndarray], np.ndarray]
     inv_link: Callable[[np.ndarray], np.ndarray]
     gprime: Callable[[np.ndarray], np.ndarray]
@@ -48,6 +54,7 @@ class GlmFamily:
     deviance: Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
     mu_start: Callable[[np.ndarray, np.ndarray | None], np.ndarray]
     check_y: Callable[[np.ndarray], None]
+    outcome_bounds: tuple[float, ...]
     inference_dist: InferenceDist = NORMAL_DIST
 
 
@@ -138,6 +145,7 @@ def _mu_start_pois(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
 
 LOGIT = GlmFamily(
     name="logit",
+    method="feglm-logit",
     link=lambda mu: np.log(mu / (1 - mu)),
     inv_link=lambda eta: np.exp(eta) / (1 + np.exp(eta)),
     gprime=lambda mu: 1 / (mu * (1 - mu)),
@@ -145,10 +153,12 @@ LOGIT = GlmFamily(
     deviance=_logit_deviance,
     mu_start=_mu_start_binary,
     check_y=_check_y_binary,
+    outcome_bounds=(0.0, 1.0),
 )
 
 PROBIT = GlmFamily(
     name="probit",
+    method="feglm-probit",
     link=norm.ppf,
     inv_link=norm.cdf,
     gprime=lambda mu: 1 / norm.pdf(norm.ppf(mu)),
@@ -156,10 +166,12 @@ PROBIT = GlmFamily(
     deviance=_probit_deviance,
     mu_start=_mu_start_binary,
     check_y=_check_y_binary,
+    outcome_bounds=(0.0, 1.0),
 )
 
 GAUSSIAN = GlmFamily(
     name="gaussian",
+    method="feglm-gaussian",
     link=lambda mu: mu,
     inv_link=lambda eta: eta,
     gprime=lambda mu: np.ones_like(mu),
@@ -167,11 +179,13 @@ GAUSSIAN = GlmFamily(
     deviance=_gaussian_deviance,
     mu_start=_mu_start_mean,
     check_y=_check_y_noop,
+    outcome_bounds=(),
     inference_dist=T_DIST,
 )
 
 POISSON = GlmFamily(
     name="poisson",
+    method="fepois",
     link=np.log,
     inv_link=np.exp,
     gprime=lambda mu: 1 / mu,
@@ -179,4 +193,5 @@ POISSON = GlmFamily(
     deviance=_pois_deviance,
     mu_start=_mu_start_pois,
     check_y=_check_y_nonneg,
+    outcome_bounds=(0.0,),
 )

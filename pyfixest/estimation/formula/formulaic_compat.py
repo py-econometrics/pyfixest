@@ -2,27 +2,223 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
-from typing import TYPE_CHECKING, Any
+import ast
+from collections import deque
+from collections.abc import Iterator, Mapping
+from functools import partial
+from typing import TYPE_CHECKING, Any, cast
 
 import formulaic
 import formulaic.formula
 import numpy as np
 import pandas as pd
-from formulaic.parser.types import Factor
+from formulaic.parser import DefaultOperatorResolver
+from formulaic.parser.types import Factor, Operator, OrderedSet, Term, Token
+from formulaic.utils import variables as formulaic_variables
+from formulaic.utils.code import format_expr
+from formulaic.utils.stateful_transforms import _is_stateful_transform
+from formulaic.utils.structured import Structured
+from formulaic.utils.variables import Variable
 
+from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
-    is_contrast_state_key,
+    is_i_contrast_state_key,
     variable_from_contrast_state_key,
+)
+from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
+    FIXED_EFFECT_ENCODING_STATE_KEY,
+    FixedEffectEncoding,
 )
 
 if TYPE_CHECKING:
     from formulaic.model_spec import ModelSpec
 
 
+# Adapted from Formulaic 1.2.2.
+# Copyright 2019 Matthew Wardrop and contributors.
+# Licensed under MIT; see THIRD_PARTY_NOTICES.md.
+def _get_ast_node_variables_formulaic_284(
+    node: ast.AST, env: Mapping[str, Any], aliases: Mapping[str, str]
+) -> list[Variable]:
+    """Work around unavailable callback arguments in Formulaic's dependency walk.
+
+    Adapted from Formulaic 1.2.2's ``_get_ast_node_variables``:
+    https://github.com/matthewwardrop/formulaic/blob/8579df0d49638acbae87e7f4171f97bf66d7d1c8/formulaic/utils/variables.py#L120-L161
+
+    Its stateful dependency callbacks evaluate arguments even when data is unavailable,
+    aborting dependency extraction instead of walking the arguments:
+    https://github.com/matthewwardrop/formulaic/issues/284
+    """
+    variables: list[Variable] = []
+    todo = deque([node])
+    while todo:
+        node = todo.popleft()
+        if _is_stateful_transform(node, env):
+            call = cast(ast.Call, node)
+            delegated = ast.Call(
+                func=ast.Attribute(
+                    value=call.func,
+                    attr="get_required_variables",
+                    ctx=ast.Load(),
+                ),
+                args=call.args,
+                keywords=call.keywords,
+            )
+            try:
+                delegated_variables = eval(
+                    compile(format_expr(delegated), "", "eval"), {}, env
+                )
+            except (NameError, AttributeError):
+                # Missing data names, or nested Q() without its data context,
+                # must not prevent the argument walk below. Literal Q() calls
+                # still contribute their quoted lookup names through the callback.
+                delegated_variables = ()
+            variables.extend(delegated_variables)
+        if not isinstance(node, (ast.Call, ast.Attribute, ast.Name)):
+            todo.extend(ast.iter_child_nodes(node))
+            continue
+        name = formulaic_variables._get_ast_node_name(node)
+        name = aliases.get(name, name)
+        if isinstance(node, ast.Call):
+            variables.append(Variable(name, roles=["callable"]))
+            todo.extend(node.args)
+            todo.extend(node.keywords)
+        else:
+            variables.append(Variable(name, roles=["value"]))
+    return variables
+
+
+if formulaic.__version__ == "1.2.2":
+    formulaic_variables._get_ast_node_variables = _get_ast_node_variables_formulaic_284
+
+
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
+
+
+def _iv_block(
+    lhs: OrderedSet[Term], rhs: OrderedSet[Term]
+) -> Structured[OrderedSet[Term]]:
+    """Preserve multistage formula terms without generating `_hat` placeholders."""
+    if isinstance(lhs, Structured) or isinstance(rhs, Structured):
+        raise FormulaSyntaxError(
+            "Nested instrumental-variable specifications are not supported. "
+            "Use a single `[endogenous ~ instruments]` block."
+        )
+    return Structured(lhs, deps=(Structured(lhs=lhs, rhs=rhs),))
+
+
+def _interaction_without_iv(
+    lhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    rhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    *,
+    operator: Operator,
+    context: Mapping[str, Any],
+) -> OrderedSet[Term] | Structured[OrderedSet[Term]]:
+    """Reject implicit exogenous interactions with an endogenous IV block."""
+    has_iv = any(
+        isinstance(terms, Structured) and count_multistage_blocks(terms)
+        for terms in (lhs, rhs)
+    )
+    result = Structured._merge(
+        lhs, rhs, merger=partial(operator.to_terms, context=context)
+    )
+    if not has_iv:
+        return result
+    original_terms = {
+        term
+        for terms in (lhs, rhs)
+        for term in (terms.root if isinstance(terms, Structured) else terms)
+    }
+    # A power of a single IV term can just deduplicate it. Reject expansions
+    # that introduce new terms, whose endogenous/exogenous role is ambiguous.
+    if set(result.root).difference(original_terms):
+        raise FormulaSyntaxError(
+            "Interactions around an instrumental-variable block are not supported. "
+            "Write interactions explicitly and specify which term is endogenous "
+            "inside `[endogenous ~ instruments]`."
+        )
+    return result
+
+
+class PyfixestOperatorResolver(DefaultOperatorResolver):
+    """Keep IV terms in dependencies without generating placeholder covariates.
+
+    The root contains the original endogenous terms, allowing ordinary formula
+    deduplication and validation of the resulting second-stage specification.
+    """
+
+    @staticmethod
+    def _is_multistage_formula_operator(operator: Operator) -> bool:
+        """Identify the `~` operator used inside `[endogenous ~ instruments]`."""
+        return (
+            operator.symbol == "~"
+            # A multistage `~` takes two arguments (endogenous ~ exogenous)
+            and operator.arity == 2
+            # A multistage `~` only accepts brackets as context
+            and operator.accepts_context([Token("[", kind=Token.Kind.CONTEXT)])
+            # A top-level `~` only accepts an empty context `[]`
+            and not operator.accepts_context([])
+        )
+
+    @property
+    def operators(self) -> list[Operator]:
+        """Preserve IV terms and reject implicit interactions around IV blocks."""
+        operators = super().operators
+        multistage_operator_positions = [
+            position
+            for position, operator in enumerate(operators)
+            if self._is_multistage_formula_operator(operator)
+        ]
+        if len(multistage_operator_positions) != 1:
+            raise FormulaicCompatibilityError(
+                "Formulaic's operator definitions changed: expected exactly one "
+                "multistage '~' operator definition."
+            )
+        position = multistage_operator_positions[0]
+        operator = operators[position]
+        operators[position] = Operator(
+            operator.symbol,
+            arity=operator.arity,
+            precedence=operator.precedence,
+            associativity=operator.associativity,
+            fixity=operator.fixity,
+            to_terms=_iv_block,
+            accepts_context=operator.accepts_context,
+            structural=operator.structural,
+            disabled=operator.disabled,
+        )
+        for position, operator in enumerate(operators):
+            if operator.symbol in {"*", ":", "/", "in", "^", "**"}:
+                operators[position] = Operator(
+                    operator.symbol,
+                    arity=operator.arity,
+                    precedence=operator.precedence,
+                    associativity=operator.associativity,
+                    fixity=operator.fixity,
+                    to_terms=partial(_interaction_without_iv, operator=operator),
+                    accepts_context=operator.accepts_context,
+                    structural=True,
+                    disabled=operator.disabled,
+                )
+        return operators
+
+
+def get_fixed_effect_encoding(
+    *, transform_state: Mapping[str, Any], column: str
+) -> FixedEffectEncoding:
+    """Read pyfixest's typed encoding from Formulaic's transform-state layout."""
+    try:
+        return cast(
+            FixedEffectEncoding,
+            transform_state[column][FIXED_EFFECT_ENCODING_STATE_KEY],
+        )
+    except KeyError as exc:
+        raise FormulaicCompatibilityError(
+            f"Fixed-effect encoding for `{column}` is missing from the "
+            "formulaic transform state."
+        ) from exc
 
 
 def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]:
@@ -30,13 +226,26 @@ def terms_without_intercept(formula: formulaic.formula.Formula) -> Iterator[Any]
     return (term for term in formula if term != "1")
 
 
+def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[str]:
+    """Collect dependencies without normalizing literal lookup names."""
+    return {
+        str(variable)
+        for term in formula
+        for factor in term.factors
+        for variable in factor.required_variables
+        if Variable.Role.CALLABLE not in variable.roles  # ignore transforms
+    }
+
+
 def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
     """Return whether formulaic parsed an IV RHS as a StructuredFormula."""
     return isinstance(rhs, formulaic.formula.StructuredFormula)
 
 
-def count_multistage_blocks(rhs: formulaic.formula.Formula) -> int:
-    """Count formulaic MULTISTAGE deps on a StructuredFormula RHS."""
+def count_multistage_blocks(
+    rhs: formulaic.formula.Formula | Structured[OrderedSet[Term]],
+) -> int:
+    """Count formulaic MULTISTAGE deps on a parsed RHS or structured term set."""
     # formulaic internal: MULTISTAGE stores the parsed first-stage formulas in
     # `.deps`; formulaic does not currently expose a documented accessor.
     deps = getattr(rhs, "deps", ())
@@ -72,27 +281,6 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
             "expose `.lhs` and `.rhs` formulas."
         )
     return block
-
-
-def filter_multistage_endogenous_terms(
-    exogenous: formulaic.formula.Formula,
-    endogenous_terms: Iterable[Any],
-) -> formulaic.formula.SimpleFormula:
-    """Drop formulaic's generated ``<endogenous term>_hat`` second-stage terms."""
-    # formulaic internal: MULTISTAGE renames each endogenous *term* to
-    # "<term>_hat" in the second-stage RHS -- `log(X2)` becomes `log(X2)_hat`,
-    # not `X2_hat`. If formulaic changes the suffix, compat tests catch it.
-    generated_endogenous = {f"{term}_hat" for term in endogenous_terms}
-    terms = list(exogenous.root)
-    missing = generated_endogenous - {str(term) for term in terms}
-    if missing:
-        raise FormulaicCompatibilityError(
-            "formulaic MULTISTAGE endogenous suffix changed: expected generated "
-            f"second-stage terms {sorted(missing)} to be present before filtering."
-        )
-    return formulaic.formula.SimpleFormula(
-        [term for term in terms if str(term) not in generated_endogenous]
-    )
 
 
 def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:
@@ -164,6 +352,22 @@ def rows_with_unseen_contrast_levels(
     return mask
 
 
+def i_term_columns(rhs_spec: ModelSpec) -> list[str]:
+    """Return the model-matrix columns produced by terms that call ``i()``."""
+    i_factor_exprs = {
+        factor_expr
+        for factor_expr, value in rhs_spec.encoder_state.items()
+        if any(is_i_contrast_state_key(key) for key in _unpack_encoder_state(value)[1])
+    }
+    columns: list[str] = []
+    # formulaic internal: `ModelSpec.structure` lists one EncodedTermStructure
+    # per term with the exact model-matrix columns that term produced.
+    for term_structure in rhs_spec.structure or ():
+        if any(factor.expr in i_factor_exprs for factor in term_structure.term.factors):
+            columns.extend(term_structure.columns)
+    return columns
+
+
 def iter_i_categorical_levels(
     rhs_spec: ModelSpec, newdata: pd.DataFrame
 ) -> Iterator[tuple[str, set[Any], dict[str, Any]]]:
@@ -173,7 +377,7 @@ def iter_i_categorical_levels(
         if kind is not Factor.Kind.CATEGORICAL:
             continue
         for key, substate in state.items():
-            if is_contrast_state_key(key):
+            if is_i_contrast_state_key(key):
                 variable = variable_from_contrast_state_key(key)
                 if variable in newdata.columns and "categories" in substate:
                     yield variable, set(substate["categories"]), state
@@ -194,3 +398,8 @@ def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
             "value to be a two-tuple of (Factor.Kind, state_dict)."
         )
     return kind, state
+
+
+def is_python_expression(factor: Factor) -> bool:
+    """Return whether Formulaic represents the factor as Python syntax."""
+    return factor.eval_method is Factor.EvalMethod.PYTHON
