@@ -1,7 +1,6 @@
 import re
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -137,6 +136,8 @@ class SaturatedEventStudy(DID):
 
     def iplot(self):
         """Plot DID estimates."""
+        import matplotlib.pyplot as plt
+
         cmp = plt.get_cmap("Set1")
 
         _, ax = plt.subplots(figsize=(10, 6))
@@ -283,6 +284,8 @@ class SaturatedEventStudy(DID):
         -------
         None
         """
+        import matplotlib.pyplot as plt
+
         df_agg = self.aggregate(agg=agg, weighting=weighting)
 
         time = np.array(df_agg.index, dtype=float).astype(float)

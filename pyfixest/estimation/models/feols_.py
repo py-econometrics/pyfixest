@@ -61,14 +61,6 @@ from pyfixest.estimation.post_estimation.fixed_effects import (
     warn_on_unseen_fixed_effect_levels,
 )
 from pyfixest.estimation.post_estimation.prediction import _compute_prediction_error
-from pyfixest.estimation.post_estimation.ritest import (
-    _HAS_NUMBA,
-    _decode_resampvar,
-    _get_ritest_pvalue,
-    _get_ritest_stats_fast,
-    _get_ritest_stats_slow,
-    _plot_ritest_pvalue,
-)
 from pyfixest.estimation.post_estimation.wald import _wald_statistic
 from pyfixest.utils.dev_utils import (
     DataFrameType,
@@ -424,7 +416,7 @@ class Feols(ResultAccessorMixin):
         )
 
         self._Y = model_matrix.dependent
-        self._Y_untransformed = model_matrix.dependent.copy()
+        self._Y_untransformed = self._Y.copy()
         self._X = model_matrix.independent
         self._fe = model_matrix.fixed_effects
         self._endogvar = model_matrix.endogenous
@@ -441,7 +433,7 @@ class Feols(ResultAccessorMixin):
             if is_icovar is not None and is_icovar.any()
             else None
         )
-        self._X_is_empty = not model_matrix.independent.shape[0] > 0
+        self._X_is_empty = self._X.shape[0] == 0
         self._model_spec = model_matrix.model_spec
 
         self._coefnames = self._X.columns.tolist()
@@ -458,11 +450,9 @@ class Feols(ResultAccessorMixin):
         self._k_fe = self._fe.nunique(axis=0) if self._has_fixef else None
         self._n_fe = len(self._k_fe) if self._has_fixef else 0
 
-        # update data
-        self._data.drop(
-            self._data.index[~self._data.index.isin(model_matrix.dependent.index)],
-            inplace=True,
-        )
+        # an empty drop still rebuilds the whole frame, so guard it
+        if self._na_index:
+            self._data.drop(index=list(self._na_index), inplace=True)
 
         self._weights = self._set_weights()
         self._N, self._N_rows = self._set_nobs()
@@ -1376,6 +1366,7 @@ class Feols(ResultAccessorMixin):
                 cluster_vec=cluster_vec,
                 pk=pk,
                 tau_full=tau_full,
+                demeaner=self._demeaner,
             )
             vcov_splits += vcov_ccv
 
@@ -1895,19 +1886,20 @@ class Feols(ResultAccessorMixin):
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
             if self._offset_name is not None:
-                if self._offset_name not in newdata.columns:
+                offset_mm = self._model_spec[_ModelMatrixKey.offset].get_model_matrix(
+                    newdata,
+                    context=context,
+                    na_action="drop",
+                    output="pandas",
+                )
+                if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
-                        f"Offset variable '{self._offset_name}' not found in newdata."
+                        f"Offset expression '{self._offset_name}' evaluates to missing "
+                        "values in `newdata`."
                     )
-                offset = pd.to_numeric(
-                    newdata[self._offset_name], errors="coerce"
-                ).to_numpy()
-                if np.isnan(offset).any():
-                    raise ValueError(
-                        f"Offset column '{self._offset_name}' in newdata contains "
-                        "NaN or non-numeric values."
-                    )
-                y_hat = y_hat + offset
+
+                y_hat += offset_mm.iloc[:, 0].to_numpy()
+
             if type == "response" and self._method == "fepois":
                 y_hat = np.exp(y_hat)
 
@@ -2003,6 +1995,14 @@ class Feols(ResultAccessorMixin):
         fit.ritest("X1", reps=1000, store_ritest_statistics=True)
         ```
         """
+        from pyfixest.estimation.post_estimation.ritest import (
+            _HAS_NUMBA,
+            _decode_resampvar,
+            _get_ritest_pvalue,
+            _get_ritest_stats_fast,
+            _get_ritest_stats_slow,
+        )
+
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
@@ -2159,6 +2159,8 @@ class Feols(ResultAccessorMixin):
         A lets_plot or matplotlib figure with the distribution of the Randomization
         Inference Statistics.
         """
+        from pyfixest.estimation.post_estimation.ritest import _plot_ritest_pvalue
+
         if not hasattr(self, "_ritest_statistics"):
             raise ValueError(
                 """

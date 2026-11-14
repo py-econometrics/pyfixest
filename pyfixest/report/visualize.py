@@ -1,31 +1,11 @@
-import math
+from __future__ import annotations
 
-import matplotlib.pyplot as plt
+import math
+from importlib.util import find_spec
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
-
-# Make lets-plot an optional dependency
-try:
-    from lets_plot import (
-        LetsPlot,
-        aes,
-        coord_flip,
-        element_text,
-        geom_errorbar,
-        geom_hline,
-        geom_point,
-        geom_vline,
-        ggplot,
-        ggsize,
-        ggtitle,
-        position_dodge,
-        theme,
-        ylab,
-    )
-
-    _HAS_LETS_PLOT = True
-except ImportError:
-    _HAS_LETS_PLOT = False
 
 from pyfixest.estimation.FixestMulti_ import FixestMulti
 from pyfixest.estimation.models.feiv_ import Feiv
@@ -39,11 +19,12 @@ from pyfixest.report.utils import (
 )
 from pyfixest.utils.dev_utils import _select_order_coefs
 
-ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
 
-# Only setup lets-plot if it's available
-if _HAS_LETS_PLOT:
-    LetsPlot.setup_html()
+_HAS_LETS_PLOT = find_spec("lets_plot") is not None
+
+ModelInputType = FixestMulti | Feols | Fepois | Feiv | list[Feols | Fepois | Feiv]
 
 
 def set_figsize(figsize: tuple[int, int] | None, plot_backend: str) -> tuple[int, int]:
@@ -575,6 +556,25 @@ def _coefplot_lets_plot(
     object
         A lets-plot figure.
     """
+    from lets_plot import (
+        LetsPlot,
+        aes,
+        coord_flip,
+        element_text,
+        geom_errorbar,
+        geom_hline,
+        geom_point,
+        geom_vline,
+        ggplot,
+        ggsize,
+        ggtitle,
+        position_dodge,
+        theme,
+        ylab,
+    )
+
+    LetsPlot.setup_html()
+
     df.reset_index(inplace=True)
     df.rename(columns={"fml": "Model"}, inplace=True)
     ub, lb = 1 - alpha / 2, alpha / 2
@@ -673,6 +673,8 @@ def _coefplot_matplotlib(
     matplotlib.figure.Figure
         A matplotlib Figure object.
     """
+    import matplotlib.pyplot as plt
+
     labels_dict = {} if labels is None else labels
 
     if not labels_dict or cat_template is not None:
@@ -798,6 +800,8 @@ def _qplot(
     (Figure, ndarray[Axes])
         Handle to the created figure and axes.
     """
+    import matplotlib.pyplot as plt
+
     if nrow is None and ncol is None:
         nrow = 1
     if (nrow is not None) and (ncol is not None):

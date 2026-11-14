@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: v0.62.2
           cache: true
@@ -52,17 +52,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-task: [test-r-core, test-r-extended, test-r-fixest, test-r-hac]
+        test-task: [test-r-core-other, test-r-extended, test-r-fixest, test-r-hac]
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: v0.62.2
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
           frozen: true
           environments: py312-r
+
+      - name: Run fast R preflight
+        if: matrix.test-task == 'test-r-fixest'
+        run: pixi run -e py312-r test-r-fixest-fast
 
       - name: Run ${{ matrix.test-task }}
         run: pixi run -e py312-r ${{ matrix.test-task }}
@@ -95,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: prefix-dev/setup-pixi@v0.10.0
+      - uses: prefix-dev/setup-pixi@v0.10.2
         with:
           pixi-version: v0.62.2
           cache: true

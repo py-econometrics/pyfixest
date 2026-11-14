@@ -10,7 +10,7 @@ def _estimation_input_checks(
     data: DataFrameType,
     vcov: str | dict[str, str] | None,
     vcov_kwargs: dict[str, str | int] | None,
-    weights: None | str,
+    weights: str | None,
     ssc: dict[str, str | bool],
     fixef_rm: str,
     collin_tol: float,

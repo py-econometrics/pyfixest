@@ -1,7 +1,7 @@
 from rpy2.robjects.packages import importr
 
 
-def _catch_import_issue(name: str, strict: bool) -> None | bool:
+def _catch_import_issue(name: str, strict: bool) -> bool | None:
     if strict:
         raise ImportError(
             f"{name} package not found. Make sure the extended R environment is installed."
