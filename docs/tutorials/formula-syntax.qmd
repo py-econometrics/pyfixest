@@ -218,6 +218,10 @@ pf.etable(fit_sw)
 ### `sw0()`: stepwise with zero step
 
 `y ~ x1 + sw0(x2, x3)` expands to `y ~ x1`, `y ~ x1 + x2`, and `y ~ x1 + x3`.
+The zero step is an empty group: in a sum it adds nothing, so `y ~ 0 + sw0(x2)`
+starts with `y ~ 0`, and in an interaction it drops the interaction, so
+`y ~ x1 + sw0(x2):z` starts with `y ~ x1`. On the left of `~`, as in
+`sw0(y1, y2) ~ x1`, there is no zero step.
 
 ```{python}
 fit_sw0 = pf.feols("Y ~ X1 + sw0(X2, Z1)", data=data)

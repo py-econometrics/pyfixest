@@ -1483,6 +1483,64 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    ("formula", "r_formulas"),
+    [
+        ("Y ~ 0 + sw0(X2) + X1", None),
+        ("Y ~ -1 + csw0(X2, Z1) + X1", None),
+        ("Y ~ 0 + mvsw(X2, Z1) + X1", None),
+        ("Y ~ X1 | f1 + sw0(f2)", None),
+        ("sw0(Y, Y2) ~ X1", None),
+        (
+            "Y ~ 0 + sw0(X2) + [X1 ~ Z1]",
+            ["Y ~ 0 | X1 ~ Z1", "Y ~ 0 + X2 | X1 ~ Z1"],
+        ),
+        # fixest rejects stepwise calls inside subtraction and interactions.
+        ("Y ~ X1 + X2 - sw0(X2)", ["Y ~ X1 + X2", "Y ~ X1"]),
+        (
+            "Y ~ X1 + csw0(X2, Z1):X1",
+            ["Y ~ X1", "Y ~ X1 + X2:X1", "Y ~ X1 + X2:X1 + Z1:X1"],
+        ),
+        ("Y ~ X1 + sw0(X2)*Z1", ["Y ~ X1 + Z1", "Y ~ X1 + X2*Z1"]),
+    ],
+)
+def test_stepwise_zero_step_models_against_fixest(data_feols, formula, r_formulas):
+    """Compare each zero-step expansion with an independent fixest fit."""
+    py_models = feols(formula, data=data_feols).to_list()
+    if r_formulas is None:
+        r_multi = fixest.feols(ro.Formula(formula), data=data_feols)
+        r_models = [r_multi.rx2(i + 1) for i in range(len(r_multi))]
+    else:
+        r_models = [
+            fixest.feols(ro.Formula(fml), data=data_feols) for fml in r_formulas
+        ]
+
+    for py_model, r_model in zip(py_models, r_models, strict=True):
+        r_coef = stats.coef(r_model)
+        r_names = [
+            name.replace("(Intercept)", "Intercept").removeprefix("fit_")
+            for name in ro.r("function(fit) names(coef(fit))")(r_model)
+        ]
+
+        # Formulaic may render interaction factors in the opposite order.
+        def canonical(name):
+            return ":".join(sorted(name.split(":")))
+
+        py_coef = {canonical(name): value for name, value in py_model.coef().items()}
+        r_values = {
+            canonical(name): value for name, value in zip(r_names, r_coef, strict=True)
+        }
+        assert py_coef.keys() == r_values.keys()
+        np.testing.assert_allclose(
+            list(py_coef.values()),
+            [r_values[name] for name in py_coef],
+            rtol=rtol,
+            atol=atol,
+        )
+        assert py_model.sample_info.n_obs == int(stats.nobs(r_model)[0])
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize("N", [100])
 @pytest.mark.parametrize("seed", [31])
 @pytest.mark.parametrize("beta_type", ["1"])

@@ -55,21 +55,21 @@ class TestMultipleEstimationExpansion:
             ("Y ~ X1 + X2", ["Y ~ X1 + X2"]),
             ("Y ~ sw(X1)", ["Y ~ (X1)"]),
             ("Y ~ csw(X1)", ["Y ~ (X1)"]),
-            ("Y ~ sw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
-            ("Y ~ csw0(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
-            ("Y ~ X1 | sw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
-            ("Y ~ X1 | csw0(f1)", ["Y ~ X1 | (1)", "Y ~ X1 | (f1)"]),
+            ("Y ~ sw0(X1)", ["Y ~ (1 - 1)", "Y ~ (X1)"]),
+            ("Y ~ csw0(X1)", ["Y ~ (1 - 1)", "Y ~ (X1)"]),
+            ("Y ~ X1 | sw0(f1)", ["Y ~ X1 | (1 - 1)", "Y ~ X1 | (f1)"]),
+            ("Y ~ X1 | csw0(f1)", ["Y ~ X1 | (1 - 1)", "Y ~ X1 | (f1)"]),
             (
                 "Y ~ csw(X1, X2):Z1",
                 ["Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
             ),
             (
                 "Y ~ csw0(X1, X2):Z1",
-                ["Y ~ (1):Z1", "Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
+                ["Y ~ (1 - 1):Z1", "Y ~ (X1):Z1", "Y ~ (X1 + X2):Z1"],
             ),
             (
                 "Y ~ csw0(1 + X1, X2):Z1",
-                ["Y ~ (1):Z1", "Y ~ (1 + X1):Z1", "Y ~ (1 + X1 + X2):Z1"],
+                ["Y ~ (1 - 1):Z1", "Y ~ (1 + X1):Z1", "Y ~ (1 + X1 + X2):Z1"],
             ),
             (
                 "Y ~ csw(X1, X2)*Z1",
@@ -109,58 +109,31 @@ class TestMultipleEstimationExpansion:
                 ],
             ),
             # sw0() cases
-            ("Y ~ sw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)"]),
-            ("Y ~ A + sw0(X1, X2)", ["Y ~ A", "Y ~ A + (X1)", "Y ~ A + (X2)"]),
+            ("Y ~ sw0(X1, X2)", ["Y ~ (1 - 1)", "Y ~ (X1)", "Y ~ (X2)"]),
+            (
+                "Y ~ A + sw0(X1, X2)",
+                ["Y ~ A + (1 - 1)", "Y ~ A + (X1)", "Y ~ A + (X2)"],
+            ),
             # csw0() cases
-            ("Y ~ csw0(X1, X2)", ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X1 + X2)"]),
+            ("Y ~ csw0(X1, X2)", ["Y ~ (1 - 1)", "Y ~ (X1)", "Y ~ (X1 + X2)"]),
             (
                 "Y ~ A + csw0(X1, X2, X3)",
                 [
-                    "Y ~ A",
+                    "Y ~ A + (1 - 1)",
                     "Y ~ A + (X1)",
                     "Y ~ A + (X1 + X2)",
                     "Y ~ A + (X1 + X2 + X3)",
                 ],
             ),
-            # The zero step adds no terms, so it keeps the main formula's
-            # intercept choice, but stays the identity in products
-            (
-                "Y ~ 0 + sw0(X2) + X1",
-                ["Y ~ 0 + X1", "Y ~ 0 + (X2) + X1"],
-            ),
-            (
-                "Y ~ -1 + csw0(X1, X2)",
-                ["Y ~ -1", "Y ~ -1 + (X1)", "Y ~ -1 + (X1 + X2)"],
-            ),
-            (
-                "Y ~ sw0(X1) + X2 - 1",
-                ["Y ~ X2 - 1", "Y ~ (X1) + X2 - 1"],
-            ),
-            (
-                "Y ~ X1 + X2 - csw0(X1, X2)",
-                ["Y ~ X1 + X2", "Y ~ X1 + X2 - (X1)", "Y ~ X1 + X2 - (X1 + X2)"],
-            ),
-            (
-                "Y ~ 0 + Z1:sw0(Z2)",
-                ["Y ~ 0 + Z1:(1)", "Y ~ 0 + Z1:(Z2)"],
-            ),
-            (
-                "Y ~ 0 + sw0(X2) + [X1 ~ Z1]",
-                ["Y ~ 0 + [X1 ~ Z1]", "Y ~ 0 + (X2) + [X1 ~ Z1]"],
-            ),
-            (
-                "Y ~ X1 | f1 + sw0(f2)",
-                ["Y ~ X1 | f1", "Y ~ X1 | f1 + (f2)"],
-            ),
             # mvsw() cases - all combinations of arguments, with zero step
             (
                 "Y ~ mvsw(X1, X2)",
-                ["Y ~ (1)", "Y ~ (X1)", "Y ~ (X2)", "Y ~ (X1 + X2)"],
+                ["Y ~ (1 - 1)", "Y ~ (X1)", "Y ~ (X2)", "Y ~ (X1 + X2)"],
             ),
             (
                 "Y ~ mvsw(X1, X2, X3)",
                 [
-                    "Y ~ (1)",
+                    "Y ~ (1 - 1)",
                     "Y ~ (X1)",
                     "Y ~ (X2)",
                     "Y ~ (X3)",
@@ -172,12 +145,17 @@ class TestMultipleEstimationExpansion:
             ),
             (
                 "Y ~ A + mvsw(X1, X2)",
-                ["Y ~ A", "Y ~ A + (X1)", "Y ~ A + (X2)", "Y ~ A + (X1 + X2)"],
+                [
+                    "Y ~ A + (1 - 1)",
+                    "Y ~ A + (X1)",
+                    "Y ~ A + (X2)",
+                    "Y ~ A + (X1 + X2)",
+                ],
             ),
             (
                 "Y ~ A + mvsw(X1, X2, X3)",
                 [
-                    "Y ~ A",
+                    "Y ~ A + (1 - 1)",
                     "Y ~ A + (X1)",
                     "Y ~ A + (X2)",
                     "Y ~ A + (X3)",
@@ -188,12 +166,12 @@ class TestMultipleEstimationExpansion:
                 ],
             ),
             # mvsw() with single argument
-            ("Y ~ mvsw(X1)", ["Y ~ (1)", "Y ~ (X1)"]),
+            ("Y ~ mvsw(X1)", ["Y ~ (1 - 1)", "Y ~ (X1)"]),
             # mvsw() with fixed effects
             (
                 "Y ~ mvsw(X1, X2) | f1",
                 [
-                    "Y ~ (1) | f1",
+                    "Y ~ (1 - 1) | f1",
                     "Y ~ (X1) | f1",
                     "Y ~ (X2) | f1",
                     "Y ~ (X1 + X2) | f1",
@@ -203,15 +181,15 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ X1 | mvsw(f1, f2)",
                 [
-                    "Y ~ X1 | (1)",
+                    "Y ~ X1 | (1 - 1)",
                     "Y ~ X1 | (f1)",
                     "Y ~ X1 | (f2)",
                     "Y ~ X1 | (f1 + f2)",
                 ],
             ),
             # Multiple estimation with sums of variables
-            ("Y ~ sw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1+f2)"]),
-            ("Y ~ csw0(f1, f1+f2)", ["Y ~ (1)", "Y ~ (f1)", "Y ~ (f1 + f1+f2)"]),
+            ("Y ~ sw0(f1, f1+f2)", ["Y ~ (1 - 1)", "Y ~ (f1)", "Y ~ (f1+f2)"]),
+            ("Y ~ csw0(f1, f1+f2)", ["Y ~ (1 - 1)", "Y ~ (f1)", "Y ~ (f1 + f1+f2)"]),
             # Fixed effects with multiple estimation
             ("Y ~ X1 | sw(f1, f2)", ["Y ~ X1 | (f1)", "Y ~ X1 | (f2)"]),
             # Two operators in the same formula part
@@ -228,16 +206,16 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ sw(X1, X2) + csw(X3, X4) + sw0(X5, X6)",
                 [
-                    "Y ~ (X1) + (X3)",
+                    "Y ~ (X1) + (X3) + (1 - 1)",
                     "Y ~ (X1) + (X3) + (X5)",
                     "Y ~ (X1) + (X3) + (X6)",
-                    "Y ~ (X1) + (X3 + X4)",
+                    "Y ~ (X1) + (X3 + X4) + (1 - 1)",
                     "Y ~ (X1) + (X3 + X4) + (X5)",
                     "Y ~ (X1) + (X3 + X4) + (X6)",
-                    "Y ~ (X2) + (X3)",
+                    "Y ~ (X2) + (X3) + (1 - 1)",
                     "Y ~ (X2) + (X3) + (X5)",
                     "Y ~ (X2) + (X3) + (X6)",
-                    "Y ~ (X2) + (X3 + X4)",
+                    "Y ~ (X2) + (X3 + X4) + (1 - 1)",
                     "Y ~ (X2) + (X3 + X4) + (X5)",
                     "Y ~ (X2) + (X3 + X4) + (X6)",
                 ],
@@ -293,8 +271,8 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ sw0(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ (1) | (f1)",
-                    "Y ~ (1) | (f2)",
+                    "Y ~ (1 - 1) | (f1)",
+                    "Y ~ (1 - 1) | (f2)",
                     "Y ~ (X1) | (f1)",
                     "Y ~ (X1) | (f2)",
                     "Y ~ (X2) | (f1)",
@@ -305,10 +283,10 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ csw(X1, X2) | csw0(f1, f2)",
                 [
-                    "Y ~ (X1) | (1)",
+                    "Y ~ (X1) | (1 - 1)",
                     "Y ~ (X1) | (f1)",
                     "Y ~ (X1) | (f1 + f2)",
-                    "Y ~ (X1 + X2) | (1)",
+                    "Y ~ (X1 + X2) | (1 - 1)",
                     "Y ~ (X1 + X2) | (f1)",
                     "Y ~ (X1 + X2) | (f1 + f2)",
                 ],
@@ -331,8 +309,8 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ mvsw(X1, X2) | sw(f1, f2)",
                 [
-                    "Y ~ (1) | (f1)",
-                    "Y ~ (1) | (f2)",
+                    "Y ~ (1 - 1) | (f1)",
+                    "Y ~ (1 - 1) | (f2)",
                     "Y ~ (X1) | (f1)",
                     "Y ~ (X1) | (f2)",
                     "Y ~ (X2) | (f1)",
@@ -345,8 +323,8 @@ class TestMultipleEstimationExpansion:
             (
                 "Y ~ mvsw(X1, X2) | csw(f1, f2)",
                 [
-                    "Y ~ (1) | (f1)",
-                    "Y ~ (1) | (f1 + f2)",
+                    "Y ~ (1 - 1) | (f1)",
+                    "Y ~ (1 - 1) | (f1 + f2)",
                     "Y ~ (X1) | (f1)",
                     "Y ~ (X1) | (f1 + f2)",
                     "Y ~ (X2) | (f1)",
@@ -1038,21 +1016,13 @@ def test_stepwise_call_over_several_lines_matches_single_line(test_data):
         np.testing.assert_allclose(multiline_fit.coef(), single_line_fit.coef())
 
 
-@pytest.mark.parametrize(
-    "formula,zero_step",
-    [
-        ("Y ~ 0 + sw0(X2) + X1", "Y ~ 0 + X1"),
-        ("Y ~ -1 + csw0(X2, Z1) + X1", "Y ~ -1 + X1"),
-        ("Y ~ 0 + sw0(X2) + [X1 ~ Z1]", "Y ~ 0 + [X1 ~ Z1]"),
-    ],
-)
-def test_zero_step_keeps_main_formula_intercept(test_data, formula, zero_step):
-    """The zero step of sw0/csw0 fits the main formula without its stepwise terms."""
-    fit = pf.feols(formula, data=test_data).to_list()[0]
-    expected = pf.feols(zero_step, data=test_data)
+def test_zero_step_keeps_main_formula_intercept(test_data):
+    """The zero step preserves an explicit no-intercept choice."""
+    fit = pf.feols("Y ~ 0 + sw0(X2) + X1", data=test_data).to_list()[0]
+    expected = pf.feols("Y ~ 0 + X1", data=test_data)
 
-    assert "Intercept" not in fit.coef().index
-    assert fit.model.formula == expected.model.formula
+    assert list(fit.coef().index) == list(expected.coef().index)
+    assert fit.sample_info.n_obs == expected.sample_info.n_obs
     np.testing.assert_allclose(
         fit.coef(), expected.coef(), err_msg="zero-step coefficients"
     )
