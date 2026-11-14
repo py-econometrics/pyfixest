@@ -23,6 +23,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated
   `AttributeError` ([#1809](https://github.com/py-econometrics/pyfixest/issues/1809)).
+- `i(x, bin=...)` bins a pandas `Categorical` column. Before, it raised
+  `TypeError: Cannot setitem on a Categorical with a new category` under pandas 3
+  and a `FutureWarning` under pandas 2. As in `fixest`, a bin takes the place of
+  the first value listed for it ([#1910](https://github.com/py-econometrics/pyfixest/issues/1910)).
 
 ## PyFixest 0.70.0
 
