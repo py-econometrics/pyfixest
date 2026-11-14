@@ -799,6 +799,7 @@ def test_demean_model_no_fixed_effects(benchmark, demeaner):
         fe=None,
         weights=weights,
         na_index=frozenset(),
+        encoding_dropped_rows=frozenset(),
         demeaner=demeaner,
     )
 
@@ -834,6 +835,7 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
         fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
+        encoding_dropped_rows=frozenset(),
         demeaner=demeaner,
     )
 
@@ -842,8 +844,8 @@ def test_demean_model_with_fixed_effects(benchmark, demeaner):
     assert not np.allclose(X.values, Xd)
 
     # Verify results are cached in lookup_dict
-    assert frozenset() in lookup_dict
-    cached_data = lookup_dict[frozenset()]
+    assert (frozenset(), frozenset()) in lookup_dict
+    cached_data = lookup_dict[frozenset(), frozenset()]
     assert isinstance(cached_data, DemeanedData)
     assert cached_data.column_keys == ("y", "x1", "x2")
     assert np.allclose(cached_data.values[:, :1], Yd)
@@ -872,6 +874,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
         fe=fe.to_numpy(),
         weights=weights,
         na_index=frozenset(),
+        encoding_dropped_rows=frozenset(),
         demeaner=demeaner,
     )
 
@@ -884,6 +887,7 @@ def test_demean_model_with_weights(benchmark, demeaner):
         fe=fe.to_numpy(),
         weights=None,
         na_index=frozenset(),
+        encoding_dropped_rows=frozenset(),
         demeaner=demeaner,
     )
 
@@ -902,6 +906,8 @@ def test_demean_model_caching(benchmark, demeaner):
     X = pd.DataFrame({"x1": rng.normal(0, 1, N), "x2": rng.normal(0, 1, N)})
     fe = pd.DataFrame({"fe1": rng.integers(0, 10, N)})
     weights = np.ones(N)
+    na_index = frozenset()
+    sample_key = (na_index, na_index)
     lookup_dict = {}
     first_cache = DemeanCache(lookup_dict)
     assert first_cache.lookup_demeaned_data is lookup_dict
@@ -914,7 +920,8 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=X.columns,
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
 
@@ -929,14 +936,15 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=X.columns,
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
 
     # Results should be identical
     assert np.allclose(Yd1, Yd2)
     assert np.allclose(Xd1, Xd2)
-    original_entry = lookup_dict[frozenset()]
+    original_entry = lookup_dict[sample_key]
     assert np.shares_memory(Xd1, original_entry.values)
     assert np.shares_memory(Xd2, original_entry.values)
     original_values = original_entry.values.copy()
@@ -950,7 +958,8 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=("x2", "x1"),
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
     Yd_empty, Xd_empty, _ = DemeanCache(lookup_dict).demean_yx(
@@ -960,7 +969,8 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=(),
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
     np.testing.assert_allclose(
@@ -1006,7 +1016,8 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=X_new.columns,
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
     _, Xd3_fresh, _ = DemeanCache().demean_yx(
@@ -1016,10 +1027,11 @@ def test_demean_model_caching(benchmark, demeaner):
         x_keys=X_new.columns,
         fe=fe.to_numpy(),
         weights=weights,
-        na_index=frozenset(),
+        na_index=na_index,
+        encoding_dropped_rows=na_index,
         demeaner=demeaner,
     )
-    assert lookup_dict[frozenset()] is not original_entry
+    assert lookup_dict[sample_key] is not original_entry
     np.testing.assert_array_equal(original_entry.values, original_values)
     assert np.shares_memory(Xd1, original_entry.values)
     assert np.shares_memory(Xd2, original_entry.values)
@@ -1028,7 +1040,7 @@ def test_demean_model_caching(benchmark, demeaner):
     # cache keeps first-seen insertion order and all earlier columns.
     assert np.allclose(Xd3, Xd3_fresh)
     assert np.allclose(Xd3[:, [1, 3]], Xd2)
-    cached_data = lookup_dict[frozenset()]
+    cached_data = lookup_dict[sample_key]
     assert isinstance(cached_data, DemeanedData)
     assert cached_data.column_keys == ("y", "x1", "x2", "x4", "x3")
     assert not cached_data.values.flags.writeable
@@ -1068,6 +1080,7 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
             fe=fe.to_numpy(),
             weights=weights,
             na_index=frozenset(),
+            encoding_dropped_rows=frozenset(),
             demeaner=demeaner,
         )
 

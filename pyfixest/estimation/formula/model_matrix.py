@@ -159,6 +159,7 @@ class ModelMatrix:
         self._collect_data(model_matrix)
         # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
         # the later stages add the rows they drop.
+        self._encoding_dropped_rows = drop_rows
         self._dropped_row_index = drop_rows
         self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)

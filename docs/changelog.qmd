@@ -19,6 +19,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- Multiple estimation keeps categorical contrasts separate when models drop
+  different rows before encoding, even when they retain the same observations
+  for fitting. Coefficients now match separate fits
+  ([#1915](https://github.com/py-econometrics/pyfixest/issues/1915)).
+
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

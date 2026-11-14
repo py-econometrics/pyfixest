@@ -10,7 +10,7 @@ from within import Effect
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.formula.model_matrix import ModelMatrix
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanedDataCache
 from pyfixest.estimation.internals.families import GlmFamily
 from pyfixest.estimation.internals.fit_glm_ import fit_glm_irls
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
@@ -91,7 +91,7 @@ class Feglm(Feols):
         data: pd.DataFrame,
         *,
         options: GlmEstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+        lookup_demeaned_data: DemeanedDataCache,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:

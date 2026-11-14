@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.linalg import cho_factor, solve_triangular
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanedDataCache
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.literals import QuantregMethodOptions
 from pyfixest.estimation.internals.model_state import (
@@ -109,7 +109,7 @@ class Quantreg(Feols):
         data: pd.DataFrame,
         *,
         options: QuantregEstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+        lookup_demeaned_data: DemeanedDataCache,
         sample_split: SampleSplit | None = None,
     ) -> None:
         super().__init__(

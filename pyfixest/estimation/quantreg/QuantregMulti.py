@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.stats import norm
 
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
-from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanedDataCache
 from pyfixest.estimation.internals.literals import QuantregMultiOptions
 from pyfixest.estimation.internals.model_state import (
     FittedValues,
@@ -30,7 +30,7 @@ class QuantregMulti:
         options: QuantregEstimationOptions,
         quantile: list[float],
         multi_method: QuantregMultiOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+        lookup_demeaned_data: DemeanedDataCache,
         sample_split: SampleSplit | None = None,
     ):
         # `options.quantile` is the first requested quantile; each child fit

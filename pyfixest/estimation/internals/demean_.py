@@ -27,8 +27,8 @@ class DemeanedData:
 
     Notes
     -----
-    One entry is shared by every model fitted on the same ``na_index``, and
-    callers receive slices of ``values`` rather than copies, so the entry must
+    Models with the same encoding and estimation samples share an entry.
+    Callers receive slices of ``values`` rather than copies, so the entry must
     not change after publication. The frozen dataclass prevents field
     rebinding, and ``values`` is flagged read-only before it is stored, so a
     model writing into a returned slice fails loudly instead of silently
@@ -37,6 +37,9 @@ class DemeanedData:
 
     values: NDArray[np.float64]
     column_keys: tuple[Hashable, ...]
+
+
+DemeanedDataCache = dict[tuple[frozenset[int], frozenset[int]], DemeanedData]
 
 
 class DemeanCache:
@@ -48,8 +51,8 @@ class DemeanCache:
     - `lookup_preconditioner`: the preconditioner from the first fit on a
        data set / na index combination.
 
-    The index for both caches is the frozen set of `na_index` - as all fits
-    operate on the same fixed effects / data structure.
+    Both caches use the final set of dropped rows within a fixed-effects block.
+    Demeaned columns also depend on which rows were dropped before encoding.
 
     OLS/IV models call :meth:`demean_yx`. GLMs call :meth:`demean_array` to
     recompute each weighted projection while reusing the preconditioner.
@@ -57,7 +60,7 @@ class DemeanCache:
 
     def __init__(
         self,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData] | None = None,
+        lookup_demeaned_data: DemeanedDataCache | None = None,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
     ) -> None:
         self.lookup_demeaned_data = (
@@ -149,6 +152,7 @@ class DemeanCache:
         fe: np.ndarray | list[Effect] | None,
         weights: NDArray[np.float64] | None,
         na_index: frozenset[int],
+        encoding_dropped_rows: frozenset[int],
         demeaner: AnyDemeaner,
     ) -> tuple[
         NDArray[np.float64],
@@ -177,7 +181,11 @@ class DemeanCache:
         weights : NDArray[np.float64] or None
             Observation weights passed to the within transformation.
         na_index : frozenset[int]
-            Row-removal identity used to share cached data between model fits.
+            Positions removed from the final estimation sample.
+        encoding_dropped_rows : frozenset[int]
+            Positions removed by formulaic before encoding. Equal estimation
+            samples can have different categorical contrast values when their
+            encoding samples differ.
         demeaner : AnyDemeaner
             Configured within-transformation strategy.
 
@@ -198,7 +206,8 @@ class DemeanCache:
         x_keys_tuple = tuple(x_keys)
         yx_keys = y_keys_tuple + x_keys_tuple
 
-        cached = self.lookup_demeaned_data.get(na_index)
+        sample_key = (na_index, encoding_dropped_rows)
+        cached = self.lookup_demeaned_data.get(sample_key)
         used_preconditioner: Preconditioner | None = None
         if cached is None:
             YX = np.concatenate((Y_array, X_array), axis=1)
@@ -208,7 +217,7 @@ class DemeanCache:
             # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
             cached = DemeanedData(values=YX_demeaned, column_keys=yx_keys)
-            self.lookup_demeaned_data[na_index] = cached
+            self.lookup_demeaned_data[sample_key] = cached
         else:
             cached_keys = cached.column_keys
             cached_key_set = frozenset(cached_keys)
@@ -233,7 +242,7 @@ class DemeanCache:
                     values=cached_demeaned,
                     column_keys=cached_keys + uncached_keys,
                 )
-                self.lookup_demeaned_data[na_index] = cached
+                self.lookup_demeaned_data[sample_key] = cached
             # Every requested column is demeaned and cached at this point.
             YX_demeaned = self._select_columns(cached, yx_keys)
 
