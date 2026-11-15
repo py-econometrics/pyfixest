@@ -105,8 +105,16 @@ fn demean_impl(
         let mut xk_prev: Vec<f64> = xk_curr.iter().map(|&v| v - 1.0).collect();
         let mut gw_sums = vec![0.0; n_groups];
 
+        // Geometric (Irons-Tuck style) acceleration:
+        // After every pair of MAP sweeps, estimate the convergence ratio ρ = ||Δnew||/||Δold||
+        // and extrapolate: x_accel = x_new + ρ/(1-ρ) * (x_new - x_old)
+        let mut xk_before_sweep = vec![0.0; n_samples];
+
         let mut converged = false;
-        for _ in 0..maxiter {
+        let mut iter = 0usize;
+        while iter < maxiter {
+            // --- First MAP sweep ---
+            xk_before_sweep.copy_from_slice(&xk_curr);
             for j in 0..n_factors {
                 internal::subtract_weighted_group_mean(
                     &mut xk_curr,
@@ -116,6 +124,74 @@ fn demean_impl(
                     &mut gw_sums,
                 );
             }
+            iter += 1;
+
+            if internal::sad_converged(&xk_curr, &xk_prev, tol) {
+                converged = true;
+                break;
+            }
+
+            // Compute ||Δold|| = ||x_after_first_sweep - x_before_first_sweep||²
+            let norm_diff_old: f64 = xk_curr
+                .iter()
+                .zip(xk_before_sweep.iter())
+                .map(|(&a, &b)| (a - b) * (a - b))
+                .sum();
+
+            xk_prev.copy_from_slice(&xk_curr);
+
+            if iter >= maxiter || norm_diff_old == 0.0 {
+                break;
+            }
+
+            // --- Second MAP sweep ---
+            xk_before_sweep.copy_from_slice(&xk_curr);
+            for j in 0..n_factors {
+                internal::subtract_weighted_group_mean(
+                    &mut xk_curr,
+                    &sample_weights,
+                    &group_ids_by_factor[j],
+                    group_weight_slices[j],
+                    &mut gw_sums,
+                );
+            }
+            iter += 1;
+
+            if internal::sad_converged(&xk_curr, &xk_prev, tol) {
+                converged = true;
+                break;
+            }
+
+            // Compute ||Δnew|| = ||x_after_second_sweep - x_before_second_sweep||²
+            let norm_diff_new: f64 = xk_curr
+                .iter()
+                .zip(xk_before_sweep.iter())
+                .map(|(&a, &b)| (a - b) * (a - b))
+                .sum();
+
+            // Geometric extrapolation: ρ = sqrt(||Δnew||/||Δold||)
+            // x_accel = x_curr + factor * (x_curr - x_prev), factor = min(ρ/(1-ρ), cap)
+            let rho = (norm_diff_new / norm_diff_old).sqrt();
+            if rho > 0.0 && rho < 1.0 {
+                let factor = (rho / (1.0 - rho)).min(10.0);
+                for i in 0..n_samples {
+                    xk_curr[i] += factor * (xk_curr[i] - xk_prev[i]);
+                }
+            }
+
+            xk_prev.copy_from_slice(&xk_curr);
+
+            // --- Stabilizing MAP sweep after acceleration ---
+            for j in 0..n_factors {
+                internal::subtract_weighted_group_mean(
+                    &mut xk_curr,
+                    &sample_weights,
+                    &group_ids_by_factor[j],
+                    group_weight_slices[j],
+                    &mut gw_sums,
+                );
+            }
+            iter += 1;
 
             if internal::sad_converged(&xk_curr, &xk_prev, tol) {
                 converged = true;
