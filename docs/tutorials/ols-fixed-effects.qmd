@@ -26,18 +26,18 @@ $$
 
 where $\alpha_i$ is an individual fixed effect (constant across time) and $\psi_t$ is a time fixed effect (constant across individuals). Fixed effects are not limited to panel data - any categorical grouping variable can serve as a fixed effect (for example, wage regressions with worker and firm FE) - more on that topic later!).
 
-`PyFixest` efficiently estimates fixed effects models by applying the [Frisch-Waugh-Lovell](https://mattblackwell.github.io/gov2002-book/least_squares.html#residual-regression) , which, among other things, avoids the need to create hundreds of dummy variables.
+`PyFixest` efficiently estimates fixed effects models by applying the [Frisch-Waugh-Lovell theorem](https://mattblackwell.github.io/gov2002-book/least_squares.html#residual-regression), which avoids the need to create hundreds of dummy variables.
 
-In the following section, we introduce two chanonical use cases of fixed effects regression.
+In the following sections, we introduce two canonical use cases of fixed effects regression.
 
 ## Application 1: Twin Studies and the Returns to Education
 
-One of the most foundational question in the economics of education is "wow much does an extra year of education raise wages"?
-If we were to simply regress years of education on realized wages, we would likely overstates the return to education as there is a selection bias: *ability* drives both education and wages. Or, in other words, kids with high innate (but unobserved) ability end up with more years of education, but also higher wages! The relation between education and wages might be spurios, as both are driven by the same latent factor.
+A classic question in labor economics is how much an extra year of education raises wages.
+If we simply regress realized wages on years of education, we will likely overstate the return to education because of selection bias: unobserved *ability* drives both schooling and wages. Students with higher innate ability tend to complete more years of schooling and also earn higher wages later in life, confounding the cross-sectional relationship between education and earnings.
 
- Twin studies aim to correct for this selection effect by comparing twins who share the same genetic endowment. If the latent innate ability is encoded in the genome, then twins with identical gene should have the same latent ability. Under this assumption, any difference in educational attainment between twins is not driven by innate ability. As a result any within‑twin difference in wages can be attributed to differences in schooling rather than unobserved ability.
+Twin studies address this selection bias by comparing twins who share the same genetic endowment and family background. If innate ability is shared within monozygotic twin pairs, differences in educational attainment between twins are not driven by shared genetic ability, so within-twin wage differences can isolate the return to schooling.
 
- In practice, twin fixed‑effects regressions compare each twin to their sibling, netting out shared genes and family background. The estimated coefficient on schooling then captures the causal return to education under the assumption that the only remaining differences between twins are not systematically related to both schooling and wages.
+In practice, twin fixed-effects regressions compare each twin to their sibling, netting out shared genetics and family background. The estimated coefficient on schooling captures the causal return to education under the assumption that remaining within-pair differences in schooling are uncorrelated with other unobserved determinants of wages.
 
 ```{python}
 import pyfixest as pf
@@ -115,7 +115,7 @@ fit_full = pf.feols("log_wage ~ experience + tenure + female | worker_id + firm_
 fit_full.summary()
 ```
 
-Here is an interesting historical fact: the first paper (to our knowledge) that fitted a three-way high-dimensional fixed effects model in an unbalanced panel was published in 2013, only four years before the transformer was invented!. Before that, economists simply did not know how to fit 3-way fixed effects regression models on unbalanced panels efficiently. See Guimarães, Portugal, and Torres, ["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), who more or less fit the model above on Portuguese data.
+Estimating three-way high-dimensional fixed effects on large unbalanced panels is relatively recent: Guimarães, Portugal, and Torres (["The Sources of Wage Variation: A Three-Way High-Dimensional Fixed Effects Regression Model"](https://ideas.repec.org/p/ptu/wpaper/w201309.html), 2013) were among the first to fit a worker–firm–job-title model of this scale on Portuguese administrative data, building on the iterative alternating-projections algorithm of Guimarães and Portugal (2010).
 
 ### Compare All Specifications
 

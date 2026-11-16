@@ -68,10 +68,9 @@ the SAVI threshold before day twenty, while lifts of 1 or 2 pp usually take
 longer. These stopping times depend on the sample size, outcome variance,
 monitoring schedule, and mixture precision.
 
-To gain a better intuition about when SAVI is useful and how it behaves, we simulate several scenarios that aim to illustrate the usefulness of SAVI inference for real-world use cases often encountered in tech companies.
+The simulations below cover several common experimentation workflows.
 
-The first set of simulations uses fixed-time and SAVI inference to measure false positives
-under daily stopping. For the second set of simulations, the **confidence sequences are the product**: the simulations illustrate how to use confidence sequences to qualify that a Java-to-Kotlin rewrite does no harm, to report correct inferences on weekly holdout results,^[This is also useful for A/A baseline checks of an experimentation platform's randomization. Repeated fixed-time looks can eventually produce a statistically significant estimate by chance; SAVI controls the probability of any such crossing within the monitored sequence.] and make hourly rollback decisions for a canary release.^[The holdout and canary examples assume that incoming units are independent and that the target effect remains fixed during monitoring. PyFixest's current iid/heteroskedastic SAVI implementation does not cover repeated measurements from the same users, serial dependence, changing traffic composition, or an evolving release policy. [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052) list dependent outcomes as future work.] A final simulation studies regression adjustment with SAVI inference.
+The first two scenarios examine false positives and stopping times under daily monitoring. The next three use confidence sequences directly: to certify that a Java-to-Kotlin backend migration does no harm, to report simultaneous coverage across weekly holdout reviews,^[This is also useful for A/A baseline checks of an experimentation platform's randomization. Repeated fixed-time looks can eventually produce a statistically significant estimate by chance; SAVI controls the probability of any such crossing within the monitored sequence.] and to make hourly rollback decisions for a canary release.^[The holdout and canary examples assume that incoming units are independent and that the target effect remains fixed during monitoring. PyFixest's current iid/heteroskedastic SAVI implementation does not cover repeated measurements from the same users, serial dependence, changing traffic composition, or an evolving release policy. [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052) list dependent outcomes as future work.] A final simulation studies regression adjustment with SAVI inference.
 
 All simulations use `PyFixest`'s implementation of the linear-model method of
 [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052), which
@@ -278,8 +277,7 @@ def _slider(days, active):
 
 ## Scenario 1: false positives from daily stopping
 
-We start with a simulation that aims to study the false positive detection rate of different decision rules. To do so, we simulate 500 A/A experiments with a treatment effect of zero and
-applies three decision rules to each experiment:
+We first compare false-positive rates across three decision rules on 500 simulated A/A experiments with a treatment effect of zero:
 
 1. The simulation uses the fixed-time p-value for the prespecified decision on day twenty.
 2. The simulation recomputes the fixed-time p-value every day and stops the first time it is at or
@@ -1012,7 +1010,7 @@ stopping when the interval first falls inside the range. A SAVI confidence
 sequence is instead designed for such a workflow: it provides simultaneous asymptotic
 coverage across all daily reviews.
 
-The Kotlin backend works just as smooth as Java, and the simulation once again assumes a true treatment effect of 0 and sends 2,000 users per arm per day to the Java and Kotlin implementations.
+The Kotlin backend performs identically to Java: the simulation assumes a true treatment effect of 0 and sends 2,000 users per arm per day to the Java and Kotlin implementations.
 
 ```{python}
 #| code-fold: true
@@ -1255,8 +1253,8 @@ For the selected path, the fixed-time interval enters the tolerance on day
 `{python} ci_cert_day`, earlier than the SAVI confidence sequence on day
 `{python} cert_day`. A fixed-time interval provides pointwise 95% coverage when
 the analysis time is fixed independently of the results. Here, however, the
-your team selects the first day on which the interval fits inside the acceptance
-range. Now comes the same old story - repeated checks make it more likely that sampling variation produces a favorable interval on at least one day. As a result, the discretionary stopping rule does not have a 95% simultaneous coverage guarantee.
+team stops on the first day the interval fits inside the acceptance
+range. Because repeated checks give sampling variation multiple chances to produce a favorable interval, this first-entry stopping rule does not have a 95% simultaneous coverage guarantee.
 
 ## Scenario 4: monitor a long-term holdout
 
@@ -1628,8 +1626,8 @@ A canary with a true effect of -3 pp. Rollback occurs when the SAVI confidence s
 
 Initially, the SAVI confidence sequence is wide because one hour of data provides little information.
 After `{python} rollback_hour` hours, the SAVI confidence sequence is
-`{python} rollback_cs`; its upper endpoint is below -1 pp, so the rollback rule
-fires. A fixed-time test planned for hour 48 would instead have to wait another
+`{python} rollback_cs`; its upper endpoint falls below -1 pp, triggering a rollback.
+A fixed-time test planned for hour 48 would instead have to wait another
 `{python} hours_saved` hours before making the same decision.
 
 ::: {.callout-note title="Why not just use fixed-time intervals?"}

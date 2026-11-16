@@ -44,7 +44,7 @@ twins.head()
 
 We first estimate a naive OLS regression in which we regress earnings on years of education and experience. The resulting coefficient on `educ` will not reflect a causal effect of education on earnings, but will be biased because higher-ability students likely select into more schooling and would also have higher earnings later in life even in the absence of additional education.
 
-We will now estimate a twin fixed-effects model, which aims to control for ability by comparing outcomes within twin pairs. As twins share the same genetic endowment, twin studies hypothesize that controlling for twin fixed effects can remove much of the ability-related confounding that biases cross-sectional OLS estimates. In both models, we cluster standard errors at the twin-pair level.
+Next, we estimate a twin fixed-effects model, which controls for shared ability by comparing outcomes within twin pairs. Because identical twins share the same genetic endowment and family background, comparing outcomes within twin pairs removes confounding from these shared unobserved factors. In both models, we cluster standard errors at the twin-pair level.
 
 ```{python}
 fit_naive = pf.feols(
@@ -103,7 +103,7 @@ fit_fe.fitstat.adj_r2_within
 
 We see that the estimated return to education is smaller once we include twin fixed effects, consistent with an upward bias in naive OLS of education on earnings from unobserved ability differences across individuals.
 
-Now, what if we had the unobserved confounder at hand? In this case, we could simply control for it in our regression model. In real life, we likely wouldn't be so lucky to have it, but alas, here we have access to it as we are working with synthetic data:
+Now, what if we observed `ability` directly? In an empirical application we would not observe ability, but because our data are simulated we can include it in the regression as a benchmark:
 ```{python}
 fit_latent = pf.feols(
   "log_wage ~ educ + experience + ability",
@@ -119,11 +119,11 @@ pf.coefplot(
 )
 ```
 
-We see that the fixed effect design gives us estimates that are much closer to the model in which we correctly control for the unoberserved confounder. By controlling for twin fixed effects, we have managed to control for an unobserved confounder, ability.
+The twin fixed-effects estimate is close to the benchmark regression that controls for `ability` directly.
 
 ## Where to Go Next
 
-Now that we’ve fit our first regression, we can jump right into one of the next tutorials that showcases core PyFixest workflows for estimation, inference, and reporting of regression models with (and without) fixed effects.
+Now that we’ve fit our first regression, we can jump into the tutorials covering estimation, inference, and reporting of regression models with and without fixed effects.
 
 <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #d0d7de;">
   <colgroup>
@@ -147,7 +147,7 @@ Now that we’ve fit our first regression, we can jump right into one of the nex
     </tr>
     <tr>
       <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/standard-errors.qmd">Standard Errors &amp; Inference</a></td>
-      <td style="border: 1px solid #d0d7de; padding: 8px;">Here we showcase different options to conduct inference with <code>PyFixest</code>, via iid, heteroskedastic, cluster robust errors, and more.</td>
+      <td style="border: 1px solid #d0d7de; padding: 8px;">Here we cover different options to conduct inference with <code>PyFixest</code>, via iid, heteroskedastic, cluster robust errors, and more.</td>
     </tr>
     <tr>
       <td style="border: 1px solid #d0d7de; padding: 8px;"><a href="tutorials/regression-tables.qmd">Regression Tables</a></td>

@@ -4,7 +4,7 @@ If you have ever fitted a fixed effects regression, you might have noticed that 
 
 In this guide, we explain *why* some fixed effects problems are harder to estimate than others, and benchmark different strategies to fit fixed effects regressions in a range of scenarios.
 
-The key insight is that fixed-effects estimation is a **graph problem**: the structure of who-works-where (or who-sees-which-doctor which-brand-in-which-store) determines how hard the problem is. After reading this guide, you should (hopefully) have a good idea if your fixed effects structure at hand is "difficult" and if you can speed up your own fixed effects problem by choosing a different solver.
+Fixed-effects estimation is at bottom a graph problem: the connectivity of who works where (or which patient sees which doctor, or which product sells in which store) determines how fast an iterative solver converges. After reading this guide, you should have a clearer sense of when a fixed-effects structure is difficult to demean and when switching solvers can speed up estimation.
 
 ## Fixed Effects as a Network
 
@@ -12,9 +12,9 @@ As our workhorse example throughout this entire vignette, we will consider the A
 
 $$y_{it} = \alpha_i + \psi_{J(i,t)} + \phi_t + x'_{it}\beta + \varepsilon_{it}$$
 
-Workers and firms form a **bipartite graph**: workers are one set of nodes, firms
-are the other, and each employment spell is an edge. Movers - workers who change
-firms - are the workers whose edges connect different parts of the graph. Without movers,
+Workers and firms form a *bipartite graph*: workers are one set of nodes, firms
+are the other, and each employment spell is an edge. Movers (workers who change
+firms) are the nodes whose edges connect different parts of the graph. Without movers,
 worker and firm effects are not separately identified.
 
 <p align="center">
@@ -77,20 +77,20 @@ preconditioning when convergence stalls.
 
 ## The Normal Equations and Their Block Structure
 
-Removing the fixed effects in the first two steps of the FWL procedure reduces to solving a linear system. In particular, the fixed-effect coefficients satisfy the **normal equations**
+Removing the fixed effects in the first two steps of the FWL procedure reduces to solving a linear system. In particular, the fixed-effect coefficients satisfy the *normal equations*
 
 $$G \, \hat{\alpha} = D^\top \mu$$
 
 
 where $D$ is the $n \times m$ dummy matrix that encodes all FE levels
-and $G = D^\top D$ is the **Gramian** - a symmetric positive
+and $G = D^\top D$ is the *Gramian*, a symmetric positive
 semi-definite matrix of dimension $m \times m$, where $m$ is the total
 number of FE levels across all fixed effects.
 
-For fixed effects problems, the Gramian $G$ has a natural **block structure**. To illustrate this, we will consider a small example (adapted from the
+For fixed effects problems, the Gramian $G$ has a natural *block structure*. To illustrate this, we will consider a small example (adapted from the
 [`within` documentation](https://github.com/py-econometrics/within)) of
 a worker-firm panel with $n = 6$ observations and $Q = 3$ fixed effects
-(worker, firm, year). Worker W1 moves from Firm F1 to F2 - this
+(worker, firm, year). Worker W1 moves from Firm F1 to F2; this
 mobility is what connects the two firms in the estimation graph.
 Workers W2 (at F1) and W3 (at F2) stay at their firms.
 
@@ -105,8 +105,8 @@ Workers W2 (at F1) and W3 (at F2) stay at their firms.
 
 Fixed Effect 1 (workers) has $m_1 = 3$ levels, fixed effect 2 (firms) has $m_2 = 2$
 levels, fixed effect 3 (years) has $m_3 = 2$ levels, giving $m = 7$ total FE
-levels. The Gramian has $Q = 3$ **diagonal blocks** and
-$\binom{3}{2} = 3$ **cross-tabulation blocks**:
+levels. The Gramian has $Q = 3$ *diagonal blocks* and
+$\binom{3}{2} = 3$ *cross-tabulation blocks*:
 
 $$
 G = \begin{pmatrix}
@@ -125,14 +125,14 @@ G_{WY}^\top & G_{FY}^\top & \mathbf{G_{YY}}
 \end{pmatrix}
 $$
 
-The **diagonal blocks** $G_{WW}$,
+The *diagonal blocks* $G_{WW}$,
 $G_{FF}$, $G_{YY}$ are each
 diagonal matrices whose entries are the group counts (how many
-observations belong to each worker, firm, or year). We note that inverting these
+observations belong to each worker, firm, or year). Inverting these
 blocks is computationally cheap because it amounts to dividing by group sizes, i.e.,
 computing group means.
 
-The **cross-tabulation blocks** $G_{WF}$,
+The *cross-tabulation blocks* $G_{WF}$,
 $G_{WY}$, $G_{FY}$ encode the
 bipartite graph structure. For example, $G_{WF} = D_W^\top D_F$ is the
 worker-firm cross-tabulation: entry $(i, j)$ counts how many times
@@ -146,7 +146,7 @@ Recall that we need to solve $G \hat{\alpha} = D^\top \mu$ for the FE
 coefficients $\hat{\alpha}$, or equivalently, find the residual
 $r = \mu - D \hat{\alpha}$ that has all fixed effects projected out. The method of alternating projections (MAP) approaches this iteratively: it sweeps through each fixed effect and subtracts
 group means from the current residual. In terms of the Gramian, this is
-**block Gauss-Seidel** - each sweep solves one diagonal block of $G$ at
+*block Gauss-Seidel*: each sweep solves one diagonal block of $G$ at
 a time. Writing $D_W, D_F, D_Y$ for the $n \times m_q$ dummy
 sub-matrices (column blocks of $D$), the steps are:
 
@@ -158,7 +158,7 @@ sub-matrices (column blocks of $D$), the steps are:
 
 Each of these steps is individually cheap because $G_{WW}$, $G_{FF}$, $G_{YY}$ are diagonal matrices and therefore not difficult to invert.
 
-We also note that the MAP algorithm **never directly touches the cross-tabulation blocks** $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
+Notice that the MAP algorithm never directly uses the cross-tabulation blocks $G_{WF}$, $G_{FY}$, $G_{WY}$. It can only extract information about the
 relationship between workers and firms *indirectly*, through the
 residuals that get passed from one sweep to the next.
 
@@ -181,7 +181,7 @@ $$
 G \, \hat{\alpha} = D^\top \mu.
 $$
 
-The main idea behind `within` is to build a good **preconditioner**
+The main idea behind `within` is to build a good *preconditioner*
 $M$ for this large sparse system. The matrix $M$ is chosen so that it
 is cheap to invert and so that the preconditioned system
 $M^{-1} G x = M^{-1} b$ is much better conditioned than the original
@@ -199,7 +199,7 @@ entry $(i,j)$ counts how often worker $i$ is observed at firm $j$.
 
 This special bipartite structure allows `within` to use fast approximate
 solvers for the pairwise graph problems. These local solves are then
-assembled into a **Schwarz preconditioner** for the full
+assembled into a *Schwarz preconditioner* for the full
 system. Finally, `within` solves the normal equations with modified LSMR,
 using this preconditioner.
 
@@ -373,11 +373,11 @@ applications add a third high-dimensional fixed effect. In AKM wage
 regressions, occupation is a natural candidate: labour economists often want to separate how much of a worker's wage comes from *who they are* (worker FE), *where they work* (firm FE), and *what they do*
 (occupation FE).
 
-Adding occupation turns the bipartite graph into a **tripartite**
+Adding occupation turns the bipartite graph into a *tripartite*
 structure. The new fixed effect can be "easy" or "hard" depending on how it
 relates to the existing fixed effects. If occupation cross-cuts firms and
-workers - different occupations appear at each firm, and workers switch
-occupations when they move - then the occupation dimension adds
+workers (different occupations appear at each firm, and workers switch
+occupations when they move), then the occupation dimension adds
 independent variation and is cheap to absorb. But if occupation is
 *nested* within one of the existing fixed effects, the new fixed effects
 become nearly collinear with an existing set, and the problem gets
@@ -386,8 +386,8 @@ edges and becomes more sparse.
 
 There are two ways occupation can nest:
 
-- **Firm nesting:** Each firm concentrates on a single occupation
-  (think a law firm where everyone is a lawyer). Then knowing the firm
+- **Firm nesting:** Each firm employs mostly one occupation
+  (for example, a law firm where nearly everyone is a lawyer). Then knowing the firm
   almost perfectly predicts the occupation, and the occupation FE
   column is nearly a copy of the firm FE column.
 - **Worker nesting:** Workers carry their occupation across job changes
@@ -395,8 +395,8 @@ There are two ways occupation can nest:
   Then the occupation FE column is nearly a copy of the worker FE
   column.
 
-In either case, the solver must separate two nearly identical columns -
-exactly the type of problem that makes vanilla MAP slow.
+In both cases, the firm or worker indicators are nearly collinear with the
+occupation indicators, which slows down alternating projections.
 
 In the benchmark family below, we focus primarily on **firm nesting** and
 on the overall number of occupation levels. Worker-level occupation

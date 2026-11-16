@@ -72,10 +72,10 @@ We see that half of our users are treated after half the time.
 
 In the next step, we will look at three different ways to compute the average treatment effect of our feature on the outcome:
 
-- First, we will compute a standard "difference in means" estimator and conduct a two-sampled t-test for inference. We do this both by hand and by means of linear regression. While standard, we will show that this estimator is relatively inefficient as it throws aways valuable information from the pre-treatment periods.
-- In a second step, we improve on the difference in means estimator and include pre-treatment measures of the outcome variable to our regression model. In the tech blog world, this method
-  is often referred to as CUPED (which stands for "Controlled-experiment Using Pre-Experiment Data" as far as we know). We will demonstrate that CUPED uted leads to a significant reduction in the variance of our estimators. Pre-treatment averages are a "good control" variable because a) under uncondional randomization, pre-treatment averages should be uncorrelated of the treatment assignment and b) pre-treatment averages should be highly predictive of the post-treatment outcome. The intuition here is simply that users will behave similarly "after" the experiment starts / when receiving the treatment than they did before.
-- In a third step, we show that instead of using pre-treatment averages as a control variable, we can simply fit a panel model and control for user and time fixed effect.
+- First, we will compute a standard "difference in means" estimator and conduct a two-sample t-test for inference. We do this both by hand and by means of linear regression. While standard, this estimator is relatively inefficient because it discards information from the pre-treatment periods.
+- Second, we include pre-treatment averages of the outcome variable as a control in our regression model. In the industry experimentation literature, this method
+  is often referred to as CUPED ("Controlled-experiment Using Pre-Experiment Data"). Including the pre-treatment average reduces the variance of the treatment-effect estimator because (a) under random assignment, pre-treatment outcomes are uncorrelated with treatment assignment, and (b) pre-treatment averages strongly predict post-treatment outcomes.
+- Third, instead of collapsing pre-treatment outcomes into a single control variable, we fit a panel model with user and time fixed effects.
 
 All three estimators identify the same average treatment effect, but the CUPED and panel estimator are much more efficient: they produce lower variances.
 
@@ -107,11 +107,10 @@ $$
     \tau = \frac{1}{n_1} \sum_{i=1}^{n_1} Y_{i,1} - \frac{1}{n_0} \sum_{i=1}^{n_0}  Y_{i,0}
 $$
 
-We can compute it in a few lines of `pandas` by implementing three steps:
-- First, we throw away all pre-experimental data.
-- Then, we sum the post-treatment minutes watched into a single data point per user.
-- Finally, we compute the difference of means of total minutes watched between the treated and control group.
-Done!
+We can compute it in a few lines of `pandas` in three steps:
+- First, we discard all pre-experimental data.
+- Next, we average the post-treatment minutes watched into a single observation per user.
+- Finally, we compute the difference in means between the treated and control groups.
 
 ```{python}
 def _difference_in_means_pd(data):
@@ -132,7 +131,7 @@ def _difference_in_means_pd(data):
 _difference_in_means_pd(data)
 ```
 
-Because linear regression is just a fency way to compute and compare differences, we could also have estimated this via `pf.feols()`:
+Equivalently, we can estimate the difference in means via `pf.feols()`:
 
 ```{python}
 def _difference_in_means(data):
@@ -148,7 +147,7 @@ fit_difference_in_means = _difference_in_means(data)
 fit_difference_in_means.summary()
 ```
 
-Note that no aggregation step is needed and that we get identical point estimates. As a bonus, we get standard errors and confidence intervals in the process.
+Because the panel is balanced, pooling the post-treatment user-days gives the same point estimate as the user-level difference in means (though valid user-level inference on uncollapsed panel data requires clustering standard errors at the `user` level, as we show below).
 
 ## Cuped: Using Pre-Experimental Measures of the Outcomes Variable as Controls
 
@@ -289,7 +288,7 @@ For more examples, see the paper by [Lal et al](https://arxiv.org/abs/2410.09952
 
 ## Monte Carlo Simulation
 
-To rule out that the examples above were purely do to look, we simply repeat them a couple of times using a monte carlo simulation.
+To verify that the precision gains above are not an artifact of a single simulation draw, we repeat the comparison across Monte Carlo replications.
 
 ```{python}
 def _variance_monte_carlo(data):

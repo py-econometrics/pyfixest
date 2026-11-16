@@ -1,6 +1,6 @@
 ---
 title: "Formula Syntax"
-description: "In this tutorial, we showcase all of PyFixest formulas syntax; including syntax for fitting models with fixed effects, interactions, and multiple-estimation operators."
+description: "PyFixest formula syntax for fixed effects, interactions, instrumental variables, and multiple-estimation operators."
 categories: [Core Estimation]
 format:
   html:
@@ -22,7 +22,7 @@ data.head()
 
 ## Basic Syntax
 
-In the simplest case, we regress covariates `X1` and `X2` on `Y`.
+In the simplest case, we regress `Y` on covariates `X1` and `X2`.
 
 ```{python}
 fit1 = pf.feols("Y ~ X1 + X2", data=data)

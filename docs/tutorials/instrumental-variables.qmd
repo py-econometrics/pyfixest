@@ -42,7 +42,7 @@ You should have read the [Getting Started](../getting-started.qmd) page and have
 
 ## Introduction
 
-Estimation of a linear model via Ordinary Least Squares (OLS) yields biased and inconsistent estimates when a regressor is correlated with the error term — a problem known as endogeneity, which arises, for example, in the presence of unobserved confounders. **Instrumental Variable (IV)** estimation addresses this by finding a variable $Z$ that satisfies three conditions:
+Ordinary least squares (OLS) is biased and inconsistent when a regressor is correlated with the error term, for instance in the presence of unobserved confounders. Instrumental variables (IV) estimation uses an instrument $Z$ that satisfies three conditions:
 
 ```{dot}
 //| column: margin
@@ -124,10 +124,14 @@ for the full set of formula-parsing changes in 0.70.
 ::: {.callout-note}
 ## Fixed Effects with IV
 
-When panel data are available, endogeneity may also stem from time-invariant unobserved heterogeneity — unit-specific characteristics (e.g., ability, culture, geography) that are fixed over time but correlated with both treatment and outcome. `PyFixest` addresses this simultaneously by applying a within-transformation (demeaning) to absorb unit fixed effects before running 2SLS, following the FE-IV approach described in @wooldridge2010 [Ch. 11]. Crucially, after demeaning, the instrument must retain within-unit variation over time — time-invariant instruments are eliminated along with the fixed effects and cannot be used for identification. When both fixed effects and an instrument are specified, `PyFixest` therefore isolates the clean variation in treatment that is both within-unit and driven by the instrument, blocking confounding from time-invariant unobservables and time-varying endogenous confounders simultaneously.
+In panel data, endogeneity often comes from time-invariant unit characteristics (such as ability, culture, or geography) that correlate with both treatment and the outcome. `PyFixest` absorbs these fixed effects via the within transformation (demeaning) before running 2SLS, following the FE-IV estimator in @wooldridge2010 [Ch. 11]. Because demeaning sweeps out all time-invariant variation, the instrument must vary within units over time; a time-invariant instrument is absorbed along with the fixed effects and cannot identify the treatment effect. Combining unit fixed effects with a time-varying instrument uses only within-unit instrument variation to identify the causal effect.
 :::
 
-This tutorial walks through three applications, all addressing endogeneity from **selection bias — a form of Omitted Variable Bias (OVB) where unobserved confounders drive both selection into treatment and the outcome.** Application 1 operates in an observational setting, exploiting quasi-random variation from individual-level selection. Application 2 arises in an experimental setting where encouragement is randomly assigned but treatment take-up remains subject to self-selection. Application 3 returns to an observational setting, exploiting regional-level sorting via a shift-share instrument.
+This tutorial covers three applications where self-selection into treatment biases OLS:
+
+1. **The motherhood penalty**, using quasi-random IVF success as an instrument for fertility in observational data.
+2. **An A/B encouragement design**, where randomized encouragement instruments for endogenous feature adoption under imperfect compliance.
+3. **A shift-share (Bartik) design**, instrumenting regional immigration with national origin-country inflows.
 
 ```{python}
 import pyfixest as pf
@@ -138,9 +142,9 @@ import pyfixest as pf
 
 **Does having children reduce women's earnings?**
 
-A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and be less likely to have children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty, which is the reduction in earnings mothers experience after child birth. This is a classic case of omitted variable bias (OVB): career ambition is unobserved, yet it drives both fertility decisions and earnings outcomes. In order to disentangle the true causal effect of having a child on earnings from the confounding influence of career ambition, we need to find a "quasi-random" source of variation in fertility that is independent of career ambition.
+A naive regression of earnings on fertility is biased: women with stronger career ambitions may both earn more and be less likely to have children. Since career ambition is positively correlated with earnings but negatively correlated with fertility, OLS overstates the motherhood penalty (the reduction in earnings after childbirth). Because career ambition is unobserved, we need a source of variation in fertility that is independent of a woman's career plans.
 
-@lundborg2017 find such an "instrument" in the quasi-random success of in-vitro fertilization (IVF) treatment. IVF success is largely determined by biological factors outside a woman's control, making it difficult to conceive of an unobserved variable that jointly drives both the success of treatment and labor market outcomes.
+@lundborg2017 use the quasi-random success of in-vitro fertilization (IVF) treatment as an instrument. Among women undergoing IVF, whether a cycle results in a live birth is largely determined by biological factors outside the patient's control, making it plausibly unrelated to unobserved determinants of labor-market earnings.
 
 ### Synthetic Data
 
@@ -149,7 +153,7 @@ ivf_df = pf.get_ivf_data()
 ivf_df.head()
 ```
 
-We create a synthetic dataset with $N = 2{,}000$ observations. The **true causal effect** of `num_children` on `earnings` is $\beta = -0.15$ — this is the treatment effect the IV estimator should recover (full DGP in the [Appendix](#appendix-dgp-design-notes)).
+We simulate a dataset with $N = 2{,}000$ observations in which the true causal effect of `num_children` on `earnings` is $\beta = -0.15$.
 
 ### Naive OLS
 
@@ -199,9 +203,9 @@ The IV estimate is closer to the true effect of -0.15. The "naive" OLS estimate 
 
 ### First-Stage Diagnostics
 
-In the section above, we have argued the IVF success is a credible instrument for fertility - the unconfoundedness assumption is plausible given the quasi-random nature of IVF success. But how do we know if the instrument is strong enough to yield reliable estimates? For this reason, applied econometricians routinely run diagnostic checks for "weak instruments", which aim to validate the "relevance" assumption.
+Even when unconfoundedness is plausible, a weak first stage can severely bias 2SLS estimates and distort standard inference. Applied researchers therefore check first-stage instrument strength to assess relevance.
 
-`PyFixest` provides two diagnostics for instrument strength: a standard first-stage F-statistic, and the more robust effective F-statistic from @oleapflueger2013 that remains valid under heteroskedasticity. Both live on the `.first_stage` attribute, which every IV fit carries.
+`PyFixest` provides two weak-instrument diagnostics on the `.first_stage` attribute: the standard first-stage $F$-statistic and the @oleapflueger2013 effective $F$-statistic, which accounts for heteroskedasticity and clustering.
 
 ```{python}
 # The first-stage OLS regression is fitted with the model and retained as
@@ -246,7 +250,7 @@ ab_df = pf.get_encouragement_data()
 ab_df.head()
 ```
 
-We first create a synthetic data set with $N = 4{,}000$ users. The **true LATE** of `adopted_feature` on `revenue` is $2.0$ — this is what the IV estimate should recover.
+We first create a synthetic dataset with $N = 4{,}000$ users in which the true LATE of `adopted_feature` on `revenue` is $2.0$.
 
 ### Three Estimands
 
@@ -324,7 +328,7 @@ bartik_df = pf.get_bartik_data()
 bartik_df.head()
 ```
 
-We create a synthetic data set with $N = 300$ regions. The **true causal effect** of `immigration` on `wages` is $\beta = -0.3$ — this is what the IV estimate should recover.
+We create a synthetic dataset with $N = 300$ regions in which the true causal effect of `immigration` on `wages` is $\beta = -0.3$.
 
 ### OLS vs IV
 
@@ -377,7 +381,7 @@ print(f"First-stage p-value:     {diagnostics.p_value:.4f}")
 
 ### The Effective F-Statistic
 
-The standard F-statistic can be misleading when there are multiple endogenous regressors or when errors are non-homoskedastic. The **effective F-statistic** (@oleapflueger2013) is a more robust measure of instrument strength that remains valid under heteroskedasticity:
+The classical first-stage $F$-statistic assumes homoskedastic errors. The **effective $F$-statistic** (@oleapflueger2013) scales the first-stage Wald statistic by the trace of the robust variance-covariance matrix so that it remains valid under heteroskedasticity and clustering:
 
 $$
 F_{\text{eff}} = \frac{\hat{\pi}' Q_{ZZ} \hat{\pi}}{\text{tr}(\hat{\Sigma} \, Q_{ZZ})}

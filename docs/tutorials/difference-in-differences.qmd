@@ -246,8 +246,8 @@ fit_twfe = pf.feols(
 )
 ```
 
-You can also estimate a TWFE model via the `event_study()` function, which aims to provide a common interface to multiple
-difference-in-differences implementations:
+You can also estimate a TWFE model via the `event_study()` function, which provides a common interface to several
+difference-in-differences estimators:
 
 ```{python}
 fit_twfe_event = pf.event_study(
@@ -291,11 +291,9 @@ fit_saturated.iplot_aggregate(weighting = "shares")
 
 ### When can we get away with using the two-way fixed effects regression?
 
-We will motivate this section by lazily quoting the abstract of [Lal (2025)](https://arxiv.org/abs/2503.05125):
+Under staggered adoption, two-way fixed effects (TWFE) can fail to recover a convex average of treatment effects when dynamic treatment effects vary across adoption cohorts. Heterogeneity-robust estimators avoid this bias, but they often have higher variance and lower power. [Lal (2025)](https://arxiv.org/abs/2503.05125) proposes linear-restrictions tests on the saturated event study to check whether dynamic treatment effects differ across cohorts, helping diagnose when TWFE is likely to be biased for the ATT.
 
-> The use of the two-way fixed effects regression in empirical social science was historically motivated by folk wisdom that it uncovers the Average Treatment effect on the Treated (ATT) as in the canonical two-period two-group case. This belief has come under scrutiny recently due to recent results in applied econometrics showing that it fails to uncover meaningful averages of heterogeneous treatment effects in the presence of effect heterogeneity over time and across adoption cohorts, and several heterogeneity-robust alternatives have been proposed. However, these estimators often have higher variance and are therefore under-powered for many applications, which poses a bias-variance tradeoff that is challenging for researchers to navigate. In this paper, we propose simple tests of linear restrictions that can be used to test for differences in dynamic treatment effects over cohorts, which allows us to test for when the two-way fixed effects regression is likely to yield biased estimates of the ATT.
-
-You can employ the proposed test after running a saturated event study by calling the `test_treatment_heterogeneity()` method:
+You can run this test after fitting a saturated event study by calling `test_treatment_heterogeneity()`:
 
 ```{python}
 fit_saturated.test_treatment_heterogeneity()
