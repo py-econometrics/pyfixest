@@ -1182,7 +1182,7 @@ def test_optional_dependency_fallbacks(data, monkeypatch):
         (
             lambda d: feols("Y + Y2 ~ X1", data=d),
             DeprecationWarning,
-            "Specifiying multiple dependent variables",
+            "Specifying multiple dependent variables",
         ),
         (
             lambda d: pf.quantreg("Y ~ X1", data=d.dropna(), quantile=0.5),

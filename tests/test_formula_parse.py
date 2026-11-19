@@ -541,7 +541,8 @@ class TestFixedEffectInteractions:
 
         with pytest.warns(
             DeprecationWarning,
-            match=r"Instead of `Y ~ X1 \| f1\^f2` use `Y ~ X1 \| f1:f2`",
+            match=r"Instead of `Y ~ X1 \| f1\^f2` use `Y ~ X1 \| f1:f2`\. See "
+            r"https://pyfixest\.org/tutorials/formula-syntax\.html#deprecated-spellings",
         ) as caught:
             legacy = Formula.parse("Y ~ X1 | f1^f2")[0]
 
