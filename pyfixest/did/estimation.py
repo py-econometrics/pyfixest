@@ -116,6 +116,11 @@ def event_study(
         raise TypeError(
             "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
         )
+    if estimator not in ("twfe", "did2s", "saturated"):
+        raise ValueError(
+            "estimator must be one of 'twfe', 'did2s', or 'saturated'; "
+            f"got {estimator!r}."
+        )
     if not isinstance(att, bool):
         raise TypeError("att must be a boolean.")
     if not (isinstance(cluster, str) or cluster is None):
@@ -190,9 +195,6 @@ def event_study(
         fit.test_treatment_heterogeneity = test_treatment_heterogeneity  # type: ignore
         fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
         fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
-
-    else:
-        raise NotImplementedError("Estimator not supported")
 
     # update inference with vcov matrix
     fit.get_inference()
