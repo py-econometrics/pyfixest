@@ -613,7 +613,7 @@ def test_all_variables_multicollinear():
 def test_wls_errors():
     data = get_data()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="weights must be a column in data"):
         feols(fml="Y ~ X1", data=data, weights="weights2")
 
     with pytest.raises(ValueError):
@@ -1821,7 +1821,7 @@ def test_errors_hac():
     )
 
     # Error 3: time_id is not provided if vcov is NW or DK
-    with pytest.raises(ValueError, match=r"Missing required 'time_id' for NW/DK vcov"):
+    with pytest.raises(ValueError, match=r"Missing required 'time_id' for vcov='NW'"):
         pf.feols(
             "Y ~ X1",
             data=data,
@@ -2180,6 +2180,22 @@ def test_vcov_spec_rejects_malformed_input(vcov, vcov_kwargs, error, match):
     fit = pf.feols("Y ~ X1", get_data())
     with pytest.raises(error, match=match):
         fit.vcov(vcov, vcov_kwargs)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"weights": "~weights"}, ValueError, "bare column name, such as 'weights'"),
+        ({"vcov": "cluster"}, ValueError, r"vcov=\{'CRV1': 'cluster_var'\}"),
+        ({"vcov": {"CRV1": "~f1"}}, ValueError, "bare column name, such as 'f1'"),
+        ({"vcov": "NW"}, ValueError, r"vcov_kwargs=\{'time_id': 'year', 'lag': 2\}"),
+        ({"split": "~f1"}, KeyError, "bare column name, such as 'f1'"),
+    ],
+)
+def test_argument_errors_suggest_fix(kwargs, error, match):
+    """Common argument mistakes get a message that names the fix."""
+    with pytest.raises(error, match=match):
+        pf.feols("Y ~ X1", get_data(), **kwargs)
 
 
 @pytest.mark.parametrize(
