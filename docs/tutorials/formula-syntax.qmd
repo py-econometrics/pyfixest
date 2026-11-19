@@ -163,6 +163,15 @@ level of the categorical variable:
 fit_i1 = pf.feols("Y ~ i(f1, ref = 1)", data=data)
 ```
 
+A list sets several reference levels, all of which are dropped. In event studies,
+`i(time_to_treat, treat, ref = [-1, -1000])` drops both the period before
+treatment and a code for never-treated units.
+
+```{python}
+# set 1 and 2 as reference levels
+fit_i1_2 = pf.feols("Y ~ i(f1, ref = [1, 2])", data=data)
+```
+
 You can also easily interact variables:
 
 ```{python}

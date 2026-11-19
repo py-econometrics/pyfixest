@@ -338,6 +338,75 @@ def test_factor_x_factor_with_fe(df_test, r_fml, py_fml):
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "r_fml,py_fml",
+    [
+        ("Y ~ i(f_int, ref=c(1, 2))", "Y ~ i(f_int, ref=[1, 2])"),
+        ("Y ~ i(f_int, ref=c(10, 1, 10))", "Y ~ i(f_int, ref=(10, 1, 10))"),
+        (
+            "Y ~ 0 + i(f_str, ref=c('apple', 'cherry'))",
+            "Y ~ 0 + i(f_str, ref=['apple', 'cherry'])",
+        ),
+        ("Y ~ i(f_int, ref=c(1, 2)) | fe1", "Y ~ i(f_int, ref=[1, 2]) | fe1"),
+        ("Y ~ i(f_int, X1, ref=c(1, 2))", "Y ~ i(f_int, X1, ref=[1, 2])"),
+        ("Y ~ i(f_int, X1, ref=c(1, 2)) | fe1", "Y ~ i(f_int, X1, ref=[1, 2]) | fe1"),
+        ("Y ~ i(f_int, i.g, ref=c(1, 2))", "Y ~ i(f_int, g, ref=[1, 2])"),
+        (
+            "Y ~ i(f_int, i.g, ref=c(1, 2), ref2=c('X', 'Z'))",
+            "Y ~ i(f_int, g, ref=[1, 2], ref2=['X', 'Z'])",
+        ),
+        (
+            "Y ~ 0 + i(f_str, i.g, ref2=c('X', 'Z')) | fe1",
+            "Y ~ 0 + i(f_str, g, ref2=['X', 'Z']) | fe1",
+        ),
+        (
+            "Y ~ i(f_int, bin=list(low=c(1, 2)), ref=c('low', 20))",
+            "Y ~ i(f_int, bin={'low': [1, 2]}, ref=['low', 20])",
+        ),
+    ],
+)
+def test_multiple_references(df_test, r_fml, py_fml):
+    """Several reference levels omit each of them, in fits and predictions."""
+    py_names, py_values, r_names, r_values = compare_with_r(r_fml, df_test, py_fml)
+    assert_models_match(py_names, py_values, r_names, r_values)
+    if "|" not in r_fml:
+        newdata = df_test.iloc[:40]
+        np.testing.assert_allclose(
+            feols(py_fml, df_test).predict(newdata=newdata),
+            np.asarray(
+                stats.predict(fixest.feols(ro.Formula(r_fml), df_test), newdata=newdata)
+            ),
+            rtol=1e-10,
+            atol=1e-10,
+        )
+
+
+@pytest.mark.against_r_core
+def test_multiple_references_must_all_be_levels(df_test):
+    """Unlike fixest 0.14.0, every listed reference must be a level."""
+    with pytest.raises(ValueError, match=r"`f_int`\. No match was found for \[4, 5\]"):
+        feols("Y ~ i(f_int, ref=[1, 4, 5])", df_test)
+    with pytest.raises(ValueError, match=r"`g`\. No match was found for \['W'\]"):
+        feols("Y ~ i(f_str, g, ref2=['X', 'W'])", df_test)
+    with pytest.raises(
+        ValueError,
+        match=r"reference levels of i\(\) for the variable `f_int` are empty",
+    ):
+        feols("Y ~ i(f_int, ref=[])", df_test)
+
+    # fixest drops the listed levels that exist and ignores the others.
+    np.testing.assert_allclose(
+        get_r_coef_values(
+            fixest.feols(ro.Formula("Y ~ i(f_int, ref=c(1, 4, 5))"), df_test)
+        ),
+        get_r_coef_values(fixest.feols(ro.Formula("Y ~ i(f_int, ref=1)"), df_test)),
+        rtol=0,
+        atol=1e-10,
+        err_msg="fixest no longer ignores absent levels in a list of references",
+    )
+
+
+@pytest.mark.against_r_core
 def test_numeric_second_variable_ref2_differs_from_fixest(df_test):
     """`ref2` on a numeric second variable raises; fixest ignores it."""
     with pytest.raises(ValueError, match=r"`f_int` is numeric.*C\(f_int\)"):

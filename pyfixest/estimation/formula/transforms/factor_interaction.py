@@ -19,8 +19,8 @@ def factor_interaction(
     data: Any,
     var2: Any = None,
     *,
-    ref: Hashable | None = None,
-    ref2: Hashable | None = None,
+    ref: Hashable | list[Hashable] | None = None,
+    ref2: Hashable | list[Hashable] | None = None,
     bin: dict | None = None,
     bin2: dict | None = None,
 ) -> FactorValues:
@@ -35,11 +35,13 @@ def factor_interaction(
         Optional second variable to interact with. A numeric `var2` gives
         continuous slopes; a non-numeric `var2` is a factor. Wrap a numeric
         `var2` in `C()`, as in `i(f, C(k))`, to treat it as a factor.
-    ref : Hashable, optional
-        Reference level to drop from `data`.
-    ref2 : Hashable, optional
-        Reference level to drop from a factor `var2`. Raises `ValueError` for a
-        continuous `var2`.
+    ref : Hashable or list, optional
+        Reference level to drop from `data`. A list or tuple, as in
+        `ref=[-1, -1000]`, drops several levels. Each must be a level of `data`
+        (after binning), or `ValueError` names the missing ones.
+    ref2 : Hashable or list, optional
+        Reference level, or list of levels, to drop from a factor `var2`.
+        Raises `ValueError` for a continuous `var2`.
     bin : dict, optional
         Mapping of `new_level -> [old_levels]` for binning `data`.
     bin2 : dict, optional
@@ -78,11 +80,12 @@ def factor_interaction(
     -----
     Naming convention (matches R fixest)::
 
-        i(cyl)            -> cyl::4, cyl::6, cyl::8
-        i(cyl, ref=4)     -> cyl::6, cyl::8
-        i(cyl, wt)        -> cyl::4:wt, cyl::6:wt, cyl::8:wt
-        i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
-        i(cyl, C(gear))   -> cyl::4:gear::3, ..., cyl::8:gear::5
+        i(cyl)             -> cyl::4, cyl::6, cyl::8
+        i(cyl, ref=4)      -> cyl::6, cyl::8
+        i(cyl, ref=[4, 6]) -> cyl::8
+        i(cyl, wt)         -> cyl::4:wt, cyl::6:wt, cyl::8:wt
+        i(cyl, wt, ref=4)  -> cyl::6:wt, cyl::8:wt
+        i(cyl, C(gear))    -> cyl::4:gear::3, ..., cyl::8:gear::5
     """
     # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
@@ -142,8 +145,8 @@ def _encode_i(
     values: Any,
     factor_name: str,
     var2_name: str | None,
-    ref: Hashable | None,
-    ref2: Hashable | None,
+    ref: Hashable | list[Hashable] | None,
+    ref2: Hashable | list[Hashable] | None,
     bin: dict | None,
     bin2: dict | None,
     reduced_rank: bool,
@@ -281,18 +284,28 @@ def _observed_levels(
 
 def _encode_factor(
     data: pd.Series,
-    ref: Hashable | None,
+    ref: Hashable | list[Hashable] | None,
     reduced_rank: bool,
     encoder_state: dict[str, Any],
     model_spec: ModelSpec,
 ) -> pd.DataFrame:
     contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
+    levels = contrasts_state.get("levels")
+    other_refs: list[Hashable] = []
+    if isinstance(ref, list | tuple):
+        # Several references: the contrasts drop the first, the rest are
+        # dropped from the encoded columns below.
+        ref, *other_refs = _validate_references(
+            ref,
+            levels=data.cat.categories if levels is None else levels,
+            variable=str(data.name),
+        )
     # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
     # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
     dummies = encode_contrasts_with_state(
         data,
         ref=ref,
-        levels=contrasts_state.get("levels"),
+        levels=levels,
         reduced_rank=reduced_rank or ref is not None,
         state=contrasts_state,
         model_spec=model_spec,
@@ -304,7 +317,30 @@ def _encode_factor(
         # first level of the already-reduced set.
         levels = contrasts_state.get("categories", dummies.columns.tolist())
         set_contrast_levels(encoder_state, str(data.name), levels)
+    if other_refs:
+        dummies = dummies.loc[:, ~dummies.columns.isin(other_refs)]
     return dummies
+
+
+def _validate_references(
+    refs: list[Hashable] | tuple[Hashable, ...],
+    levels: Iterable[Any],
+    variable: str,
+) -> list[Hashable]:
+    """Return the distinct references of i(), each of which must be a level."""
+    if not refs:
+        raise ValueError(
+            f"The reference levels of i() for the variable `{variable}` are empty. "
+            "Name at least one level, or omit the argument."
+        )
+    level_list = list(levels)
+    missing = [ref for ref in refs if ref not in level_list]
+    if missing:
+        raise ValueError(
+            f"The reference levels of i() must be levels of the variable "
+            f"`{variable}`. No match was found for {missing!r}."
+        )
+    return list(dict.fromkeys(refs))
 
 
 def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
