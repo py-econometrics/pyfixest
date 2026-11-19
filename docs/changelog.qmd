@@ -31,6 +31,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   porting from R `fixest` and migrating to 0.70, which agents open when
   `SKILL.md` is not enough. The website and `llms.txt` publish the same files
   ([#2049](https://github.com/py-econometrics/pyfixest/pull/2049)).
+- `help(pyfixest)` and the README now say where to find the documentation,
+  `llms.txt`, the packaged agent skill and the 0.60 migration guide
+  ([#2047](https://github.com/py-econometrics/pyfixest/pull/2047)).
 
 ### Bug Fixes
 
