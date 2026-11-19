@@ -27,6 +27,13 @@ if TYPE_CHECKING:
 _VCOV_STRINGS: tuple[str, ...] = get_args(VcovTypeOptions)
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
+_HAC_KWARGS_HINT = {
+    "NW": (
+        "Pass it as vcov_kwargs={'time_id': 'year', 'lag': 2}, adding "
+        "'panel_id' for panel data; 'lag' is required without 'panel_id'."
+    ),
+    "DK": "Pass vcov_kwargs={'time_id': 'year', 'panel_id': 'unit'}, optionally with 'lag'.",
+}
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -831,13 +838,23 @@ class VcovSpec:
                 f"vcov must be a string or a dict such as {{'CRV1': 'f1'}}; got {type(vcov).__name__}."
             )
         if vcov not in _VCOV_STRINGS:
-            raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
+            raise ValueError(
+                f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}. "
+                "Cluster-robust inference is requested with a dict such as "
+                "vcov={'CRV1': 'cluster_var'}, or {'CRV1': 'a + b'} for multiway clustering."
+            )
 
         if vcov in ("NW", "DK"):
             if time_id is None:
-                raise ValueError("Missing required 'time_id' for NW/DK vcov")
+                raise ValueError(
+                    f"Missing required 'time_id' for vcov={vcov!r}. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             if vcov == "DK" and panel_id is None:
-                raise ValueError("Missing required 'panel_id' for DK vcov")
+                raise ValueError(
+                    "Missing required 'panel_id' for vcov='DK'. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
