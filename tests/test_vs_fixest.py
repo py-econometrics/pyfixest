@@ -595,6 +595,45 @@ def test_single_fit_fepois(
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(("weight_scale", "dropped"), [(1, ("x2",)), (1000, ())])
+def test_weighted_ols_collinearity_against_fixest(weight_scale, dropped):
+    # After demeaning, the columns are orthogonal. The second weighted pivot
+    # is 4e-12 or 4e-9, on opposite sides of the absolute cutoff.
+    data = pd.DataFrame(
+        {
+            "group": [1] * 4 + [2] * 4,
+            "x1": [3, 1, 3, 1, 4, 4, 4, 4],
+            "x2": [2, 2, 2, 2, 5, 3, 5, 3],
+            "y": [5, 2, 4, 1, 8, 1, 7, 2],
+            "w": weight_scale * np.repeat([1.0, 1e-12], 4),
+        }
+    )
+    fml = "y ~ x1 + x2 | group"
+    r_fit = fixest.feols(
+        ro.Formula(fml), data=data, weights=ro.Formula("~w"), collin_tol=1e-9
+    )
+    if dropped:
+        with pytest.warns(
+            UserWarning, match="variables dropped due to multicollinearity"
+        ):
+            py_fit = feols(fml, data, weights="w", collin_tol=1e-9)
+    else:
+        py_fit = feols(fml, data, weights="w", collin_tol=1e-9)
+
+    r_coef = stats.coef(r_fit)
+    assert py_fit.collinearity.dropped_coef_names == dropped
+    r_coef_names = ro.r("function(fit) names(coef(fit))")(r_fit)
+    assert list(py_fit.coef().index) == list(r_coef_names)
+    np.testing.assert_allclose(
+        py_fit.coef(),
+        r_coef,
+        rtol=0,
+        atol=1e-12,
+        err_msg="Weighted OLS coefficients differ from R fixest",
+    )
+
+
+@pytest.mark.against_r_core
 @pytest.mark.parametrize(
     "fml",
     [
