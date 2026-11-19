@@ -44,7 +44,9 @@ fit_squared_fe = pf.feols("Y ~ X1 + I(X1**2) | f1", data=data)
 
 Inside `I(...)`, expressions follow Python arithmetic: `**`
 means exponentiation, while `^` means bitwise XOR. Use `I(X1**2)` when
-translating R's `I(X1^2)`.
+translating R's `I(X1^2)`. PyFixest raises a `FormulaSyntaxError` for `^`
+inside any Python expression, such as `I(X1^2)` or `np.log(X1^2)`, so a
+translated formula cannot silently regress on `X1` XOR 2.
 
 ## Setup
 

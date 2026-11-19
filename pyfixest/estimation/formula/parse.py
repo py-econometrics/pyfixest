@@ -25,6 +25,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
     get_first_multistage_rhs,
     is_python_expression,
     is_structured_formula,
+    python_expression_ast,
     terms_without_intercept,
 )
 from pyfixest.estimation.formula.transforms.fixed_effects_encoding import (
@@ -331,6 +332,22 @@ def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term
     return formula[0]
 
 
+def _reject_bitwise_xor(terms: Iterable[Term]) -> None:
+    """Reject `^` in Python expressions, where it is bitwise XOR, not a power."""
+    for term in terms:
+        for factor in term.factors:
+            expression = python_expression_ast(factor)
+            if expression is not None and any(
+                isinstance(node, ast.BitXor) for node in ast.walk(expression)
+            ):
+                raise FormulaSyntaxError(
+                    f"Invalid term `{factor.expr}`: in a Python expression such "
+                    "as `I(...)`, `^` is bitwise XOR, not a power. Use `**` for "
+                    "powers, for example `I(x**2)`. For an exclusive or, use "
+                    "`np.logical_xor(a, b)`."
+                )
+
+
 def _factor_ast(factor: Factor) -> ast.expr | None:
     """Return the AST for a Python-evaluated Formulaic factor."""
     # Factor must encoded as Python expression by formulaic
@@ -393,6 +410,7 @@ class Formula:
                 f"Received {len(self._formula.rhs)}:\n"
                 f"{self._formula}"
             )
+        _reject_bitwise_xor(self._terms())
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
         # expression evaluated from two columns.
         if len(self.dependent) > 1:
@@ -402,6 +420,19 @@ class Formula:
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
+
+    def _terms(self) -> Iterator[Term]:
+        """Yield the terms of every formula part, including IV and fixed effects."""
+        yield from self._left_hand_side
+        if self.is_instrumental_variable:
+            # The root holds the exogenous and endogenous terms.
+            yield from self._right_hand_side.root
+            yield from get_first_multistage_rhs(self._right_hand_side)
+        else:
+            yield from self._right_hand_side
+        if isinstance(self._formula.rhs, tuple):
+            for part in self._formula.rhs[1:]:
+                yield from part
 
     def _validate_instrumental_variable_specification(self) -> None:
         n_multistage_blocks = count_multistage_blocks(self._right_hand_side)
