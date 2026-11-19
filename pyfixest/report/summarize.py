@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING
 
 import maketables
@@ -39,6 +40,49 @@ def _get_estimation_method_name(fxst: Feols) -> str:
     if method in _METHOD_DISPLAY_NAMES:
         return _METHOD_DISPLAY_NAMES[method]
     raise ValueError(f"Unknown estimation method: {method}")
+
+
+_ETABLE_TYPES = ("df", "md", "html", "gt", "tex", "typst", "docx")
+
+# Pointers for keyword arguments of R's `etable()` that pyfixest spells differently.
+_ETABLE_ARGUMENT_HINTS = {
+    "tex": 'Use type="tex" for LaTeX output.',
+    "dict": "Use labels= to rename variables.",
+}
+
+
+def _check_etable_kwargs(kwargs: dict[str, object]) -> None:
+    """Raise TypeError for keyword arguments that maketables does not consume."""
+    # ETable forwards its own **kwargs to MTable, which accepts and ignores
+    # any further keywords, so only the named parameters of the two are used.
+    accepted = {
+        name
+        for init in (maketables.ETable.__init__, maketables.MTable.__init__)
+        for name, parameter in inspect.signature(init).parameters.items()
+        if parameter.kind is not inspect.Parameter.VAR_KEYWORD
+    }
+    unexpected = [name for name in kwargs if name not in accepted]
+    if not unexpected:
+        return
+    names = ", ".join(repr(name) for name in unexpected)
+    what = (
+        "an unexpected keyword argument"
+        if len(unexpected) == 1
+        else "unexpected keyword arguments"
+    )
+    hints = [
+        _ETABLE_ARGUMENT_HINTS[n] for n in unexpected if n in _ETABLE_ARGUMENT_HINTS
+    ]
+    raise TypeError(
+        " ".join(
+            [
+                f"etable() got {what} {names}.",
+                *hints,
+                "Keyword arguments that etable() does not name are passed to "
+                "maketables.ETable; see its documentation for the accepted names.",
+            ]
+        )
+    )
 
 
 def etable(
@@ -143,14 +187,6 @@ def etable(
     fe_absent: str, optional
         Symbol to use when a fixed effect is absent from a model. Default is "-".
         Common alternatives include "N", "NO", "✗", "", or any custom string.
-    digits: int
-        The number of digits to round to.
-    thousands_sep: bool, optional
-        The thousands separator. Default is False.
-    scientific_notation: bool, optional
-        Whether to use scientific notation. Default is True.
-    scientific_notation_threshold: int, optional
-        The threshold for using scientific notation. Default is 10_000.
     notes: str, optional
         Custom table notes. Default shows the significance levels and the format of
         the coefficient cell.
@@ -173,6 +209,10 @@ def etable(
         `{"font_name": "Arial", "font_size_pt": 12, "notes_font_size_pt": 9}`.
         See `maketables.MTable.DEFAULT_DOCX_STYLE` for supported options.
         Default is None, which uses maketables' Word style defaults.
+    **kwargs
+        Passed to `maketables.ETable`, for example `digits` (decimal places
+        when `coef_fmt` has no format specifiers), `model_stats`, or `caption`.
+        A keyword that `maketables.ETable` does not accept raises a TypeError.
 
     Returns
     -------
@@ -207,6 +247,22 @@ def etable(
     document.add_paragraph("Additional discussion of the estimates.")
     ```
     """
+    _check_etable_kwargs(kwargs)
+
+    if not isinstance(type, str):
+        hint = (
+            " To put several models in one table, pass them as one list: "
+            "pf.etable([fit1, fit2])."
+            if isinstance(type, Feols | FixestMulti)
+            else ""
+        )
+        raise TypeError(
+            f"type must be a string, got a {type.__class__.__name__} object.{hint}"
+        )
+    if type not in _ETABLE_TYPES:
+        valid = ", ".join(repr(t) for t in _ETABLE_TYPES)
+        raise ValueError(f"type must be one of {valid}; got {type!r}.")
+
     # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
@@ -222,16 +278,6 @@ def etable(
         assert signif_code[0] < signif_code[1] < signif_code[2], (
             "signif_code must be in increasing order"
         )
-
-    assert type in [
-        "df",
-        "md",
-        "html",
-        "gt",
-        "tex",
-        "typst",
-        "docx",
-    ], "type must be either 'df', 'md', 'html', 'gt', 'tex', 'typst' or 'docx'"
 
     models_list = _post_processing_input_checks(models)
 
@@ -249,13 +295,24 @@ def etable(
     ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
 
     if custom_model_stats is not None:
-        assert isinstance(custom_model_stats, dict), "custom_model_stats must be a dict"
-        for stat, values in custom_model_stats.items():
-            assert isinstance(stat, str), "custom_model_stats keys must be strings"
-            assert isinstance(values, list), "custom_model_stats values must be lists"
-            assert len(values) == len(models_list), (
-                "lists in custom_model_stats values must have the same length as models"
+        if not isinstance(custom_model_stats, dict):
+            raise TypeError(
+                f"custom_model_stats must be a dict, got {custom_model_stats!r}."
             )
+        for stat, values in custom_model_stats.items():
+            if not isinstance(stat, str):
+                raise TypeError(
+                    f"custom_model_stats keys must be strings, got {stat!r}."
+                )
+            if not isinstance(values, list):
+                raise TypeError(
+                    f"custom_model_stats[{stat!r}] must be a list, got {values!r}."
+                )
+            if len(values) != len(models_list):
+                raise ValueError(
+                    f"custom_model_stats[{stat!r}] must have one value per model "
+                    f"({len(models_list)}), got {len(values)}: {values!r}."
+                )
 
     table = maketables.ETable(
         models=models_list,
