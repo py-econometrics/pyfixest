@@ -861,7 +861,7 @@ def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
     """A fixed-effects-only fit skips vcov() and carries no covariance."""
     fit = pf.feols("y ~ 1 | fe", lifecycle_data)
     assert not hasattr(fit, "variance_covariance")
-    with pytest.raises(EmptyVcovError):
+    with pytest.raises(EmptyVcovError, match="estimated no coefficients"):
         fit.get_inference()
 
 

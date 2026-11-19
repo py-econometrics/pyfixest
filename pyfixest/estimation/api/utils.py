@@ -41,6 +41,13 @@ def _resolve_vcov(
     )
 
 
+def _bare_column_hint(name: str) -> str:
+    """Return a hint when a column name carries a formula tilde, such as ``'~f1'``."""
+    if name.startswith("~"):
+        return f" Pass the bare column name, such as {name.lstrip('~').strip()!r}."
+    return ""
+
+
 def _estimation_input_checks(
     fml: str,
     data: DataFrameType,
@@ -79,8 +86,11 @@ def _estimation_input_checks(
         raise ValueError(
             f"weights must be a string or None but you provided weights = {weights}."
         )
-    if weights is not None:
-        assert weights in data.columns, "weights must be a column in data"
+    if weights is not None and weights not in data.columns:
+        raise ValueError(
+            f"weights must be a column in data; got weights={weights!r}."
+            + _bare_column_hint(weights)
+        )
 
     bool_args = [copy_data, store_data, lean]
     for arg in bool_args:
@@ -121,10 +131,14 @@ def _estimation_input_checks(
         )
 
     if isinstance(split, str) and split not in data.columns:
-        raise KeyError(f"Column '{split}' not found in data.")
+        raise KeyError(
+            f"Column '{split}' not found in data." + _bare_column_hint(split)
+        )
 
     if isinstance(fsplit, str) and fsplit not in data.columns:
-        raise KeyError(f"Column '{fsplit}' not found in data.")
+        raise KeyError(
+            f"Column '{fsplit}' not found in data." + _bare_column_hint(fsplit)
+        )
 
     if separation_check is not None:
         if not isinstance(separation_check, list):
@@ -139,4 +153,7 @@ def _estimation_input_checks(
 
     for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
         if column is not None and column not in data.columns:
-            raise ValueError(f"The variable '{column}' is not in the data.")
+            raise ValueError(
+                f"The variable '{column}' is not in the data."
+                + _bare_column_hint(column)
+            )
