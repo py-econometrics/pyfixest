@@ -23,6 +23,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated
   `AttributeError` ([#1809](https://github.com/py-econometrics/pyfixest/issues/1809)).
+- Several argument errors now say how to fix the call: `vcov="cluster"` points
+  to `vcov={"CRV1": "cluster_var"}`, column names written as `"~f1"` get a hint
+  to drop the tilde, and NW/DK errors show the needed `vcov_kwargs`. A missing
+  `weights` column now raises `ValueError` instead of `AssertionError`, and an
+  unknown `event_study()` estimator raises `ValueError` instead of
+  `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
 
 ## PyFixest 0.70.0
 
