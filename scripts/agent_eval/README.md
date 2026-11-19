@@ -31,6 +31,9 @@ cd /tmp && /tmp/pf-env/bin/python -I -c "import pyfixest; print(pyfixest.__file_
 ```
 
 The runner refuses an interpreter whose `pyfixest` is not in `site-packages`.
+Keep the environment in a directory of its own, away from `--out`: the prompt
+shows the interpreter's path, and the agent's scripts can read anything near it,
+including earlier results and references.
 
 ## Run
 
