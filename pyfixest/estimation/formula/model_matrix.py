@@ -3,7 +3,8 @@ from __future__ import annotations
 import copy
 import warnings
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Collection, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import Any, Final, Literal, TypeAlias, cast
@@ -11,6 +12,7 @@ from typing import Any, Final, Literal, TypeAlias, cast
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.errors import FactorEvaluationError
 from formulaic.model_matrix import ModelMatrices
 from formulaic.parser import DefaultFormulaParser
 from formulaic.parser.types import Factor, Term
@@ -18,10 +20,11 @@ from numpy.typing import NDArray
 from within import Effect
 
 from pyfixest.core.detect_singletons import detect_singletons
-from pyfixest.errors import FormulaSyntaxError
+from pyfixest.errors import FixedEffectEvaluationError, FormulaSyntaxError
 from pyfixest.estimation.formula import FORMULAIC_FEATURE_FLAG, FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     flatten_model_matrix,
+    formula_required_variables,
     get_fixed_effect_encoding,
 )
 from pyfixest.estimation.formula.parse import (
@@ -657,13 +660,20 @@ def create_model_matrix(
         formula=formula, data=data, weights=weights, offset=offset
     )
     evaluation_context = FORMULAIC_TRANSFORMS | {**capture_context(context)}
-    model_matrix = formula_formulaic.get_model_matrix(
-        data=data,
-        ensure_full_rank=ensure_full_rank,
-        na_action="drop",
-        output="pandas",
+    with explain_evaluation_errors(
         context=evaluation_context,
-    )
+        fixed_effect_columns=formula_required_variables(
+            formula.formulaic_fixed_effects
+        ),
+        data_name="the data",
+    ):
+        model_matrix = formula_formulaic.get_model_matrix(
+            data=data,
+            ensure_full_rank=ensure_full_rank,
+            na_action="drop",
+            output="pandas",
+            context=evaluation_context,
+        )
     drop_rows = _dropped_rows(
         kept=model_matrix[_ModelMatrixKey.main]["lhs"].index,
         n_observations=n_observations,
@@ -675,6 +685,57 @@ def create_model_matrix(
         drop_intercept=drop_intercept,
         fixed_effect_specifications=formula.fixed_effect_specifications,
     )
+
+
+_UNDEFINED_FUNCTION_HINTS: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        "factor": (
+            "Use `C(x)` to treat `x` as categorical, or `i(x)` for dummies "
+            "with an optional reference level."
+        ),
+        "c": (
+            "Use `sw(Y1, Y2) ~ ...` for several dependent variables, and a "
+            "Python list such as `[1, 2]` for several values of an argument, "
+            "e.g. `i(f1, ref=[1, 2])`."
+        ),
+        **dict.fromkeys(
+            ("l", "f", "d"),
+            "pyfixest formulas have no panel lag, lead or difference helpers. "
+            "Create the lagged, lead or differenced column in the data first.",
+        ),
+    }
+)
+
+
+@contextmanager
+def explain_evaluation_errors(
+    *,
+    context: Mapping[str, Any],
+    fixed_effect_columns: Collection[str],
+    data_name: str,
+) -> Iterator[None]:
+    """Explain formula evaluation failures caused by an undefined name.
+
+    A fixed-effect column missing from the data is reported by column name
+    instead of the internal fixed-effect transform. Undefined `factor`, `c`,
+    `l`, `f` and `d` get a hint with the pyfixest spelling. Other errors pass
+    through unchanged.
+    """
+    try:
+        yield
+    except FactorEvaluationError as exc:
+        cause = exc.__cause__
+        name = cause.name if isinstance(cause, NameError) else None
+        if name is None or name in context:
+            raise
+        if name in fixed_effect_columns:
+            raise FixedEffectEvaluationError(
+                f"Fixed-effect column `{name}` is not present in {data_name}."
+            ) from cause
+        hint = _UNDEFINED_FUNCTION_HINTS.get(name)
+        if hint is None:
+            raise
+        raise FactorEvaluationError(f"{exc} {hint}") from cause
 
 
 def _dropped_rows(kept: pd.Index, n_observations: int) -> frozenset[int]:

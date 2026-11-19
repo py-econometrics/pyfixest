@@ -993,6 +993,30 @@ def test_i_error():
 
 
 @pytest.mark.parametrize(
+    "estimate,error,match",
+    [
+        (
+            lambda d: feols("Y ~ X1 | f1:fmissing", d),
+            FixedEffectEvaluationError,
+            r"^Fixed-effect column `fmissing` is not present in the data\.$",
+        ),
+        (
+            lambda d: feols("Y ~ X1 | f1", d).predict(newdata=d[["X1"]]),
+            FixedEffectEvaluationError,
+            r"^Fixed-effect column `f1` is not present in `newdata`\.$",
+        ),
+        (lambda d: feols("Y ~ X1 + factor(f1)", d), FactorEvaluationError, r"`C\(x\)`"),
+        (lambda d: feols("c(Y, Y2) ~ X1", d), FactorEvaluationError, r"`sw\(Y1, Y2\)"),
+        (lambda d: feols("Y ~ i(f1, ref=c(1, 2))", d), FactorEvaluationError, "list"),
+        (lambda d: feols("Y ~ l(X1, 1)", d), FactorEvaluationError, "no panel lag"),
+    ],
+)
+def test_formula_evaluation_error_messages(data, estimate, error, match):
+    with pytest.raises(error, match=match):
+        estimate(data)
+
+
+@pytest.mark.parametrize(
     "fml,match",
     [
         # Mistyped level, alone or next to a valid one.
