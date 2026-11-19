@@ -17,6 +17,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## Unreleased
 
+### New Features
+
+- `i()` accepts several reference levels as a list, as in
+  `i(time_to_treat, treat, ref=[-1, -1000])`, for both `ref` and `ref2`. Every
+  listed level must occur in the variable ([#2051](https://github.com/py-econometrics/pyfixest/pull/2051)).
+
 ### Bug Fixes
 
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
