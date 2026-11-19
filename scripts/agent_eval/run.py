@@ -101,7 +101,10 @@ def session(args, task, rep):
     tools = {}  # tool calls by name, e.g. how often it read site-packages
     for line in res.stdout.splitlines():
         msg = json.loads(line) if line.startswith("{") else {}
-        for part in (msg.get("message") or {}).get("content") or []:
+        # A permission_denied event carries its message as a string.
+        message = msg.get("message")
+        parts = message.get("content") if isinstance(message, dict) else None
+        for part in parts or []:
             if isinstance(part, dict) and part.get("type") == "tool_use":
                 tools[part["name"]] = tools.get(part["name"], 0) + 1
     row = {
