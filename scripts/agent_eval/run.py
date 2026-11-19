@@ -86,12 +86,20 @@ def session(args, task, rep):
     prompt = PROMPT.format(
         prompt=task["prompt"], python=args.python, keys=", ".join(ref)
     )
+    isolation = ["--safe-mode", "--setting-sources", "", "--disable-slash-commands"]
+    allowed_tools = "Read,Glob,Grep,Write,Edit,Bash"
+    if args.project_skill:  # the packaged skill as a project skill, nothing else
+        skill = Path(site) / "pyfixest" / "skills" / "pyfixest"
+        shutil.copytree(skill, work / ".claude" / "skills" / "pyfixest")
+        no_memory = '{"autoMemoryEnabled": false}'
+        isolation = ["--setting-sources", "project", "--settings", no_memory]
+        allowed_tools += ",Skill"
     cmd = [
         "claude", "-p", prompt, "--model", args.model,
         "--max-budget-usd", str(args.budget), "--max-turns", str(args.max_turns),
         "--output-format", "stream-json", "--verbose", "--no-session-persistence",
-        "--safe-mode", "--setting-sources", "", "--strict-mcp-config", "--disable-slash-commands",
-        "--tools", "Read,Glob,Grep,Write,Edit,Bash", "--permission-mode", "dontAsk",
+        *isolation, "--strict-mcp-config",
+        "--tools", allowed_tools, "--permission-mode", "dontAsk",
         "--allowedTools", f"Read(/{work}/**)", f"Edit(/{work}/**)",
         f"Read(/{site}/**)", f"Bash({args.python} *)",
     ]  # fmt: skip
@@ -160,6 +168,11 @@ def main():
     p.add_argument("--budget", type=float, default=0.5, help="USD cap per session")
     p.add_argument("--max-turns", type=int, default=20)
     p.add_argument("--jobs", type=int, default=4, help="parallel sessions")
+    p.add_argument(
+        "--project-skill",
+        action="store_true",
+        help="copy the installed skills/pyfixest into the task's .claude/skills",
+    )
     p.add_argument("--summary-only", action="store_true", help="reprint --out's table")
     args = p.parse_args()
     args.python = os.path.abspath(args.python)
