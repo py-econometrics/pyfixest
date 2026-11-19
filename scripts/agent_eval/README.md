@@ -44,7 +44,10 @@ python3 scripts/agent_eval/run.py --python /tmp/pf-env/bin/python --out /tmp/pf-
 ```
 
 Options: `--model` (default `claude-sonnet-5-5`), `--reps` (3), `--budget` (USD
-per session, 0.5), `--max-turns` (20), `--jobs` (parallel sessions, 4). Use a new
+per session, 0.5), `--max-turns` (20), `--jobs` (parallel sessions, 4).
+`--project-skill` copies the installed `skills/pyfixest` into the task's
+`.claude/skills/` and loads project settings only (no user settings, memory,
+plugins or MCP; Claude Code's bundled skills stay available). Use a new
 `--out` for each run, because `results.jsonl` is appended to. Per task, the
 output directory holds the data, the reference and, for each repetition, the
 transcript, `solution.py` and its output.
