@@ -613,7 +613,7 @@ def test_all_variables_multicollinear():
 def test_wls_errors():
     data = get_data()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="weights must be a column in data"):
         feols(fml="Y ~ X1", data=data, weights="weights2")
 
     with pytest.raises(ValueError):
