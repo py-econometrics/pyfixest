@@ -64,7 +64,7 @@ def test_summary():
         coef_fmt="b [conf_int_lb, conf_int_ub]",
     )
 
-    # Test scientific notation
+    # Test digits
     etable(
         models=[fit1],
         custom_stats={
@@ -74,17 +74,8 @@ def test_summary():
         digits=2,
     )
 
-    # Test scientific notation, thousands separator
-    etable(
-        models=[fit1],
-        custom_stats={
-            "test_digits": [[0.1, 12300]],
-        },
-        coef_fmt="b [test_digits]",
-        digits=2,
-        scientific_notation=False,
-        thousands_sep=True,
-    )
+    # Test keyword arguments passed to maketables.ETable
+    etable([fit1, fit2], caption="Results", model_stats=["N"])
 
     # Test select / order coefficients
     etable([fit1, fit2, fit3], coef_fmt="b (se)\nt [p]")
@@ -207,7 +198,7 @@ def test_etable_docx_style():
 
 def test_etable_invalid_output_type():
     """The invalid-format message includes both Word and Typst output."""
-    with pytest.raises(AssertionError, match="'typst' or 'docx'"):
+    with pytest.raises(ValueError, match="'typst', 'docx'; got 'invalid'"):
         etable([], type="invalid")
 
 

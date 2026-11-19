@@ -351,7 +351,6 @@ tab = pf.etable(
     type="tex",
     notes=mynotes,
     show_fe=True,
-    show_se_type=False,
     custom_model_stats={
         "Number of Clusters": [42, 42, 42, 37, 37, 37],
     },
@@ -566,7 +565,6 @@ t1 = DTable(
 t2 = pf.etable(
     [fit1, fit2, fit3, fit4, fit5, fit6],
     labels=labels,
-    show_se=False,
     felabels={"f1": "Industry Fixed Effects", "f2": "Year Fixed Effects"},
     caption="Regression results",
 )

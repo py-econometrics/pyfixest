@@ -775,6 +775,33 @@ def test_errors_etable():
         )
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "error", "match"),
+    [
+        ({"tex": True}, TypeError, r"argument 'tex'\. Use type=\"tex\""),
+        ({"dict": {"X1": "x"}}, TypeError, r"argument 'dict'\. Use labels="),
+        ({"not_an_option": 1}, TypeError, "argument 'not_an_option'"),
+        ({"custom_model_stats": [1, 2]}, TypeError, r"a dict, got \[1, 2\]"),
+        ({"custom_model_stats": {1: [1, 2]}}, TypeError, "strings, got 1"),
+        ({"custom_model_stats": {"a": (1, 2)}}, TypeError, r"a list, got \(1, 2\)"),
+        ({"custom_model_stats": {"a": [1]}}, ValueError, r"model \(2\), got 1"),
+    ],
+)
+def test_etable_rejects_invalid_arguments(kwargs, error, match):
+    data = get_data()
+    fits = [feols("Y ~ X1", data=data), feols("Y ~ X1 + X2", data=data)]
+    with pytest.raises(error, match=match):
+        etable(fits, **kwargs)
+
+
+def test_etable_models_passed_positionally():
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2", data=data)
+    with pytest.raises(TypeError, match=r"pf\.etable\(\[fit1, fit2\]\)"):
+        etable(fit1, fit2)
+
+
 def test_errors_ccv():
     data = get_data().dropna()
     data["D"] = np.random.choice([0, 1], size=len(data))

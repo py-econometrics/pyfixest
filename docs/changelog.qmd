@@ -29,6 +29,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `weights` column now raises `ValueError` instead of `AssertionError`, and an
   unknown `event_study()` estimator raises `ValueError` instead of
   `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
+- `pf.etable()` now raises `TypeError` for keyword arguments it does not accept,
+  such as `tex=True` or `dict=`. Before, they were silently ignored and the
+  default table came back. A second model passed positionally,
+  `pf.etable(fit1, fit2)`, now raises an error that shows the list form
+  `pf.etable([fit1, fit2])` ([#2050](https://github.com/py-econometrics/pyfixest/pull/2050)).
 
 ## PyFixest 0.70.0
 
