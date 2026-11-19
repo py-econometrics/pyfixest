@@ -28,6 +28,7 @@ from pyfixest.estimation.formula.model_matrix import (
     ModelMatrix,
     _ModelMatrixKey,
     create_model_matrix,
+    explain_evaluation_errors,
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
@@ -2014,11 +2015,16 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
                 # na_action="ignore" keeps unseen-level rows as NaN codes
-                fe_mm = fe_spec.get_model_matrix(
-                    newdata,
+                with explain_evaluation_errors(
                     context=context,
-                    na_action="ignore",
-                )
+                    fixed_effect_columns=formula_required_variables(fe_spec.formula),
+                    data_name="`newdata`",
+                ):
+                    fe_mm = fe_spec.get_model_matrix(
+                        newdata,
+                        context=context,
+                        na_action="ignore",
+                    )
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):

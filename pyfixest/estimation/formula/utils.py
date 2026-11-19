@@ -11,6 +11,10 @@ from formulaic.parser.types import Token
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.utils.dev_utils import _find_stack_level
 
+_DEPRECATED_SPELLINGS_URL = (
+    "https://pyfixest.org/tutorials/formula-syntax.html#deprecated-spellings"
+)
+
 
 def _str_split_by_sep(string: str, separator: str = "+") -> list[str]:
     """
@@ -112,7 +116,8 @@ def _preprocess_fixed_effect_interactions(formula: str) -> str:
     warnings.warn(
         "The `^` operator for fixed-effect interactions is deprecated and will "
         "throw an error in a future version. "
-        f"Instead of `{formula_old}` use `{formula}`",
+        f"Instead of `{formula_old}` use `{formula}`. "
+        f"See {_DEPRECATED_SPELLINGS_URL}",
         DeprecationWarning,
         stacklevel=_find_stack_level(),
     )
@@ -184,7 +189,8 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
         formula = f"{formula} | {fixed_effects_part}"
     warnings.warn(
         "The fixest-style syntax for instrumental variable regressions is deprecated and will throw an error in a future version. "
-        f"Instead of `{formula_old}` use `{formula}`",
+        f"Instead of `{formula_old}` use `{formula}`. "
+        f"See {_DEPRECATED_SPELLINGS_URL}",
         DeprecationWarning,
         stacklevel=_find_stack_level(),
     )
@@ -205,8 +211,9 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
         formula_old = formula
         formula = f"{_MultipleEstimationType.sw.name}({', '.join(dependents)}) ~ {rest}"
         warnings.warn(
-            "Specifiying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
-            f"Instead of `{formula_old}` use `{formula}`",
+            "Specifying multiple dependent variables with `+` is deprecated and will throw an error in a future version. "
+            f"Instead of `{formula_old}` use `{formula}`. "
+            f"See {_DEPRECATED_SPELLINGS_URL}",
             DeprecationWarning,
             stacklevel=_find_stack_level(),
         )

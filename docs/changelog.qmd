@@ -29,6 +29,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `weights` column now raises `ValueError` instead of `AssertionError`, and an
   unknown `event_study()` estimator raises `ValueError` instead of
   `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
+- A fixed-effect column missing from `data` or `newdata` now raises an error
+  that names the column. `factor()`, `c()`, `l()`, `f()` and `d()` in a formula
+  get a hint with the pyfixest spelling, and the deprecated-spelling warnings
+  link to the formula syntax guide ([#2042](https://github.com/py-econometrics/pyfixest/pull/2042)).
 
 ## PyFixest 0.70.0
 
