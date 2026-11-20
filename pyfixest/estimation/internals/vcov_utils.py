@@ -196,7 +196,7 @@ def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
 def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
     if np.any(cluster_df.isna().any()):
         raise NanInClusterVarError(
-            "CRV inference not supported with missing values in the cluster variable."
+            "CRV inference not supported with missing values in the cluster variable. "
             "Please drop missing values before running the regression."
         )
 
