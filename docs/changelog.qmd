@@ -29,6 +29,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `weights` column now raises `ValueError` instead of `AssertionError`, and an
   unknown `event_study()` estimator raises `ValueError` instead of
   `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
+- Cluster variables can be written with backticks, as in formulas:
+  ``vcov={"CRV1": "`fiscal year`"}`` no longer fails with "not in the data"
+  ([#2053](https://github.com/py-econometrics/pyfixest/pull/2053)).
 
 ## PyFixest 0.70.0
 
