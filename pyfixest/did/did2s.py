@@ -11,6 +11,8 @@ from pyfixest.did.did import DID
 from pyfixest.errors import NanInClusterVarError
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
+from pyfixest.estimation.formula.formulaic_compat import formula_required_variables
+from pyfixest.estimation.formula.model_matrix import explain_evaluation_errors
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
 from pyfixest.estimation.models.feols_ import Feols
@@ -346,15 +348,23 @@ def _did2s_vcov(
     model_spec = first_stage.model.model_spec
     assert model_spec is not None
     context = FORMULAIC_TRANSFORMS | dict(first_stage.options.context)
-    fe_codes = model_spec["fe"].get_model_matrix(
-        data, context=context, na_action="ignore"
-    )
+    # Report a column missing from `data` by its name, not by the internal
+    # fixed-effect transform; the wrapper used at fit time does not cover
+    # this replay.
+    with explain_evaluation_errors(
+        context=context,
+        fixed_effect_columns=formula_required_variables(model_spec["fe"].formula),
+        data_name="the data",
+    ):
+        fe_codes = model_spec["fe"].get_model_matrix(
+            data, context=context, na_action="ignore"
+        )
+        covariates = model_spec["second_stage"].rhs.get_model_matrix(
+            data, context=context
+        )[first_stage._coefnames]
     dummies = build_fixed_effect_dummies(
         codes=fe_codes, formulaic_columns=fe_codes.columns
     )
-    covariates = model_spec["second_stage"].rhs.get_model_matrix(data, context=context)[
-        first_stage._coefnames
-    ]
     X1 = (
         hstack([csr_matrix(covariates.to_numpy()), dummies.matrix], format="csr")
         .multiply(weights_array[:, None])
