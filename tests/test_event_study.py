@@ -3,8 +3,9 @@ import pandas as pd
 import pytest
 
 import pyfixest as pf
+from pyfixest.did.did2s import _did2s_vcov
 from pyfixest.did.estimation import did2s, event_study
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import FixedEffectEvaluationError, VcovTypeNotSupportedError
 
 
 @pytest.fixture
@@ -302,6 +303,31 @@ def test_did2s_formula_validation(data, stages, match):
             treatment="treat",
             cluster="state",
         )
+
+
+def test_did2s_vcov_missing_fixed_effect_column(data):
+    "The did2s variance replay names a missing fixed-effect column, not the internal transform."
+    # Through pf.did2s(), a column missing from the input data is caught by the
+    # stage-1 feols call; the replay inside _did2s_vcov is reached only when the
+    # fits and the data passed here disagree, hence the direct call.
+    fit1 = pf.feols("dep_var ~ 1 | unit + year", data[data["treat"] == False])  # noqa: E712
+    fit2 = pf.feols(
+        "dep_var_hat ~ i(treat)",
+        data.assign(dep_var_hat=data["dep_var"]),
+        drop_intercept=True,
+    )
+    with pytest.raises(
+        FixedEffectEvaluationError,
+        match=r"^Fixed-effect column `year` is not present in the data\.$",
+    ) as exc:
+        _did2s_vcov(
+            first_stage=fit1,
+            second_stage=fit2,
+            data=data.drop(columns=["year"]),
+            treatment="treat",
+            cluster="state",
+        )
+    assert "__fixed_effect__" not in str(exc.value)
 
 
 def test_lpdid_invalid_xfml_type(data):
