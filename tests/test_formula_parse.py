@@ -585,10 +585,11 @@ class TestFixedEffectInteractions:
     def test_nested_fe_and_iv_power_expressions_are_untouched(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
-            nested_fe = Formula.parse("Y ~ X1 | I(f1^2)")[0]
+            # Not rewritten to `I(f1:2)`: the Python expression keeps its XOR.
+            with pytest.raises(FormulaSyntaxError, match=r"`I\(f1 \^ 2\)`"):
+                Formula.parse("Y ~ X1 | I(f1^2)")
             iv_power = Formula.parse("Y ~ X1 + [X2 ~ (Z1 + Z2)^2] | f1:f2")[0]
 
-        assert str(nested_fe.fixed_effects) == "I(f1 ^ 2)"
         assert str(iv_power.instruments) == "Z1 + Z2 + Z1:Z2"
 
 
@@ -870,6 +871,24 @@ class TestValidation:
         with pytest.raises(FormulaSyntaxError, match="cannot mix IV and non-IV"):
             Formula.parse(fml)
 
+    @pytest.mark.parametrize(
+        "fml, term",
+        [
+            ("Y ~ X1 + I(X2^2)", "I(X2 ^ 2)"),
+            ("I(Y^2) ~ X1", "I(Y ^ 2)"),
+            ("Y ~ np.log(X1^2)", "np.log(X1 ^ 2)"),
+            ("Y ~ {X1^2}", "X1 ^ 2"),
+            ("Y ~ X1 + [I(X2^2) ~ Z1]", "I(X2 ^ 2)"),
+            ("Y ~ X1 | X2 ~ I(Z1^2)", "I(Z1 ^ 2)"),
+            ("Y ~ X1 + sw(X2, I(Z1^2))", "I(Z1 ^ 2)"),
+            ("Y ~ X1 | f1[I(X2^2)]", "f1[I(X2 ^ 2)]"),
+        ],
+    )
+    def test_bitwise_xor_in_python_expression(self, fml, term):
+        """`^` inside a Python expression is XOR, so it is rejected."""
+        with pytest.raises(FormulaSyntaxError, match=re.escape(f"`{term}`")):
+            Formula.parse(fml)
+
     def test_three_parts_without_iv(self):
         """Y ~ X | f1 | f2 should error (should be Y ~ X | f1 + f2)."""
         with pytest.raises(FormulaSyntaxError):
@@ -1006,6 +1025,20 @@ def test_stepwise_call_over_several_lines_matches_single_line(test_data):
         fit_multiline, fit_single_line, strict=True
     ):
         np.testing.assert_allclose(multiline_fit.coef(), single_line_fit.coef())
+
+
+@pytest.mark.parametrize("dtype", ["int64", "float64"])
+def test_python_power_needs_double_star(test_data, dtype):
+    """`I(x^2)` raises for any column type, while `I(x**2)` squares the column."""
+    data = test_data.assign(x=test_data["X2"].astype(dtype), x_sq=lambda d: d.x**2)
+
+    with pytest.raises(FormulaSyntaxError, match=r"Use `\*\*` for powers"):
+        pf.feols("Y ~ I(x^2)", data=data)
+
+    np.testing.assert_allclose(
+        pf.feols("Y ~ I(x**2)", data=data).coef().to_numpy(),
+        pf.feols("Y ~ x_sq", data=data).coef().to_numpy(),
+    )
 
 
 def test_explicit_no_fe_coefficients_match(test_data):

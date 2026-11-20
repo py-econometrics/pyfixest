@@ -62,7 +62,7 @@ pf.etable([fit])
 df = restaurant_inspections.load_pandas().data
 
 fit1 = pf.feols(
-    fml="inspection_score ~ NumberofLocations + I(NumberofLocations^2) + Year", data=df
+    fml="inspection_score ~ NumberofLocations + I(NumberofLocations**2) + Year", data=df
 )
 fit2 = pf.feols(fml="inspection_score ~ NumberofLocations*Weekend + Year", data=df)
 

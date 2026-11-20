@@ -17,6 +17,13 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ## Unreleased
 
+### Breaking Changes
+
+- `^` inside a Python expression, such as `I(x^2)` or `np.log(x^2)`, now raises
+  `FormulaSyntaxError`. There `^` is bitwise XOR, so `I(x^2)` silently fitted
+  `x` XOR 2 on integer columns; write `I(x**2)` for a square
+  ([#2043](https://github.com/py-econometrics/pyfixest/pull/2043)).
+
 ### Bug Fixes
 
 - A multiple estimation call whose expansions mix IV and non-IV models, such as

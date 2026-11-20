@@ -15,7 +15,7 @@ import pandas as pd
 from formulaic.parser import DefaultOperatorResolver
 from formulaic.parser.types import Factor, Operator, OrderedSet, Term, Token
 from formulaic.utils import variables as formulaic_variables
-from formulaic.utils.code import format_expr
+from formulaic.utils.code import format_expr, sanitize_variable_names
 from formulaic.utils.stateful_transforms import _is_stateful_transform
 from formulaic.utils.structured import Structured
 from formulaic.utils.variables import Variable
@@ -403,3 +403,18 @@ def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
 def is_python_expression(factor: Factor) -> bool:
     """Return whether Formulaic represents the factor as Python syntax."""
     return factor.eval_method is Factor.EvalMethod.PYTHON
+
+
+def python_expression_ast(factor: Factor) -> ast.expr | None:
+    """Parse a Python-evaluated factor, or return None if it is not valid Python.
+
+    Backtick-quoted names, as in ``I(`my col`**2)``, are replaced by valid
+    identifiers first, as Formulaic does before evaluating the expression.
+    """
+    if not is_python_expression(factor):
+        return None
+    expression = sanitize_variable_names(factor.expr, env={}, aliases={})
+    try:
+        return ast.parse(expression, mode="eval").body
+    except SyntaxError:
+        return None
