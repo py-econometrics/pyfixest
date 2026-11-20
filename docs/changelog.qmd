@@ -29,6 +29,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `weights` column now raises `ValueError` instead of `AssertionError`, and an
   unknown `event_study()` estimator raises `ValueError` instead of
   `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
+- `center()` and `scale()` in a formula compute their mean and standard
+  deviation from the column's non-missing values. Before, a single missing
+  value made the whole column NaN and the fit failed with "All variables are
+  collinear" ([#2056](https://github.com/py-econometrics/pyfixest/pull/2056)).
 
 ## PyFixest 0.70.0
 
