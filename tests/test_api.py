@@ -31,6 +31,17 @@ def test_api():
     pf.coefplot(fit_multi)
 
 
+def test_fetch_model_by_key_or_position():
+    fit = pf.feols("sw(Y, Y2) ~ X1 | f1", data=get_data())
+    second = fit.all_fitted_models["Y2 ~ X1 | f1"]
+
+    assert fit.fetch_model("Y2 ~ X1 | f1", print_fml=False) is second
+    assert fit.fetch_model(1, print_fml=False) is second
+    assert fit.fetch_model("1", print_fml=False) is second
+    with pytest.raises(KeyError, match=r"Available keys: \['Y ~ X1 \| f1'"):
+        fit.fetch_model("Y3 ~ X1 | f1")
+
+
 def test_feols_args():
     """
     Check feols function arguments.

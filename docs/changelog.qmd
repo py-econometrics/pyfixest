@@ -33,6 +33,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   estimation that includes one, no longer fails with `AttributeError`. It
   leaves the fit unchanged, since there are no coefficients to compute a
   covariance for ([#2054](https://github.com/py-econometrics/pyfixest/pull/2054)).
+- `FixestMulti.fetch_model()` accepts a model key such as `"Y ~ X1 | f1"`, as
+  documented. Before, it failed with `ValueError: invalid literal for int()`;
+  an unknown key now raises `KeyError` listing the available keys
+  ([#2052](https://github.com/py-econometrics/pyfixest/pull/2052)).
 
 ## PyFixest 0.70.0
 
