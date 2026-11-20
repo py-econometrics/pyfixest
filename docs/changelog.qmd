@@ -33,6 +33,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   that names the column. `factor()`, `c()`, `l()`, `f()` and `d()` in a formula
   get a hint with the pyfixest spelling, and the deprecated-spelling warnings
   link to the formula syntax guide ([#2042](https://github.com/py-econometrics/pyfixest/pull/2042)).
+- The did2s variance replay reports a missing first-stage fixed-effect column
+  by name instead of the internal `__fixed_effect__(...)` transform
+  ([#2064](https://github.com/py-econometrics/pyfixest/pull/2064)).
 
 ## PyFixest 0.70.0
 
