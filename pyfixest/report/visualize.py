@@ -14,6 +14,7 @@ from pyfixest.estimation.models.fepois_ import Fepois
 from pyfixest.estimation.quantreg.quantreg_ import Quantreg
 from pyfixest.report.utils import (
     _check_label_keys_in_covars,
+    _check_positional_model_argument,
     _post_processing_input_checks,
     _relabel_expvar,
 )
@@ -181,6 +182,8 @@ def iplot(
     pf.iplot([fit1], joint = "both")
     ```
     """
+    _check_positional_model_argument("iplot", "alpha", alpha)
+
     models = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
     )
@@ -360,6 +363,8 @@ def coefplot(
 
     ```
     """
+    _check_positional_model_argument("coefplot", "alpha", alpha)
+
     models = _post_processing_input_checks(
         models, check_duplicate_model_names=True, rename_models=rename_models
     )
@@ -458,6 +463,8 @@ def qplot(
     See the [quantile regression tutorial](/tutorials/quantile-regression.qmd)
     for details.
     """
+    _check_positional_model_argument("qplot", "rename_models", rename_models)
+
     if rename_models is None:
         rename_models = {}
 

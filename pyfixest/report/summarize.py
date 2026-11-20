@@ -12,7 +12,10 @@ from pyfixest.estimation.internals.literals import InferenceType
 from pyfixest.estimation.models.feiv_ import Feiv
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.models.fepois_ import Fepois
-from pyfixest.report.utils import _post_processing_input_checks
+from pyfixest.report.utils import (
+    _check_positional_model_argument,
+    _post_processing_input_checks,
+)
 
 if TYPE_CHECKING:
     from docx.document import Document
@@ -415,6 +418,8 @@ def summary(
     pf.summary([fit1, fit2, fit3])
     ```
     """
+    _check_positional_model_argument("summary", "digits", digits)
+
     models = _post_processing_input_checks(models)
 
     for fxst in list(models):
