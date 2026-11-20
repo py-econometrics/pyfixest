@@ -825,7 +825,9 @@ class VcovSpec:
                 raise TypeError(
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
-            clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
+            clustervar = tuple(
+                _cluster_column_name(x) for x in cluster_input.split("+")
+            )
             if any("^" in x for x in clustervar):
                 raise ValueError(
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "
@@ -867,6 +869,18 @@ class VcovSpec:
             "iid" if vcov == "iid" else "nid" if vcov == "nid" else "hetero"
         )
         return cls(vcov_type=vcov_type, vcov_type_detail=vcov)
+
+
+def _cluster_column_name(term: str) -> str:
+    """Return the column named by one ``+`` term of a cluster spec.
+
+    A backtick-quoted term such as ``"`fiscal year`"`` names its content
+    verbatim; spaces are dropped from an unquoted term.
+    """
+    term = term.strip()
+    if len(term) > 2 and term[0] == term[-1] == "`":
+        return term[1:-1]
+    return term.replace(" ", "")
 
 
 def _parse_vcov_kwargs(

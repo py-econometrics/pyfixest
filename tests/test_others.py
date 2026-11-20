@@ -518,3 +518,25 @@ def test_fixef_excludes_singleton_levels_from_prediction():
     assert np.isfinite(prediction[:-1]).all()
     assert np.isnan(prediction[-1])
     assert set(fixed_effects["level"]) == {"a,u", "b,v"}
+
+
+@pytest.mark.parametrize(
+    ("cluster", "plain"),
+    [
+        ("`fiscal.year`", "f2"),
+        ("`fiscal year`", "f2"),
+        ("`fiscal year` + f1", "f2 + f1"),
+    ],
+)
+def test_cluster_accepts_backtick_quoted_names(cluster, plain):
+    """Cluster specs accept backtick-quoted column names, as formulas do."""
+    data = get_data().dropna()
+    data["fiscal.year"] = data["f2"]
+    data["fiscal year"] = data["f2"]
+    expected = feols("Y ~ X1", data=data, vcov={"CRV1": plain}).se()
+
+    at_estimation = feols("Y ~ X1", data=data, vcov={"CRV1": cluster})
+    post_estimation = feols("Y ~ X1", data=data).vcov({"CRV1": cluster})
+
+    pd.testing.assert_series_equal(at_estimation.se(), expected)
+    pd.testing.assert_series_equal(post_estimation.se(), expected)
