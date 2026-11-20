@@ -161,10 +161,7 @@ class FixestMulti(TidyColumnAccessors):
             df["fml"] = fxst.model.formula
             res.append(df)
 
-        res_df = pd.concat(res, axis=0)
-        res_df.set_index(["fml", "Coefficient"], inplace=True)
-
-        return res_df
+        return pd.concat(res, axis=0).set_index(["fml", "Coefficient"])
 
     def confint(self) -> pd.DataFrame:
         """

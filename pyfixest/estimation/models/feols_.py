@@ -387,7 +387,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         # an empty drop still rebuilds the whole frame, so guard it
         if model_matrix.dropped_row_index:
-            self._data.drop(index=list(model_matrix.dropped_row_index), inplace=True)
+            self._data = self._data.drop(index=list(model_matrix.dropped_row_index))
 
         return model_matrix
 
