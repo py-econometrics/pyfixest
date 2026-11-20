@@ -2172,6 +2172,39 @@ def test_parsed_stage_expressions_against_fixest(data_feols, fml, fml_r, renamed
 
 
 @pytest.mark.against_r_core
+@pytest.mark.parametrize(
+    "fml, fml_r, renamed_terms",
+    [
+        ("Y ~ scale(X1) + X2", "Y ~ scale(X1) + X2", {}),
+        (
+            "Y ~ center(X1) | f1",
+            "Y ~ scale(X1, scale = FALSE) | f1",
+            {"scale(X1, scale = FALSE)": "center(X1)"},
+        ),
+    ],
+)
+def test_center_scale_with_missing_values_against_fixest(
+    data_feols, fml, fml_r, renamed_terms
+):
+    """Center and scale statistics use all non-missing values of the column."""
+    assert data_feols[["Y", "X1"]].isna().any().all()
+    fit = pf.feols(fml, data=data_feols, vcov="iid")
+    fit_r = fixest.feols(ro.Formula(fml_r), data=data_feols, vcov="iid")
+    names = [
+        renamed_terms.get(name, name).replace("(Intercept)", "Intercept")
+        for name in ro.r("function(fit) names(coef(fit))")(fit_r)
+    ]
+    assert fit.sample_info.n_obs == int(stats.nobs(fit_r)[0]), "n_obs != fixest"
+    np.testing.assert_allclose(
+        fit.coef()[names],
+        stats.coef(fit_r),
+        rtol=0,
+        atol=1e-8,
+        err_msg="coefficients != fixest",
+    )
+
+
+@pytest.mark.against_r_core
 def test_parsed_no_intercept_refit_against_fixest(data_feols):
     """#1759: replaying the parsed formula retains the absent intercept."""
     fit = pf.feols("Y ~ X1 - 1", data=data_feols, vcov="iid")
