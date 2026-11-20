@@ -31,7 +31,7 @@ from pyfixest.estimation.formula.model_matrix import (
 )
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
-from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanCache, DemeanedDataCache
 from pyfixest.estimation.internals.families import T_DIST
 from pyfixest.estimation.internals.fit_ import fit_ols
 from pyfixest.estimation.internals.fit_statistics import (
@@ -158,7 +158,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     options : EstimationOptions
         Every estimation option the fit is built with, as built by the
         estimation function.
-    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
+    lookup_demeaned_data : DemeanedDataCache
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
@@ -294,7 +294,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         data: pd.DataFrame,
         *,
         options: EstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+        lookup_demeaned_data: DemeanedDataCache,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
@@ -479,6 +479,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 fe=self._fixed_effects_for_demeaning(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
+                encoding_dropped_rows=self.model_matrix._encoding_dropped_rows,
                 demeaner=self.options.demeaner,
             )
         return WithinLinearData(response=response, design=design)

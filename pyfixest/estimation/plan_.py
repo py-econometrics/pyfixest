@@ -9,7 +9,7 @@ import pandas as pd
 from pyfixest.core.demean import Preconditioner
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
-from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanedDataCache
 from pyfixest.estimation.internals.literals import EstimationMethod
 from pyfixest.estimation.internals.model_state import (
     EstimationOptions,
@@ -249,7 +249,7 @@ def expand_specs(
 def fit_one(
     spec: ModelSpec,
     *,
-    lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+    lookup_demeaned_data: DemeanedDataCache,
     lookup_preconditioner: dict[frozenset[int], Preconditioner],
     vcov: VcovSpec,
 ) -> FittedModel:

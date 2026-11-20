@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import pyfixest as pf
@@ -658,6 +659,86 @@ def test_demean_cache_distinguishes_colliding_columns(
         np.testing.assert_allclose(
             stepwise_fit.predict(), separate_fit.predict(), rtol=1e-10, atol=1e-10
         )
+
+
+@pytest.fixture
+def contrast_cache_data() -> pd.DataFrame:
+    rng = np.random.default_rng(383)
+    n = 80
+    fe = np.repeat(np.arange(8), 10)
+    category = np.tile(["a", "b"], n // 2)
+    category[-1] = "c"
+    treatment = np.where(category == "a", 0.5, -0.5)
+    x_missing, x_infinite = rng.normal(size=(2, n))
+    y = 2 * treatment + 0.6 * x_missing - 0.2 * x_infinite + fe
+    data = pd.DataFrame(
+        {
+            "y": y + rng.normal(scale=0.3, size=n),
+            "category": category,
+            "x_missing": x_missing,
+            "x_infinite": x_infinite,
+            "fe": fe,
+        }
+    )
+    data.loc[n - 1, ["x_missing", "x_infinite"]] = [np.nan, np.inf]
+    return data
+
+
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["forward", "reversed"])
+@pytest.mark.filterwarnings("ignore:1 rows with infinite values dropped from the model")
+@pytest.mark.filterwarnings("ignore:(?s).*variables dropped due to multicollinearity")
+def test_demean_cache_distinguishes_contrast_encoding_samples(
+    contrast_cache_data: pd.DataFrame, reverse_order: bool
+) -> None:
+    """The same final rows can come from different contrast encodings (#1915)."""
+    data = contrast_cache_data
+    terms = ["x_missing", "x_infinite"]
+    if reverse_order:
+        terms.reverse()
+    contrast = "C(category, contr.sum)"
+    fits = pf.feols(
+        f"y ~ {contrast} + sw({', '.join(terms)}) | fe", data, vcov="hetero"
+    ).to_list()
+
+    assert (
+        fits[0].sample_info.dropped_row_index == fits[1].sample_info.dropped_row_index
+    )
+    assert fits[0].sample_info.dropped_by_stage != fits[1].sample_info.dropped_by_stage
+    for term, fit in zip(terms, fits, strict=True):
+        reference = pf.feols(f"y ~ {contrast} + {term} | fe", data, vcov="hetero")
+        pd.testing.assert_series_equal(
+            fit.coef(), reference.coef(), rtol=1e-10, atol=1e-10
+        )
+        pd.testing.assert_series_equal(fit.se(), reference.se(), rtol=1e-10, atol=1e-10)
+        np.testing.assert_allclose(fit.predict(), reference.predict(), atol=1e-10)
+
+
+@pytest.mark.filterwarnings("ignore:1 rows with infinite values dropped from the model")
+@pytest.mark.filterwarnings("ignore:(?s).*variables dropped due to multicollinearity")
+def test_iv_demean_cache_distinguishes_instrument_encoding_samples(
+    contrast_cache_data: pd.DataFrame,
+) -> None:
+    data = contrast_cache_data
+    rng = np.random.default_rng(2026)
+    data["z"] = rng.normal(size=len(data))
+    data["endog"] = data["z"] + (data["category"] == "a") + rng.normal(size=len(data))
+    data["weight"] = rng.uniform(0.6, 1.7, size=len(data))
+    formula = "y ~ {} + [endog ~ C(category, contr.sum) + z] | fe"
+    fit = pf.feols(
+        formula.format("sw(x_missing, x_infinite)"),
+        data,
+        weights="weight",
+        vcov="hetero",
+    ).to_list()[1]
+    reference = pf.feols(
+        formula.format("x_infinite"), data, weights="weight", vcov="hetero"
+    )
+
+    assert fit.first_stage.instruments == reference.first_stage.instruments
+    np.testing.assert_allclose(
+        fit.within_data.instruments, reference.within_data.instruments, atol=1e-10
+    )
+    pd.testing.assert_series_equal(fit.coef(), reference.coef(), rtol=1e-10, atol=1e-10)
 
 
 def test_full_sample_and_group_named_all_have_distinct_identity():

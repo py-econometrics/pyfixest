@@ -13,7 +13,7 @@ from pyfixest.core.demean import Preconditioner
 from pyfixest.errors import IVIdentificationError
 from pyfixest.estimation.formula.parse import Formula as FixestFormula
 from pyfixest.estimation.internals.collinearity import drop_multicollinear_variables
-from pyfixest.estimation.internals.demean_ import DemeanedData
+from pyfixest.estimation.internals.demean_ import DemeanedDataCache
 from pyfixest.estimation.internals.fit_ import fit_iv, project_onto_design
 from pyfixest.estimation.internals.fit_statistics import FitStatistics
 from pyfixest.estimation.internals.model_state import (
@@ -52,7 +52,7 @@ class Feiv(Feols):
     options : EstimationOptions
         Every estimation option the fit is built with, as built by the
         estimation function.
-    lookup_demeaned_data : dict[frozenset[int], DemeanedData]
+    lookup_demeaned_data : DemeanedDataCache
         Demeaning cache shared across the models of one cache block.
     lookup_preconditioner : Optional[dict[frozenset[int], Preconditioner]]
         Preconditioner cache shared across the models of one cache block.
@@ -157,7 +157,7 @@ class Feiv(Feols):
         data: pd.DataFrame,
         *,
         options: EstimationOptions,
-        lookup_demeaned_data: dict[frozenset[int], DemeanedData],
+        lookup_demeaned_data: DemeanedDataCache,
         lookup_preconditioner: dict[frozenset[int], Preconditioner] | None = None,
         sample_split: SampleSplit | None = None,
     ) -> None:
@@ -198,6 +198,7 @@ class Feiv(Feols):
                 fe=self._fixed_effects_for_demeaning(),
                 weights=self.observation_weights.values,
                 na_index=self.sample_info.dropped_row_index,
+                encoding_dropped_rows=self.model_matrix._encoding_dropped_rows,
                 demeaner=self.options.demeaner,
             )
         return WithinIvData(
