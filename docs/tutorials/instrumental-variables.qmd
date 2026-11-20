@@ -7,8 +7,6 @@ format:
     html-table-processing: none
 toc: true
 toc-title: "On this page"
-execute:
-  freeze: false
 bibliography: references.bib
 nocite: |
   @wooldridge2010, @neal2020, @lundborg2017, @borusyak2022, @oleapflueger2013, @stockyogo2005
