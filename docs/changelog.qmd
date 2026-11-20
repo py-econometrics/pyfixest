@@ -41,6 +41,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   documented. Before, it failed with `ValueError: invalid literal for int()`;
   an unknown key now raises `KeyError` listing the available keys
   ([#2052](https://github.com/py-econometrics/pyfixest/pull/2052)).
+- Fits no longer emit pandas 3.1's `Pandas4Warning` about the deprecated
+  `inplace=` keyword, and `copy_data=False` no longer resets the index of the
+  data you pass in.
 
 ## PyFixest 0.70.0
 
