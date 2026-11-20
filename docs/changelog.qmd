@@ -29,6 +29,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `weights` column now raises `ValueError` instead of `AssertionError`, and an
   unknown `event_study()` estimator raises `ValueError` instead of
   `NotImplementedError` ([#2041](https://github.com/py-econometrics/pyfixest/pull/2041)).
+- The `wald_test()` fallback warning no longer claims that `q` is non-zero
+  when a non-identity `R` alone triggered the switch to chi2; it now names
+  only the restriction that actually applied
+  ([#2065](https://github.com/py-econometrics/pyfixest/pull/2065)).
 - `vcov()` on a fixed-effects-only fit such as `Y ~ 1 | f1`, or on a multiple
   estimation that includes one, no longer fails with `AttributeError`. It
   leaves the fit unchanged, since there are no coefficients to compute a
