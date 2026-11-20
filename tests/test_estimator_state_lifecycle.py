@@ -865,6 +865,21 @@ def test_get_inference_before_vcov_raises_empty_vcov(lifecycle_data):
         fit.get_inference()
 
 
+@pytest.mark.parametrize("estimator", [pf.feols, pf.fepois])
+@pytest.mark.parametrize("vcov", ["iid", "hetero", {"CRV1": "fe"}])
+def test_vcov_on_fixed_effects_only_fit_is_a_no_op(lifecycle_data, estimator, vcov):
+    """Post-estimation vcov() skips a fixed-effects-only fit, as estimation does."""
+    data = lifecycle_data.assign(y=lambda d: d["y"].abs())
+    fit = estimator("y ~ 1 | fe", data)
+
+    assert fit.vcov(vcov) is fit
+    assert not hasattr(fit, "variance_covariance")
+    # Multiple estimation updates its fixed-effects-only member without failing.
+    multi = estimator("y ~ csw0(x) | fe", data).vcov(vcov)
+    assert not hasattr(multi.fetch_model(0, print_fml=False), "variance_covariance")
+    assert hasattr(multi.fetch_model(1, print_fml=False), "variance_covariance")
+
+
 def test_quantreg_rejects_multiway_clustering(lifecycle_data):
     """Quantile regression declares no multiway support before any state is read."""
     data = lifecycle_data.assign(group=np.tile(["g1", "g2", "g3"], 8))

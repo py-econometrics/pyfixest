@@ -688,6 +688,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             exception_type=VcovTypeNotSupportedError,
         )
         spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        if self._X_is_empty:
+            # Fixed-effects-only model: no coefficients, so there is no
+            # covariance to compute; estimation skips this step as well.
+            return self
         self._check_vcov_support(spec)
         return self._vcov_from_spec(spec)
 
