@@ -41,7 +41,10 @@ def test_cluster_na():
     data["f3"] = data["f3"].astype("int64")
     data.loc[5, "f3"] = np.nan
 
-    with pytest.raises(NanInClusterVarError):
+    with pytest.raises(
+        NanInClusterVarError,
+        match=r"cluster variable\. Please drop missing values before running the regression\.",
+    ):
         feols(fml="Y ~ X1", data=data, vcov={"CRV1": "f3"})
 
 
