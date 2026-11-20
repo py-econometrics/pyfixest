@@ -215,6 +215,38 @@ def rename_event_study_coefs(coef_names_list: list):
     return {col: _rename_event_study_coefs(col) for col in coef_names_list}
 
 
+def _check_positional_model_argument(
+    func_name: str, arg_name: str, value: object
+) -> None:
+    """
+    Raise TypeError when a fitted model lands in a non-model argument slot.
+
+    Post-processing functions accept a single ``models`` argument, so a second
+    fitted model passed positionally, e.g. ``pf.coefplot(fit1, fit2)``, ends up
+    in the next parameter slot and would fail far from the cause.
+
+    Parameters
+    ----------
+    func_name : str
+        The name of the calling function, used in the error message.
+    arg_name : str
+        The name of the argument the fitted model was passed to.
+    value : object
+        The value passed to that argument.
+
+    Raises
+    ------
+    TypeError
+        If the value is a fitted model object.
+    """
+    if isinstance(value, (Feols, Fepois, Feiv, FixestMulti)):
+        raise TypeError(
+            f"{func_name}() got a fitted model for `{arg_name}`. "
+            "To put several models in one call, pass them as one list: "
+            f"pf.{func_name}([fit1, fit2])."
+        )
+
+
 def _post_processing_input_checks(
     models: ModelInputType,
     check_duplicate_model_names: bool = False,

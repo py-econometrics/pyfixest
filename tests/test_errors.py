@@ -24,6 +24,7 @@ from pyfixest.errors import (
 from pyfixest.estimation import feols, fepois
 from pyfixest.estimation.post_estimation.multcomp import rwolf
 from pyfixest.report.summarize import etable, summary
+from pyfixest.report.visualize import coefplot, iplot, qplot
 from pyfixest.utils.dgps import gelbach_data
 from pyfixest.utils.utils import get_data, ssc
 from tests._capability_fits import capability_fit
@@ -800,6 +801,21 @@ def test_etable_models_passed_positionally():
     fit2 = feols("Y ~ X1 + X2", data=data)
     with pytest.raises(TypeError, match=r"pf\.etable\(\[fit1, fit2\]\)"):
         etable(fit1, fit2)
+
+
+def test_models_passed_positionally():
+    """A second model passed positionally fails in the next argument slot."""
+    data = get_data()
+    fit1 = feols("Y ~ X1", data=data)
+    fit2 = feols("Y ~ X1 + X2", data=data)
+    with pytest.raises(TypeError, match=r"pf\.summary\(\[fit1, fit2\]\)"):
+        summary(fit1, fit2)
+    with pytest.raises(TypeError, match=r"pf\.coefplot\(\[fit1, fit2\]\)"):
+        coefplot(fit1, fit2)
+    with pytest.raises(TypeError, match=r"pf\.qplot\(\[fit1, fit2\]\)"):
+        qplot(fit1, fit2)
+    with pytest.raises(TypeError, match=r"pf\.iplot\(\[fit1, fit2\]\)"):
+        iplot(fit1, fit2)
 
 
 def test_errors_ccv():
