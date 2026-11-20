@@ -30,6 +30,7 @@ from pyfixest.estimation.formula.formulaic_compat import (
 from pyfixest.estimation.formula.parse import (
     FixedEffectSpecification,
     Formula,
+    explain_as_factor_syntax,
     render_term,
 )
 from pyfixest.estimation.formula.utils import _get_weights
@@ -781,10 +782,11 @@ def _get_formulaic_formula(
     if offset is not None:
         # Offsets accept expressions as well as column names. Parse this user
         # input once; the model's already-parsed stages stay intact.
-        formula_kwargs[_ModelMatrixKey.offset] = formulaic.Formula(
-            offset,
-            _parser=DefaultFormulaParser(
-                feature_flags=FORMULAIC_FEATURE_FLAG, include_intercept=False
-            ),
-        )
+        with explain_as_factor_syntax():
+            formula_kwargs[_ModelMatrixKey.offset] = formulaic.Formula(
+                offset,
+                _parser=DefaultFormulaParser(
+                    feature_flags=FORMULAIC_FEATURE_FLAG, include_intercept=False
+                ),
+            )
     return formulaic.Formula(formula_kwargs)

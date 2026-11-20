@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import ast
 import itertools
+import re
 from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Final
 
@@ -46,6 +48,38 @@ _PARSER: Final[FormulaParser] = DefaultFormulaParser(
 _PARSER_NO_INTERCEPT: Final[FormulaParser] = DefaultFormulaParser(
     include_intercept=False
 )
+
+# `as.factor(x)` is R fixest syntax. Formulaic reads the call as one Python
+# expression, which Python's tokenizer rejects because `as` is a keyword.
+_AS_FACTOR_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"\bas\s*\.\s*factor\s*\((?P<argument>[^()]*)"
+)
+
+
+@contextmanager
+def explain_as_factor_syntax() -> Iterator[None]:
+    """Explain formula tokenizer failures caused by R's `as.factor()`.
+
+    A bare `SyntaxError` from Formulaic's tokenizer helps no one. When the
+    failing expression is an `as.factor()` call, point the user at the
+    pyfixest spellings instead; any other tokenizer failure passes through
+    unchanged.
+    """
+    try:
+        yield
+    except SyntaxError as exception:
+        expression = (exception.text or "").strip()
+        match = _AS_FACTOR_PATTERN.search(expression)
+        if match is None:
+            raise
+        argument = match.group("argument").partition(",")[0].strip() or "x"
+        raise FormulaSyntaxError(
+            f"`{expression}` is R fixest syntax: `as` is a Python keyword, "
+            "so the formula tokenizer cannot parse the call as a Python "
+            f"expression. Use `C({argument})` to treat `{argument}` as "
+            f"categorical, or `i({argument})` for dummies with an optional "
+            "reference level."
+        ) from exception
 
 
 def _render_factor(factor: Factor) -> str:
@@ -666,10 +700,11 @@ class Formula:
         returns a list of multiple regression formulas.
         """
         formula = _preprocess(formula)
-        formulas = [
-            Formula(_formula=formulaic.Formula(formulaic_compliant, _parser=_PARSER))
-            for formulaic_compliant in _expand_all_multiple_estimation(formula)
-        ]
+        formulas: list[Formula] = []
+        for formulaic_compliant in _expand_all_multiple_estimation(formula):
+            with explain_as_factor_syntax():
+                parsed = formulaic.Formula(formulaic_compliant, _parser=_PARSER)
+            formulas.append(Formula(_formula=parsed))
         is_iv = {f.is_instrumental_variable for f in formulas}
         if len(is_iv) > 1:
             # All models of one call are fitted with the same estimator class.

@@ -1017,6 +1017,31 @@ def test_formula_evaluation_error_messages(data, estimate, error, match):
 
 
 @pytest.mark.parametrize(
+    "estimate",
+    [
+        # The tokenizer failure a bare `as.factor()` causes on the right-hand
+        # side, in the fixed effects, and after stepwise expansion.
+        lambda d: feols("Y ~ as.factor(f1)", d),
+        lambda d: feols("Y ~ X1 | as.factor(f1)", d),
+        lambda d: feols("Y ~ sw(X1, X2) + as.factor(f1)", d),
+        # Offsets are tokenized as Python expressions as well.
+        lambda d: fepois("Y ~ X1", d, offset="as.factor(f1)"),
+    ],
+)
+def test_as_factor_syntax_error_message(data, estimate):
+    with pytest.raises(
+        FormulaSyntaxError,
+        match=(
+            r"`as\.factor\(f1\)` is R fixest syntax.*"
+            r"`C\(f1\)` to treat `f1` as categorical, or `i\(f1\)` for dummies"
+        ),
+    ) as caught:
+        estimate(data)
+    # The bare tokenizer SyntaxError is converted, not masked.
+    assert isinstance(caught.value.__cause__, SyntaxError)
+
+
+@pytest.mark.parametrize(
     "fml,match",
     [
         # Mistyped level, alone or next to a valid one.
