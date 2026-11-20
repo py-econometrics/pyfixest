@@ -47,6 +47,8 @@ def _get_estimation_method_name(fxst: Feols) -> str:
 
 _ETABLE_TYPES = ("df", "md", "html", "gt", "tex", "typst", "docx")
 
+_ETABLE_HEAD_ORDERS = ("dh", "hd", "d", "h", "")
+
 # Pointers for keyword arguments of R's `etable()` that pyfixest spells differently.
 _ETABLE_ARGUMENT_HINTS = {
     "tex": 'Use type="tex" for LaTeX output.',
@@ -270,32 +272,35 @@ def etable(
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
 
-    assert isinstance(signif_code, list) and len(signif_code) == 3, (
-        "signif_code must be a list of length 3"
-    )
-    if signif_code:
-        assert all([0 < i < 1 for i in signif_code]), (
-            "All values of signif_code must be between 0 and 1"
+    if not isinstance(signif_code, list):
+        raise TypeError(f"signif_code must be a list, got {signif_code!r}.")
+    if len(signif_code) != 3:
+        raise ValueError(
+            f"signif_code must be a list of length 3, got {len(signif_code)}: "
+            f"{signif_code!r}."
         )
     if signif_code:
-        assert signif_code[0] < signif_code[1] < signif_code[2], (
-            "signif_code must be in increasing order"
-        )
+        if not all([0 < i < 1 for i in signif_code]):
+            raise ValueError(
+                f"All values of signif_code must be between 0 and 1, got "
+                f"{signif_code!r}."
+            )
+        if not signif_code[0] < signif_code[1] < signif_code[2]:
+            raise ValueError(
+                f"signif_code must be in increasing order, got {signif_code!r}."
+            )
 
     models_list = _post_processing_input_checks(models)
 
-    if model_heads is not None:
-        assert len(model_heads) == len(models_list), (
-            "model_heads must have the same length as models"
+    if model_heads is not None and len(model_heads) != len(models_list):
+        raise ValueError(
+            f"model_heads must have one value per model ({len(models_list)}), "
+            f"got {len(model_heads)}: {model_heads!r}."
         )
 
-    assert head_order in [
-        "dh",
-        "hd",
-        "d",
-        "h",
-        "",
-    ], "head_order must be one of 'd', 'h', 'dh', 'hd', ''"
+    if head_order not in _ETABLE_HEAD_ORDERS:
+        valid = ", ".join(repr(value) for value in _ETABLE_HEAD_ORDERS)
+        raise ValueError(f"head_order must be one of {valid}; got {head_order!r}.")
 
     if custom_model_stats is not None:
         if not isinstance(custom_model_stats, dict):

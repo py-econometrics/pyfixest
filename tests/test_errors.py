@@ -728,15 +728,6 @@ def test_errors_etable():
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    with pytest.raises(AssertionError):
-        etable([fit1, fit2], signif_code=[0.01, 0.05])
-
-    with pytest.raises(AssertionError):
-        etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
-
-    with pytest.raises(AssertionError):
-        etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
-
     # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
     with pytest.raises((AssertionError, ValueError)):
         etable(
@@ -786,6 +777,12 @@ def test_errors_etable():
         ({"custom_model_stats": {1: [1, 2]}}, TypeError, "strings, got 1"),
         ({"custom_model_stats": {"a": (1, 2)}}, TypeError, r"a list, got \(1, 2\)"),
         ({"custom_model_stats": {"a": [1]}}, ValueError, r"model \(2\), got 1"),
+        ({"signif_code": (0.001, 0.01, 0.05)}, TypeError, r"a list, got"),
+        ({"signif_code": [0.01, 0.05]}, ValueError, r"list of length 3, got 2"),
+        ({"signif_code": [0.1, 0.5, 1.5]}, ValueError, r"between 0 and 1"),
+        ({"signif_code": [0.2, 0.05, 0.1]}, ValueError, r"increasing order"),
+        ({"model_heads": ["a"]}, ValueError, r"one value per model \(2\), got 1"),
+        ({"head_order": "x"}, ValueError, r"head_order must be one of"),
     ],
 )
 def test_etable_rejects_invalid_arguments(kwargs, error, match):

@@ -39,6 +39,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `pf.summary(fit1, fit2)` suggests `pf.summary([fit1, fit2])`. Before, the
   model landed in the next argument slot and failed with an unrelated
   error ([#2068](https://github.com/py-econometrics/pyfixest/pull/2068)).
+- Invalid `signif_code`, `model_heads`, or `head_order` arguments to
+  `pf.etable()` now raise `TypeError` or `ValueError` with a message that shows
+  the offending value, instead of a bare `AssertionError`. The `head_order`
+  error now lists all allowed values, including `""`
+  ([#2063](https://github.com/py-econometrics/pyfixest/pull/2063)).
 
 ## PyFixest 0.70.0
 
