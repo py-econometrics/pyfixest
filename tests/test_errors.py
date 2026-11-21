@@ -2381,3 +2381,16 @@ def test_invalid_weights_report_the_column_and_count():
     data = pf.get_data(N=20).assign(weight=-1.0)
     with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
         pf.feols("Y ~ X1", data, weights="weight")
+
+
+def test_invalid_solver_reports_available_choices():
+    with pytest.raises(
+        ValueError, match=r"solver must be one of .*np.linalg.solve.*got 'missing'"
+    ):
+        pf.feols("Y ~ X1", data=pf.get_data(N=20), solver="missing")
+
+
+def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
+    data = pf.get_data(N=30).dropna()
+    with pytest.raises(ValueError, match=r"vcov='nid'.*Hall-Sheather bandwidth"):
+        pf.quantreg("Y ~ X1", data=data, quantile=0.99)

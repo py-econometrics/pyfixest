@@ -321,10 +321,10 @@ def _get_compiled_step(device_type: str):
                 _compiled_step_cache[device_type] = torch.compile(
                     _scalar_step, backend="inductor", fullgraph=True
                 )
-            except Exception:
+            except Exception as exc:
                 warnings.warn(
-                    "torch.compile failed for LSMR scalar step; "
-                    "falling back to eager mode.",
+                    f"torch.compile failed for the LSMR scalar step on {device_type} "
+                    f"({type(exc).__name__}). Using eager execution.",
                     RuntimeWarning,
                     stacklevel=_find_stack_level(),
                 )

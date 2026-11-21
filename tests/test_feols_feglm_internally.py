@@ -350,7 +350,9 @@ def test_glm_raises_after_iwls_maxiter_without_convergence():
     def _identity_demean(v, X, weights, tol):
         return v, X
 
-    with pytest.raises(NonConvergenceError, match="did not converge"):
+    with pytest.raises(
+        NonConvergenceError, match="did not converge within iwls_maxiter=1"
+    ):
         fit_glm_module.fit_glm_irls(
             X=X,
             Y=Y,
