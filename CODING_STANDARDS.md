@@ -58,8 +58,14 @@ Rules that ruff or ty enforce are not repeated here.
   `NDArray[np.float64]` in stubs. Shared typed option aliases live in
   `estimation/internals/literals.py`.
 - Validate options at the API boundary with a `ValueError` naming the allowed
-  values; raise the `pyfixest/errors/` classes for domain failures. An error
-  names the rejected input and, when useful, a supported alternative.
+  values; raise the `pyfixest/errors/` classes for domain failures.
+- Write actionable error messages. Name the failed operation or rejected
+  input, explain the condition, and give a concrete check, correction, or
+  supported alternative when one exists. Include relevant names, counts, or
+  values where they help diagnose the failure. For internal failures, identify
+  the violated invariant and preserve the underlying exception when wrapping
+  it. Link directly to a maintained documentation section when it explains
+  how to resolve the problem.
 - Guard optional imports, and raise an error naming the pip extra when the
   path that needs one is used.
 - Never mutate user input except through the documented `copy_data=False`
