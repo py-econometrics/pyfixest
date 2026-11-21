@@ -14,9 +14,6 @@ formula syntax, inference, and post-estimation, with Rust kernels for hot loops.
   [PR sizing](docs/developer/git-and-pr-style.md#stacks-and-commits).
   Keep independent fixes separate, including numerical corrections discovered
   during an invariant refactor.
-- Prefer code a maintainer can follow from inputs to results. An abstraction
-  earns its place by clarifying an operation, owning an invariant, or serving
-  real callers—not by adding another layer to pass through.
 - Use `pixi run` for Python, pytest, lint, docs, and R commands. Use
   `pixi task list` to discover tasks. Select checks from the
   [testing policy](docs/developer/testing.md#selection-matrix), including
@@ -28,7 +25,7 @@ formula syntax, inference, and post-estimation, with Rust kernels for hot loops.
 |---|---|
 | Implement estimator, inference, formula, post-estimation, public API, or shared-core changes | [implementation-strategy](.agents/skills/implementation-strategy/SKILL.md) |
 | Select or report checks for a change | [change-verification](.agents/skills/change-verification/SKILL.md) |
-| Review a diff, self-review, or walk through changed code together | [pr-review](.agents/skills/pr-review/SKILL.md), choosing the requested mode |
+| Review a diff, self-review, or walk through changed code together | [pr-review](.agents/skills/pr-review/SKILL.md), choosing the requested mode; it checks [coding standards](CODING_STANDARDS.md) |
 | Prepare commits, push, open a PR, or curate history | [pr-handoff](.agents/skills/pr-handoff/SKILL.md) |
 | Create or edit a GitHub issue | [issue style](docs/developer/git-and-pr-style.md#issues) |
 | Name a concept in code, docstrings, errors, or docs | [glossary](GLOSSARY.md) |
@@ -38,9 +35,10 @@ Reuse decisions and checks already established unless the change invalidates
 them. Internal workflow steps need not appear as checklists in replies or PRs.
 
 `docs/developer/` owns detailed policy; skills apply it. Read the relevant
-sections, not every linked document. [Architecture](docs/developer/architecture.md)
-owns code conventions and extension seams; [Git and PR style](docs/developer/git-and-pr-style.md)
-owns scope and publication. These documents are not part of the rendered site.
+sections, not every linked document. [Coding standards](CODING_STANDARDS.md)
+own code conventions, [ADRs](docs/developer/adr/) record design decisions, and
+[Git and PR style](docs/developer/git-and-pr-style.md) owns scope and
+publication. These documents are not part of the rendered site.
 `CLAUDE.md` imports this file; `.claude/skills/` links to the shared skills.
 `docs/skills.md` is guidance for package users, not contributors.
 
@@ -59,8 +57,9 @@ The five default triage roles, each label named after its role;
 
 ### Domain docs
 
-Single-context: the root `GLOSSARY.md`, with decisions recorded under
-`docs/developer/`. See `docs/developer/agents/domain.md`.
+Single-context: the root `GLOSSARY.md`, with decisions recorded in
+`docs/developer/adr/` and the `fixest` compatibility ledger. See
+`docs/developer/agents/domain.md`.
 
 ## Boundaries
 

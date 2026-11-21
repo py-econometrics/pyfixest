@@ -1,3 +1,12 @@
+"""Typed state of a fitted model; see ADR 0001.
+
+Frozen dataclasses prevent field rebinding, not mutation of contained NumPy
+arrays. Mark shared arrays read-only where ownership requires it, and copy only
+at ownership boundaries. A published field keeps its type and domain for the
+fit's lifetime: solver scratch never replaces within data, and observation
+weights stay unchanged after preparation, with working weights held separately.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping

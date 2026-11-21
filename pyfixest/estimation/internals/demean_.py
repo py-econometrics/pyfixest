@@ -49,7 +49,9 @@ class DemeanCache:
        data set / na index combination.
 
     The index for both caches is the frozen set of `na_index` - as all fits
-    operate on the same fixed effects / data structure.
+    operate on the same fixed effects / data structure. One cache serves the
+    models of one estimation call that share a sample split and fixed effects,
+    and so the same observation weights; never share it across those blocks.
 
     OLS/IV models call :meth:`demean_yx`. GLMs call :meth:`demean_array` to
     recompute each weighted projection while reusing the preconditioner.
