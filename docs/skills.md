@@ -10,6 +10,19 @@ methods, regression tables, and the spellings that agents tend to carry over
 from R `fixest`, Stata or statsmodels. The skill is part of the installed
 package, so it matches the PyFixest version in your environment.
 
+Next to `SKILL.md`, the skill folder holds a `references/` folder with longer
+reference files that the agent opens only when it needs them:
+
+- `formula-syntax.md`: every formula operator, including `i()`, varying
+  slopes, IV and multiple estimation.
+- `inference.md`: every `vcov` option and the models that support it,
+  small-sample corrections, the wild bootstrap, randomization inference and
+  multiple-testing corrections.
+- `coming-from-fixest.md`: R `fixest` spellings and their PyFixest
+  equivalents, and behaviour that differs.
+- `migrating-to-0.70.md`: deprecated and removed spellings and attributes,
+  with their replacements.
+
 ## Use the skill
 
 The skill is the `skills/pyfixest` folder of the installed package. Make it
@@ -30,7 +43,9 @@ rather than from a stale copy after you upgrade.
 
 This is the `SKILL.md` that ships with this version of PyFixest. The header
 between the `---` lines is the skill's metadata: its `name` and the
-`description` that the agent reads to decide when to load it.
+`description` that the agent reads to decide when to load it. The reference
+files are not shown here; read them in the `references/` folder of the
+installed skill.
 
 ````markdown
 {{< include ../pyfixest/skills/pyfixest/SKILL.md >}}
