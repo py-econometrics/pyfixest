@@ -30,6 +30,9 @@ rewrite. Apply requested edits and use the checks appropriate to those edits.
 ## Defect review and self-review
 
 For guidance or documentation, check accuracy, links, consistency, and scope.
+Check new or changed public names, docstrings, error messages, and docs
+against the [glossary](../../../GLOSSARY.md): a term it lists under _Avoid_ is
+a finding, not a naming preference.
 Numerical tracing applies only to code that can affect results or state.
 
 Prioritize silently wrong results. Trace the changed values through their
