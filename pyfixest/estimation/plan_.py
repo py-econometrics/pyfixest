@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
+from pyfixest.errors import EmptyEstimationSampleError
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -189,14 +190,19 @@ def build_all_splits(
     """
     if not run_split:
         return [None]
-    assert splitvar is not None
+    if splitvar is None:
+        raise RuntimeError("Sample splitting was requested without a split column.")
+    values = data[splitvar].dropna().drop_duplicates().sort_values().tolist()
+    if not values:
+        option = "fsplit" if run_full else "split"
+        raise EmptyEstimationSampleError(
+            f"{option}={splitvar!r} has no nonmissing values, so no sample can be fitted. "
+            f"Supply a populated {option} column or omit {option} to fit the original sample."
+        )
     all_splits: list[SampleSplit | None] = []
     if run_full:
         all_splits.append(SampleSplit(var=splitvar, value=None))
-    all_splits.extend(
-        SampleSplit(var=splitvar, value=value)
-        for value in data[splitvar].dropna().drop_duplicates().sort_values().tolist()
-    )
+    all_splits.extend(SampleSplit(var=splitvar, value=value) for value in values)
     return all_splits
 
 
