@@ -94,7 +94,7 @@ only part of its dependent state updated.
 ## Implemented array and weight domains
 
 Domain terms such as observation weights, within data, working weights, and
-residual are defined in the [glossary](glossary.md). Names should expose
+residual are defined in the [glossary](../../GLOSSARY.md). Names should expose
 mathematical meaning, numerical scale, and ordering. Code adds two array
 scales the glossary does not cover: formula data (filtered,
 formula-materialized values and metadata, not necessarily raw input columns)
