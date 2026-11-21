@@ -28,6 +28,17 @@ class TestNwMeatTime:
         expected = scores.T @ scores
         np.testing.assert_allclose(meat, expected)
 
+    @pytest.mark.parametrize(
+        ("times", "message"),
+        [
+            ([1.0, np.nan, 3.0], r"non-missing time values.*row 1"),
+            ([1.0, 2.0], r"2 time values for 3 rows"),
+        ],
+    )
+    def test_invalid_time_input(self, times, message):
+        with pytest.raises(ValueError, match=message):
+            _nw_meat_time(scores=np.ones((3, 1)), time_arr=np.array(times), lag=1)
+
     def test_unsorted_time(self):
         """Unsorted time_arr should produce same result as pre-sorted."""
         scores = np.array([[5.0, 6.0], [1.0, 2.0], [3.0, 4.0]])
