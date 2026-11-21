@@ -302,8 +302,7 @@ def test_did2s_wildboottest_ccv_unsupported(data):
 
     with pytest.raises(
         NotImplementedError,
-        match=r"The causal cluster variance estimator is not supported for models "
-        r"of type 'did2s'\.",
+        match=r"The causal cluster variance estimator is not supported for 'did2s' fits\.",
     ):
         fit.ccv(treatment="treat", cluster="state")
 

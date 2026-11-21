@@ -872,15 +872,13 @@ def test_errors_ccv():
     pois_data = get_data(model="Fepois").dropna()
     pois_data["D"] = np.random.choice([0, 1], size=len(pois_data))
     fit = fepois("Y ~ D", data=pois_data)
-    with pytest.raises(
-        NotImplementedError, match=r"not supported for models of type 'fepois'"
-    ):
+    with pytest.raises(NotImplementedError, match=r"not supported for 'fepois' fits"):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # same for IV
     fit = feols("Y ~ 1 | D ~ Z1", data=data)
     with pytest.raises(
-        NotImplementedError, match=r"not supported for models of type 'feols'"
+        NotImplementedError, match=r"not supported for 'feols' fits with instruments"
     ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
@@ -2512,3 +2510,12 @@ def test_native_kernels_validate_array_shapes():
         )
     with pytest.raises(ValueError, match=r"time-period starts must be ordered"):
         _core_impl._dk_meat_panel_rs(scores, np.array([2, 1], dtype=np.uintp), 1)
+
+
+def test_prediction_explains_required_fixed_effects():
+    data = pf.get_data(N=80)
+    fit = pf.feols("Y ~ X1 | f1", data)
+    with pytest.raises(
+        FactorEvaluationError, match=r"f1[\s\S]*fixed-effect columns.*newdata"
+    ):
+        fit.predict(data.drop(columns="f1"))
