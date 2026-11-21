@@ -71,9 +71,10 @@ variable and only `feols`.
 Multiple estimation operators expand one formula into several models:
 `sw(X2, Z1)` fits one model per term, `csw(X1, X2)` adds terms cumulatively,
 `sw0` and `csw0` first fit the model without them, and `mvsw(X1, X2)` fits
-every subset. They work on the left-hand side (`sw(Y, Y2) ~ X1`) and in the
-fixed-effects part (`Y ~ X1 | csw0(f1, f2)`). `split="f1"` fits one model per
-value of the column `f1`; `fsplit="f1"` adds the full sample first.
+every subset. They work on the left-hand side (`sw(Y, Y2) ~ X1`), among the
+covariates (`Y ~ csw(X1, X2)`) and in the fixed-effects part
+(`Y ~ X1 | csw0(f1, f2)`). `split="f1"` fits one model per value of the column
+`f1`; `fsplit="f1"` adds the full sample first.
 
 ## Inference
 
@@ -234,3 +235,4 @@ strings, and `"docx"` returns a python-docx Document. `file_name=` saves
 - Tables: https://pyfixest.org/tutorials/regression-tables.html
 - Difference-in-differences: https://pyfixest.org/tutorials/difference-in-differences.html
 - Stata to pyfixest: https://pyfixest.org/how-to/stata-2-pyfixest.html
+- If fixed-effects estimation is slow: the default demeaner is chosen to be fast across a variety of fixed-effects structures, but changing its parameters or switching demeaner can sometimes help further, and preconditioners can be stored across regressions and sessions: https://pyfixest.org/how-to/demeaner-backends.html
