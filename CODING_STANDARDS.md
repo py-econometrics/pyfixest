@@ -1,7 +1,7 @@
 # pyfixest coding standards
 
 The rules a reviewer checks on every diff. Decisions and their reasons are
-ADRs in [`docs/developer/adr/`](docs/developer/adr/); differences from `fixest`
+ADRs in [`docs/adr/`](docs/adr/); differences from `fixest`
 are in the [compatibility ledger](docs/developer/fixest-compatibility.md).
 Rules that ruff or ty enforce are not repeated here.
 
