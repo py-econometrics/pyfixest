@@ -7,8 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`GLOSSARY.md`** at the repo root.
 - **Decision records** that touch the area you're about to work in:
   - [`docs/developer/fixest-compatibility.md`](../fixest-compatibility.md): the compatibility ledger of intentional differences from R's `fixest`.
-  - [`docs/developer/architecture.md`](../architecture.md): code conventions and extension seams.
-  - `docs/developer/adr/`: ADRs, once any exist.
+  - [`docs/developer/adr/`](../adr/): architectural decisions and their reasons.
 
 If a file doesn't exist, **proceed silently**. Don't flag its absence and don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) adds terms and decisions lazily as they get resolved.
 

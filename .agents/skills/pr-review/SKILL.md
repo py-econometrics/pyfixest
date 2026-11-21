@@ -29,10 +29,9 @@ rewrite. Apply requested edits and use the checks appropriate to those edits.
 
 ## Defect review and self-review
 
-For guidance or documentation, check accuracy, links, consistency, and scope.
-Check new or changed public names, docstrings, error messages, and docs
-against the [glossary](../../../GLOSSARY.md): a term it lists under _Avoid_ is
-a finding, not a naming preference.
+Check that the diff does what its linked issue or request asked, and that it
+follows the [coding standards](../../../CODING_STANDARDS.md). For guidance or
+documentation, check accuracy, links, consistency, and scope.
 Numerical tracing applies only to code that can affect results or state.
 
 Prioritize silently wrong results. Trace the changed values through their
@@ -42,7 +41,7 @@ already applied, ownership, and lifetime. Frozen fields do not make contained
 arrays immutable. Before deleting a wrapper or accessor, inspect subclass
 overrides and callers; fewer functions alone do not prove a better design.
 
-Check the [supported paths](../../../docs/developer/architecture.md#result-and-numerical-boundaries),
+Check the [supported paths](../../../CODING_STANDARDS.md#results-and-numerical-boundaries),
 independent [numerical evidence](../../../docs/developer/testing.md#choosing-a-numerical-reference),
 and documented compatibility decisions. Audit tests for distinct failures they
 catch, not just their count or agreement with the implementation. Apply the

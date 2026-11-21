@@ -81,6 +81,12 @@ class ModelMatrix:
     variables, and weights. It handles missing data, singleton observations,
     and ensures proper formatting for estimation procedures.
 
+    Construction filters rows; later filtering goes through `without_rows()`,
+    so row identity, dropped-row tracking, and cache keys stay aligned with
+    the sample actually fitted. The retained tables are read-only: within and
+    solver transforms produce separate arrays, and prediction and refits reuse
+    the fitted encoding when they need the original design.
+
     Obtain this component from ``fit.model_matrix``. Its properties expose
     the model frames as pandas DataFrames for inspection and internal
     calculations. See the

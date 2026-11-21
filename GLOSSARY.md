@@ -44,13 +44,20 @@ _Avoid_: model object, fitted result, estimation result, Fixest object, model
 
 **Multiple estimation**:
 One call to an estimation function that fits several models, through
-stepwise formula operators, a sample split, or several quantiles.
+stepwise formula operators, a sample split, or several quantiles. It is
+shorthand for the single fits: each model equals the one fitted on its own.
 _Avoid_: stepwise regression, multi-model fit
 
 **Estimation options**:
 The settings a fitted model was estimated with, other than its formula and
 data.
 _Avoid_: settings, config, arguments
+
+**Retention**:
+What a fitted model keeps from its estimation, such as its data, design
+matrix, or residuals, as chosen with `store_data` and `lean`. An operation
+that needs removed state fails rather than recomputing it.
+_Avoid_: storage, caching, lean mode (for the concept)
 
 ### Formula
 
@@ -310,6 +317,12 @@ share of clusters sampled and how treatment varies within clusters.
 _Avoid_: CCV (in prose)
 
 ### Post-estimation
+
+**Capability**:
+An inference or post-estimation operation an estimator declares it supports,
+such as CRV3 inference, prediction, or randomization inference. A fitted model
+rejects an operation its estimator does not declare.
+_Avoid_: feature flag, support check
 
 **Link scale**:
 The scale of the linear predictor.
