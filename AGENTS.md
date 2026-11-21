@@ -36,7 +36,7 @@ them. Internal workflow steps need not appear as checklists in replies or PRs.
 
 `docs/developer/` owns detailed policy; skills apply it. Read the relevant
 sections, not every linked document. [Coding standards](CODING_STANDARDS.md)
-own code conventions, [ADRs](docs/developer/adr/) record design decisions, and
+own code conventions, [ADRs](docs/adr/) record design decisions, and
 [Git and PR style](docs/developer/git-and-pr-style.md) owns scope and
 publication. These documents are not part of the rendered site.
 `CLAUDE.md` imports this file; `.claude/skills/` links to the shared skills.
@@ -58,7 +58,7 @@ The five default triage roles, each label named after its role;
 ### Domain docs
 
 Single-context: the root `GLOSSARY.md`, with decisions recorded in
-`docs/developer/adr/` and the `fixest` compatibility ledger. See
+`docs/adr/` and the `fixest` compatibility ledger. See
 `docs/developer/agents/domain.md`.
 
 ## Boundaries

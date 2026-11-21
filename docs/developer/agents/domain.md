@@ -7,7 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`GLOSSARY.md`** at the repo root.
 - **Decision records** that touch the area you're about to work in:
   - [`docs/developer/fixest-compatibility.md`](../fixest-compatibility.md): the compatibility ledger of intentional differences from R's `fixest`.
-  - [`docs/developer/adr/`](../adr/): architectural decisions and their reasons.
+  - [`docs/adr/`](../../adr/): architectural decisions and their reasons.
 
 If a file doesn't exist, **proceed silently**. Don't flag its absence and don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) adds terms and decisions lazily as they get resolved.
 
@@ -15,7 +15,7 @@ If a file doesn't exist, **proceed silently**. Don't flag its absence and don't 
 
 - **Glossary terms**: `GLOSSARY.md` currently covers econometric and estimation concepts. Add project-specific software concepts, such as the demeaner backend or a capability declaration, to the same file under their own subheadings once they are resolved. General programming concepts stay out.
 - **A difference from `fixest`**: add a ledger entry to `fixest-compatibility.md` following its "Adding an entry" section, not an ADR.
-- **Any other ADR**: `docs/developer/adr/NNNN-<slug>.md`. Never `docs/adr/`: Quarto publishes everything under `docs/` except `docs/developer/`.
+- **Any other ADR**: `docs/adr/NNNN-<slug>.md`, following the `/domain-modeling` ADR format.
 
 ## Use the glossary's vocabulary
 

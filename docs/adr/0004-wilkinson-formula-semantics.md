@@ -11,7 +11,7 @@ the formula.
 ## Consequences
 
 - Each such difference is still a ledger entry in
-  [fixest-compatibility.md](../fixest-compatibility.md) that cites this
+  [fixest-compatibility.md](../developer/fixest-compatibility.md) that cites this
   decision: covariate powers, `i(a)*X` slopes, implicit `i()` references
   without an intercept, and term deduplication of redundant endogenous
   variables.

@@ -37,7 +37,7 @@ that repeat it for the same reason. `fixest` 0.14.2 accepts distinct terms such
 as `Y ~ X2 | X2:Z2 ~ Z1`.
 
 **Rationale:** Applies ordinary formula term deduplication to IV declarations.
-See [ADR 0004](adr/0004-wilkinson-formula-semantics.md).
+See [ADR 0004](../adr/0004-wilkinson-formula-semantics.md).
 
 **Tests:**
 `tests/test_formula_parse.py::TestEdgeCases::test_iv_semantic_deduplication`;
@@ -179,7 +179,7 @@ fixest's arithmetic-power convention; see
 [#1765](https://github.com/py-econometrics/pyfixest/issues/1765) and the
 [user-facing
 explanation](../explanation/compare-fixest-pyfixest.qmd#covariate-powers). See
-[ADR 0004](adr/0004-wilkinson-formula-semantics.md).
+[ADR 0004](../adr/0004-wilkinson-formula-semantics.md).
 
 **Tests:**
 `tests/test_formula_parse.py::TestFixedEffectInteractions::test_formulaic_power_operators_match_outside_fixed_effects`;
@@ -275,7 +275,7 @@ supply an intercept, rather than constraining a cell's effect to zero because of
 term order. This is a model-specification difference, not an equivalent
 parameterization; see
 [#1767](https://github.com/py-econometrics/pyfixest/issues/1767). See [ADR
-0004](adr/0004-wilkinson-formula-semantics.md).
+0004](../adr/0004-wilkinson-formula-semantics.md).
 
 **Tests:**
 `tests/test_vs_fixest.py::test_parsed_stage_expressions_against_fixest` covers
@@ -339,7 +339,7 @@ from it.
 inside formulaic. `i(a) + X + i(a, X, ref="a3")` reproduces fixest's
 coefficients, and `i(a) + i(a, X)` gives one slope per level in both packages.
 See [#1803](https://github.com/py-econometrics/pyfixest/issues/1803). See [ADR
-0004](adr/0004-wilkinson-formula-semantics.md).
+0004](../adr/0004-wilkinson-formula-semantics.md).
 
 **Tests:** Confirmed with R 4.5.3 and `fixest` 0.14.0 on 2026-10-04
 
@@ -453,7 +453,7 @@ Add an entry in the same PR that introduces or formalizes the difference: a
 `###` heading naming the area, followed by the pyfixest, `fixest`, rationale,
 tests, and status fields. Name the exact external package version in the test
 or its reference artifact. Link the issue for a long rationale, and cite the
-[ADR](adr/) when the difference follows from a recorded decision.
+[ADR](../adr/) when the difference follows from a recorded decision.
 
 Compatibility work that restores parity should update or remove the ledger
 entry and retain a regression test.

@@ -16,7 +16,7 @@ This will launch a github codespace (there is a free tier for 60h a month, thank
 Please refer to the [contributing section](https://pyfixest.org/contributing.html) of our documentation to get started with local development.
 
 The repository's [coding standards](CODING_STANDARDS.md),
-[architectural decisions](docs/developer/adr/),
+[architectural decisions](docs/adr/),
 [testing policy](docs/developer/testing.md),
 [`fixest` compatibility ledger](docs/developer/fixest-compatibility.md), and
 [Git and PR style](docs/developer/git-and-pr-style.md) are the authoritative
