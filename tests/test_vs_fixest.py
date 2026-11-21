@@ -1167,7 +1167,7 @@ def test_glm_vs_fixest(N, seed, dropna, fml, demeaner, weights, inference, famil
     data = pf.get_data(N=N, seed=seed)
     data["Y"] = np.where(data["Y"] > 0, 1, 0)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     r_inference = _get_r_inference(inference)
 
@@ -1427,7 +1427,7 @@ def test_multi_fit(N, seed, beta_type, error_type, dropna, fml_multi):
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
@@ -1503,7 +1503,7 @@ def test_split_fit(N, seed, beta_type, error_type, dropna, fml_multi, split, fsp
     data = get_data(N=N, seed=seed, beta_type=beta_type, error_type=error_type)
     data.where(data != "nan", np.nan, inplace=True)
     if dropna:
-        data.dropna(inplace=True)
+        data = data.dropna()
 
     # suppress correction for fixed effects
     fixest.setFixest_ssc(fixest.ssc(True, "nonnested", False, True, "min", "min"))
@@ -1630,7 +1630,7 @@ def test_twoway_clustering(data, k_adj, k_fixef, G_adj, G_df):
 def test_wls_na():
     """Special tests for WLS and NA values."""
     data = get_data()
-    data.dropna(inplace=True)
+    data = data.dropna()
 
     # case 1: NA in weights
     data.loc[data.index[0], "weights"] = np.nan

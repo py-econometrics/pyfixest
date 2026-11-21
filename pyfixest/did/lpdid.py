@@ -73,8 +73,7 @@ class LPDID(DID):
         if not (isinstance(xfml, str) or xfml is None):
             raise TypeError("xfml must be a string or None.")
 
-        data = data.copy()
-        data.sort_values([idname, tname], inplace=True)
+        data = data.sort_values([idname, tname])
         data[f"{yname}_lag"] = data.groupby(idname)[yname].shift(1)
 
         data["treat"] = np.where(data[gname] <= data[tname], 1, 0)

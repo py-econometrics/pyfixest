@@ -104,6 +104,8 @@ markers = [
 filterwarnings = [
     "ignore::FutureWarning:rpy2",
     "ignore::DeprecationWarning:rpy2",
+    # pandas 3.1 deprecates inplace= on most DataFrame methods (PDEP-8)
+    "error:The inplace keyword::pyfixest",
 ]
 
 [tool.ruff]

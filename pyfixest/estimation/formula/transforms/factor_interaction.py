@@ -164,7 +164,7 @@ def _encode_i(
     data = pd.Series(data)
     data.name = factor_name
     data = _observed_levels(data, bins=bin, encoder_state=encoder_state)
-    data.drop(index=data.index[drop_rows], inplace=True)
+    data = data.drop(index=data.index[drop_rows])
     var2_is_numeric = False
     if var2 is not None:
         var2_is_numeric = not _is_factor_interaction(var2=var2)
@@ -179,7 +179,7 @@ def _encode_i(
         var2.name = var2_name
         if not var2_is_numeric:
             var2 = _observed_levels(var2, bins=bin2, encoder_state=encoder_state)
-        var2.drop(index=var2.index[drop_rows], inplace=True)
+        var2 = var2.drop(index=var2.index[drop_rows])
     dummies = _encode_factor(
         data,
         ref=ref,
@@ -190,9 +190,8 @@ def _encode_i(
     # Three options: (i) no interaction, (ii) interaction with continuous variable, (ii) factor-factor interaction
     if var2 is None:
         # (i) No interaction: return categorical encoding of single variable
-        dummies.rename(
-            columns={level: f"{factor_name}::{level}" for level in dummies.columns},
-            inplace=True,
+        dummies = dummies.rename(
+            columns={level: f"{factor_name}::{level}" for level in dummies.columns}
         )
         return FactorValues(
             dummies,
@@ -206,12 +205,11 @@ def _encode_i(
     elif var2_is_numeric:
         # (ii) interaction with continuous variable
         result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
-        result.rename(
+        result = result.rename(
             columns={
                 level: f"{factor_name}::{level}:{var2_name}"
                 for level in dummies.columns
-            },
-            inplace=True,
+            }
         )
         return FactorValues(
             result,
@@ -249,10 +247,9 @@ def _encode_i(
         if spans_intercept and reduced_rank:
             first = get_contrast_levels(encoder_state, factor_name)[0]
             first2 = get_contrast_levels(encoder_state, var2_name)[0]
-            interacted.drop(
+            interacted = interacted.drop(
                 f"{factor_name}::{first}:{var2_name}::{first2}",
                 axis=1,
-                inplace=True,
                 errors="ignore",
             )
         return FactorValues(

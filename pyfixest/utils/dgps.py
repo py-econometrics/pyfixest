@@ -272,12 +272,11 @@ def get_blw(seed=1234):
     blw["firms"] = rng.uniform(0, 5, size=len(blw))
     blw["e"] = rng.normal(0, 0.5**2, size=len(blw))
     blw["te"] = rng.normal(10 - 2 * (blw["group"] - 1), 0.2**2, size=len(blw))
-    blw.eval(
+    blw = blw.eval(
         """
         y = firms + n + treat * te * (year - treat_date + 1) + e
         y2 = firms + n + te * treat + e
-    """,
-        inplace=True,
+    """
     )
     return blw
 

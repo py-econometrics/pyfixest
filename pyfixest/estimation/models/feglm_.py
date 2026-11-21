@@ -149,7 +149,7 @@ class Feglm(Feols):
             )
 
         if na_separation:
-            self._data.drop(na_separation, axis=0, inplace=True)
+            self._data = self._data.drop(na_separation, axis=0)
             model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 

@@ -30,7 +30,7 @@ def _prepare_data(config: EstimationConfig) -> pd.DataFrame:
     data = _narwhals_to_pandas(config.data)
     if config.options.copy_data:
         data = data.copy()
-    data.reset_index(drop=True, inplace=True)
+    data = data.reset_index(drop=True)
     return data
 
 
