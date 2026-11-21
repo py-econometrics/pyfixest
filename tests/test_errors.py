@@ -2445,3 +2445,15 @@ def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
         pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
+
+
+def test_demean_names_mismatched_rows():
+    from pyfixest.estimation import demean
+
+    x = np.ones((3, 2))
+    flist = np.array([[0], [1], [0]], dtype=np.uint64)
+
+    with pytest.raises(ValueError, match=r"3 rows in flist, and 2 weights"):
+        demean(x, flist, np.ones(2))
+    with pytest.raises(ValueError, match=r"2 rows in flist, and 3 weights"):
+        demean(x, flist[:2], np.ones(3))

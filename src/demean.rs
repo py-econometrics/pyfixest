@@ -1,5 +1,6 @@
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -218,6 +219,19 @@ pub fn _demean_rs(
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
+    let n_rows = x_arr.nrows();
+    // `demean_impl` indexes `flist` and `weights` by the rows of `x`.
+    if n_rows > 0
+        && flist_arr.ncols() > 0
+        && (flist_arr.nrows() < n_rows || weights_arr.len() < n_rows)
+    {
+        return Err(PyValueError::new_err(format!(
+            "x, flist, and weights must have one row per observation. Got {} rows in x, {} rows in flist, and {} weights.",
+            n_rows,
+            flist_arr.nrows(),
+            weights_arr.len(),
+        )));
+    }
 
     let (out, success) = py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
