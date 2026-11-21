@@ -45,7 +45,10 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
     """
     position_open = string.find("(")
     if position_open == -1:
-        raise ValueError(f"No parenthesis in `{string}`")
+        raise ValueError(
+            f"No parenthesis in `{string}`. Use parentheses around the operator "
+            "arguments, as in sw(x1, x2)."
+        )
     else:
         position_open += 1
     depth: int = 1
@@ -56,18 +59,25 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
             depth -= 1
             if depth == 0:
                 return position_open, position
-    raise ValueError(f"Unmatched '(' in `{string}`")
+    raise ValueError(
+        f"Unmatched '(' in `{string}`. Close the formula operator with ')'."
+    )
 
 
 def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
     w = data[weights]
     try:
         w = pd.to_numeric(w, errors="raise")
-    except ValueError:
-        raise ValueError(f"The weights column '{weights}' must be numeric.")
-    if not (w.dropna() >= 0.0).all():
+    except (TypeError, ValueError) as exc:
         raise ValueError(
-            f"The weights column '{weights}' must have only non-negative values."
+            f"The weights column {weights!r} must be numeric; got dtype {w.dtype}. "
+            "Correct the values or pass a numeric column to weights."
+        ) from exc
+    negative = w < 0
+    if negative.any():
+        raise ValueError(
+            f"The weights column {weights!r} must have only non-negative values. "
+            f"Found {int(negative.sum())} negative values. Check the weight calculation."
         )
     return w
 
@@ -196,7 +206,10 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
     Y + Y2 ~ X1 + X2 will be converted to sw(Y, Y2) ~ X1 + X2.
     """
     if "~" not in formula:
-        raise FormulaSyntaxError("Formula must contain '~'.")
+        raise FormulaSyntaxError(
+            f"Formula must contain '~'; got {formula!r}. Use a formula such as "
+            "'y ~ x | group'. See https://pyfixest.org/tutorials/formula-syntax.html#basic-syntax"
+        )
     dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
     # Only a top-level `+` separates dependents: `I(Y + Y2)` is a single
     # transformed dependent, not two.

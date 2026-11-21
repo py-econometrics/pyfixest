@@ -382,7 +382,8 @@ class Formula:
         if not hasattr(self._formula, "lhs") or not hasattr(self._formula, "rhs"):
             raise FormulaSyntaxError(
                 f"Formula must specify a left-hand and right-hand side separated by '~':\n"
-                f"{self._formula}"
+                f"{self._formula}. Use a formula such as 'y ~ x | group'. "
+                "See https://pyfixest.org/tutorials/formula-syntax.html#basic-syntax"
             )
         if (
             isinstance(self._formula.rhs, tuple)
@@ -390,15 +391,17 @@ class Formula:
         ):
             raise FormulaSyntaxError(
                 f"Formula can have at most {self._max_parts} parts separated by '|'. "
-                f"Received {len(self._formula.rhs)}:\n"
-                f"{self._formula}"
+                f"Received {len(self._formula.rhs)} in {self._formula!s}. "
+                "Use the right-hand side for regressors and the segment after "
+                "'|' for fixed effects, as in 'y ~ x | group'."
             )
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
         # expression evaluated from two columns.
         if len(self.dependent) > 1:
             raise FormulaSyntaxError(
                 f"Formula must have exactly one term on the left hand side. "
-                f"Received: {[str(term) for term in self.dependent]}"
+                f"Received {[str(term) for term in self.dependent]}. "
+                "Use one dependent expression or use sw(y1, y2) for separate models."
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
@@ -415,6 +418,8 @@ class Formula:
         if len(self.endogenous) > 1:
             raise FormulaSyntaxError(
                 "Multiple endogenous variables are currently not supported. "
+                f"The instrument block contains {[str(term) for term in self.endogenous]}. "
+                "Use a single endogenous regressor in [endogenous ~ instruments]. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
             )
         missing_endogenous = [
@@ -423,13 +428,17 @@ class Formula:
         if missing_endogenous:
             raise FormulaSyntaxError(
                 "Formula operations removed or transformed the endogenous terms "
-                f"{missing_endogenous}, but their IV specification remains."
+                f"{missing_endogenous}, but their instrument block remains. "
+                "Put the intended endogenous term inside [endogenous ~ instruments] "
+                "and keep that term in the main equation."
             )
         underdetermined = len(self.endogenous) > len(self.instruments)
         if underdetermined:
             raise UnderDeterminedIVError(
                 "The IV system is underdetermined. "
-                "Please provide at least as many instruments as endogenous variables."
+                f"Found {len(self.endogenous)} endogenous regressors and "
+                f"{len(self.instruments)} instruments. Supply at least one "
+                "excluded instrument per endogenous regressor."
             )
         # Redundant instruments are allowed if an excluded instrument remains.
         excluded_instruments = set(self.instruments).difference(
@@ -438,7 +447,10 @@ class Formula:
         if not excluded_instruments:
             raise IVIdentificationError(
                 "The instruments add no explanatory power for the endogenous variable: "
-                "all instrument terms are also specified as covariates."
+                f"all instrument terms {[str(term) for term in self.instruments]} "
+                "are also specified as exogenous regressors. Supply an excluded "
+                "instrument with independent first-stage variation. "
+                "See https://pyfixest.org/tutorials/instrumental-variables.html"
             )
 
     def __repr__(self) -> str:
@@ -557,7 +569,8 @@ class Formula:
         """Endogenous variables of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Endogenous variables are available only in instrumental variables specifications."
+                "Formula.endogenous requires an instrument block. "
+                "Check Formula.is_instrumental_variable before reading it."
             )
         return get_first_multistage_lhs(self._right_hand_side)
 
@@ -570,7 +583,8 @@ class Formula:
         """
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Instruments are available only in instrumental variables specifications."
+                "Formula.instruments requires an instrument block. "
+                "Check Formula.is_instrumental_variable before reading it."
             )
         instruments = get_first_multistage_rhs(self._right_hand_side)
         return formulaic.formula.SimpleFormula(
@@ -581,7 +595,10 @@ class Formula:
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
-            raise AttributeError("Not a fixed effects specification")
+            raise AttributeError(
+                "Formula.fixed_effects requires a formula with fixed effects. "
+                "Check Formula.is_fixed_effects before reading it."
+            )
         return formulaic.formula.SimpleFormula(
             terms_without_intercept(self._formula.rhs[1])
         )
@@ -644,7 +661,10 @@ class Formula:
     def as_first_stage(self) -> Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
-            raise TypeError("Not an instrumental variable specification.")
+            raise TypeError(
+                "Formula.as_first_stage() requires an instrument block. "
+                "Check Formula.is_instrumental_variable before converting it."
+            )
         # Controls must survive collinearity selection before excluded instruments.
         # Preserve this order even when a control is an interaction and a
         # redundant instrument is a degree-one transform of that interaction.
