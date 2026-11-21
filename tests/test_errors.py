@@ -1105,14 +1105,18 @@ def test_plot_error():
 def test_ritest_error(data):
     fit = pf.feols("Y ~ X1", data=data)
 
-    with pytest.raises(ValueError, match=r"X2 not found in the model's coefficients\."):
+    with pytest.raises(
+        ValueError, match=r"resampvar='X2' is absent from the fitted coefficients"
+    ):
         fit.ritest(resampvar="X2", reps=1000)
 
-    with pytest.raises(ValueError, match="CLUST is not found in the data"):
+    with pytest.raises(
+        ValueError, match="cluster='CLUST' is absent from the estimation data"
+    ):
         fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
 
     with pytest.raises(
-        ValueError, match=r"type must be 'randomization-t' or 'randomization-c\."
+        ValueError, match=r"type must be 'randomization-t' or 'randomization-c'"
     ):
         fit.ritest(resampvar="X1", reps=1000, type="a")
 
@@ -2416,3 +2420,33 @@ def test_invalid_solver_reports_available_choices():
         ValueError, match=r"solver must be one of .*np.linalg.solve.*got 'missing'"
     ):
         pf.feols("Y ~ X1", data=pf.get_data(N=20), solver="missing")
+
+
+def test_wald_rejects_nonfinite_restrictions():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"R must contain finite restriction weights"):
+        fit.wald_test(R=np.array([[1.0, np.nan]]))
+
+
+def test_ritest_explains_invalid_null_hypotheses():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
+        fit.ritest("X1=nope", reps=4)
+
+
+def test_ritest_accepts_string_assignment_clusters():
+    rng = np.random.default_rng(292)
+    data = pd.DataFrame(
+        {
+            "y": rng.normal(size=24),
+            "x": np.repeat([0, 0, 1, 1], 6),
+            "unit": np.repeat(np.arange(4), 6),
+        }
+    )
+    numeric = pf.feols("y ~ x", data).ritest(
+        "x", cluster="unit", reps=8, rng=np.random.default_rng(11)
+    )
+    strings = pf.feols(
+        "y ~ x", data.assign(unit=data["unit"].map("group{}".format))
+    ).ritest("x", cluster="unit", reps=8, rng=np.random.default_rng(11))
+    pd.testing.assert_series_equal(numeric, strings)

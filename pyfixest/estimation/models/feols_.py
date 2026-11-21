@@ -741,29 +741,40 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if spec.vcov_type_detail in ("HC2", "HC3"):
             if self.model.has_fixef:
                 raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for regressions with fixed effects."
+                    f"HC2 and HC3 inference types are not supported for regressions with fixed effects. "
+                    f"Got vcov={spec.vcov_type_detail!r}. Use an available covariance "
+                    "such as HC1 if appropriate."
                 )
             if self.model.is_iv:
                 raise VcovTypeNotSupportedError(
-                    "HC2 and HC3 inference types are not supported for IV regressions."
+                    f"HC2 and HC3 inference types are not supported for IV regressions. "
+                    f"Got vcov={spec.vcov_type_detail!r}. Use an available covariance "
+                    "such as HC1 if appropriate."
                 )
         if spec.vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
-                    f"Multiway clustering is not (yet) supported for {type(self).__name__} models."
+                    f"Multiway clustering is not supported for {self._describe_fits()}. "
+                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}. "
+                    "Pass one clustering column if the design calls for it."
                 )
             if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
                 raise VcovTypeNotSupportedError(
-                    f"CRV3 inference is not supported for {self._describe_fits()}."
+                    f"CRV3 inference is not supported for {self._describe_fits()}. "
+                    "Use CRV1 if it is appropriate for the sampling design."
                 )
         if spec.vcov_type == "HAC":
             if not self.capabilities.hac_inference:
                 raise NotImplementedError(
-                    f"HAC inference is not supported for {self._describe_fits()}."
+                    f"HAC inference is not supported for {self._describe_fits()}. "
+                    f"Got vcov={spec.vcov_type_detail!r}. "
+                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
                 )
             if self.options.has_weights and self.options.weights_type == "fweights":
                 raise NotImplementedError(
-                    "HAC inference (NW, DK) is not supported with `weights_type='fweights'`."
+                    "HAC inference (NW, DK) is not supported with `weights_type='fweights'`. "
+                    f"Got vcov={spec.vcov_type_detail!r}. Choose inference supported "
+                    "for frequency weights."
                 )
         if spec.vcov_type == "nid":
             raise NotImplementedError(
@@ -839,7 +850,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
             else:
-                raise ValueError(f"Unknown vcov type {vcov_type!r}.")
+                raise ValueError(
+                    f"Unknown vcov type {vcov_type!r} in the covariance dispatcher. "
+                    "Create the covariance specification with VcovSpec.from_user_input()."
+                )
             correction = get_ssc(
                 self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
@@ -1243,7 +1257,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         if param is not None and param not in self._coefnames:
             raise ValueError(
-                f"Parameter {param} not found in the model's coefficients."
+                f"wildboottest() param={param!r} is absent from the model's coefficients. "
+                "Choose a name from fit.coef().index."
             )
 
         if not self.capabilities.wildboottest:
@@ -1281,7 +1296,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap."
+                "Multiway clustering is currently not supported with the wild cluster bootstrap. "
+                "Pass a single cluster column if that matches the sampling design."
             )
 
         if self.model.has_fixef or not run_heteroskedastic:
@@ -1291,7 +1307,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
             raise ValueError(
-                f"Cluster variable {cluster_list[0]} not found in the data."
+                f"wildboottest() cluster={cluster_list[0]!r} is absent from the estimation "
+                "data. Pass an existing cluster column or refit with it included."
             )
 
         try:
@@ -1462,16 +1479,21 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if treatment not in self._coefnames:
             raise ValueError(
-                f"Variable {treatment} not found in the model's coefficients."
+                f"ccv() treatment={treatment!r} is absent from the fitted coefficients. "
+                "Choose a treatment coefficient from fit.coef().index."
             )
 
         if cluster is None:
             clustervar = self.variance_covariance.spec.clustervar
             if not clustervar:
-                raise ValueError("No cluster variable found in the model fit.")
+                raise ValueError(
+                    "No cluster variable found in the model fit. Pass a column name, "
+                    "for example fit.ccv(treatment='treated', cluster='group')."
+                )
             elif len(clustervar) > 1:
                 raise ValueError(
-                    "Multiway clustering is currently not supported with the causal cluster variance estimator."
+                    "Multiway clustering is currently not supported with the causal cluster variance "
+                    "estimator. Pass a single cluster column if it matches the design."
                 )
             else:
                 cluster = clustervar[0]
@@ -1480,7 +1502,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         require_retained(self, "ccv", "_data", "within_data")
         if cluster not in self._data.columns:
             raise ValueError(
-                f"Cluster variable {cluster} not found in the data used for the model fit."
+                f"ccv() cluster={cluster!r} is absent from the estimation data. "
+                "Pass an existing cluster column or refit with it included."
             )
 
         # Abadie et al. (2023): the cluster component in the CCV mixture and
@@ -1500,7 +1523,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         W = data[treatment].to_numpy()
         if not np.all(np.isin(W, [0, 1])):
             raise ValueError(
-                f"Treatment variable '{treatment}' must be binary with values 0 and 1."
+                f"Treatment variable '{treatment}' must be binary with values 0 and 1. "
+                f"Observed values include {np.unique(W)[:5].tolist()!r}. Check the coding."
             )
         X = self.within_data.design
         cluster_vec = data[cluster].to_numpy()
@@ -1644,7 +1668,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             return
         raise exception_type(
             f"{method}() is not supported for {self._describe_fits()}: "
-            f"fit.capabilities.{capability} is False."
+            f"fit.capabilities.{capability} is False. "
+            "See https://pyfixest.org/reference/ for the supported fitted-model operations."
         )
 
     def _describe_fits(self) -> str:
@@ -1766,11 +1791,15 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         has_decomp = decomp_var is not None
 
         if not has_param and not has_decomp:
-            raise ValueError("Either 'param' or 'decomp_var' must be provided.")
+            raise ValueError(
+                "Either 'param' or 'decomp_var' must be provided. "
+                "Pass decomp_var with a name from fit.coef().index."
+            )
 
         if has_param and has_decomp:
             raise ValueError(
-                "The 'param' and 'decomp_var' arguments cannot be provided at the same time."
+                "The 'param' and 'decomp_var' arguments cannot be provided at the same time. "
+                "Pass only decomp_var."
             )
 
         if has_param:
@@ -1833,7 +1862,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 if isinstance(value, re.Pattern):
                     matched = [x for x in xnames if value.search(x)]
                     if len(matched) == 0:
-                        raise ValueError(f"No covariates match the regex {value}.")
+                        raise ValueError(
+                            f"No regressors match combine_covariates pattern {value.pattern!r}. "
+                            "Check the pattern against fit.coef().index."
+                        )
                     combine_covariates[key] = matched
 
         med = GelbachDecomposition(
@@ -1934,7 +1966,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         ```
         """
         if not self.model.has_fixef:
-            raise ValueError("The regression model does not have fixed effects.")
+            raise ValueError(
+                "The regression model does not have fixed effects. Call fixef() on "
+                "a fit with a fixed-effect term, such as 'y ~ x | group'."
+            )
 
         self._require_capability(capability="fixed_effect_recovery", method="fixef")
 
@@ -2065,12 +2100,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
             if self.model.has_fixef:
                 raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with fixed effects."
+                    "Prediction errors are currently not supported for models with fixed effects. "
+                    "For point predictions, call predict() with se_fit=False and interval=None."
                 )
 
             if self.options.has_weights:
                 raise NotImplementedError(
-                    "Prediction errors are currently not supported for models with weights."
+                    "Prediction errors are currently not supported for models with weights. "
+                    "For point predictions, call predict() with se_fit=False and interval=None."
                 )
 
         _validate_literal_argument(type, PredictionType, name="type")
@@ -2150,7 +2187,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
                         f"Offset expression '{self.options.offset}' evaluates to missing "
-                        "values in `newdata`."
+                        f"values in `newdata`. Check the offset inputs for "
+                        f"{len(newdata) - len(offset_mm)} affected rows."
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
@@ -2260,6 +2298,11 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             _get_ritest_stats_slow,
         )
 
+        if not isinstance(resampvar, str):
+            raise TypeError(
+                f"ritest() needs a coefficient name or hypothesis in resampvar; "
+                f"got {type(resampvar).__name__}. Use a string such as 'x=0'."
+            )
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
 
@@ -2267,7 +2310,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
-            raise ValueError(f"{resampvar_} not found in the model's coefficients.")
+            raise ValueError(
+                f"ritest() resampvar={resampvar_!r} is absent from the fitted "
+                "coefficients. Choose a name from fit.coef().index."
+            )
 
         if self.options.has_weights:
             raise NotImplementedError(
@@ -2279,18 +2325,20 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         require_retained(self, "ritest", "_data")
 
         if cluster is not None and cluster not in self._data:
-            raise ValueError(f"The variable {cluster} is not found in the data.")
+            raise ValueError(
+                f"ritest() cluster={cluster!r} is absent from the estimation data. "
+                "Pass the name of the column that identifies assignment clusters."
+            )
 
         clustervar_arr = (
             self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
         )
 
-        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+        if clustervar_arr is not None and pd.isna(clustervar_arr).any():
+            count = int(pd.isna(clustervar_arr).sum())
             raise ValueError(
-                """
-            The cluster variable contains missing values. This is not allowed
-            for randomization inference via `ritest()`.
-            """
+                f"The cluster variable {cluster!r} contains {count} missing values. "
+                "Supply an assignment cluster for each estimation row before running ritest()."
             )
 
         if (
@@ -2304,7 +2352,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
         if type not in ["randomization-t", "randomization-c"]:
-            raise ValueError("type must be 'randomization-t' or 'randomization-c.")
+            raise ValueError(
+                f"ritest() type must be 'randomization-t' or 'randomization-c'; got {type!r}."
+            )
 
         if isinstance(reps, bool) or not isinstance(reps, int):
             raise TypeError("reps must be an integer.")
@@ -2524,12 +2574,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         if self.model.has_fixef:
             raise NotImplementedError(
-                "The update() method is currently not supported for models with fixed effects."
+                "The update() method is currently not supported for models with fixed effects. "
+                "Refit the original formula on the combined data."
             )
         self._require_capability(capability="sherman_morrison_update", method="update")
         if self.options.has_weights:
             raise NotImplementedError(
-                "The update() method is currently not supported for models with weights."
+                "The update() method is currently not supported for models with weights. "
+                "Refit the original formula with weights on the combined data."
             )
         if inplace:
             raise NotImplementedError(

@@ -46,6 +46,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   failed setting and say how to fix it
   ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088),
   [#2089](https://github.com/py-econometrics/pyfixest/pull/2089)).
+- `wald_test()` raises a `ValueError` for missing or infinite values in `R` or
+  `q`; before, a missing `q` returned NaN statistics. `ritest()` accepts string
+  cluster identifiers ([#2090](https://github.com/py-econometrics/pyfixest/pull/2090)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

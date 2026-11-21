@@ -43,14 +43,14 @@ _SAVI_SUPPORTED_VCOV_TYPES = ("iid", "hetero")
 def _validate_positive_float(value: float, name: str) -> float:
     value = float(value)
     if not np.isfinite(value) or value <= 0:
-        raise ValueError(f"{name} must be positive.")
+        raise ValueError(f"{name} must be positive and finite; got {value!r}.")
     return value
 
 
 def _validate_alpha(alpha: float) -> float:
     alpha = float(alpha)
     if not np.isfinite(alpha) or alpha <= 0 or alpha >= 1:
-        raise ValueError("alpha must be between 0 and 1.")
+        raise ValueError(f"alpha must be between 0 and 1, exclusive; got {alpha!r}.")
     return alpha
 
 
@@ -130,7 +130,11 @@ def optimal_mixture_precision(
         number_of_coefficients, "number_of_coefficients"
     )
     if nobs <= number_of_coefficients:
-        raise ValueError("nobs must be greater than number_of_coefficients.")
+        raise ValueError(
+            f"nobs must be greater than number_of_coefficients; got nobs={nobs:g} "
+            f"and number_of_coefficients={number_of_coefficients:g}. "
+            "Check the observation and coefficient counts used for planning."
+        )
     alpha = _validate_alpha(alpha)
 
     dfd = nobs - number_of_coefficients
@@ -139,7 +143,9 @@ def optimal_mixture_precision(
     if upper_bound <= 1:
         raise ValueError(
             "No finite optimal mixture precision exists for these inputs because "
-            "the optimization upper bound is not greater than 1."
+            f"the optimization upper bound ({upper_bound:g}) is not greater than 1. "
+            f"Check the planning inputs nobs={nobs:g}, "
+            f"number_of_coefficients={number_of_coefficients:g}, and alpha={alpha:g}."
         )
 
     result = minimize_scalar(
