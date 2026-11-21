@@ -154,6 +154,10 @@ For the full benchmark suite, see the [`benchmarks/`](https://github.com/py-econ
 - [Changelog](https://pyfixest.org/changelog.html)
 - [Contributing](https://pyfixest.org/contributing.html)
 
+## Using PyFixest with Coding Agents
+
+PyFixest ships an agent skill inside the installed package at `pyfixest/skills/pyfixest/SKILL.md`. It tells coding agents how to call the current API and which R `fixest`, Stata and statsmodels habits to avoid. The [Agent Skill page](https://pyfixest.org/skills.html) shows how to copy it into your project, and [llms.txt](https://pyfixest.org/llms.txt) indexes the documentation for LLMs.
+
 ## Acknowledgements
 
 First and foremost, we want to acknowledge [Laurent Bergé's](https://sites.google.com/site/laurentrberge/) formidable [fixest](https://github.com/lrberge/fixest), which [is so good we decided to stick to its API and conventions](https://youtu.be/kSQxGGA7Rr4?si=8-wTbzLPnIZQ7lYI&t=576) as closely as Python allows. Without `fixest`, `PyFixest` likely wouldn't exist - or at the very least, it would look very different.

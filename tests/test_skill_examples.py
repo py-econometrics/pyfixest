@@ -16,6 +16,11 @@ def test_skill_is_found():
     assert SKILL_DIR / "SKILL.md" in SKILL_FILES
 
 
+def test_package_docstring_points_at_the_skill():
+    skill_path = re.search(r"``(skills/\S+)``", pf.__doc__).group(1)
+    assert (Path(pf.__file__).parent / skill_path).is_file()
+
+
 @pytest.mark.filterwarnings("error::DeprecationWarning")
 @pytest.mark.filterwarnings("error::FutureWarning")
 @pytest.mark.parametrize(
