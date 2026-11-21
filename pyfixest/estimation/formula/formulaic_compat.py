@@ -20,6 +20,7 @@ from formulaic.utils.stateful_transforms import _is_stateful_transform
 from formulaic.utils.structured import Structured
 from formulaic.utils.variables import Variable
 
+from pyfixest import __version__
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -95,6 +96,12 @@ if formulaic.__version__ == "1.2.2":
 
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            f"{message} If this persists, report a minimal formula and data example "
+            f"with PyFixest {__version__} and Formulaic {formulaic.__version__}."
+        )
 
 
 def _iv_block(

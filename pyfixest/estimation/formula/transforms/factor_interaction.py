@@ -364,7 +364,8 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
             if not old_levels:
                 raise ValueError(
                     f"The binning of i() assigns no values of the variable "
-                    f"`{series.name}` to the bin {new_level!r}."
+                    f"`{series.name}` to the bin {new_level!r}. "
+                    "Supply at least one observed level for that bin."
                 )
             for old in old_levels:
                 if old in mapping and old not in duplicated:
@@ -381,7 +382,8 @@ def _apply_binning(series: pd.Series, bins: dict, state: dict) -> pd.Series:
         if unmatched:
             raise ValueError(
                 f"The binning of i() names values that do not occur in the "
-                f"variable `{series.name}`. No match was found for {unmatched!r}."
+                f"variable `{series.name}`. No match was found for {unmatched!r}. "
+                "Correct these entries or remove levels you do not wish to bin."
             )
         state[bin_key] = mapping
     return series.replace(state[bin_key])

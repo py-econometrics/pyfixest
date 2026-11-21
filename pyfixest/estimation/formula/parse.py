@@ -381,24 +381,26 @@ class Formula:
     def __post_init__(self) -> None:
         if not hasattr(self._formula, "lhs") or not hasattr(self._formula, "rhs"):
             raise FormulaSyntaxError(
-                f"Formula must specify a left-hand and right-hand side separated by '~':\n"
-                f"{self._formula}"
+                "Formula must have a dependent variable on the left of '~'. "
+                "Use a formula such as 'y ~ x | group'. "
+                "See https://pyfixest.org/tutorials/formula-syntax.html#basic-syntax"
             )
         if (
             isinstance(self._formula.rhs, tuple)
             and len(self._formula.rhs) > self._max_parts
         ):
             raise FormulaSyntaxError(
-                f"Formula can have at most {self._max_parts} parts separated by '|'. "
-                f"Received {len(self._formula.rhs)}:\n"
-                f"{self._formula}"
+                f"Formula can have at most {self._max_parts} parts separated by '|'; "
+                f"got {len(self._formula.rhs)}. Put all fixed effects in one part, "
+                "as in 'y ~ x | f1 + f2'."
             )
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
         # expression evaluated from two columns.
         if len(self.dependent) > 1:
             raise FormulaSyntaxError(
                 f"Formula must have exactly one term on the left hand side. "
-                f"Received: {[str(term) for term in self.dependent]}"
+                f"Received {[str(term) for term in self.dependent]}. "
+                "Use one dependent expression or use sw(y1, y2) for separate models."
             )
         if self.is_instrumental_variable:
             self._validate_instrumental_variable_specification()
@@ -415,6 +417,8 @@ class Formula:
         if len(self.endogenous) > 1:
             raise FormulaSyntaxError(
                 "Multiple endogenous variables are currently not supported. "
+                f"The instrument block contains {[str(term) for term in self.endogenous]}. "
+                "Use a single endogenous regressor in [endogenous ~ instruments]. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
             )
         missing_endogenous = [
@@ -423,13 +427,17 @@ class Formula:
         if missing_endogenous:
             raise FormulaSyntaxError(
                 "Formula operations removed or transformed the endogenous terms "
-                f"{missing_endogenous}, but their IV specification remains."
+                f"{missing_endogenous}, but their instrument block remains. "
+                "Put the intended endogenous term inside [endogenous ~ instruments] "
+                "and keep that term in the main equation."
             )
         underdetermined = len(self.endogenous) > len(self.instruments)
         if underdetermined:
             raise UnderDeterminedIVError(
                 "The IV system is underdetermined. "
-                "Please provide at least as many instruments as endogenous variables."
+                f"Found {len(self.endogenous)} endogenous regressors and "
+                f"{len(self.instruments)} instruments. Supply at least one "
+                "excluded instrument per endogenous regressor."
             )
         # Redundant instruments are allowed if an excluded instrument remains.
         excluded_instruments = set(self.instruments).difference(
@@ -438,7 +446,10 @@ class Formula:
         if not excluded_instruments:
             raise IVIdentificationError(
                 "The instruments add no explanatory power for the endogenous variable: "
-                "all instrument terms are also specified as covariates."
+                f"all instrument terms {[str(term) for term in self.instruments]} "
+                "are also specified as exogenous regressors. Supply an excluded "
+                "instrument with independent first-stage variation. "
+                "See https://pyfixest.org/tutorials/instrumental-variables.html"
             )
 
     def __repr__(self) -> str:

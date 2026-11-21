@@ -230,7 +230,9 @@ class Feiv(Feols):
         if np.any(endogenous_positions < 0):
             raise RuntimeError(
                 "Endogenous variables are missing from the second-stage design: "
-                f"{list(endogenous_names[endogenous_positions < 0])}."
+                f"{list(endogenous_names[endogenous_positions < 0])}. "
+                f"The first-stage terms did not match the main equation for "
+                f"{self.model.model_name!r}. Report this with a minimal formula and data example."
             )
         exogenous_mask = np.ones(projected_design.shape[1], dtype=bool)
         exogenous_mask[endogenous_positions] = False
@@ -274,12 +276,16 @@ class Feiv(Feols):
             if ssr_i < 1e-10:
                 raise IVIdentificationError(
                     f"The endogenous variable '{name}' is fully explained by the "
-                    "exogenous variables and instruments."
+                    "exogenous regressors and instruments in the first stage. "
+                    "Check for a duplicate or transformation of the endogenous regressor "
+                    "among those terms. See https://pyfixest.org/tutorials/instrumental-variables.html"
                 )
             if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
                 raise IVIdentificationError(
                     "The instruments add no explanatory power for the endogenous "
-                    f"variable '{name}'."
+                    f"variable '{name}' in the first stage. Check whether the excluded "
+                    "instruments vary after accounting for exogenous regressors and any "
+                    "fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
                 )
 
     def get_fit(self) -> None:
@@ -481,8 +487,8 @@ class Feiv(Feols):
 
             if invalid_stats:
                 raise ValueError(
-                    f"Statistics not supported: {invalid_stats}."
-                    f"You should specify from the following list of statistics {iv_diag_stat_allowed}"
+                    f"IV_Diag() received unsupported statistics {invalid_stats!r}. "
+                    f"Pass statistics from {iv_diag_stat_allowed!r}."
                 )
 
             iv_diag_stat += statistics
