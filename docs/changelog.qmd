@@ -21,7 +21,7 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 - PyFixest now ships an agent skill for coding agents in
   `pyfixest/skills/pyfixest/SKILL.md`, rewritten for the current API. The
-  [Agent Skill](/skills.md) page shows how to copy it into a project
+  [Agent Skill](/skills.md) page shows where to find it and its content
   ([#2045](https://github.com/py-econometrics/pyfixest/pull/2045)).
 
 ### Bug Fixes
