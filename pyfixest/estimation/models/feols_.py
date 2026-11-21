@@ -821,6 +821,12 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 ssc_vcov_type = "HAC"
                 term = self._vcov_hac(spec)
                 ssc_G = np.unique(self._data[spec.time_id]).shape[0]
+                if ssc_G < 2:
+                    raise ValueError(
+                        f"vcov={spec.vcov_type_detail!r} needs at least two time periods. "
+                        f"time_id column {spec.time_id!r} has {ssc_G} on the estimation "
+                        "sample. Check the time identifiers and estimation sample."
+                    )
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()

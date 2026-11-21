@@ -835,6 +835,14 @@ class VcovSpec:
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
             clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
+            if "" in clustervar:
+                raise ValueError(
+                    f"vcov={vcov!r} contains an empty clustering term. "
+                    "Pass a column name, such as vcov={'CRV1': 'cluster'}, "
+                    "or join column names with '+'."
+                )
+            # A repeated column adds no clustering dimension.
+            clustervar = tuple(dict.fromkeys(clustervar))
             if any("^" in x for x in clustervar):
                 raise ValueError(
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "

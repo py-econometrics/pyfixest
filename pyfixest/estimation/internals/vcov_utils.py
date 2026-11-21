@@ -106,7 +106,10 @@ def prepare_cluster_state(
     n_fe_fully_nested = 0
     if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
-            raise ValueError("`fe` must not be None when `fixef` is specified.")
+            raise ValueError(
+                "The nonnested fixed-effect correction needs an encoded level "
+                f"for each estimation row, but no codes were supplied for {fixef!r}."
+            )
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
@@ -178,39 +181,48 @@ def get_ssc_cluster(
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
-    if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
-    else:
-        raise AttributeError(
-            """The input data set needs to be stored in the model object if
-            you call `vcov()` post estimation with a novel cluster variable.
-            Please set the function argument `store_data=True` when calling
-            the regression.
-            """
+    data_pandas = _narwhals_to_pandas(data)
+    missing = [column for column in clustervar if column not in data_pandas.columns]
+    if missing:
+        raise ValueError(
+            f"Clustering columns {missing!r} are absent from the estimation data. "
+            "Pass existing columns to vcov() or refit with those columns included."
         )
-
-    return cluster_df
+    return data_pandas[clustervar].copy()
 
 
 def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
-    if np.any(cluster_df.isna().any()):
+    missing = cluster_df.isna().sum()
+    missing = missing[missing > 0]
+    if not missing.empty:
+        columns = ", ".join(
+            f"{column!r} ({count})" for column, count in missing.items()
+        )
         raise NanInClusterVarError(
-            "CRV inference not supported with missing values in the cluster variable."
-            "Please drop missing values before running the regression."
+            f"Cluster-robust inference found missing values on the estimation sample "
+            f"in {columns}. Check the cluster identifiers and refit with valid values."
         )
 
     N = data.shape[0]
     if cluster_df.shape[0] != N:
         raise ValueError(
-            "The cluster variable must have the same length as the data set."
+            f"Cluster identifiers have {cluster_df.shape[0]} rows for an estimation "
+            f"sample of {N} rows. Provide one identifier per estimation row."
         )
 
 
 def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int]:
     G = []
     for col in cluster_df.columns:
-        G.append(cluster_df[col].nunique())
+        count = cluster_df[col].nunique()
+        if count < 2:
+            raise ValueError(
+                f"Cluster-robust inference needs at least two distinct clusters. "
+                f"Column {col!r} has {count} on the estimation sample. "
+                "Check the cluster identifiers and observations kept by the formula. "
+                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
+            )
+        G.append(count)
 
     if G_df == "min":
         G = [min(G)] * len(G)

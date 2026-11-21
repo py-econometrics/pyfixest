@@ -1835,6 +1835,44 @@ def test_vcov_kwargs_rejected_without_hac(estimator, vcov):
         estimator("Y ~ X1", data=data, vcov=vcov, vcov_kwargs={"lag": 2})
 
 
+@pytest.mark.parametrize("cluster", ["", "f1+", "+f1"])
+def test_vcov_rejects_empty_clustering_terms(cluster):
+    with pytest.raises(
+        ValueError, match=r"contains an empty clustering term.*column name"
+    ):
+        pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
+
+
+def test_one_cluster_is_reported_on_estimation_sample():
+    data = pf.get_data(N=50).assign(cluster=0)
+    data.loc[0, ["cluster", "X1"]] = [1, np.nan]
+    with pytest.raises(
+        ValueError, match=r"Column 'cluster' has 1 on the estimation sample"
+    ):
+        pf.feols("Y ~ X1", data=data, vcov={"CRV1": "cluster"})
+
+
+def test_vcov_names_missing_and_unretained_clusters():
+    data = pf.get_data(N=50)
+    fit = pf.feols("Y ~ X1", data)
+    with pytest.raises(ValueError, match=r"\['absent'\].*refit"):
+        fit.vcov({"CRV1": "absent"})
+    data.loc[0, "f1"] = np.nan
+    with pytest.raises(NanInClusterVarError, match=r"missing values.*'f1' \(1\)"):
+        pf.feols("Y ~ X1", data, vcov={"CRV1": "f1"})
+
+
+def test_panel_hac_rejects_one_time_period():
+    data = pf.get_data(N=20).assign(year=1, unit=np.arange(20))
+    with pytest.raises(ValueError, match=r"time_id column 'year' has 1"):
+        pf.feols(
+            "Y ~ X1",
+            data,
+            vcov="NW",
+            vcov_kwargs={"time_id": "year", "panel_id": "unit", "lag": 1},
+        )
+
+
 def test_errors_hac():
     """Test all error conditions for HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors."""
     rng = np.random.default_rng(123)

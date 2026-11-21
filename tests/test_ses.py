@@ -224,6 +224,21 @@ def run_crv3_poisson():
     )
 
 
+@pytest.mark.parametrize("detail", ["CRV1", "CRV3"])
+@pytest.mark.parametrize(
+    ("repeated", "unique"), [("f1+f1", "f1"), ("f1 + f2 + f1", "f1+f2")]
+)
+def test_repeated_cluster_columns_cluster_once(detail, repeated, unique):
+    data = get_data().dropna()
+    fit = feols("Y ~ X1", data=data, vcov={detail: repeated})
+    expected = feols("Y ~ X1", data=data, vcov={detail: unique})
+
+    assert fit.variance_covariance.spec.clustervar == tuple(unique.split("+"))
+    np.testing.assert_allclose(
+        fit.variance_covariance.vcov, expected.variance_covariance.vcov
+    )
+
+
 @pytest.mark.parametrize("vcov", ["NW", "DK"])
 def test_hac_rejects_fweights(vcov):
     """HAC does not support frequency weights."""
