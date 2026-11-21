@@ -31,6 +31,7 @@ formula syntax, inference, and post-estimation, with Rust kernels for hot loops.
 | Review a diff, self-review, or walk through changed code together | [pr-review](.agents/skills/pr-review/SKILL.md), choosing the requested mode |
 | Prepare commits, push, open a PR, or curate history | [pr-handoff](.agents/skills/pr-handoff/SKILL.md) |
 | Create or edit a GitHub issue | [issue style](docs/developer/git-and-pr-style.md#issues) |
+| Name a concept in code, docstrings, errors, or docs | [glossary](docs/developer/glossary.md) |
 
 A question or prose correction does not require an implementation plan.
 Reuse decisions and checks already established unless the change invalidates
