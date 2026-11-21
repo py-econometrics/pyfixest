@@ -412,30 +412,30 @@ class Feiv(Feols):
             import pandas as pd
             from pyfixest.estimation import feols
 
-            # Set random seed for reproducibility
-            np.random.seed(1)
+            # Seeded generator for reproducibility
+            rng = np.random.default_rng(1)
 
             # Number of observations
             n = 1000
 
             # Simulate the data
             # Instrumental variable
-            z = np.random.binomial(1, 0.5, size=n)
-            z2 = np.random.binomial(1, 0.5, size=n)
+            z = rng.binomial(1, 0.5, size=n)
+            z2 = rng.binomial(1, 0.5, size=n)
 
             # Endogenous variable
-            d = 0.5 * z + 1.5 * z2 + np.random.normal(size=n)
+            d = 0.5 * z + 1.5 * z2 + rng.normal(size=n)
 
             # Control variables
-            c1 = np.random.normal(size=n)
-            c2 = np.random.normal(size=n)
+            c1 = rng.normal(size=n)
+            c2 = rng.normal(size=n)
 
             # Outcome variable
-            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + np.random.normal(size=n)
+            y = 1.0 + 1.5 * d + 0.8 * c1 + 0.5 * c2 + rng.normal(size=n)
 
             # Cluster variable
-            cluster = np.random.randint(1, 50, size=n)
-            weights = np.random.uniform(1, 3, size=n)
+            cluster = rng.integers(1, 50, size=n)
+            weights = rng.uniform(1, 3, size=n)
 
             # Create a DataFrame
             data = pd.DataFrame({

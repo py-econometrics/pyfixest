@@ -127,6 +127,7 @@ select = [
     "SIM", # flake8-simplify
     "RUF", # ruff,
     "TRY", # tryceratops
+    "NPY002", # legacy np.random functions; use np.random.default_rng
 ]
 
 ignore = [
@@ -151,7 +152,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["D100", "D101", "D102", "D103"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "NPY002"]
+"benchmarks/**" = ["NPY002"]
 "pyfixest/multcomp.py" = ["D103"]
 "pyfixest/summarize.py" = ["D103"]
 "pyfixest/visualize.py" = ["D103"]

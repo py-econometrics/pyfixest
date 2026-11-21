@@ -62,8 +62,8 @@ Rules that ruff or ty enforce are not repeated here.
   names the rejected input and, when useful, a supported alternative.
 - Guard optional imports, and raise an error naming the pip extra when the
   path that needs one is used.
-- Use `np.random.default_rng(seed)`, never global seeding. Never mutate user
-  input except through the documented `copy_data=False` path.
+- Never mutate user input except through the documented `copy_data=False`
+  path.
 - One module per public estimation function; model module names end in `_`.
 
 ## Documentation

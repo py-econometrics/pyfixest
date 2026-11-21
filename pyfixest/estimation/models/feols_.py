@@ -1341,7 +1341,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         import numpy as np
 
         data = pf.get_data()
-        data["D"] = np.random.choice([0, 1], size=data.shape[0])
+        rng = np.random.default_rng(1)
+        data["D"] = rng.choice([0, 1], size=data.shape[0])
 
         fit = pf.feols("Y ~ D", data=data, vcov={"CRV1": "group_id"})
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=8, seed=123).head()
