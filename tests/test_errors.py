@@ -2485,3 +2485,30 @@ def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
         pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
+
+
+def test_native_kernels_validate_array_shapes():
+    from pyfixest.core import _core_impl
+
+    scores = np.ones((3, 2))
+    codes = np.array([0, 1, 0], dtype=np.uintp)
+    clusters = np.array([0, 1], dtype=np.uintp)
+
+    with pytest.raises(
+        ValueError, match=r"3 design rows, 3 fixed-effect rows, and 2 weights"
+    ):
+        _core_impl._demean_rs(scores, codes[:, None], np.ones(2))
+    with pytest.raises(ValueError, match=r"Got 2 codes for 3 rows"):
+        _core_impl._crv1_meat_loop_rs(scores, clusters, codes[:2])
+    with pytest.raises(ValueError, match=r"cluster ID 3 is outside"):
+        _core_impl._crv1_meat_loop_rs(scores, np.array([3], dtype=np.uintp), codes)
+    with pytest.raises(ValueError, match=r"3 design rows, 3 codes, and 2 residuals"):
+        _core_impl._crv1_vcov_loop_qreg_rs(
+            scores, clusters, codes, 0.5, np.ones(2), 1.0
+        )
+    with pytest.raises(ValueError, match=r"slice 0 starts at 0 and requests 4 rows"):
+        _core_impl._nw_meat_panel_rs(
+            scores, np.array([0], dtype=np.uintp), np.array([4], dtype=np.uintp), 1
+        )
+    with pytest.raises(ValueError, match=r"time-period starts must be ordered"):
+        _core_impl._dk_meat_panel_rs(scores, np.array([2, 1], dtype=np.uintp), 1)

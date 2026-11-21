@@ -1,6 +1,6 @@
-use pyo3::exceptions::PyValueError;
 use ndarray::{Array1, Array2, ArrayView2, s};
 use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 /// Compute Bartlett kernel weights for a given lag.
@@ -100,11 +100,7 @@ fn nw_meat_time_impl(scores: &ArrayView2<f64>, time_arr: &[f64], lag: usize) -> 
 ///
 /// `scores` is (N_total, k), sorted by time.
 /// `idx[t]` is the start index of time period t.
-fn dk_meat_panel_impl(
-    scores: &ArrayView2<f64>,
-    idx: &[usize],
-    lag: usize,
-) -> Array2<f64> {
+fn dk_meat_panel_impl(scores: &ArrayView2<f64>, idx: &[usize], lag: usize) -> Array2<f64> {
     let n_times = idx.len();
     let k = scores.ncols();
     let n_obs = scores.nrows();
@@ -153,6 +149,21 @@ pub fn _nw_meat_panel_rs(
     let scores_view = scores.as_array();
     let starts_slice = starts.as_slice()?;
     let counts_slice = counts.as_slice()?;
+    if starts_slice.len() != counts_slice.len() {
+        return Err(PyValueError::new_err(format!(
+            "Panel Newey-West needs one count per panel start. Got {} starts and {} counts.",
+            starts_slice.len(),
+            counts_slice.len(),
+        )));
+    }
+    let n_rows = scores_view.nrows();
+    for (panel, (&start, &count)) in starts_slice.iter().zip(counts_slice).enumerate() {
+        if start > n_rows || count > n_rows - start {
+            return Err(PyValueError::new_err(format!(
+                "Panel Newey-West slice {panel} starts at {start} and requests {count} rows from {n_rows} scores rows. Check starts and counts."
+            )));
+        }
+    }
     let meat = nw_meat_panel_impl(&scores_view, starts_slice, counts_slice, lag);
     Ok(meat.into_pyarray(py).to_owned().into())
 }
@@ -219,6 +230,14 @@ pub fn _dk_meat_panel_rs(
 ) -> PyResult<Py<PyArray2<f64>>> {
     let scores_view = scores.as_array();
     let idx_slice = idx.as_slice()?;
+    if idx_slice.iter().any(|&start| start > scores_view.nrows())
+        || idx_slice.windows(2).any(|pair| pair[0] > pair[1])
+    {
+        return Err(PyValueError::new_err(format!(
+            "Driscoll-Kraay time-period starts must be ordered and lie within the {} scores rows. Check idx.",
+            scores_view.nrows(),
+        )));
+    }
     let meat = dk_meat_panel_impl(&scores_view, idx_slice, lag);
     Ok(meat.into_pyarray(py).to_owned().into())
 }
@@ -275,9 +294,12 @@ mod tests {
     fn test_dk_aggregation() {
         // 2 obs per time, 3 times
         let scores = array![
-            [1.0, 2.0], [3.0, 4.0],
-            [5.0, 6.0], [7.0, 8.0],
-            [9.0, 10.0], [11.0, 12.0]
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0],
+            [7.0, 8.0],
+            [9.0, 10.0],
+            [11.0, 12.0]
         ];
         let idx = vec![0usize, 2, 4];
         let meat = dk_meat_panel_impl(&scores.view(), &idx, 0);
