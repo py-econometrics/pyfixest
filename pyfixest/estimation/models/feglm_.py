@@ -263,7 +263,9 @@ class Feglm(Feols):
         eta = self.fitted_values.link
         if self.options.offset is not None:
             offset = self.model_matrix.offset
-            assert offset is not None
+            assert offset is not None, (
+                "Fixed-effect recovery requires the offset values used to fit this GLM."
+            )
             eta = eta - offset.to_numpy().flatten()
         return eta
 

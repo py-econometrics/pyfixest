@@ -66,7 +66,10 @@ def pinned_release() -> str:
     """
     match = re.search(r'(?m)^pyfixest = "==([^"]+)"$', RELEASE_MANIFEST.read_text())
     if match is None:
-        raise RuntimeError(f"Could not find the pyfixest pin in {RELEASE_MANIFEST}.")
+        raise RuntimeError(
+            f"Could not find the pyfixest pin in {RELEASE_MANIFEST}. "
+            'Add a pyfixest = "==<version>" entry under pypi-dependencies.'
+        )
     return match.group(1)
 
 

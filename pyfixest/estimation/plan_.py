@@ -86,7 +86,10 @@ def _resolve_model_class(
     entry = MODEL_REGISTRY[method]
     if fits_quantile_process:
         if entry.quantile_process_model_cls is None:
-            raise TypeError(f"{method!r} models cannot fit a quantile process.")
+            raise TypeError(
+                f"{method!r} models cannot fit a quantile process. "
+                "Use the quantreg registry entry for a grid of quantiles."
+            )
         return entry.quantile_process_model_cls
     if is_iv and entry.iv_model_cls is not None:
         return entry.iv_model_cls
@@ -102,7 +105,10 @@ def estimation_method_of(model_cls: type) -> EstimationMethod:
     for method, entry in MODEL_REGISTRY.items():
         if model_cls in (entry.model_cls, entry.iv_model_cls):
             return method
-    raise ValueError(f"{model_cls.__name__} is not a registered model class.")
+    raise ValueError(
+        f"{model_cls.__name__} is not a registered model class. "
+        "Add its estimator and model class to MODEL_REGISTRY before dispatching a fit."
+    )
 
 
 @dataclass(frozen=True)
@@ -227,7 +233,8 @@ def expand_specs(
     if not isinstance(config.options, entry.options_cls):
         raise TypeError(
             f"{config.method!r} models take {entry.options_cls.__name__}; "
-            f"got {type(config.options).__name__}."
+            f"got {type(config.options).__name__}. "
+            "Use the options type declared for this estimator in MODEL_REGISTRY."
         )
     model_cls = _resolve_model_class(
         config.method,

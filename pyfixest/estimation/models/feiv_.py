@@ -184,8 +184,12 @@ class Feiv(Feols):
         linear_data = super()._demean()
         endogenous_frame = self.model_matrix.endogenous
         instrument_frame = self.model_matrix.instruments
-        assert endogenous_frame is not None
-        assert instrument_frame is not None
+        assert endogenous_frame is not None, (
+            "The IV model matrix must contain its endogenous regressors."
+        )
+        assert instrument_frame is not None, (
+            "The IV model matrix must contain its instruments."
+        )
         endogenous = endogenous_frame.to_numpy(dtype=np.float64)
         instruments = instrument_frame.to_numpy(dtype=np.float64)
         fixed_effects = self.model_matrix.fixed_effects
@@ -220,7 +224,9 @@ class Feiv(Feols):
         endogenous regressor.
         """
         endogenous_frame = self.model_matrix.endogenous
-        assert endogenous_frame is not None
+        assert endogenous_frame is not None, (
+            "The IV model matrix must contain its endogenous regressors."
+        )
 
         endogenous_names = endogenous_frame.columns
         endogenous_positions = self.model_matrix.independent.columns.get_indexer(
@@ -322,7 +328,9 @@ class Feiv(Feols):
 
         # Drop collinear variables in the second stage and update within data
         structural_data = self._drop_multicollinear_within_data(within_data)
-        assert isinstance(structural_data, WithinIvData)
+        assert isinstance(structural_data, WithinIvData), (
+            "The main-equation IV coefficient solve needs demeaned IV data."
+        )
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
 

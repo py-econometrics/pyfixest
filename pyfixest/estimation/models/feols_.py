@@ -430,7 +430,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         n_rows = model_matrix.n_rows
         # Frequency weights count repeated observations; other fits count rows.
         if weights.weights_type == "fweights":
-            assert weights.values is not None
+            assert weights.values is not None, (
+                "Frequency-weighted estimation needs weights to count observations."
+            )
             n_obs: int | float = float(weights.values.sum())
         else:
             n_obs = n_rows
@@ -489,10 +491,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         if self.model.parsed_formula.has_varying_slopes:
             effects = self.model_matrix.effects
-            assert effects is not None
+            assert effects is not None, (
+                "Demeaning varying slopes needs the fixed-effect levels and slope values."
+            )
             return effects
         fixed_effects = self.model_matrix.fixed_effects
-        assert fixed_effects is not None
+        assert fixed_effects is not None, (
+            "Demeaning a model with fixed effects needs encoded levels on the estimation sample."
+        )
         return fixed_effects.to_numpy()
 
     def _demean(self) -> WithinLinearData:
@@ -2133,7 +2139,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             # (covariate or FE) marks the whole row as NaN in the output.
             model_spec = self.model.model_spec
             assert model_spec is not None, (
-                "predict() runs after the model matrix is built"
+                "Prediction requires the fitted formula's model-matrix specification."
             )
             rhs_spec = model_spec[_ModelMatrixKey.main].rhs
             try:
