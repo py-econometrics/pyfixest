@@ -53,7 +53,7 @@ pf.feols(f"Y ~ X1 + {' + '.join(controls)} | f1", data)  # replaces ..ctrl
 | `feglm(family = gaussian)`, `poisson` | `family="gaussian"`, `"poisson"`, or `pf.fepois()` |
 | `femlm()`, `fenegbin()`, `feNmlm()` | not available |
 | `weights = ~w` | `weights="w"` (`weights_type="fweights"` for frequency weights) |
-| `offset = ~log(e)` | `offset="log(e)"` (`fepois`, `feglm`) |
+| `offset = ~log(e)` | `offset="log(e)"` (`fepois`, and `feglm` with `family="poisson"`) |
 | `split = ~k`, `fsplit = ~k` | `split="k"`, `fsplit="k"` |
 | `subset = ~x > 0` | filter the DataFrame first |
 | `fixef.rm = "singleton"` | `fixef_rm="singleton"` (default) or `"none"` |

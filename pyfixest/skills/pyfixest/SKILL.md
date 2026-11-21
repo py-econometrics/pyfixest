@@ -24,7 +24,7 @@ matches the installed version. Open a file when this page is not enough:
 ```python
 import pyfixest as pf
 
-data = pf.get_data()  # example data: Y, Y2, X1, X2, Z1, Z2, f1, f2, f3, weights
+data = pf.get_data()  # example data: Y, Y2, X1, X2, Z1, Z2, f1, f2, f3, group_id, weights
 fit = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
 fit.summary()  # prints; returns None
 fit.tidy()  # DataFrame: Estimate, Std. Error, t value, Pr(>|t|), 2.5%, 97.5%
