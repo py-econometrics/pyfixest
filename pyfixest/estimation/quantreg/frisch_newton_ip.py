@@ -184,13 +184,12 @@ def frisch_newton_solver(
     w_pred = np.empty_like(w)
     y_pred = np.empty_like(y)
 
-    # quick sanity checks on starting values
-    if True:
-        for val in [x, z, s, w]:
-            if np.any(val < 0):
-                raise ValueError(
-                    f"Initial value {val} has negative entries, which is not allowed."
-                )
+    for name, initial in (("x", x), ("z", z), ("s", s), ("w", w)):
+        if np.any(initial < 0):
+            raise ValueError(
+                f"Frisch-Newton initial {name} must be nonnegative. "
+                f"The minimum is {float(np.min(initial)):g}. Check the starting values."
+            )
 
     mu_curr = _duality_gap(x=x, z=z, s=s, w=w)
 

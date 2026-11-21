@@ -11,6 +11,17 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
 
+def _invert_covariance_component(matrix: np.ndarray, *, component: str) -> np.ndarray:
+    try:
+        return np.linalg.inv(matrix)
+    except np.linalg.LinAlgError as exc:
+        raise np.linalg.LinAlgError(
+            f"Quantile regression could not compute {component} covariance. "
+            f"A {matrix.shape[0]} by {matrix.shape[1]} matrix could not be inverted. "
+            "Check for redundant regressors or insufficient variation at the fitted quantile."
+        ) from exc
+
+
 def vcov_iid_qreg(
     X: np.ndarray, Y: np.ndarray, u_hat: np.ndarray, q: float, N: int
 ) -> np.ndarray:
@@ -26,7 +37,7 @@ def vcov_iid_qreg(
     f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
 
     D = X.T @ X
-    Dinv = np.linalg.inv(D)
+    Dinv = _invert_covariance_component(D, component="iid")
 
     return 1 / (f**2) * q * (1 - q) * Dinv
 
@@ -46,7 +57,7 @@ def vcov_hetero_qreg(
 
     D = X.T @ X
     C = f * D
-    Cinv = np.linalg.inv(C)
+    Cinv = _invert_covariance_component(C, component="heteroskedasticity-robust")
 
     return q * (1 - q) * Cinv @ D @ Cinv
 
@@ -84,7 +95,7 @@ def vcov_nid_qreg(
     J = X.T @ X
     XFplus = X * np.sqrt(Fplus[:, np.newaxis])
     H = XFplus.T @ XFplus
-    Hinv = np.linalg.inv(H)
+    Hinv = _invert_covariance_component(H, component="nid")
 
     return q * (1 - q) * Hinv @ J @ Hinv
 
@@ -110,7 +121,7 @@ def vcov_crv1_qreg(
     A, B = crv1_vcov_qreg_loop(
         X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
     )
-    B_inv = np.linalg.inv(B)
+    B_inv = _invert_covariance_component(B, component="cluster-robust")
     vcov = B_inv @ A @ B_inv
 
     return vcov

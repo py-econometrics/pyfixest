@@ -59,7 +59,7 @@ def _require_fixed_effect_codes(
     """Require group codes for backends without explicit-effect support."""
     if isinstance(flist, list):
         raise TypeError(
-            f"Explicit fixed effects are not supported by the {backend} "
+            f"Explicit fixed effects, such as varying slopes, are not supported by the {backend} "
             "demeaner. Use `LsmrDemeaner(backend='within')`, the default demeaner."
         )
     return flist
@@ -165,9 +165,13 @@ class MapDemeaner(BaseDemeaner):
         BaseDemeaner.__post_init__(self)
         _validate_unit_interval_float(self.fixef_tol, "fixef_tol")
         if not isinstance(self.backend, str):
-            raise TypeError("`backend` must be a string.")
+            raise TypeError(
+                f"MapDemeaner backend must be a string; got {self.backend!r}."
+            )
         if self.backend not in get_args(MapBackend):
-            raise ValueError(f"`backend` must be one of {get_args(MapBackend)}.")
+            raise ValueError(
+                f"`backend` must be one of {get_args(MapBackend)}; got {self.backend!r}."
+            )
 
     def with_tol(self, tol: float | None) -> MapDemeaner:
         """Override the `fixef_tol`, used for IWLS acceleration."""
@@ -201,7 +205,9 @@ class MapDemeaner(BaseDemeaner):
 
             demean_func = demean_rs
         else:
-            raise ValueError(f"Unknown MapDemeaner backend: {self.backend!r}")
+            raise ValueError(
+                f"Unknown MapDemeaner backend {self.backend!r}. Use one of {get_args(MapBackend)!r}."
+            )
 
         result, success = demean_func(
             x=x,
@@ -300,19 +306,31 @@ class LsmrDemeaner(BaseDemeaner):
     def __post_init__(self) -> None:
         BaseDemeaner.__post_init__(self)
         if not isinstance(self.backend, str):
-            raise TypeError("`backend` must be a string.")
+            raise TypeError(
+                f"LsmrDemeaner backend must be a string; got {self.backend!r}."
+            )
         if self.backend not in get_args(LsmrBackend):
-            raise ValueError(f"`backend` must be one of {get_args(LsmrBackend)}.")
+            raise ValueError(
+                f"`backend` must be one of {get_args(LsmrBackend)}; got {self.backend!r}."
+            )
 
         if not isinstance(self.precision, str):
-            raise TypeError("`precision` must be a string.")
+            raise TypeError(
+                f"LsmrDemeaner precision must be a string; got {self.precision!r}."
+            )
         if self.precision not in get_args(LsmrPrecision):
-            raise ValueError(f"`precision` must be one of {get_args(LsmrPrecision)}.")
+            raise ValueError(
+                f"`precision` must be one of {get_args(LsmrPrecision)}; got {self.precision!r}."
+            )
 
         if not isinstance(self.device, str):
-            raise TypeError("`device` must be a string.")
+            raise TypeError(
+                f"LsmrDemeaner device must be a string; got {self.device!r}."
+            )
         if self.device not in get_args(TorchDevice):
-            raise ValueError(f"`device` must be one of {get_args(TorchDevice)}.")
+            raise ValueError(
+                f"`device` must be one of {get_args(TorchDevice)}; got {self.device!r}."
+            )
         _validate_unit_interval_float(self.fixef_atol, "fixef_atol")
         _validate_unit_interval_float(self.fixef_btol, "fixef_btol")
 
@@ -324,11 +342,13 @@ class LsmrDemeaner(BaseDemeaner):
                     "A Preconditioner can only be reused with `backend='within'`."
                 )
         elif not isinstance(self.preconditioner, str):
-            raise TypeError("`preconditioner` must be a string or a Preconditioner.")
+            raise TypeError(
+                f"preconditioner must be a string or a Preconditioner; got {type(self.preconditioner).__name__}."
+            )
         elif self.preconditioner not in get_args(LsmrPreconditioner):
             raise ValueError(
                 f"`preconditioner` must be one of {get_args(LsmrPreconditioner)} "
-                "or a Preconditioner."
+                f"or a Preconditioner; got {self.preconditioner!r}."
             )
 
         if self.local_size is not None:
@@ -397,7 +417,9 @@ class LsmrDemeaner(BaseDemeaner):
         if self.backend == "torch":
             flist = _require_fixed_effect_codes(flist=flist, backend="torch LSMR")
             return self._demean_torch(x=x, flist=flist, weights=weights)
-        raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
+        raise ValueError(
+            f"Unknown LsmrDemeaner backend {self.backend!r}. Use one of {get_args(LsmrBackend)!r}."
+        )
 
     def _demean_within(
         self,

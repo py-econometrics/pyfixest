@@ -65,8 +65,8 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
         )
         return torch.device("cpu")
     warnings.warn(
-        "No GPU available — torch demeaning will run on CPU, which is slower "
-        "than the scipy backend. Consider using `demean_scipy` instead.",
+        "No GPU is available. Torch demeaning will run on CPU. "
+        "Use LsmrDemeaner(backend='within') for the default CPU backend.",
         UserWarning,
         stacklevel=_find_stack_level(),
     )
@@ -85,7 +85,10 @@ def _demean_torch_on_device_impl(
 ) -> tuple[NDArray[np.float64], bool]:
     """Inner implementation wrapped in torch.no_grad() to skip autograd overhead."""
     if flist is None:
-        raise ValueError("flist cannot be None")
+        raise ValueError(
+            "Torch demeaning needs an array of fixed-effect level codes, one row "
+            "per observation and one column per fixed effect. flist was None."
+        )
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 
@@ -128,8 +131,9 @@ def _demean_torch_on_device_impl(
     if zero_weight_mask.any():
         bad_groups = zero_weight_mask.nonzero(as_tuple=False).squeeze(-1).tolist()
         raise ValueError(
-            f"Fixed effect groups {bad_groups} have zero total weight. "
-            f"Check your weights or fixed effect encoding."
+            f"Found {len(bad_groups)} fixed-effect level codes with zero total "
+            f"weight ({bad_groups[:10]!r} shown). Check the observation weights "
+            "and the fixed-effect level encoding."
         )
 
     M_inv = 1.0 / torch.sqrt(group_weights)
@@ -217,7 +221,10 @@ def demean_torch(
         True if LSMR converged for all columns.
     """
     if flist is None:
-        raise ValueError("flist cannot be None")
+        raise ValueError(
+            "Torch demeaning needs an array of fixed-effect level codes, one row "
+            "per observation and one column per fixed effect. flist was None."
+        )
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 

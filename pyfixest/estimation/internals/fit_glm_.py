@@ -70,12 +70,11 @@ def _check_convergence(
     return rel_dev_change < tol
 
 
-def _raise_non_convergence(maxiter: int) -> None:
+def _raise_non_convergence(*, family: str, maxiter: int, tol: float) -> None:
     raise NonConvergenceError(
-        f"""
-        The IRLS algorithm did not converge with {maxiter}
-        iterations. Try to increase the maximum number of iterations.
-        """
+        f"The {family} IWLS solver did not converge within iwls_maxiter={maxiter} before "
+        f"meeting iwls_tol={tol:g}. Check for separation or extreme regressor "
+        "scales and increase iwls_maxiter if more iterations are needed."
     )
 
 
@@ -107,7 +106,9 @@ def _step_halving(
         return eta_new, mu_new, deviance_new, False
 
     raise RuntimeError(
-        f"Step-halving failed. Deviance: {deviance_new:.6f} vs {deviance:.6f}"
+        f"Step-halving failed for {family.name} IWLS. The new deviance "
+        f"({deviance_new:.6g}) did not improve on {deviance:.6g}. "
+        "Check for separation, extreme regressor scales, or extreme weights."
     )
 
 
@@ -218,8 +219,12 @@ def fit_glm_irls(
         z = (eta - offset_flat) + (Y_flat - mu) * gprime
 
         if accelerate and r > 0:
-            assert z_tilde_prev is not None and z_prev is not None
-            assert X_tilde_prev is not None
+            assert z_tilde_prev is not None and z_prev is not None, (
+                "Accelerated IWLS needs the previous working response and its within values."
+            )
+            assert X_tilde_prev is not None, (
+                "Accelerated IWLS needs the previous working design after demeaning."
+            )
             z_input = z_tilde_prev + (z - z_prev)
             X_input = X_tilde_prev
         else:
@@ -292,7 +297,7 @@ def fit_glm_irls(
                 is_gaussian=family.name == "gaussian",
             )
         if not converged:
-            _raise_non_convergence(maxiter)
+            _raise_non_convergence(family=family.name, maxiter=maxiter, tol=tol)
 
     working_residuals = (z_tilde_final - X_tilde_final @ beta_final).flatten()
     working_weights = working_weights_final.flatten()
