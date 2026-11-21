@@ -790,8 +790,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             elif vcov_type == "HAC":
                 # G is the number of unique time periods T used
                 ssc_vcov_type = "HAC"
-                ssc_G = np.unique(self._data[spec.time_id]).shape[0]
                 term = self._vcov_hac(spec)
+                ssc_G = np.unique(self._data[spec.time_id]).shape[0]
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
@@ -880,27 +880,64 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)
 
     def _vcov_hac(self, spec: VcovSpec) -> VcovTerm:
-        _data = self._data
+        data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
-
-        # some data checks on input pandas df
-        # time needs to be numeric or date else we cannot sort by time
-        if not np.issubdtype(_data[time_id], np.number) and not np.issubdtype(
-            _data[time_id], np.datetime64
+        detail = cast(HacVcovTypeOptions, spec.vcov_type_detail)
+        for option, column in (("time_id", time_id), ("panel_id", panel_id)):
+            if column is not None and column not in data.columns:
+                raise ValueError(
+                    f"vcov={detail!r} uses {option}={column!r}, which is absent from "
+                    "the estimation data. Pass an existing column or refit with it included."
+                )
+        time = data[time_id]
+        if not (
+            pd.api.types.is_datetime64_any_dtype(time.dtype)
+            or (
+                pd.api.types.is_numeric_dtype(time.dtype)
+                and not pd.api.types.is_bool_dtype(time.dtype)
+                and not pd.api.types.is_complex_dtype(time.dtype)
+            )
         ):
             raise ValueError(
-                "The time variable must be numeric or date, else we cannot sort by time."
+                f"vcov={detail!r} needs a numeric or datetime time_id column. "
+                f"Column {time_id!r} has dtype {time.dtype}. Convert it to a "
+                "chronologically ordered numeric or datetime column."
             )
 
-        _time_arr = _data[time_id].to_numpy()
-        _panel_arr = _data[panel_id].to_numpy() if panel_id is not None else None
+        time_arr = time.to_numpy()
+        if isinstance(time.dtype, pd.DatetimeTZDtype):
+            time_arr = time.dt.tz_convert(None).to_numpy()
+        invalid_time = int((~np.isfinite(time_arr)).sum())
+        if invalid_time:
+            raise ValueError(
+                f"vcov={detail!r} found {invalid_time} missing or nonfinite values "
+                f"in time_id column {time_id!r} on the estimation sample. "
+                "Check the time values before refitting. "
+                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
+            )
+
+        panel_arr = None
+        if panel_id is not None:
+            panel = data[panel_id]
+            missing_panel = int(panel.isna().sum())
+            if missing_panel:
+                raise ValueError(
+                    f"vcov={detail!r} found {missing_panel} missing values in "
+                    f"panel_id column {panel_id!r} on the estimation sample. "
+                    "Supply a panel identifier for every observation before refitting."
+                )
+            panel_arr = panel.to_numpy()
+            if panel_arr.dtype.kind == "O":
+                panel_arr, _ = pd.factorize(panel, sort=True)
 
         meat = meat_hac(
             scores=self.sandwich.scores,
-            time_arr=_time_arr,
-            panel_arr=_panel_arr,
+            time_arr=time_arr,
+            panel_arr=panel_arr,
             lag=spec.lag,
-            vcov_type_detail=cast(HacVcovTypeOptions, spec.vcov_type_detail),
+            vcov_type_detail=detail,
+            time_id=time_id,
+            panel_id=panel_id,
         )
         bread = self.sandwich.bread
         return VcovTerm(vcov=bread @ meat @ bread, meat=meat)

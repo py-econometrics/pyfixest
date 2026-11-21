@@ -26,6 +26,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- Newey–West and Driscoll–Kraay inference with a missing or infinite `time_id`
+  value raises a `ValueError` naming the column and the number of affected
+  rows. Before, time-series Newey–West aborted the Python process. Panel HAC
+  accepts string `panel_id` values ([#2084](https://github.com/py-econometrics/pyfixest/pull/2084)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

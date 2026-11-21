@@ -1,3 +1,4 @@
+use pyo3::exceptions::PyValueError;
 use ndarray::{Array1, Array2, ArrayView2, s};
 use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
@@ -84,7 +85,11 @@ fn nw_meat_panel_impl(
 fn nw_meat_time_impl(scores: &ArrayView2<f64>, time_arr: &[f64], lag: usize) -> Array2<f64> {
     // argsort by time
     let mut order: Vec<usize> = (0..time_arr.len()).collect();
-    order.sort_by(|&a, &b| time_arr[a].partial_cmp(&time_arr[b]).unwrap());
+    order.sort_by(|&a, &b| {
+        time_arr[a]
+            .partial_cmp(&time_arr[b])
+            .expect("validated finite Newey-West time values")
+    });
 
     let sorted_scores = scores.select(ndarray::Axis(0), &order);
     hac_meat_loop(&sorted_scores.view(), lag)
@@ -175,6 +180,18 @@ pub fn _nw_meat_time_rs(
 ) -> PyResult<Py<PyArray2<f64>>> {
     let scores_view = scores.as_array();
     let time_slice = time_arr.as_slice()?;
+    if time_slice.len() != scores_view.nrows() {
+        return Err(PyValueError::new_err(format!(
+            "Newey-West requires one time value per scores row. Got {} time values for {} rows.",
+            time_slice.len(),
+            scores_view.nrows(),
+        )));
+    }
+    if let Some(row) = time_slice.iter().position(|time| !time.is_finite()) {
+        return Err(PyValueError::new_err(format!(
+            "Newey-West requires finite time values. Check time_arr at row {row}."
+        )));
+    }
     let meat = nw_meat_time_impl(&scores_view, time_slice, lag);
     Ok(meat.into_pyarray(py).to_owned().into())
 }
