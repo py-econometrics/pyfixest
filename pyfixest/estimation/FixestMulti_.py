@@ -161,10 +161,7 @@ class FixestMulti(TidyColumnAccessors):
             df["fml"] = fxst.model.formula
             res.append(df)
 
-        res_df = pd.concat(res, axis=0)
-        res_df.set_index(["fml", "Coefficient"], inplace=True)
-
-        return res_df
+        return pd.concat(res, axis=0).set_index(["fml", "Coefficient"])
 
     def confint(self) -> pd.DataFrame:
         """
@@ -269,18 +266,28 @@ class FixestMulti(TidyColumnAccessors):
         Parameters
         ----------
         i : int or str
-            The index of the model to fetch.
+            The position of the model, or its key in `all_fitted_models`,
+            for example `"Y ~ X1 | f1"`. Any other string is read as an
+            integer position, so `"0"` fetches the first model.
         print_fml : bool, optional
             Whether to print the formula of the model. Default is True.
 
         Returns
         -------
-            A Feols object.
+            The fitted model.
         """
-        if isinstance(i, str):
-            i = int(i)
-
         keys = list(self.all_fitted_models.keys())
+        if isinstance(i, str):
+            if i in self.all_fitted_models:
+                i = keys.index(i)
+            else:
+                try:
+                    i = int(i)
+                except ValueError:
+                    raise KeyError(
+                        f"No fitted model with key {i!r}. Available keys: {keys}."
+                    ) from None
+
         if i >= len(keys):
             raise IndexError(f"Index {i} is larger than the number of fitted models.")
         key = keys[i]

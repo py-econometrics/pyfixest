@@ -481,7 +481,7 @@ def qplot(
 
         df_all = pd.concat([df_all, df], axis=0)
 
-    df_all.reset_index(inplace=True)
+    df_all = df_all.reset_index()
 
     return _qplot(
         data=df_all,
@@ -575,8 +575,7 @@ def _coefplot_lets_plot(
 
     LetsPlot.setup_html()
 
-    df.reset_index(inplace=True)
-    df.rename(columns={"fml": "Model"}, inplace=True)
+    df = df.reset_index().rename(columns={"fml": "Model"})
     ub, lb = 1 - alpha / 2, alpha / 2
 
     labels_dict = {} if labels is None else labels
@@ -889,8 +888,7 @@ def _get_model_df(
     if joint in ["both", True]:
         lb, ub = f"{alpha / 2 * 100:.1f}%", f"{(1 - alpha / 2) * 100:.1f}%"
         df_joint = fxst.confint(inference_type="simult", alpha=alpha, seed=seed)
-        df_joint.reset_index(inplace=True)
-        df_joint = df_joint.rename(columns={"index": "Coefficient"})
+        df_joint = df_joint.reset_index().rename(columns={"index": "Coefficient"})
         df_joint_full = (
             df_model.copy()
             .drop([lb, ub], axis=1)

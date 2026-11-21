@@ -35,7 +35,8 @@ df = pf.get_data()
 If you want to use the same dataset in Stata, you can save the data to your home
 directory as a .dta file with
 
-```{python, eval = FALSE}
+```{python}
+#| eval: false
 import os
 df.to_stata(os.path.join(os.path.expanduser("~"), "pyfixest-data.dta"))
 ```

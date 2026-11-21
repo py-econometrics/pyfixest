@@ -220,12 +220,12 @@ def test_ccv_refits_replay_options(data, drop_intercept):
 
 
 def test_refits_leave_data_untouched(data, case):
-    "Refits modify neither the fit's sample nor the user's frame."
+    "Fits and refits modify neither the fit's sample nor the user's frame."
     estimator, options = case
     options = _without_weights(options)
-    # copy_data=False lets the original fit reset the index; refits must not
-    fit = estimator(FML, data=data, copy_data=False, **options)
     data_before = data.copy()
+    # copy_data=False hands the user's frame to the fit and its refits
+    fit = estimator(FML, data=data, copy_data=False, **options)
     sample_before = fit._data.copy()
 
     fit.vcov({"CRV3": CLUSTER})

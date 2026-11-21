@@ -651,7 +651,7 @@ def create_model_matrix(
     ```
     """
     # Process input data
-    data.reset_index(drop=True, inplace=True)  # Sanitise index
+    data = data.reset_index(drop=True)  # Sanitise index
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
