@@ -62,6 +62,30 @@ def test_multicollinearity_error():
     assert fit._coefnames == ["X1"]
 
 
+def test_weighted_iv_drops_controls_and_instruments_consistently():
+    data = pd.DataFrame(
+        {
+            "group": [1] * 4 + [2] * 4,
+            "x": [0, 0, 0, 0, 1, 1, -1, -1],
+            "z1": [1, -1, 1, -1, 0, 0, 0, 0],
+            "z2": [0, 0, 0, 0, 1, -1, 1, -1],
+            "d": [3, -1, 1, -3, 3, -1, 1, -3],
+            "y": [5, -1, 3, -7, 6, -2, 2, -6],
+            "w": np.repeat([1.0, 1e-12], 4),
+        }
+    )
+    with pytest.warns(UserWarning, match="variables dropped due to multicollinearity"):
+        fit = feols("y ~ x + [d ~ z1 + z2] | group", data, weights="w")
+    reference = feols("y ~ 1 + [d ~ z1] | group", data, weights="w")
+    assert fit.collinearity.dropped_coef_names == ("x",)
+    assert fit.collinearity_instruments.dropped_coef_names == ("x", "z2")
+    assert fit.first_stage.model.collinearity.dropped_coef_names == ("x", "z2")
+    assert fit.first_stage.instruments == ("z1",)
+    np.testing.assert_allclose(
+        fit.coef(), reference.coef(), err_msg="Weighted IV coefficients"
+    )
+
+
 @pytest.mark.parametrize(
     "fml",
     ["Y ~ C(independent)*C(unit_fixed_effect) | unit_id + year"],

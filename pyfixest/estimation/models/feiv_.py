@@ -239,10 +239,13 @@ class Feiv(Feols):
         fitted_endogenous = projected_design[:, endogenous_positions]
         exogenous = within_data.design[:, exogenous_mask]
 
-        # Drop collinear controls before the controls-only regression.
+        # Screen the controls in the same weight domain as their projection.
         if exogenous.shape[1] > 0:
+            rank_design = (
+                exogenous if sqrt_weights is None else exogenous * sqrt_weights
+            )
             collinear, _, _ = find_collinear_variables(
-                np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
+                np.ascontiguousarray(rank_design.T @ rank_design, dtype=np.float64),
                 self.options.collin_tol,
             )
             exogenous = exogenous[:, ~np.asarray(collinear, dtype=bool)]
@@ -285,17 +288,18 @@ class Feiv(Feols):
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._demean()
-        # Drop collinear columns from instruments
+        weights = self.observation_weights.values
+        # Match the weighted rank check in the first-stage OLS refit.
         instruments, instrument_collinearity = drop_multicollinear_variables(
             X=within_data.instruments,
             names=self._coefnames_z,
             collin_tol=self.options.collin_tol,
+            weights=weights,
         )
         self.collinearity_instruments = instrument_collinearity
         self._coefnames_z = list(instrument_collinearity.coefnames)
 
         # Project second-stage regressors onto the retained instruments.
-        weights = self.observation_weights.values
         sqrt_weights = (
             None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
         )
@@ -315,7 +319,9 @@ class Feiv(Feols):
         )
 
         # Drop collinear variables in the second stage and update within data
-        structural_data = self._drop_multicollinear_within_data(within_data)
+        structural_data = self._drop_multicollinear_within_data(
+            within_data, weights=weights
+        )
         assert isinstance(structural_data, WithinIvData)
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
