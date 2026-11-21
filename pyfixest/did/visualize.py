@@ -109,11 +109,17 @@ def panelview(
     ```
     """
     # check if unit, time, treat and outcome are in the data
-    for col in [unit, time, treat]:
-        if col not in data.columns:
-            raise ValueError(f"Column '{col}' not found in data.")
-    if outcome and outcome not in data.columns:
-        raise ValueError(f"Outcome column '{outcome}' not found in data.")
+    for option, col in (
+        ("unit", unit),
+        ("time", time),
+        ("treat", treat),
+        ("outcome", outcome),
+    ):
+        if col is not None and col not in data.columns:
+            raise ValueError(
+                f"panelview() {option}={col!r} is absent from data. "
+                f"Pass an existing column name to {option}."
+            )
 
     if collapse_to_cohort and (subsamp or units_to_plot):
         raise ValueError(

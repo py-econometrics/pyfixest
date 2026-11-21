@@ -42,10 +42,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - `feglm()` and `fepois()` raise `ValueError` instead of `AssertionError` for
   `iwls_tol` outside (0, 1) or `iwls_maxiter` below 1, and `quantreg()` raises
   `ValueError` instead of `IndexError` for an empty `quantile` list ([#2087](https://github.com/py-econometrics/pyfixest/pull/2087)).
-- Error messages for formulas and solver failures name the rejected input or
-  failed setting and say how to fix it
+- Error messages for formulas, solver failures and difference-in-differences
+  inputs name the rejected input or failed setting and say how to fix it
   ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088),
-  [#2089](https://github.com/py-econometrics/pyfixest/pull/2089)).
+  [#2089](https://github.com/py-econometrics/pyfixest/pull/2089),
+  [#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
 - `wald_test()` raises a `ValueError` for missing or infinite values in `R` or
   `q`; before, a missing `q` returned NaN statistics. `ritest()` accepts string
   cluster identifiers ([#2090](https://github.com/py-econometrics/pyfixest/pull/2090)).

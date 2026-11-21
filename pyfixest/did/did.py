@@ -46,7 +46,22 @@ class DID(ABC):
         xfml: str | None = None,
         att: bool = True,
     ):
-        # do some checks here
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError(
+                f"Difference-in-differences requires a pandas DataFrame; got {type(data).__name__}."
+            )
+        for option, column in (
+            ("yname", yname),
+            ("idname", idname),
+            ("tname", tname),
+            ("gname", gname),
+        ):
+            if not isinstance(column, str) or column not in data.columns:
+                raise ValueError(
+                    f"{option}={column!r} must name an existing column in the panel data. "
+                    "Check the column names before fitting. "
+                    "See https://pyfixest.org/tutorials/difference-in-differences.html"
+                )
 
         self._data = data.copy()
         self._yname = yname
@@ -57,9 +72,7 @@ class DID(ABC):
         self._att = att
         self._cluster = cluster
 
-        # check if tname and gname are of type int (either int 64, 32, 8)
-
-        for var in [self._tname, self._gname]:
+        for option, var in (("tname", self._tname), ("gname", self._gname)):
             if self._data[var].dtype not in [
                 "int64",
                 "int32",
@@ -68,9 +81,11 @@ class DID(ABC):
                 "float32",
             ]:
                 raise ValueError(
-                    f"""The variable {var} must be of a numeric type, and more
-                    specifically, in the format YYYYMMDDHHMMSS. I.e. either 2012, 2013,
-                    etc. or 201201, 201202, 201203 etc."""
+                    f"{option}={var!r} must have a supported numeric dtype "
+                    f"(int8, int32, int64, float32, or float64); got {self._data[var].dtype}. "
+                    "Convert the time and cohort columns to the same period scale, "
+                    "such as sequential integers. Check the never-treated code for "
+                    "the estimator. See https://pyfixest.org/tutorials/difference-in-differences.html"
                 )
 
         # create a treatment variable
