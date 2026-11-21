@@ -44,11 +44,12 @@ def drop_multicollinear_variables(
     collin_vars: list[str] = []
     collin_index = np.zeros(len(names), dtype=bool)
 
-    if all_removed:
+    if all_removed or 0 < n_excl == X.shape[1]:
+        dropped = repr(names[:5]) + (" ..." if len(names) > 5 else "")
         raise ValueError(
-            """
-            All variables are collinear. Maybe your model specification introduces multicollinearity? If not, please reach out to the package authors!.
-            """
+            f"All regressors are collinear at collin_tol={collin_tol:g}: {dropped}. "
+            "Check for redundant terms and regressors without variation after "
+            "absorbing any fixed effects."
         )
 
     names_array = np.array(names)
@@ -72,13 +73,6 @@ def drop_multicollinear_variables(
         )
 
         X = np.delete(X, id_excl, axis=1)
-        if X.ndim == 2 and X.shape[1] == 0:
-            raise ValueError(
-                """
-                All variables are collinear. Please check your model specification.
-                """
-            )
-
         names_array = np.delete(names_array, id_excl)
         collin_index = np.asarray(id_excl, dtype=bool)
 

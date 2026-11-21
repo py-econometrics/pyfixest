@@ -67,6 +67,10 @@ class FeatureDeprecationError(Exception):  # noqa: D101
     pass
 
 
+class EmptyEstimationSampleError(ValueError):
+    """No observations are available to fit a model."""
+
+
 class EmptyVcovError(Exception):
     """The fit has no variance-covariance matrix because it estimated no coefficients."""
 
@@ -103,6 +107,7 @@ __all__ = [
     "DepvarIsNotNumericError",
     "DuplicateKeyError",
     "EmptyDesignMatrixError",
+    "EmptyEstimationSampleError",
     "EmptyVcovError",
     "EndogVarsAsCovarsError",
     "FeatureDeprecationError",
