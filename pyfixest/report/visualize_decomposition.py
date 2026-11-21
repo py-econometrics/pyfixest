@@ -114,10 +114,10 @@ def create_decomposition_plot(
     """
     try:
         import matplotlib.pyplot as plt
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
-            "matplotlib is required for coefplot. Install with: pip install matplotlib"
-        )
+            "Decomposition plots require matplotlib. Install it with pip install matplotlib."
+        ) from exc
 
     # Create configuration
     config = PlotConfig(figsize=figsize or (12, 8))

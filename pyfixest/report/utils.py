@@ -254,14 +254,17 @@ def _post_processing_input_checks(
     elif isinstance(models, FixestMulti):
         models_list = models.to_list()
     elif isinstance(models, (list, ValuesView)):
-        if all(isinstance(m, (Feols, Fepois, Feiv)) for m in models):
-            models_list = models
-        else:
-            raise TypeError(
-                "All elements in the models list must be instances of Feols, Feiv, or Fepois."
-            )
+        for position, model in enumerate(models):
+            if not isinstance(model, (Feols, Fepois, Feiv)):
+                raise TypeError(
+                    f"models[{position}] must be a fitted model; got {type(model).__name__}."
+                )
+            models_list.append(model)
     else:
-        raise TypeError("Invalid type for models argument.")
+        raise TypeError(
+            f"models must be a fitted model, a FixestMulti, or a list of fitted models; "
+            f"got {type(models).__name__}. Pass the result of a call such as feols()."
+        )
 
     if check_duplicate_model_names or rename_models is not None:
         all_model_names = [model.model.model_name for model in models_list]

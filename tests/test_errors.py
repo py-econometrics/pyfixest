@@ -774,13 +774,13 @@ def test_errors_etable():
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.01, 0.05])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
     # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
@@ -1518,7 +1518,7 @@ def test_gelbach_errors():
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
     with pytest.raises(
-        ValueError, match=r"The variable 'x32' is not in the mediator names."
+        ValueError, match=r"The variable 'x32'.*is not in the mediator names"
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
@@ -1527,17 +1527,17 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
+    with pytest.raises(TypeError, match=r"combine_covariates\['g1'\] must be a list"):
         fit.decompose(param="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"not in list"):
+    with pytest.raises(ValueError, match=r"x99.*is not in the coefficient names"):
         fit.decompose(param="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
     with pytest.raises(
-        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates groups"
     ):
         fit.decompose(
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
@@ -1601,7 +1601,7 @@ def test_gelbach_errors():
     # error with fweights and only_coef=False
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
+        match=r"Decomposition inference is unavailable with frequency weights.*Use only_coef=True",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
@@ -2439,3 +2439,9 @@ def test_did2s_requires_formula_for_each_stage():
             treatment="treat",
             cluster="unit",
         )
+
+
+def test_etable_names_bad_significance_code():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
+        pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
