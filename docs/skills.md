@@ -15,7 +15,16 @@ package, so it matches the PyFixest version in your environment.
 The skill is the `skills/pyfixest` folder of the installed package. Make it
 available to your coding agent in whichever way that agent loads skills or
 project instructions, and point the agent at the [llms.txt](llms.txt) index of
-this site for the full documentation.
+this site for the full documentation. To print the folder's location, run this
+in the Python environment of your project:
+
+```python
+import pathlib, pyfixest
+print(pathlib.Path(pyfixest.__file__).parent / "skills" / "pyfixest")
+```
+
+The folder belongs to the installed version of PyFixest, so read it in place
+rather than from a stale copy after you upgrade.
 
 ## Skill content
 

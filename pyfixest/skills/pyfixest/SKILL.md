@@ -6,8 +6,8 @@ description: Write, debug and port regression code that uses pyfixest (`import p
 # pyfixest
 
 Fixed-effects regression for Python, on pandas or polars DataFrames. Every
-example below runs as written; later blocks reuse `pf`, `data` and `fit` from
-the quick start.
+example below runs as written, once the optional packages named in comments are
+installed; later blocks reuse `pf`, `data` and `fit` from the quick start.
 
 ## Quick start
 
@@ -32,7 +32,7 @@ sample size is `fit.sample_info.n_obs`.
 |---|---|---|
 | `pf.feols(fml, data, vcov=None, weights=None, ...)` | OLS, WLS, 2SLS | fixed effects, IV, varying slopes, weights |
 | `pf.fepois(fml, data, vcov=None, offset=None, ...)` | Poisson | fixed effects, varying slopes, weights, offset |
-| `pf.feglm(fml, data, family, vcov=None, ...)` | `family`: `"logit"`, `"probit"`, `"gaussian"`, `"poisson"` | fixed effects, varying slopes, weights, offset |
+| `pf.feglm(fml, data, family, vcov=None, ...)` | `family`: `"logit"`, `"probit"`, `"gaussian"`, `"poisson"` | fixed effects, varying slopes, weights; `offset` only for `"poisson"` |
 | `pf.quantreg(fml, data, quantile=0.5, vcov="nid", ...)` | quantile regression (experimental) | no fixed effects, no IV |
 
 Each returns one fitted model, or a `FixestMulti` when the formula, `split`,
@@ -71,10 +71,10 @@ variable and only `feols`.
 Multiple estimation operators expand one formula into several models:
 `sw(X2, Z1)` fits one model per term, `csw(X1, X2)` adds terms cumulatively,
 `sw0` and `csw0` first fit the model without them, and `mvsw(X1, X2)` fits
-every subset. They work on the left-hand side (`sw(Y, Y2) ~ X1`), among the
-covariates (`Y ~ csw(X1, X2)`) and in the fixed-effects part
-(`Y ~ X1 | csw0(f1, f2)`). `split="f1"` fits one model per value of the column
-`f1`; `fsplit="f1"` adds the full sample first.
+every subset. All five work among the covariates (`Y ~ csw(X1, X2)`) and in
+the fixed-effects part (`Y ~ X1 | csw0(f1, f2)`); on the left-hand side use
+only `sw` (`sw(Y, Y2) ~ X1`). `split="f1"` fits one model per value of the
+column `f1`; `fsplit="f1"` adds the full sample first.
 
 ## Inference
 
@@ -98,6 +98,8 @@ fit.vcov({"CRV1": "f1"})
 ```
 
 `pf.ssc()` defaults to `k_adj=True, k_fixef="nonnested", G_adj=True, G_df="min"`.
+`CRV3` is not available for IV, varying-slope or logit, probit and gaussian
+fits.
 A cluster variable must not be missing in the estimation sample
 (`NanInClusterVarError`); drop those rows first. To cluster on an interaction,
 add it as a column. `fit.vcov()` needs the data, so it fails on fits made with
@@ -114,7 +116,7 @@ fit.predict(newdata=data.head())  # ndarray; unseen fixed-effect levels give NaN
 fe = fit.fixef()  # DataFrame with columns variable, code, level, coefficient
 fe[fe["variable"] == "f1"]
 fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")  # WaldTest
-fit.wildboottest(reps=999, param="X1", cluster="f1", seed=1)  # Series with bootstrap p-value
+fit.wildboottest(reps=999, param="X1", cluster="f1", seed=1)  # needs pip install wildboottest; returns a Series
 fit.ritest(resampvar="X1", reps=199, rng=np.random.default_rng(1))  # randomization inference
 pf.feols("Y ~ X1 + X2", data).decompose(decomp_var="X1", x1_vars=["X2"], reps=50, seed=1)
 
@@ -128,17 +130,23 @@ iv.first_stage.diagnostics.f_stat
 pf.etable([iv.first_stage.model, iv], type="md")
 ```
 
+`fit.resid()` and `fit.predict()` cover only the estimation sample, so
+`data["r"] = fit.resid()` fails when rows were dropped;
+`fit.sample_info.dropped_row_index` holds the dropped rows.
+
 Not every model supports every method. `fit.capabilities` lists what a fit
-supports, and an unsupported call raises `NotImplementedError` naming the
-missing capability. Common gaps: IV fits have no `predict()` or `fixef()`;
-varying-slope fits have no `predict()`; `wildboottest()` and the Gelbach
+supports, and an unsupported call raises `NotImplementedError`. Common gaps: IV
+and varying-slope fits have no `predict()` or `fixef()`; `wildboottest()` and the Gelbach
 `decompose()` need a `feols` fit without IV or varying slopes, and
 `wildboottest()` also rejects weights; `ccv()` rejects fixed effects.
 
 Also available: `pf.coefplot([fit])`, `pf.iplot(fit)` for `i()` terms,
 `pf.bonferroni`, `pf.rwolf`, `pf.wyoung` for multiple testing, and
 `pf.event_study(..., estimator="twfe")` (or `"did2s"`, `"saturated"`),
-`pf.did2s`, `pf.lpdid` for difference-in-differences.
+`pf.did2s`, `pf.lpdid` for difference-in-differences. Their signatures are
+`pf.event_study(data, yname, idname, tname, gname, estimator="twfe")` and
+`pf.did2s(data, yname, first_stage="~ 0 | unit + year", second_stage="~ i(rel_year, ref=-1.0)", treatment="treat", cluster="unit")`,
+where the stage formulas start with `~` and have no left-hand side.
 
 ## Fitted-model components
 
@@ -213,6 +221,12 @@ strings, and `"docx"` returns a python-docx Document. `file_name=` saves
 - No formula macros (`..ctrl`, `xpd()`): build the formula string in Python.
 - `pf.etable(fit1, fit2)` fails because the second argument is `type`: pass a
   list, `pf.etable([fit1, fit2])`.
+- From pyfixest 0.60 or earlier: `fixef_tol=`, `fixef_maxiter=` and
+  `demeaner_backend=` are gone, use `demeaner=`; `pf.ssc(adj=, fixef_k=,
+  cluster_adj=, cluster_df=)` became `k_adj, k_fixef, G_adj, G_df`;
+  `confint(joint=True)` became `inference_type="simult"`; `pf.dtable` is
+  removed; `wald_test()` returns a `WaldTest` with `.stat` and `.pvalue`, not
+  a Series.
 - `summary(fit, vcov=...)` becomes `fit.vcov(...).summary()`.
 - `fit.fixef()` returns a DataFrame, not a dict: `fe[fe["variable"] == "f1"]`.
 - `fit.first_stage` is a component, not a method: `fit.first_stage.model`.
