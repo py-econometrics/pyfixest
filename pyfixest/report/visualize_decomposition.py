@@ -114,10 +114,10 @@ def create_decomposition_plot(
     """
     try:
         import matplotlib.pyplot as plt
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
-            "matplotlib is required for coefplot. Install with: pip install matplotlib"
-        )
+            "Decomposition plots require matplotlib. Install it with pip install matplotlib."
+        ) from exc
 
     # Create configuration
     config = PlotConfig(figsize=figsize or (12, 8))
@@ -151,15 +151,24 @@ def _prepare_plot_data(
     """Prepare all data needed for plotting."""
     from pyfixest.utils.dev_utils import _select_order_coefs
 
+    if "panels" not in decomposition_data.columns:
+        raise ValueError(
+            "A decomposition plot needs a tidy table with a panels column. "
+            "Pass the output of decomposition.tidy(panels='Levels (units)')."
+        )
     levels = decomposition_data[
         decomposition_data["panels"].str.lower().eq("levels (units)".lower())
     ].copy()
 
     if levels.empty:
-        raise ValueError("No rows found with panels == 'Levels (units)'.")
+        raise ValueError(
+            "No rows found with panels == 'Levels (units)'. "
+            "Regenerate the plot input with decomposition.tidy(panels='Levels (units)')."
+        )
     if "direct_effect" not in levels.index or "full_effect" not in levels.index:
         raise ValueError(
-            "Expected 'direct_effect' and 'full_effect' in 'Levels (units)'."
+            "Expected 'direct_effect' and 'full_effect' in 'Levels (units)'. "
+            "Pass the full Levels (units) result from decomposition.tidy()."
         )
 
     # Extract key values
@@ -674,8 +683,11 @@ def _finalize_plot(
     """Finalize the plot with titles, labels, and styling."""
     try:
         import matplotlib.pyplot as plt
-    except ImportError:
-        raise ImportError("matplotlib is required for coefplot")
+    except ImportError as exc:
+        raise ImportError(
+            "Formatting the decomposition plot requires matplotlib. "
+            "Install it with pip install matplotlib."
+        ) from exc
 
     bar_data = plot_data["bar_data"]
 
