@@ -35,6 +35,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   number of rows each filtering stage removed. Before, it failed with "All
   variables are collinear"
   ([#2085](https://github.com/py-econometrics/pyfixest/pull/2085)).
+- Cluster-robust and HAC inference raise a `ValueError` when the
+  small-sample correction meets fewer than two clusters or time periods,
+  instead of `ZeroDivisionError`. Errors for empty, repeated, missing or
+  absent clustering columns name the columns and the fix
+  ([#2086](https://github.com/py-econometrics/pyfixest/pull/2086)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

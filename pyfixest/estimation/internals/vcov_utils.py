@@ -92,7 +92,7 @@ def prepare_cluster_state(
 ) -> ClusterPrep:
     """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
-    _check_cluster_df(cluster_df=cluster_df, data=data)
+    _check_cluster_df(cluster_df=cluster_df)
 
     cluster_df, vcov_signs = _prepare_multiway_clustering(cluster_df=cluster_df)
 
@@ -106,7 +106,12 @@ def prepare_cluster_state(
     n_fe_fully_nested = 0
     if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
-            raise ValueError("`fe` must not be None when `fixef` is specified.")
+            raise ValueError(
+                "ssc(k_fixef='nonnested') needs the fixed-effect values for "
+                f"{list(fixef)!r} to find which fixed effects are nested in the "
+                "clusters, but this fit did not keep them. "
+                "Use ssc(k_fixef='full') or refit the model."
+            )
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef, dtype=str),
             cluster_colnames=np.array(cluster_df.columns, dtype=str),
@@ -178,32 +183,26 @@ def get_ssc_cluster(
 
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
-    if not data.empty:
-        data_pandas = _narwhals_to_pandas(data)
-        cluster_df = data_pandas[clustervar].copy()
-    else:
-        raise AttributeError(
-            """The input data set needs to be stored in the model object if
-            you call `vcov()` post estimation with a novel cluster variable.
-            Please set the function argument `store_data=True` when calling
-            the regression.
-            """
-        )
-
-    return cluster_df
-
-
-def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
-    if np.any(cluster_df.isna().any()):
-        raise NanInClusterVarError(
-            "CRV inference not supported with missing values in the cluster variable."
-            "Please drop missing values before running the regression."
-        )
-
-    N = data.shape[0]
-    if cluster_df.shape[0] != N:
+    data_pandas = _narwhals_to_pandas(data)
+    missing = [column for column in clustervar if column not in data_pandas.columns]
+    if missing:
         raise ValueError(
-            "The cluster variable must have the same length as the data set."
+            f"Clustering columns {missing!r} are absent from the estimation data. "
+            "Pass existing columns to vcov() or refit with those columns included."
+        )
+    return data_pandas[clustervar].copy()
+
+
+def _check_cluster_df(cluster_df: pd.DataFrame):
+    missing = cluster_df.isna().sum()
+    missing = missing[missing > 0]
+    if not missing.empty:
+        columns = ", ".join(
+            f"{column!r} ({count})" for column, count in missing.items()
+        )
+        raise NanInClusterVarError(
+            f"Cluster-robust inference found missing values on the estimation sample "
+            f"in {columns}. Check the cluster identifiers and refit with valid values."
         )
 
 
