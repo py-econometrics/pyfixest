@@ -47,8 +47,15 @@ def _find_stack_level() -> int:
     return outermost_level + 1
 
 
-def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:
-    return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
+def _narwhals_to_pandas(data: IntoDataFrame, *, argument: str = "data") -> pd.DataFrame:
+    try:
+        frame = nw.from_native(data, eager_or_interchange_only=True)
+    except TypeError as exc:
+        raise TypeError(
+            f"{argument} must be a supported DataFrame, such as a pandas or Polars "
+            f"DataFrame; got {type(data).__name__}. Convert {argument} before passing it."
+        ) from exc
+    return frame.to_pandas()
 
 
 def _create_rng(seed: int | None = None) -> np.random.Generator:

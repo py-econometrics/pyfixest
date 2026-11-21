@@ -188,7 +188,9 @@ class Quantreg(Feols):
 
         if self.model_matrix.fixed_effects is not None:
             raise NotImplementedError(
-                "Fixed effects are not yet supported for Quantile Regression."
+                "Fixed effects are not yet supported for Quantile Regression. "
+                f"The model formula {self.model.model_name!r} requests fixed effects. "
+                "See https://pyfixest.org/tutorials/quantile-regression.html"
             )
 
     def get_fit(self) -> None:

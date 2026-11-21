@@ -1691,7 +1691,7 @@ def test_prediction_inference_unsupported(model, storage):
                 fit.predict(newdata=newdata, **inference)
         if not storage.get("lean") or newdata is not None:
             assert isinstance(fit.predict(newdata=newdata), np.ndarray)
-    with pytest.raises(ValueError, match=r"Invalid argument\. Expecting one of"):
+    with pytest.raises(ValueError, match=r"interval must be one of"):
         fit.predict(interval="invalid")
 
 
@@ -1757,13 +1757,13 @@ def test_errors_quantreg(data):
             pf.quantreg("Y ~ X1", data=data, vcov={"CRV1": cluster})
 
     # error for quantile outside [0, 1]
-    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+    with pytest.raises(ValueError, match=r"quantile(?:\[0\])? must be between 0 and 1"):
         pf.quantreg("Y ~ X1", data=data, quantile=1.1)
-    with pytest.raises(ValueError, match="quantile must be between 0 and 1"):
+    with pytest.raises(ValueError, match=r"quantile(?:\[0\])? must be between 0 and 1"):
         pf.quantreg("Y ~ X1", data=data, quantile=-0.1)
 
     # error if list provided and quantile is 0, 1, or outside
-    with pytest.raises(ValueError, match="quantile must be a list of floats"):
+    with pytest.raises(ValueError, match=r"quantile\[0\] must be a float"):
         pf.quantreg("Y ~ X1", data=data, quantile=["0.1", "0.2"])
 
     # error when fixed effects in formula
@@ -1860,6 +1860,11 @@ def test_vcov_names_missing_and_unretained_clusters():
     data.loc[0, "f1"] = np.nan
     with pytest.raises(NanInClusterVarError, match=r"missing values.*'f1' \(1\)"):
         pf.feols("Y ~ X1", data, vcov={"CRV1": "f1"})
+
+
+def test_missing_cluster_shows_dictionary_syntax():
+    with pytest.raises(ValueError, match=r"vcov=\{'CRV1': 'cluster'\}"):
+        pf.feols("Y ~ X1", data=pf.get_data(N=20), vcov={"CRV1": "absent"})
 
 
 def test_panel_hac_rejects_one_time_period():
@@ -2188,19 +2193,19 @@ def test_savi_input_validation():
             "tidy",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "summary",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "confint",
             {"inference_type": "other"},
             ValueError,
-            r"Invalid argument\. Expecting one of",
+            r"inference_type must be one of",
         ),
         (
             "tidy",
@@ -2355,3 +2360,35 @@ def test_estimation_rejects_malformed_ssc():
         pf.feols("Y ~ X1", data, ssc="k_adj=False")
     legacy = pf.feols("Y ~ X1", data, ssc={"k_adj": False})
     assert legacy.options.ssc == pf.ssc(k_adj=False)
+
+
+@pytest.mark.parametrize(
+    ("key", "value", "message"),
+    [
+        ("copy_data", "false", r"copy_data must be True or False; got 'false'"),
+        ("demeaner", "rust", r"demeaner must be a MapDemeaner or LsmrDemeaner"),
+        ("data", {}, r"data must be a supported DataFrame"),
+    ],
+)
+def test_estimation_type_errors_name_the_option(key, value, message):
+    kwargs = {"data": pf.get_data(N=20), key: value}
+    with pytest.raises(TypeError, match=message):
+        pf.feols("Y ~ X1", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("options", "error", "message"),
+    [
+        ({"quantile": []}, ValueError, r"quantile must include at least one value"),
+        ({"quantile": [0.25, 2.0]}, ValueError, r"quantile\[1\].*got 2.0"),
+        ({"maxiter": "20"}, TypeError, r"maxiter must be a positive integer"),
+    ],
+)
+def test_quantreg_explains_the_rejected_option(options, error, message):
+    with pytest.raises(error, match=message):
+        pf.quantreg("Y ~ X1", data=pf.get_data(N=20), **options)
+
+
+def test_feglm_reports_the_public_iteration_option():
+    with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
+        pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)

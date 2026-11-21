@@ -418,12 +418,16 @@ class Feglm(Feols):
 
 def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
     if not isinstance(drop_singletons, bool):
-        raise TypeError("drop_singletons must be logical.")
+        raise TypeError(
+            f"drop_singletons must be True or False; got {drop_singletons!r}."
+        )
     if not isinstance(tol, (int, float)):
-        raise TypeError("tol must be numeric.")
-    if tol <= 0 or tol >= 1:
-        raise AssertionError("tol must be between 0 and 1.")
+        raise TypeError(f"iwls_tol must be numeric; got {tol!r}.")
+    if not 0 < tol < 1:
+        raise ValueError(
+            f"iwls_tol must be greater than 0 and less than 1; got {tol!r}."
+        )
     if not isinstance(maxiter, int):
-        raise TypeError("maxiter must be integer.")
+        raise TypeError(f"iwls_maxiter must be an integer; got {maxiter!r}.")
     if maxiter <= 0:
-        raise AssertionError("maxiter must be greater than 0.")
+        raise ValueError(f"iwls_maxiter must be greater than 0; got {maxiter!r}.")

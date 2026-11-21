@@ -1094,7 +1094,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         print(f"Python p-value: {wald.pvalue}")
         ```
         """
-        _validate_literal_argument(distribution, WaldDistributionOptions)
+        _validate_literal_argument(
+            distribution, WaldDistributionOptions, name="distribution"
+        )
 
         # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
@@ -2063,9 +2065,11 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                     "Prediction errors are currently not supported for models with weights."
                 )
 
-        _validate_literal_argument(type, PredictionType)
+        _validate_literal_argument(type, PredictionType, name="type")
         if interval is not None:
-            _validate_literal_argument(interval, PredictionErrorOptions)
+            _validate_literal_argument(
+                interval, PredictionErrorOptions, name="interval"
+            )
 
         if newdata is None:
             # note: no need to worry about fixed effects, as not supported with
@@ -2074,7 +2078,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             y_hat = getattr(self.fitted_values, type)
             n_observations = self.sample_info.n_rows
         else:
-            newdata = _narwhals_to_pandas(newdata).reset_index(drop=True)
+            newdata = _narwhals_to_pandas(newdata, argument="newdata").reset_index(
+                drop=True
+            )
             n_observations = newdata.shape[0]
             context = FORMULAIC_TRANSFORMS | {**self.options.context}
             # Use na_action="drop" on each sub-spec separately because dependent variable
