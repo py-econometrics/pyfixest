@@ -24,6 +24,9 @@ Resolve the decisions that affect this change:
   and whether results must stay invariant. Read "Release contract" for the
   applicable baseline check; do not silently turn a refactor into a behavior fix.
 - Necessary exports, user documentation, and compatibility decisions.
+- Names for new arguments, attributes, error messages, and documentation
+  terms, taken from the [glossary](../../../GLOSSARY.md); raise a concept it
+  lacks instead of inventing a term.
 
 For a small fix, these decisions can be a brief explanation in the ongoing
 work. Write a separate plan only when it helps coordinate substantial work or
