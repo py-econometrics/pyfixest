@@ -1098,14 +1098,18 @@ def test_plot_error():
 def test_ritest_error(data):
     fit = pf.feols("Y ~ X1", data=data)
 
-    with pytest.raises(ValueError, match=r"X2 not found in the model's coefficients\."):
+    with pytest.raises(
+        ValueError, match=r"resampvar='X2' is absent from the fitted coefficients"
+    ):
         fit.ritest(resampvar="X2", reps=1000)
 
-    with pytest.raises(ValueError, match="CLUST is not found in the data"):
+    with pytest.raises(
+        ValueError, match="cluster='CLUST' is absent from the estimation data"
+    ):
         fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
 
     with pytest.raises(
-        ValueError, match=r"type must be 'randomization-t' or 'randomization-c\."
+        ValueError, match=r"type must be 'randomization-t' or 'randomization-c'"
     ):
         fit.ritest(resampvar="X1", reps=1000, type="a")
 
@@ -2394,3 +2398,21 @@ def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
     data = pf.get_data(N=30).dropna()
     with pytest.raises(ValueError, match=r"vcov='nid'.*Hall-Sheather bandwidth"):
         pf.quantreg("Y ~ X1", data=data, quantile=0.99)
+
+
+def test_wald_rejects_nonfinite_restrictions():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"R must contain finite restriction weights"):
+        fit.wald_test(R=np.array([[1.0, np.nan]]))
+
+
+def test_ritest_explains_invalid_null_hypotheses():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(ValueError, match=r"resampvar='X1=nope'.*'x=0'"):
+        fit.ritest("X1=nope", reps=4)
+
+
+def test_ritest_names_non_string_resampvar():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(TypeError, match=r"resampvar; got int\. Use a string"):
+        fit.ritest(resampvar=1, reps=4)

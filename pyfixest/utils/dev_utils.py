@@ -172,5 +172,8 @@ def _select_coefnames_and_indices(
 
     indices = [coefnames_all.index(name) for name in selected]
     if not indices:
-        raise ValueError("No coefficients match the keep/drop patterns.")
+        raise ValueError(
+            f"No coefficients match the keep/drop patterns (keep={keep!r}, drop={drop!r}). "
+            "Compare the patterns with fit.coef().index."
+        )
     return selected, indices

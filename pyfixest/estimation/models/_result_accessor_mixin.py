@@ -313,7 +313,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             )
         if inference_type == "savi":
             raise NotImplementedError(
-                "inference_type='savi' is not available in tidy() yet."
+                "inference_type='savi' is not available in tidy(). "
+                "Use confint(inference_type='savi') for confidence sequences."
             )
 
         ub, lb = 1 - alpha / 2, alpha / 2
@@ -324,7 +325,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int = table.conf_int
         except EmptyVcovError:
             warnings.warn(
-                "Empty variance-covariance matrix detected",
+                "Empty variance-covariance matrix detected. This fit estimated no coefficients, "
+                "so tidy() has no coefficient inference to report.",
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )
@@ -361,7 +363,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             if inference_type not in ("regular", "simult"):
                 raise ValueError(
                     "joint=True cannot be combined with "
-                    f"inference_type={inference_type!r}."
+                    f"inference_type={inference_type!r}. Remove joint or use inference_type='simult'."
                 )
             inference_type = "simult"
 
