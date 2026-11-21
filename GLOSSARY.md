@@ -32,8 +32,9 @@ repeated weighted least-squares fits.
 _Avoid_: IRLS, iterated weighted least squares
 
 **Model**:
-A formula and an estimator applied to one estimation sample: the thing being
-estimated, whether or not it has been fitted. Its inference is not part of it.
+A model formula and an estimator applied to one estimation sample: the thing
+being estimated, whether or not it has been fitted. Its inference is not part
+of it.
 _Avoid_: specification, regression (as synonyms)
 
 **Fitted model**:
@@ -44,8 +45,9 @@ _Avoid_: model object, fitted result, estimation result, Fixest object, model
 
 **Multiple estimation**:
 One call to an estimation function that fits several models, through
-stepwise formula operators, a sample split, or several quantiles. It is
-shorthand for the single fits: each model equals the one fitted on its own.
+stepwise operators, several dependent variables, a sample split, or several
+quantiles. It is shorthand for the single fits: each model equals the one
+fitted on its own.
 _Avoid_: stepwise regression, multi-model fit
 
 **Estimation options**:
@@ -61,6 +63,29 @@ _Avoid_: storage, caching, lean mode (for the concept)
 
 ### Formula
 
+**Formula**:
+The model description passed to an estimation function. With stepwise
+operators or several dependent variables, it describes several models.
+_Avoid_: formula string, fml (in prose)
+
+**Model formula**:
+The formula of one model after stepwise operators and dependent variables are
+expanded, written in a canonical spelling that can differ from the user's,
+for example with an explicit `0 +`.
+_Avoid_: expanded formula, rendered formula, parsed formula, model name
+
+**Stepwise operator**:
+A formula function that expands into several models: `sw()` uses its
+arguments one at a time, `csw()` adds them cumulatively, `mvsw()` uses every
+combination of them, and `sw0()`, `csw0()`, and `mvsw()` also give a model
+with none of them.
+_Avoid_: multiple estimation syntax
+
+**Term**:
+One summand of a formula, such as `X1`, `X1:X2`, `C(f)`, or `f1[x]`. `a*b`
+expands to the terms `a + b + a:b`.
+_Avoid_: factor
+
 **Dependent variable**:
 The left-hand-side variable of a model.
 _Avoid_: depvar (in prose), response (for the variable), Y, target; outcome,
@@ -70,6 +95,11 @@ except in causal and difference-in-differences prose
 A right-hand-side variable with an estimated coefficient. In an IV model it is
 an exogenous regressor or an endogenous regressor.
 _Avoid_: covariate, independent variable, explanatory variable, control, X
+
+**Intercept**:
+The constant regressor a formula includes unless it writes `0` or `-1`, or a
+fixed effect with level intercepts absorbs it.
+_Avoid_: constant, structural intercept
 
 **Fixed effect**:
 A term after `|` in a formula whose levels are absorbed instead of being
@@ -88,26 +118,59 @@ _Avoid_: random slope, interacted slope
 
 **Categorical regressor**:
 A categorical variable entered as regressors, one per level except a reference
-level, written `C(f)` or `i(f)`. `i(f, x)` interacts those regressors with a
-second variable.
+level where one is needed, written `C(f)` or `i(f)`. `i(f, x)` interacts those
+regressors with a second variable.
 _Avoid_: factor, dummies, fixed effects, interacted fixed effects
+
+**Reference level**:
+The level of a categorical regressor that gets no regressor of its own,
+because the intercept or another term already spans it; the other levels'
+coefficients are contrasts with it. Chosen with `ref=` in `i()`.
+_Avoid_: base level, reference category, omitted category
 
 **Main equation**:
 The equation of the dependent variable on the regressors that every model
 has.
 _Avoid_: second stage (outside IV)
 
+### Model matrix
+
+**Model matrix**:
+The data a model is estimated from, by role: the dependent variable, the
+design matrix, the fixed-effect levels and varying-slope variables, the
+endogenous regressors and instruments, the weights, and the offset.
+_Avoid_: model frame, design matrix (for the whole)
+
 **Design matrix**:
 The regressors of the main equation, one column per estimated coefficient. In
 an IV model it holds the endogenous regressors, not their first-stage fitted
 values.
-_Avoid_: X (in prose), model matrix, regressor matrix
+_Avoid_: X (in prose), regressor matrix
+
+**Offset**:
+A variable added to the linear predictor with its coefficient fixed at one,
+such as log exposure in a Poisson model.
+_Avoid_: exposure (for the offset)
+
+**Collinear regressor**:
+A regressor that is, within a tolerance, a linear combination of other
+regressors in the within data. It is dropped from the design matrix and gets
+no coefficient.
+_Avoid_: multicollinear variable
 
 ### Instrumental variables
 
 **Instrument block**:
 The `[endogenous ~ instruments]` part of a formula.
 _Avoid_: IV block, multistage block
+
+**Endogenous regressor**:
+A regressor on the left of the instrument block; the first stage predicts it
+from the instrument matrix.
+_Avoid_: endogenous variable
+
+**Exogenous regressor**:
+A regressor of the main equation outside the instrument block.
 
 **Instrument**:
 A variable in the instrument block that is not a regressor of the main
@@ -334,6 +397,11 @@ for linear models.
 **Fitted values**:
 A fitted model's in-sample predictions, on the link or the response scale.
 _Avoid_: yhat, predictions (for in-sample values)
+
+**Unseen level**:
+A level in prediction data that the estimation sample does not contain. Its
+row's prediction is missing.
+_Avoid_: new level
 
 **Residual**:
 The dependent variable minus the fitted mean, in the dependent variable's
