@@ -44,6 +44,24 @@ owns scope and publication. These documents are not part of the rendered site.
 `CLAUDE.md` imports this file; `.claude/skills/` links to the shared skills.
 `docs/skills.md` is guidance for package users, not contributors.
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `py-econometrics/pyfixest`, used through `gh`. See
+`docs/developer/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage roles, each label named after its role;
+`factory-ready` stays a separate manual gate. See
+`docs/developer/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: the root `GLOSSARY.md`, with decisions recorded under
+`docs/developer/`. See `docs/developer/agents/domain.md`.
+
 ## Boundaries
 
 - Preserve unrelated user changes. Change `pixi.lock` or `Cargo.lock` only for
