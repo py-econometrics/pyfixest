@@ -93,7 +93,7 @@ the Python baseline rather than silently selecting no tests.
 | HAC | Targeted HAC/meat tests | Single-threaded `test-r-hac` |
 | Rust | Kernel/reference integration tests | Python baseline, platform CI, relevant benchmarks |
 | Optional backend | Dependency-present and dependency-absent paths | Backend/platform CI |
-| Demeaning, IRLS, solvers, vcov, model-matrix construction, Rust kernels, or other performance-sensitive loops | Correctness tests and before/after benchmark | Relevant benchmark environment |
+| Demeaning, IWLS, solvers, vcov, model-matrix construction, Rust kernels, or other performance-sensitive loops | Correctness tests and before/after benchmark | Relevant benchmark environment |
 | Dependency or workflow | Targeted environment/configuration validation | Affected CI workflow |
 
 `docs-build` regenerates API-reference inputs; it is not a Markdown validator.

@@ -55,7 +55,7 @@ configuration and model specs
   -> model-matrix preparation and response validation
   -> estimator-specific fitting
        OLS / IV: within arrays -> collinearity handling -> solve
-       GLM: IRLS, separating observation and working weights
+       GLM: IWLS, separating observation and working weights
        quantreg: Frisch-Newton solve (no absorbed fixed effects)
   -> fit statistics -> covariance -> inference -> finalization
   -> retention cleanup -> fitted result / FixestMulti
@@ -91,25 +91,20 @@ operation needing deliberately removed state. The public `vcov()` operation
 is explicitly in-place; other operations must not leave a fitted result with
 only part of its dependent state updated.
 
-## Estimation-state vocabulary
+## Implemented array and weight domains
 
-Names should expose mathematical meaning, numerical scale, and ordering.
-
-| Domain | Meaning |
-|---|---|
-| Formula data | Filtered, formula-materialized values and metadata; not necessarily raw input columns |
-| Observation weights | User weights with their `aweights` or `fweights` interpretation |
-| Within data | After the possibly weighted FE projection, in original units, not premultiplied by square-root weights |
-| Solver data | Local arrays transformed for a numerical solve, such as `design_sqrt_weighted` |
-| Working state | GLM iteration values: response, design, means, predictors, and working weights |
-| Response residual | Residual in response units, distinct from a working or weighted solver residual |
+Domain terms such as observation weights, within data, working weights, and
+residual are defined in the [glossary](glossary.md). Names should expose
+mathematical meaning, numerical scale, and ordering. Code adds two array
+scales the glossary does not cover: formula data (filtered,
+formula-materialized values and metadata, not necessarily raw input columns)
+and solver data (local arrays transformed for a numerical solve, such as
+`design_sqrt_weighted`).
 
 Persisted fields must not change type or domain during fitting. Solver scratch
 must not replace canonical within data. Use econometric names such as
 `scores`, `meat`, `bread`, `u_hat`, and `clustid` where they match the quantity;
 avoid aliases that make readers translate between names for the same thing.
-
-## Implemented array and weight domains
 
 The contracts below are defined in `internals/model_state.py` and the named
 modules. Frozen dataclasses prevent field rebinding, not mutation of contained
@@ -118,22 +113,22 @@ it; copy at actual ownership boundaries.
 
 | Component | Contract |
 |---|---|
-| `ModelMatrix` | Formula-scale pandas tables with separate response, design, FE, IV, weight, and offset roles |
+| `ModelMatrix` | Formula-scale pandas tables with separate dependent-variable, design, fixed-effect, IV, weight, and offset roles |
 | `ObservationWeights` | User-scale weights and their semantics; `values=None` is the unweighted path |
 | `WithinLinearData` / `WithinIvData` | Unpremultiplied within arrays; IV adds instruments and endogenous arrays |
-| `GlmWorkingState` | Final IRLS values, with response and working residuals kept distinct |
+| `GlmWorkingState` | Final IWLS values, with residuals and working residuals kept distinct |
 | `SandwichComponents` | Weighted scores, Hessian, and bread; 2SLS scores use the first-stage projection |
 | `DemeanedData` | Shared array-native cache entries and ordered column keys |
 
-Analytic weights retain the row count as effective sample size; frequency
-weights use the sum of user weights. `pweights` are unsupported. Singleton
-detection counts physical rows even under frequency weights. Projection can
-use observation or IRLS weights while returning within-scale arrays. Fit
-primitives use square-root-weighted arrays locally and persist response-unit
-residuals and weighted scores or cross-products. Observation weights stay
-unchanged after preparation; IRLS working weights have separate state. Never
-apply a weight twice
-because its first application is hidden in another component.
+Under analytic weights the number of observations is the row count; under
+frequency weights it is the sum of the weights. `pweights` are unsupported.
+Singleton detection counts physical rows even under frequency weights.
+Projection can use observation or working weights while returning within-scale
+arrays. Fit primitives use square-root-weighted arrays locally and persist
+residuals in dependent-variable units and weighted scores or cross-products.
+Observation weights stay unchanged after preparation; working weights have
+separate state. Never apply a weight twice because its first application is
+hidden in another component.
 
 ## Repository map and extension seams
 
