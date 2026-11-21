@@ -165,8 +165,10 @@ pf.feols("Y ~ X1 | f1", data, split="f3")  # one model per value of f3
 pf.feols("Y ~ X1 | f1", data, fsplit="f3")  # full sample first, then each value
 ```
 
-- Operators work on the left-hand side, in covariates, in fixed effects and
-  inside the IV block. Several operators combine as a Cartesian product.
+- Operators work in covariates, in fixed effects and inside the IV block. On
+  the left-hand side only `sw` works (`sw(Y, Y2) ~ X1`); `csw`, `csw0` and
+  `mvsw` there raise `FormulaSyntaxError`. Several operators combine as a
+  Cartesian product.
 - An expansion that mixes IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError`; fit them
   separately.

@@ -147,7 +147,7 @@ ols.pvalue_savi()
 ## Wild cluster bootstrap
 
 ```python
-fit.wildboottest(reps=999, param="X1", cluster="f1", seed=1)
+fit.wildboottest(reps=999, param="X1", cluster="f1", seed=1)  # needs pip install wildboottest
 ```
 
 Returns a Series with `t value`, `Pr(>|t|)`, `bootstrap_type` and
