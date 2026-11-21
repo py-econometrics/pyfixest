@@ -30,9 +30,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
-urls.Homepage = "https://pyfixest.com"
+urls.Homepage = "https://pyfixest.org"
 urls.Repository = "https://github.com/py-econometrics/pyfixest"
-urls.Documentation = "https://pyfixest.com"
+urls.Documentation = "https://pyfixest.org"
 urls.Tracker = "https://github.com/py-econometrics/pyfixest/issues"
 
 dependencies = [

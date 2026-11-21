@@ -688,6 +688,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             exception_type=VcovTypeNotSupportedError,
         )
         spec = VcovSpec.from_user_input(vcov, vcov_kwargs)
+        if self._X_is_empty:
+            # Fixed-effects-only model: no coefficients, so there is no
+            # covariance to compute; estimation skips this step as well.
+            return self
         self._check_vcov_support(spec)
         return self._vcov_from_spec(spec)
 
@@ -1037,11 +1041,16 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         # The F distribution is only used for the joint test that all
         # coefficients are zero (R identity, q zero).
-        if distribution == "F" and (
-            not np.array_equal(R, np.eye(self._k)) or np.any(q)
-        ):
+        R_is_identity = np.array_equal(R, np.eye(self._k))
+        q_is_zero = not np.any(q)
+        if distribution == "F" and not (R_is_identity and q_is_zero):
+            reasons = []
+            if not R_is_identity:
+                reasons.append("R is not an identity matrix")
+            if not q_is_zero:
+                reasons.append("q is not a zero vector")
             warnings.warn(
-                "Distribution changed to chi2, as R is not an identity matrix and q is not a zero vector.",
+                f"Distribution changed to chi2, as {' and '.join(reasons)}.",
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )

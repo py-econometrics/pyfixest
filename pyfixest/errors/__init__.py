@@ -67,8 +67,19 @@ class FeatureDeprecationError(Exception):  # noqa: D101
     pass
 
 
-class EmptyVcovError(Exception):  # noqa: D101
-    pass
+class EmptyVcovError(Exception):
+    """The fit has no variance-covariance matrix because it estimated no coefficients."""
+
+    def __init__(
+        self,
+        message: str = (
+            "This model has no variance-covariance matrix because it estimated "
+            "no coefficients: its formula only demeans the outcome by fixed "
+            "effects, such as 'Y ~ 1 | f1'. Add regressors to the formula to get "
+            "standard errors and inference."
+        ),
+    ) -> None:
+        super().__init__(message)
 
 
 class MissingModelDataError(RuntimeError):
