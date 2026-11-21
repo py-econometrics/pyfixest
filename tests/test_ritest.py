@@ -183,9 +183,7 @@ def test_randomization_t_vs_c(fml, resampvar, cluster):
 def ritest_results():
     # Load the CSV file into a pandas DataFrame
     file_path = "tests/data/ritest_results.csv"
-    results_df = pd.read_csv(file_path)
-    results_df.set_index(["formula", "resampvar", "cluster"], inplace=True)
-    return results_df
+    return pd.read_csv(file_path).set_index(["formula", "resampvar", "cluster"])
 
 
 @pytest.fixture
