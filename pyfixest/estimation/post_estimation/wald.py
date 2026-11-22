@@ -25,8 +25,7 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
         return np.full(n_restrictions, float(q_array))
     if q_array.ndim != 1:
         raise ValueError(
-            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}. "
-            "Pass one null value per row of R."
+            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}."
         )
     if q_array.shape[0] != n_restrictions:
         raise ValueError(
