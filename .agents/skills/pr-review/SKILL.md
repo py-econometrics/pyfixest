@@ -34,6 +34,12 @@ follows the [coding standards](../../../CODING_STANDARDS.md). For guidance or
 documentation, check accuracy, links, consistency, and scope.
 Numerical tracing applies only to code that can affect results or state.
 
+Take a behavior inventory. Classify each hunk that changes more than text as
+required for the stated outcome or as a separate behavior change: an input
+that newly succeeds, newly fails, or yields different results. Each separate
+behavior change has its own layer, or a test plus a mention in the PR body
+and changelog. Flag two mechanisms that achieve the same goal.
+
 Prioritize silently wrong results. Trace the changed values through their
 callers: construction, fitting, inference, post-estimation, and cleanup as
 applicable. Check mathematical meaning, row/column alignment, weight factors
