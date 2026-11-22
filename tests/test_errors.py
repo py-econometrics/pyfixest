@@ -1384,20 +1384,20 @@ def test_errors_panelview():
     )
 
     # 1. Test for missing 'unit' column
-    with pytest.raises(ValueError, match=r"Column 'unit' not found in data\."):
+    with pytest.raises(ValueError, match=r"unit='unit' is absent from data"):
         pf.panelview(sample_df.drop(columns=["unit"]), "unit", "year", "treat")
 
     # 2. Test for missing 'year' column (time)
-    with pytest.raises(ValueError, match=r"Column 'year' not found in data\."):
+    with pytest.raises(ValueError, match=r"time='year' is absent from data"):
         pf.panelview(sample_df.drop(columns=["year"]), "unit", "year", "treat")
 
     # 3. Test for missing 'treat' column
-    with pytest.raises(ValueError, match=r"Column 'treat' not found in data\."):
+    with pytest.raises(ValueError, match=r"treat='treat' is absent from data"):
         pf.panelview(sample_df.drop(columns=["treat"]), "unit", "year", "treat")
 
     # 4. Test for missing outcome column
     with pytest.raises(
-        ValueError, match=r"Outcome column 'nonexistent_col' not found in data\."
+        ValueError, match=r"outcome='nonexistent_col' is absent from data"
     ):
         pf.panelview(sample_df, "unit", "year", "treat", outcome="nonexistent_col")
 
@@ -2069,9 +2069,7 @@ def test_did2s_unestimated_first_stage_fixef():
 
     with pytest.raises(
         ValueError,
-        match=r"First-stage predictions contain NaN values because some fixed effect "
-        "levels were not observed in the not-yet-treated first-stage sample. "
-        "Drop those observations before calling did2s().",
+        match=r"First-stage predictions contain NaN values.*not-yet-treated first-stage sample",
     ):
         pf.did2s(
             data,
@@ -2409,3 +2407,28 @@ def test_ritest_names_non_string_resampvar():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"resampvar; got int\. Use a string"):
         fit.ritest(resampvar=1, reps=4)
+
+
+def test_event_study_names_missing_time_column():
+    data = pd.DataFrame({"y": [1, 2], "unit": [1, 1], "cohort": [0, 0]})
+    with pytest.raises(ValueError, match=r"tname='year' must name an existing column"):
+        pf.event_study(data, yname="y", idname="unit", tname="year", gname="cohort")
+
+
+def test_lpdid_explains_absence_of_treated_cohorts():
+    data = pd.DataFrame({"y": [1, 2], "unit": [1, 1], "year": [1, 2], "cohort": [0, 0]})
+    with pytest.raises(ValueError, match=r"lpdid\(\) has no usable relative periods"):
+        pf.lpdid(data, yname="y", idname="unit", tname="year", gname="cohort")
+
+
+def test_did2s_requires_formula_for_each_stage():
+    data = pd.DataFrame({"y": [1, 2], "treat": [0, 1], "unit": [1, 2]})
+    with pytest.raises(TypeError, match=r"first_stage must be a formula string"):
+        pf.did2s(
+            data,
+            yname="y",
+            first_stage=None,
+            second_stage="~ treat",
+            treatment="treat",
+            cluster="unit",
+        )
