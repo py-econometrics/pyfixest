@@ -606,8 +606,55 @@ def test_poisson_offset_errors():
 
 def test_all_variables_multicollinear():
     data = get_data()
-    with pytest.raises(ValueError):
-        fit = feols("Y ~ f1 | f1", data=data)  # noqa: F841
+    with pytest.raises(
+        ValueError, match=r"All regressors are collinear at collin_tol=.*f1"
+    ):
+        feols("Y ~ f1 | f1", data=data)
+
+
+@pytest.mark.parametrize(
+    ("stage", "message"),
+    [
+        ("empty", "0 input rows"),
+        ("missing", "missing values=4"),
+        ("zero_weight", "zero weights=4"),
+        ("singleton", "singleton fixed-effect levels=4"),
+        ("separation", "separation=4"),
+    ],
+)
+def test_empty_estimation_sample_reports_filtering(stage, message):
+    data = pd.DataFrame(
+        {
+            "y": [2.0, 1.0, 3.0, 2.0],
+            "x": [1.0, 2.0, 3.0, 1.0],
+            "g": [1, 2, 3, 4],
+            "w": 1.0,
+        }
+    )
+    estimator, formula, kwargs = pf.feols, "y ~ x", {}
+    if stage == "empty":
+        data = data.iloc[:0]
+    elif stage == "missing":
+        data["y"] = np.nan
+    elif stage == "zero_weight":
+        data["w"] = 0.0
+        kwargs["weights"] = "w"
+    elif stage == "singleton":
+        formula = "y ~ x | g"
+    else:
+        data["y"] = 0.0
+        data["g"] = [1, 1, 2, 2]
+        formula, estimator = "y ~ x | g", pf.fepois
+
+    with pytest.raises(ValueError, match=f"No observations.*{message}"):
+        estimator(formula, data=data, **kwargs)
+
+
+def test_fetch_model_reports_index_bounds():
+    fit = pf.feols("Y ~ sw(X1, X2)", data=pf.get_data(N=100))
+    for invalid in [-3, 2]:
+        with pytest.raises(IndexError, match=r"outside the bounds.*from -2 to 1"):
+            fit.fetch_model(invalid)
 
 
 def test_wls_errors():

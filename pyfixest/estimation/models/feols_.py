@@ -17,7 +17,7 @@ from within import Effect
 
 from pyfixest.core.demean import Preconditioner
 from pyfixest.demeaners import LsmrDemeaner
-from pyfixest.errors import VcovTypeNotSupportedError
+from pyfixest.errors import EmptyEstimationSampleError, VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
     formula_required_variables,
@@ -50,6 +50,7 @@ from pyfixest.estimation.internals.literals import (
 from pyfixest.estimation.internals.model_state import (
     Capabilities,
     CollinearityCheck,
+    DroppedRowCounts,
     EstimationOptions,
     EstimationSample,
     FittedValues,
@@ -374,6 +375,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
     def prepare_model_matrix(self):
         """Build and retain the canonical formula-derived estimator inputs."""
+        if len(self._data) == 0:
+            self._raise_empty_sample(dropped=DroppedRowCounts())
         model_matrix = create_model_matrix(
             formula=self.model.parsed_formula,
             data=self._data,
@@ -395,6 +398,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     # attribute types are still transitional or loose; see the typing follow-up.
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
+        if model_matrix.n_rows == 0:
+            self._raise_empty_sample(dropped=model_matrix.dropped_by_stage)
         self.model_matrix = model_matrix
         independent = model_matrix.independent
         self.model = replace(
@@ -426,6 +431,30 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             n_rows=n_rows,
             n_obs=n_obs,
             dropped_by_stage=model_matrix.dropped_by_stage,
+        )
+
+    def _raise_empty_sample(self, *, dropped: DroppedRowCounts) -> None:
+        if dropped.total:
+            stages = {
+                "missing values": dropped.missing,
+                "infinite values": dropped.infinite,
+                "zero weights": dropped.zero_weight,
+                "singleton fixed-effect levels": dropped.singleton,
+                "separation": dropped.separation,
+            }
+            reasons = ", ".join(
+                f"{reason}={count}" for reason, count in stages.items() if count
+            )
+            explanation = (
+                f"Filtering removed all {dropped.total} input rows ({reasons})."
+            )
+            remedy = "Check these inputs before refitting."
+        else:
+            explanation = "The model received 0 input rows."
+            remedy = "Pass data with observations for this model."
+        raise EmptyEstimationSampleError(
+            f"No observations are available for {self.model.model_name!r}. "
+            f"{explanation} {remedy}"
         )
 
     def _validate_response(self) -> None:
