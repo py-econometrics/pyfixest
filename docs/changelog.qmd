@@ -43,13 +43,21 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - `feglm()` and `fepois()` raise `ValueError` instead of `AssertionError` for
   `iwls_tol` outside (0, 1) or `iwls_maxiter` below 1, and `quantreg()` raises
   `ValueError` instead of `IndexError` for an empty `quantile` list ([#2087](https://github.com/py-econometrics/pyfixest/pull/2087)).
-- Error messages for formulas, solver failures, post-estimation methods and
-  difference-in-differences inputs name the rejected input or failed setting
+- Error messages for formulas name the rejected input or failed setting and say
+  how to fix it
+  ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088)).
+- Error messages for solver and convergence failures name the failed setting and
+  say how to fix it: demeaner non-convergence reports the backend and
+  tolerances and suggests another backend, IWLS failures name `iwls_maxiter` and
+  `iwls_tol`, an unknown `solver` lists the valid choices, and a singular
+  normal-equation matrix names the solver and the matrix size
+  ([#2089](https://github.com/py-econometrics/pyfixest/pull/2089)).
+- Error messages for post-estimation methods name the rejected input or failed
+  setting and say how to fix it
+  ([#2090](https://github.com/py-econometrics/pyfixest/pull/2090)).
+- Error messages for difference-in-differences inputs name the rejected input
   and say how to fix it
-  ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088),
-  [#2089](https://github.com/py-econometrics/pyfixest/pull/2089),
-  [#2090](https://github.com/py-econometrics/pyfixest/pull/2090),
-  [#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
+  ([#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
 - `etable()` raises `ValueError` or `TypeError` instead of `AssertionError` for
   invalid `signif_code`, `type`, `head_order`, `model_heads` or
   `custom_model_stats` ([#2092](https://github.com/py-econometrics/pyfixest/pull/2092)).

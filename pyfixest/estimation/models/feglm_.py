@@ -412,9 +412,7 @@ class Feglm(Feols):
         try:
             self._family.check_y(self.model_matrix.dependent.to_numpy())
         except ValueError as exc:
-            exc.add_note(
-                f"Model family {self._family.name!r}; dependent variable {self.model.depvar!r}."
-            )
+            exc.add_note(f"Dependent variable {self.model.depvar!r}.")
             raise
 
     def _finalize_fit(self) -> None:

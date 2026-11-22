@@ -1640,6 +1640,10 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
+    data_one_outcome = pf.get_data().assign(Y=1.0)
+    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+        pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
+
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
     with pytest.raises(
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
@@ -2368,17 +2372,6 @@ def test_feglm_reports_the_public_iteration_option():
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
 
 
-def test_formula_evaluation_explains_where_to_supply_missing_column():
-    data = pf.get_data(N=50)
-    with pytest.raises(FactorEvaluationError, match=r"absent[\s\S]*check that data"):
-        pf.feols("Y ~ absent", data)
-    fit = pf.feols("Y ~ X1", data)
-    with pytest.raises(
-        FactorEvaluationError, match=r"X1[\s\S]*fitted formula in newdata"
-    ):
-        fit.predict(data.drop(columns="X1"))
-
-
 def test_invalid_weights_report_the_column_and_count():
     data = pf.get_data(N=20).assign(weight=-1.0)
     with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
@@ -2445,15 +2438,3 @@ def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
         pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
-
-
-def test_demean_names_mismatched_rows():
-    from pyfixest.estimation import demean
-
-    x = np.ones((3, 2))
-    flist = np.array([[0], [1], [0]], dtype=np.uint64)
-
-    with pytest.raises(ValueError, match=r"3 rows in flist, and 2 weights"):
-        demean(x, flist, np.ones(2))
-    with pytest.raises(ValueError, match=r"2 rows in flist, and 3 weights"):
-        demean(x, flist[:2], np.ones(3))

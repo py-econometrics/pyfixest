@@ -25,13 +25,12 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
         return np.full(n_restrictions, float(q_array))
     if q_array.ndim != 1:
         raise ValueError(
-            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}. "
-            "Pass one null value per row of R."
+            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}."
         )
     if q_array.shape[0] != n_restrictions:
         raise ValueError(
-            f"q must have the same number of rows as R. Pass one null value per "
-            f"restriction or a scalar; got {q_array.shape[0]} values for {n_restrictions} rows."
+            f"q must have the same number of rows as R; got {q_array.shape[0]} values "
+            f"for {n_restrictions} rows."
         )
     return q_array
 
@@ -52,8 +51,7 @@ def _wald_statistic(
 
     if R.ndim != 2:
         raise ValueError(
-            f"R must be a one- or two-dimensional array; got shape {R.shape}. "
-            "Pass one row per restriction."
+            f"R must be a one- or two-dimensional array; got shape {R.shape}."
         )
 
     if R.shape[1] != beta_hat.shape[0]:
