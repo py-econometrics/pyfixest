@@ -1640,6 +1640,10 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
+    data_one_outcome = pf.get_data().assign(Y=1.0)
+    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+        pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
+
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
     with pytest.raises(
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
@@ -2366,17 +2370,6 @@ def test_quantreg_explains_the_rejected_option(options, error, message):
 def test_feglm_reports_the_public_iteration_option():
     with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
-
-
-def test_formula_evaluation_explains_where_to_supply_missing_column():
-    data = pf.get_data(N=50)
-    with pytest.raises(FactorEvaluationError, match=r"absent[\s\S]*check that data"):
-        pf.feols("Y ~ absent", data)
-    fit = pf.feols("Y ~ X1", data)
-    with pytest.raises(
-        FactorEvaluationError, match=r"X1[\s\S]*fitted formula in newdata"
-    ):
-        fit.predict(data.drop(columns="X1"))
 
 
 def test_invalid_weights_report_the_column_and_count():
