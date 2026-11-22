@@ -350,7 +350,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         self, inference_type: InferenceType, joint: bool = False
     ) -> InferenceType:
         """Validate `inference_type` and fold the deprecated `joint` flag into it."""
-        _validate_literal_argument(inference_type, InferenceType)
+        _validate_literal_argument(inference_type, InferenceType, name="inference_type")
 
         if joint:
             warnings.warn(
