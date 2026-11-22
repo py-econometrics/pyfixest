@@ -1,6 +1,6 @@
 ---
 name: delete-comment
-description: Audit comments in pyfixest, remove redundant and stale prose, record implementation follow-ups, keep local constraints, and move cross-module decisions into ADRs.
+description: Audit comments in pyfixest, remove redundant and stale prose, record implementation follow-ups, keep local constraints, move cross-module decisions into ADRs, and tighten the package comment baseline.
 ---
 
 # Delete comments
@@ -31,9 +31,12 @@ summary.
   in the [compatibility ledger](../../../docs/developer/fixest-compatibility.md).
 
 Preserve license and attribution notices, interpreter declarations, and
-tooling directives until their requirements have another home. Record the disposition of deferred comments in the summary. Follow the [issue style](../../../docs/developer/git-and-pr-style.md#issues)
+tooling directives until their requirements have another home. Keep deferred
+comments in the ratchet baseline and explain their disposition in the
+summary. Follow the [issue style](../../../docs/developer/git-and-pr-style.md#issues)
 when preparing GitHub issues.
 
-Confirm the diff changes only comments and related
+Run `pixi run python scripts/check_comments.py --prune` and then run the same
+command without `--prune`. Confirm the diff changes only comments and related
 whitespace in the package. Report comment-only lines removed separately from
 inline comments stripped, and count what remains of each.

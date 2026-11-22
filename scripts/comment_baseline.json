@@ -1,0 +1,559 @@
+{
+  "pyfixest/__init__.py": {
+    "# For direct module imports: import_module(f\"{prefix}.{name}\")": 1,
+    "# Functions that have their own dedicated module (can be imported directly)": 1,
+    "# Map function/class names to their module prefix": 1,
+    "# Version handling (keep eager - it's cheap)": 1
+  },
+  "pyfixest/core/collinear.py": {
+    "# noqa: F401": 1
+  },
+  "pyfixest/core/crv1.py": {
+    "# noqa: F401": 2
+  },
+  "pyfixest/core/detect_singletons.py": {
+    "# (matches numba implementation behavior)": 1,
+    "# Convert to uint32 F-contiguous array for optimal performance": 1,
+    "# Using empty((m,n)).T gives F-order (n,m) layout": 1
+  },
+  "pyfixest/core/nested_fixed_effects.py": {
+    "# noqa: F401": 1
+  },
+  "pyfixest/core/nw.py": {
+    "# noqa: F401": 3
+  },
+  "pyfixest/demeaners.py": {
+    "# Call the resolver for its UserWarning side effect on incompatible": 1,
+    "# requests; torch LSMR always uses its diagonal preconditioner.": 1
+  },
+  "pyfixest/did/did.py": {
+    "# noqa: D102": 5
+  },
+  "pyfixest/did/did2s.py": {
+    "# Gardner's cluster score sum must include every estimation observation.": 1,
+    "# Replay fitted encodings on the full sample: raw FE expressions must never": 1,
+    "# Validate before either stage, rather than silently omitting NA clusters": 1,
+    "# Work on copies: square-root weighting must not mutate the fitted state.": 1,
+    "# `clustid` (factorize's `uniques`) is an `Index` for a Series input; the": 1,
+    "# be evaluated as Python (in particular, `a^b` is not a bitwise XOR).": 1,
+    "# from the covariance while retaining their outcomes in the fit.": 1,
+    "# iid as it might be faster than CRV": 1,
+    "# intercept needs to be dropped by hand due to the presence of fixed effects in the first stage": 1,
+    "# noqa: D102": 2,
+    "# noqa: E712": 2,
+    "# pandas stubs also allow `ndarray`, which lacks `.nunique()`.": 1,
+    "# tocsc() to fix spsolve efficiency warning": 1
+  },
+  "pyfixest/did/estimation.py": {
+    "# ritest(), update(), and SAVI have not supported event-study fits.": 2,
+    "# type: ignore": 4
+  },
+  "pyfixest/did/lpdid.py": {
+    "# code for the lpdid package: https://github.com/alexCardazzi/lpdid": 1,
+    "# noqa: D102": 3,
+    "# noqa: F841": 1,
+    "# the implementation here is highly influenced by Alex Cardazzi's R": 1,
+    "# type: ignore[union-attr]": 2
+  },
+  "pyfixest/did/saturated_twfe.py": {
+    "# type: ignore": 1
+  },
+  "pyfixest/did/twfe.py": {
+    "# noqa: D102": 2
+  },
+  "pyfixest/did/visualize.py": {
+    "# Normalize treat to boolean to handle integer (0/1) columns robustly": 1
+  },
+  "pyfixest/errors/__init__.py": {
+    "# noqa: D101": 16
+  },
+  "pyfixest/estimation/api/fepois.py": {
+    "# Thin wrapper: fepois is exactly feglm(family=\"poisson\"). Capture the": 1,
+    "# context here, as an integer frame offset passed on to feglm would resolve": 1,
+    "# relative to this frame rather than the user's.": 1
+  },
+  "pyfixest/estimation/api/quantreg.py": {
+    "# a quantile process carries its first quantile; each child fit": 1,
+    "# fixed effects are rejected for quantile regression; use the feols default": 1,
+    "# gets its own via `dataclasses.replace`": 1
+  },
+  "pyfixest/estimation/formula/formulaic_compat.py": {
+    "# (Factor.Kind, state_dict) tuples produced by formulaic materializers.": 1,
+    "# A power of a single IV term can just deduplicate it. Reject expansions": 1,
+    "# Adapted from Formulaic 1.2.2.": 1,
+    "# Copyright 2019 Matthew Wardrop and contributors.": 1,
+    "# Licensed under MIT; see THIRD_PARTY_NOTICES.md.": 1,
+    "# Missing data names, or nested Q() without its data context,": 1,
+    "# `.deps`; formulaic does not currently expose a documented accessor.": 1,
+    "# documented as unstable. Callers must not rely on the returned order.": 1,
+    "# formulaic internal: MULTISTAGE stores the parsed first-stage formulas in": 1,
+    "# formulaic internal: `.deps[0]` is the parsed `[endog ~ instr]` block.": 1,
+    "# formulaic internal: `ModelSpec.structure` lists one EncodedTermStructure": 1,
+    "# formulaic internal: `_flatten()` is private and its iteration order is": 1,
+    "# formulaic internal: encoder_state values are": 1,
+    "# must not prevent the argument walk below. Literal Q() calls": 1,
+    "# per term with the exact model-matrix columns that term produced.": 1,
+    "# still contribute their quoted lookup names through the callback.": 1,
+    "# that introduce new terms, whose endogenous/exogenous role is ambiguous.": 1
+  },
+  "pyfixest/estimation/formula/model_matrix.py": {
+    "# Offsets accept expressions as well as column names. Parse this user": 1,
+    "# Singleton detection only for fixed effects without slopes.": 1,
+    "# Zero-weight rows go first, so they cannot keep a singleton level.": 1,
+    "# formulaic keeps only the last of several equally named columns.": 1,
+    "# formulaic's `na_action=\"drop\"` removed `drop_rows` for missing values;": 1,
+    "# input once; the model's already-parsed stages stay intact.": 1,
+    "# integer and boolean columns are finite by construction": 1,
+    "# the later stages add the rows they drop.": 1
+  },
+  "pyfixest/estimation/formula/parse.py": {
+    "# Accept `f1:f2[z]`, but reject `f1[z]:f2`.": 1,
+    "# Controls must survive collinearity selection before excluded instruments.": 1,
+    "# Count terms, not source variables: `I(Y + Y2)` is one dependent": 1,
+    "# Drop the intercept for fixed effects regressions, except for": 1,
+    "# Formula operators can silently change a Python level expression:": 1,
+    "# IV blocks add their endogenous terms to the root. Exclude those": 1,
+    "# ModelMatrix removes this encoding intercept after materialization.": 1,
+    "# Preserve the existing reduced-rank categorical encoding for FE models.": 1,
+    "# Preserve this order even when a control is an interaction and a": 1,
+    "# Python identifiers include Unicode characters that Formulaic's": 1,
+    "# Redundant instruments are allowed if an excluded instrument remains.": 1,
+    "# Reject expressions of the form `f1[z1]:f2[z2]`": 1,
+    "# Slopes are evaluated expressions: formula operators would silently turn": 1,
+    "# `z**2` into `z`, for example. Keep bare names as ordinary column lookups.": 1,
+    "# expression evaluated from two columns.": 1,
+    "# intercept-only specifications such as `Y ~ 1 | f1`; these can be": 1,
+    "# redundant instrument is a degree-one transform of that interaction.": 1,
+    "# reparsing `f1 - f2` as a formula would leave only `f1`.": 1,
+    "# terms here so the first stage does not regress them on themselves.": 1,
+    "# tokenizer cannot read unquoted. Retain backticks for those names.": 1,
+    "# used to demean dependent variables.": 1
+  },
+  "pyfixest/estimation/formula/transforms/factor_interaction.py": {
+    "# (i.e., ref is None and reduced_rank is False)": 1,
+    "# Extract values - may be wrapped in dict for null detection": 1,
+    "# Only a complete set of factor levels or interaction cells spans the": 1,
+    "# Store the full category list (including the reference level dropped by": 1,
+    "# When var2 is provided, wrap both variables in a dict so that find_nulls()": 1,
+    "# Without ref/ref2 the cells span the intercept. Drop the first cell": 1,
+    "# first level of the already-reduced set.": 1,
+    "# formulaic internal: FactorValues is a wrapt proxy; `.__wrapped__` exposes": 1,
+    "# formulaic internal: `_state`/`_spec` are normally supplied by formulaic's": 1,
+    "# full-rank term); otherwise keep every cell.": 1,
+    "# identify and drop the same reference level rather than dropping the": 1,
+    "# intercept. Explicit references remove groups, and slopes on a numeric": 1,
+    "# only when the model already spans it (intercept or an earlier": 1,
+    "# reduced_rank) so that during prediction encode_contrasts can correctly": 1,
+    "# second variable never span it, so later terms keep their full rank.": 1,
+    "# spans_intercept is True only when no reference level was dropped": 1,
+    "# stateful_transform machinery; pyfixest calls the transform directly.": 1,
+    "# the object consumed by pyfixest's custom encoders.": 1,
+    "# will check both for null values. This ensures drop_rows is correctly populated.": 1
+  },
+  "pyfixest/estimation/formula/transforms/fixed_effects_encoding.py": {
+    "# Discard Series labels to combine series by position.": 1,
+    "# Sorted factorization preserves declared categorical order, returning": 1,
+    "# The sorted level index already defines the complete code order.": 1,
+    "# codes and observed levels together.": 1,
+    "# noqa: TRY301": 1
+  },
+  "pyfixest/estimation/formula/utils.py": {
+    "# Matches an operator call such as `csw(X1, X2)`, also when a space precedes the": 1,
+    "# Only a top-level `+` separates dependents: `I(Y + Y2)` is a single": 1,
+    "# parenthesis (`csw (X1, X2)`) or the arguments span lines.": 1,
+    "# transformed dependent, not two.": 1
+  },
+  "pyfixest/estimation/internals/demean_.py": {
+    "# An explicit adaptive handle must not restart the ladder after": 1,
+    "# Basic slicing gives a view, which inherits the read-only flag.": 1,
+    "# Callers get slices of this array; see DemeanedData.": 1,
+    "# Fancy indexing gives a fresh, writable copy. Flag it too, so that": 1,
+    "# ``yx_keys`` lists the responses first, so they lead the columns.": 1,
+    "# an earlier solve has already built the additive preconditioner.": 1,
+    "# the order the cache happened to fill up in.": 1,
+    "# whether a caller may write into its demeaned data never depends on": 1
+  },
+  "pyfixest/estimation/internals/families.py": {
+    "# divide by zero warnings because of the log(0) terms": 1
+  },
+  "pyfixest/estimation/internals/fit_glm_.py": {
+    "# After step-halving, eta/mu reflect the shortened step, but beta and": 1,
+    "# IWLS pass is needed to bring the returned state back into alignment.": 1,
+    "# Only check convergence when the previous update was a full IWLS step.": 1,
+    "# the final WLS objects still reflect the unhalved solve; one more": 1
+  },
+  "pyfixest/estimation/internals/fit_statistics.py": {
+    "# The weighted mean of the squared residuals, so the RMSE does not": 1,
+    "# depend on the scale of the weights.": 1
+  },
+  "pyfixest/estimation/internals/literals.py": {
+    "# Internal dispatch key for the model registry, not a user option; kept here so": 1,
+    "# config.py and plan_.py can share it without an import cycle.": 1
+  },
+  "pyfixest/estimation/internals/model_state.py": {
+    "# `unweighted()` and `from_values()` are the only constructors used by": 1,
+    "# the estimators; this guard catches direct misconstruction.": 1
+  },
+  "pyfixest/estimation/internals/separation.py": {
+    "# Project on the original materialized design. Stateful terms and FE codes": 1,
+    "# Within residuals equal full-model residuals, including the FE fit.": 1,
+    "# must not be reevaluated after the outer fit filters its rows.": 1,
+    "# need to be more strict below zero to avoid false positives": 1,
+    "# update when within tolerance of zero": 1
+  },
+  "pyfixest/estimation/internals/solvers.py": {
+    "#   0  x = 0 is the exact solution": 1,
+    "#   1  Ax - b is small enough, given atol and btol": 1,
+    "#   2  the least-squares solution is good enough, given atol": 1,
+    "#   3  the estimate of cond(Abar) has exceeded conlim": 1,
+    "#   4  Ax - b is small enough for this machine": 1,
+    "#   5  the least-squares solution is good enough for this machine": 1,
+    "#   6  cond(Abar) seems to be too large for this machine": 1,
+    "#   7  the iteration limit has been reached": 1,
+    "# Codes 3, 6, and 7 stop before the accuracy tests are met.": 1,
+    "# LSQR stopping reasons (istop), from SciPy's lsqr message table:": 1,
+    "# https://github.com/scipy/scipy/blob/v1.17.1/scipy/sparse/linalg/_isolve/lsqr.py#L334-L341": 1,
+    "# lsqr accepts one right-hand side at a time.": 1
+  },
+  "pyfixest/estimation/internals/vcov_.py": {
+    "# For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted": 1,
+    "# is h_i / f_i and their aggregated score is divided by sqrt(f_i).": 1,
+    "# rows represent repeated observations, so their per-observation leverage": 1
+  },
+  "pyfixest/estimation/models/_deprecated_attributes.py": {
+    "# 0.60 left the deviance `None` for linear and quantile fits.": 1,
+    "# A catch-all __getattr__ would make unknown attributes type-check as Any.": 1,
+    "# An unrelated property's internal AttributeError is replaced by this": 1,
+    "# Keep `hasattr` and `require_retained` working: state that is not": 1,
+    "# Python calls __getattr__ after a descriptor raises AttributeError;": 1,
+    "# fallback too; properties should avoid raising AttributeError internally.": 1,
+    "# published yet, or was dropped by `lean=True`, stays missing.": 1,
+    "# re-run our descriptor to preserve its specific migration message.": 1
+  },
+  "pyfixest/estimation/models/_result_accessor_mixin.py": {
+    "# Fixed-effects-only model: no coefficients, so no inference rows.": 1
+  },
+  "pyfixest/estimation/models/fegaussian_.py": {
+    "# we set gaussian glms to match pf.feols exactly": 1
+  },
+  "pyfixest/estimation/models/feglm_.py": {
+    "# APIs and cannot yet preserve a generic GLM family's estimation contract.": 1,
+    "# Families without outcome bounds, such as Gaussian, cannot separate.": 1,
+    "# Iterative IRLS fit: no single least-squares solve to shortcut.": 1,
+    "# Link, variance, deviance, and method name; each subclass declares one.": 1,
+    "# No CRV3: the inherited slow jackknife refits with the linear/Poisson": 1,
+    "# The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the": 1,
+    "# final IRLS weights, which already contain the observation weights.": 1
+  },
+  "pyfixest/estimation/models/feiv_.py": {
+    "# A missing name would select no columns, which broadcast to zero SSRs.": 1,
+    "# Absolute thresholds on the first-stage SSRs.": 1,
+    "# Drop collinear controls before the controls-only regression.": 1,
+    "# Pad an identity matrix of size p_iv by p_iv with zeros to select the": 1,
+    "# The excluded instruments are the instrument-matrix columns that are": 1,
+    "# The first stage uses the second stage's rows and options.": 1,
+    "# The response minus the residual carries the fixed-effect": 1,
+    "# Two-stage fit: no single least-squares solve to shortcut.": 1,
+    "# Validate identification using first-stage projection": 1,
+    "# before collinearity removal can drop the endogenous regressor": 1,
+    "# contribution, which `design @ beta_hat` alone would omit.": 1,
+    "# excluded instruments out of the first stage's k coefficients.": 1,
+    "# not also second-stage regressors, kept in instrument-matrix order.": 1,
+    "# note that model1.within_data.design is demeaned": 1,
+    "# the first stage replays this model's storage options": 1
+  },
+  "pyfixest/estimation/models/feols_.py": {
+    "# (covariate or FE) marks the whole row as NaN in the output.": 1,
+    "# Abadie et al. (2023): the cluster component in the CCV mixture and": 1,
+    "# An assignment-cluster override belongs to this test. Use a local": 1,
+    "# Center the coefficient before studentization, so the null and": 1,
+    "# Empty designs are used only for demeaning and may have no residual": 1,
+    "# Every estimator follows the same three steps: small-sample factors,": 1,
+    "# Features this model class supports; __init__ copies them to": 1,
+    "# Fixed-effects-only model: no coefficients, residuals are the": 1,
+    "# Fixed-effects-only model: no coefficients, so there is no": 1,
+    "# Fixed-effects-only model: nothing to check, but the attribute is": 1,
+    "# Frequency weights count repeated observations; other fits count rows.": 1,
+    "# G is the number of unique time periods T used": 1,
+    "# Only level intercepts can be nested in clusters; every": 1,
+    "# Pad X to full size; NaN rows yield NaN SE/CI via einsum propagation.": 1,
+    "# Recover from retained codes, omitting the first observed level of": 1,
+    "# Refit locally to retain the fit's SSC and leave its inference intact.": 1,
+    "# The F distribution is only used for the joint test that all": 1,
+    "# The fast solver replaces only the bare treatment column. Formula": 1,
+    "# The fit is a single least-squares solve, so the fast CRV3 jackknife and": 1,
+    "# The response minus the residual carries the fixed-effect": 1,
+    "# These methods rebuild or reuse plain fixed-effect codes.": 1,
+    "# Use na_action=\"drop\" on each sub-spec separately because dependent variable": 1,
+    "# Wu and Ding (JASA, 2021): permuted statistics must use the": 1,
+    "# _coefnames names the estimated ones.": 1,
+    "# `capabilities`. Each subclass declares its own value in full.": 1,
+    "# always run slow algorithm for randomization-t": 1,
+    "# an empty drop still rebuilds the whole frame, so guard it": 1,
+    "# be silently encoded as the reference level -> drop them to NaN instead,": 1,
+    "# coefficient share units.": 1,
+    "# coefficients are zero (R identity, q zero).": 1,
+    "# contribution, which `design @ beta_hat` alone would omit.": 1,
+    "# covariance to compute; estimation skips this step as well.": 1,
+    "# degrees of freedom. Leave their fit statistics undefined.": 1,
+    "# depends on the assignment.": 1,
+    "# encoded fixed effects also cover interactions and expressions": 1,
+    "# fitted covariance and SSC, just like the observed statistic.": 1,
+    "# flatten() copies: the weighting below scales uhat in place and must": 1,
+    "# has_fixef guarantees that the retained matrix contains FE codes.": 1,
+    "# inference not needed, iid fastest to compute": 1,
+    "# its comparison row must use the same clusters as the split scores.": 1,
+    "# matching how unseen fixed-effect levels are handled below.": 1,
+    "# may not be available in newdata, then intersect indices so a NaN in *any* variable": 1,
+    "# model_matrix keeps the columns the collinearity check dropped;": 1,
+    "# na_action=\"ignore\" keeps unseen-level rows as NaN codes": 1,
+    "# not touch the fitted values the GLM hook may return.": 1,
+    "# note: no need to worry about fixed effects, as not supported with": 1,
+    "# one unadjusted term per cluster dimension, and their combination.": 1,
+    "# only the coefficients are read; iid is fastest to compute": 1,
+    "# permutations change the treatment, not the rows": 1,
+    "# prediction errors; will throw error later;": 1,
+    "# published for every fitted model.": 1,
+    "# refit with the fit's SSC instead of replacing its stored inference.": 1,
+    "# refits must rebuild interactions, transforms, and a response that": 1,
+    "# rows with a categorical level unseen during fitting (in C()/i()) would": 1,
+    "# the fast ritest algorithm apply. Subclasses with other fits override it.": 1,
+    "# the second and subsequent FEs under treatment normalization.": 1,
+    "# varying-slope coefficient counts.": 1,
+    "# within-transformed response, and the plan skips vcov().": 1
+  },
+  "pyfixest/estimation/models/fepois_.py": {
+    "# ``None`` is the allocation-free unweighted path shared with the rest": 1,
+    "# of the estimation core; no vector of ones is materialised.": 1
+  },
+  "pyfixest/estimation/numba/demean_nb.py": {
+    "# ty: ignore[not-iterable]": 1
+  },
+  "pyfixest/estimation/numba/find_collinear_variables_nb.py": {
+    "#": 4,
+    "# ----------------------------------------------------------------------": 2,
+    "# Copyright (c) 2025  PyFixest Authors": 1,
+    "# SPDX-License-Identifier: MIT": 1,
+    "# The full text of that permission is archived at:": 1,
+    "# This function is a Python/Numba re-implementation of the algorithm": 1,
+    "# [here](https:#github.com/lrberge/fixest/blob/a4d1a9bea20aa7ab7ab0e0f1d2047d8097971ad7/src/lm_related.cpp#L130)),": 1,
+    "# docs/THIRD_PARTY_PERMISSIONS.md": 1,
+    "# originally licensed under GPL-3.0.  Laurent Berge granted the maintainers of this": 1,
+    "# project (see See the fixest repo": 1,
+    "# project an irrevocable, written permission to": 1,
+    "# published by Laurent Berge in the **fixest**": 1,
+    "# redistribute and re-license the relevant code under the MIT License.": 1
+  },
+  "pyfixest/estimation/numba/nested_fixef_nb.py": {
+    "# ty: ignore[not-iterable]": 1
+  },
+  "pyfixest/estimation/plan_.py": {
+    "# Quantile regression does not absorb fixed effects, so it neither": 1,
+    "# demeans nor shares the runner's preconditioner cache.": 1,
+    "# if X is empty: no inference (empty X only as shorthand for demeaning)": 1
+  },
+  "pyfixest/estimation/post_estimation/ccv.py": {
+    "# type: ignore[arg-type]": 1
+  },
+  "pyfixest/estimation/post_estimation/decomposition.py": {
+    "# Don't print CIs as they are [1,1]": 1,
+    "# convert to csr for easier vstacking": 1,
+    "# csc better for slicing columns than csr": 1,
+    "# keep X1 columns in the order of names_X1, not the formula order": 1,
+    "# treat weights as frequency weights": 1
+  },
+  "pyfixest/estimation/post_estimation/fixed_effects.py": {
+    "# Observed reference levels are zero; removed levels remain NaN.": 1
+  },
+  "pyfixest/estimation/post_estimation/multcomp.py": {
+    "# Step 3 (p.28 -- Westfall and Young Free step-down resampling method)": 1,
+    "# Step 4 and 5": 1,
+    "# Step 6: Enforce monotonicity of adjusted p-values": 1,
+    "# all S iterations require the same bootstrap samples, hence seed needs to be reset": 1,
+    "# covariance.G has one entry per cluster dimension": 1
+  },
+  "pyfixest/estimation/post_estimation/ritest.py": {
+    "# Numba is an optional dependency. The fast randomization-inference path uses it;": 1,
+    "# actually requested.": 1,
+    "# columns; `fit_fn` must not modify its input": 1,
+    "# numba is not installed, and surface a clear error only when the fast path is": 1,
+    "# the resampled column goes into a shallow copy, so `data` keeps its": 1,
+    "# the slow path does not. We import lazily so the module loads cleanly even when": 1
+  },
+  "pyfixest/estimation/quantreg/QuantregMulti.py": {
+    "# The response minus the residual carries the fixed-effect": 1,
+    "# `options.quantile` is the first requested quantile; each child fit": 1,
+    "# carries its own quantile and shares every other option.": 1,
+    "# contribution, which `design @ beta_hat` alone would omit.": 1
+  },
+  "pyfixest/estimation/quantreg/frisch_newton_ip.py": {
+    "# 6) Compute mu_new  and centering sigma  (eq (10))": 1,
+    "# Affine-Scaling Predictor Direction (eq. (8))": 1,
+    "# Final step lengths (corrector) — eq (12)": 1,
+    "# Residuals: equ. (7)": 1,
+    "# Step lengths (eq. (9))": 1,
+    "# ty: ignore[unresolved-attribute]": 1
+  },
+  "pyfixest/estimation/quantreg/quantreg_.py": {
+    "# Quantile loss fit: no single least-squares solve to shortcut.": 1,
+    "# conservative estimate of sigma^2": 1
+  },
+  "pyfixest/estimation/quantreg/vcov_.py": {
+    "# (all three logical lines below in fact)": 1,
+    "# eps: small tolerance parameter to avoid division by zero": 1,
+    "# equation (2)": 1,
+    "# equation (3)": 1,
+    "# general Huber structure, see page 74 in Koenker.": 1,
+    "# interquartile range of u_hat - this is what both quantreg and statsmodels use": 1,
+    "# when di = 0; set to sqrt of machine epsilon in quantreg": 1
+  },
+  "pyfixest/estimation/refit.py": {
+    "# `run_estimation` resets the index, so compare it before fitting": 1,
+    "# do not drop singletons again (they are already dropped)": 1,
+    "# lazy loading to avoid circular import": 1,
+    "# the caller reads the refit in full or throws it away": 1,
+    "# the runner does not modify `data`, so it need not copy it": 1
+  },
+  "pyfixest/estimation/runner.py": {
+    "# Formulaic drops repeated terms, so steps such as `csw(X1, X1)` or a": 1,
+    "# step repeating the endogenous variable render to the same model.": 1
+  },
+  "pyfixest/estimation/torch/_lsmr_compiled_core.py": {
+    "#": 1,
+    "# 0  _I_ALPHABAR": 1,
+    "# 1  _I_DAMP (pass through)": 1,
+    "# 10 _I_TAUTILDEOLD": 1,
+    "# 11 _I_THETATILDE": 1,
+    "# 12 _I_BETADD": 1,
+    "# 13 _I_BETAD": 1,
+    "# 14 _I_D": 1,
+    "# 15 _I_NORMA2": 1,
+    "# 16 _I_MAXRBAR": 1,
+    "# 17 _I_MINRBAR": 1,
+    "# 18 _I_NORMB (pass through)": 1,
+    "# 19 _I_ZETA (saved for next iteration's zetaold)": 1,
+    "# 2  _I_BETA (pass through, updated by caller)": 1,
+    "# 20 _O_THETANEW (for vector update)": 1,
+    "# 21 _O_THETABAR (for vector update)": 1,
+    "# 22 _O_ZETA (for vector update — same as slot 19)": 1,
+    "# 23 _O_RHOOLD (for vector update)": 1,
+    "# 24 _O_RHOBAROLD (for vector update)": 1,
+    "# 25 _O_CONVERGED": 1,
+    "# 26 _O_NORMR": 1,
+    "# 27 _O_NORMAR": 1,
+    "# 28 _O_NORMA": 1,
+    "# 29 _O_CONDA": 1,
+    "# 3  _I_ALPHA (pass through, updated by caller)": 1,
+    "# 30 _O_NORMX_EST (placeholder)": 1,
+    "# 4  _I_SBAR": 1,
+    "# 5  _I_CBAR": 1,
+    "# 6  _I_ZETABAR": 1,
+    "# 7  _I_RHO": 1,
+    "# 8  _I_RHOBAR": 1,
+    "# 9  _I_RHODOLD": 1,
+    "# All scalar state is packed into a single 1-D tensor to minimize Metal buffer": 1,
+    "# Constants (3 elements): atol, btol, ctol": 1,
+    "# Guard value for divisions that can be zero (e.g. normb, rho, rhodold).": 1,
+    "# Input state (20 elements):": 1,
+    "# Match SciPy: only update minrbar from iteration 2 onward.": 1,
+    "# Output adds extra slots for vector update coefficients:": 1,
+    "# Using clamp(..., min=_DIV_GUARD) or max(..., _DIV_GUARD) prevents 0/0 → NaN.": 1,
+    "# device-local zero": 1,
+    "# maxrbar == 0 on the first call (initial state), so use it as guard.": 1,
+    "# placeholder, actual normx computed from vector": 1,
+    "# previous iteration's zeta (for normr estimation)": 1,
+    "# slots (hardware limit: 31 per kernel).": 1
+  },
+  "pyfixest/estimation/torch/_lsmr_helpers.py": {
+    "# Sparse COO (used on MPS): coalesce for efficient SpMV/SpMM": 1
+  },
+  "pyfixest/estimation/torch/demean_torch_.py": {
+    "# Benchmarked breakeven is device-specific.": 1,
+    "# Build preconditioned operator once (not per column)": 1,
+    "# D_unweighted^T @ w gives the sum of weights per group": 1,
+    "# Diagonal preconditioning: M_inv = 1 / sqrt(D_unweighted^T @ w)": 1,
+    "# Guard against zero-weight groups (would produce inf in M_inv)": 1,
+    "# Minimum K (number of RHS columns) for batched SpMM to beat sequential SpMV.": 1,
+    "# Move to torch — use from_numpy for zero-copy when staying on CPU": 1,
+    "# Solve for each column — batched SpMM for K >= threshold, sequential otherwise.": 1
+  },
+  "pyfixest/report/summarize.py": {
+    "# An unsplit fit reports the full sample, with no split variable.": 1,
+    "# Apply pyfixest default for signif_code (different from maketables default)": 1,
+    "# type: ignore": 1
+  },
+  "pyfixest/report/utils.py": {
+    "# Here two patterns are used to extract the variable and level": 1,
+    "# Note the second pattern matches the notation when the variable is categorical at the outset": 1,
+    "# Try parsing as float so that e.g. \"2.0\" can become \"2\"": 1,
+    "# create model_name_plot attribute to differentiate between models with the": 1,
+    "# same model_name / model formula": 1
+  },
+  "pyfixest/report/visualize.py": {
+    "# for compatibility with matplotlib backend": 1,
+    "# keep only coefficients interacted via the i() syntax": 1,
+    "# type: ignore[operator]": 1
+  },
+  "pyfixest/report/visualize_decomposition.py": {
+    "# Adjust color index based on original position in lines array": 1,
+    "# Blue": 2,
+    "# Colors": 1,
+    "# For negative bars going up, reverse the order so absolute is closest to bar": 1,
+    "# For positive bars going down, we want normal order (absolute closest to bar)": 1,
+    "# Green (reducing effect)": 1,
+    "# Navy blue": 2,
+    "# Place above negative bars": 1,
+    "# Place below positive bars": 1,
+    "# Red (increasing effect)": 1,
+    "# Reorder: red first (away from zero), then green (toward zero)": 1,
+    "# Separate red (move away from zero) and green (move toward zero) effects": 1
+  },
+  "pyfixest/utils/dev_utils.py": {
+    "# Level 1 is the function that calls `warnings.warn`.": 1,
+    "# `stacklevel`, so they must not count here either.": 1,
+    "# `warnings.warn` skips import-machinery frames when it counts": 1
+  },
+  "pyfixest/utils/dgps.py": {
+    "# --- DGP parameters ---": 3,
+    "# Cohort 1: mean reversal: big bump that decays to zero within 10 days, then zero": 1,
+    "# Cohort 2: shark-fin - logarithmic for the first week, then 0": 1,
+    "# Cohort 3: sinusoidal": 1,
+    "# Education: correlated with ability (source of OV bias)": 1,
+    "# Event-time dip before birth: fertility occurs as career growth slows.": 1,
+    "# Generate day-of-the-week pattern": 1,
+    "# ITT         = true_late * first_stage              = 1.10": 1,
+    "# LATE        = ITT / first_stage                    = 2.0": 1,
+    "# LATE: causal effect of adoption on revenue for compliers": 1,
+    "# Log wage: true return to education = 0.08": 1,
+    "# Most women eventually have a first birth, but never-treated units remain.": 1,
+    "# P(adopt | Z=0): always-takers only": 1,
+    "# P(adopt | Z=1): compliers + always-takers": 1,
+    "# Region-specific motherhood penalties.": 1,
+    "# Shared unobserved ability within each pair": 1,
+    "# Stronger effects on weekends": 2,
+    "# causal effect of immigration on wages": 1,
+    "# causal effect of num_children on earnings": 1,
+    "# confounder → endogenous var": 1,
+    "# confounder → endogenous var (creates OVB)": 1,
+    "# confounder → outcome (creates OVB)": 1,
+    "# confounder → outcome (creates positive OVB)": 1,
+    "# effect functions": 1,
+    "# first-stage strength": 1,
+    "# first-stage strength (instrument → endogenous)": 1,
+    "# first_stage = p_adopt_encouraged - p_adopt_control = 0.55": 1,
+    "# switch off effects after a week": 1,
+    "# time FEs: Generate day-of-the-week pattern": 1,
+    "# ~20% of workers switch firms each year (after year 0)": 1,
+    "####################################################################": 1
+  },
+  "pyfixest/utils/utils.py": {
+    "# Annotation-only: pyfixest.estimation imports this module at package": 1,
+    "# G_adj applied with G = N for hetero but not for iid": 1,
+    "# fails; callers rely on an empty mapping (not None) for \"no context\".": 1,
+    "# formulaic's `_capture_context` returns `None` when frame introspection": 1,
+    "# https://github.com/lrberge/fixest/issues/554": 1,
+    "# import time, so a module-level runtime import here would be circular.": 1,
+    "# see here for why:": 1,
+    "# subtract one for each fixed effect, except for the first": 1
+  }
+}
