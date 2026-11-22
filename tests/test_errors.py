@@ -2364,3 +2364,9 @@ def test_quantreg_explains_the_rejected_option(options, error, message):
 def test_feglm_reports_the_public_iteration_option():
     with pytest.raises(ValueError, match=r"iwls_maxiter.*got 0"):
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
+
+
+def test_invalid_weights_report_the_column_and_count():
+    data = pf.get_data(N=20).assign(weight=-1.0)
+    with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
+        pf.feols("Y ~ X1", data, weights="weight")
