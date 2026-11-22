@@ -747,8 +747,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not supported for {type(self).__name__} models. "
-                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}. "
-                    "Pass one clustering column if the design calls for it."
+                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}."
                 )
             if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
                 raise VcovTypeNotSupportedError(
