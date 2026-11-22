@@ -144,8 +144,12 @@ class DemeanCache:
                 f"Demeaning with {type(demeaner).__name__}(backend={demeaner.backend!r}) "
                 f"failed to converge with {tolerances} and "
                 f"fixef_maxiter={demeaner.fixef_maxiter}. Check regressor scales and "
-                "fixed-effect structure, or raise fixef_maxiter if the solver needs "
-                "more iterations. See https://pyfixest.org/how-to/demeaner-backends.html#usage"
+                "fixed-effect structure, raise fixef_maxiter if the solver needs "
+                "more iterations, or select a different demeaner backend, for "
+                'example demeaner=LsmrDemeaner(backend="within") or '
+                'demeaner=MapDemeaner(backend="rust"). See '
+                "https://pyfixest.org/how-to/demeaner-backends.html for the "
+                "available backends."
             )
         return result, used_preconditioner
 
