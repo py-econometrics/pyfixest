@@ -11,7 +11,6 @@ from typing import ClassVar, Literal, cast, overload
 import formulaic
 import numpy as np
 import pandas as pd
-from formulaic.errors import FactorEvaluationError
 from scipy.sparse import csc_matrix, diags
 from scipy.stats import t
 from within import Effect
@@ -378,22 +377,15 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """Build and retain the canonical formula-derived estimator inputs."""
         if len(self._data) == 0:
             self._raise_empty_sample(dropped=DroppedRowCounts())
-        try:
-            model_matrix = create_model_matrix(
-                formula=self.model.parsed_formula,
-                data=self._data,
-                drop_singletons=self.options.drop_singletons,
-                drop_intercept=self.options.drop_intercept,
-                weights=self.options.weights,
-                offset=self.options.offset,
-                context=self.options.context,
-            )
-        except FactorEvaluationError as exc:
-            raise exc.__class__(
-                f"{exc} While fitting {self.model.model_name!r}, check that data contains "
-                "the formula columns and that transforms are available in context. "
-                "See https://pyfixest.org/tutorials/formula-syntax.html"
-            ) from (exc.__cause__ or exc)
+        model_matrix = create_model_matrix(
+            formula=self.model.parsed_formula,
+            data=self._data,
+            drop_singletons=self.options.drop_singletons,
+            drop_intercept=self.options.drop_intercept,
+            weights=self.options.weights,
+            offset=self.options.offset,
+            context=self.options.context,
+        )
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it
@@ -755,8 +747,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
                     f"Multiway clustering is not supported for {type(self).__name__} models. "
-                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}. "
-                    "Pass one clustering column if the design calls for it."
+                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}."
                 )
             if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
                 raise VcovTypeNotSupportedError(
@@ -773,8 +764,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if self.options.has_weights and self.options.weights_type == "fweights":
                 raise NotImplementedError(
                     "HAC inference (NW, DK) is not supported with `weights_type='fweights'`. "
-                    f"Got vcov={spec.vcov_type_detail!r}. Choose inference supported "
-                    "for frequency weights."
+                    f"Got vcov={spec.vcov_type_detail!r}."
                 )
         if spec.vcov_type == "nid":
             raise NotImplementedError(
@@ -1272,8 +1262,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap. "
-                "Pass a single cluster column if that matches the sampling design."
+                "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
         if self.model.has_fixef or not run_heteroskedastic:
@@ -1469,7 +1458,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             elif len(clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance "
-                    "estimator. Pass a single cluster column if it matches the design."
+                    "estimator."
                 )
             else:
                 cluster = clustervar[0]
@@ -2112,16 +2101,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 "predict() runs after the model matrix is built"
             )
             rhs_spec = model_spec[_ModelMatrixKey.main].rhs
-            try:
-                X_mm, unseen = materialize_model_spec_with_unseen_mask(
-                    rhs_spec, newdata, context
-                )
-            except FactorEvaluationError as exc:
-                raise exc.__class__(
-                    f"{exc} While predicting from {self.model.model_name!r}, include the "
-                    "columns required by the fitted formula in newdata. "
-                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.predict.html"
-                ) from (exc.__cause__ or exc)
+            X_mm, unseen = materialize_model_spec_with_unseen_mask(
+                rhs_spec, newdata, context
+            )
             valid_idx = X_mm.index.to_numpy()
             # rows with a categorical level unseen during fitting (in C()/i()) would
             # be silently encoded as the reference level -> drop them to NaN instead,
@@ -2163,8 +2145,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
                         f"Offset expression '{self.options.offset}' evaluates to missing "
-                        f"values in `newdata`. Check the offset inputs for "
-                        f"{len(newdata) - len(offset_mm)} affected rows."
+                        f"values for {len(newdata) - len(offset_mm)} of {len(newdata)} "
+                        "rows in `newdata`."
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
