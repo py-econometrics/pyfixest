@@ -65,7 +65,13 @@ Rules that ruff or ty enforce are not repeated here.
   values where they help diagnose the failure. For internal failures, identify
   the violated invariant and preserve the underlying exception when wrapping
   it. Link directly to a maintained documentation section when it explains
-  how to resolve the problem.
+  how to resolve the problem. Classify each check before writing its message.
+  A check a public call can reach is written for the user, in the names they
+  type (`ssc(k_fixef=...)`, `lean`, `vcov`) and never in internal names (`fe`,
+  "codes", "state"). A check no public call can reach is an invariant: delete
+  it, or state that it is a pyfixest bug to report. Name a cause or remedy
+  only after reproducing it; a storage option such as `lean=True` already
+  raises `MissingModelDataError` before most checks run.
 - Guard optional imports, and raise an error naming the pip extra when the
   path that needs one is used.
 - Never mutate user input except through the documented `copy_data=False`
