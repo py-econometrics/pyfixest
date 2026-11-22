@@ -18,7 +18,6 @@ class Fegaussian(Feglm):
     _family: ClassVar[GlmFamily] = GAUSSIAN
 
     def _vcov_iid(self) -> VcovTerm:
-        # we set gaussian glms to match pf.feols exactly
         vcov = vcov_iid_ols(
             residuals=self.working_state.working_residuals,
             bread=self.sandwich.bread,

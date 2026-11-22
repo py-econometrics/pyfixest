@@ -163,8 +163,6 @@ class ModelMatrix:
         self._model_spec = cast(_ModelSpecMapping, model_matrix.model_spec)
         self._collect_columns(model_matrix)
         self._collect_data(model_matrix)
-        # formulaic's `na_action="drop"` removed `drop_rows` for missing values;
-        # the later stages add the rows they drop.
         self._dropped_row_index = drop_rows
         self._dropped_by_stage = DroppedRowCounts(missing=len(drop_rows))
         self._process(drop_singletons=drop_singletons)
@@ -239,7 +237,6 @@ class ModelMatrix:
     def _collect_data(self, model_matrix: ModelMatrices) -> None:
         datas = flatten_model_matrix(model_matrix)
         for data in datas:
-            # formulaic keeps only the last of several equally named columns.
             counts = Counter(data.model_spec.column_names)
             duplicated = sorted(name for name, count in counts.items() if count > 1)
             if duplicated:
@@ -290,7 +287,6 @@ class ModelMatrix:
                     "Use one numeric endogenous expression."
                 )
 
-        # integer and boolean columns are finite by construction
         maybe_infinite = self._data.select_dtypes(exclude=["integer", "bool"])
         is_finite_row = cast(
             "NDArray[np.bool_]", np.isfinite(maybe_infinite.to_numpy()).all(axis=1)
@@ -301,7 +297,6 @@ class ModelMatrix:
             stage="infinite",
         )
         if self._weights_column_names is not None:
-            # fixest drops zero-weight rows before removing singletons
             is_zero_weight = (
                 self._data[self._weights_column_names].to_numpy() == 0
             ).any(axis=1)
@@ -311,7 +306,6 @@ class ModelMatrix:
                 stage="zero_weight",
             )
         if self._fixed_effects_column_names is not None:
-            # Ensure fixed effects are `int32`
             self._data[self._fixed_effects_column_names] = self._data[
                 self._fixed_effects_column_names
             ].astype("int32")
@@ -343,7 +337,6 @@ class ModelMatrix:
                 self._instruments_column_names = [
                     col for col in self._instruments_column_names if col != "Intercept"
                 ]
-        # Singleton detection only for fixed effects without slopes.
         intercept_columns = [
             column
             for column, specification in self._fixed_effect_specification_by_column.items()
@@ -682,8 +675,7 @@ def create_model_matrix(
     model_matrix = create_model_matrix(formula=formula, data=data)
     ```
     """
-    # Process input data
-    data = data.reset_index(drop=True)  # Sanitise index
+    data = data.reset_index(drop=True)
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
@@ -726,7 +718,6 @@ def _get_formulaic_formula(
     weights: str | None = None,
     offset: str | None = None,
 ) -> formulaic.Formula:
-    # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, formulaic.Formula] = {
         _ModelMatrixKey.main: formula.second_stage
     }
@@ -750,8 +741,6 @@ def _get_formulaic_formula(
             [Term([Factor(weights, eval_method=Factor.EvalMethod.LOOKUP)])]
         )
     if offset is not None:
-        # Offsets accept expressions as well as column names. Parse this user
-        # input once; the model's already-parsed stages stay intact.
         formula_kwargs[_ModelMatrixKey.offset] = formulaic.Formula(
             offset,
             _parser=DefaultFormulaParser(

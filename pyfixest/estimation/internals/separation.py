@@ -207,8 +207,6 @@ def _check_for_separation_ir(
     if is_interior.all():
         return set()
 
-    # Project on the original materialized design. Stateful terms and FE codes
-    # must not be reevaluated after the outer fit filters its rows.
     response = (~is_interior).to_numpy(dtype=np.float64)[:, None]
     weights = np.where(is_interior, is_interior.sum() / tol**2, 1.0)
     cache = DemeanCache()
@@ -234,8 +232,6 @@ def _check_for_separation_ir(
     has_converged = False
     while iteration < maxiter:
         iteration += 1
-        # regress U on X
-        # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         response_demeaned = cache.demean_array(
             x=response,
             flist=effects,
@@ -252,17 +248,12 @@ def _check_for_separation_ir(
             residuals = response_demeaned[:, 0] - design @ beta
         else:
             residuals = response_demeaned[:, 0]
-        # Within residuals equal full-model residuals, including the FE fit.
         Uhat = pd.Series(response[:, 0] - residuals, index=dependent.index)
-        # update when within tolerance of zero
-        # need to be more strict below zero to avoid false positives
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
         Uhat.where(~(is_interior | within_zero.fillna(True)), 0, inplace=True)
         if (Uhat >= 0).all():
-            # all separated observations have been identified
             has_converged = True
             break
-        # rectified linear unit (ReLU)
         response[~is_interior.to_numpy(), 0] = np.fmax(Uhat[~is_interior], 0)
 
     separation_na: set[int] = set()

@@ -28,13 +28,10 @@ def _find_stack_level() -> int:
     frame = inspect.currentframe()
     outermost_level = 1
     try:
-        # Level 1 is the function that calls `warnings.warn`.
         frame = frame.f_back if frame is not None else None
         level = 1
         while frame is not None:
             filename = frame.f_code.co_filename
-            # `warnings.warn` skips import-machinery frames when it counts
-            # `stacklevel`, so they must not count here either.
             if "importlib" in filename and "_bootstrap" in filename:
                 frame = frame.f_back
                 continue
@@ -124,9 +121,9 @@ def _select_order_coefs(
         drop = [drop]
 
     coefs = list(coefs)
-    res = [] if keep else coefs[:]  # Store matched coefs
+    res = [] if keep else coefs[:]
     for pattern in keep:
-        _coefs = []  # Store remaining coefs
+        _coefs = []
         for coef in coefs:
             if (exact_match and pattern == coef) or (
                 exact_match is False and re.findall(pattern, coef)
@@ -138,7 +135,7 @@ def _select_order_coefs(
 
     for pattern in drop:
         _coefs = []
-        for coef in res:  # Remove previously matched coefs that match the drop pattern
+        for coef in res:
             if (exact_match and pattern == coef) or (
                 exact_match is False and re.findall(pattern, coef)
             ):

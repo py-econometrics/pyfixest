@@ -82,8 +82,6 @@ class Fepois(Feglm):
 
     def _fit_statistics(self) -> FitStatistics:
         "Add the Poisson likelihood measures to the deviance."
-        # ``None`` is the allocation-free unweighted path shared with the rest
-        # of the estimation core; no vector of ones is materialised.
         return poisson_fit_statistics(
             y=self.model_matrix.dependent.to_numpy().flatten(),
             mu=self.working_state.mu,

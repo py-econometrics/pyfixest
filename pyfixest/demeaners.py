@@ -466,8 +466,6 @@ class LsmrDemeaner(BaseDemeaner):
         The third return value is always `None`: no within preconditioner
         participates in the solve.
         """
-        # Call the resolver for its UserWarning side effect on incompatible
-        # requests; torch LSMR always uses its diagonal preconditioner.
         _ = _resolve_preconditioner(
             "torch", cast(LsmrPreconditioner, self.preconditioner)
         )

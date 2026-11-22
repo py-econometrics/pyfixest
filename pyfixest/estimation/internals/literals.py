@@ -11,8 +11,6 @@ DropStageOptions = Literal[
     "missing", "infinite", "zero_weight", "singleton", "separation"
 ]
 FamilyOptions = Literal["logit", "probit", "gaussian", "poisson"]
-# Internal dispatch key for the model registry, not a user option; kept here so
-# config.py and plan_.py can share it without an import cycle.
 EstimationMethod = Literal[
     "feols",
     "fepois",

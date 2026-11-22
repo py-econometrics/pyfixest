@@ -71,9 +71,6 @@ def _get_ast_node_variables_formulaic_284(
                     compile(format_expr(delegated), "", "eval"), {}, env
                 )
             except (NameError, AttributeError):
-                # Missing data names, or nested Q() without its data context,
-                # must not prevent the argument walk below. Literal Q() calls
-                # still contribute their quoted lookup names through the callback.
                 delegated_variables = ()
             variables.extend(delegated_variables)
         if not isinstance(node, (ast.Call, ast.Attribute, ast.Name)):
@@ -138,8 +135,6 @@ def _interaction_without_iv(
         for terms in (lhs, rhs)
         for term in (terms.root if isinstance(terms, Structured) else terms)
     }
-    # A power of a single IV term can just deduplicate it. Reject expansions
-    # that introduce new terms, whose endogenous/exogenous role is ambiguous.
     if set(result.root).difference(original_terms):
         raise FormulaSyntaxError(
             "Interactions around an instrumental-variable block are not supported. "
@@ -161,11 +156,8 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
         """Identify the `~` operator used inside `[endogenous ~ instruments]`."""
         return (
             operator.symbol == "~"
-            # A multistage `~` takes two arguments (endogenous ~ exogenous)
             and operator.arity == 2
-            # A multistage `~` only accepts brackets as context
             and operator.accepts_context([Token("[", kind=Token.Kind.CONTEXT)])
-            # A top-level `~` only accepts an empty context `[]`
             and not operator.accepts_context([])
         )
 
@@ -240,7 +232,7 @@ def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[
         for term in formula
         for factor in term.factors
         for variable in factor.required_variables
-        if Variable.Role.CALLABLE not in variable.roles  # ignore transforms
+        if Variable.Role.CALLABLE not in variable.roles
     }
 
 
@@ -253,8 +245,6 @@ def count_multistage_blocks(
     rhs: formulaic.formula.Formula | Structured[OrderedSet[Term]],
 ) -> int:
     """Count formulaic MULTISTAGE deps on a parsed RHS or structured term set."""
-    # formulaic internal: MULTISTAGE stores the parsed first-stage formulas in
-    # `.deps`; formulaic does not currently expose a documented accessor.
     deps = getattr(rhs, "deps", ())
     return len(deps) if isinstance(deps, tuple) else int(bool(deps))
 
@@ -274,7 +264,6 @@ def get_first_multistage_rhs(
 
 
 def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
-    # formulaic internal: `.deps[0]` is the parsed `[endog ~ instr]` block.
     deps = getattr(rhs, "deps", None)
     if not isinstance(deps, tuple) or len(deps) != 1:
         raise FormulaicCompatibilityError(
@@ -292,8 +281,6 @@ def _get_single_multistage_block(rhs: formulaic.formula.Formula) -> Any:
 
 def flatten_model_matrix(model_matrix: formulaic.ModelMatrix) -> list[pd.DataFrame]:
     """Return the leaf data frames from a possibly structured ModelMatrix."""
-    # formulaic internal: `_flatten()` is private and its iteration order is
-    # documented as unstable. Callers must not rely on the returned order.
     return list(model_matrix._flatten())
 
 
@@ -367,8 +354,6 @@ def i_term_columns(rhs_spec: ModelSpec) -> list[str]:
         if any(is_i_contrast_state_key(key) for key in _unpack_encoder_state(value)[1])
     }
     columns: list[str] = []
-    # formulaic internal: `ModelSpec.structure` lists one EncodedTermStructure
-    # per term with the exact model-matrix columns that term produced.
     for term_structure in rhs_spec.structure or ():
         if any(factor.expr in i_factor_exprs for factor in term_structure.term.factors):
             columns.extend(term_structure.columns)
@@ -391,8 +376,6 @@ def iter_i_categorical_levels(
 
 
 def _unpack_encoder_state(value: Any) -> tuple[Factor.Kind, dict[str, Any]]:
-    # formulaic internal: encoder_state values are
-    # (Factor.Kind, state_dict) tuples produced by formulaic materializers.
     if not isinstance(value, tuple) or len(value) != 2:
         raise FormulaicCompatibilityError(
             "formulaic ModelSpec.encoder_state structure changed: expected each "

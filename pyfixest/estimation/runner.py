@@ -122,8 +122,6 @@ def run_estimation(
             fixest.all_fitted_models[model_name] = fitted_result
 
     if duplicate_model_names:
-        # Formulaic drops repeated terms, so steps such as `csw(X1, X1)` or a
-        # step repeating the endogenous variable render to the same model.
         warnings.warn(
             "Several multiple estimation steps parse to the same model after "
             "repeated terms are dropped; only one model is returned for each of: "

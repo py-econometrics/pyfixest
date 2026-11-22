@@ -107,8 +107,6 @@ class DemeanCache:
             and isinstance(demeaner, LsmrDemeaner)
             and isinstance(demeaner.preconditioner, Preconditioner)
         ):
-            # An explicit adaptive handle must not restart the ladder after
-            # an earlier solve has already built the additive preconditioner.
             demeaner = replace(demeaner, preconditioner=cached)
         result, _ = self._run_or_raise(
             x=x,
@@ -219,7 +217,6 @@ class DemeanCache:
             YX_demeaned, used_preconditioner = self._run_or_raise(
                 x=YX, flist=fe, weights=weights, na_index=na_index, demeaner=demeaner
             )
-            # Callers get slices of this array; see DemeanedData.
             YX_demeaned.setflags(write=False)
             cached = DemeanedData(values=YX_demeaned, column_keys=yx_keys)
             self.lookup_demeaned_data[na_index] = cached
@@ -248,10 +245,8 @@ class DemeanCache:
                     column_keys=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
-            # Every requested column is demeaned and cached at this point.
             YX_demeaned = self._select_columns(cached, yx_keys)
 
-        # ``yx_keys`` lists the responses first, so they lead the columns.
         n_response_columns = len(y_keys_tuple)
         response_demeaned = YX_demeaned[:, :n_response_columns]
         design_demeaned = YX_demeaned[:, n_response_columns:]
@@ -268,11 +263,7 @@ class DemeanCache:
         positions = tuple(cached_position_by_key[key] for key in yx_keys)
         selects_cached_prefix = positions == tuple(range(len(positions)))
         if selects_cached_prefix:
-            # Basic slicing gives a view, which inherits the read-only flag.
             return cached.values[:, : len(positions)]
-        # Fancy indexing gives a fresh, writable copy. Flag it too, so that
-        # whether a caller may write into its demeaned data never depends on
-        # the order the cache happened to fill up in.
         reordered = cached.values[:, positions]
         reordered.setflags(write=False)
         return reordered

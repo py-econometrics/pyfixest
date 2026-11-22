@@ -65,6 +65,9 @@ jobs:
       - name: Run ty
         run: pixi run -e py312 ty
 
+      - name: Check package comment ratchet
+        run: pixi run -e py312 python scripts/check_comments.py
+
   test-r:
     name: "Tests vs R (${{ matrix.test-task }})"
     runs-on: ubuntu-latest

@@ -19,17 +19,8 @@ import torch
 
 from pyfixest.utils.dev_utils import _find_stack_level
 
-# Guard value for divisions that can be zero (e.g. normb, rho, rhodold).
-# Using clamp(..., min=_DIV_GUARD) or max(..., _DIV_GUARD) prevents 0/0 → NaN.
 _DIV_GUARD = 1e-30
 
-# ---------------------------------------------------------------------------
-# Packed state layout
-# ---------------------------------------------------------------------------
-# All scalar state is packed into a single 1-D tensor to minimize Metal buffer
-# slots (hardware limit: 31 per kernel).
-#
-# Input state (20 elements):
 _I_ALPHABAR = 0
 _I_DAMP = 1
 _I_BETA = 2
@@ -49,11 +40,9 @@ _I_NORMA2 = 15
 _I_MAXRBAR = 16
 _I_MINRBAR = 17
 _I_NORMB = 18
-_I_ZETA = 19  # previous iteration's zeta (for normr estimation)
+_I_ZETA = 19
 
-# Constants (3 elements): atol, btol, ctol
 
-# Output adds extra slots for vector update coefficients:
 _O_THETANEW = 20
 _O_THETABAR = 21
 _O_ZETA = 22
@@ -64,14 +53,9 @@ _O_NORMR = 26
 _O_NORMAR = 27
 _O_NORMA = 28
 _O_CONDA = 29
-_O_NORMX_EST = 30  # placeholder, actual normx computed from vector
+_O_NORMX_EST = 30
 
 _STATE_SIZE = 20
-
-
-# ---------------------------------------------------------------------------
-# Overflow-safe hypot (replaces torch.hypot for Metal compatibility)
-# ---------------------------------------------------------------------------
 
 
 def _safe_hypot(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
@@ -107,11 +91,6 @@ def _sym_ortho_tensor(
     c = torch.where(r == zero, zero, a / safe_r)
     s = torch.where(r == zero, zero, b / safe_r)
     return c, s, r
-
-
-# ---------------------------------------------------------------------------
-# Initial state packing
-# ---------------------------------------------------------------------------
 
 
 def _make_initial_state(
@@ -155,11 +134,6 @@ def _make_initial_state(
     return state
 
 
-# ---------------------------------------------------------------------------
-# Compiled scalar step (single Metal/CUDA kernel after fusion)
-# ---------------------------------------------------------------------------
-
-
 def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     """
     All scalar work for one LSMR iteration: 4 Givens rotations, norm/cond
@@ -168,7 +142,6 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     Packed I/O keeps Metal buffer count to 3 (state_in, consts, state_out).
     Uses overflow-safe hypot (no torch.hypot — unsupported in Metal codegen).
     """
-    # Unpack
     alphabar = state[_I_ALPHABAR]
     damp = state[_I_DAMP]
     beta = state[_I_BETA]
@@ -188,25 +161,22 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     maxrbar = state[_I_MAXRBAR]
     minrbar = state[_I_MINRBAR]
     normb = state[_I_NORMB]
-    zetaold = state[_I_ZETA]  # zeta from previous iteration (for normr estimation)
+    zetaold = state[_I_ZETA]
 
     atol_t = consts[0]
     ctol = consts[2]
 
-    _ZERO = state[_I_ALPHABAR] * 0.0  # device-local zero
+    _ZERO = state[_I_ALPHABAR] * 0.0
     _ONE = _ZERO + 1.0
 
-    # --- Givens 1: (alphabar, damp) ---
     chat, shat, r1 = _sym_ortho_tensor(alphabar, damp, _ZERO, _ONE)
 
-    # --- Givens 2: (alphahat=r1, beta) ---
     rhoold = rho
     c, s, r2 = _sym_ortho_tensor(r1, beta, _ZERO, _ONE)
     rho_new = r2
     thetanew = s * alpha
     alphabar_new = c * alpha
 
-    # --- Givens 3: rhobar ---
     rhobarold = rhobar
     thetabar = sbar * rho_new
     rhotemp = cbar * rho_new
@@ -215,13 +185,11 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     zeta = cbar_new * zetabar
     zetabar_new = -sbar_new * zetabar
 
-    # --- ||r|| estimation ---
     betaacute = chat * betadd
     betacheck = -shat * betadd
     betahat = c * betaacute
     betadd_new = -s * betaacute
 
-    # Givens 4: rhotilde
     ctildeold, stildeold, r4 = _sym_ortho_tensor(rhodold, thetabar, _ZERO, _ONE)
 
     thetatilde_new = stildeold * rhobar_new
@@ -237,21 +205,16 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
     d_new = d + betacheck * betacheck
     normr = torch.sqrt(d_new + (betad_new - taud) ** 2 + betadd_new * betadd_new)
 
-    # --- ||A|| estimation ---
     normA2_new = normA2 + beta * beta
     normA = torch.sqrt(normA2_new)
     normA2_final = normA2_new + alpha * alpha
 
-    # --- cond(A) estimation ---
     maxrbar_new = torch.maximum(maxrbar, rhobarold)
-    # Match SciPy: only update minrbar from iteration 2 onward.
-    # maxrbar == 0 on the first call (initial state), so use it as guard.
     minrbar_new = torch.where(maxrbar > 0, torch.minimum(minrbar, rhobarold), minrbar)
     condA = torch.maximum(maxrbar_new, rhotemp) / torch.clamp(
         torch.minimum(minrbar_new, rhotemp), min=_DIV_GUARD
     )
 
-    # --- Convergence check ---
     normar = torch.abs(zetabar_new)
     test2 = normar / torch.clamp(normA * normr, min=_DIV_GUARD)
     test3 = _ONE / condA
@@ -265,13 +228,12 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
         _ZERO,
     )
 
-    # --- Pack output ---
     return torch.stack(
         [
             alphabar_new,  # 0  _I_ALPHABAR
-            damp,  # 1  _I_DAMP (pass through)
-            beta,  # 2  _I_BETA (pass through, updated by caller)
-            alpha,  # 3  _I_ALPHA (pass through, updated by caller)
+            damp,
+            beta,
+            alpha,
             sbar_new,  # 4  _I_SBAR
             cbar_new,  # 5  _I_CBAR
             zetabar_new,  # 6  _I_ZETABAR
@@ -286,26 +248,23 @@ def _scalar_step(state: torch.Tensor, consts: torch.Tensor) -> torch.Tensor:
             normA2_final,  # 15 _I_NORMA2
             maxrbar_new,  # 16 _I_MAXRBAR
             minrbar_new,  # 17 _I_MINRBAR
-            normb,  # 18 _I_NORMB (pass through)
-            zeta,  # 19 _I_ZETA (saved for next iteration's zetaold)
-            thetanew,  # 20 _O_THETANEW (for vector update)
-            thetabar,  # 21 _O_THETABAR (for vector update)
-            zeta,  # 22 _O_ZETA (for vector update — same as slot 19)
-            rhoold,  # 23 _O_RHOOLD (for vector update)
-            rhobarold,  # 24 _O_RHOBAROLD (for vector update)
+            normb,
+            zeta,
+            thetanew,
+            thetabar,
+            zeta,
+            rhoold,
+            rhobarold,
             converged_flag,  # 25 _O_CONVERGED
             normr,  # 26 _O_NORMR
             normar,  # 27 _O_NORMAR
             normA,  # 28 _O_NORMA
             condA,  # 29 _O_CONDA
-            _ZERO,  # 30 _O_NORMX_EST (placeholder)
+            _ZERO,
         ]
     )
 
 
-# ---------------------------------------------------------------------------
-# Module-level compilation cache
-# ---------------------------------------------------------------------------
 _compiled_step_cache: dict[str, object] = {}
 _cache_lock = threading.Lock()
 
@@ -315,7 +274,6 @@ def _get_compiled_step(device_type: str):
     if device_type in _compiled_step_cache:
         return _compiled_step_cache[device_type]
     with _cache_lock:
-        # Double-check after acquiring lock
         if device_type not in _compiled_step_cache:
             try:
                 _compiled_step_cache[device_type] = torch.compile(

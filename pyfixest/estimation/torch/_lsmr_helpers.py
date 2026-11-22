@@ -26,7 +26,6 @@ def _precompute_transpose(A):
     if A.is_sparse_csr:
         return A.t().to_sparse_csr()
     if A.is_sparse:
-        # Sparse COO (used on MPS): coalesce for efficient SpMV/SpMM
         return A.t().coalesce()
     return A.t().contiguous()
 

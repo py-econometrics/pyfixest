@@ -87,10 +87,6 @@ def _solve_ADAt(
     )
     y = solve_triangular(chol.T, u_buf, lower=False, check_finite=False)
 
-    # S = np.linalg.cholesky(K)
-    # z = solve_triangular(S, u, lower=True)
-    # z = solve_triangular(S.T, z, lower=False)
-    # y = solve_triangular(chol.T, z, lower=False)
     return y
 
 
@@ -101,7 +97,6 @@ def cold_start(
     n = A.shape[1]
     x = np.full(n, 1.0 - q)
 
-    # iniate all other variables
     s = np.full_like(x, q)
     d_plus = np.maximum(c, 0.0)
     d_minus = np.maximum(-c, 0.0)
@@ -115,7 +110,6 @@ def cold_start(
 
     rhs = A @ (c - z + w)
     y = _solve_ADAt(rhs, D=np.ones(n), chol=chol, P=P)
-    # y = np.linalg.solve(A @ A.T, rhs)
     return x, s, z, w, y
 
 
@@ -153,13 +147,10 @@ def frisch_newton_solver(
     r1_hat = np.empty_like(c)
 
     Qinv = np.empty_like(x)
-    # rhs = np.empty_like(b)
-    # work_n = np.empty_like(x)
     work_m = np.empty_like(b)
 
     M = np.empty((m, m))
 
-    # predictor-/corrector direction vectors (allocated once, reused)
     dx_aff = np.empty_like(x)
     ds_aff = np.empty_like(s)
     dz_aff = np.empty_like(z)
@@ -206,11 +197,10 @@ def frisch_newton_solver(
         r2_tilde[:] = b - A @ x
 
         # Affine-Scaling Predictor Direction (eq. (8))
-        Qinv[:] = 1.0 / (z / x + w / s)  # diag
+        Qinv[:] = 1.0 / (z / x + w / s)
         M[:] = A @ (Qinv[:, None] * A.T)
         work_m[:] = r2_tilde + A @ (Qinv * r1_tilde)
         dy_aff[:] = np.linalg.solve(M, work_m)
-        # dy_aff[:] = _solve_ADAt(rhs=work_m, D=Qinv, chol=chol, P=P)
 
         dx_aff[:] = Qinv * (A.T @ dy_aff - r1_tilde)
         ds_aff[:] = -dx_aff
@@ -234,13 +224,11 @@ def frisch_newton_solver(
         sigma = ratio**2
         mu_targ = sigma * mu_curr / n
 
-        # corrector direction
         r1_hat = (
             mu_targ * (1 / s - 1 / x) + (dx_aff * dz_aff) / x - (ds_aff * dw_aff) / s
         )
 
         work_m[:] = A @ (Qinv * r1_hat)
-        # dy_cor[:] = _solve_ADAt(rhs = work_m, D = Qinv, chol=chol, P = P)
         dy_cor[:] = np.linalg.solve(M, work_m)
         dx_cor[:] = Qinv * (A.T @ dy_cor - r1_hat)
         ds_cor[:] = -dx_cor
@@ -255,14 +243,12 @@ def frisch_newton_solver(
             a=(z_pred, dz_cor), b=(w_pred, dw_cor), backoff=backoff
         )
 
-        # Update all variables / corrector step
         x[:] = x_pred + alpha_p_cor * dx_cor
         s[:] = s_pred + alpha_p_cor * ds_cor
         y[:] = y_pred + alpha_d_cor * dy_cor
         z[:] = z_pred + alpha_d_cor * dz_cor
         w[:] = w_pred + alpha_d_cor * dw_cor
 
-        # update
         mu_curr = _duality_gap(x=x, z=z, s=s, w=w)
 
     return QuantregSolution(

@@ -127,11 +127,8 @@ class Feiv(Feols):
     details.
     """
 
-    # Set in _fit_first_stage().
     first_stage: FirstStage
-    # Set in get_fit().
     collinearity_instruments: CollinearityCheck
-    # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
 
     _declared_capabilities: ClassVar[Capabilities] = Capabilities(
@@ -150,7 +147,6 @@ class Feiv(Feols):
         anytime_valid_inference=False,
     )
 
-    # Constructor and methods implementation...
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -226,7 +222,6 @@ class Feiv(Feols):
         endogenous_positions = self.model_matrix.independent.columns.get_indexer(
             endogenous_names
         )
-        # A missing name would select no columns, which broadcast to zero SSRs.
         if np.any(endogenous_positions < 0):
             raise RuntimeError(
                 "Endogenous variables are missing from the second-stage design: "
@@ -241,7 +236,6 @@ class Feiv(Feols):
         fitted_endogenous = projected_design[:, endogenous_positions]
         exogenous = within_data.design[:, exogenous_mask]
 
-        # Drop collinear controls before the controls-only regression.
         if exogenous.shape[1] > 0:
             collinear, _, _ = find_collinear_variables(
                 np.ascontiguousarray(exogenous.T @ exogenous, dtype=np.float64),
@@ -269,7 +263,6 @@ class Feiv(Feols):
         ssr = np.sum(residuals**2, axis=0)
         ssr_without_instruments = np.sum(residuals_without_instruments**2, axis=0)
 
-        # Absolute thresholds on the first-stage SSRs.
         for name, ssr_i, ssr_without_instruments_i in zip(
             endogenous_names, ssr, ssr_without_instruments, strict=True
         ):
@@ -291,7 +284,6 @@ class Feiv(Feols):
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._demean()
-        # Drop collinear columns from instruments
         instruments, instrument_collinearity = drop_multicollinear_variables(
             X=within_data.instruments,
             names=self._coefnames_z,
@@ -300,7 +292,6 @@ class Feiv(Feols):
         self.collinearity_instruments = instrument_collinearity
         self._coefnames_z = list(instrument_collinearity.coefnames)
 
-        # Project second-stage regressors onto the retained instruments.
         weights = self.observation_weights.values
         sqrt_weights = (
             None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
@@ -312,21 +303,17 @@ class Feiv(Feols):
             solver=self.options.solver,
         )
 
-        # Validate identification using first-stage projection
-        # before collinearity removal can drop the endogenous regressor
         self._validate_iv_identification(
             within_data=within_data,
             projected_design=projected_design,
             sqrt_weights=sqrt_weights,
         )
 
-        # Drop collinear variables in the second stage and update within data
         structural_data = self._drop_multicollinear_within_data(within_data)
         assert isinstance(structural_data, WithinIvData)
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
 
-        # Fit the second stage
         fit = fit_iv(
             X=within_data.design,
             X_hat=self.collinearity.select(projected_design),
@@ -339,8 +326,6 @@ class Feiv(Feols):
         self._u_hat = fit.residuals
         self.sandwich = fit.sandwich
 
-        # The response minus the residual carries the fixed-effect
-        # contribution, which `design @ beta_hat` alone would omit.
         fitted = self.model_matrix.dependent.to_numpy().flatten() - self.resid()
         self.fitted_values = FittedValues(link=fitted, response=fitted)
 
@@ -351,14 +336,11 @@ class Feiv(Feols):
     def _fit_first_stage(self) -> None:
         """Fit the first-stage regression and publish it as `first_stage`."""
         require_retained(self, "_fit_first_stage", "_data")
-        # The excluded instruments are the instrument-matrix columns that are
-        # not also second-stage regressors, kept in instrument-matrix order.
         exogenous = set(self._coefnames)
         instruments = tuple(
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        # As in fixest, the first stage uses the second stage's rows and options.
         model1 = refit(
             self,
             formula=self.model.parsed_formula.as_first_stage(),
@@ -369,7 +351,6 @@ class Feiv(Feols):
 
         self.first_stage = FirstStage(
             coefficients=model1._beta_hat,
-            # note that model1.within_data.design is demeaned
             fitted_values=model1.within_data.design @ model1._beta_hat,
             residuals=model1._u_hat,
             model=model1,
@@ -390,7 +371,6 @@ class Feiv(Feols):
         """Apply the retention policy to this model and its first stage."""
         first_stage = getattr(self, "first_stage", None)
         if first_stage is not None:
-            # the first stage replays this model's storage options
             first_stage.model._clear_attributes()
         super()._clear_attributes()
 
@@ -473,13 +453,10 @@ class Feiv(Feols):
 
             ```
         """
-        # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
-        # Set statistics allowed in the current version
         iv_diag_stat_allowed = ["f_stat", "effective_f"]
 
-        # Check whether there is unsupported statistics.
         if statistics:
             invalid_stats = [
                 stat for stat in statistics if stat not in iv_diag_stat_allowed
@@ -610,8 +587,6 @@ def first_stage_f_test(
     FirstStageDiagnostics
         The F statistic and its p-value; `eff_f` is not computed here.
     """
-    # Pad an identity matrix of size p_iv by p_iv with zeros to select the
-    # excluded instruments out of the first stage's k coefficients.
     p_iv = len(instrument_positions)
     R = np.zeros((p_iv, model._k))
     R[:, instrument_positions] = np.eye(p_iv)

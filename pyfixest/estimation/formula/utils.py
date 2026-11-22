@@ -80,7 +80,6 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
 
 
 class _MultipleEstimationType(Enum):
-    # See https://lrberge.github.io/fixest/reference/stepwise.html
     sw = "sequential stepwise"
     csw = "cumulative stepwise"
     sw0 = "sequential stepwise with zero step"
@@ -88,8 +87,6 @@ class _MultipleEstimationType(Enum):
     mvsw = "multiverse stepwise"
 
 
-# Matches an operator call such as `csw(X1, X2)`, also when a space precedes the
-# parenthesis (`csw (X1, X2)`) or the arguments span lines, as fixest allows.
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
     rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\s*\(.+\)",
     flags=re.DOTALL,
@@ -148,8 +145,6 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
     """
     main_part, *fixef_iv_parts = _str_split_by_sep(formula, separator="|")
     supported = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
-    # Bracketed IV in the first part is already in Formulaic syntax.
-    # Only later parts need legacy-IV conversion or misplaced-IV validation.
     iv_tilde_counts = [_count_formula_tildes(part) for part in fixef_iv_parts]
     if not any(iv_tilde_counts):
         return formula
@@ -208,8 +203,6 @@ def _preprocess_fixest_multiple_dependents(formula: str) -> str:
             "'y ~ x | group'. See https://pyfixest.org/tutorials/formula-syntax.html#basic-syntax"
         )
     dependent, rest = re.split(r"\s*~\s*", formula, maxsplit=1)
-    # Only a top-level `+` separates dependents: `I(Y + Y2)` is a single
-    # transformed dependent, not two.
     dependents = _str_split_by_sep(dependent, separator="+")
     if len(dependents) > 1:
         formula_old = formula

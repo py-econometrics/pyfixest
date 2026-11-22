@@ -53,13 +53,10 @@ class FixedEffectEncoding:
         cls, *, term: Term, values: tuple[pd.Series, ...]
     ) -> tuple[FixedEffectEncoding, pd.Series]:
         """Learn the level mappings and return the training codes."""
-        # Sorted factorization preserves declared categorical order, returning
-        # codes and observed levels together.
         factorized = [pd.factorize(column, sort=True) for column in values]
         per_factor = [codes for codes, _ in factorized]
         factor_levels = tuple(pd.Index(levels) for _, levels in factorized)
         if len(values) == 1:
-            # The sorted level index already defines the complete code order.
             code_index = pd.RangeIndex(len(factor_levels[0]))
             codes = per_factor[0].astype(np.float64)
         else:
@@ -188,7 +185,6 @@ def encode_fixed_effect(*_columns, _state=None, _metadata=None, _context: Any = 
             )
             if unseen.any():
                 missing = (
-                    # Discard Series labels to combine series by position.
                     pd.concat(
                         [column.reset_index(drop=True) for column in values],
                         axis=1,

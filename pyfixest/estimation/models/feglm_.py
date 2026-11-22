@@ -62,13 +62,9 @@ class Feglm(Feols):
 
     options: GlmEstimationOptions
     _n_fe_after_separation: int | None = None
-    # Iterative IRLS fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
-    # Link, variance, deviance, and method name; each subclass declares one.
     _family: ClassVar[GlmFamily]
 
-    # No CRV3: the inherited slow jackknife refits with the linear/Poisson
-    # APIs and cannot yet preserve a generic GLM family's estimation contract.
     _declared_capabilities: ClassVar[Capabilities] = Capabilities(
         covariance_update=True,
         crv3_inference=False,
@@ -121,14 +117,12 @@ class Feglm(Feols):
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
 
-        # check for separation
         na_separation: list[int] = []
         if (
-            # Families without outcome bounds, such as Gaussian, cannot separate.
             self._family.outcome_bounds
             and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
-            and self.options.separation_check  # not an empty list
+            and self.options.separation_check
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
@@ -152,7 +146,6 @@ class Feglm(Feols):
             model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
-            # possible to have dropped fixed effects level due to separation
             counts = self.fixef_counts
             self._n_fe_after_separation = sum(
                 n_levels > 1 and has_intercept
@@ -215,8 +208,6 @@ class Feglm(Feols):
         self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
-        # The prediction view of the same arrays: eta is the linear predictor
-        # (fixed effects and offset included), mu its inverse-link mean.
         self.fitted_values = FittedValues(
             link=working_state.eta, response=working_state.mu
         )
@@ -270,8 +261,6 @@ class Feglm(Feols):
         return VcovTerm(vcov=vcov_iid_glm(bread=self.sandwich.bread), meat=None)
 
     def _vcov_hetero(self, *, vcov_type_detail: str) -> VcovTerm:
-        # The IRLS design is unpremultiplied, so the HC2/HC3 leverage takes the
-        # final IRLS weights, which already contain the observation weights.
         observation_weights = self.observation_weights.values
         meat = meat_hetero(
             sandwich=self.sandwich,

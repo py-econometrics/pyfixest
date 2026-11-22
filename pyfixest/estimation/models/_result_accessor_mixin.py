@@ -130,7 +130,6 @@ class TidyColumnAccessors:
 class ResultAccessorMixin(TidyColumnAccessors):
     """Mixin providing result-accessor methods for fitted models."""
 
-    # Type declarations for attributes provided by the host class (Feols).
     variance_covariance: "VarianceCovariance"
     coeftable: CoefficientTable
     _beta_hat: np.ndarray
@@ -252,7 +251,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
         se = np.sqrt(np.diagonal(covariance.vcov))
         tstat = beta_hat / se
         pvalue = dist.pvalue(tstat, covariance.df_t)
-        # fixest_CI_factor: beta +- q(1 - alpha / 2) * se at df_t degrees of freedom
         z_se = dist.crit_val(alpha, covariance.df_t) * se
         self.coeftable = CoefficientTable(
             estimate=beta_hat,
@@ -330,7 +328,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )
-            # Fixed-effects-only model: no coefficients, so no inference rows.
             se = tstat = pvalue = np.empty(0)
             conf_int = np.empty((2, 0))
 
@@ -508,7 +505,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
                 f"{(1 - alpha / 2) * 100:.1f}%": ub,
             }
         )
-        # df = pd.DataFrame({f"{alpha / 2}%": lb, f"{1-alpha / 2}%": ub})
         df.index = coefnames
 
         return df

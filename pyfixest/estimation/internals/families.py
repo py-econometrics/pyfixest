@@ -110,7 +110,6 @@ def _probit_deviance(
 ) -> float:
     w = _flatten_weights(weights)
     ll_fitted = np.sum(w * (y * np.log(mu) + (1 - y) * np.log(1 - mu)))
-    # divide by zero warnings because of the log(0) terms
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ll_saturated = np.sum(

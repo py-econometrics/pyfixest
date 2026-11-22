@@ -52,8 +52,6 @@ class ModelEntry:
     options_cls: type[EstimationOptions] = EstimationOptions
     iv_model_cls: ModelFactory | None = None
     quantile_process_model_cls: ModelFactory | None = None
-    # Quantile regression does not absorb fixed effects, so it neither
-    # demeans nor shares the runner's preconditioner cache.
     accepts_preconditioner: bool = True
 
 
@@ -278,7 +276,6 @@ def fit_one(
     if entry.accepts_preconditioner:
         model_kwargs["lookup_preconditioner"] = lookup_preconditioner
     if spec.quantile_process is not None:
-        # the fan-out itself is not an option of any single fit
         model_kwargs["quantile"] = spec.quantile_process.quantiles
         model_kwargs["multi_method"] = spec.quantile_process.multi_method
 
@@ -286,7 +283,6 @@ def fit_one(
 
     FIT.prepare_model_matrix()
     FIT._validate_response()
-    # if X is empty: no inference (empty X only as shorthand for demeaning)
     if not FIT._X_is_empty:
         FIT._check_vcov_support(vcov)
     FIT.get_fit()

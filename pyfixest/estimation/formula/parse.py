@@ -52,8 +52,6 @@ def _render_factor(factor: Factor) -> str:
     """Render one factor without confusing lookups with Python expressions."""
     expression = factor.expr
     if factor.eval_method is Factor.EvalMethod.LOOKUP:
-        # Python identifiers include Unicode characters that Formulaic's
-        # tokenizer cannot read unquoted. Retain backticks for those names.
         safe_unquoted = expression.isascii() and all(
             part.isidentifier() for part in expression.split(".")
         )
@@ -66,7 +64,6 @@ def _render_factor(factor: Factor) -> str:
             and tokens[0].kind is Token.Kind.PYTHON
             and tokens[0].token == expression
         ):
-            # Calls and subscripts already identify a single Python factor.
             return expression
         return "{" + expression + "}"
 
@@ -122,9 +119,6 @@ class FixedEffectSpecification:
     @classmethod
     def from_term(cls, term: Term) -> FixedEffectSpecification:
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
-        # A fixed-effect term can have multiple factors if it represents interactions
-        # For example f1:f2[z] has two factors: `(f1, f2[z])`
-
         varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
         for position, factor in enumerate(term.factors):
             factor_expression = _factor_ast(factor)
@@ -137,7 +131,6 @@ class FixedEffectSpecification:
         if not varying_slope_expressions:
             return cls(levels=term, intercept=True)
         if len(varying_slope_expressions) != 1:
-            # Reject expressions of the form `f1[z1]:f2[z2]`
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: cannot specify more than one "
                 "varying-slope expression in a single term. For slopes on interacted "
@@ -146,18 +139,15 @@ class FixedEffectSpecification:
 
         expression, slope_factor_position = varying_slope_expressions[0]
         last_factor_position = len(term.factors) - 1
-        # Accept `f1:f2[z]`, but reject `f1[z]:f2`.
         if slope_factor_position != last_factor_position:
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: varying-slope syntax is only "
                 "supported on the final factor of a fixed-effect interaction, "
                 "for example `f1:f2[z]`."
             )
-        # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
-        # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
 
-        fixed_effect_level = expression.value  # `f2`
-        fixed_effect_slopes = expression.slice  # `z`
+        fixed_effect_level = expression.value
+        fixed_effect_slopes = expression.slice
         if isinstance(fixed_effect_level, ast.Subscript):
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: nested varying-slope "
@@ -165,8 +155,6 @@ class FixedEffectSpecification:
                 "for example `f1[z1, z2]` (with fixed-effect intercepts) or "
                 "`f1[[z1, z2]]` (without fixed-effect intercepts)."
             )
-        # Formula operators can silently change a Python level expression:
-        # reparsing `f1 - f2` as a formula would leave only `f1`.
         if isinstance(fixed_effect_level, (ast.BinOp, ast.UnaryOp)):
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: unsupported fixed-effect "
@@ -176,20 +164,17 @@ class FixedEffectSpecification:
             )
 
         if isinstance(fixed_effect_slopes, ast.List):
-            # Varying slopes without fixed effect: f1[[z1, z2]]
             intercept = False
             slope_nodes = tuple(fixed_effect_slopes.elts)
         else:
-            # Varying slopes fixed effect: f1[z1] or f1[z1, z2]
             intercept = True
             slope_nodes = (
                 tuple(fixed_effect_slopes.elts)
-                if isinstance(fixed_effect_slopes, ast.Tuple)  # f1[z1, z2]
-                else (fixed_effect_slopes,)  # f1[z1]
+                if isinstance(fixed_effect_slopes, ast.Tuple)
+                else (fixed_effect_slopes,)
             )
 
         if not slope_nodes:
-            # Guard against empty slope lists such as `f1[[]]`.
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: a varying-slope term must "
                 "specify at least one slope, for example `f1[z]` or `f1[[z]]`. "
@@ -281,23 +266,23 @@ def _is_slope_expression(node: ast.AST) -> bool:
     examples include `0`, `"z"`, `z[0]`, `z > 0`, and `[x for x in z]`.
     """
     supported_nodes = (
-        ast.Name,  # z
-        ast.Attribute,  # np.log
-        ast.Call,  # np.log(z)
-        ast.BinOp,  # z + 1, z**2
-        ast.UnaryOp,  # -z, +z
-        ast.Constant,  # 2 in z / 2; True in center=True
-        ast.keyword,  # center=True
-        ast.Load,  # variable-read context added by the AST
-        ast.Add,  # +
-        ast.Sub,  # -
-        ast.Mult,  # *
-        ast.Div,  # /
-        ast.FloorDiv,  # //
-        ast.Mod,  # %
-        ast.Pow,  # **
-        ast.UAdd,  # unary +
-        ast.USub,  # unary -
+        ast.Name,
+        ast.Attribute,
+        ast.Call,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Constant,
+        ast.keyword,
+        ast.Load,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.FloorDiv,
+        ast.Mod,
+        ast.Pow,
+        ast.UAdd,
+        ast.USub,
     )
     nodes = tuple(ast.walk(node))
     return (
@@ -312,8 +297,6 @@ def _is_slope_expression(node: ast.AST) -> bool:
 def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term:
     """Parse one extracted Python expression as one Formulaic term."""
     expression = ast.unparse(node)
-    # Slopes are evaluated expressions: formula operators would silently turn
-    # `z**2` into `z`, for example. Keep bare names as ordinary column lookups.
     formula_expression = (
         "{" + expression + "}"
         if preserve_arithmetic and not isinstance(node, ast.Name)
@@ -333,9 +316,6 @@ def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term
 
 def _factor_ast(factor: Factor) -> ast.expr | None:
     """Return the AST for a Python-evaluated Formulaic factor."""
-    # Factor must encoded as Python expression by formulaic
-    # (because `f1[z]` is Python syntax)
-
     if not is_python_expression(factor):
         return None
     try:
@@ -394,8 +374,6 @@ class Formula:
                 f"got {len(self._formula.rhs)}. Put all fixed effects in one part, "
                 "as in 'y ~ x | f1 + f2'."
             )
-        # Count terms, not source variables: `I(Y + Y2)` is one dependent
-        # expression evaluated from two columns.
         if len(self.dependent) > 1:
             raise FormulaSyntaxError(
                 f"Formula must have exactly one term on the left hand side. "
@@ -439,7 +417,6 @@ class Formula:
                 f"{len(self.instruments)} instruments. Supply at least one "
                 "excluded instrument per endogenous regressor."
             )
-        # Redundant instruments are allowed if an excluded instrument remains.
         excluded_instruments = set(self.instruments).difference(
             terms_without_intercept(self.exogenous)
         )
@@ -506,7 +483,6 @@ class Formula:
     @property
     def is_fixed_effects(self) -> bool:
         """Boolean indicating whether the formula is a fixed effects specification."""
-        # A MULTIPART formula is a tuple of formulas on the right hand side
         return isinstance(self._formula.rhs, tuple) and any(
             terms_without_intercept(self._formula.rhs[-1])
         )
@@ -546,17 +522,12 @@ class Formula:
         """Exogenous aka covariates aka independent variables."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
-            # IV blocks add their endogenous terms to the root. Exclude those
-            # terms here so the first stage does not regress them on themselves.
             exogenous = formulaic.formula.SimpleFormula(
                 term for term in exogenous.root if term not in self.endogenous
             )
 
         exogenous_terms = tuple(terms_without_intercept(exogenous))
         if self.absorbs_intercept and exogenous_terms:
-            # Drop the intercept for fixed effects regressions, except for
-            # intercept-only specifications such as `Y ~ 1 | f1`; these can be
-            # used to demean dependent variables.
             exogenous = formulaic.formula.SimpleFormula(
                 exogenous_terms, _ordering=exogenous.ordering
             )
@@ -641,8 +612,6 @@ class Formula:
         terms = list(self.exogenous)
         if self.is_instrumental_variable:
             terms.extend(self.endogenous)
-        # Preserve the existing reduced-rank categorical encoding for FE models.
-        # ModelMatrix removes this encoding intercept after materialization.
         if self.absorbs_intercept and terms and not any(term == "1" for term in terms):
             terms.insert(0, Term([Factor("1", eval_method=Factor.EvalMethod.LITERAL)]))
         return formulaic.formula.StructuredFormula(
@@ -656,9 +625,6 @@ class Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
             raise TypeError("Not an instrumental variable specification.")
-        # Controls must survive collinearity selection before excluded instruments.
-        # Preserve this order even when a control is an interaction and a
-        # redundant instrument is a degree-one transform of that interaction.
         rhs = formulaic.formula.SimpleFormula(
             dict.fromkeys(itertools.chain(self.exogenous, self.instruments)),
             _ordering="none",
@@ -683,7 +649,6 @@ class Formula:
         ]
         is_iv = {f.is_instrumental_variable for f in formulas}
         if len(is_iv) > 1:
-            # All models of one call are fitted with the same estimator class.
             iv = [f.render() for f in formulas if f.is_instrumental_variable]
             non_iv = [f.render() for f in formulas if not f.is_instrumental_variable]
             raise FormulaSyntaxError(
@@ -714,7 +679,6 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         separator=",",
     )
     if kind is _MultipleEstimationType.mvsw:
-        # Multiverse stepwise: all combinations of arguments
         arguments = [
             " + ".join(combination)
             for combination in itertools.chain.from_iterable(
@@ -723,14 +687,12 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
             )
         ]
     elif kind is _MultipleEstimationType.csw or kind is _MultipleEstimationType.csw0:
-        # Cumulative stepwise
         arguments = [" + ".join(arguments[: i + 1]) for i, _ in enumerate(arguments)]
     if (
         kind is _MultipleEstimationType.sw0
         or kind is _MultipleEstimationType.csw0
-        or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
+        or kind is _MultipleEstimationType.mvsw
     ):
-        # Add zero step
         arguments = ["1", *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
@@ -743,7 +705,6 @@ def _expand_all_multiple_estimation(formula: str) -> Iterator[str]:
     """Recursively expand all multiple estimation calls."""
     expansion = _expand_first_multiple_estimation(formula)
     if expansion is None:
-        # No multiple estimation syntax present
         yield formula
     else:
         for formula_expanded in expansion:

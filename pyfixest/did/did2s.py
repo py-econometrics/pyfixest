@@ -87,7 +87,6 @@ class DID2S(DID):
             self._fml1 = f" ~ 0 | {idname} + {tname}"
             self._fml2 = " ~ is_treated"
 
-        # column name with weights. None by default
         self._weights_name = weights
 
     def estimate(self):
@@ -178,9 +177,6 @@ def _did2s_estimate(
     object
         A fitted model object of class feols with the two-stage covariance.
     """
-    # Gardner's cluster score sum must include every estimation observation.
-    # Validate before either stage, rather than silently omitting NA clusters
-    # from the covariance while retaining their outcomes in the fit.
     if yname not in data.columns:
         raise ValueError(
             f"did2s() yname={yname!r} must name an existing outcome column."
@@ -281,7 +277,6 @@ def _did2s_estimate(
     else:
         _not_yet_treated_data = data[data["is_treated"] == False]  # noqa: E712
 
-    # estimate first stage
     fit1 = cast(
         Feols,
         feols(
@@ -290,12 +285,10 @@ def _did2s_estimate(
             vcov="iid",
             weights=weights,
         ),
-    )  # iid as it might be faster than CRV
+    )
 
-    # obtain estimated fixed effects
     fit1.fixef()
 
-    # demean data
     Y_hat = fit1.predict(newdata=data)
     missing_predictions = int(np.isnan(Y_hat).sum())
     if missing_predictions:
@@ -308,7 +301,6 @@ def _did2s_estimate(
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u
 
-    # intercept needs to be dropped by hand due to the presence of fixed effects in the first stage
     fit2 = cast(
         Feols,
         feols(
@@ -368,11 +360,8 @@ def _did2s_vcov(
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
 
-    # `clustid` (factorize's `uniques`) is an `Index` for a Series input; the
-    # pandas stubs also allow `ndarray`, which lacks `.nunique()`.
     _G = cast(pd.Index, clustid).nunique()
 
-    # Work on copies: square-root weighting must not mutate the fitted state.
     first_u = second_stage.model_matrix.dependent.to_numpy().flatten()
     second_u = second_stage.resid().copy()
     observation_weights = second_stage.observation_weights.values
@@ -381,8 +370,6 @@ def _did2s_vcov(
     else:
         weights_array = np.sqrt(observation_weights)
 
-    # Replay fitted encodings on the full sample: raw FE expressions must never
-    # be evaluated as Python (in particular, `a^b` is not a bitwise XOR).
     model_spec = first_stage.model.model_spec
     assert model_spec is not None
     context = FORMULAIC_TRANSFORMS | dict(first_stage.options.context)
@@ -405,7 +392,6 @@ def _did2s_vcov(
         * weights_array[:, None]
     )
 
-    # Weight first and second stage residuals
     first_u *= weights_array
     second_u *= weights_array
 
@@ -415,7 +401,7 @@ def _did2s_vcov(
 
     X10X10 = X10.T.dot(X10)
     X2X1 = X2.T.dot(X1)
-    X2X2 = X2.T.dot(X2)  # tocsc() to fix spsolve efficiency warning
+    X2X2 = X2.T.dot(X2)
 
     V = spsolve(X10X10.tocsc(), X2X1.T.tocsc()).T
 

@@ -67,13 +67,11 @@ def refit(
     Feols
         The fitted model, of the same estimator as `fit`.
     """
-    # lazy loading to avoid circular import
     from pyfixest.estimation.models.feols_ import Feols
     from pyfixest.estimation.plan_ import estimation_method_of, plan_formulas
     from pyfixest.estimation.runner import run_estimation
 
     require_retained(fit, "refit", "_data")
-    # `run_estimation` resets the index, so compare it before fitting
     if same_sample and not data.index.equals(fit._data.index):
         raise ValueError(
             "`same_sample=True` requires `data` to have the same index as "
@@ -82,9 +80,7 @@ def refit(
     if same_sample:
         options = replace(
             fit.options,
-            # do not drop singletons again (they are already dropped)
             drop_singletons=False,
-            # reuse the preconditioner
             demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
         )
     else:
@@ -97,11 +93,9 @@ def refit(
         method=estimation_method_of(type(fit)),
         data=data,
         formulas=(formula,),
-        # the runner does not modify `data`, so it need not copy it
         options=replace(options, copy_data=False),
         vcov=vcov,
     )
-    # the caller reads the refit in full or throws it away
     plan = plan_formulas(config)
     result = run_estimation(config, plan, apply_retention=False)
     if not isinstance(result, Feols):

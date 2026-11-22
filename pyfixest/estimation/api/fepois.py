@@ -250,9 +250,6 @@ def fepois(
     Shared arguments such as `vcov`, `ssc`, `split`, `fsplit`, `context`, and typed demeaners
     are documented in the [feols() reference](/reference/estimation.api.feols.feols.html).
     """
-    # Thin wrapper: fepois is exactly feglm(family="poisson"). Capture the
-    # context here, as an integer frame offset passed on to feglm would resolve
-    # relative to this frame rather than the user's.
     context = {} if context is None else capture_context(context)
     return feglm(
         fml=fml,

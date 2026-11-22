@@ -175,7 +175,6 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
         else:
             corr_padj[j] = max(pinit[j], corr_padj[j - 1])
 
-    # Collect the results
     pval = corr_padj[ro]
 
     return pval
@@ -306,7 +305,6 @@ def _multcomp_resample(
             )
 
         if model.variance_covariance.spec.is_clustered:
-            # covariance.G has one entry per cluster dimension
             G = min(model.variance_covariance.G)
             if reps > 2**G:
                 warnings.warn(
@@ -338,7 +336,7 @@ def _multcomp_resample(
                 param=param,
                 reps=reps,
                 return_bootstrapped_t_stats=True,
-                seed=seed,  # all S iterations require the same bootstrap samples, hence seed needs to be reset
+                seed=seed,
             )
             t_stats[i] = wildboot_res_df["t value"]
             boot_t_stats[:, i] = bootstrapped_t_stats

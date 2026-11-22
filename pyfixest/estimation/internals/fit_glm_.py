@@ -186,7 +186,6 @@ def fit_glm_irls(
     converged = False
     step_halved_prev = False
 
-    # Buffers populated each iteration; used after the loop.
     beta_final: np.ndarray
     z_tilde_final: np.ndarray
     X_tilde_final: np.ndarray
@@ -196,10 +195,6 @@ def fit_glm_irls(
     for r in range(maxiter):
         if r > 0:
             rel_dev_change = _rel_dev_change(deviance, deviance_old)
-            # Only check convergence when the previous update was a full IWLS step.
-            # After step-halving, eta/mu reflect the shortened step, but beta and
-            # the final WLS objects still reflect the unhalved solve; one more
-            # IWLS pass is needed to bring the returned state back into alignment.
             if not step_halved_prev:
                 converged = _check_convergence(
                     rel_dev_change=rel_dev_change,

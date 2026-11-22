@@ -344,8 +344,6 @@ class ObservationWeights:
     weights_type: WeightsTypeOptions | None
 
     def __post_init__(self) -> None:
-        # `unweighted()` and `from_values()` are the only constructors used by
-        # the estimators; this guard catches direct misconstruction.
         if self.values is not None and self.weights_type is None:
             raise ValueError("Weighted observations must declare a `weights_type`.")
 

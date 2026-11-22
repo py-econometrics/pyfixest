@@ -15,6 +15,6 @@ FORMULAIC_FEATURE_FLAG: Final[DefaultFormulaParser.FeatureFlags] = (
 )
 
 FORMULAIC_TRANSFORMS: Final[dict[str, Callable]] = {
-    "i": factor_interaction,  # fixest::i()-style syntax
+    "i": factor_interaction,
     "__fixed_effect__": encode_fixed_effect,
 }

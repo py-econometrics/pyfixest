@@ -216,7 +216,6 @@ def iplot(
         )
         df_all.append(df_model)
 
-    # drop duplicates
     all_icovars = list(set(all_icovars))
 
     df = pd.concat(df_all, axis=0)
@@ -225,10 +224,8 @@ def iplot(
     else:
         idxs = df["Coefficient"]
     df = df.loc[df["Coefficient"].isin(idxs), :]
-    # keep only coefficients interacted via the i() syntax
     df = df[df["Coefficient"].isin(all_icovars)].reset_index()
 
-    # check that labels match the coef names
     if labels is not None:
         _check_label_keys_in_covars(
             label_keys=list(labels.keys()),
@@ -394,7 +391,6 @@ def coefplot(
         idxs = df.index
     df = df.loc[idxs, :].reset_index()
 
-    # check that labels match the coef names
     if labels is not None:
         _check_label_keys_in_covars(
             label_keys=list(labels.keys()),
@@ -522,7 +518,7 @@ def _coefplot_lets_plot(
     flip_coord: bool | None = True,
     labels: dict | None = None,
     cat_template: str | None = None,
-    ax=None,  # for compatibility with matplotlib backend
+    ax=None,
 ):
     """
     Plot model coefficients with confidence intervals.
@@ -701,14 +697,12 @@ def _coefplot_matplotlib(
     else:
         f = cast(plt.Figure, ax.get_figure())
 
-    # Check if we have multiple models
     models = df["fml"].unique()
     is_multi_model = len(models) > 1
 
     colors = plt.get_cmap("jet")(np.linspace(0, 1, len(models)))
     color_dict = dict(zip(models, colors, strict=False))
 
-    # Calculate the positions for dodging
     unique_coefficients = df["Coefficient"].unique()
     if is_multi_model:
         coef_positions = {coef: i for i, coef in enumerate(unique_coefficients)}
@@ -739,7 +733,6 @@ def _coefplot_matplotlib(
             ax.errorbar(
                 y=group["Estimate"],
                 x=x_pos,
-                # yerr=group["Std. Error"] * critval,
                 yerr=err,
                 fmt="o",
                 capsize=5,
@@ -814,7 +807,7 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None  # for mypy, do people really do this?
+        assert nrow is not None
         rows, cols = nrow, math.ceil(k / nrow)
     else:
         assert ncol is not None
@@ -884,7 +877,7 @@ def _get_model_df(
     if rename_models is None:
         rename_models = {}
 
-    df_model = fxst.tidy(alpha=alpha).reset_index()  # Coefficient -> simple column
+    df_model = fxst.tidy(alpha=alpha).reset_index()
 
     df_model["fml"] = fxst._model_name_plot
     df_model["fml"] = df_model["fml"].apply(lambda x: rename_models.get(x, x))

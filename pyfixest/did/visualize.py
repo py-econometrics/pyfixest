@@ -20,7 +20,7 @@ def panelview(
     sort_by_timing: bool | None = False,
     xlab: str | None = None,
     ylab: str | None = None,
-    figsize: tuple | None = (11, 3),  # Default plot size
+    figsize: tuple | None = (11, 3),
     noticks: bool | None = False,
     title: str | None = None,
     legend: bool | None = False,
@@ -108,7 +108,6 @@ def panelview(
     )
     ```
     """
-    # check if unit, time, treat and outcome are in the data
     for option, col in (("unit", unit), ("time", time), ("treat", treat)):
         if col not in data.columns:
             raise ValueError(
@@ -136,7 +135,6 @@ def panelview(
             f"Column '{treat}' must be binary (bool or 0/1 integer). "
             f"Found values: {unique_vals}"
         )
-    # Normalize treat to boolean to handle integer (0/1) columns robustly
     data = data.copy()
     data[treat] = data[treat].astype(bool)
 
@@ -273,7 +271,6 @@ def _plot_panelview_output_plot(
         else:
             treatment_times = data[(data[unit] == unit_id) & (data[treat])][time]
 
-        # If the unit never receives treatment, plot the line in grey
         if treatment_times.empty:
             ax.plot(
                 unit_data.index,
@@ -285,7 +282,6 @@ def _plot_panelview_output_plot(
         else:
             treatment_start = treatment_times.min()
 
-            # Plot the entire line with the initial color (orange), then change to red after treatment
             ax.plot(
                 unit_data.index,
                 unit_data.values,

@@ -233,11 +233,9 @@ def quantreg(
     of the full quantile regression process, see the
     [quantile regression tutorial](/tutorials/quantile-regression.html).
     """
-    # WLS currently not supported for quantile regression
     weights = None
     weights_type: WeightsTypeOptions = "aweights"
     solver: SolverOptions = "np.linalg.solve"
-    # fixed effects are rejected for quantile regression; use the feols default
     fixef_rm: FixedRmOptions = "singleton"
 
     ssc = _resolve_ssc(ssc)
@@ -283,8 +281,6 @@ def quantreg(
         copy_data=copy_data,
         lean=lean,
         context=context,
-        # a quantile process carries its first quantile; each child fit
-        # gets its own via `dataclasses.replace`
         quantile=quantile[0] if isinstance(quantile, list) else quantile,
         method=method,
         quantile_tol=tol,

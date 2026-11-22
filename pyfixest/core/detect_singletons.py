@@ -65,9 +65,6 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
             "Encode each fixed-effect column before calling it."
         )
 
-    # Convert to uint32 F-contiguous array for optimal performance
-    # (matches numba implementation behavior)
-    # Using empty((m,n)).T gives F-order (n,m) layout
     n, m = ids.shape
     out: NDArray[np.uint32] = np.empty((m, n), dtype=np.uint32).T
     out[:] = ids

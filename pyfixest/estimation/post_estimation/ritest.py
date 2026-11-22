@@ -12,10 +12,6 @@ from tqdm import tqdm
 
 from pyfixest.utils.dev_utils import _find_stack_level
 
-# Numba is an optional dependency. The fast randomization-inference path uses it;
-# the slow path does not. We import lazily so the module loads cleanly even when
-# numba is not installed, and surface a clear error only when the fast path is
-# actually requested.
 try:
     import numba as nb
 
@@ -76,8 +72,6 @@ def _get_ritest_stats_slow(
         `type` is 'randomization-c', otherwise t-statistics are returned.
 
     """
-    # the resampled column goes into a shallow copy, so `data` keeps its
-    # columns; `fit_fn` must not modify its input
     data_resampled = data.copy(deep=False)
 
     assignment, unit_codes = _assignment_units(

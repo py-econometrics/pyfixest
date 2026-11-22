@@ -211,7 +211,6 @@ def etable(
     document.add_paragraph("Additional discussion of the estimates.")
     ```
     """
-    # Apply pyfixest default for signif_code (different from maketables default)
     if signif_code is None:
         signif_code = [0.001, 0.01, 0.05]
 
@@ -389,7 +388,6 @@ def summary(
         print(depvar_fixef)
         sample_split = fxst.model.sample_split
         if sample_split is None:
-            # An unsplit fit reports the full sample, with no split variable.
             print("sample: None = all")
         else:
             sample = "all" if sample_split.value is None else sample_split.value

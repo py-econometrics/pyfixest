@@ -64,9 +64,6 @@ def meat_hetero(
         pre-multiplied by ``sqrt(w)``. ``None`` when the caller passes a
         square-root-weighted design, as GLMs do in this layer.
     """
-    # For HC2/HC3, h_i = w_i x_i' (X' W X)^-1 x_i. Frequency-weighted
-    # rows represent repeated observations, so their per-observation leverage
-    # is h_i / f_i and their aggregated score is divided by sqrt(f_i).
     scores = sandwich.scores
     if vcov_type_detail in ["hetero", "HC1"]:
         transformed_scores = scores
@@ -144,10 +141,6 @@ def meat_hac(
             )
 
         order, _, starts, _, time_arr_sorted, _ = _get_panel_idx(
-            # hack: sort first by time, than panel
-            # we need the data sorted by time, but sort by
-            # panel too to check for duplicate time periods
-            # per panel
             panel_arr=time_arr,
             time_arr=panel_arr,
             identifier_columns=(panel_id, time_id),

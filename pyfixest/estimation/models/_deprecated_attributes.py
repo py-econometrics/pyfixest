@@ -40,8 +40,6 @@ class Alias:
         try:
             return self.read(fit)
         except AttributeError as exc:
-            # Keep `hasattr` and `require_retained` working: state that is not
-            # published yet, or was dropped by `lean=True`, stays missing.
             raise AttributeError(
                 f"`fit.{name}` is not available on this fit: {exc}. "
                 f"`fit.{name}` is deprecated; use `{self.replacement}` instead."
@@ -149,11 +147,9 @@ class DeprecatedAttributes:
             )
 
     if not TYPE_CHECKING:
-        # A catch-all __getattr__ would make unknown attributes type-check as Any.
+
         def __getattr__(self, name: str) -> Any:
             """Explain missing 0.60 private attributes without shadowing live state."""
-            # Python calls __getattr__ after a descriptor raises AttributeError;
-            # re-run our descriptor to preserve its specific migration message.
             for cls in type(self).__mro__:
                 descriptor = cls.__dict__.get(name)
                 if isinstance(descriptor, _DeprecatedAttributeDescriptor):
@@ -164,8 +160,6 @@ class DeprecatedAttributes:
                     f"is not supported in {REMOVED_IN}; see the migration guide: "
                     "https://pyfixest.org/how-to/migrate-fit-attributes.html"
                 )
-            # An unrelated property's internal AttributeError is replaced by this
-            # fallback too; properties should avoid raising AttributeError internally.
             raise AttributeError(
                 f"{type(self).__name__!r} object has no attribute {name!r}"
             )
@@ -491,7 +485,6 @@ DEPRECATED_ATTRIBUTES: tuple[DeprecatedAttributeSpec, ...] = (
     _attribute_spec(
         "deviance",
         silent=True,
-        # 0.60 left the deviance `None` for linear and quantile fits.
         Feols=_alias("fit.fitstat.deviance", lambda fit: None),
         Feglm=_alias("fit.fitstat.deviance", lambda fit: fit.fitstat.deviance),
     ),
