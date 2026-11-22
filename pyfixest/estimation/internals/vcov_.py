@@ -83,8 +83,7 @@ def meat_hetero(
         )
     else:
         raise ValueError(
-            f"Heteroskedasticity-robust meat requires hetero, HC1, HC2, or HC3; "
-            f"got vcov_type_detail={vcov_type_detail!r}. Check covariance dispatch."
+            f"vcov_type_detail must be one of {HeteroVcovTypeOptions}, got {vcov_type_detail}."
         )
 
     if frequency_weights is not None:
@@ -157,10 +156,7 @@ def meat_hac(
             scores=scores[order], time_arr=time_arr_sorted, idx=starts, lag=lag
         )
     else:
-        raise ValueError(
-            f"HAC meat requires vcov_type_detail='NW' or 'DK'; got {vcov_type_detail!r}. "
-            "Check covariance dispatch."
-        )
+        raise ValueError("vcov_type_detail must be one of 'NW' or 'DK'.")
 
     return hac_meat
 

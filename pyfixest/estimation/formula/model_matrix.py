@@ -248,16 +248,8 @@ class ModelMatrix:
                     "some columns would be silently dropped. Remove or rename the "
                     "repeated terms."
                 )
-        first = datas[0]
-        for other in datas[1:]:
-            if not first.index.identical(other.index):
-                raise ValueError(
-                    "Formula evaluation produced misaligned model matrices. "
-                    f"Columns {list(first.columns[:5])!r} have {len(first)} rows, "
-                    f"and columns {list(other.columns[:5])!r} have {len(other)} rows "
-                    "with a different index. Check that formula transforms "
-                    "produce values aligned with the input rows."
-                )
+        if not all(datas[0].index.identical(other.index) for other in datas[1:]):
+            raise ValueError("All design matrix data must have the same index.")
         data = pd.concat(datas, ignore_index=False, axis=1)
         self._data = data.loc[:, ~data.columns.duplicated()]
 

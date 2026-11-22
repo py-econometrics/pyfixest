@@ -67,14 +67,14 @@ function parse_vcov(vcov_type::String)
     elseif vcov_type == "hetero"
         return Vcov.robust()
     else
-        error("Unknown vcov_type: $vcov_type. Use iid, hetero, or cluster:<column>.")
+        error("Unknown vcov_type: $vcov_type")
     end
 end
 
 # ── main ──
 function main()
     if length(ARGS) != 1
-        error("Expected exactly one argument, a JSON configuration path. Run julia benchmarks/modular/feols_julia.jl config.json.")
+        error("Expected exactly one argument: path to JSON config.")
     end
 
     config = JSON3.read(read(ARGS[1], String))

@@ -59,7 +59,7 @@ def _require_fixed_effect_codes(
     """Require group codes for backends without explicit-effect support."""
     if isinstance(flist, list):
         raise TypeError(
-            f"Explicit fixed effects, such as varying slopes, are not supported by the {backend} "
+            f"Explicit fixed effects are not supported by the {backend} "
             "demeaner. Use `LsmrDemeaner(backend='within')`, the default demeaner."
         )
     return flist
@@ -205,9 +205,7 @@ class MapDemeaner(BaseDemeaner):
 
             demean_func = demean_rs
         else:
-            raise ValueError(
-                f"Unknown MapDemeaner backend {self.backend!r}. Use one of {get_args(MapBackend)!r}."
-            )
+            raise ValueError(f"Unknown MapDemeaner backend: {self.backend!r}")
 
         result, success = demean_func(
             x=x,
@@ -417,9 +415,7 @@ class LsmrDemeaner(BaseDemeaner):
         if self.backend == "torch":
             flist = _require_fixed_effect_codes(flist=flist, backend="torch LSMR")
             return self._demean_torch(x=x, flist=flist, weights=weights)
-        raise ValueError(
-            f"Unknown LsmrDemeaner backend {self.backend!r}. Use one of {get_args(LsmrBackend)!r}."
-        )
+        raise ValueError(f"Unknown LsmrDemeaner backend: {self.backend!r}")
 
     def _demean_within(
         self,

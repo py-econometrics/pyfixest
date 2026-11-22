@@ -7,7 +7,6 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.errors import EmptyEstimationSampleError
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.demean_ import DemeanedData
@@ -86,10 +85,7 @@ def _resolve_model_class(
     entry = MODEL_REGISTRY[method]
     if fits_quantile_process:
         if entry.quantile_process_model_cls is None:
-            raise TypeError(
-                f"{method!r} models cannot fit a quantile process. "
-                "Use the quantreg registry entry for a grid of quantiles."
-            )
+            raise TypeError(f"{method!r} models cannot fit a quantile process.")
         return entry.quantile_process_model_cls
     if is_iv and entry.iv_model_cls is not None:
         return entry.iv_model_cls
@@ -105,10 +101,7 @@ def estimation_method_of(model_cls: type) -> EstimationMethod:
     for method, entry in MODEL_REGISTRY.items():
         if model_cls in (entry.model_cls, entry.iv_model_cls):
             return method
-    raise ValueError(
-        f"{model_cls.__name__} is not a registered model class. "
-        "Add its estimator and model class to MODEL_REGISTRY before dispatching a fit."
-    )
+    raise ValueError(f"{model_cls.__name__} is not a registered model class.")
 
 
 @dataclass(frozen=True)
@@ -198,17 +191,13 @@ def build_all_splits(
         return [None]
     if splitvar is None:
         raise RuntimeError("Sample splitting was requested without a split column.")
-    values = data[splitvar].dropna().drop_duplicates().sort_values().tolist()
-    if not values:
-        option = "fsplit" if run_full else "split"
-        raise EmptyEstimationSampleError(
-            f"{option}={splitvar!r} has no nonmissing values, so no sample can be fitted. "
-            f"Supply a populated {option} column or omit {option} to fit the original sample."
-        )
     all_splits: list[SampleSplit | None] = []
     if run_full:
         all_splits.append(SampleSplit(var=splitvar, value=None))
-    all_splits.extend(SampleSplit(var=splitvar, value=value) for value in values)
+    all_splits.extend(
+        SampleSplit(var=splitvar, value=value)
+        for value in data[splitvar].dropna().drop_duplicates().sort_values().tolist()
+    )
     return all_splits
 
 
@@ -233,8 +222,7 @@ def expand_specs(
     if not isinstance(config.options, entry.options_cls):
         raise TypeError(
             f"{config.method!r} models take {entry.options_cls.__name__}; "
-            f"got {type(config.options).__name__}. "
-            "Use the options type declared for this estimator in MODEL_REGISTRY."
+            f"got {type(config.options).__name__}."
         )
     model_cls = _resolve_model_class(
         config.method,

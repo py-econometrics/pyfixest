@@ -105,7 +105,6 @@ class Feglm(Feols):
         )
 
         _glm_input_checks(
-            drop_singletons=options.drop_singletons,
             tol=options.tol,
             maxiter=options.maxiter,
         )
@@ -263,9 +262,7 @@ class Feglm(Feols):
         eta = self.fitted_values.link
         if self.options.offset is not None:
             offset = self.model_matrix.offset
-            assert offset is not None, (
-                "Fixed-effect recovery requires the offset values used to fit this GLM."
-            )
+            assert offset is not None
             eta = eta - offset.to_numpy().flatten()
         return eta
 
@@ -415,23 +412,17 @@ class Feglm(Feols):
         try:
             self._family.check_y(self.model_matrix.dependent.to_numpy())
         except ValueError as exc:
-            exc.add_note(
-                f"Model family {self._family.name!r}; dependent variable {self.model.depvar!r}."
-            )
+            exc.add_note(f"Dependent variable {self.model.depvar!r}.")
             raise
 
     def _finalize_fit(self) -> None:
         """Skip the OLS Wald test; GLMs run no Wald test at fit time."""
 
 
-def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
-    if not isinstance(drop_singletons, bool):
-        raise TypeError(
-            f"drop_singletons must be True or False; got {drop_singletons!r}."
-        )
+def _glm_input_checks(tol: float, maxiter: int) -> None:
     if not isinstance(tol, (int, float)):
         raise TypeError(f"iwls_tol must be numeric; got {tol!r}.")
-    if not 0 < tol < 1:
+    if tol <= 0 or tol >= 1:
         raise ValueError(
             f"iwls_tol must be greater than 0 and less than 1; got {tol!r}."
         )

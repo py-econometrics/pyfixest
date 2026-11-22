@@ -45,10 +45,7 @@ def _get_position_of_first_parenthesis_pair(string: str) -> tuple[int, int]:
     """
     position_open = string.find("(")
     if position_open == -1:
-        raise ValueError(
-            f"No parenthesis in `{string}`. Use parentheses around the operator "
-            "arguments, as in sw(x1, x2)."
-        )
+        raise ValueError(f"No parenthesis in `{string}`")
     else:
         position_open += 1
     depth: int = 1

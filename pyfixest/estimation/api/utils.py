@@ -79,7 +79,7 @@ def _estimation_input_checks(
 
     if fixef_rm not in ["none", "singleton"]:
         raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
-    if not 0 < collin_tol < 1:
+    if collin_tol <= 0 or collin_tol >= 1:
         raise ValueError(
             f"collin_tol must be greater than 0 and less than 1; got {collin_tol!r}."
         )
@@ -162,7 +162,7 @@ def _estimation_input_checks(
             raise ValueError(
                 f"The variable {column!r} is not in the data. "
                 "Pass an existing clustering column, for example "
-                f"vcov={{{vcov.vcov_type_detail!r}: 'cluster'}}."
+                f"vcov={{{vcov.vcov_type_detail!r}: '<column>'}}."
                 + _bare_column_hint(column)
             )
     for option, column in (("time_id", vcov.time_id), ("panel_id", vcov.panel_id)):

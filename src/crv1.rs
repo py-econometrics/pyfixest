@@ -1,6 +1,5 @@
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 fn bucket_argsort_rs(arr: &ArrayView1<usize>) -> (Vec<usize>, Vec<usize>) {
@@ -34,24 +33,13 @@ fn bucket_argsort_rs(arr: &ArrayView1<usize>) -> (Vec<usize>, Vec<usize>) {
     (args, locs)
 }
 
-fn check_cluster_lookup(clustid: &ArrayView1<usize>, group_locations: &[usize]) -> PyResult<()> {
-    let n_levels = group_locations.len() - 1;
-    if let Some(&invalid) = clustid.iter().find(|&&code| code >= n_levels) {
-        return Err(PyValueError::new_err(format!(
-            "CRV1 cluster ID {invalid} is outside the encoded range 0..{n_levels}. Supply IDs from the per-observation cluster codes."
-        )));
-    }
-    Ok(())
-}
-
 fn crv1_meat_loop_imp(
     scores: &ArrayView2<f64>,
     clustid: &ArrayView1<usize>,
     cluster_col: &ArrayView1<usize>,
-) -> PyResult<Array2<f64>> {
+) -> Array2<f64> {
     let k = scores.ncols();
     let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
-    check_cluster_lookup(clustid, &g_locs)?;
 
     // Compute cluster contributions
     let create_cluster_contrib = |&g: &usize| -> Array2<f64> {
@@ -69,13 +57,13 @@ fn crv1_meat_loop_imp(
         x.dot(&x_t)
     };
 
-    Ok(clustid
+    clustid
         .iter()
         .map(create_cluster_contrib)
         .fold(Array2::zeros((k, k)), |mut acc, x| {
             acc += &x;
             acc
-        }))
+        })
 }
 
 /// Compute the CRV1 meat matrix for cluster-robust standard errors.
@@ -102,18 +90,14 @@ pub fn _crv1_meat_loop_rs(
     clustid: PyReadonlyArray1<usize>,
     cluster_col: PyReadonlyArray1<usize>,
 ) -> PyResult<Py<PyArray2<f64>>> {
-    let scores = scores.as_array();
-    let cluster_col = cluster_col.as_array();
-    if cluster_col.len() != scores.nrows() {
-        return Err(PyValueError::new_err(format!(
-            "CRV1 needs one cluster code per score row. Got {} codes for {} rows.",
-            cluster_col.len(),
-            scores.nrows(),
-        )));
-    }
-    let meat = crv1_meat_loop_imp(&scores, &clustid.as_array(), &cluster_col)?;
+    let meat = crv1_meat_loop_imp(
+        &scores.as_array(),
+        &clustid.as_array(),
+        &cluster_col.as_array(),
+    );
     Ok(meat.into_pyarray(py).to_owned().into())
 }
+
 
 fn crv1_vcov_loop(
     x: &ArrayView2<f64>,
@@ -122,14 +106,13 @@ fn crv1_vcov_loop(
     q: f64,
     u_hat: &ArrayView1<f64>,
     delta: f64,
-) -> PyResult<(Array2<f64>, Array2<f64>)> {
+) -> (Array2<f64>, Array2<f64>) {
     let k = x.ncols();
     let mut a = Array2::<f64>::zeros((k, k));
     let mut b = Array2::<f64>::zeros((k, k));
     let eps: f64 = 1e-7;
 
     let (g_indices, g_locs) = bucket_argsort_rs(cluster_col);
-    check_cluster_lookup(clustid, &g_locs)?;
 
     let mut psi_sum_g = Array1::<f64>::zeros(k);
     for &g in clustid.iter() {
@@ -160,8 +143,9 @@ fn crv1_vcov_loop(
     }
 
     b /= 2.0 * delta;
-    Ok((a, b))
+    (a, b)
 }
+
 
 /// Compute the matrices for the CRV1 sandwich estimator
 /// in quantile regression, following Parente & Santos Silva (2016).
@@ -175,18 +159,14 @@ pub fn _crv1_vcov_loop_qreg_rs(
     u_hat: PyReadonlyArray1<f64>,
     delta: f64,
 ) -> PyResult<(Py<PyArray2<f64>>, Py<PyArray2<f64>>)> {
-    let x = x.as_array();
-    let cluster_col = cluster_col.as_array();
-    let residuals = u_hat.as_array();
-    if cluster_col.len() != x.nrows() || residuals.len() != x.nrows() {
-        return Err(PyValueError::new_err(format!(
-            "Quantile CRV1 needs a cluster code and residual per design row. Got {} design rows, {} codes, and {} residuals.",
-            x.nrows(),
-            cluster_col.len(),
-            residuals.len(),
-        )));
-    }
-    let (a, b) = crv1_vcov_loop(&x, &clustid.as_array(), &cluster_col, q, &residuals, delta)?;
+    let (a, b) = crv1_vcov_loop(
+        &x.as_array(),
+        &clustid.as_array(),
+        &cluster_col.as_array(),
+        q,
+        &u_hat.as_array(),
+        delta,
+    );
     Ok((
         a.into_pyarray(py).to_owned().into(),
         b.into_pyarray(py).to_owned().into(),

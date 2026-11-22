@@ -106,14 +106,12 @@ class LPDID(DID):
         # check that pre_window is in rel_years
         if pre_window_int not in rel_years:
             raise ValueError(
-                f"pre_window={pre_window_int!r} is absent from the observed relative periods. "
-                f"Choose an observed value between {rel_years[0]:g} and {rel_years[-1]:g}."
+                f"pre_window={pre_window_int!r} is absent from the observed relative periods."
             )
         # check that post_window is in rel_years
         if post_window_int not in rel_years:
             raise ValueError(
-                f"post_window={post_window_int!r} is absent from the observed relative periods. "
-                f"Choose an observed value between {rel_years[0]:g} and {rel_years[-1]:g}."
+                f"post_window={post_window_int!r} is absent from the observed relative periods."
             )
 
         pre_window_int = np.abs(pre_window_int)

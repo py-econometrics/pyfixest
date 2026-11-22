@@ -36,10 +36,7 @@ def within_preconditioner_name(
     for name, config_class in _WITHIN_PRECONDITIONER_CONFIGS.items():
         if isinstance(config, config_class):
             return name
-    raise TypeError(
-        f"Unknown `within` preconditioner configuration {config!r}. "
-        f"Use one of {tuple(_WITHIN_PRECONDITIONER_CONFIGS)!r}."
-    )
+    raise TypeError(f"Unknown `within` preconditioner configuration: {config!r}.")
 
 
 def demean(

@@ -317,7 +317,7 @@ def _get_ritest_pvalue(
         probs = ri_stats >= sample_stat
     else:
         raise ValueError(
-            f"The `method` argument must be one of 'two-sided', 'greater', or 'lower'; got {method!r}."
+            "The `method` argument must be one of 'two-sided', 'right', 'left'."
         )
 
     p_value = probs.mean()
@@ -432,10 +432,10 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
             f"ritest() could not read the null value in resampvar={resampvar!r}. "
             "Pass a coefficient name or a hypothesis such as 'x=0', 'x>0', or 'x<0'."
         ) from exc
-    if not resampvar_ or not np.isfinite(h0_value_float):
+    if not resampvar_:
         raise ValueError(
-            f"ritest() needs a coefficient name and a finite null value; got "
-            f"resampvar={resampvar!r}. Use a hypothesis such as 'x=0'."
+            f"ritest() needs a coefficient name; got resampvar={resampvar!r}. "
+            "Use a hypothesis such as 'x=0'."
         )
 
     return resampvar_, h0_value_float, hypothesis, test_type

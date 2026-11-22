@@ -10,7 +10,7 @@ setFixest_nthreads(parallel::detectCores())
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1) {
-  stop("Expected exactly one argument, a JSON configuration path. Run Rscript benchmarks/modular/feols_r.R config.json.")
+  stop("Expected exactly one argument: path to JSON config.")
 }
 
 config <- fromJSON(args[[1]], simplifyVector = FALSE)

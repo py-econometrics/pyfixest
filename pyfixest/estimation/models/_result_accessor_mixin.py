@@ -33,9 +33,7 @@ class TidyColumnAccessors:
 
     def tidy(self, *args, **kwargs) -> pd.DataFrame:
         """Tidy DataFrame of results. Implemented by the host class."""
-        raise NotImplementedError(
-            "A fitted-model implementation using the tidy column accessors must define tidy()."
-        )
+        raise NotImplementedError
 
     def coef(self) -> pd.Series:
         """

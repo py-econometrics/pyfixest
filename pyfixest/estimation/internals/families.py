@@ -60,12 +60,20 @@ class GlmFamily:
 
 def _check_y_binary(Y: np.ndarray) -> None:
     Y_unique = np.unique(Y)
-    if len(Y_unique) != 2:
+    if len(Y_unique) < 2:
         raise ValueError(
             "The dependent variable must have two unique values. "
-            f"Logit and probit need both 0 and 1 in the estimation sample; "
-            f"found {len(Y_unique)} distinct values ({Y_unique[:5].tolist()!r}). "
-            "Check the coding and which observations survive filtering."
+            "Logit and probit need both 0 and 1 in the estimation sample; "
+            f"found only {Y_unique.tolist()!r}. Rows with missing values, rows "
+            "removed by `subset`, and observations dropped for separation are "
+            "excluded before this check; confirm that both outcomes remain after "
+            "that."
+        )
+    if len(Y_unique) > 2:
+        raise ValueError(
+            "The dependent variable must have two unique values. "
+            f"Found {len(Y_unique)} distinct values ({Y_unique[:5].tolist()!r}). "
+            "Logit and probit need a dependent variable coded 0/1."
         )
     if np.any(~np.isin(Y_unique, [0, 1])):
         raise ValueError(

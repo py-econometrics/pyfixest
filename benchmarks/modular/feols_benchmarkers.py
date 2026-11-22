@@ -9,7 +9,6 @@ import sys
 import tempfile
 import time
 import warnings
-from collections import deque
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -190,10 +189,7 @@ def _demeaner_from_backend(backend: str, fixef_maxiter: int | None = None):
         )
     if backend == "torch_cuda":
         return pf.LsmrDemeaner(backend="torch", device="cuda", **kwargs)
-    raise ValueError(
-        f"Unknown demeaner backend: {backend!r}. Pass 'rust', 'within', "
-        "'torch_cpu', 'torch_mps', or 'torch_cuda'."
-    )
+    raise ValueError(f"Unknown demeaner backend: {backend!r}")
 
 
 class PyFeolsBenchmarkerFullApi:
@@ -272,7 +268,7 @@ class PyFeolsBenchmarkerFullApi:
                     backend=self.name,
                     elapsed=None,
                     success=False,
-                    error=f"{self.name} on {dataset.dataset_id}: {type(exc).__name__}: {exc}",
+                    error=str(exc),
                     n_obs_override=n_obs_for_result,
                 )
             finally:
@@ -317,25 +313,20 @@ def _parse_subprocess_output(
             entry = json.loads(payload)
         except json.JSONDecodeError:
             continue
-        if not isinstance(entry, dict):
-            continue
         dataset_id = entry.get("dataset_id")
         if isinstance(dataset_id, str):
             parsed_by_id[dataset_id] = entry
 
-    missing = [d.dataset_id for d in datasets if d.dataset_id not in parsed_by_id]
-    if missing and completed_process.returncode == 0:
+    # A4: partial-result warning
+    n_missing = len(datasets) - len(parsed_by_id)
+    if n_missing > 0 and completed_process.returncode == 0:
         warnings.warn(
-            f"Subprocess backend {backend!r} emitted no results for {len(missing)} "
-            f"datasets, including {missing[:5]!r}. Check its output and logs."
+            f"Subprocess emitted results for {len(parsed_by_id)}/{len(datasets)} datasets"
         )
 
     stderr_text = (completed_process.stderr or "").strip()
     if completed_process.returncode != 0:
-        default_error = (
-            f"Subprocess exited with code {completed_process.returncode} "
-            f"for backend {backend!r}"
-        )
+        default_error = f"Subprocess exited with code {completed_process.returncode}"
         if stderr_text:
             default_error = f"{default_error}: {stderr_text}"
     else:
@@ -345,10 +336,7 @@ def _parse_subprocess_output(
     for dataset in datasets:
         entry = parsed_by_id.get(dataset.dataset_id)
         if entry is None:
-            missing_error = default_error or (
-                f"No result emitted by subprocess backend {backend!r} for "
-                f"dataset {dataset.dataset_id!r}. Check the backend logs."
-            )
+            missing_error = default_error or "No result emitted by subprocess backend."
             results.append(
                 _result_from_dataset(
                     dataset,
@@ -442,14 +430,12 @@ class SubprocessFeolsBenchmarker:
                     stderr=subprocess.PIPE,
                     text=True,
                 )
-                stderr_lines: deque[str] = deque(maxlen=20)
+                stdout_lines: list[str] = []
                 # Stream stderr line-by-line for real-time console output
                 # while collecting stdout for JSON parsing.
-                assert proc.stderr is not None and proc.stdout is not None, (
-                    f"Benchmark backend {self.name!r} must capture stdout and stderr."
-                )
+                assert proc.stderr is not None
+                assert proc.stdout is not None
                 for line in proc.stderr:
-                    stderr_lines.append(line)
                     sys.stderr.write(line)
                     sys.stderr.flush()
                 stdout_lines = proc.stdout.readlines()
@@ -462,7 +448,7 @@ class SubprocessFeolsBenchmarker:
                         backend=self.name,
                         elapsed=None,
                         success=False,
-                        error=f"{self.name} on {dataset.dataset_id}: {type(exc).__name__}: {exc}",
+                        error=str(exc),
                     )
                     for dataset in datasets
                 ]
@@ -471,7 +457,7 @@ class SubprocessFeolsBenchmarker:
             args=command,
             returncode=proc.returncode,
             stdout="".join(stdout_lines),
-            stderr="".join(stderr_lines),
+            stderr=None,
         )
         return _parse_subprocess_output(
             datasets=datasets,

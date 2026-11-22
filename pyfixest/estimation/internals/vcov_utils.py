@@ -92,7 +92,7 @@ def prepare_cluster_state(
 ) -> ClusterPrep:
     """Build cluster_df, int-factorized cluster array, G, and nested-FE counts."""
     cluster_df = _get_cluster_df(data=data, clustervar=clustervar)
-    _check_cluster_df(cluster_df=cluster_df, data=data)
+    _check_cluster_df(cluster_df=cluster_df)
 
     cluster_df, vcov_signs = _prepare_multiway_clustering(cluster_df=cluster_df)
 
@@ -107,8 +107,10 @@ def prepare_cluster_state(
     if fixef and ssc.k_fixef == "nonnested":
         if fe is None:
             raise ValueError(
-                "The nonnested fixed-effect correction needs an encoded level "
-                f"for each estimation row, but no codes were supplied for {fixef!r}."
+                "ssc(k_fixef='nonnested') needs the fixed-effect values for "
+                f"{list(fixef)!r} to find which fixed effects are nested in the "
+                "clusters, but this fit did not keep them. "
+                "Use ssc(k_fixef='full') or refit the model."
             )
         k_fe_nested_flag, n_fe_fully_nested = count_fixef_fully_nested_all(
             all_fixef_array=np.array(fixef, dtype=str),
@@ -191,7 +193,7 @@ def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     return data_pandas[clustervar].copy()
 
 
-def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
+def _check_cluster_df(cluster_df: pd.DataFrame):
     missing = cluster_df.isna().sum()
     missing = missing[missing > 0]
     if not missing.empty:
@@ -203,26 +205,11 @@ def _check_cluster_df(cluster_df: pd.DataFrame, data: pd.DataFrame):
             f"in {columns}. Check the cluster identifiers and refit with valid values."
         )
 
-    N = data.shape[0]
-    if cluster_df.shape[0] != N:
-        raise ValueError(
-            f"Cluster identifiers have {cluster_df.shape[0]} rows for an estimation "
-            f"sample of {N} rows. Provide one identifier per estimation row."
-        )
-
 
 def _count_G_for_ssc_correction(cluster_df: pd.DataFrame, G_df: str) -> list[int]:
     G = []
     for col in cluster_df.columns:
-        count = cluster_df[col].nunique()
-        if count < 2:
-            raise ValueError(
-                f"Cluster-robust inference needs at least two distinct clusters. "
-                f"Column {col!r} has {count} on the estimation sample. "
-                "Check the cluster identifiers and observations kept by the formula. "
-                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
-            )
-        G.append(count)
+        G.append(cluster_df[col].nunique())
 
     if G_df == "min":
         G = [min(G)] * len(G)
@@ -272,9 +259,7 @@ def _get_panel_idx(
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
     panel_arr_sorted = panel_arr[order]
     time_arr_sorted = time_arr[order]
-    duplicate_mask = (panel_arr_sorted[1:] == panel_arr_sorted[:-1]) & (
-        time_arr_sorted[1:] == time_arr_sorted[:-1]
-    )
+    duplicate_mask = (np.diff(panel_arr_sorted) == 0) & (np.diff(time_arr_sorted) == 0)
     if np.any(duplicate_mask):
         panel_id, time_id = identifier_columns
         raise ValueError(

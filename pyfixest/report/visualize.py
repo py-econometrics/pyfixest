@@ -186,8 +186,7 @@ def iplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model. "
-            "Pass one fitted model for simultaneous intervals or set joint=False."
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
         )
 
     df_all: list[pd.DataFrame] = []
@@ -206,8 +205,7 @@ def iplot(
         if not fxst.model.interacted_covariates:
             raise ValueError(
                 f"Model {x + 1} cannot be plotted with `iplot` because it does not "
-                f"use the `i` syntax: {fxst.model.formula!r}. Use coefplot() for ordinary "
-                "regressors. See https://pyfixest.org/tutorials/formula-syntax.html"
+                f"use the `i` syntax: {fxst.model.formula!r}"
             )
         all_icovars += fxst.model.interacted_covariates
 
@@ -367,8 +365,7 @@ def coefplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model. "
-            "Pass one fitted model for simultaneous intervals or set joint=False."
+            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
         )
 
     if keep is None:
@@ -475,8 +472,7 @@ def qplot(
     for model in models:
         if not isinstance(model, Quantreg):
             raise TypeError(
-                f"qplot() needs a quantreg() fit or quantile process; got "
-                f"{type(model).__name__}. Fit the desired quantiles with quantreg()."
+                "The 'qplot' function is only supported for objects of type Quantreg."
             )
 
         df = model.tidy()
@@ -814,14 +810,10 @@ def _qplot(
     k = len(coeffs)
 
     if nrow is not None:
-        assert nrow is not None, (
-            "qplot() must resolve a row count before sizing the grid."
-        )  # for mypy, do people really do this?
+        assert nrow is not None  # for mypy, do people really do this?
         rows, cols = nrow, math.ceil(k / nrow)
     else:
-        assert ncol is not None, (
-            "qplot() must resolve a column count before sizing the grid."
-        )
+        assert ncol is not None
         cols, rows = ncol, math.ceil(k / ncol)
 
     fig, axes = plt.subplots(rows, cols, figsize=figsize, squeeze=False, sharey="all")

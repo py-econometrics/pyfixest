@@ -30,8 +30,7 @@ def base_dgp(
     if nb_indiv < 1 or nb_firm < 1:
         raise ValueError(
             f"n={n} too small for nb_year={nb_year}, "
-            f"nb_indiv_per_firm={nb_indiv_per_firm}. Increase n or reduce the "
-            "periods or workers per firm so at least one worker and firm can be generated."
+            f"nb_indiv_per_firm={nb_indiv_per_firm}"
         )
 
     n_obs = nb_indiv * nb_year
@@ -47,9 +46,7 @@ def base_dgp(
     elif type_ == "difficult":
         firm_id = np.tile(np.arange(1, nb_firm + 1), n_obs // nb_firm + 1)[:n_obs]
     else:
-        raise ValueError(
-            f"Unknown type of dgp: {type_!r}. Pass 'simple' or 'difficult'."
-        )
+        raise ValueError(f"Unknown type of dgp: {type_!r}")
 
     x = rng.standard_normal((n_obs, max_k))
     betas = 1.0 / np.arange(1, k + 1, dtype=float)

@@ -21,19 +21,16 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
         )
     q_array = q_array.astype(float, copy=False)
 
-    if not np.isfinite(q_array).all():
-        raise ValueError("q must contain finite null values. Check the entries of q.")
     if q_array.ndim == 0:
         return np.full(n_restrictions, float(q_array))
     if q_array.ndim != 1:
         raise ValueError(
-            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}. "
-            "Pass one null value per row of R."
+            f"q must be a one-dimensional array or a scalar; got shape {q_array.shape}."
         )
     if q_array.shape[0] != n_restrictions:
         raise ValueError(
-            f"q must have the same number of rows as R. Pass one null value per "
-            f"restriction or a scalar; got {q_array.shape[0]} values for {n_restrictions} rows."
+            f"q must have the same number of rows as R; got {q_array.shape[0]} values "
+            f"for {n_restrictions} rows."
         )
     return q_array
 
@@ -47,18 +44,14 @@ def _wald_statistic(
     """Compute a Wald quadratic form and its numerator degrees of freedom."""
     beta_hat = np.asarray(beta_hat, dtype=float)
     vcov = np.asarray(vcov, dtype=float)
-    try:
-        R = np.asarray(R, dtype=float)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("R must contain numeric restriction weights.") from exc
+    R = np.asarray(R, dtype=float)
 
     if R.ndim == 1:
         R = R.reshape((1, len(R)))
 
     if R.ndim != 2:
         raise ValueError(
-            f"R must be a one- or two-dimensional array; got shape {R.shape}. "
-            "Pass one row per restriction."
+            f"R must be a one- or two-dimensional array; got shape {R.shape}."
         )
 
     if R.shape[1] != beta_hat.shape[0]:

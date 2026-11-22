@@ -187,8 +187,9 @@ def frisch_newton_solver(
     for name, initial in (("x", x), ("z", z), ("s", s), ("w", w)):
         if np.any(initial < 0):
             raise ValueError(
-                f"Frisch-Newton initial {name} must be nonnegative. "
-                f"The minimum is {float(np.min(initial)):g}. Check the starting values."
+                f"internal error: Frisch-Newton starting value {name} has negative "
+                f"entries (minimum {float(np.min(initial)):g}); please report this "
+                "pyfixest bug."
             )
 
     mu_curr = _duality_gap(x=x, z=z, s=s, w=w)

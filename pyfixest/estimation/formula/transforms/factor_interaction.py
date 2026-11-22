@@ -220,9 +220,7 @@ def _encode_i(
         )
     else:
         # (iii) factor-factor interaction
-        assert var2_name is not None, (
-            "The second variable of i() must have a name before encoding its interaction."
-        )
+        assert var2_name is not None
         dummies2 = _encode_factor(
             data=var2,
             ref=ref2,

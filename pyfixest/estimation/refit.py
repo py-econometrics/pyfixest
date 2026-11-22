@@ -77,8 +77,7 @@ def refit(
     if same_sample and not data.index.equals(fit._data.index):
         raise ValueError(
             "`same_sample=True` requires `data` to have the same index as "
-            "the data the model was fit on. Use the retained estimation data in its "
-            "original row order, or use same_sample=False for a new sample."
+            "the data the model was fit on."
         )
     if same_sample:
         options = replace(
@@ -110,8 +109,7 @@ def refit(
     if same_sample and result.sample_info.n_obs != fit.sample_info.n_obs:
         raise ValueError(
             f"A refit on the fit's sample kept {result.sample_info.n_obs} of its "
-            f"{fit.sample_info.n_obs} observations. Check the new formula's "
-            f"filtering counts ({result.sample_info.dropped_by_stage!r})."
+            f"{fit.sample_info.n_obs} observations."
         )
     return result
 

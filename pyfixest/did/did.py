@@ -51,12 +51,11 @@ class DID(ABC):
                 f"Difference-in-differences requires a pandas DataFrame; got {type(data).__name__}."
             )
         for option, column in (
-            ("yname", yname),
             ("idname", idname),
             ("tname", tname),
             ("gname", gname),
         ):
-            if not isinstance(column, str) or column not in data.columns:
+            if column not in data.columns:
                 raise ValueError(
                     f"{option}={column!r} must name an existing column in the panel data. "
                     "Check the column names before fitting. "
@@ -81,11 +80,10 @@ class DID(ABC):
                 "float32",
             ]:
                 raise ValueError(
-                    f"{option}={var!r} must have a supported numeric dtype "
-                    f"(int8, int32, int64, float32, or float64); got {self._data[var].dtype}. "
-                    "Convert the time and cohort columns to the same period scale, "
-                    "such as sequential integers. Check the never-treated code for "
-                    "the estimator. See https://pyfixest.org/tutorials/difference-in-differences.html"
+                    f"{option}={var!r} must have dtype int8, int32, int64, float32, "
+                    f"or float64; got {self._data[var].dtype}. Convert it to one of "
+                    "these dtypes, for example with .astype('int64') for integer "
+                    "periods such as 2012 or 201201."
                 )
 
         # create a treatment variable

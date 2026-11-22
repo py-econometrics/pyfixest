@@ -50,9 +50,7 @@ def _validate_config(config: AKMConfig) -> None:
     if config.n_industries < 1:
         raise ValueError("n_industries must be positive")
     if config.n_industries > config.n_firms:
-        raise ValueError(
-            f"n_industries={config.n_industries} must not exceed n_firms={config.n_firms}"
-        )
+        raise ValueError("n_industries must not exceed n_firms")
     if config.n_match_bins < 1:
         raise ValueError("n_match_bins must be positive")
     if config.occ_menu_size < 1:
@@ -60,9 +58,7 @@ def _validate_config(config: AKMConfig) -> None:
     if not 0 <= config.entry_exit_share <= 1:
         raise ValueError("entry_exit_share must be in [0, 1]")
     if not 2 <= config.entry_exit_n_periods <= config.n_time:
-        raise ValueError(
-            f"entry_exit_n_periods={config.entry_exit_n_periods} must be in [2, {config.n_time}]"
-        )
+        raise ValueError("entry_exit_n_periods must be in [2, n_time]")
     if config.gamma <= 0:
         raise ValueError("gamma must be positive")
     if not 0 <= config.rho_size <= 1:
@@ -75,13 +71,9 @@ def _validate_config(config: AKMConfig) -> None:
         raise ValueError("n_occupations must be 0 or at least 2")
     if config.n_occupations > 0:
         if config.n_occupations < config.n_industries:
-            raise ValueError(
-                f"n_occupations={config.n_occupations} must be at least n_industries={config.n_industries}"
-            )
+            raise ValueError("n_occupations must be at least n_industries")
         if config.occ_menu_size > config.n_occupations:
-            raise ValueError(
-                f"occ_menu_size={config.occ_menu_size} must not exceed n_occupations={config.n_occupations}"
-            )
+            raise ValueError("occ_menu_size must not exceed n_occupations")
     if not 0 <= config.occ_lambda <= 1:
         raise ValueError("occ_lambda must be in [0, 1]")
     if not 0 <= config.occ_delta <= 1:
@@ -91,21 +83,16 @@ def _validate_config(config: AKMConfig) -> None:
             raise ValueError(
                 f"delta tuple length {len(config.delta)} != n_industries {config.n_industries}"
             )
-        for index, delta in enumerate(config.delta):
-            if not 0 < delta <= 1:
-                raise ValueError(f"delta[{index}] must be in (0, 1]; got {delta}")
+        if not all(0 < d <= 1 for d in config.delta):
+            raise ValueError("all delta values must be in (0, 1]")
     else:
         if not 0 < config.delta <= 1:
             raise ValueError("delta must be in (0, 1]")
     if config.n_industries == 1:
         if config.lambda_ != 1:
-            raise ValueError(
-                f"lambda_ must equal 1 when n_industries == 1; got {config.lambda_}"
-            )
+            raise ValueError("lambda_ must equal 1 when n_industries == 1")
     elif not (1 / config.n_industries) <= config.lambda_ <= 1:
-        raise ValueError(
-            f"lambda_={config.lambda_} must be in [{1 / config.n_industries:g}, 1] for n_industries={config.n_industries}"
-        )
+        raise ValueError("lambda_ must be in [1 / n_industries, 1]")
     for name, value in (
         ("var_alpha", config.var_alpha),
         ("var_psi", config.var_psi),
@@ -114,7 +101,7 @@ def _validate_config(config: AKMConfig) -> None:
         ("var_epsilon", config.var_epsilon),
     ):
         if value < 0:
-            raise ValueError(f"{name} must be non-negative; got {value}")
+            raise ValueError(f"{name} must be non-negative")
 
 
 def _balanced_groups(

@@ -24,10 +24,7 @@ def main() -> None:
                 stable_versions[tag] = tuple(int(part) for part in match.groups())
 
     if not stable_versions:
-        sys.exit(
-            "No published stable version found in the GitHub releases response. Verify that a stable release with a vMAJOR.MINOR.PATCH tag "
-            "is published and visible to the workflow before deploying the docs."
-        )
+        sys.exit("No published stable version found; refusing docs deployment.")
 
     tag = os.environ["GITHUB_REF"].removeprefix("refs/tags/")
     publish = stable_versions.get(tag) == max(stable_versions.values())

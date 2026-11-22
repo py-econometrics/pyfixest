@@ -347,10 +347,7 @@ class ObservationWeights:
         # `unweighted()` and `from_values()` are the only constructors used by
         # the estimators; this guard catches direct misconstruction.
         if self.values is not None and self.weights_type is None:
-            raise ValueError(
-                "Weighted observations must declare a `weights_type`. "
-                "Set 'aweights' for precision weights or 'fweights' for observation counts."
-            )
+            raise ValueError("Weighted observations must declare a `weights_type`.")
 
     @classmethod
     def unweighted(cls) -> ObservationWeights:
@@ -459,10 +456,7 @@ class EstimationSample:
     def __post_init__(self) -> None:
         if self.dropped_by_stage.total != len(self.dropped_row_index):
             raise ValueError(
-                "Dropped-row counts must sum to the size of the dropped row index. "
-                f"Got {self.dropped_by_stage.total} counted rows for "
-                f"{len(self.dropped_row_index)} index positions. "
-                "Count each row at the filtering stage that removed it."
+                "Dropped-row counts must sum to the size of the dropped row index."
             )
 
 
@@ -504,13 +498,7 @@ class FixedEffectCounts:
             == len(self.has_intercept_by_fe)
             == len(self.n_slopes_by_fe)
         ):
-            raise ValueError(
-                "Fixed-effect counts must describe every fixed effect. "
-                f"Got {len(self.n_levels_by_fe)} level counts, "
-                f"{len(self.has_intercept_by_fe)} intercept flags, and "
-                f"{len(self.n_slopes_by_fe)} slope counts. "
-                "Build these arrays from the same fixed-effect terms."
-            )
+            raise ValueError("Fixed-effect counts must describe every fixed effect.")
 
     @property
     def n_fixef(self) -> int:
@@ -853,8 +841,12 @@ class VcovSpec:
                     "Pass a column name, such as vcov={'CRV1': 'cluster'}, "
                     "or join column names with '+'."
                 )
-            # A repeated column adds no clustering dimension.
-            clustervar = tuple(dict.fromkeys(clustervar))
+            repeated = sorted({x for x in clustervar if clustervar.count(x) > 1})
+            if repeated:
+                raise ValueError(
+                    f"vcov={vcov!r} repeats the clustering columns {repeated!r}. "
+                    "Name each clustering column once, as in vcov={'CRV1': 'f1+f2'}."
+                )
             if any("^" in x for x in clustervar):
                 raise ValueError(
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "

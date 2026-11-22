@@ -381,8 +381,8 @@ class Formula:
     def __post_init__(self) -> None:
         if not hasattr(self._formula, "lhs") or not hasattr(self._formula, "rhs"):
             raise FormulaSyntaxError(
-                f"Formula must specify a left-hand and right-hand side separated by '~':\n"
-                f"{self._formula}. Use a formula such as 'y ~ x | group'. "
+                "Formula must have a dependent variable on the left of '~'. "
+                "Use a formula such as 'y ~ x | group'. "
                 "See https://pyfixest.org/tutorials/formula-syntax.html#basic-syntax"
             )
         if (
@@ -390,10 +390,9 @@ class Formula:
             and len(self._formula.rhs) > self._max_parts
         ):
             raise FormulaSyntaxError(
-                f"Formula can have at most {self._max_parts} parts separated by '|'. "
-                f"Received {len(self._formula.rhs)} in {self._formula!s}. "
-                "Use the right-hand side for regressors and the segment after "
-                "'|' for fixed effects, as in 'y ~ x | group'."
+                f"Formula can have at most {self._max_parts} parts separated by '|'; "
+                f"got {len(self._formula.rhs)}. Put all fixed effects in one part, "
+                "as in 'y ~ x | f1 + f2'."
             )
         # Count terms, not source variables: `I(Y + Y2)` is one dependent
         # expression evaluated from two columns.
@@ -569,8 +568,7 @@ class Formula:
         """Endogenous variables of an instrumental variable specification."""
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Formula.endogenous requires an instrument block. "
-                "Check Formula.is_instrumental_variable before reading it."
+                "Endogenous variables are available only in instrumental variables specifications."
             )
         return get_first_multistage_lhs(self._right_hand_side)
 
@@ -583,8 +581,7 @@ class Formula:
         """
         if not self.is_instrumental_variable:
             raise AttributeError(
-                "Formula.instruments requires an instrument block. "
-                "Check Formula.is_instrumental_variable before reading it."
+                "Instruments are available only in instrumental variables specifications."
             )
         instruments = get_first_multistage_rhs(self._right_hand_side)
         return formulaic.formula.SimpleFormula(
@@ -595,10 +592,7 @@ class Formula:
     def fixed_effects(self) -> formulaic.formula.SimpleFormula:
         """The fixed effects of a formula."""
         if not self.is_fixed_effects:
-            raise AttributeError(
-                "Formula.fixed_effects requires a formula with fixed effects. "
-                "Check Formula.is_fixed_effects before reading it."
-            )
+            raise AttributeError("Not a fixed effects specification")
         return formulaic.formula.SimpleFormula(
             terms_without_intercept(self._formula.rhs[1])
         )
@@ -661,10 +655,7 @@ class Formula:
     def as_first_stage(self) -> Formula:
         """Return the parsed OLS specification for an IV first stage."""
         if not self.is_instrumental_variable:
-            raise TypeError(
-                "Formula.as_first_stage() requires an instrument block. "
-                "Check Formula.is_instrumental_variable before converting it."
-            )
+            raise TypeError("Not an instrumental variable specification.")
         # Controls must survive collinearity selection before excluded instruments.
         # Preserve this order even when a control is an interaction and a
         # redundant instrument is a degree-one transform of that interaction.

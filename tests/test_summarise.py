@@ -207,7 +207,7 @@ def test_etable_docx_style():
 
 def test_etable_invalid_output_type():
     """The invalid-format message includes both Word and Typst output."""
-    with pytest.raises(ValueError, match=r"type must be one of .*'typst', 'docx'"):
+    with pytest.raises(AssertionError, match="'typst' or 'docx'"):
         etable([], type="invalid")
 
 

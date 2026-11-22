@@ -378,22 +378,15 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """Build and retain the canonical formula-derived estimator inputs."""
         if len(self._data) == 0:
             self._raise_empty_sample(dropped=DroppedRowCounts())
-        try:
-            model_matrix = create_model_matrix(
-                formula=self.model.parsed_formula,
-                data=self._data,
-                drop_singletons=self.options.drop_singletons,
-                drop_intercept=self.options.drop_intercept,
-                weights=self.options.weights,
-                offset=self.options.offset,
-                context=self.options.context,
-            )
-        except FactorEvaluationError as exc:
-            raise exc.__class__(
-                f"{exc} While fitting {self.model.model_name!r}, check that data contains "
-                "the formula columns and that transforms are available in context. "
-                "See https://pyfixest.org/tutorials/formula-syntax.html"
-            ) from (exc.__cause__ or exc)
+        model_matrix = create_model_matrix(
+            formula=self.model.parsed_formula,
+            data=self._data,
+            drop_singletons=self.options.drop_singletons,
+            drop_intercept=self.options.drop_intercept,
+            weights=self.options.weights,
+            offset=self.options.offset,
+            context=self.options.context,
+        )
         self._publish_model_matrix(model_matrix)
 
         # an empty drop still rebuilds the whole frame, so guard it
@@ -430,9 +423,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         n_rows = model_matrix.n_rows
         # Frequency weights count repeated observations; other fits count rows.
         if weights.weights_type == "fweights":
-            assert weights.values is not None, (
-                "Frequency-weighted estimation needs weights to count observations."
-            )
+            assert weights.values is not None
             n_obs: int | float = float(weights.values.sum())
         else:
             n_obs = n_rows
@@ -491,14 +482,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         if self.model.parsed_formula.has_varying_slopes:
             effects = self.model_matrix.effects
-            assert effects is not None, (
-                "Demeaning varying slopes needs the fixed-effect levels and slope values."
-            )
+            assert effects is not None
             return effects
         fixed_effects = self.model_matrix.fixed_effects
-        assert fixed_effects is not None, (
-            "Demeaning a model with fixed effects needs encoded levels on the estimation sample."
-        )
+        assert fixed_effects is not None
         return fixed_effects.to_numpy()
 
     def _demean(self) -> WithinLinearData:
@@ -760,9 +747,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if spec.vcov_type == "CRV":
             if len(spec.clustervar) > 1 and not self.capabilities.multiway_clustering:
                 raise NotImplementedError(
-                    f"Multiway clustering is not supported for {self._describe_fits()}. "
-                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}. "
-                    "Pass one clustering column if the design calls for it."
+                    f"Multiway clustering is not supported for {type(self).__name__} models. "
+                    f"Got vcov={spec.vcov_type_detail!r} with columns {spec.clustervar!r}."
                 )
             if spec.vcov_type_detail == "CRV3" and not self.capabilities.crv3_inference:
                 raise VcovTypeNotSupportedError(
@@ -779,8 +765,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if self.options.has_weights and self.options.weights_type == "fweights":
                 raise NotImplementedError(
                     "HAC inference (NW, DK) is not supported with `weights_type='fweights'`. "
-                    f"Got vcov={spec.vcov_type_detail!r}. Choose inference supported "
-                    "for frequency weights."
+                    f"Got vcov={spec.vcov_type_detail!r}."
                 )
         if spec.vcov_type == "nid":
             raise NotImplementedError(
@@ -848,20 +833,11 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 ssc_vcov_type = "HAC"
                 term = self._vcov_hac(spec)
                 ssc_G = np.unique(self._data[spec.time_id]).shape[0]
-                if ssc_G < 2:
-                    raise ValueError(
-                        f"vcov={spec.vcov_type_detail!r} needs at least two time periods. "
-                        f"time_id column {spec.time_id!r} has {ssc_G} on the estimation "
-                        "sample. Check the time identifiers and estimation sample."
-                    )
             elif vcov_type == "nid":
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_nid()
             else:
-                raise ValueError(
-                    f"Unknown vcov type {vcov_type!r} in the covariance dispatcher. "
-                    "Create the covariance specification with VcovSpec.from_user_input()."
-                )
+                raise ValueError(f"Unknown vcov type {vcov_type!r}.")
             correction = get_ssc(
                 self.options.ssc, self._dof_counts(G=ssc_G), vcov_type=ssc_vcov_type
             )
@@ -955,14 +931,13 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                     "the estimation data. Pass an existing column or refit with it included."
                 )
         time = data[time_id]
-        if not (
-            pd.api.types.is_datetime64_any_dtype(time.dtype)
-            or (
-                pd.api.types.is_numeric_dtype(time.dtype)
-                and not pd.api.types.is_bool_dtype(time.dtype)
-                and not pd.api.types.is_complex_dtype(time.dtype)
+        try:
+            sortable = np.issubdtype(time, np.number) or np.issubdtype(
+                time, np.datetime64
             )
-        ):
+        except (TypeError, ValueError):
+            sortable = False
+        if not sortable:
             raise ValueError(
                 f"vcov={detail!r} needs a numeric or datetime time_id column. "
                 f"Column {time_id!r} has dtype {time.dtype}. Convert it to a "
@@ -970,30 +945,16 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
         time_arr = time.to_numpy()
-        if isinstance(time.dtype, pd.DatetimeTZDtype):
-            time_arr = time.dt.tz_convert(None).to_numpy()
-        invalid_time = int((~np.isfinite(time_arr)).sum())
-        if invalid_time:
-            raise ValueError(
-                f"vcov={detail!r} found {invalid_time} missing or nonfinite values "
-                f"in time_id column {time_id!r} on the estimation sample. "
-                "Check the time values before refitting. "
-                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
-            )
-
-        panel_arr = None
-        if panel_id is not None:
-            panel = data[panel_id]
-            missing_panel = int(panel.isna().sum())
-            if missing_panel:
+        panel_arr = data[panel_id].to_numpy() if panel_id is not None else None
+        if panel_arr is None and detail == "NW":
+            missing_time = int(pd.isna(time_arr).sum())
+            if missing_time:
                 raise ValueError(
-                    f"vcov={detail!r} found {missing_panel} missing values in "
-                    f"panel_id column {panel_id!r} on the estimation sample. "
-                    "Supply a panel identifier for every observation before refitting."
+                    f"Time-series Newey-West inference found {missing_time} missing "
+                    f"values in time_id column {time_id!r} on the estimation sample. "
+                    "Supply a time value for every observation before refitting. "
+                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
                 )
-            panel_arr = panel.to_numpy()
-            if panel_arr.dtype.kind == "O":
-                panel_arr, _ = pd.factorize(panel, sort=True)
 
         meat = meat_hac(
             scores=self.sandwich.scores,
@@ -1308,8 +1269,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap. "
-                "Pass a single cluster column if that matches the sampling design."
+                "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
         if self.model.has_fixef or not run_heteroskedastic:
@@ -1507,7 +1467,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             elif len(clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance "
-                    "estimator. Pass a single cluster column if it matches the design."
+                    "estimator."
                 )
             else:
                 cluster = clustervar[0]
@@ -2152,19 +2112,12 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             # (covariate or FE) marks the whole row as NaN in the output.
             model_spec = self.model.model_spec
             assert model_spec is not None, (
-                "Prediction requires the fitted formula's model-matrix specification."
+                "predict() runs after the model matrix is built"
             )
             rhs_spec = model_spec[_ModelMatrixKey.main].rhs
-            try:
-                X_mm, unseen = materialize_model_spec_with_unseen_mask(
-                    rhs_spec, newdata, context
-                )
-            except FactorEvaluationError as exc:
-                raise exc.__class__(
-                    f"{exc} While predicting from {self.model.model_name!r}, include the "
-                    "columns required by the fitted formula in newdata. "
-                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.predict.html"
-                ) from (exc.__cause__ or exc)
+            X_mm, unseen = materialize_model_spec_with_unseen_mask(
+                rhs_spec, newdata, context
+            )
             valid_idx = X_mm.index.to_numpy()
             # rows with a categorical level unseen during fitting (in C()/i()) would
             # be silently encoded as the reference level -> drop them to NaN instead,
@@ -2218,8 +2171,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
                         f"Offset expression '{self.options.offset}' evaluates to missing "
-                        f"values in `newdata`. Check the offset inputs for "
-                        f"{len(newdata) - len(offset_mm)} affected rows."
+                        f"values for {len(newdata) - len(offset_mm)} of {len(newdata)} "
+                        "rows in `newdata`."
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
@@ -2332,7 +2285,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if not isinstance(resampvar, str):
             raise TypeError(
                 f"ritest() needs a coefficient name or hypothesis in resampvar; "
-                f"got {type(resampvar).__name__}. Use a string such as 'x=0'."
+                f"got {resampvar.__class__.__name__}. Use a string such as 'x=0'."
             )
         resampvar = resampvar.replace(" ", "")
         resampvar_, h0_value, hypothesis, test_type = _decode_resampvar(resampvar)
@@ -2365,8 +2318,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None
         )
 
-        if clustervar_arr is not None and pd.isna(clustervar_arr).any():
-            count = int(pd.isna(clustervar_arr).sum())
+        if clustervar_arr is not None and np.any(np.isnan(clustervar_arr)):
+            count = int(np.isnan(clustervar_arr).sum())
             raise ValueError(
                 f"The cluster variable {cluster!r} contains {count} missing values. "
                 "Supply an assignment cluster for each estimation row before running ritest()."

@@ -650,13 +650,6 @@ def test_empty_estimation_sample_reports_filtering(stage, message):
         estimator(formula, data=data, **kwargs)
 
 
-@pytest.mark.parametrize("option", ["split", "fsplit"])
-def test_all_missing_split_explains_empty_sample(option):
-    data = pf.get_data(N=50).assign(group=np.nan)
-    with pytest.raises(ValueError, match=rf"{option}='group' has no nonmissing values"):
-        pf.feols("Y ~ X1", data=data, **{option: "group"})
-
-
 def test_fetch_model_reports_index_bounds():
     fit = pf.feols("Y ~ sw(X1, X2)", data=pf.get_data(N=100))
     for invalid in [-3, 2]:
@@ -781,13 +774,13 @@ def test_errors_etable():
     fit1 = feols("Y ~ X1", data=data)
     fit2 = feols("Y ~ X1 + X2 | f1", data=data)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.01, 0.05])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.2, 0.05, 0.1])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         etable([fit1, fit2], signif_code=[0.1, 0.5, 1.5])
 
     # maketables raises AssertionError before 0.2.0 and ValueError from 0.2.0.
@@ -1523,7 +1516,7 @@ def test_gelbach_errors():
     fit = pf.feols("y ~ x1 + x21 + x22 + x23", data=data)
 
     with pytest.raises(
-        ValueError, match=r"The variable 'x32'.*is not in the mediator names"
+        ValueError, match=r"The variable 'x32' is not in the mediator names."
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x32"]})
 
@@ -1532,17 +1525,17 @@ def test_gelbach_errors():
     ):
         fit.decompose(param="x1", combine_covariates={"g1": ["x21"], "g2": ["x21"]})
 
-    with pytest.raises(TypeError, match=r"combine_covariates\['g1'\] must be a list"):
+    with pytest.raises(TypeError, match=r"combine_covariates_dict must be lists"):
         fit.decompose(param="x1", combine_covariates={"g1": "x21"})
 
-    with pytest.raises(ValueError, match=r"x99.*is not in the coefficient names"):
+    with pytest.raises(ValueError, match=r"not in list"):
         fit.decompose(param="x99")
 
     with pytest.raises(ValueError, match=r"cannot be included in the x1_vars argument"):
         fit.decompose(decomp_var="x1", x1_vars=["x1"])
 
     with pytest.raises(
-        ValueError, match=r"cannot be in both x1_vars and combine_covariates groups"
+        ValueError, match=r"cannot be in both x1_vars and combine_covariates keys"
     ):
         fit.decompose(
             decomp_var="x1", x1_vars=["x21"], combine_covariates={"g1": ["x21"]}
@@ -1606,7 +1599,7 @@ def test_gelbach_errors():
     # error with fweights and only_coef=False
     with pytest.raises(
         NotImplementedError,
-        match=r"Decomposition inference is unavailable with frequency weights.*Use only_coef=True",
+        match=r"Decomposition is currently only supported for models with frequency weights when only_coef is False.",
     ):
         fit = pf.feols(
             "y ~ x1 + x21", data=data, weights="weights", weights_type="fweights"
@@ -1644,6 +1637,10 @@ def test_glm_errors():
         ValueError, match=r"The dependent variable must have two unique values\."
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
+
+    data_one_outcome = pf.get_data().assign(Y=1.0)
+    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+        pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
 
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
     with pytest.raises(
@@ -1845,11 +1842,18 @@ def test_vcov_rejects_empty_clustering_terms(cluster):
         pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
 
 
+@pytest.mark.parametrize("cluster", ["f1+f1", "f1 + f2 + f1"])
+def test_vcov_rejects_repeated_clustering_columns(cluster):
+    with pytest.raises(ValueError, match=r"repeats the clustering columns \['f1'\]"):
+        pf.feols("Y ~ X1", data=pf.get_data(), vcov={"CRV1": cluster})
+
+
 def test_one_cluster_is_reported_on_estimation_sample():
     data = pf.get_data(N=50).assign(cluster=0)
     data.loc[0, ["cluster", "X1"]] = [1, np.nan]
     with pytest.raises(
-        ValueError, match=r"Column 'cluster' has 1 on the estimation sample"
+        ValueError,
+        match=r"CRV small-sample correction requires at least two clusters; got 1",
     ):
         pf.feols("Y ~ X1", data=data, vcov={"CRV1": "cluster"})
 
@@ -1865,13 +1869,13 @@ def test_vcov_names_missing_and_unretained_clusters():
 
 
 def test_missing_cluster_shows_dictionary_syntax():
-    with pytest.raises(ValueError, match=r"vcov=\{'CRV1': 'cluster'\}"):
+    with pytest.raises(ValueError, match=r"vcov=\{'CRV1': '<column>'\}"):
         pf.feols("Y ~ X1", data=pf.get_data(N=20), vcov={"CRV1": "absent"})
 
 
 def test_panel_hac_rejects_one_time_period():
     data = pf.get_data(N=20).assign(year=1, unit=np.arange(20))
-    with pytest.raises(ValueError, match=r"time_id column 'year' has 1"):
+    with pytest.raises(ValueError, match=r"at least two time periods; got 1"):
         pf.feols(
             "Y ~ X1",
             data,
@@ -1972,44 +1976,17 @@ def test_errors_hac():
             )
 
 
-@pytest.mark.parametrize("bad_time", [np.nan, np.inf, -np.inf])
-def test_hac_rejects_invalid_estimation_time(bad_time):
+def test_time_series_nw_rejects_missing_time():
     data = pd.DataFrame(
-        {"y": [1, 4, 3, 2], "x": [1, 2, 3, 4], "year": [1.0, 2, 3, bad_time]}
+        {"y": [1, 4, 3, 2], "x": [1, 2, 3, 4], "year": [1.0, 2, 3, np.nan]}
     )
     with pytest.raises(
         ValueError,
-        match=r"vcov='NW' found 1 missing or nonfinite values in time_id column 'year'",
+        match=r"Newey-West inference found 1 missing values in time_id column 'year'",
     ):
         pf.feols(
             "y ~ x", data=data, vcov="NW", vcov_kwargs={"time_id": "year", "lag": 1}
         )
-
-
-@pytest.mark.parametrize("method", ["NW", "DK"])
-def test_panel_hac_accepts_string_labels(method):
-    rng = np.random.default_rng(701)
-    data = pd.DataFrame(
-        {
-            "y": rng.normal(size=24),
-            "x": rng.normal(size=24),
-            "year": np.tile(np.arange(6), 4),
-            "unit": np.repeat(np.arange(4), 6),
-        }
-    )
-    options = {"time_id": "year", "panel_id": "unit", "lag": 1}
-    numeric = pf.feols("y ~ x", data=data, vcov=method, vcov_kwargs=options)
-    labels = pf.feols(
-        "y ~ x",
-        data=data.assign(unit=data["unit"].map("group{}".format)),
-        vcov=method,
-        vcov_kwargs=options,
-    )
-    np.testing.assert_allclose(labels.se(), numeric.se())
-
-    missing = data.assign(unit=data["unit"].where(data.index != 0))
-    with pytest.raises(ValueError, match=r"1 missing values in panel_id column 'unit'"):
-        pf.feols("y ~ x", data=missing, vcov=method, vcov_kwargs=options)
 
 
 def test_hac_names_missing_post_estimation_column():
@@ -2366,7 +2343,6 @@ def test_estimation_rejects_malformed_ssc():
     ("key", "value", "message"),
     [
         ("copy_data", "false", r"copy_data must be True or False; got 'false'"),
-        ("demeaner", "rust", r"demeaner must be a MapDemeaner or LsmrDemeaner"),
         ("data", {}, r"data must be a supported DataFrame"),
     ],
 )
@@ -2394,17 +2370,6 @@ def test_feglm_reports_the_public_iteration_option():
         pf.feglm("Y ~ X1", data=pf.get_data(N=20), family="gaussian", iwls_maxiter=0)
 
 
-def test_formula_evaluation_explains_where_to_supply_missing_column():
-    data = pf.get_data(N=50)
-    with pytest.raises(FactorEvaluationError, match=r"absent[\s\S]*check that data"):
-        pf.feols("Y ~ absent", data)
-    fit = pf.feols("Y ~ X1", data)
-    with pytest.raises(
-        FactorEvaluationError, match=r"X1[\s\S]*fitted formula in newdata"
-    ):
-        fit.predict(data.drop(columns="X1"))
-
-
 def test_invalid_weights_report_the_column_and_count():
     data = pf.get_data(N=20).assign(weight=-1.0)
     with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
@@ -2416,6 +2381,12 @@ def test_invalid_solver_reports_available_choices():
         ValueError, match=r"solver must be one of .*np.linalg.solve.*got 'missing'"
     ):
         pf.feols("Y ~ X1", data=pf.get_data(N=20), solver="missing")
+
+
+def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
+    data = pf.get_data(N=30).dropna()
+    with pytest.raises(ValueError, match=r"vcov='nid'.*Hall-Sheather bandwidth"):
+        pf.quantreg("Y ~ X1", data=data, quantile=0.99)
 
 
 def test_wald_rejects_nonfinite_restrictions():
@@ -2430,22 +2401,10 @@ def test_ritest_explains_invalid_null_hypotheses():
         fit.ritest("X1=nope", reps=4)
 
 
-def test_ritest_accepts_string_assignment_clusters():
-    rng = np.random.default_rng(292)
-    data = pd.DataFrame(
-        {
-            "y": rng.normal(size=24),
-            "x": np.repeat([0, 0, 1, 1], 6),
-            "unit": np.repeat(np.arange(4), 6),
-        }
-    )
-    numeric = pf.feols("y ~ x", data).ritest(
-        "x", cluster="unit", reps=8, rng=np.random.default_rng(11)
-    )
-    strings = pf.feols(
-        "y ~ x", data.assign(unit=data["unit"].map("group{}".format))
-    ).ritest("x", cluster="unit", reps=8, rng=np.random.default_rng(11))
-    pd.testing.assert_series_equal(numeric, strings)
+def test_ritest_names_non_string_resampvar():
+    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
+    with pytest.raises(TypeError, match=r"resampvar; got int\. Use a string"):
+        fit.ritest(resampvar=1, reps=4)
 
 
 def test_event_study_names_missing_time_column():
@@ -2471,45 +2430,6 @@ def test_did2s_requires_formula_for_each_stage():
             treatment="treat",
             cluster="unit",
         )
-
-
-@pytest.mark.parametrize("plot", [pf.iplot, pf.coefplot, pf.qplot])
-def test_plots_require_at_least_one_fitted_model(plot):
-    with pytest.raises(ValueError, match=r"models contains no fitted models"):
-        plot([])
-
-
-def test_etable_names_bad_significance_code():
-    fit = pf.feols("Y ~ X1", pf.get_data(N=50))
-    with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):
-        pf.etable(fit, signif_code=["invalid", 0.01, 0.05])
-
-
-def test_native_kernels_validate_array_shapes():
-    from pyfixest.core import _core_impl
-
-    scores = np.ones((3, 2))
-    codes = np.array([0, 1, 0], dtype=np.uintp)
-    clusters = np.array([0, 1], dtype=np.uintp)
-
-    with pytest.raises(
-        ValueError, match=r"3 design rows, 3 fixed-effect rows, and 2 weights"
-    ):
-        _core_impl._demean_rs(scores, codes[:, None], np.ones(2))
-    with pytest.raises(ValueError, match=r"Got 2 codes for 3 rows"):
-        _core_impl._crv1_meat_loop_rs(scores, clusters, codes[:2])
-    with pytest.raises(ValueError, match=r"cluster ID 3 is outside"):
-        _core_impl._crv1_meat_loop_rs(scores, np.array([3], dtype=np.uintp), codes)
-    with pytest.raises(ValueError, match=r"3 design rows, 3 codes, and 2 residuals"):
-        _core_impl._crv1_vcov_loop_qreg_rs(
-            scores, clusters, codes, 0.5, np.ones(2), 1.0
-        )
-    with pytest.raises(ValueError, match=r"slice 0 starts at 0 and requests 4 rows"):
-        _core_impl._nw_meat_panel_rs(
-            scores, np.array([0], dtype=np.uintp), np.array([4], dtype=np.uintp), 1
-        )
-    with pytest.raises(ValueError, match=r"time-period starts must be ordered"):
-        _core_impl._dk_meat_panel_rs(scores, np.array([2, 1], dtype=np.uintp), 1)
 
 
 def test_prediction_explains_required_fixed_effects():

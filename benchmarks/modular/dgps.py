@@ -309,10 +309,7 @@ def _get_akm_scenarios(
     scenario_names = names or [scenario.name for scenario in scenario_defs]
     unknown = sorted(set(scenario_names) - set(scenario_map))
     if unknown:
-        raise ValueError(
-            f"Unknown AKM sweep scenario(s): {', '.join(unknown)}. "
-            f"Choose from {', '.join(scenario_map)}."
-        )
+        raise ValueError(f"Unknown AKM sweep scenario(s): {', '.join(unknown)}")
 
     return [
         AKMSweepDGP(

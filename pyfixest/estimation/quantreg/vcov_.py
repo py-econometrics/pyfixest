@@ -78,6 +78,14 @@ def vcov_nid_qreg(
     'nid' stands for 'non-iid'.
     """
     h = get_hall_sheather_bandwidth(q=q, N=N)
+    if q - h < 0 or q + h > 1:
+        raise ValueError(
+            "vcov='nid', the quantreg() default, needs quantile plus or minus its "
+            f"Hall-Sheather bandwidth inside [0, 1], but quantile={q:g} with "
+            f"bandwidth {h:.3g} gives "
+            f"[{q - h:.3g}, {q + h:.3g}] for {N} observations. Use vcov='iid' or "
+            "vcov='hetero', a quantile closer to 0.5, or more observations."
+        )
     beta_init = beta_hat if method == "pfn" else None
 
     beta_hat_plus = fit(X=X, Y=Y, q=q + h, beta_init=beta_init).beta

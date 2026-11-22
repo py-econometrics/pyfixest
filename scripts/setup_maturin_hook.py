@@ -84,11 +84,9 @@ try:
     )
 except Exception as e:
     raise RuntimeError(
-        f"PyFixest's Maturin import hook failed in {__file__}: {e}\\n"
-        "Check the Pixi environment and rerun python scripts/setup_maturin_hook.py "
-        "through pixi run. To disable this hook, remove only the marked "
-        "maturin_import_hook block from sitecustomize.py."
-    ) from e
+        f"{e}\\n>> ERROR in managed maturin_import_hook installation. "
+        "Remove the sitecustomize.py in your environment's site-packages.\\n",
+    )
 # </maturin_import_hook>
 """
 

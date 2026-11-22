@@ -38,8 +38,7 @@ class GelbachResults:
         computed_explained = sum(self.mediator_effects.values())
         if not np.isclose(self.explained_effect, computed_explained, atol=1e-10):
             raise ValueError(
-                f"The explained effect ({self.explained_effect:g}) must equal the sum of "
-                f"the mediator contributions ({computed_explained:g}). Check the decomposition terms."
+                f"Explained effect {self.explained_effect} != sum of mediators {computed_explained}"
             )
 
     @property
@@ -186,7 +185,6 @@ class GelbachDecomposition:
         )
 
         # build index for all variables in X1: decomp_var, x1_vars
-        self._check_covariates()
         self.x1_indices = [self.coefnames.index(var) for var in x1_variables]
         self.mask = np.ones(len(self.coefnames), dtype=bool)
         self.mask[self.x1_indices] = False
@@ -220,6 +218,7 @@ class GelbachDecomposition:
                 stacklevel=_find_stack_level(),
             )
 
+        self._check_covariates()
         self._check_combine_covariates()
         self.combine_covariates_dict = {
             name: list(covariates)
@@ -240,20 +239,17 @@ class GelbachDecomposition:
     def _check_covariates(self):
         if self.decomp_var not in self.coefnames:
             raise ValueError(
-                f"The decomposition variable '{self.decomp_var}' is not in the coefficient names. "
-                "Choose decomp_var from fit.coef().index."
+                f"The decomposition variable '{self.decomp_var}' is not in the coefficient names."
             )
         if self.x1_vars is not None:
             for var in self.x1_vars:
                 if var not in self.coefnames:
                     raise ValueError(
-                        f"The variable '{var}' in x1_vars is not in the coefficient names. "
-                        "Use estimated coefficient names from fit.coef().index."
+                        f"The variable '{var}' is not in the coefficient names."
                     )
         if self.x1_vars is not None and self.decomp_var in self.x1_vars:
             raise ValueError(
-                f"The decomposition variable '{self.decomp_var}' cannot be included in the "
-                "x1_vars argument. Pass it only as decomp_var."
+                f"The decomposition variable '{self.decomp_var}' cannot be included in the x1_vars argument."
             )
 
         # Check x1_vars don't overlap with combine_covariates keys
@@ -265,23 +261,18 @@ class GelbachDecomposition:
             overlap = x1_set & combine_values
             if overlap:
                 raise ValueError(
-                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates "
-                    "groups. Assign each term to the baseline or to a mediator group."
+                    f"Variables {sorted(overlap)} cannot be in both x1_vars and combine_covariates keys."
                 )
 
     def _check_combine_covariates(self):
         # Check that each value in self.combine_covariates_dict is in self.mediator_names
-        for group, values in self.combine_covariates_dict.items():
+        for _, values in self.combine_covariates_dict.items():
             if not isinstance(values, list):
-                raise TypeError(
-                    f"combine_covariates[{group!r}] must be a list of coefficient names. "
-                    "For example, pass combine_covariates={'group': ['x1', 'x2']}."
-                )
+                raise TypeError("Values in combine_covariates_dict must be lists.")
             for v in values:
                 if v not in self.mediator_names:
                     raise ValueError(
-                        f"The variable '{v}' in combine_covariates[{group!r}] is not in the mediator "
-                        "names. Choose a coefficient outside decomp_var and x1_vars."
+                        f"The variable '{v}' is not in the mediator names."
                     )
 
         # Check for overlap in values between different keys
@@ -294,8 +285,7 @@ class GelbachDecomposition:
                 if key1 != key2 and values1 & values2:
                     overlap = values1 & values2
                     raise ValueError(
-                        f"Variables {overlap} are in both '{key1}' and '{key2}' groups. "
-                        "Assign each mediator to one group."
+                        f"Variables {overlap} are in both '{key1}' and '{key2}' groups."
                     )
 
     def fit(
@@ -328,8 +318,7 @@ class GelbachDecomposition:
                     self.N = int(N)
                 else:
                     raise ValueError(
-                        f"The sum of weights is not an integer (got {N:g}), which is not supported "
-                        "with frequency weights. Check the counts in the weights column."
+                        "The sum of weights is not an integer, which is not supported with frequency weights."
                     )
             else:
                 self.N = X.shape[0]
@@ -1085,26 +1074,21 @@ def _decompose_arg_check(
 
     if has_weights and weights_type != "fweights":
         raise NotImplementedError(
-            "Decomposition is currently only supported for models with frequency weights "
-            "when weights are supplied. Choose weights_type='fweights' only if your "
-            "weights represent observation counts."
+            "Decomposition is currently only supported for models with frequency weights."
         )
     if has_weights and not only_coef:
         raise NotImplementedError(
-            "Decomposition inference is unavailable with frequency weights. "
-            "Use only_coef=True to compute the decomposition without inference."
+            "Decomposition is currently only supported for models with frequency weights when only_coef is False."
         )
 
     if is_iv:
         raise NotImplementedError(
-            "Decomposition is currently not supported for IV models. "
-            "See the supported OLS workflow at https://pyfixest.org/how-to/regression_decomposition.html"
+            "Decomposition is currently not supported for IV models."
         )
 
     if method == "fepois":
         raise NotImplementedError(
-            "Decomposition is currently not supported for Poisson regression. "
-            "See the supported OLS workflow at https://pyfixest.org/how-to/regression_decomposition.html"
+            "Decomposition is currently not supported for Poisson regression."
         )
 
     return None

@@ -226,7 +226,7 @@ def _did2s_estimate(
         if len(formulas) != 1 or len(formulas[0].dependent) != 1:
             raise ValueError(
                 f"{name} must specify a single model. Pass one formula without "
-                "stepwise operators or multiple dependent variables."
+                "stepwise operators."
             )
         if formulas[0].is_instrumental_variable:
             raise ValueError(
@@ -272,8 +272,10 @@ def _did2s_estimate(
             data[treatment] = data[treatment].astype(bool)
         else:
             raise ValueError(
-                f"The treatment variable {treatment} must be boolean or numeric; "
-                f"got {data[treatment].dtype}. Encode the values as False/True or 0/1."
+                f"The treatment variable {treatment} must have dtype bool, int32, "
+                f"int64, float32, or float64; got {data[treatment].dtype}. Encode "
+                "untreated and treated observations as False/True or 0/1 with one "
+                "of these dtypes."
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
@@ -382,9 +384,7 @@ def _did2s_vcov(
     # Replay fitted encodings on the full sample: raw FE expressions must never
     # be evaluated as Python (in particular, `a^b` is not a bitwise XOR).
     model_spec = first_stage.model.model_spec
-    assert model_spec is not None, (
-        "DID2S covariance replay requires the fitted first-stage model specification."
-    )
+    assert model_spec is not None
     context = FORMULAIC_TRANSFORMS | dict(first_stage.options.context)
     fe_codes = model_spec["fe"].get_model_matrix(
         data, context=context, na_action="ignore"

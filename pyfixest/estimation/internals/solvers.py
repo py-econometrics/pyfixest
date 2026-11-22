@@ -62,7 +62,7 @@ def solve_lsqr(
         raise NonConvergenceError(
             f"{task} did not converge: LSQR reached its iteration limit "
             f"({itn} iterations) before meeting atol={atol} and btol={btol}. "
-            "Check scaling and use a larger iteration budget where the caller exposes one."
+            f"Check the scaling and rank of the {A.shape[0]} by {A.shape[1]} system."
         )
     return x
 

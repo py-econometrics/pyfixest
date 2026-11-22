@@ -53,7 +53,7 @@ def _quantreg_input_checks(
         raise ValueError(f"tol must be greater than 0 and less than 1; got {tol!r}.")
 
     if maxiter is not None:
-        if isinstance(maxiter, bool) or not isinstance(maxiter, Integral):
+        if not isinstance(maxiter, Integral):
             raise TypeError(
                 f"maxiter must be a positive integer or None; got {maxiter!r}."
             )

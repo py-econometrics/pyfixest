@@ -37,8 +37,7 @@ def main() -> None:
     target = parser.parse_args().version or newest_release_tag()
     if target is None:
         raise SystemExit(
-            "No version given and no release tag found. Pass a version explicitly, "
-            "for example pixi run roll-release-baseline 0.70.0."
+            "No version given and no release tag found. Pass one explicitly."
         )
     if target == RELEASE_VERSION:
         print(f"Already pinned to pyfixest {target}.")
@@ -47,10 +46,7 @@ def main() -> None:
     manifest = RELEASE_MANIFEST.read_text()
     rolled = re.sub(r'(?m)^pyfixest = "==[^"]+"$', f'pyfixest = "=={target}"', manifest)
     if rolled == manifest:
-        raise SystemExit(
-            f"Could not find the pyfixest pin in {RELEASE_MANIFEST}. "
-            'Add a pyfixest = "==<version>" entry under pypi-dependencies.'
-        )
+        raise SystemExit(f"Could not find the pyfixest pin in {RELEASE_MANIFEST}.")
     RELEASE_MANIFEST.write_text(rolled)
     print(f"Pinned pyfixest {RELEASE_VERSION} -> {target}; relocking.")
 

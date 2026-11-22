@@ -191,8 +191,8 @@ class Quantreg(Feols):
         if self.model_matrix.fixed_effects is not None:
             raise NotImplementedError(
                 "Fixed effects are not yet supported for Quantile Regression. "
-                f"The model formula {self.model.model_name!r} requests fixed effects. "
-                "See https://pyfixest.org/tutorials/quantile-regression.html"
+                "Remove the fixed-effects part after '|' from the quantreg() "
+                "formula. See https://pyfixest.org/tutorials/quantile-regression.html"
             )
 
     def get_fit(self) -> None:
@@ -254,7 +254,8 @@ class Quantreg(Feols):
 
         if not solution.has_converged:
             warnings.warn(
-                f"The Frisch-Newton solver for quantile={q:g} has not converged "
+                f"The Frisch-Newton solver for quantile={self.options.quantile:g} "
+                "has not converged "
                 f"after {solution.iterations} iterations (tol={tol:g}, maxiter={maxiter}). "
                 "Check regressor scales. With method='fn', increase maxiter if the "
                 "solver needs more iterations. "
@@ -357,7 +358,8 @@ class Quantreg(Feols):
                     break
                 elif n_bad > 0.1 * M:
                     warnings.warn(
-                        f"Quantile {q:g} preprocessing misclassified {n_bad} observations. "
+                        f"Quantile {self.options.quantile:g} preprocessing "
+                        f"misclassified {n_bad} observations. "
                         "Retrying with a larger initialization sample.",
                         RuntimeWarning,
                         stacklevel=_find_stack_level(),
@@ -374,7 +376,8 @@ class Quantreg(Feols):
 
         if not has_converged:
             warnings.warn(
-                f"Quantile {q:g} preprocessing failed after {n_bad_fixups} retries. "
+                f"Quantile {self.options.quantile:g} preprocessing failed after "
+                f"{n_bad_fixups} retries. "
                 "The returned coefficients did not pass the preprocessing checks. "
                 "Check regressor scales or use method='fn' to fit without preprocessing. "
                 "See https://pyfixest.org/tutorials/quantile-regression.html#solvers",

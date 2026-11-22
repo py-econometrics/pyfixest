@@ -73,7 +73,7 @@ def _make_demeaner(backend: str):
         return pf.MapDemeaner(backend=backend)
     if backend == "within":
         return pf.LsmrDemeaner()
-    raise ValueError(f"Unknown backend {backend!r}. Pass 'numba', 'rust', or 'within'.")
+    raise ValueError(f"Unknown backend {backend!r}")
 
 
 def run_pyfixest_feols(data: pd.DataFrame, formula: str, backend: str) -> float:
@@ -172,17 +172,12 @@ def _run_in_subprocess(
         elif func_name == "pyfixest_feglm_logit":
             elapsed = run_pyfixest_feglm_logit(data, formula, backend)
         else:
-            raise ValueError(  # noqa: TRY301
-                f"Unknown benchmark worker {func_name!r}. Select absorbingls, "
-                "statsmodels_ols, pyfixest_feols, pyfixest_fepois, or pyfixest_feglm_logit."
-            )
+            raise ValueError(f"Unknown function: {func_name}")  # noqa: TRY301
         result_queue.put(("success", elapsed))
     except MemoryError:
         result_queue.put(("oom", None))
     except Exception as e:
-        result_queue.put(
-            ("error", f"{func_name} on {data_path}: {type(e).__name__}: {e}")
-        )
+        result_queue.put(("error", str(e)))
 
 
 def run_with_timeout(
@@ -191,8 +186,8 @@ def run_with_timeout(
     formula: str,
     timeout: int,
     backend: str | None = None,
-) -> tuple[str, float | str | None]:
-    """Run a subprocess, returning its status and elapsed time or error message."""
+) -> tuple[str, float | None]:
+    """Run a function in subprocess with timeout. Returns (status, elapsed_time)."""
     result_queue = mp.Queue()
     proc = mp.Process(
         target=_run_in_subprocess,
@@ -210,11 +205,7 @@ def run_with_timeout(
         return ("timeout", None)
 
     if result_queue.empty():
-        return (
-            "error",
-            f"{func_name} on {data_path} exited with code {proc.exitcode} without a result. "
-            "Check the worker logs and data path.",
-        )
+        return ("error", None)
 
     return result_queue.get()
 
@@ -374,9 +365,7 @@ def get_estimators(
             3: "binary_y ~ x1 | indiv_id + year + firm_id",
         }
     else:
-        raise ValueError(
-            f"Unknown benchmark type {benchmark_type!r}. Pass 'ols', 'poisson', or 'logit'."
-        )
+        raise ValueError(f"Unknown benchmark type: {benchmark_type}")
 
     return estimators, formulas
 
@@ -431,11 +420,7 @@ def run_benchmark(
     # Get all parquet files
     parquet_files = sorted(data_dir.glob("*.parquet"))
     if not parquet_files:
-        print(
-            f"No parquet files matched {data_dir / '*.parquet'}. "
-            "Generate benchmark data or point the benchmark at the data directory.",
-            file=sys.stderr,
-        )
+        print(f"No parquet files found in {data_dir}", file=sys.stderr)
         sys.exit(1)
 
     # Group files by dataset (excluding iteration suffix)
@@ -505,10 +490,7 @@ def run_benchmark(
                                 print("OOM")
                                 elapsed = None
                             elif status == "error":
-                                print(
-                                    f"{est_name} failed for {filepath}: {elapsed}",
-                                    file=sys.stderr,
-                                )
+                                print(f"ERROR: {elapsed}")
                                 elapsed = None
                             else:
                                 print(f"{elapsed:.3f}s")

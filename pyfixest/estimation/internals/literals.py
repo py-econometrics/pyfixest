@@ -62,7 +62,7 @@ def _validate_literal_argument(arg: Any, literal: Any, *, name: str) -> None:
 
     if len(valid_types) < 1:
         raise TypeError(
-            f"Options for {name} must be declared with a nonempty Literal; got {literal!r}."
+            f"{literal} must be a Literal[...] type argument with least one type"
         )
 
     if arg not in valid_types:

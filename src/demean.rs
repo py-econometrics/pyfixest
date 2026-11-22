@@ -1,10 +1,9 @@
 use ndarray::{Array2, ArrayView1, ArrayView2, Zip};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2};
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 mod internal {
     pub(super) fn sad_converged(a: &[f64], b: &[f64], tol: f64) -> bool {
@@ -77,7 +76,7 @@ fn demean_impl(
         .iter()
         .cloned()
         .max()
-        .expect("MAP demeaning received matching nonempty design and fixed-effect rows")
+        .expect("flist is non-empty after guard")
         + 1;
 
     let sample_weights: Vec<f64> = weights.iter().cloned().collect();
@@ -219,14 +218,6 @@ pub fn _demean_rs(
     let x_arr = x.as_array();
     let flist_arr = flist.as_array();
     let weights_arr = weights.as_array();
-    if x_arr.nrows() != flist_arr.nrows() || x_arr.nrows() != weights_arr.len() {
-        return Err(PyValueError::new_err(format!(
-            "MAP demeaning needs one fixed-effect row and one weight per observation. Got {} design rows, {} fixed-effect rows, and {} weights.",
-            x_arr.nrows(),
-            flist_arr.nrows(),
-            weights_arr.len(),
-        )));
-    }
 
     let (out, success) = py.detach(|| demean_impl(&x_arr, &flist_arr, &weights_arr, tol, maxiter));
 
