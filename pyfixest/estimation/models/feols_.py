@@ -1262,8 +1262,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and not len(cluster_list) == 1:
             raise NotImplementedError(
-                "Multiway clustering is currently not supported with the wild cluster bootstrap. "
-                "Pass a single cluster column if that matches the sampling design."
+                "Multiway clustering is currently not supported with the wild cluster bootstrap."
             )
 
         if self.model.has_fixef or not run_heteroskedastic:
