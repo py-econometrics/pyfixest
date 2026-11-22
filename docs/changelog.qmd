@@ -29,7 +29,8 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   ([#2048](https://github.com/py-econometrics/pyfixest/pull/2048)).
 - The agent skill comes with reference files on formula syntax, inference,
   porting from R `fixest` and migrating to 0.70, which agents open when
-  `SKILL.md` is not enough ([#2049](https://github.com/py-econometrics/pyfixest/pull/2049)).
+  `SKILL.md` is not enough. The website and `llms.txt` publish the same files
+  ([#2049](https://github.com/py-econometrics/pyfixest/pull/2049)).
 
 ### Bug Fixes
 
