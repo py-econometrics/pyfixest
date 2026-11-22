@@ -34,11 +34,15 @@ follows the [coding standards](../../../CODING_STANDARDS.md). For guidance or
 documentation, check accuracy, links, consistency, and scope.
 Numerical tracing applies only to code that can affect results or state.
 
-Take a behavior inventory. Classify each hunk that changes more than text as
-required for the stated outcome or as a separate behavior change: an input
-that newly succeeds, newly fails, or yields different results. Each separate
-behavior change has its own layer, or a test plus a mention in the PR body
-and changelog. Flag two mechanisms that achieve the same goal.
+Find [behavior changes](../../../docs/developer/git-and-pr-style.md#change-scope)
+by running code, not by reading the diff. For each check the diff adds or
+rewrites, call the public function on the parent branch with inputs the new
+check rejects: edge values (NaN, inf, empty, `True`, a single group) and every
+option or estimator path that reaches the check. An input that returned a
+result there is a behavior change. For a check the diff removes or relaxes,
+look for inputs that used to raise. Also run the PR's new tests on the parent:
+a test that expects an error and gets a result marks one. Report each, and
+whether the request asked for it.
 
 Prioritize silently wrong results. Trace the changed values through their
 callers: construction, fitting, inference, post-estimation, and cleanup as

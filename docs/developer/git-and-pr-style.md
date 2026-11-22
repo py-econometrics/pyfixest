@@ -21,11 +21,19 @@ parent or already squash-merged are not new changes in this layer.
 Complete the requested outcome with the smallest coherent change. Include
 adjacent fixes or refactors only when requested, accepted, or necessary for
 that outcome. A pre-existing bug does not automatically become a prerequisite.
-A request to implement a set of findings authorizes each change, not bundling
-them: a finding that pairs a clearer diagnostic with a behavior fix becomes
-two layers.
 In an invariant refactor, preserve behavior and separate newly discovered
 numerical fixes. Identify independent follow-ups; open issues when authorized.
+
+A behavior change is an input that returned a result on the parent branch and
+now raises, raised and now returns a result, or returns a different result.
+For example, `tol=float("nan")` was accepted and is now rejected. An input
+that failed before and still fails, with a clearer error, is not a behavior
+change.
+
+A PR changes only the behavior its title names. When a requested finding asks
+for both a clearer error and a fix, the fix goes in its own PR. If a new check
+also rejects inputs that used to work, narrow it so they still work and
+propose the stricter rule separately.
 
 Prefer a local simplification over a new framework, registry, or compatibility
 layer unless the latter solves a concrete problem. Conversely, do not reduce
@@ -88,10 +96,10 @@ often explains more than a list of files. Use a short paragraph or a few
 bullets, then the applicable parts of the repository PR template. Scale detail
 to the change; omit implementation diaries and internal workflow checklists.
 
-Name each user-visible behavior change, including any outside the title's
-theme. Beyond that, include only material compatibility differences, support
-limits, numerical references, tolerance decisions, performance effects, and
-verification gaps.
+List every behavior change, each with one input that shows it, including
+changes that do not fit the title. Beyond that, include only material
+compatibility differences, support limits, numerical references, tolerance
+decisions, performance effects, and verification gaps.
 Link tests or longer explanations instead of copying a support matrix. Follow
 [verification reporting](testing.md#verification-reporting) for a compact check
 summary. If scope changes, rewrite the title and body around the final diff.
