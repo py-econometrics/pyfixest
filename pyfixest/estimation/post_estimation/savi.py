@@ -142,9 +142,7 @@ def optimal_mixture_precision(
     if upper_bound <= 1:
         raise ValueError(
             "No finite optimal mixture precision exists for these inputs because "
-            f"the optimization upper bound ({upper_bound:g}) is not greater than 1. "
-            f"Check the planning inputs nobs={nobs:g}, "
-            f"number_of_coefficients={number_of_coefficients:g}, and alpha={alpha:g}."
+            f"the optimization upper bound ({upper_bound:g}) is not greater than 1."
         )
 
     result = minimize_scalar(
