@@ -5,8 +5,12 @@ Quarto's ``website: llms-txt: true`` writes a Markdown copy of every page
 heading, in render order, with no descriptions and with file names as titles
 for pages that have no ``title`` field. Quarto offers no way to describe, group
 or omit entries, so this post-render script (``project: post-render`` in
-``_quarto.yml``) keeps Quarto's header (site title and description) and
-replaces the page list with the sections below.
+``_quarto.yml``) keeps Quarto's header (site title and description), adds
+notes for coding agents, and replaces the page list with the sections below.
+
+The notes point agents at the packaged agent skill and repeat its list of
+common slips, read from ``SKILL.md`` at render time so that llms.txt cannot
+drift from the skill.
 
 Guides come first, then the user-facing API reference. Internals (fitted-state
 data classes, formula parsing, small-sample utilities) are not listed one by
@@ -26,6 +30,9 @@ from pathlib import Path
 # without resolving paths against the site URL.
 SITE_URL = "https://pyfixest.org"
 
+SKILL_MD = Path(__file__).resolve().parents[1] / "pyfixest/skills/pyfixest/SKILL.md"
+SLIPS_HEADING = "## Coming from R fixest, Stata or statsmodels"
+
 # (page path without extension, title, description)
 SECTIONS = {
     "Start here": [
@@ -42,7 +49,7 @@ SECTIONS = {
         (
             "skills",
             "Agent skill for PyFixest",
-            "A ready-to-use skill file for coding agents that write PyFixest code.",
+            "Read before writing PyFixest code: the current API and its pitfalls, for coding agents.",
         ),
     ],
     "Tutorials": [
@@ -440,6 +447,25 @@ UNLISTED = {
 }
 
 
+def agent_notes() -> str:
+    """Point agents at the skill and copy the bullets of its slips section."""
+    skill = SKILL_MD.read_text(encoding="utf-8")
+    _, found, section = skill.partition(f"\n{SLIPS_HEADING}\n")
+    if not found:
+        sys.exit(f"{SKILL_MD}: no '{SLIPS_HEADING}' heading to copy into llms.txt")
+    section = section.split("\n## ", 1)[0]
+    bullets = section[section.find("\n- ") + 1 :].strip()
+    if not bullets.startswith("- "):
+        sys.exit(f"{SKILL_MD}: '{SLIPS_HEADING}' has no bullet list")
+    return (
+        "Coding agents: before writing PyFixest code, read the "
+        f"[PyFixest agent skill]({SITE_URL}/skills.llms.md). It covers the "
+        "current API, and the same skill ships inside the installed package at "
+        "`skills/pyfixest/SKILL.md`. Its list of the R fixest, Stata and "
+        "statsmodels habits that most often break PyFixest code:\n\n" + bullets
+    )
+
+
 def main() -> None:
     """Replace the page list of the llms.txt Quarto wrote."""
     if not os.environ.get("QUARTO_PROJECT_RENDER_ALL"):
@@ -478,7 +504,7 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    lines = [header.rstrip("\n"), ""]
+    lines = [header.rstrip("\n"), "", agent_notes(), ""]
     for heading, pages in SECTIONS.items():
         lines += [f"## {heading}", ""]
         lines += [
