@@ -764,8 +764,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if self.options.has_weights and self.options.weights_type == "fweights":
                 raise NotImplementedError(
                     "HAC inference (NW, DK) is not supported with `weights_type='fweights'`. "
-                    f"Got vcov={spec.vcov_type_detail!r}. Choose inference supported "
-                    "for frequency weights."
+                    f"Got vcov={spec.vcov_type_detail!r}."
                 )
         if spec.vcov_type == "nid":
             raise NotImplementedError(
