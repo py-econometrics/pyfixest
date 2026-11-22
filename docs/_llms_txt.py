@@ -22,6 +22,10 @@ import os
 import sys
 from pathlib import Path
 
+# Links are absolute so that an agent that downloads llms.txt can fetch them
+# without resolving paths against the site URL.
+SITE_URL = "https://pyfixest.org"
+
 # (page path without extension, title, description)
 SECTIONS = {
     "Start here": [
@@ -478,7 +482,7 @@ def main() -> None:
     for heading, pages in SECTIONS.items():
         lines += [f"## {heading}", ""]
         lines += [
-            f"- [{title}]({path}.llms.md): {description}"
+            f"- [{title}]({SITE_URL}/{path}.llms.md): {description}"
             for path, title, description in pages
         ]
         lines.append("")
