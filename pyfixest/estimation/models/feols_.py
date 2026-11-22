@@ -2145,8 +2145,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
                         f"Offset expression '{self.options.offset}' evaluates to missing "
-                        f"values in `newdata`. Check the offset inputs for "
-                        f"{len(newdata) - len(offset_mm)} affected rows."
+                        f"values for {len(newdata) - len(offset_mm)} of {len(newdata)} "
+                        "rows in `newdata`."
                     )
 
                 y_hat += offset_mm.iloc[:, 0].to_numpy()
