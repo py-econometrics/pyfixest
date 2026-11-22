@@ -58,6 +58,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Error messages for difference-in-differences inputs name the rejected input
   and say how to fix it
   ([#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
+- Error messages for prediction from new data name the fixed-effect or offset
+  columns that `newdata` must contain, `predict()` on a fit without prediction
+  inference points to point predictions, bootstrap and covariance errors link to
+  their API references, and IWLS step-halving failures report the iteration
+  ([#2095](https://github.com/py-econometrics/pyfixest/pull/2095)).
 - `etable()` raises `ValueError` or `TypeError` instead of `AssertionError` for
   invalid `signif_code`, `type`, `head_order`, `model_heads` or
   `custom_model_stats` ([#2092](https://github.com/py-econometrics/pyfixest/pull/2092)).

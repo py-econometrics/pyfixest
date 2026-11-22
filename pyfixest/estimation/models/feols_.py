@@ -11,6 +11,7 @@ from typing import ClassVar, Literal, cast, overload
 import formulaic
 import numpy as np
 import pandas as pd
+from formulaic.errors import FactorEvaluationError
 from scipy.sparse import csc_matrix, diags
 from scipy.stats import t
 from within import Effect
@@ -768,7 +769,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 )
         if spec.vcov_type == "nid":
             raise NotImplementedError(
-                "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+                "Only models of type Quantreg support a variance-covariance matrix of type 'nid'. "
+                "Choose a covariance type supported by the fitted estimator. "
+                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
             )
 
     def _vcov_from_spec(self, spec: VcovSpec) -> Feols:
@@ -967,7 +970,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
     def _vcov_nid(self) -> VcovTerm:
         raise NotImplementedError(
-            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'."
+            "Only models of type Quantreg support a variance-covariance matrix of type 'nid'. "
+            "Choose a covariance type supported by the fitted estimator. "
+            "See https://pyfixest.org/reference/estimation.models.feols_.Feols.vcov.html"
         )
 
     def _vcov_crv1(self, clustid: np.ndarray, cluster_col: np.ndarray) -> VcovTerm:
@@ -1230,16 +1235,18 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if not self.capabilities.wildboottest:
             if self.options.has_weights:
                 raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for WLS estimation."
+                    "Wild cluster bootstrap is not supported for WLS estimation. "
+                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.wildboottest.html"
                 )
             if self.model.parsed_formula.has_varying_slopes:
                 raise NotImplementedError(
-                    "Wild cluster bootstrap is not supported for models with "
-                    "varying slopes."
+                    "Wild cluster bootstrap is not supported for models with varying slopes. "
+                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.wildboottest.html"
                 )
             raise NotImplementedError(
                 "Wild cluster bootstrap is only supported for unweighted OLS models; "
-                "it is not available for IV, GLM, quantile regression, or DID2S fits."
+                "it is not available for IV, GLM, quantile regression, or DID2S fits. "
+                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.wildboottest.html"
             )
 
         if param is None:
@@ -1414,8 +1421,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         if not self.capabilities.cluster_causal_variance:
             raise NotImplementedError(
-                "The causal cluster variance estimator is not supported for models "
-                f"of type '{self.model.method}'."
+                "The causal cluster variance estimator is not supported for "
+                f"{self._describe_fits()}. ccv() requires an unweighted OLS fit "
+                "without fixed effects. "
+                "See https://pyfixest.org/reference/estimation.models.feols_.Feols.ccv.html"
             )
         if not isinstance(treatment, str):
             raise TypeError("treatment must be a string.")
@@ -1627,14 +1636,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         capability: str,
         method: str,
         exception_type: type[Exception] = NotImplementedError,
+        remedy: str = "See https://pyfixest.org/reference/ for supported fitted-model operations.",
     ) -> None:
         """Reject a post-estimation method the model class does not support."""
         if getattr(self.capabilities, capability):
             return
         raise exception_type(
             f"{method}() is not supported for {self._describe_fits()}: "
-            f"fit.capabilities.{capability} is False. "
-            "See https://pyfixest.org/reference/ for the supported fitted-model operations."
+            f"fit.capabilities.{capability} is False. {remedy}"
         )
 
     def _describe_fits(self) -> str:
@@ -2061,7 +2070,12 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if interval == "prediction" or se_fit:
             self._require_capability(
-                capability="prediction_inference", method="predict"
+                capability="prediction_inference",
+                method="predict",
+                remedy=(
+                    "For point predictions, call predict() with se_fit=False and interval=None. "
+                    "See https://pyfixest.org/reference/estimation.models.feols_.Feols.predict.html"
+                ),
             )
             if self.model.has_fixef:
                 raise NotImplementedError(
@@ -2112,11 +2126,17 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if self.model.has_fixef:
                 fe_spec = model_spec[_ModelMatrixKey.fixed_effects]
                 # na_action="ignore" keeps unseen-level rows as NaN codes
-                fe_mm = fe_spec.get_model_matrix(
-                    newdata,
-                    context=context,
-                    na_action="ignore",
-                )
+                try:
+                    fe_mm = fe_spec.get_model_matrix(
+                        newdata,
+                        context=context,
+                        na_action="ignore",
+                    )
+                except FactorEvaluationError as exc:
+                    raise exc.__class__(
+                        f"{exc} While predicting from {self.model.model_name!r}, "
+                        "include the fixed-effect columns used during fitting in newdata."
+                    ) from (exc.__cause__ or exc)
                 valid_fixed_effects = fe_mm.notna().all(axis="columns").to_numpy()
                 valid_idx = valid_idx[valid_fixed_effects[valid_idx]]
                 if not hasattr(self, "fixef_estimates"):
@@ -2136,12 +2156,18 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             X = np.full((n_observations, X_coef.shape[1]), np.nan)
             X[valid_idx] = X_coef
             if self.options.offset is not None:
-                offset_mm = model_spec[_ModelMatrixKey.offset].get_model_matrix(
-                    newdata,
-                    context=context,
-                    na_action="drop",
-                    output="pandas",
-                )
+                try:
+                    offset_mm = model_spec[_ModelMatrixKey.offset].get_model_matrix(
+                        newdata,
+                        context=context,
+                        na_action="drop",
+                        output="pandas",
+                    )
+                except FactorEvaluationError as exc:
+                    raise exc.__class__(
+                        f"{exc} predict() could not evaluate offset={self.options.offset!r}. "
+                        "Include the columns needed to calculate this offset in newdata."
+                    ) from (exc.__cause__ or exc)
                 if not offset_mm.index.equals(newdata.index):
                     raise ValueError(
                         f"Offset expression '{self.options.offset}' evaluates to missing "

@@ -278,9 +278,12 @@ def test_step_halving_forces_follow_up_wls(monkeypatch):
         tol,
         weights,
         step_halving_tol=1e-12,
+        *,
+        iteration,
     ):
         nonlocal step_calls
         step_calls += 1
+        assert iteration == step_calls + 1
         if step_calls == 1:
             eta_accepted = eta + 0.5 * (eta_new - eta)
             mu_accepted = family.inv_link(eta_accepted)
