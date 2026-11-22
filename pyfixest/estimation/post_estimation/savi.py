@@ -132,8 +132,7 @@ def optimal_mixture_precision(
     if nobs <= number_of_coefficients:
         raise ValueError(
             f"nobs must be greater than number_of_coefficients; got nobs={nobs:g} "
-            f"and number_of_coefficients={number_of_coefficients:g}. "
-            "Check the observation and coefficient counts used for planning."
+            f"and number_of_coefficients={number_of_coefficients:g}."
         )
     alpha = _validate_alpha(alpha)
 
