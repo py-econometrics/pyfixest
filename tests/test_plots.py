@@ -162,7 +162,8 @@ def test_iplot_error(data, preceding_model):
         iplot(models)
     assert str(exc.value) == (
         f"Model {len(models)} cannot be plotted with `iplot` because it does not "
-        f"use the `i` syntax: {fit.model.formula!r}"
+        f"use the `i` syntax: {fit.model.formula!r}. Use coefplot() for ordinary "
+        "regressors. See https://pyfixest.org/tutorials/formula-syntax.html"
     )
 
 

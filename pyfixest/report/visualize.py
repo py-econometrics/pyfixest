@@ -186,7 +186,8 @@ def iplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+            "The 'joint' parameter is only available for a single model. "
+            "Pass one fitted model for simultaneous intervals or set joint=False."
         )
 
     df_all: list[pd.DataFrame] = []
@@ -205,7 +206,8 @@ def iplot(
         if not fxst.model.interacted_covariates:
             raise ValueError(
                 f"Model {x + 1} cannot be plotted with `iplot` because it does not "
-                f"use the `i` syntax: {fxst.model.formula!r}"
+                f"use the `i` syntax: {fxst.model.formula!r}. Use coefplot() for ordinary "
+                "regressors. See https://pyfixest.org/tutorials/formula-syntax.html"
             )
         all_icovars += fxst.model.interacted_covariates
 
@@ -365,7 +367,8 @@ def coefplot(
     )
     if joint not in [False, None] and len(models) > 1:
         raise ValueError(
-            "The 'joint' parameter is only available for a single model, i.e. objects of type FixestMulti are not supported."
+            "The 'joint' parameter is only available for a single model. "
+            "Pass one fitted model for simultaneous intervals or set joint=False."
         )
 
     if keep is None:
@@ -472,7 +475,8 @@ def qplot(
     for model in models:
         if not isinstance(model, Quantreg):
             raise TypeError(
-                "The 'qplot' function is only supported for objects of type Quantreg."
+                f"qplot() needs quantreg() fits; got {type(model).__name__}. "
+                "Fit the desired quantiles with quantreg()."
             )
 
         df = model.tidy()

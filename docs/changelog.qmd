@@ -63,6 +63,9 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   inference points to point predictions, bootstrap and covariance errors link to
   their API references, and IWLS step-halving failures report the iteration
   ([#2095](https://github.com/py-econometrics/pyfixest/pull/2095)).
+- `etable()` raises `ValueError` or `TypeError` instead of `AssertionError` for
+  invalid `signif_code`, `type`, `head_order`, `model_heads` or
+  `custom_model_stats` ([#2092](https://github.com/py-econometrics/pyfixest/pull/2092)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

@@ -94,7 +94,8 @@ def build_standard_feols_benchmarkers(
     if not benchmarkers:
         raise ValueError(
             "No benchmarkers available after applying include flags and runtime "
-            "availability checks."
+            "availability checks. Set include_pyfixest, include_fixest, or "
+            "include_julia to True, or install torch for include_torch=True."
         )
 
     figure_backends = [b.name for b in benchmarkers]
