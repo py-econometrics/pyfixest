@@ -51,8 +51,7 @@ def _wald_statistic(
 
     if R.ndim != 2:
         raise ValueError(
-            f"R must be a one- or two-dimensional array; got shape {R.shape}. "
-            "Pass one row per restriction."
+            f"R must be a one- or two-dimensional array; got shape {R.shape}."
         )
 
     if R.shape[1] != beta_hat.shape[0]:
