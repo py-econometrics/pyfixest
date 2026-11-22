@@ -1458,7 +1458,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             elif len(clustervar) > 1:
                 raise ValueError(
                     "Multiway clustering is currently not supported with the causal cluster variance "
-                    "estimator. Pass a single cluster column if it matches the design."
+                    "estimator."
                 )
             else:
                 cluster = clustervar[0]
