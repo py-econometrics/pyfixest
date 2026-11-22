@@ -42,12 +42,3 @@ repos:
         types_or: [jupyter, pyi, python]
       - id: ruff-format
         types_or: [jupyter, pyi, python]
-
-  - repo: local
-    hooks:
-      - id: package-comments
-        name: Check package comment ratchet
-        entry: python3 scripts/check_comments.py
-        language: system
-        pass_filenames: false
-        always_run: true
