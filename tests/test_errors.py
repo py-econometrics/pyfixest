@@ -1808,7 +1808,7 @@ def test_errors_hac():
     # Error 4: lag is not provided if vcov is NW or DK
     with pytest.raises(
         ValueError,
-        match=r"We have not yet implemented the default Newey-West HAC lag. Please provide a lag value via the `vcov_kwargs`\.",
+        match=r"Time-series Newey-West inference requires an explicit lag.*'time_id': 'time', 'lag': 2",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1848,7 +1848,7 @@ def test_errors_hac():
     data.loc[0, "time2"] = data.loc[1, "time2"]
     with pytest.raises(
         ValueError,
-        match=r"There are duplicate time periods in the data. This is not supported for HAC SEs\.",
+        match=r"time_id column 'time2' contains duplicate values",
     ):
         pf.feols(
             "Y ~ X1",
@@ -1863,7 +1863,7 @@ def test_errors_hac():
     for vcov in ["NW", "DK"]:
         with pytest.raises(
             ValueError,
-            match=r"There are duplicate time periods for the same panel id. This is not supported for HAC SEs\.",
+            match=r"duplicate pairs for panel_id='panel' and time_id='time3'",
         ):
             pf.feols(
                 "Y ~ X1",
@@ -1871,6 +1871,25 @@ def test_errors_hac():
                 vcov=vcov,
                 vcov_kwargs={"time_id": "time3", "panel_id": "panel", "lag": 5},
             )
+
+
+def test_time_series_nw_rejects_missing_time():
+    data = pd.DataFrame(
+        {"y": [1, 4, 3, 2], "x": [1, 2, 3, 4], "year": [1.0, 2, 3, np.nan]}
+    )
+    with pytest.raises(
+        ValueError,
+        match=r"Newey-West inference found 1 missing values in time_id column 'year'",
+    ):
+        pf.feols(
+            "y ~ x", data=data, vcov="NW", vcov_kwargs={"time_id": "year", "lag": 1}
+        )
+
+
+def test_hac_names_missing_post_estimation_column():
+    fit = pf.feols("Y ~ X1", data=pf.get_data())
+    with pytest.raises(ValueError, match=r"vcov='NW' uses time_id='year'.*refit"):
+        fit.vcov("NW", vcov_kwargs={"time_id": "year", "lag": 1})
 
 
 @pytest.mark.parametrize("entry", ["did2s", "event_study"])

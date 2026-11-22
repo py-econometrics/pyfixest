@@ -230,7 +230,10 @@ def _nw_meat_time(scores: np.ndarray, time_arr: np.ndarray, lag: int):
 
 
 def _get_panel_idx(
-    panel_arr: np.ndarray, time_arr: np.ndarray
+    panel_arr: np.ndarray,
+    time_arr: np.ndarray,
+    *,
+    identifier_columns: tuple[str | None, str | None] = (None, None),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Get indices for each unit. I.e. the first value ("starts") and how many
@@ -259,8 +262,11 @@ def _get_panel_idx(
     time_arr_sorted = time_arr[order]
     duplicate_mask = (np.diff(panel_arr_sorted) == 0) & (np.diff(time_arr_sorted) == 0)
     if np.any(duplicate_mask):
+        panel_id, time_id = identifier_columns
         raise ValueError(
-            "There are duplicate time periods for the same panel id. This is not supported for HAC SEs."
+            "Panel HAC inference requires one row per panel and time pair. "
+            f"Found duplicate pairs for panel_id={panel_id!r} and time_id={time_id!r} "
+            "on the estimation sample. Check for duplicate rows or verify the identifiers."
         )
     return order, units, starts, counts, panel_arr_sorted, time_arr_sorted
 
