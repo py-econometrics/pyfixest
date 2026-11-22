@@ -29,8 +29,8 @@ def _normalize_q(q: float | np.ndarray | None, n_restrictions: int) -> np.ndarra
         )
     if q_array.shape[0] != n_restrictions:
         raise ValueError(
-            f"q must have the same number of rows as R. Pass one null value per "
-            f"restriction or a scalar; got {q_array.shape[0]} values for {n_restrictions} rows."
+            f"q must have the same number of rows as R; got {q_array.shape[0]} values "
+            f"for {n_restrictions} rows."
         )
     return q_array
 
