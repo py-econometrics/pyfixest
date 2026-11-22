@@ -11,7 +11,7 @@ from pyfixest.core.demean import (
     Preconditioner,
     within_preconditioner_name,
 )
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner
+from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -136,8 +136,20 @@ class DemeanCache:
         )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
+            if isinstance(demeaner, MapDemeaner):
+                tolerances = f"fixef_tol={demeaner.fixef_tol:g}"
+            else:
+                tolerances = f"fixef_atol={demeaner.fixef_atol:g}, fixef_btol={demeaner.fixef_btol:g}"
             raise ValueError(
-                f"Demeaning failed after {demeaner.fixef_maxiter} iterations."
+                f"Demeaning with {type(demeaner).__name__}(backend={demeaner.backend!r}) "
+                f"failed to converge with {tolerances} and "
+                f"fixef_maxiter={demeaner.fixef_maxiter}. Check regressor scales and "
+                "fixed-effect structure, raise fixef_maxiter if the solver needs "
+                "more iterations, or select a different demeaner backend, for "
+                'example demeaner=LsmrDemeaner(backend="within") or '
+                'demeaner=MapDemeaner(backend="rust"). See '
+                "https://pyfixest.org/how-to/demeaner-backends.html for the "
+                "available backends."
             )
         return result, used_preconditioner
 

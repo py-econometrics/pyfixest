@@ -46,6 +46,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Error messages for formulas name the rejected input or failed setting and say
   how to fix it
   ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088)).
+- Error messages for solver and convergence failures name the failed setting and
+  say how to fix it: demeaner non-convergence reports the backend and
+  tolerances and suggests another backend, IWLS failures name `iwls_maxiter` and
+  `iwls_tol`, an unknown `solver` lists the valid choices, and a singular
+  normal-equation matrix names the solver and the matrix size
+  ([#2089](https://github.com/py-econometrics/pyfixest/pull/2089)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

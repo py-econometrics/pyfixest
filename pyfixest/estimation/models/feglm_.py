@@ -409,7 +409,11 @@ class Feglm(Feols):
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
-        self._family.check_y(self.model_matrix.dependent.to_numpy())
+        try:
+            self._family.check_y(self.model_matrix.dependent.to_numpy())
+        except ValueError as exc:
+            exc.add_note(f"Dependent variable {self.model.depvar!r}.")
+            raise
 
     def _finalize_fit(self) -> None:
         """Skip the OLS Wald test; GLMs run no Wald test at fit time."""

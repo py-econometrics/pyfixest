@@ -60,7 +60,10 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     ```
     """
     if not np.issubdtype(ids.dtype, np.integer):
-        raise TypeError("Fixed effects must be integers")
+        raise TypeError(
+            f"detect_singletons() requires integer fixed-effect level codes; got {ids.dtype}. "
+            "Encode each fixed-effect column before calling it."
+        )
 
     # Convert to uint32 F-contiguous array for optimal performance
     # (matches numba implementation behavior)

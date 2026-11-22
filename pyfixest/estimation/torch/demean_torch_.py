@@ -65,8 +65,8 @@ def _get_device(dtype: torch.dtype = torch.float64) -> torch.device:
         )
         return torch.device("cpu")
     warnings.warn(
-        "No GPU available — torch demeaning will run on CPU, which is slower "
-        "than the scipy backend. Consider using `demean_scipy` instead.",
+        "No GPU is available. Torch demeaning will run on CPU. "
+        "Use LsmrDemeaner(backend='within') for the default CPU backend.",
         UserWarning,
         stacklevel=_find_stack_level(),
     )
@@ -217,7 +217,10 @@ def demean_torch(
         True if LSMR converged for all columns.
     """
     if flist is None:
-        raise ValueError("flist cannot be None")
+        raise ValueError(
+            "Torch demeaning needs an array of fixed-effect level codes, one row "
+            "per observation and one column per fixed effect. flist was None."
+        )
     if weights is None:
         weights = np.ones(x.shape[0], dtype=np.float64)
 

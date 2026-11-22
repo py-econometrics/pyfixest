@@ -154,7 +154,9 @@ class Quantreg(Feols):
             self._fit = self._method_map[method]
         except KeyError as exc:
             valid = ", ".join(self._method_map)
-            raise ValueError(f"`method` must be one of {{{valid}}}") from exc
+            raise ValueError(
+                f"`method` must be one of {{{valid}}}; got {method!r}."
+            ) from exc
 
     def _describe_model(self, **kwargs: Any) -> ModelDescription:
         """Name the quantile solver and append the quantile to the model name."""
@@ -252,7 +254,12 @@ class Quantreg(Feols):
 
         if not solution.has_converged:
             warnings.warn(
-                f"The Frisch-Newton Interior Point solver has not converged after {solution.iterations} iterations.",
+                f"The Frisch-Newton solver for quantile={self.options.quantile:g} "
+                "has not converged "
+                f"after {solution.iterations} iterations (tol={tol:g}, maxiter={maxiter}). "
+                "Check regressor scales. With method='fn', increase maxiter if the "
+                "solver needs more iterations. "
+                "See https://pyfixest.org/tutorials/quantile-regression.html#solvers",
                 RuntimeWarning,
                 stacklevel=_find_stack_level(),
             )
@@ -351,7 +358,9 @@ class Quantreg(Feols):
                     break
                 elif n_bad > 0.1 * M:
                     warnings.warn(
-                        "Too many bad fixups. Doubling m.",
+                        f"Quantile {self.options.quantile:g} preprocessing "
+                        f"misclassified {n_bad} observations. "
+                        "Retrying with a larger initialization sample.",
                         RuntimeWarning,
                         stacklevel=_find_stack_level(),
                     )
@@ -367,7 +376,11 @@ class Quantreg(Feols):
 
         if not has_converged:
             warnings.warn(
-                "The Frisch-Newton Interior Point solver with preprocessing has not converged after 3 bad fixups.",
+                f"Quantile {self.options.quantile:g} preprocessing failed after "
+                f"{n_bad_fixups} retries. "
+                "The returned coefficients did not pass the preprocessing checks. "
+                "Check regressor scales or use method='fn' to fit without preprocessing. "
+                "See https://pyfixest.org/tutorials/quantile-regression.html#solvers",
                 RuntimeWarning,
                 stacklevel=_find_stack_level(),
             )

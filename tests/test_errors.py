@@ -1636,6 +1636,10 @@ def test_glm_errors():
     ):
         pf.feglm("Y ~ X1", data=data, family="logit")
 
+    data_one_outcome = pf.get_data().assign(Y=1.0)
+    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+        pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
+
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
     with pytest.raises(
         ValueError, match=r"The dependent variable must be binary \(0 or 1\)."
@@ -2370,3 +2374,16 @@ def test_invalid_weights_report_the_column_and_count():
     data = pf.get_data(N=20).assign(weight=-1.0)
     with pytest.raises(ValueError, match=r"weights column 'weight'.*20 negative"):
         pf.feols("Y ~ X1", data, weights="weight")
+
+
+def test_invalid_solver_reports_available_choices():
+    with pytest.raises(
+        ValueError, match=r"solver must be one of .*np.linalg.solve.*got 'missing'"
+    ):
+        pf.feols("Y ~ X1", data=pf.get_data(N=20), solver="missing")
+
+
+def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
+    data = pf.get_data(N=30).dropna()
+    with pytest.raises(ValueError, match=r"vcov='nid'.*Hall-Sheather bandwidth"):
+        pf.quantreg("Y ~ X1", data=data, quantile=0.99)

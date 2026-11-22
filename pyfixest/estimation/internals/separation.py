@@ -270,7 +270,9 @@ def _check_for_separation_ir(
         separation_na = set(dependent[Uhat > 0].index)
     else:
         warnings.warn(
-            "iterative rectivier separation check: maximum number of iterations reached before convergence",
+            f"The Poisson iterative rectifier (separation_check=['ir']) reached its "
+            f"iteration limit ({maxiter}) before convergence. This check removed no rows. "
+            "Inspect regressors that predict zero outcomes and check their scales.",
             RuntimeWarning,
             stacklevel=_find_stack_level(),
         )
