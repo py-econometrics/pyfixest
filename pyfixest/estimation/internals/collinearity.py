@@ -44,7 +44,7 @@ def drop_multicollinear_variables(
     collin_vars: list[str] = []
     collin_index = np.zeros(len(names), dtype=bool)
 
-    if all_removed or 0 < n_excl == X.shape[1]:
+    if all_removed:
         dropped = repr(names[:5]) + (" ..." if len(names) > 5 else "")
         raise ValueError(
             f"All regressors are collinear at collin_tol={collin_tol:g}: {dropped}. "
