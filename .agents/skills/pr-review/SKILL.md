@@ -44,12 +44,12 @@ look for inputs that used to raise. Also run the PR's new tests on the parent:
 a test that expects an error and gets a result marks one. Report each, and
 whether the request asked for it.
 
-Probe each raise, warning, or assert message the diff adds or rewords the same
-way. Name a public call that reaches it and run that call; the message you read
-is the one it prints. A line you cannot reach is an invariant: report it for
-deletion or a bug-report message, however well the text reads. Check that any
-cause the message names matches what the probe shows, for example by repeating
-the call with `lean=True` and `store_data=False`.
+Test every added or reworded raise, warning, or assert message the same way.
+Find a public call that triggers it, run it, and read the actual output. If no
+public call can reach the line, it is an internal invariant and should either be
+deleted or say to report a pyfixest bug. Verify that any cause the message
+blames can actually trigger that check (for example, by testing the call with
+`lean=True` or `store_data=False`).
 
 Prioritize silently wrong results. Trace the changed values through their
 callers: construction, fitting, inference, post-estimation, and cleanup as
