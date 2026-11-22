@@ -70,9 +70,9 @@ def _check_convergence(
     return rel_dev_change < tol
 
 
-def _raise_non_convergence(*, family: str, maxiter: int, tol: float) -> None:
+def _raise_non_convergence(*, maxiter: int, tol: float) -> None:
     raise NonConvergenceError(
-        f"The {family} IWLS solver did not converge within iwls_maxiter={maxiter} before "
+        f"The IWLS solver did not converge within iwls_maxiter={maxiter} before "
         f"meeting iwls_tol={tol:g}. Check for separation or extreme regressor "
         "scales and increase iwls_maxiter if more iterations are needed."
     )
@@ -106,7 +106,7 @@ def _step_halving(
         return eta_new, mu_new, deviance_new, False
 
     raise RuntimeError(
-        f"Step-halving failed for {family.name} IWLS. The new deviance "
+        "Step-halving failed for IWLS. The new deviance "
         f"({deviance_new:.6g}) did not improve on {deviance:.6g}. "
         "Check for separation, extreme regressor scales, or extreme weights."
     )
@@ -293,7 +293,7 @@ def fit_glm_irls(
                 is_gaussian=family.name == "gaussian",
             )
         if not converged:
-            _raise_non_convergence(family=family.name, maxiter=maxiter, tol=tol)
+            _raise_non_convergence(maxiter=maxiter, tol=tol)
 
     working_residuals = (z_tilde_final - X_tilde_final @ beta_final).flatten()
     working_weights = working_weights_final.flatten()
