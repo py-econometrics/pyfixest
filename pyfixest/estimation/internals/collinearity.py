@@ -13,9 +13,11 @@ def drop_multicollinear_variables(
     X: np.ndarray,
     names: list[str],
     collin_tol: float,
+    *,
+    weights: np.ndarray | None = None,
 ) -> tuple[np.ndarray, CollinearityCheck]:
     """
-    Check for multicollinearity in the design matrices X and Z.
+    Check the design's Gram matrix for multicollinearity.
 
     Parameters
     ----------
@@ -25,11 +27,13 @@ def drop_multicollinear_variables(
         The names of the coefficients.
     collin_tol : float
         The tolerance level for the multicollinearity check.
+    weights : numpy.ndarray or None
+        Flat observation weights used to screen X' W X when supplied.
 
     Returns
     -------
     Xd : numpy.ndarray
-        The design matrix X after checking for multicollinearity.
+        The original design with collinear columns removed.
     check : CollinearityCheck
         The names of the dropped columns, the mask over X's input columns,
         and the names of the retained columns. The design matrix stays out of
@@ -38,7 +42,8 @@ def drop_multicollinear_variables(
     """
     # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
 
-    tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
+    rank_design = X if weights is None else X * np.sqrt(weights)[:, None]
+    tXX = np.ascontiguousarray(rank_design.T @ rank_design, dtype=np.float64)
     id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 
     collin_vars: list[str] = []

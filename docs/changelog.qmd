@@ -92,6 +92,12 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `inplace=` keyword, and `copy_data=False` no longer resets the index of the
   data you pass in ([#2069](https://github.com/py-econometrics/pyfixest/pull/2069)).
 
+- Weighted least-squares fits with `feols()` check collinearity using the
+  weighted Gram matrix, matching R's `fixest`. Terms near the absolute
+  `collin_tol` cutoff can be dropped or retained depending on their weighted
+  variation. Weighted IV fits also account for observation weights in their
+  collinearity checks.
+
 ## PyFixest 0.70.0
 
 ### TL;DR

@@ -530,9 +530,12 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         )
 
     def _drop_multicollinear_within_data(
-        self, within_data: WithinLinearData
+        self,
+        within_data: WithinLinearData,
+        *,
+        weights: np.ndarray | None = None,
     ) -> WithinLinearData:
-        """Return within data after the established unweighted rank check."""
+        """Select within columns using the supplied weights for the rank check."""
         design = within_data.design
         if design.shape[1] == 0:
             # Fixed-effects-only model: nothing to check, but the attribute is
@@ -548,6 +551,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             design,
             self._coefnames,
             self.options.collin_tol,
+            weights=weights,
         )
         self.collinearity = collinearity
         self._coefnames = list(collinearity.coefnames)
@@ -586,7 +590,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         -------
         None
         """
-        within_data = self._drop_multicollinear_within_data(self._demean())
+        weights = self.observation_weights.values
+        within_data = self._drop_multicollinear_within_data(
+            self._demean(), weights=weights
+        )
         self._set_within_data(within_data)
 
         if self._X_is_empty:
@@ -598,7 +605,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             fit = fit_ols(
                 X=within_data.design,
                 Y=within_data.response,
-                weights=self.observation_weights.values,
+                weights=weights,
                 solver=self.options.solver,
             )
 
