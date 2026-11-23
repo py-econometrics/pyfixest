@@ -54,7 +54,7 @@ Common robust choices:
 - `HC2`, `HC3`: often preferred in smaller samples. Use them with OLS models
   without absorbed fixed effects.
 
-The comparison below uses the same regression for all three covariance estimators.
+The comparison below uses the same model for all three variance estimators.
 
 ```python
 fit_hc1 = pf.feols("Y ~ X1 + X2", data=data, vcov="HC1")
@@ -147,7 +147,7 @@ Goal: compare rejection rates under the null (`beta = 0`) for:
 Design sketch:
 
 1. Simulate clustered data with no true treatment effect.
-2. Fit `feols` with clustered vcov.
+2. Fit with `feols()` and a cluster-robust variance estimator.
 3. Test `H0: beta = 0` using conventional CRV p-values.
 4. Test the same null via `wildboottest`.
 5. Repeat many times and compare empirical rejection rates.
@@ -196,7 +196,7 @@ Interpretation target:
 Suggested workflow:
 
 1. Start from design and dependence structure.
-2. Use robust/clustered vcov aligned with that structure.
+2. Choose a variance estimator that accounts for that dependence structure.
 3. If clusters are few or very uneven, use wild cluster bootstrap.
 4. If assignment is randomized, add randomization inference as a design-based check.
 

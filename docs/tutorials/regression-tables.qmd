@@ -258,8 +258,8 @@ fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
 
 pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
 ```
-##  Change reference category
-You can also change the reference category of a categorical variable using the `ref` argument in the  interaction `i()` operator. For example, repeating the last estimation but changing the reference category to "Managerial" instead of "Admin":
+## Change the reference level {#change-reference-category}
+Use the `ref` argument of `i()` to choose the reference level of a categorical regressor. This example refits the model with "Managerial" as the reference level:
 
 ```{python}
 

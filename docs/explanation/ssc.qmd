@@ -1,5 +1,5 @@
 ---
-title: On Small Sample Corrections
+title: Small-sample corrections
 aliases:
   - /ssc.html
   - /explanation/ssc.html
@@ -10,9 +10,9 @@ toc: true
 toc-title: "On this page"
 ---
 
-The `fixest` R package provides various options for small sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small sample adjustments work in `fixest` and how they are implemented in `pyfixest` in this document.
+The `fixest` R package provides various options for small-sample corrections. While it has an excellent [vignette](https://cran.r-project.org/web/packages/fixest/vignettes/standard_errors.html) on the topic, reproducing its behavior in `pyfixest` took more time than expected. So that future developers (and my future self) can stay sane, I’ve compiled all of my hard-earned understanding of how small-sample corrections work in `fixest` and how they are implemented in `pyfixest` in this document.
 
-In both `fixest` and `pyfixest`, small sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `k_adj`, `G_adj`, `k_fixef` and `G_df`.
+In both `fixest` and `pyfixest`, small-sample corrections are controlled by the `ssc` function. In `pyfixest`, `ssc` accepts four arguments: `k_adj`, `G_adj`, `k_fixef` and `G_df`.
 
 Based on these inputs, the adjusted variance-covariance matrix is computed as:
 
@@ -39,7 +39,7 @@ Outside of this formula, we have **`df_t`**, which is the degrees of freedom use
 
 ---
 
-# Small Sample Adjustments
+# Small-sample corrections {#small-sample-adjustments}
 
 ## `k_adj = True`
 

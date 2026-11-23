@@ -1,8 +1,8 @@
 # Formula syntax reference
 
 Every formula has the shape
-`"depvar ~ covariates + [endogenous ~ instruments] | fixed effects"`. The
-covariate part follows [formulaic](https://matthew.wardrop.casa/formulaic/)
+`"dependent ~ regressors + [endogenous ~ instruments] | fixed effects"`. The
+regressor terms follow [formulaic](https://matthew.wardrop.casa/formulaic/)
 grammar plus the pyfixest operators below. Every example runs as written;
 later blocks reuse `pf` and `data`. Full tutorial:
 https://pyfixest.org/tutorials/formula-syntax.html
@@ -14,7 +14,7 @@ import pyfixest as pf
 data = pf.get_data()  # Y, Y2, X1, X2, Z1, Z2 numeric; f1, f2, f3, group_id float codes
 ```
 
-## Covariates, intercept and transforms
+## Regressors, intercept and transforms {#covariates-intercept-and-transforms}
 
 ```python
 formulas = [
@@ -102,7 +102,7 @@ pf.feols("Y ~ X1 | f1 + f1:f2", data)
 - Column dtype must be numeric, `"string"` or `"category"`, not `object`:
   convert with `df["firm"] = df["firm"].astype("string")`.
   `predict(newdata=...)` needs the same dtype as the fitting data.
-- Observations in singleton groups are dropped with a warning
+- Rows in singleton levels are dropped with a warning
   (`fixef_rm="singleton"`, the default); `fixef_rm="none"` keeps them.
 - Fixed-effect estimates are not coefficients; recover them with
   `fit.fixef()` (a DataFrame).
@@ -131,7 +131,7 @@ pf.feols("Y ~ 0 + X2 + [X1 ~ Z1]", data)  # no intercept in either stage
 pf.feols("Y ~ X2 + [X1:X2 ~ Z1:X2]", data)  # interacted endogenous term
 ```
 
-- One endogenous variable per model; more raise `FormulaSyntaxError`.
+- One endogenous regressor per model; more raise `FormulaSyntaxError`.
 - Only `feols()` fits IV.
 - The main formula decides the intercept of both stages; a `0` or `1` inside
   the brackets has no effect.
@@ -165,7 +165,7 @@ pf.feols("Y ~ X1 | f1", data, split="f3")  # one model per value of f3
 pf.feols("Y ~ X1 | f1", data, fsplit="f3")  # full sample first, then each value
 ```
 
-- Operators work in covariates, in fixed effects and inside the IV block. On
+- Operators work among regressors, in fixed effects and inside the instrument block. On
   the left-hand side only `sw` works (`sw(Y, Y2) ~ X1`); `csw`, `csw0` and
   `mvsw` there raise `FormulaSyntaxError`. Several operators combine as a
   Cartesian product.

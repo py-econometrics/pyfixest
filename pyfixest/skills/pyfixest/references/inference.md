@@ -19,7 +19,7 @@ The default is `vcov="iid"` for `feols`, `fepois` and `feglm`, with or
 without fixed effects, and `"nid"` for `quantreg`. There are no `cluster=` or
 `se=` arguments.
 
-| `vcov=` | Estimator |
+| `vcov=` | Variance estimator |
 |---|---|
 | `"iid"` | homoskedastic |
 | `"hetero"` or `"HC1"` | heteroskedasticity-robust (same estimator) |
@@ -135,7 +135,7 @@ fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")
 warns. `confint(joint=True)` is deprecated; use `inference_type="simult"`.
 
 Anytime-valid inference (SAVI) works for `feols` without IV, fixed effects or
-weights, and with an iid or HC covariance:
+weights, and with an iid or heteroskedasticity-robust variance estimator:
 
 ```python
 ols = pf.feols("Y ~ X1 + X2", data, vcov="hetero")
