@@ -171,7 +171,7 @@ class Feglm(Feols):
         return replace(counts, n_fe=self._n_fe_after_separation)
 
     def get_fit(self) -> None:
-        "Fit the GLM via IRLS and write results onto self.* attributes."
+        "Fit the GLM via IWLS and write results onto self.* attributes."
         model_matrix = self.model_matrix
         response = model_matrix.dependent.to_numpy()
         design = model_matrix.independent.to_numpy()
@@ -229,7 +229,7 @@ class Feglm(Feols):
         self.convergence = fit.converged
 
     def _fit_statistics(self) -> FitStatistics:
-        """Compute the deviance of the final IRLS iteration.
+        """Compute the deviance of the final IWLS iteration.
 
         Families with further measures extend this in their subclass.
         """
@@ -241,7 +241,7 @@ class Feglm(Feols):
         return FitStatistics(deviance=deviance)
 
     def _prediction_design(self) -> np.ndarray:
-        """Supply the final IRLS design to the inherited predict() method.
+        """Supply the final IWLS design to the inherited predict() method.
 
         Unlike linear models, GLMs store this coefficient-ordered design in
         working_state. It is not multiplied by square-root working weights.
@@ -318,7 +318,7 @@ class Feglm(Feols):
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Residualize v and X with current working weights and a reused preconditioner."""
+        """Demean v and X with current working weights and a reused preconditioner."""
         if flist is None:
             return v, X
 
@@ -368,7 +368,7 @@ class Feglm(Feols):
             Can be either "response" (default) or "link".
             If type="response", the output is at the level of the response variable,
             i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
+            If "link", the output is on the scale of the linear predictor,
             i.e., the linear predictor X @ beta.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().

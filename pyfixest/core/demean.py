@@ -145,7 +145,7 @@ def demean_within(
     flist : numpy.ndarray or list[within.Effect]
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded), or complete effects containing their group codes,
-        intercept flags, and slope covariates.
+        intercept flags, and varying-slope variables.
     weights : numpy.ndarray or None, optional
         Array of shape (n_samples,) specifying observation weights.
     tol : float, optional

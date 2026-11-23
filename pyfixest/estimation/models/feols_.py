@@ -177,9 +177,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         absorbed fixed effects, the `i()` interaction coefficients, and the
         formulaic model specification.
     model_matrix : ModelMatrix
-        Model frames containing the response, regressors, and other model inputs.
+        Model matrix with the dependent variable, regressors, and other model inputs.
     within_data : WithinLinearData
-        Response and regressors after demeaning by fixed effects and removing
+        Dependent variable and regressors after demeaning and removing
         collinear regressor columns, without multiplication by square-root weights.
     _X_is_empty : bool
         Indicates whether the X array is empty.
@@ -201,10 +201,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         Level counts of the fixed effects in the estimation sample and the
         counts derived from them for inference.
     sandwich : SandwichComponents
-        Weighted scores, Hessian, and bread of the sandwich covariance, set in
+        Weighted scores, Hessian, and bread of the sandwich variance-covariance matrix, set in
         get_fit().
     _k : int
-        Number of independent variables (or features).
+        Number of regressors.
     capabilities : Capabilities
         Inference and post-estimation features this model class supports.
     _beta_hat : np.ndarray
@@ -215,9 +215,9 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     _u_hat : np.ndarray
         Residuals of the regression model.
     variance_covariance : VarianceCovariance
-        Covariance estimate published by `vcov()`: the adjusted matrix, the
-        meat where a sandwich exists, small-sample factors, degrees of
-        freedom, and the requested estimator with its cluster variables.
+        The adjusted variance-covariance matrix, sandwich meat when available,
+        adjustment factors, degrees of freedom, variance estimator, and cluster
+        variables published by `vcov()`.
     wald : WaldTest
         Wald test published by `wald_test()`: the statistic of the reference
         distribution used, its p-value, both scalings of the quadratic form,
@@ -489,7 +489,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         return fixed_effects.to_numpy()
 
     def _demean(self) -> WithinLinearData:
-        """Convert model frames to arrays and residualize them on the fixed effects.
+        """Convert the dependent variable and regressors to arrays and demean them.
 
         The returned arrays are in the units of the data; they are not
         multiplied by square-root weights.
@@ -564,7 +564,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """Return the coefficient-ordered design for the shared predict() method.
 
         Linear and quantile models retain it in within_data. The GLM override
-        reads the corresponding final IRLS design from working_state.
+        reads the corresponding final IWLS design from working_state.
         """
         require_retained(self, "predict", "within_data")
         return self.within_data.design
@@ -644,7 +644,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         self.wald_test()
 
     def _iter_fitted_models(self) -> tuple[Feols, ...]:
-        """Yield this fitted result to the result container."""
+        """Yield this fitted model to the result container."""
         return (self,)
 
     def vcov(
@@ -654,23 +654,22 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         data: DataFrameType | None = None,
     ) -> Feols:
         """
-        Compute covariance matrices for an estimated regression model.
+        Update the variance-covariance matrix of a fitted model.
 
         Parameters
         ----------
         vcov : Union[str, dict[str, str]]
-            A string or dictionary specifying the type of variance-covariance matrix
-            to use for inference.
+            A string or dictionary specifying the variance estimator.
             If a string, it can be one of "iid", "hetero", "HC1", "HC2", "HC3", "NW", "DK".
             If a dictionary, it should have the format {"CRV1": "clustervar"} for
             CRV1 inference or {"CRV3": "clustervar"}
             for CRV3 inference. Note that CRV3 inference is currently not supported
             for IV estimation.
         vcov_kwargs : Optional[dict[str, any]]
-             Additional keyword arguments for the variance-covariance matrix.
+             Additional options for the variance estimator.
         data : Optional[DataFrameType], optional
             No longer supported; passing a frame raises `ValueError`. The
-            covariance matrix uses the estimation sample stored on the model.
+            variance-covariance matrix uses the estimation sample retained by the fitted model.
             This argument will be removed in a future release.
 
         Notes
@@ -688,7 +687,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         Examples
         --------
         Updates the variance estimator of a fitted model without refitting it.
-        The model is modified in place and returned.
+        The fitted model is modified in place and returned.
 
         ```{python}
         import pyfixest as pf
@@ -702,7 +701,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         fit.vcov({"CRV1": "f1"}).tidy()
         ```
 
-        See [On Small Sample Corrections](/explanation/ssc.qmd) for how the
+        See [Small-sample corrections](/explanation/ssc.qmd) for how the
         `ssc` adjustments interact with each estimator.
         """
         if data is not None:
@@ -726,7 +725,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         return self._vcov_from_spec(spec)
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
-        """Reject a covariance estimator this model cannot compute.
+        """Reject a variance estimator this model cannot compute.
 
         Reads only the model description, options, and capabilities, so the
         estimation pipeline runs it before fitting.
@@ -775,7 +774,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
 
     def _vcov_from_spec(self, spec: VcovSpec) -> Feols:
-        """Compute and publish the covariance of a parsed, supported `spec`.
+        """Compute and publish the variance-covariance matrix for `spec`.
 
         `vcov()` parses and checks the user's input first; the estimation
         pipeline passes the spec it parsed before fitting.
@@ -1176,10 +1175,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         seed : Union[int, None], optional
             An option to provide a random seed. Defaults to None.
         k_adj : bool, optional
-            Indicates whether to apply a small sample adjustment for the number
-            of observations and covariates. Defaults to True.
+            Indicates whether to apply a small-sample correction for the number
+            of observations and regressors. Defaults to True.
         G_adj : bool, optional
-            Indicates whether to apply a small sample adjustment for the number
+            Indicates whether to apply a small-sample correction for the number
             of clusters. Defaults to True.
         parallel : bool, optional
             Indicates whether to run the bootstrap in parallel. Defaults to False.
@@ -1674,8 +1673,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         """
         Implement the Gelbach (2016) decomposition method for mediation analysis.
 
-        Compares a short model `depvar on param` with the long model
-        specified in the original feols() call.
+        Compare the coefficient on `param` in a model with just that regressor
+        and in the full model from the original `feols()` call.
 
         For details, take a look at
         "When do covariates matter?" by Gelbach (2016, JoLe). You can find
@@ -1688,13 +1687,13 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         Parameters
         ----------
         param : str
-            The name of the focal covariate whose effect is to be decomposed into direct
+            The name of the focal regressor whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         x1_vars : list[str]
-            A list of covariates that are included in both the baseline and the full
+            A list of regressors that are included in both the baseline and the full
             regressions.
         decomp_var : str
-            The name of the focal covariate whose effect is to be decomposed into direct
+            The name of the focal regressor whose effect is to be decomposed into direct
             and indirect components with respect to the rest of the right-hand side.
         type : str, optional
             The type of decomposition method to use. Defaults to "gelbach", which
@@ -1705,7 +1704,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             supported; a fit with multiway clustering raises ``ValueError`` unless
             a single cluster variable is passed here. Defaults to None.
         combine_covariates: Optional.
-            A dictionary that specifies which covariates to combine into groups.
+            A dictionary that specifies which regressors to combine into groups.
             See the example for how to use this argument. Defaults to None.
         reps : int, optional
             The number of bootstrap iterations to run. Defaults to 1000.
@@ -1718,7 +1717,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             If True, use the 'aggregate first' algorithm described in Gelbach (2016).
             False by default, unless combine_covariates is provided.
             Recommended to set to True if combine_covariates is argument is provided.
-            As a rule of thumb, the more covariates are combined, the larger the performance
+            As a rule of thumb, the more regressors are combined, the larger the performance
             improvement.
         only_coef : bool, optional
             Indicates whether to compute inference for the decomposition. Defaults to False.
@@ -1730,7 +1729,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         -------
         GelbachDecomposition
             A GelbachDecomposition object with the decomposition results.
-            Use `tidy()` and `etable()` to access the estimation results.
+            Use `tidy()` and `etable()` to access the decomposition results.
 
         Examples
         --------
@@ -2516,10 +2515,10 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         Parameters
         ----------
         X_new : np.ndarray
-            Covariates for new data points. Users expected to ensure conformability
-            with existing data.
+            Regressor values for new observations, in the fitted design matrix's
+            column order.
         y_new : np.ndarray
-            Outcome values for new data points.
+            Dependent-variable values for new observations.
         inplace : bool, optional
             Must be `False`. In-place updates are unsupported because appending
             design rows cannot reconstruct the complete fitted-result state.

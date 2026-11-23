@@ -32,7 +32,7 @@ class DemeanedData:
     not change after publication. The frozen dataclass prevents field
     rebinding, and ``values`` is flagged read-only before it is stored, so a
     model writing into a returned slice fails loudly instead of silently
-    corrupting the demeaned data of the models it shares the cache with.
+    corrupting the within data of the models it shares the cache with.
     """
 
     values: NDArray[np.float64]
@@ -189,7 +189,7 @@ class DemeanCache:
             Encoded fixed-effect identifiers, complete effects, or ``None`` for
             no fixed effects. A cache block shares the same effect design.
         weights : NDArray[np.float64] or None
-            Observation weights passed to the within transformation.
+            Observation weights passed to the demeaning.
         na_index : frozenset[int]
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner

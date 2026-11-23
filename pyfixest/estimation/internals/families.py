@@ -41,8 +41,9 @@ class GlmFamily:
     Bundles the link function, inverse link, derivative of the link, variance function,
     deviance, initial mu, and dependent-variable validation into a single object.
     `method` names the estimation function in `fit.model.method`.
-    `outcome_bounds` lists the outcome values the inverse link attains only as
-    the linear predictor diverges; outcomes stuck at such a bound are separated.
+    `outcome_bounds` lists the dependent-variable bounds that the inverse link
+    reaches only as the linear predictor diverges. Observations at such a
+    bound can be separated.
     """
 
     name: str

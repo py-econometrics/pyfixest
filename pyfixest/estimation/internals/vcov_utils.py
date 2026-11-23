@@ -24,12 +24,12 @@ from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VcovTerm:
-    """One unadjusted covariance term and, for sandwich estimators, its meat.
+    """One unadjusted variance-covariance contribution and, for sandwich estimators, its meat.
 
     Attributes
     ----------
     vcov : np.ndarray
-        Unadjusted covariance, shape (k, k). Equals ``bread @ meat @ bread``
+        Unadjusted variance-covariance contribution, shape (k, k). Equals ``bread @ meat @ bread``
         when ``meat`` is present.
     meat : np.ndarray or None
         Unadjusted meat, shape (k, k); ``None`` for estimators without a

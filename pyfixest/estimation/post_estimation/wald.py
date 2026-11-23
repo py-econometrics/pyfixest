@@ -96,7 +96,7 @@ def wald_test(
     beta_hat : np.ndarray
         Estimated coefficients, shape (n_coefficients,).
     vcov : np.ndarray
-        Covariance estimate of `beta_hat`, shape (n_coefficients,
+        Variance-covariance matrix for `beta_hat`, shape (n_coefficients,
         n_coefficients).
     R : np.ndarray
         Restriction matrix of full row rank, shape (n_restrictions,
@@ -108,7 +108,7 @@ def wald_test(
     distribution : {"F", "chi2"}
         Reference distribution used for the p-value.
     vcov_type : str
-        Name of the covariance estimator, recorded on the result.
+        Name of the variance estimator, recorded on the result.
 
     Returns
     -------

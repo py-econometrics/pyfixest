@@ -542,7 +542,7 @@ class Formula:
 
     @property
     def exogenous(self) -> formulaic.formula.SimpleFormula:
-        """Exogenous aka covariates aka independent variables."""
+        """Terms for the exogenous regressors."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
             # IV blocks add their endogenous terms to the root. Exclude those
@@ -564,7 +564,7 @@ class Formula:
 
     @property
     def endogenous(self) -> formulaic.formula.SimpleFormula:
-        """Endogenous variables of an instrumental variable specification."""
+        """Terms for the endogenous regressor in an IV formula."""
         if not self.is_instrumental_variable:
             raise AttributeError(
                 "Endogenous variables are available only in instrumental variables specifications."
@@ -573,10 +573,10 @@ class Formula:
 
     @property
     def instruments(self) -> formulaic.formula.SimpleFormula:
-        """Instruments of an instrumental variable specification.
+        """Terms for the instruments in an IV formula.
 
         The main formula sets the intercept of both stages, so this excludes
-        the intercept Formulaic adds to every IV block.
+        the intercept Formulaic adds to every instrument block.
         """
         if not self.is_instrumental_variable:
             raise AttributeError(

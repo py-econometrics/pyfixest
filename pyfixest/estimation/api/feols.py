@@ -62,11 +62,11 @@ def feols(
     Parameters
     ----------
     fml : str
-        A formula string using fixest formula syntax.
+        A formula using fixest formula syntax.
         Syntax: "Y ~ X1 + X2 + [X_endog ~ Z1] | FE1 + FE2". "|" separates the model
         from the fixed effects; instruments go into a "[endogenous ~ instruments]"
-        block on the right-hand side. Special syntax includes stepwise regressions,
-        cumulative stepwise regression, multiple dependent variables via sw(),
+        block on the right-hand side. Special syntax includes stepwise operators,
+        multiple dependent variables via `sw()`,
         interaction of variables (i(X1,X2)), interacted fixed effects (fe1:fe2),
         and varying slopes: "FE1[Z]" adds a slope on Z for every level of FE1,
         and "FE1[[Z]]" adds only the slopes.
@@ -75,7 +75,7 @@ def feols(
         A pandas or polars dataframe containing the variables in the formula.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
+        Variance estimator. Options include "iid",
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
@@ -95,14 +95,11 @@ def feols(
         contains the weights.
 
     ssc : str
-        A ssc object specifying the small sample correction for inference.
+        The small-sample correction for inference, created with `ssc()`.
 
     fixef_rm : FixedRmOptions
-        Specifies whether to drop singleton fixed effects.
-        Can be equal to "singleton" (default),
-        or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
-        estimates but it will impact standard errors.
+        Use "singleton" (default) to drop rows in singleton levels or "none"
+        to retain them. This can affect standard errors.
 
     collin_tol : float, optional
         Tolerance for collinearity check, by default 1e-10.
@@ -120,12 +117,10 @@ def feols(
         a column with interacted fixed effects in the data set.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Whether the fitted model retains the data, by default True. Set to
+        False to save memory. Accessing `fit.data` or calling a post-estimation
+        operation that needs the data, such as `predict()` or `vcov()`, then
+        raises `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the
@@ -240,7 +235,7 @@ def feols(
     `fit.tstat()` for the t-statistics, `fit.pvalue()` for the p-values, and
     `fit.confint()` for the confidence intervals.
 
-    The employed type of inference can be specified via the `vcov` argument. For compatibility
+    Select the variance estimator with the `vcov` argument. For compatibility
     with `fixest`, if vcov is not provided, `PyFixest` always employs "iid" inference by default
     starting with pyfixest 0.31.0. Prior to pyfixest 0.31.0, if vcov was not provided, `PyFixest`
     would cluster by the first fixed effect if no vcov was provided.
@@ -251,8 +246,8 @@ def feols(
     fit3 = pf.feols("Y ~ X1 + X2 | f1 + f2", data, vcov={"CRV1": "f1"})
     ```
 
-    Supported inference types are "iid", "hetero", "HC1", "HC2", "HC3", and
-    "CRV1"/"CRV3". Clustered standard errors are specified via a dictionary,
+    Supported variance estimators include "iid", "hetero", "HC1", "HC2", "HC3", and
+    "CRV1"/"CRV3". Specify cluster-robust inference with a dictionary,
     e.g. `{"CRV1": "f1"}` for CRV1 inference with clustering by `f1` or
     `{"CRV3": "f1"}` for CRV3 inference with clustering by `f1`. For multiway
     clustering, join the cluster variables with `+`, e.g. `{"CRV1": "f1 + f2"}`
@@ -270,7 +265,7 @@ def feols(
     fit.vcov("iid").summary()
     ```
 
-    The `ssc` argument specifies the small sample correction for inference. In
+    The `ssc` argument specifies the small-sample correction for inference. In
     general, `feols()` uses all of `fixest::feols()` defaults, but sets the
     `fixef.K` argument to `"none"` whereas the `fixest::feols()` default is `"nested"`.
     See here for more details: [link to github](https://github.com/py-econometrics/pyfixest/issues/260).
@@ -342,10 +337,8 @@ def feols(
     pf.etable(fit)
     ```
 
-    In general, using muliple estimation syntax can improve the estimation time
-    as covariates that are demeaned in one model and are used in another model do
-    not need to be demeaned again: `feols()` implements a caching mechanism that
-    stores the demeaned covariates.
+    Multiple estimation can be faster because `feols()` can reuse demeaned
+    regressors across models that share an estimation sample and fixed effects.
 
     Additionally, you can fit models on different samples via the split and fsplit
     arguments. The split argument splits the sample according to the variable
@@ -367,7 +360,7 @@ def feols(
     type(fit_iv)
     ```
 
-    Here, `X1` is the endogenous variable and `Z1` is the instrument. `f1` and `f2`
+    Here, `X1` is the endogenous regressor and `Z1` is the instrument. `f1` and `f2`
     are the fixed effects, as before. To estimate IV models without fixed effects,
     simply omit the fixed effects:
 
