@@ -96,14 +96,12 @@ def _rename_categorical(
     else:
         pattern = r"([^[]+)\[(?:T\.)?([^]]+)\]"
 
-    # Replace labels with empty dictionary if not provided
     if labels is None:
         labels = {}
-    # Apply the regex to extract the variable and value
     match = re.search(pattern, col_name)
     if match:
         variable = match.group(1)
-        variable = labels.get(variable, variable)  # apply label if any
+        variable = labels.get(variable, variable)
         value_raw = match.group(2)
 
         # Try parsing as float so that e.g. "2.0" can become "2"
@@ -112,7 +110,6 @@ def _rename_categorical(
             numeric_val = float(value_raw)
             value_int = int(numeric_val) if numeric_val.is_integer() else numeric_val
         except ValueError:
-            # If not numeric at all, we'll leave it as-is
             pass
 
         return template.format(variable=variable, value=value_raw, value_int=value_int)

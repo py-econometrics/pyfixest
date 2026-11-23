@@ -87,7 +87,6 @@ class DID2S(DID):
             self._fml1 = f" ~ 0 | {idname} + {tname}"
             self._fml2 = " ~ is_treated"
 
-        # column name with weights. None by default
         self._weights_name = weights
 
     def estimate(self):
@@ -281,7 +280,6 @@ def _did2s_estimate(
     else:
         _not_yet_treated_data = data[data["is_treated"] == False]  # noqa: E712
 
-    # estimate first stage
     fit1 = cast(
         Feols,
         feols(
@@ -292,10 +290,8 @@ def _did2s_estimate(
         ),
     )  # iid as it might be faster than CRV
 
-    # obtain estimated fixed effects
     fit1.fixef()
 
-    # demean data
     Y_hat = fit1.predict(newdata=data)
     missing_predictions = int(np.isnan(Y_hat).sum())
     if missing_predictions:
@@ -405,7 +401,6 @@ def _did2s_vcov(
         * weights_array[:, None]
     )
 
-    # Weight first and second stage residuals
     first_u *= weights_array
     second_u *= weights_array
 

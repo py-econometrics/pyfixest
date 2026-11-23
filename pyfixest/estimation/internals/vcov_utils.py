@@ -63,9 +63,9 @@ class ClusterPrep:
     "Precomputed cluster state shared across the CRV per-cluster loop."
 
     cluster_df: pd.DataFrame
-    cluster_arr_int: np.ndarray  # (N, n_cluster_cols), int-factorized
-    G: list[int]  # cluster counts per column, post ssc["G_df"] adjustment
-    vcov_signs: list[int]  # inclusion-exclusion sign per column
+    cluster_arr_int: np.ndarray
+    G: list[int]
+    vcov_signs: list[int]
     k_fe_nested: int
     n_fe_fully_nested: int
 
@@ -254,7 +254,7 @@ def _get_panel_idx(
       panel_arr_sorted : panel variable in sorted order
       time_arr_sorted : time variable in sorted order
     """
-    order = np.lexsort((time_arr, panel_arr))  # sort by panel, then time
+    order = np.lexsort((time_arr, panel_arr))
     p_sorted = panel_arr[order]
     units, starts, counts = np.unique(p_sorted, return_index=True, return_counts=True)
     panel_arr_sorted = panel_arr[order]

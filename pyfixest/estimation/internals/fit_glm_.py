@@ -186,7 +186,6 @@ def fit_glm_irls(
     converged = False
     step_halved_prev = False
 
-    # Buffers populated each iteration; used after the loop.
     beta_final: np.ndarray
     z_tilde_final: np.ndarray
     X_tilde_final: np.ndarray

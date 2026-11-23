@@ -120,8 +120,8 @@ def linear_fit_statistics(
         w = weights.reshape((-1, 1))
         ssu = np.sum(w.flatten() * residuals**2)
         ssy = np.sum(w * (Y - np.average(Y, weights=w)) ** 2)
-        # As fixest, the weighted mean of the squared residuals, so the RMSE
-        # does not depend on the scale of the weights.
+        # The weighted mean of the squared residuals, so the RMSE does not
+        # depend on the scale of the weights.
         sum_weights = np.sum(w)
 
     if has_fixef:

@@ -196,7 +196,6 @@ def event_study(
         fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
         fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
 
-    # update inference with vcov matrix
     fit.get_inference()
 
     return fit
@@ -294,7 +293,7 @@ def did2s(
         cluster=cluster,
         weights=weights,
     )
-    fit.get_inference()  # update inference with correct vcov matrix
+    fit.get_inference()
     _mark_as_did2s(fit)
 
     return fit
@@ -422,7 +421,7 @@ def lpdid(
         idname=idname,
         tname=tname,
         gname=gname,
-        cluster="",  # just something to pass DID input checks
+        cluster="",
         vcov=vcov,
         pre_window=pre_window,
         post_window=post_window,

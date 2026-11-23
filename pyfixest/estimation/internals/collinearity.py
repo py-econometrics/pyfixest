@@ -36,8 +36,6 @@ def drop_multicollinear_variables(
         the value so that a fitted model can publish the check without keeping
         the design alive under `lean=True`.
     """
-    # TODO: avoid doing this computation twice, e.g. compute tXXinv here as fixest does
-
     tXX = np.ascontiguousarray(X.T @ X, dtype=np.float64)
     id_excl, n_excl, all_removed = find_collinear_variables(tXX, collin_tol)
 

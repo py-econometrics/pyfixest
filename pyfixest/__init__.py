@@ -46,41 +46,34 @@ __all__ = [
     "wyoung",
 ]
 
-# Submodules loaded lazily
 _submodules = ["did", "errors", "estimation", "report", "utils"]
 
 # Map function/class names to their module prefix
 # For direct module imports: import_module(f"{prefix}.{name}")
 _lazy_imports = {
-    # estimation - each function in its own module
     "feols": "pyfixest.estimation.api",
     "fepois": "pyfixest.estimation.api",
     "feglm": "pyfixest.estimation.api",
     "quantreg": "pyfixest.estimation.api",
-    # demeaner configs
     "BaseDemeaner": "pyfixest.demeaners",
     "MapDemeaner": "pyfixest.demeaners",
     "LsmrDemeaner": "pyfixest.demeaners",
     "Preconditioner": "pyfixest.core.demean",
-    # estimation - other functions (still use parent module + getattr)
     "bonferroni": "pyfixest.estimation",
     "optimal_mixture_precision": "pyfixest.estimation",
     "rwolf": "pyfixest.estimation",
     "wyoung": "pyfixest.estimation",
-    # did
     "did2s": "pyfixest.did",
     "event_study": "pyfixest.did",
     "lpdid": "pyfixest.did",
     "panelview": "pyfixest.did",
     "SaturatedEventStudy": "pyfixest.did",
-    # report
     "etable": "pyfixest.report",
     "summary": "pyfixest.report",
     "coefplot": "pyfixest.report",
     "iplot": "pyfixest.report",
     "qplot": "pyfixest.report",
     "make_table": "pyfixest.report",
-    # utils
     "get_bartik_data": "pyfixest.utils",
     "get_data": "pyfixest.utils",
     "get_encouragement_data": "pyfixest.utils",
@@ -106,11 +99,9 @@ def __getattr__(name: str):
         return _importlib.import_module(f"pyfixest.{name}")
     if name in _lazy_imports:
         if name in _direct_module_imports:
-            # Direct module import: import pyfixest.estimation.api.feols
             module = _importlib.import_module(f"{_lazy_imports[name]}.{name}")
             return getattr(module, name)
         else:
-            # Fallback: import parent module and get attribute
             module = _importlib.import_module(_lazy_imports[name])
             return getattr(module, name)
     raise AttributeError(f"module 'pyfixest' has no attribute {name!r}")

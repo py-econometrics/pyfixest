@@ -175,7 +175,6 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
         else:
             corr_padj[j] = max(pinit[j], corr_padj[j - 1])
 
-    # Collect the results
     pval = corr_padj[ro]
 
     return pval

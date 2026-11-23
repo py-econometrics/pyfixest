@@ -233,7 +233,6 @@ def quantreg(
     of the full quantile regression process, see the
     [quantile regression tutorial](/tutorials/quantile-regression.html).
     """
-    # WLS currently not supported for quantile regression
     weights = None
     weights_type: WeightsTypeOptions = "aweights"
     solver: SolverOptions = "np.linalg.solve"

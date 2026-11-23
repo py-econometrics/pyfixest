@@ -252,19 +252,13 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     [Migrating Fitted-Model Attributes](/how-to/migrate-fit-attributes.qmd).
     """
 
-    # Set in get_fit().
     collinearity: CollinearityCheck
     sandwich: SandwichComponents
     fitted_values: FittedValues
-    # Set in _publish_fit_statistics() right after get_fit().
     fitstat: FitStatistics
-    # Set in vcov().
     variance_covariance: VarianceCovariance
-    # Set in wald_test().
     wald: WaldTest
-    # Set in ritest() when store_ritest_statistics is True.
     ritest_statistics: RitestStatistics
-    # Set in fixef().
     fixef_estimates: FixedEffectEstimates
 
     # The fit is a single least-squares solve, so the fast CRV3 jackknife and
@@ -394,8 +388,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         return model_matrix
 
-    # Deliberately untyped: an annotation makes mypy check this body, whose published
-    # attribute types are still transitional or loose; see the typing follow-up.
     def _publish_model_matrix(self, model_matrix):
         """Publish structurally immutable formula, sample, and weight state."""
         if model_matrix.n_rows == 0:
@@ -466,7 +458,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if weights is None:
             return ObservationWeights.unweighted()
 
-        # `weights_type` is validated at the API boundary (estimation/api/utils.py).
         weights_type = cast(WeightsTypeOptions, self.options.weights_type)
         return ObservationWeights.from_values(
             weights.to_numpy().reshape(-1),
@@ -787,8 +778,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         df_t: int | float
         correction: SmallSampleCorrection | ClusterSmallSampleCorrection
         if vcov_type == "CRV":
-            # Only level intercepts can be nested in clusters; fixest counts
-            # every varying-slope coefficient.
+            # Only level intercepts can be nested in clusters; every
+            # varying-slope coefficient counts.
             has_intercept = self.fixef_counts.has_intercept_by_fe
             fixed_effects = self.model_matrix.fixed_effects
             prep = prepare_cluster_state(
@@ -822,7 +813,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 ssc_vcov_type, ssc_G = "iid", 1
                 term = self._vcov_iid()
             elif vcov_type == "hetero":
-                # fixest:::vcov_hetero_internal: adj = ifelse(ssc$cluster.adj, n/(n - 1), 1)
                 ssc_vcov_type, ssc_G = "hetero", self.sample_info.n_obs
                 term = self._vcov_hetero(vcov_type_detail=spec.vcov_type_detail)
             elif vcov_type == "HAC":
@@ -852,7 +842,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             spec=spec,
             G=G,
         )
-        # update p-value, t-stat, standard error, confint
         self.get_inference()
 
         return self
@@ -993,7 +982,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         beta_jack = np.zeros((len(clustid), self._k))
 
         for ixg, g in enumerate(clustid):
-            # direct leave one cluster out implementation
             data = self._data[~np.equal(g, cluster_col)]
             fit = refit(
                 self,
@@ -1003,12 +991,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             )
             beta_jack[ixg, :] = fit.coef().to_numpy()
 
-        # optional: beta_bar in MNW (2022)
-        # center = "estimate"
-        # if center == 'estimate':
-        #    beta_center = beta_hat
-        # else:
-        #    beta_center = np.mean(beta_jack, axis = 0)
         beta_center = self._beta_hat
 
         vcov_mat = np.zeros((self._k, self._k))
@@ -1086,7 +1068,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             distribution, WaldDistributionOptions, name="distribution"
         )
 
-        # If R is None, default to the identity matrix
         R = np.eye(self._k) if R is None else np.atleast_2d(np.asarray(R, dtype=float))
         q = _normalize_q(q=q, n_restrictions=R.shape[0])
 
@@ -1286,7 +1267,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         _Y, _X, _xnames = self._model_matrix_one_hot()
 
-        # later: allow r <> 0 and custom R
         R = np.zeros(len(_xnames))
         R[_xnames.index(param)] = 1
         r = 0
@@ -1463,7 +1443,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             else:
                 cluster = clustervar[0]
 
-        # check that cluster is in data
         require_retained(self, "ccv", "_data", "within_data")
         if cluster not in self._data.columns:
             raise ValueError(
@@ -1592,9 +1571,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             fixef_vars_C = [f"C({x})" for x in fixef_vars]
             fixef_fml = "+".join(fixef_vars_C)
             fml_dummies = f"{fml_linear} + {fixef_fml}"
-            # output = "pandas" as Y, X need to be np.arrays for parallel processing
-            # if output = "numpy", type of Y, X is not np.ndarray but a formulaic object
-            # which cannot be pickled by joblib
 
             Y, X = formulaic.Formula(fml_dummies).get_model_matrix(
                 self._data,
@@ -1605,7 +1581,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             Y = Y.toarray().flatten() if output == "sparse" else Y.flatten()
             X = csc_matrix(X) if output == "sparse" else X
 
-            # drop the covariates the fit removed as collinear
             collinear = set(self.collinearity.dropped_coef_names)
             if collinear:
                 keep = [i for i, name in enumerate(xnames) if name not in collinear]
@@ -1961,7 +1936,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         D_w = D
         observation_weights = self.observation_weights.values
         if observation_weights is not None:
-            # Weighted least squares: min || sqrt(w) (uhat - D alpha) ||.
             weights_sqrt = np.sqrt(observation_weights)
             uhat *= weights_sqrt
             D_w = diags(weights_sqrt, 0).dot(D)
@@ -1977,7 +1951,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 transform_state=fe_spec.transform_state,
             ),
             alpha=alpha,
-            # Fixed-effect contribution per observation, in the units of Y.
             sumFE=D.dot(alpha),
         )
 
@@ -2266,7 +2239,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         self._require_capability(capability="randomization_inference", method="ritest")
 
-        # check that resampvar in _coefnames
         if resampvar_ not in self._coefnames:
             raise ValueError(
                 f"ritest() resampvar={resampvar_!r} is absent from the fitted "
@@ -2369,7 +2341,6 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
                 else VcovSpec.from_user_input({"CRV1": cluster})
             )
 
-            # for performance reasons
             if type == "randomization-c":
                 vcov_input = VcovSpec.from_user_input("iid")
 

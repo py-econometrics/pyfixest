@@ -66,7 +66,6 @@ def _render_factor(factor: Factor) -> str:
             and tokens[0].kind is Token.Kind.PYTHON
             and tokens[0].token == expression
         ):
-            # Calls and subscripts already identify a single Python factor.
             return expression
         return "{" + expression + "}"
 
@@ -122,9 +121,6 @@ class FixedEffectSpecification:
     @classmethod
     def from_term(cls, term: Term) -> FixedEffectSpecification:
         """Convert one Formulaic fixed-effect term to a symbolic effect spec."""
-        # A fixed-effect term can have multiple factors if it represents interactions
-        # For example f1:f2[z] has two factors: `(f1, f2[z])`
-
         varying_slope_expressions: list[tuple[ast.Subscript, int]] = []
         for position, factor in enumerate(term.factors):
             factor_expression = _factor_ast(factor)
@@ -153,11 +149,9 @@ class FixedEffectSpecification:
                 "supported on the final factor of a fixed-effect interaction, "
                 "for example `f1:f2[z]`."
             )
-        # Decompose expression f1[z] into its "value" (f1) and its "slice" (z)
-        # Note: we exploit that `f1[z]` is valid Python syntax to construct an AST
 
-        fixed_effect_level = expression.value  # `f2`
-        fixed_effect_slopes = expression.slice  # `z`
+        fixed_effect_level = expression.value
+        fixed_effect_slopes = expression.slice
         if isinstance(fixed_effect_level, ast.Subscript):
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: nested varying-slope "
@@ -176,20 +170,17 @@ class FixedEffectSpecification:
             )
 
         if isinstance(fixed_effect_slopes, ast.List):
-            # Varying slopes without fixed effect: f1[[z1, z2]]
             intercept = False
             slope_nodes = tuple(fixed_effect_slopes.elts)
         else:
-            # Varying slopes fixed effect: f1[z1] or f1[z1, z2]
             intercept = True
             slope_nodes = (
                 tuple(fixed_effect_slopes.elts)
-                if isinstance(fixed_effect_slopes, ast.Tuple)  # f1[z1, z2]
-                else (fixed_effect_slopes,)  # f1[z1]
+                if isinstance(fixed_effect_slopes, ast.Tuple)
+                else (fixed_effect_slopes,)
             )
 
         if not slope_nodes:
-            # Guard against empty slope lists such as `f1[[]]`.
             raise FormulaSyntaxError(
                 f"Invalid fixed-effect term `{term}`: a varying-slope term must "
                 "specify at least one slope, for example `f1[z]` or `f1[[z]]`. "
@@ -281,23 +272,23 @@ def _is_slope_expression(node: ast.AST) -> bool:
     examples include `0`, `"z"`, `z[0]`, `z > 0`, and `[x for x in z]`.
     """
     supported_nodes = (
-        ast.Name,  # z
-        ast.Attribute,  # np.log
-        ast.Call,  # np.log(z)
-        ast.BinOp,  # z + 1, z**2
-        ast.UnaryOp,  # -z, +z
-        ast.Constant,  # 2 in z / 2; True in center=True
-        ast.keyword,  # center=True
-        ast.Load,  # variable-read context added by the AST
-        ast.Add,  # +
-        ast.Sub,  # -
-        ast.Mult,  # *
-        ast.Div,  # /
-        ast.FloorDiv,  # //
-        ast.Mod,  # %
-        ast.Pow,  # **
-        ast.UAdd,  # unary +
-        ast.USub,  # unary -
+        ast.Name,
+        ast.Attribute,
+        ast.Call,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Constant,
+        ast.keyword,
+        ast.Load,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.FloorDiv,
+        ast.Mod,
+        ast.Pow,
+        ast.UAdd,
+        ast.USub,
     )
     nodes = tuple(ast.walk(node))
     return (
@@ -333,9 +324,6 @@ def _term_from_ast(node: ast.expr, *, preserve_arithmetic: bool = False) -> Term
 
 def _factor_ast(factor: Factor) -> ast.expr | None:
     """Return the AST for a Python-evaluated Formulaic factor."""
-    # Factor must encoded as Python expression by formulaic
-    # (because `f1[z]` is Python syntax)
-
     if not is_python_expression(factor):
         return None
     try:
@@ -506,7 +494,6 @@ class Formula:
     @property
     def is_fixed_effects(self) -> bool:
         """Boolean indicating whether the formula is a fixed effects specification."""
-        # A MULTIPART formula is a tuple of formulas on the right hand side
         return isinstance(self._formula.rhs, tuple) and any(
             terms_without_intercept(self._formula.rhs[-1])
         )
@@ -683,7 +670,6 @@ class Formula:
         ]
         is_iv = {f.is_instrumental_variable for f in formulas}
         if len(is_iv) > 1:
-            # All models of one call are fitted with the same estimator class.
             iv = [f.render() for f in formulas if f.is_instrumental_variable]
             non_iv = [f.render() for f in formulas if not f.is_instrumental_variable]
             raise FormulaSyntaxError(
@@ -714,7 +700,6 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
         separator=",",
     )
     if kind is _MultipleEstimationType.mvsw:
-        # Multiverse stepwise: all combinations of arguments
         arguments = [
             " + ".join(combination)
             for combination in itertools.chain.from_iterable(
@@ -723,14 +708,12 @@ def _expand_first_multiple_estimation(formula: str) -> list[str] | None:
             )
         ]
     elif kind is _MultipleEstimationType.csw or kind is _MultipleEstimationType.csw0:
-        # Cumulative stepwise
         arguments = [" + ".join(arguments[: i + 1]) for i, _ in enumerate(arguments)]
     if (
         kind is _MultipleEstimationType.sw0
         or kind is _MultipleEstimationType.csw0
-        or kind is _MultipleEstimationType.mvsw  # Following fixest there's no mvsw0
+        or kind is _MultipleEstimationType.mvsw
     ):
-        # Add zero step
         arguments = ["1", *arguments]
     multiple_estimation_call = formula[match.start() : parenthesis_closed + 1]
     return [
@@ -743,7 +726,6 @@ def _expand_all_multiple_estimation(formula: str) -> Iterator[str]:
     """Recursively expand all multiple estimation calls."""
     expansion = _expand_first_multiple_estimation(formula)
     if expansion is None:
-        # No multiple estimation syntax present
         yield formula
     else:
         for formula_expanded in expansion:

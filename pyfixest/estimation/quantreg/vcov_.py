@@ -33,7 +33,6 @@ def vcov_iid_qreg(
     sigma = np.std(Y)
     hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
-    # uniform kernel
     f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
 
     D = X.T @ X
@@ -47,12 +46,10 @@ def vcov_hetero_qreg(
 ) -> np.ndarray:
     "Implement the kernel-based sandwich estimator from Powell (1991) for heteroskedasticity robust inference."
     h = get_hall_sheather_bandwidth(q=q, N=N)
-    # interquartile range of u_hat
     rq = np.quantile(np.abs(u_hat), 0.75) - np.quantile(np.abs(u_hat), 0.25)
     sigma = np.std(Y)
     hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
-    # uniform kernel
     f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
 
     D = X.T @ X
@@ -121,7 +118,6 @@ def vcov_crv1_qreg(
     """
     N, _ = X.shape
 
-    # kappa: median absolute deviation of the a-th quantile regression residuals
     kappa = np.median(np.abs(u_hat - np.median(u_hat)))
     h_G = get_hall_sheather_bandwidth(q=q, N=N)
     delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))

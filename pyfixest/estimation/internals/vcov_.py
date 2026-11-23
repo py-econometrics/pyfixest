@@ -144,10 +144,6 @@ def meat_hac(
             )
 
         order, _, starts, _, time_arr_sorted, _ = _get_panel_idx(
-            # hack: sort first by time, than panel
-            # we need the data sorted by time, but sort by
-            # panel too to check for duplicate time periods
-            # per panel
             panel_arr=time_arr,
             time_arr=panel_arr,
             identifier_columns=(panel_id, time_id),

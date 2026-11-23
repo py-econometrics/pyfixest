@@ -301,7 +301,7 @@ class ModelMatrix:
             stage="infinite",
         )
         if self._weights_column_names is not None:
-            # fixest drops zero-weight rows before removing singletons
+            # Zero-weight rows go first, so they cannot keep a singleton level.
             is_zero_weight = (
                 self._data[self._weights_column_names].to_numpy() == 0
             ).any(axis=1)
@@ -311,7 +311,6 @@ class ModelMatrix:
                 stage="zero_weight",
             )
         if self._fixed_effects_column_names is not None:
-            # Ensure fixed effects are `int32`
             self._data[self._fixed_effects_column_names] = self._data[
                 self._fixed_effects_column_names
             ].astype("int32")
@@ -682,8 +681,7 @@ def create_model_matrix(
     model_matrix = create_model_matrix(formula=formula, data=data)
     ```
     """
-    # Process input data
-    data = data.reset_index(drop=True)  # Sanitise index
+    data = data.reset_index(drop=True)
     n_observations: Final[int] = data.shape[0]
     formula_formulaic = _get_formulaic_formula(
         formula=formula, data=data, weights=weights, offset=offset
@@ -726,7 +724,6 @@ def _get_formulaic_formula(
     weights: str | None = None,
     offset: str | None = None,
 ) -> formulaic.Formula:
-    # Collate kwargs to be passed to formulaic.Formula
     formula_kwargs: dict[str, formulaic.Formula] = {
         _ModelMatrixKey.main: formula.second_stage
     }

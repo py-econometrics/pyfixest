@@ -127,9 +127,7 @@ class Feiv(Feols):
     details.
     """
 
-    # Set in _fit_first_stage().
     first_stage: FirstStage
-    # Set in get_fit().
     collinearity_instruments: CollinearityCheck
     # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
@@ -150,7 +148,6 @@ class Feiv(Feols):
         anytime_valid_inference=False,
     )
 
-    # Constructor and methods implementation...
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -291,7 +288,6 @@ class Feiv(Feols):
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._demean()
-        # Drop collinear columns from instruments
         instruments, instrument_collinearity = drop_multicollinear_variables(
             X=within_data.instruments,
             names=self._coefnames_z,
@@ -300,7 +296,6 @@ class Feiv(Feols):
         self.collinearity_instruments = instrument_collinearity
         self._coefnames_z = list(instrument_collinearity.coefnames)
 
-        # Project second-stage regressors onto the retained instruments.
         weights = self.observation_weights.values
         sqrt_weights = (
             None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
@@ -320,13 +315,11 @@ class Feiv(Feols):
             sqrt_weights=sqrt_weights,
         )
 
-        # Drop collinear variables in the second stage and update within data
         structural_data = self._drop_multicollinear_within_data(within_data)
         assert isinstance(structural_data, WithinIvData)
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
 
-        # Fit the second stage
         fit = fit_iv(
             X=within_data.design,
             X_hat=self.collinearity.select(projected_design),
@@ -358,7 +351,7 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        # As in fixest, the first stage uses the second stage's rows and options.
+        # The first stage uses the second stage's rows and options.
         model1 = refit(
             self,
             formula=self.model.parsed_formula.as_first_stage(),
@@ -473,13 +466,10 @@ class Feiv(Feols):
 
             ```
         """
-        # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
-        # Set statistics allowed in the current version
         iv_diag_stat_allowed = ["f_stat", "effective_f"]
 
-        # Check whether there is unsupported statistics.
         if statistics:
             invalid_stats = [
                 stat for stat in statistics if stat not in iv_diag_stat_allowed

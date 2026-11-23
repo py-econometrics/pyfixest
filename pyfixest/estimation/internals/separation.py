@@ -234,8 +234,6 @@ def _check_for_separation_ir(
     has_converged = False
     while iteration < maxiter:
         iteration += 1
-        # regress U on X
-        # TODO: check acceleration in ppmlhdfe's implementation: https://github.com/sergiocorreia/ppmlhdfe/blob/master/src/ppmlhdfe_separation_relu.mata#L135
         response_demeaned = cache.demean_array(
             x=response,
             flist=effects,
@@ -259,10 +257,8 @@ def _check_for_separation_ir(
         within_zero = (Uhat > -0.1 * tol) & (Uhat < tol)
         Uhat.where(~(is_interior | within_zero.fillna(True)), 0, inplace=True)
         if (Uhat >= 0).all():
-            # all separated observations have been identified
             has_converged = True
             break
-        # rectified linear unit (ReLU)
         response[~is_interior.to_numpy(), 0] = np.fmax(Uhat[~is_interior], 0)
 
     separation_na: set[int] = set()
