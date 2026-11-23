@@ -2439,6 +2439,8 @@ def test_prediction_explains_required_fixed_effects():
         FactorEvaluationError, match=r"f1[\s\S]*fixed-effect columns.*newdata"
     ):
         fit.predict(data.drop(columns="f1"))
+
+
 def test_etable_names_bad_significance_code():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(TypeError, match=r"signif_code\[0\] must be numeric"):

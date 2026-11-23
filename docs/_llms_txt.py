@@ -52,6 +52,28 @@ SECTIONS = {
             "Read before writing PyFixest code: the current API and its pitfalls, for coding agents.",
         ),
     ],
+    "Agent skill reference files": [
+        (
+            "skills/formula-syntax",
+            "Formula syntax reference",
+            "Every formula operator, including `i()`, varying slopes, IV and multiple estimation, with runnable examples.",
+        ),
+        (
+            "skills/inference",
+            "Inference reference",
+            "Every `vcov` option and the models that support it, small-sample corrections, bootstrap and multiple testing.",
+        ),
+        (
+            "skills/coming-from-fixest",
+            "Coming from R fixest",
+            "R `fixest` spellings and their PyFixest equivalents, and the behaviour that differs.",
+        ),
+        (
+            "skills/migrating-to-0.70",
+            "Migrating code to PyFixest 0.70",
+            "Deprecated and removed 0.60 spellings and attributes, with their replacements.",
+        ),
+    ],
     "Tutorials": [
         (
             "tutorials/ols-fixed-effects",

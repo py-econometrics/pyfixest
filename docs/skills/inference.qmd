@@ -1,0 +1,8 @@
+---
+pagetitle: "Inference reference"
+description: "Every vcov option and the models that support it, small-sample corrections, the wild bootstrap, randomization inference and multiple testing."
+---
+
+<!-- The agent skill ships this file inside the package; edit it there. -->
+
+{{< include ../../pyfixest/skills/pyfixest/references/inference.md >}}
