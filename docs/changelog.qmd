@@ -23,6 +23,10 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `pyfixest/skills/pyfixest/SKILL.md`, rewritten for the current API. The
   [Agent Skill](/skills.md) page shows where to find it and its content
   ([#2045](https://github.com/py-econometrics/pyfixest/pull/2045)).
+- [llms.txt](https://pyfixest.org/llms.txt) now groups pages into described
+  sections, links them by absolute URL and tells coding agents to read the agent
+  skill first, followed by the skill's list of common slips
+  ([#2048](https://github.com/py-econometrics/pyfixest/pull/2048)).
 
 ### Bug Fixes
 
