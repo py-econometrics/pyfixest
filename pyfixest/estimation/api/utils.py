@@ -6,7 +6,11 @@ from typing import Any
 import pandas as pd
 
 from pyfixest.estimation.internals.model_state import VcovSpec
-from pyfixest.utils.dev_utils import DataFrameType, _narwhals_to_pandas
+from pyfixest.utils.dev_utils import (
+    DataFrameType,
+    _narwhals_to_pandas,
+    _require_columns,
+)
 from pyfixest.utils.utils import Ssc
 
 
@@ -88,11 +92,14 @@ def _estimation_input_checks(
         raise ValueError(
             f"weights must be a string or None but you provided weights = {weights}."
         )
-    if weights is not None and weights not in data.columns:
-        raise ValueError(
-            f"weights must be a column in data; got weights={weights!r}."
-            + _bare_column_hint(weights)
-        )
+    _require_columns(
+        data,
+        [("weights", weights)],
+        message=lambda option, column: (
+            f"weights must be a column in data; got {option}={column!r}."
+            + _bare_column_hint(column)
+        ),
+    )
 
     for name, value in (
         ("copy_data", copy_data),
@@ -134,17 +141,25 @@ def _estimation_input_checks(
             "use the same column for both."
         )
 
-    if isinstance(split, str) and split not in data.columns:
-        raise KeyError(
-            f"Column '{split}' not found in data. Pass an existing column to split."
-            + _bare_column_hint(split)
-        )
+    _require_columns(
+        data,
+        [("split", split)],
+        error=KeyError,
+        message=lambda option, column: (
+            f"Column '{column}' not found in data. Pass an existing column to {option}."
+            + _bare_column_hint(column)
+        ),
+    )
 
-    if isinstance(fsplit, str) and fsplit not in data.columns:
-        raise KeyError(
-            f"Column '{fsplit}' not found in data. Pass an existing column to fsplit."
-            + _bare_column_hint(fsplit)
-        )
+    _require_columns(
+        data,
+        [("fsplit", fsplit)],
+        error=KeyError,
+        message=lambda option, column: (
+            f"Column '{column}' not found in data. Pass an existing column to {option}."
+            + _bare_column_hint(column)
+        ),
+    )
 
     if separation_check is not None:
         if not isinstance(separation_check, list):
@@ -157,18 +172,22 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    for column in vcov.clustervar:
-        if column not in data.columns:
-            raise ValueError(
-                f"The variable {column!r} is not in the data. "
-                "Pass an existing clustering column, for example "
-                f"vcov={{{vcov.vcov_type_detail!r}: '<column>'}}."
-                + _bare_column_hint(column)
-            )
-    for option, column in (("time_id", vcov.time_id), ("panel_id", vcov.panel_id)):
-        if column is not None and column not in data.columns:
-            raise ValueError(
-                f"The variable {column!r} is not in the data. "
-                f"Pass an existing column to {option} in vcov_kwargs."
-                + _bare_column_hint(column)
-            )
+    _require_columns(
+        data,
+        [("clustervar", column) for column in vcov.clustervar],
+        message=lambda _option, column: (
+            f"The variable {column!r} is not in the data. "
+            "Pass an existing clustering column, for example "
+            f"vcov={{{vcov.vcov_type_detail!r}: '<column>'}}."
+            + _bare_column_hint(column)
+        ),
+    )
+    _require_columns(
+        data,
+        (("time_id", vcov.time_id), ("panel_id", vcov.panel_id)),
+        message=lambda option, column: (
+            f"The variable {column!r} is not in the data. "
+            f"Pass an existing column to {option} in vcov_kwargs."
+            + _bare_column_hint(column)
+        ),
+    )

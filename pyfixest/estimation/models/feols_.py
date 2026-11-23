@@ -105,6 +105,7 @@ from pyfixest.utils.dev_utils import (
     DataFrameType,
     _find_stack_level,
     _narwhals_to_pandas,
+    _require_columns,
 )
 from pyfixest.utils.utils import (
     DegreesOfFreedomCounts,
@@ -924,12 +925,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         data = self._data
         time_id, panel_id = spec.time_id, spec.panel_id
         detail = cast(HacVcovTypeOptions, spec.vcov_type_detail)
-        for option, column in (("time_id", time_id), ("panel_id", panel_id)):
-            if column is not None and column not in data.columns:
-                raise ValueError(
-                    f"vcov={detail!r} uses {option}={column!r}, which is absent from "
-                    "the model's estimation sample. Pass an existing column or refit with it included."
-                )
+        _require_columns(
+            data,
+            (("time_id", time_id), ("panel_id", panel_id)),
+            message=lambda option, column: (
+                f"vcov={detail!r} uses {option}={column!r}, which is absent from "
+                "the model's estimation sample. Pass an existing column or refit with it included."
+            ),
+        )
         time = data[time_id]
         try:
             sortable = np.issubdtype(time, np.number) or np.issubdtype(
@@ -1277,10 +1280,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         else:
             require_retained(self, "wildboottest", "within_data")
 
-        if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
-            raise ValueError(
-                f"wildboottest() cluster={cluster_list[0]!r} is absent from the model's "
-                "estimation sample. Pass an existing cluster column or refit with it included."
+        if not run_heteroskedastic:
+            _require_columns(
+                self._data,
+                [("cluster", cluster_list[0])],
+                message=lambda _option, column: (
+                    f"wildboottest() cluster={column!r} is absent from the model's "
+                    "estimation sample. Pass an existing cluster column or refit with it included."
+                ),
             )
 
         try:
@@ -1474,11 +1481,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         # check that cluster is in data
         require_retained(self, "ccv", "_data", "within_data")
-        if cluster not in self._data.columns:
-            raise ValueError(
-                f"ccv() cluster={cluster!r} is absent from the model's estimation sample. "
+        _require_columns(
+            self._data,
+            [("cluster", cluster)],
+            message=lambda _option, column: (
+                f"ccv() cluster={column!r} is absent from the model's estimation sample. "
                 "Pass an existing cluster column or refit with it included."
-            )
+            ),
+        )
 
         # Abadie et al. (2023): the cluster component in the CCV mixture and
         # its comparison row must use the same clusters as the split scores.
@@ -2308,11 +2318,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         require_retained(self, "ritest", "_data")
 
-        if cluster is not None and cluster not in self._data:
-            raise ValueError(
-                f"ritest() cluster={cluster!r} is absent from the model's estimation sample. "
+        _require_columns(
+            self._data,
+            [("cluster", cluster)],
+            message=lambda _option, column: (
+                f"ritest() cluster={column!r} is absent from the model's estimation sample. "
                 "Pass the name of the column that identifies assignment clusters."
-            )
+            ),
+        )
 
         clustervar_arr = (
             self._data[cluster].to_numpy().reshape(-1, 1) if cluster else None

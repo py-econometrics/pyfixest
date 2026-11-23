@@ -18,7 +18,7 @@ from pyfixest.core.nw import (
     nw_meat_time as _nw_meat_time_rs,
 )
 from pyfixest.errors import NanInClusterVarError
-from pyfixest.utils.dev_utils import _narwhals_to_pandas
+from pyfixest.utils.dev_utils import _missing_columns, _narwhals_to_pandas
 from pyfixest.utils.utils import DegreesOfFreedomCounts, Ssc, get_ssc
 
 
@@ -184,7 +184,7 @@ def get_ssc_cluster(
 
 def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     data_pandas = _narwhals_to_pandas(data)
-    missing = [column for column in clustervar if column not in data_pandas.columns]
+    missing = _missing_columns(data_pandas, clustervar)
     if missing:
         raise ValueError(
             f"Clustering columns {missing!r} are absent from the model's estimation sample. "

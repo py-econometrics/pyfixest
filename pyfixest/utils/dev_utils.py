@@ -1,6 +1,7 @@
 import inspect
 import os
 import re
+from collections.abc import Callable, Iterable
 
 import narwhals.stable.v1 as nw
 import numpy as np
@@ -56,6 +57,65 @@ def _narwhals_to_pandas(data: IntoDataFrame, *, argument: str = "data") -> pd.Da
             f"DataFrame; got {type(data).__name__}. Convert {argument} before passing it."
         ) from exc
     return frame.to_pandas()
+
+
+def _missing_columns(data: pd.DataFrame, columns: Iterable[str | None]) -> list[str]:
+    """
+    Return the entries of ``columns`` that do not name a column of ``data``.
+
+    ``None`` entries are skipped, so optional arguments can be passed through
+    unchanged.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The frame whose columns are checked.
+    columns : Iterable[str | None]
+        The column names to look up; ``None`` entries are ignored.
+
+    Returns
+    -------
+    list[str]
+        The entries of ``columns`` absent from ``data.columns``, in order.
+    """
+    return [
+        column
+        for column in columns
+        if column is not None and column not in data.columns
+    ]
+
+
+def _require_columns(
+    data: pd.DataFrame,
+    columns: Iterable[tuple[str, str | None]],
+    *,
+    error: type[Exception] = ValueError,
+    message: Callable[[str, str], str],
+) -> None:
+    """
+    Raise for the first named column that is absent from ``data``.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The frame whose columns are checked.
+    columns : Iterable[tuple[str, str | None]]
+        Pairs of an argument label and the column name to validate. ``None``
+        names are skipped, so optional arguments need no guard.
+    error : type[Exception], optional
+        The exception type to raise. Default is `ValueError`.
+    message : Callable[[str, str], str]
+        Builds the exception message from the argument label and the missing
+        column name.
+
+    Raises
+    ------
+    Exception
+        ``error(message(label, column))`` for the first missing column.
+    """
+    for label, column in columns:
+        if column is not None and _missing_columns(data, [column]):
+            raise error(message(label, column))
 
 
 def _create_rng(seed: int | None = None) -> np.random.Generator:
