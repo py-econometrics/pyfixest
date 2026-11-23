@@ -1,3 +1,30 @@
+"""
+PyFixest: fast high-dimensional fixed-effects regression in Python.
+
+PyFixest fits OLS, IV, Poisson, GLM and quantile regressions with many fixed
+effects on pandas or polars DataFrames, from a formula such as
+``"Y ~ X1 | f1 + f2"``, and provides standard errors, post-estimation tools and
+regression tables.
+
+Example::
+
+    import pyfixest as pf
+
+    data = pf.get_data()
+    fit = pf.feols("Y ~ X1 | f1 + f2", data=data)
+    fit.summary()
+
+Resources:
+
+- Documentation: https://pyfixest.org
+- Documentation index for LLMs: https://pyfixest.org/llms.txt
+- Agent skill: ``skills/pyfixest/SKILL.md`` inside this package, a guide for
+  coding agents to the current API and its common pitfalls
+- Migrating code written for PyFixest 0.60:
+  https://pyfixest.org/how-to/migrate-fit-attributes.html
+- Source code: https://github.com/py-econometrics/pyfixest
+"""
+
 import importlib as _importlib
 from importlib.metadata import PackageNotFoundError, version
 
