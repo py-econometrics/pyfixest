@@ -34,7 +34,7 @@ WaldDistributionOptions = Literal["F", "chi2"]
 InferenceType = Literal["regular", "simult", "savi"]
 
 
-def _validate_literal_argument(arg: Any, literal: Any) -> None:
+def _validate_literal_argument(arg: Any, literal: Any, *, name: str) -> None:
     """
     Validate if the given argument matches one of the allowed literal types.
 
@@ -48,6 +48,8 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         The argument to validate.
     literal : Any
         A Literal type that defines the allowed values for `arg`.
+    name : str
+        Public keyword for the rejected option.
 
     Raises
     ------
@@ -64,7 +66,7 @@ def _validate_literal_argument(arg: Any, literal: Any) -> None:
         )
 
     if arg not in valid_types:
-        raise ValueError(f"Invalid argument. Expecting one of {valid_types}. Got {arg}")
+        raise ValueError(f"{name} must be one of {valid_types}; got {arg!r}.")
 
 
 KFixefOptions = Literal["none", "full", "nonnested"]

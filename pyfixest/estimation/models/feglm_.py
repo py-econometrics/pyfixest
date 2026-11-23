@@ -105,7 +105,6 @@ class Feglm(Feols):
         )
 
         _glm_input_checks(
-            drop_singletons=options.drop_singletons,
             tol=options.tol,
             maxiter=options.maxiter,
         )
@@ -410,20 +409,24 @@ class Feglm(Feols):
 
     def _validate_response(self) -> None:
         """Validate the prepared response against the family's constraints."""
-        self._family.check_y(self.model_matrix.dependent.to_numpy())
+        try:
+            self._family.check_y(self.model_matrix.dependent.to_numpy())
+        except ValueError as exc:
+            exc.add_note(f"Dependent variable {self.model.depvar!r}.")
+            raise
 
     def _finalize_fit(self) -> None:
         """Skip the OLS Wald test; GLMs run no Wald test at fit time."""
 
 
-def _glm_input_checks(drop_singletons: bool, tol: float, maxiter: int) -> None:
-    if not isinstance(drop_singletons, bool):
-        raise TypeError("drop_singletons must be logical.")
+def _glm_input_checks(tol: float, maxiter: int) -> None:
     if not isinstance(tol, (int, float)):
-        raise TypeError("tol must be numeric.")
+        raise TypeError(f"iwls_tol must be numeric; got {tol!r}.")
     if tol <= 0 or tol >= 1:
-        raise AssertionError("tol must be between 0 and 1.")
+        raise ValueError(
+            f"iwls_tol must be greater than 0 and less than 1; got {tol!r}."
+        )
     if not isinstance(maxiter, int):
-        raise TypeError("maxiter must be integer.")
+        raise TypeError(f"iwls_maxiter must be an integer; got {maxiter!r}.")
     if maxiter <= 0:
-        raise AssertionError("maxiter must be greater than 0.")
+        raise ValueError(f"iwls_maxiter must be greater than 0; got {maxiter!r}.")

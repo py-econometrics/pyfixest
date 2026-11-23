@@ -288,8 +288,15 @@ class FixestMulti(TidyColumnAccessors):
                         f"No fitted model with key {i!r}. Available keys: {keys}."
                     ) from None
 
-        if i >= len(keys):
-            raise IndexError(f"Index {i} is larger than the number of fitted models.")
+        if not keys:
+            raise IndexError(
+                "fetch_model() cannot select a model because there are no fitted models."
+            )
+        if not -len(keys) <= i < len(keys):
+            raise IndexError(
+                f"fetch_model() index {i} is outside the bounds for {len(keys)} fitted "
+                f"models. Use an index from {-len(keys)} to {len(keys) - 1} or pass a model key."
+            )
         key = keys[i]
         if print_fml:
             print("Model: ", key)

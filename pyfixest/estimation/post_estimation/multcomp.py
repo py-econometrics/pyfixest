@@ -54,7 +54,8 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     for i, model in enumerate(models):
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model.model.formula}."
+                f"Parameter '{param}' not found in the model {model.model.formula}. "
+                "Choose a coefficient that appears in fit.coef().index for every fit."
             )
         pvalues[i] = model.pvalue().xs(param)
         all_model_stats = pd.concat([all_model_stats, model.tidy().xs(param)], axis=1)
@@ -287,10 +288,10 @@ def _multcomp_resample(
 
     models = _post_processing_input_checks(models)
     if type not in ["rwolf", "wyoung"]:
-        raise ValueError("Type should be one of 'rwolf' and 'wyoung'")
+        raise ValueError(f"type must be 'rwolf' or 'wyoung'; got {type!r}.")
     if sampling_method not in ["wild-bootstrap", "ri"]:
         raise ValueError(
-            "Adjustment procedure should be one of 'wild-bootstrap' and 'ri'"
+            f"sampling_method must be 'wild-bootstrap' or 'ri'; got {sampling_method!r}."
         )
 
     all_model_stats = pd.DataFrame()
@@ -300,7 +301,8 @@ def _multcomp_resample(
     for model in models:
         if param not in model._coefnames:
             raise ValueError(
-                f"Parameter '{param}' not found in the model {model.model.formula}."
+                f"Parameter '{param}' not found in the model {model.model.formula}. "
+                "Choose a coefficient that appears in fit.coef().index for every fit."
             )
 
         if model.variance_covariance.spec.is_clustered:

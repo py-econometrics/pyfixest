@@ -75,7 +75,9 @@ def test_separation_ir_datasets(dataset_path):
     expected = set(data.index[data.separated == 1])
     if dataset_path.name == "15.csv":
         assert expected
-        with pytest.warns(RuntimeWarning, match="maximum number of iterations"):
+        with pytest.warns(
+            RuntimeWarning, match=r"iteration limit \(1\) before convergence"
+        ):
             assert _check_for_separation_ir(**arguments, maxiter=1) == set()
     assert _check_for_separation_ir(**arguments) == expected
 
