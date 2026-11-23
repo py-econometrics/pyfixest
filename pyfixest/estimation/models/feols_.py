@@ -928,7 +928,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
             if column is not None and column not in data.columns:
                 raise ValueError(
                     f"vcov={detail!r} uses {option}={column!r}, which is absent from "
-                    "the estimation data. Pass an existing column or refit with it included."
+                    "the model's estimation sample. Pass an existing column or refit with it included."
                 )
         time = data[time_id]
         try:
@@ -1279,8 +1279,8 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if not run_heteroskedastic and cluster_list[0] not in self._data.columns:
             raise ValueError(
-                f"wildboottest() cluster={cluster_list[0]!r} is absent from the estimation "
-                "data. Pass an existing cluster column or refit with it included."
+                f"wildboottest() cluster={cluster_list[0]!r} is absent from the model's "
+                "estimation sample. Pass an existing cluster column or refit with it included."
             )
 
         try:
@@ -1476,7 +1476,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         require_retained(self, "ccv", "_data", "within_data")
         if cluster not in self._data.columns:
             raise ValueError(
-                f"ccv() cluster={cluster!r} is absent from the estimation data. "
+                f"ccv() cluster={cluster!r} is absent from the model's estimation sample. "
                 "Pass an existing cluster column or refit with it included."
             )
 
@@ -2310,7 +2310,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
 
         if cluster is not None and cluster not in self._data:
             raise ValueError(
-                f"ritest() cluster={cluster!r} is absent from the estimation data. "
+                f"ritest() cluster={cluster!r} is absent from the model's estimation sample. "
                 "Pass the name of the column that identifies assignment clusters."
             )
 

@@ -437,7 +437,7 @@ class Formula:
                 "The IV system is underdetermined. "
                 f"Found {len(self.endogenous)} endogenous regressors and "
                 f"{len(self.instruments)} instruments. Supply at least one "
-                "excluded instrument per endogenous regressor."
+                "instrument per endogenous regressor."
             )
         # Redundant instruments are allowed if an excluded instrument remains.
         excluded_instruments = set(self.instruments).difference(
@@ -445,10 +445,9 @@ class Formula:
         )
         if not excluded_instruments:
             raise IVIdentificationError(
-                "The instruments add no explanatory power for the endogenous variable: "
-                f"all instrument terms {[str(term) for term in self.instruments]} "
-                "are also specified as exogenous regressors. Supply an excluded "
-                "instrument with independent first-stage variation. "
+                "The right-hand side of the instrument block contains only exogenous regressors "
+                f"{[str(term) for term in self.instruments]}. "
+                "Supply an instrument with independent first-stage variation. "
                 "See https://pyfixest.org/tutorials/instrumental-variables.html"
             )
 

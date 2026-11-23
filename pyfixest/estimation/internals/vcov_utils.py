@@ -187,7 +187,7 @@ def _get_cluster_df(data: pd.DataFrame, clustervar: list[str]):
     missing = [column for column in clustervar if column not in data_pandas.columns]
     if missing:
         raise ValueError(
-            f"Clustering columns {missing!r} are absent from the estimation data. "
+            f"Clustering columns {missing!r} are absent from the model's estimation sample. "
             "Pass existing columns to vcov() or refit with those columns included."
         )
     return data_pandas[clustervar].copy()
