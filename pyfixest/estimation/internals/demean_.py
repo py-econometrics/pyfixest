@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,7 +11,7 @@ from pyfixest.core.demean import (
     Preconditioner,
     within_preconditioner_name,
 )
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, MapDemeaner
+from pyfixest.demeaners import AnyDemeaner
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -102,14 +102,10 @@ class DemeanCache:
         after adaptive escalation, including for an explicitly supplied handle.
         """
         cached = self.lookup_preconditioner.get(na_index)
-        if (
-            cached is not None
-            and isinstance(demeaner, LsmrDemeaner)
-            and isinstance(demeaner.preconditioner, Preconditioner)
-        ):
+        if cached is not None:
             # An explicit adaptive handle must not restart the ladder after
             # an earlier solve has already built the additive preconditioner.
-            demeaner = replace(demeaner, preconditioner=cached)
+            demeaner = demeaner._with_cached_preconditioner(cached)
         result, _ = self._run_or_raise(
             x=x,
             flist=flist,
@@ -136,10 +132,7 @@ class DemeanCache:
         )
         self.seed_preconditioner(na_index, used_preconditioner)
         if not success:
-            if isinstance(demeaner, MapDemeaner):
-                tolerances = f"fixef_tol={demeaner.fixef_tol:g}"
-            else:
-                tolerances = f"fixef_atol={demeaner.fixef_atol:g}, fixef_btol={demeaner.fixef_btol:g}"
+            tolerances = demeaner._tolerance_settings
             raise ValueError(
                 f"Demeaning with {type(demeaner).__name__}(backend={demeaner.backend!r}) "
                 f"failed to converge with {tolerances} and "

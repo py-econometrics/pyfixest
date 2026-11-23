@@ -11,10 +11,6 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from within import PreconditionerConfig
-
-from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import AnyDemeaner, LsmrDemeaner, LsmrPreconditioner
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.retention import require_retained
@@ -84,12 +80,12 @@ def refit(
             fit.options,
             # do not drop singletons again (they are already dropped)
             drop_singletons=False,
-            demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
+            demeaner=fit.options.demeaner._with_preconditioner(fit.preconditioner),
         )
     else:
         options = replace(
             fit.options,
-            demeaner=_without_prebuilt_preconditioner(fit.options.demeaner),
+            demeaner=fit.options.demeaner._without_prebuilt_preconditioner(),
         )
     formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(
@@ -111,40 +107,3 @@ def refit(
             f"{fit.sample_info.n_obs} observations."
         )
     return result
-
-
-def _with_preconditioner(
-    demeaner: AnyDemeaner, preconditioner: Preconditioner | None
-) -> AnyDemeaner:
-    """Pass the fit's preconditioner to an LSMR demeaner on the same sample.
-
-    A refit starts with an empty demean cache, so the fit's preconditioner is
-    reused only when it is passed in. It depends on the fixed-effect codes,
-    the weights, and the rows, which a same-sample refit keeps.
-    """
-    if isinstance(demeaner, LsmrDemeaner) and preconditioner is not None:
-        return replace(demeaner, preconditioner=preconditioner)
-    return demeaner
-
-
-def _without_prebuilt_preconditioner(demeaner: AnyDemeaner) -> AnyDemeaner:
-    """Replace a prebuilt LSMR `Preconditioner` by the name of its configuration.
-
-    A prebuilt preconditioner is tied to the fixed-effect design it was built
-    on, so a refit on another sample must build its own. Variants without a
-    public name fall back to ``"auto"``, the `LsmrDemeaner` default.
-    """
-    if not (
-        isinstance(demeaner, LsmrDemeaner)
-        and isinstance(demeaner.preconditioner, Preconditioner)
-    ):
-        return demeaner
-    config = demeaner.preconditioner.config
-    preconditioner: LsmrPreconditioner = (
-        "additive"
-        if isinstance(config, PreconditionerConfig.Additive)
-        else "diagonal"
-        if isinstance(config, PreconditionerConfig.Diagonal)
-        else "auto"
-    )
-    return replace(demeaner, preconditioner=preconditioner)

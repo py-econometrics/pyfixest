@@ -17,7 +17,6 @@ from scipy.stats import t
 from within import Effect
 
 from pyfixest.core.demean import Preconditioner
-from pyfixest.demeaners import LsmrDemeaner
 from pyfixest.errors import EmptyEstimationSampleError, VcovTypeNotSupportedError
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.formulaic_compat import (
@@ -333,7 +332,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     def _check_varying_slopes_support(self) -> None:
         """Reject estimators and demeaners that cannot absorb varying slopes."""
         demeaner = self.options.demeaner
-        if not isinstance(demeaner, LsmrDemeaner) or demeaner.backend != "within":
+        if not demeaner._supports_varying_slopes:
             raise ValueError(
                 "Varying slopes such as `f1[z]` require "
                 "`LsmrDemeaner(backend='within')`, the default demeaner."

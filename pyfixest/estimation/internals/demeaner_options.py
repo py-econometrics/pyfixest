@@ -14,8 +14,8 @@ def _resolve_demeaner(demeaner: AnyDemeaner | None) -> AnyDemeaner:
     return demeaner if demeaner is not None else LsmrDemeaner()
 
 
-def _warn_if_experimental_torch_demeaner(demeaner: object) -> None:
-    if isinstance(demeaner, LsmrDemeaner) and demeaner.backend == "torch":
+def _warn_if_experimental_torch_demeaner(demeaner: AnyDemeaner) -> None:
+    if demeaner._is_experimental:
         warnings.warn(
             (
                 "The torch LSMR demeaner backend is experimental. "
