@@ -272,7 +272,7 @@ def _check_for_separation_ir(
         warnings.warn(
             f"The Poisson iterative rectifier (separation_check=['ir']) reached its "
             f"iteration limit ({maxiter}) before convergence. This check removed no rows. "
-            "Inspect regressors that predict zero outcomes and check their scales.",
+            "Inspect regressors that predict zeros in the dependent variable and check their scales.",
             RuntimeWarning,
             stacklevel=_find_stack_level(),
         )

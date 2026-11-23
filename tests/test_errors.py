@@ -232,10 +232,16 @@ def test_error_hc23_fe():
     """
     data = get_data().dropna()
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC2")
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC3")
 
 
@@ -260,17 +266,17 @@ def test_depvar_numeric():
         (
             "Y ~ X1 + [X2 ~ Z1]",
             True,
-            "endogenous variable must be numeric",
+            "endogenous regressor must be numeric",
         ),
         (
             "Y ~ X1 + [two_columns(X2) ~ Z1]",
             False,
-            "exactly one endogenous variable",
+            "exactly one endogenous regressor",
         ),
         (
             "Y ~ X1 + [poly(X1, 2) ~ Z1]",
             False,
-            "exactly one endogenous variable",
+            "exactly one endogenous regressor",
         ),
     ],
 )
@@ -360,7 +366,7 @@ def test_iv_block_of_intercepts_has_no_instrument(main, block):
 
 @pytest.mark.parametrize("endogenous", ["1 + X1", "X1 + 1"])
 def test_iv_endogenous_side_rejects_intercept(endogenous):
-    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous variables"):
+    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous regressors"):
         feols(f"Y ~ X2 + [{endogenous} ~ Z1]", data=get_data())
 
 
@@ -388,9 +394,15 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # unsupported HC vcov
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
 
 
@@ -443,7 +455,7 @@ def test_iv_identification_errors(
             data["C_small"] = 1e-9 * data.D
 
     if case in ("perfect-control", "perfect-instrument"):
-        message = "variable 'D' is fully explained"
+        message = "regressor 'D' is fully explained"
     else:
         message = "no explanatory power for the endogenous regressor 'D'"
 
@@ -516,8 +528,8 @@ def test_iv_constant_instrument_without_intercept(iv_identification_data):
         ("Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]", "exactly one formula-level"),
         ("Y ~ X1 | f1 | X2 ~ Z1 ~ Z2", "exactly one formula-level"),
         ("Y ~ X1 | f1 | f2 | X2 ~ Z1", "Legacy IV syntax allows only"),
-        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous variables"),
-        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous variables"),
+        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous regressors"),
+        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous regressors"),
     ],
 )
 def test_misplaced_iv_syntax_errors(estimator, fml, reason):
@@ -1677,7 +1689,13 @@ def test_glm_errors():
         pf.feglm("Y ~ X1", data=data, family="logit")
 
     data_one_outcome = pf.get_data().assign(Y=1.0)
-    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"found only \[1\.0\].*`subset`.*"
+            r"the dependent variable contains both 0 and 1 after filtering"
+        ),
+    ):
         pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
 
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
@@ -2438,7 +2456,10 @@ def test_quantreg_nid_reports_singular_covariance():
     data = pd.DataFrame({"y": np.zeros(40)})
     with pytest.raises(
         np.linalg.LinAlgError,
-        match=r"could not compute nid covariance\. A 1 by 1 matrix could not be inverted",
+        match=(
+            r"could not compute the nid variance-covariance matrix\. "
+            r"A 1 by 1 matrix could not be inverted"
+        ),
     ) as exc_info:
         pf.quantreg("y ~ 1", data=data, method="fn", vcov="nid")
 

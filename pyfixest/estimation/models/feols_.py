@@ -734,14 +734,14 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         if spec.vcov_type_detail in ("HC2", "HC3"):
             if self.model.has_fixef:
                 raise VcovTypeNotSupportedError(
-                    f"HC2 and HC3 inference types are not supported for regressions with fixed effects. "
-                    f"Got vcov={spec.vcov_type_detail!r}. Use an available covariance "
+                    "The HC2 and HC3 variance estimators are not supported for models with fixed effects. "
+                    f"Got vcov={spec.vcov_type_detail!r}. Use an available variance estimator "
                     "such as HC1 if appropriate."
                 )
             if self.model.is_iv:
                 raise VcovTypeNotSupportedError(
-                    f"HC2 and HC3 inference types are not supported for IV regressions. "
-                    f"Got vcov={spec.vcov_type_detail!r}. Use an available covariance "
+                    "The HC2 and HC3 variance estimators are not supported for IV models. "
+                    f"Got vcov={spec.vcov_type_detail!r}. Use an available variance estimator "
                     "such as HC1 if appropriate."
                 )
         if spec.vcov_type == "CRV":

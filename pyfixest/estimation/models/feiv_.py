@@ -275,7 +275,7 @@ class Feiv(Feols):
         ):
             if ssr_i < 1e-10:
                 raise IVIdentificationError(
-                    f"The endogenous variable '{name}' is fully explained by the "
+                    f"The endogenous regressor '{name}' is fully explained by the "
                     "exogenous regressors and instruments in the first stage. "
                     "Check for a duplicate or transformation of the endogenous regressor "
                     "among those terms. See https://pyfixest.org/tutorials/instrumental-variables.html"

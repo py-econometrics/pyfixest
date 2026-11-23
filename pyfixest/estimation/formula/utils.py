@@ -177,7 +177,7 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
             "Bracketed IV syntax belongs before `|`, alongside the covariates."
         )
     elif iv_has_empty_side:
-        reason = "Specify endogenous variables before `~` and instruments after it."
+        reason = "Specify endogenous regressors before `~` and instruments after it."
     else:
         reason = None
 
