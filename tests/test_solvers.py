@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 import pyfixest as pf
@@ -118,3 +119,18 @@ def test_solve_ols_invalid_solver():
     tZY = np.array([5, 6])
     with pytest.raises(ValueError):
         solve_ols(tZX, tZY, "invalid_solver")
+
+
+def test_feols_reports_singular_weighted_coefficient_solve():
+    data = pd.DataFrame(
+        {"y": [0, 0, 1, 1, 2], "x": [1, 1, 1, 1, 2], "weight": [1, 1, 1, 1, 2.0**-60]}
+    )
+    # The only row with a different x has too little weight to affect the
+    # floating-point cross-products, so the normal equations are singular.
+    with pytest.raises(
+        np.linalg.LinAlgError,
+        match=r"coefficient solve with solver='np\.linalg\.solve' failed for a 2 by 2",
+    ) as exc_info:
+        pf.feols("y ~ x", data=data, weights="weight", solver="np.linalg.solve")
+
+    assert isinstance(exc_info.value.__cause__, np.linalg.LinAlgError)

@@ -2389,6 +2389,18 @@ def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
         pf.quantreg("Y ~ X1", data=data, quantile=0.99)
 
 
+def test_quantreg_nid_reports_singular_covariance():
+    # Both quantiles used to estimate the covariance have the same fitted value.
+    data = pd.DataFrame({"y": np.zeros(40)})
+    with pytest.raises(
+        np.linalg.LinAlgError,
+        match=r"could not compute nid covariance\. A 1 by 1 matrix could not be inverted",
+    ) as exc_info:
+        pf.quantreg("y ~ 1", data=data, method="fn", vcov="nid")
+
+    assert isinstance(exc_info.value.__cause__, np.linalg.LinAlgError)
+
+
 def test_wald_rejects_nonfinite_restrictions():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(ValueError, match=r"R must contain finite restriction weights"):
