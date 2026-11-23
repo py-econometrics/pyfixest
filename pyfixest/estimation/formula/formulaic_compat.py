@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from collections import deque
 from collections.abc import Iterator, Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 import formulaic
@@ -19,6 +20,7 @@ from formulaic.utils.stateful_transforms import _is_stateful_transform
 from formulaic.utils.structured import Structured
 from formulaic.utils.variables import Variable
 
+from pyfixest import __version__
 from pyfixest.errors import FormulaSyntaxError
 from pyfixest.estimation.formula.transforms.factor_interaction import (
     bin_mapping_state_key,
@@ -95,6 +97,12 @@ if formulaic.__version__ == "1.2.2":
 class FormulaicCompatibilityError(RuntimeError):
     """Raised when formulaic internals no longer match pyfixest expectations."""
 
+    def __init__(self, message: str) -> None:
+        super().__init__(
+            f"{message} If this persists, report a minimal formula and data example "
+            f"with PyFixest {__version__} and Formulaic {formulaic.__version__}."
+        )
+
 
 def _iv_block(
     lhs: OrderedSet[Term], rhs: OrderedSet[Term]
@@ -106,6 +114,39 @@ def _iv_block(
             "Use a single `[endogenous ~ instruments]` block."
         )
     return Structured(lhs, deps=(Structured(lhs=lhs, rhs=rhs),))
+
+
+def _interaction_without_iv(
+    lhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    rhs: OrderedSet[Term] | Structured[OrderedSet[Term]],
+    *,
+    operator: Operator,
+    context: Mapping[str, Any],
+) -> OrderedSet[Term] | Structured[OrderedSet[Term]]:
+    """Reject implicit exogenous interactions with an endogenous IV block."""
+    has_iv = any(
+        isinstance(terms, Structured) and count_multistage_blocks(terms)
+        for terms in (lhs, rhs)
+    )
+    result = Structured._merge(
+        lhs, rhs, merger=partial(operator.to_terms, context=context)
+    )
+    if not has_iv:
+        return result
+    original_terms = {
+        term
+        for terms in (lhs, rhs)
+        for term in (terms.root if isinstance(terms, Structured) else terms)
+    }
+    # A power of a single IV term can just deduplicate it. Reject expansions
+    # that introduce new terms, whose endogenous/exogenous role is ambiguous.
+    if set(result.root).difference(original_terms):
+        raise FormulaSyntaxError(
+            "Interactions around an instrumental-variable block are not supported. "
+            "Write interactions explicitly and specify which term is endogenous "
+            "inside `[endogenous ~ instruments]`."
+        )
+    return result
 
 
 class PyfixestOperatorResolver(DefaultOperatorResolver):
@@ -130,7 +171,7 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
 
     @property
     def operators(self) -> list[Operator]:
-        """Replace only the bracketed IV operator, preserving Formulaic's grammar."""
+        """Preserve IV terms and reject implicit interactions around IV blocks."""
         operators = super().operators
         multistage_operator_positions = [
             position
@@ -155,6 +196,19 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
             structural=operator.structural,
             disabled=operator.disabled,
         )
+        for position, operator in enumerate(operators):
+            if operator.symbol in {"*", ":", "/", "in", "^", "**"}:
+                operators[position] = Operator(
+                    operator.symbol,
+                    arity=operator.arity,
+                    precedence=operator.precedence,
+                    associativity=operator.associativity,
+                    fixity=operator.fixity,
+                    to_terms=partial(_interaction_without_iv, operator=operator),
+                    accepts_context=operator.accepts_context,
+                    structural=True,
+                    disabled=operator.disabled,
+                )
         return operators
 
 
@@ -195,8 +249,10 @@ def is_structured_formula(rhs: formulaic.formula.Formula) -> bool:
     return isinstance(rhs, formulaic.formula.StructuredFormula)
 
 
-def count_multistage_blocks(rhs: formulaic.formula.Formula) -> int:
-    """Count formulaic MULTISTAGE deps on a StructuredFormula RHS."""
+def count_multistage_blocks(
+    rhs: formulaic.formula.Formula | Structured[OrderedSet[Term]],
+) -> int:
+    """Count formulaic MULTISTAGE deps on a parsed RHS or structured term set."""
     # formulaic internal: MULTISTAGE stores the parsed first-stage formulas in
     # `.deps`; formulaic does not currently expose a documented accessor.
     deps = getattr(rhs, "deps", ())

@@ -11,6 +11,9 @@ project:
     # Contributor policy, not user documentation: kept out of the site and
     # llms.txt. contributing.qmd links to it on GitHub.
     - "!developer/"
+    # ADRs sit at docs/adr/, where the agent skills expect them; contributor
+    # policy like developer/, so also kept out of the site and llms.txt.
+    - "!adr/"
     # Draft outlines: excluded from the site and llms.txt until finished.
     # (Both open with an explicit "outline" callout.) Delete the matching line
     # to publish one. Complete-but-unlinked pages are left to render normally.
@@ -18,6 +21,8 @@ project:
     - "!how-to/surrogate-indices-experimental-selection.qmd"
     # Held back for now; delete this line to publish it again.
     - "!tutorials/poisson-glm.qmd"
+  # Replaces the flat page list in llms.txt with a curated, described index.
+  post-render: _llms_txt.py
 
 execute:
   freeze: auto
@@ -47,6 +52,7 @@ metadata-files:
 website:
   title: "PyFixest"
   description: "Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest."
+  # Writes a .llms.md copy of each page; _llms_txt.py curates llms.txt.
   llms-txt: true
   favicon: "figures/pyfixest-logo.png"
   page-navigation: true
@@ -85,7 +91,7 @@ website:
           - text: "Acknowledgements"
             file: acknowledgements.md
           - text: "---"
-          - text: "Skills.md"
+          - text: "Agent Skill"
             file: skills.md
           - text: "llms.txt"
             href: llms.txt

@@ -116,6 +116,11 @@ def event_study(
         raise TypeError(
             "estimator must be a string: one of 'twfe', 'did2s', or 'saturated'."
         )
+    if estimator not in ("twfe", "did2s", "saturated"):
+        raise ValueError(
+            "estimator must be one of 'twfe', 'did2s', or 'saturated'; "
+            f"got {estimator!r}."
+        )
     if not isinstance(att, bool):
         raise TypeError("att must be a boolean.")
     if not (isinstance(cluster, str) or cluster is None):
@@ -191,9 +196,6 @@ def event_study(
         fit.aggregate = saturated.aggregate.__get__(fit, type(fit))  # type: ignore
         fit.iplot_aggregate = saturated.iplot_aggregate.__get__(fit, type(fit))  # type: ignore
 
-    else:
-        raise NotImplementedError("Estimator not supported")
-
     # update inference with vcov matrix
     fit.get_inference()
 
@@ -219,7 +221,8 @@ def did2s(
     yname : str
         The name of the dependent variable.
     first_stage : str
-        The formula for the first stage, starting with '~'.
+        The formula for the first stage, starting with '~'. It must not contain
+        varying slopes such as `unit[year]`.
     second_stage : str
         The formula for the second stage, starting with '~'.
     treatment : str
@@ -309,6 +312,7 @@ def _mark_as_did2s(fit: Feols) -> None:
         cluster_causal_variance=False,
         decomposition=False,
         prediction=False,
+        prediction_inference=False,
         fixed_effect_recovery=False,
         randomization_inference=False,
         sherman_morrison_update=False,

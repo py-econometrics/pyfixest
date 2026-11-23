@@ -234,13 +234,11 @@ def test_panelview_raises():
     )
 
     # Missing unit/time/treat column
-    with pytest.raises(ValueError, match=r"Column 'bad_col' not found in data."):
+    with pytest.raises(ValueError, match=r"unit='bad_col' is absent from data"):
         panelview(data, unit="bad_col", time="time", treat="treat")
 
     # Missing outcome column
-    with pytest.raises(
-        ValueError, match=r"Outcome column 'bad_outcome' not found in data."
-    ):
+    with pytest.raises(ValueError, match=r"outcome='bad_outcome' is absent from data"):
         panelview(data, unit="unit", time="time", treat="treat", outcome="bad_outcome")
 
     # collapse_to_cohort with subsamp

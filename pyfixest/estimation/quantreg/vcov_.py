@@ -11,6 +11,17 @@ from pyfixest.estimation.quantreg.frisch_newton_ip import QuantregSolution
 from pyfixest.estimation.quantreg.utils import get_hall_sheather_bandwidth
 
 
+def _invert_covariance_component(matrix: np.ndarray, *, component: str) -> np.ndarray:
+    try:
+        return np.linalg.inv(matrix)
+    except np.linalg.LinAlgError as exc:
+        raise np.linalg.LinAlgError(
+            f"Quantile regression could not compute {component} covariance. "
+            f"A {matrix.shape[0]} by {matrix.shape[1]} matrix could not be inverted. "
+            "Check for redundant regressors or insufficient variation at the fitted quantile."
+        ) from exc
+
+
 def vcov_iid_qreg(
     X: np.ndarray, Y: np.ndarray, u_hat: np.ndarray, q: float, N: int
 ) -> np.ndarray:
@@ -26,7 +37,7 @@ def vcov_iid_qreg(
     f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
 
     D = X.T @ X
-    Dinv = np.linalg.inv(D)
+    Dinv = _invert_covariance_component(D, component="iid")
 
     return 1 / (f**2) * q * (1 - q) * Dinv
 
@@ -55,7 +66,7 @@ def vcov_hetero_qreg(
 
     density = norm.pdf(u_hat / residual_bandwidth) / residual_bandwidth
     hessian = X.T @ (density[:, np.newaxis] * X)
-    bread = np.linalg.inv(hessian)
+    bread = _invert_covariance_component(hessian, component="heteroskedasticity-robust")
     meat = q * (1 - q) * X.T @ X
 
     return bread @ meat @ bread
@@ -77,6 +88,14 @@ def vcov_nid_qreg(
     'nid' stands for 'non-iid'.
     """
     h = get_hall_sheather_bandwidth(q=q, N=N)
+    if q - h < 0 or q + h > 1:
+        raise ValueError(
+            "vcov='nid', the quantreg() default, needs quantile plus or minus its "
+            f"Hall-Sheather bandwidth inside [0, 1], but quantile={q:g} with "
+            f"bandwidth {h:.3g} gives "
+            f"[{q - h:.3g}, {q + h:.3g}] for {N} observations. Use vcov='iid' or "
+            "vcov='hetero', a quantile closer to 0.5, or more observations."
+        )
     beta_init = beta_hat if method == "pfn" else None
 
     beta_hat_plus = fit(X=X, Y=Y, q=q + h, beta_init=beta_init).beta
@@ -94,7 +113,7 @@ def vcov_nid_qreg(
     J = X.T @ X
     XFplus = X * np.sqrt(Fplus[:, np.newaxis])
     H = XFplus.T @ XFplus
-    Hinv = np.linalg.inv(H)
+    Hinv = _invert_covariance_component(H, component="nid")
 
     return q * (1 - q) * Hinv @ J @ Hinv
 
@@ -120,7 +139,7 @@ def vcov_crv1_qreg(
     A, B = crv1_vcov_qreg_loop(
         X, clustid.astype(np.uintp), cluster_col.astype(np.uintp), q, u_hat, delta
     )
-    B_inv = np.linalg.inv(B)
+    B_inv = _invert_covariance_component(B, component="cluster-robust")
     vcov = B_inv @ A @ B_inv
 
     return vcov

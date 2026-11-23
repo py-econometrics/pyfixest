@@ -3,7 +3,7 @@
 # PyFixest: Fast High-Dimensional Fixed Effects Regression in Python
 
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit)
-![Python Versions](https://img.shields.io/badge/Python-3.9–3.14-blue)
+![Python Versions](https://img.shields.io/badge/Python-3.11–3.15-blue)
 [![PyPI Version](https://img.shields.io/pypi/v/pyfixest.svg)](https://pypi.org/project/pyfixest/)
 [![Coverage](https://codecov.io/gh/py-econometrics/pyfixest/branch/master/graph/badge.svg)](https://codecov.io/gh/py-econometrics/pyfixest)
 [![Downloads](https://img.shields.io/pepy/dt/pyfixest)](https://pepy.tech/project/pyfixest)
@@ -30,6 +30,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
   - Fast **quantile regression** via an interior-point solver
   - **Difference-in-differences** estimators, including TWFE, `Did2s`, local projections, and Sun-Abraham event studies
   - Regression **decomposition** following [Gelbach (2016)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1425737)
+  - **Varying slopes** for fixed effects with `f[x]` and `f[[x]]`
   - Multiple estimation syntax
 - **Inference**
   - Several **robust**, **cluster-robust**, and **HAC variance-covariance** estimators
@@ -41,7 +42,7 @@ For questions on `PyFixest`, head over to our [GitHub discussions](https://githu
     anytime-valid p-values, e-values, and confidence sequences following
     [Lindon et al. (2026)](https://doi.org/10.1080/01621459.2026.2692052)
 - **Post-Estimation & Reporting**
-  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
+  - **Publication-ready tables** with [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) or LaTeX booktabs via the [maketables library](https://github.com/py-econometrics/maketables)
 
 ## Installation
 
@@ -117,6 +118,12 @@ pf.feols("Y ~ X1 | f1 + f2", data=data).summary()
     | X1            |     -0.919 |        0.065 |   -14.057 |      0.000 | -1.053 |  -0.786 |
     ---
     RMSE: 1.441   R2: 0.609   R2 Within: 0.2
+
+Use `f1[X2]` to let the slope on `X2` vary across levels of `f1`:
+
+```python
+pf.feols("Y ~ X1 | f1[X2] + f2", data=data).summary()
+```
 
 `PyFixest` also supports multiple estimation syntax:
 
@@ -272,6 +279,8 @@ Thanks goes to these wonderful people:
     </tr>
     <tr>
       <td align="center" valign="top" width="12.5%"><a href="https://github.com/mayuriphad"><img src="https://avatars.githubusercontent.com/u/163738104?v=4?s=40" width="40px;" alt="Mayuri"/><br /><sub><b>Mayuri</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=mayuriphad" title="Code">💻</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="http://johannes-schmieder.com"><img src="https://avatars.githubusercontent.com/u/47986688?v=4?s=40" width="40px;" alt="Johannes Schmieder"/><br /><sub><b>Johannes Schmieder</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/issues?q=author%3Ajohannes-schmieder" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="12.5%"><a href="https://www.markstudios.com"><img src="https://avatars.githubusercontent.com/u/24554186?v=4?s=40" width="40px;" alt="Mark Santos"/><br /><sub><b>Mark Santos</b></sub></a><br /><a href="https://github.com/py-econometrics/pyfixest/commits?author=markksantos" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>

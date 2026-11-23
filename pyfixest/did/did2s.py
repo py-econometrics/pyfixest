@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix, hstack
 from scipy.sparse.linalg import spsolve
 
 from pyfixest.did.did import DID
+from pyfixest.errors import NanInClusterVarError
 from pyfixest.estimation import feols
 from pyfixest.estimation.formula import FORMULAIC_TRANSFORMS
 from pyfixest.estimation.formula.parse import Formula
@@ -177,12 +178,45 @@ def _did2s_estimate(
     object
         A fitted model object of class feols with the two-stage covariance.
     """
+    # Gardner's cluster score sum must include every estimation observation.
+    # Validate before either stage, rather than silently omitting NA clusters
+    # from the covariance while retaining their outcomes in the fit.
+    if yname not in data.columns:
+        raise ValueError(
+            f"did2s() yname={yname!r} must name an existing outcome column."
+        )
+    if cluster not in data.columns:
+        raise ValueError(
+            f"The cluster variable {cluster} is not in the data. "
+            "Pass the name of an existing cluster column to did2s()."
+        )
+    if data[cluster].isna().any():
+        raise NanInClusterVarError(
+            f"The cluster variable {cluster} contains missing values. "
+            "Drop those observations before calling did2s()."
+        )
+    n_clusters = data[cluster].nunique()
+    if n_clusters < 2:
+        raise ValueError(
+            f"did2s() requires at least two clusters. Column {cluster!r} has "
+            f"{n_clusters} distinct values. Check the data and cluster assignment."
+        )
+
     _first_stage_full = f"{yname} {_first_stage}"
     _second_stage_full = f"{yname}_hat {_second_stage}"
 
     for name, stage in (("first_stage", _first_stage), ("second_stage", _second_stage)):
+        example = "~ 0 | unit + time" if name == "first_stage" else "~ i(relative_time)"
+        if not isinstance(stage, str):
+            raise TypeError(
+                f"did2s() {name} must be a formula string; got {type(stage).__name__}. "
+                f"For example, pass {name}={example!r}."
+            )
         if not stage.lstrip().startswith("~"):
-            raise ValueError(f"{name} must start with '~', got '{stage}'.")
+            raise ValueError(
+                f"{name} must start with '~', got {stage!r}. "
+                f"For example, pass {name}={example!r}."
+            )
     first_formulas = Formula.parse(_first_stage_full)
     second_formulas = Formula.parse(_second_stage_full)
     for name, formulas in (
@@ -190,13 +224,31 @@ def _did2s_estimate(
         ("second_stage", second_formulas),
     ):
         if len(formulas) != 1 or len(formulas[0].dependent) != 1:
-            raise ValueError(f"{name} must specify a single model.")
+            raise ValueError(
+                f"{name} must specify a single model. Pass one formula without "
+                "stepwise operators."
+            )
         if formulas[0].is_instrumental_variable:
-            raise ValueError(f"{name} must not contain instrumental variables.")
+            raise ValueError(
+                f"{name} must not contain instrumental variables. "
+                "Use a stage formula without an instrument block."
+            )
     if not first_formulas[0].is_fixed_effects:
-        raise ValueError("First stage formula must contain fixed effects.")
+        raise ValueError(
+            "First stage formula must contain fixed effects. Add them after '|', "
+            "as in first_stage='~ 0 | unit + time'."
+        )
+    if first_formulas[0].has_varying_slopes:
+        raise ValueError(
+            "First stage formula must not contain varying slopes such as "
+            "`unit[year]`. did2s() imputes untreated outcomes from the estimated "
+            "fixed effects, which are not available for varying slopes."
+        )
     if second_formulas[0].is_fixed_effects:
-        raise ValueError("Second stage formula must not contain fixed effects.")
+        raise ValueError(
+            "Second stage formula must not contain fixed effects. Put fixed effects "
+            "in first_stage and use second_stage for the treatment terms."
+        )
     if not any(term == "1" for term in second_formulas[0].exogenous):
         raise ValueError(
             "The second stage formula must not remove the intercept with '0' or '-1'. "
@@ -205,17 +257,25 @@ def _did2s_estimate(
 
     if treatment is not None:
         if treatment not in data.columns:
-            raise ValueError(f"The variable {treatment} is not in the data.")
+            raise ValueError(
+                f"Treatment column {treatment!r} is not in the data. Pass the name "
+                "of an existing Boolean or numeric treatment indicator."
+            )
         treat_u = data[treatment].unique()
         if len(treat_u) != 2:
             raise ValueError(
-                f"The treatment variable {treatment} must have 2 unique values but it has unique values {treat_u}."
+                f"The treatment variable {treatment} must have 2 unique values; "
+                f"found {len(treat_u)} (including {treat_u[:5].tolist()!r}). "
+                "Use 0 for untreated observations and 1 for treated observations."
             )
         if data[treatment].dtype in ["bool", "int64", "int32", "float64", "float32"]:
             data[treatment] = data[treatment].astype(bool)
         else:
             raise ValueError(
-                f"The treatment variable {treatment} must be boolean or numeric but it is of type {data[treatment].dtype}."
+                f"The treatment variable {treatment} must have dtype bool, int32, "
+                f"int64, float32, or float64; got {data[treatment].dtype}. Encode "
+                "untreated and treated observations as False/True or 0/1 with one "
+                "of these dtypes."
             )
         _not_yet_treated_data = data[data[treatment] == False]  # noqa: E712
     else:
@@ -237,13 +297,13 @@ def _did2s_estimate(
 
     # demean data
     Y_hat = fit1.predict(newdata=data)
-    if np.isnan(Y_hat).any():
-        # levels present in the full data but absent from the first stage fit
-        # (fit on not-yet-treated observations only) predict to NaN
+    missing_predictions = int(np.isnan(Y_hat).sum())
+    if missing_predictions:
         raise ValueError(
-            "First-stage predictions contain NaN values because some fixed effect "
-            "levels were not observed in the not-yet-treated first-stage sample. "
-            "Drop those observations before calling did2s()."
+            f"First-stage predictions contain NaN values for {missing_predictions} "
+            "observations. Check for missing first-stage regressors or fixed-effect "
+            "levels absent from the not-yet-treated first-stage sample. "
+            "Check which observations have usable first-stage inputs before refitting."
         )
     _first_u = data[f"{yname}"].to_numpy().flatten() - Y_hat
     data[f"{yname}_hat"] = _first_u

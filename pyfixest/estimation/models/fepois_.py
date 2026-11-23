@@ -73,6 +73,7 @@ class Fepois(Feglm):
         cluster_causal_variance=False,
         decomposition=False,
         prediction=True,
+        prediction_inference=False,
         fixed_effect_recovery=True,
         randomization_inference=True,
         sherman_morrison_update=False,

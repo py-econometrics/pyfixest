@@ -39,6 +39,8 @@ website:
       file: how-to/stata-2-pyfixest.qmd
     - text: Variance Reduction in AB Tests
       file: how-to/panel_variance_reduction.qmd
+    - text: Migrating Fitted-Model Attributes from 0.60
+      file: how-to/migrate-fit-attributes.qmd
   - id: explanation
     title: Explanation
     style: docked

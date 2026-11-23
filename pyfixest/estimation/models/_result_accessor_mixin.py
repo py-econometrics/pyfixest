@@ -145,21 +145,6 @@ class ResultAccessorMixin(TidyColumnAccessors):
     model: "ModelDescription"
     _k: int
 
-    @property
-    def _fml(self) -> str:
-        """Formula string. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.formula` instead."""
-        return self.model.formula
-
-    @property
-    def _method(self) -> str:
-        """Estimator name. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `model.method` instead."""
-        return self.model.method
-
-    @property
-    def _vcov(self) -> np.ndarray:
-        """Covariance matrix. Kept for third-party integrations (e.g. marginaleffects's `ModelPyfixest`) that read this private attribute directly; use `variance_covariance.vcov` instead."""
-        return self.variance_covariance.vcov
-
     def evalue(
         self: "Feols",
         mixture_precision: float = 1.0,
@@ -328,7 +313,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             )
         if inference_type == "savi":
             raise NotImplementedError(
-                "inference_type='savi' is not available in tidy() yet."
+                "inference_type='savi' is not available in tidy(). "
+                "Use confint(inference_type='savi') for confidence sequences."
             )
 
         ub, lb = 1 - alpha / 2, alpha / 2
@@ -339,7 +325,8 @@ class ResultAccessorMixin(TidyColumnAccessors):
             conf_int = table.conf_int
         except EmptyVcovError:
             warnings.warn(
-                "Empty variance-covariance matrix detected",
+                "Empty variance-covariance matrix detected. This fit estimated no coefficients, "
+                "so tidy() has no coefficient inference to report.",
                 UserWarning,
                 stacklevel=_find_stack_level(),
             )
@@ -365,7 +352,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
         self, inference_type: InferenceType, joint: bool = False
     ) -> InferenceType:
         """Validate `inference_type` and fold the deprecated `joint` flag into it."""
-        _validate_literal_argument(inference_type, InferenceType)
+        _validate_literal_argument(inference_type, InferenceType, name="inference_type")
 
         if joint:
             warnings.warn(
@@ -376,7 +363,7 @@ class ResultAccessorMixin(TidyColumnAccessors):
             if inference_type not in ("regular", "simult"):
                 raise ValueError(
                     "joint=True cannot be combined with "
-                    f"inference_type={inference_type!r}."
+                    f"inference_type={inference_type!r}. Remove joint or use inference_type='simult'."
                 )
             inference_type = "simult"
 

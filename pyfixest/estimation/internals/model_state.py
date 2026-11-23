@@ -1,3 +1,12 @@
+"""Typed state of a fitted model; see ADR 0001.
+
+Frozen dataclasses prevent field rebinding, not mutation of contained NumPy
+arrays. Mark shared arrays read-only where ownership requires it, and copy only
+at ownership boundaries. A published field keeps its type and domain for the
+fit's lifetime: solver scratch never replaces within data, and observation
+weights stay unchanged after preparation, with working weights held separately.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -27,6 +36,13 @@ if TYPE_CHECKING:
 _VCOV_STRINGS: tuple[str, ...] = get_args(VcovTypeOptions)
 _VCOV_CLUSTER_KEYS = ("CRV1", "CRV3")
 _VCOV_KWARGS_KEYS = ("lag", "time_id", "panel_id")
+_HAC_KWARGS_HINT = {
+    "NW": (
+        "Pass it as vcov_kwargs={'time_id': 'year', 'lag': 2}, adding "
+        "'panel_id' for panel data; 'lag' is required without 'panel_id'."
+    ),
+    "DK": "Pass vcov_kwargs={'time_id': 'year', 'panel_id': 'unit'}, optionally with 'lag'.",
+}
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -454,6 +470,12 @@ class FixedEffectCounts:
         Number of levels of each fixed effect after sample filtering, in the
         order of `ModelDescription.fixed_effects`. A fixed effect left with a
         single level, e.g. by the GLM separation check, still counts.
+    has_intercept_by_fe : tuple[bool, ...]
+        Whether each fixed effect has level-specific intercepts. Slope-only
+        effects such as `f1[[z]]` have none.
+    n_slopes_by_fe : tuple[int, ...]
+        Number of varying-slope covariates of each fixed effect; `f1[z1, z2]`
+        has two.
 
     Examples
     --------
@@ -467,21 +489,52 @@ class FixedEffectCounts:
     """
 
     n_levels_by_fe: tuple[int, ...] = ()
+    has_intercept_by_fe: tuple[bool, ...] = ()
+    n_slopes_by_fe: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not (
+            len(self.n_levels_by_fe)
+            == len(self.has_intercept_by_fe)
+            == len(self.n_slopes_by_fe)
+        ):
+            raise ValueError("Fixed-effect counts must describe every fixed effect.")
 
     @property
     def n_fixef(self) -> int:
-        """Number of fixed effects; ``Y ~ X | f1 + f2`` has two."""
-        return len(self.n_levels_by_fe)
+        """Number of fixed effects with intercepts; ``Y ~ X | f1 + f2[[z]]`` has one."""
+        return sum(self.has_intercept_by_fe)
 
     @property
     def n_levels(self) -> int:
-        """Levels summed over all fixed effects, ``sum(n_levels_by_fe)``."""
-        return sum(self.n_levels_by_fe)
+        """Levels summed over the fixed effects with intercepts."""
+        return sum(
+            n_levels
+            for n_levels, has_intercept in zip(
+                self.n_levels_by_fe, self.has_intercept_by_fe, strict=True
+            )
+            if has_intercept
+        )
+
+    @property
+    def n_slope_coefficients(self) -> int:
+        """Number of varying-slope coefficients, one per level and slope."""
+        return sum(
+            n_levels * n_slopes
+            for n_levels, n_slopes in zip(
+                self.n_levels_by_fe, self.n_slopes_by_fe, strict=True
+            )
+        )
 
     @property
     def fixef_dof(self) -> int:
-        """Degrees of freedom consumed by the fixed effects, ``sum(n_levels_by_fe - 1) + 1``."""
-        return self.n_levels - self.n_fixef + 1 if self.n_levels_by_fe else 0
+        """Degrees of freedom consumed by the fixed effects.
+
+        Intercepts consume ``sum(n_levels - 1) + 1`` over the effects with
+        intercepts; every varying-slope coefficient consumes one more.
+        """
+        intercept_dof = self.n_levels - self.n_fixef + 1 if self.n_fixef else 0
+        return intercept_dof + self.n_slope_coefficients
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -782,6 +835,18 @@ class VcovSpec:
                     f"The cluster variable in a vcov dict must be a string such as 'f1' or 'f1+f2'; got {cluster_input!r}."
                 )
             clustervar = tuple(x.replace(" ", "") for x in cluster_input.split("+"))
+            if "" in clustervar:
+                raise ValueError(
+                    f"vcov={vcov!r} contains an empty clustering term. "
+                    "Pass a column name, such as vcov={'CRV1': 'cluster'}, "
+                    "or join column names with '+'."
+                )
+            repeated = sorted({x for x in clustervar if clustervar.count(x) > 1})
+            if repeated:
+                raise ValueError(
+                    f"vcov={vcov!r} repeats the clustering columns {repeated!r}. "
+                    "Name each clustering column once, as in vcov={'CRV1': 'f1+f2'}."
+                )
             if any("^" in x for x in clustervar):
                 raise ValueError(
                     f"Clustering on an interaction such as {cluster_input!r} is not supported. "
@@ -794,13 +859,23 @@ class VcovSpec:
                 f"vcov must be a string or a dict such as {{'CRV1': 'f1'}}; got {type(vcov).__name__}."
             )
         if vcov not in _VCOV_STRINGS:
-            raise ValueError(f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}.")
+            raise ValueError(
+                f"vcov must be one of {_VCOV_STRINGS}; got {vcov!r}. "
+                "Cluster-robust inference is requested with a dict such as "
+                "vcov={'CRV1': 'cluster_var'}, or {'CRV1': 'a + b'} for multiway clustering."
+            )
 
         if vcov in ("NW", "DK"):
             if time_id is None:
-                raise ValueError("Missing required 'time_id' for NW/DK vcov")
+                raise ValueError(
+                    f"Missing required 'time_id' for vcov={vcov!r}. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             if vcov == "DK" and panel_id is None:
-                raise ValueError("Missing required 'panel_id' for DK vcov")
+                raise ValueError(
+                    "Missing required 'panel_id' for vcov='DK'. "
+                    + _HAC_KWARGS_HINT[vcov]
+                )
             return cls(
                 vcov_type="HAC",
                 vcov_type_detail=vcov,
@@ -1078,6 +1153,10 @@ class Capabilities:
     prediction : bool
         Whether ``predict()`` is available. IV and ``did2s()`` fits do not
         support it.
+    prediction_inference : bool
+        Whether ``predict(se_fit=True)`` and ``predict(interval="prediction")``
+        are available. Only OLS fits support them, additionally requiring no
+        weights or fixed effects.
     fixed_effect_recovery : bool
         Whether the model class can recover fixed-effect estimates through
         ``fixef()``. IV, ``quantreg()``, and ``did2s()`` fits do not support
@@ -1120,6 +1199,7 @@ class Capabilities:
     cluster_causal_variance: bool
     decomposition: bool
     prediction: bool
+    prediction_inference: bool
     fixed_effect_recovery: bool
     randomization_inference: bool
     sherman_morrison_update: bool

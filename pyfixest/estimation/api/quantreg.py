@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from numbers import Integral, Real
 from typing import Any
 
 from pyfixest.demeaners import MapDemeaner
@@ -30,25 +31,34 @@ def _quantreg_input_checks(
     quantile: float | list[float], tol: float, maxiter: int | None
 ):
     "Run custom input checks for quantreg."
-    if isinstance(quantile, list):
-        if not all(isinstance(q, float) for q in quantile):
-            raise ValueError("quantile must be a list of floats")
+    quantiles = quantile if isinstance(quantile, list) else [quantile]
+    if not quantiles:
+        raise ValueError(
+            "quantile must include at least one value. For example, pass quantile=0.5 "
+            "or quantile=[0.25, 0.5, 0.75]."
+        )
+    for index, value in enumerate(quantiles):
+        option = f"quantile[{index}]" if isinstance(quantile, list) else "quantile"
+        if not isinstance(value, float):
+            error = ValueError if isinstance(quantile, list) else TypeError
+            raise error(f"{option} must be a float; got {value!r}.")
+        if not 0.0 < value < 1.0:
+            raise ValueError(
+                f"{option} must be between 0 and 1, exclusive; got {value!r}."
+            )
 
-        if not all(0.0 < q < 1.0 for q in quantile):
-            raise ValueError("quantile must be between 0 and 1")
-    else:
-        # single quantile provided
-        if not isinstance(quantile, float):
-            raise TypeError("quantile must be a float")
-        if not 0.0 < quantile < 1.0:
-            raise ValueError("quantile must be between 0 and 1")
-
-    # tol must always be in (0, 1)
+    if not isinstance(tol, Real):
+        raise TypeError(f"tol must be a real number; got {tol!r}.")
     if not 0.0 < tol < 1.0:
-        raise ValueError("tol must be in (0, 1)")
+        raise ValueError(f"tol must be greater than 0 and less than 1; got {tol!r}.")
 
-    if maxiter is not None and maxiter <= 0:
-        raise ValueError("maxiter must be greater than 0")
+    if maxiter is not None:
+        if not isinstance(maxiter, Integral):
+            raise TypeError(
+                f"maxiter must be a positive integer or None; got {maxiter!r}."
+            )
+        if maxiter <= 0:
+            raise ValueError(f"maxiter must be greater than 0; got {maxiter!r}.")
 
 
 def quantreg(
@@ -300,7 +310,8 @@ def quantreg(
     plan = plan_formulas(config)
     if plan.is_iv:
         raise NotImplementedError(
-            "IV Estimation is not supported for Quantile Regression"
+            "quantreg() does not support an instrument block. Use feols() if the "
+            "intended model is linear IV. See https://pyfixest.org/tutorials/quantile-regression.html"
         )
 
     return run_estimation(config, plan, apply_retention=True)

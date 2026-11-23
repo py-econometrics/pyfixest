@@ -1,0 +1,8 @@
+---
+pagetitle: "Migrating code to pyfixest 0.70"
+description: "Deprecated and removed spellings and attributes from PyFixest 0.60 and earlier, with their replacements."
+---
+
+<!-- The agent skill ships this file inside the package; edit it there. -->
+
+{{< include ../../pyfixest/skills/pyfixest/references/migrating-to-0.70.md >}}

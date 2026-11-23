@@ -18,7 +18,7 @@ Starting with pyfixest 0.41.0 (currently in development), the table functionalit
 The `pf.etable()` API remains unchanged and `pf.make_table()` has been removed (use `maketables.MTable()` directly).
 :::
 
-Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
+Pyfixest comes with functions to generate publication-ready tables. Regression tables are generated with `pf.etable()`, which can output different formats, for instance using the [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) package or generating formatted LaTex Tables using [booktabs](https://ctan.org/pkg/booktabs?lang=en). Descriptive statistics tables can be created with `DTable()` and custom tables with `maketables.MTable()`.
 
 To begin, we load some libraries and fit a set of regression models.
 
@@ -100,7 +100,7 @@ pf.etable([fit1, fit2, fit3, fit4, fit5, fit6], signif_code=[0.01, 0.05, 0.1], d
 
 
 ## Other output formats
-By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/articles/intro.html)), but you can also opt to DataFrame, Markdown, LaTeX, Typst, or Word output via the `type` argument.
+By default, `pf.etable()` returns a GT object (see [the Great Tables package](https://posit-dev.github.io/great-tables/user-guide/introduction.html)), but you can also opt to DataFrame, Markdown, LaTeX, Typst, or Word output via the `type` argument.
 
 
 ```{python}
@@ -172,15 +172,14 @@ display(FileLink("latexdocs/SampleTableDoc.pdf"))
 
 Use `type="docx"` to create an editable Word table, including multi-level
 headers, coefficients and standard errors, fixed effects, statistics, and notes.
-The result is a `python-docx.Document` object. Pass `file_name` to save it
-directly; the same document is returned for further editing.
+The result is a `python-docx.Document` object that you can edit before saving.
+You can also pass `file_name` to save the file directly.
 
 ```{python}
 #| output: false
 document = pf.etable(
     [fit1, fit2, fit3, fit4, fit5, fit6],
     type="docx",
-    file_name="regression_results.docx",
     model_heads=["Baseline", "Two-way FE", "Interaction"] * 2,
     coef_fmt="b:.3f*\n(se:.3f)",
     docx_style={
@@ -199,8 +198,11 @@ These settings apply only to Word output. Use `labels`, `felabels`, and `notes`
 to supply text in your preferred language. Font availability and pagination
 depend on the application opening the document.
 
-To add more content before saving, omit `file_name`, edit the returned document
-using python-docx, and call `document.save("regression_results.docx")`.
+Call `save()` to write the Word file when it is ready.
+
+```python
+document.save("regression_results.docx")
+```
 
 ## Rename variables
 You can also rename variables if you want to have a more readable output. Just pass a dictionary to the `labels` argument. Note that interaction terms will also be relabeled using the specified labels for the interacted variables (if you want to manually relabel an interaction term differently, add it to the dictionary).
@@ -493,7 +495,7 @@ display(FileLink("latexdocs/SampleTableDoc3.pdf"))
 
 
 # Custom Styling with Great Tables
-You can use the rich set of methods offered by [Great Tables](https://posit-dev.github.io/great-tables/articles/intro.html) to further customize the table display when the type is "gt".
+You can use the rich set of methods offered by [Great Tables](https://posit-dev.github.io/great-tables/user-guide/introduction.html) to further customize the table display when the type is "gt".
 
 ## Example Styling
 

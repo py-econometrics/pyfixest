@@ -180,6 +180,7 @@ class SaturatedEventStudy(DID):
             time_id=self._tname,
             unit_id=self._idname,
             cluster=self._cluster,
+            xfml=self._xfml,
         )
         self.mod.event_study_design = EventStudyDesign(
             yname=self._yname,
@@ -266,25 +267,25 @@ class SaturatedEventStudy(DID):
         ----------
         agg : str, optional
 
-                The type of aggregation to perform. Can be either "att" or "cohort" or "period".
-                Default is "att". If "att", computes the average treatment effect on the treated.
-                If "cohort", computes the average treatment effect by cohort. If "period",
-                computes the average treatment effect by period.
+                The type of aggregation to perform. Only "period" is supported,
+                which computes the average treatment effect by period.
 
         weighting : str, optional
 
-                    The type of weighting to use. Can be either 'shares' or 'variance'.
+                    The type of weighting to use. Only "shares" is supported.
 
         Returns
         -------
         pd.Series
             A Series containing the aggregated estimates.
         """
-        if agg not in ["period"]:
-            raise ValueError("agg must be either 'period'")
+        if agg != "period":
+            raise ValueError(f"agg must be 'period'; got agg={agg!r}.")
 
-        if weighting not in ["shares"]:
-            raise ValueError("weighting must be 'shares'.")
+        if weighting != "shares":
+            raise ValueError(
+                f"weighting must be 'shares'; got weighting={weighting!r}."
+            )
 
         model = self.mod if isinstance(self, SaturatedEventStudy) else self
         design = model.event_study_design
@@ -428,8 +429,10 @@ def _saturated_event_study(
     time_id: str,
     unit_id: str,
     cluster: str | None = None,
+    xfml: str | None = None,
 ):
-    ff = f"{outcome} ~ i(rel_time, first_treated_period, ref = -1, ref2=0) | {unit_id} + {time_id}"
+    covariates = f" + {xfml}" if xfml is not None else ""
+    ff = f"{outcome} ~ i(rel_time, C(first_treated_period), ref = -1, ref2=0){covariates} | {unit_id} + {time_id}"
     m = feols(fml=ff, data=df, vcov={"CRV1": cluster})  # type: ignore
     res = m.tidy().reset_index()
     res = res.join(

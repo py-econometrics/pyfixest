@@ -33,6 +33,9 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     accounts for the possibility that removing an observation in one column can
     lead to the emergence of new singletons in subsequent columns.
 
+    Groups are counted in physical rows, also under frequency weights: a row
+    whose weight exceeds one is still a singleton if it is alone in its group.
+
     For performance reasons, the input array should be in column-major order.
     Operating on a row-major array can lead to significant performance losses.
 
@@ -57,7 +60,10 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     ```
     """
     if not np.issubdtype(ids.dtype, np.integer):
-        raise TypeError("Fixed effects must be integers")
+        raise TypeError(
+            f"detect_singletons() requires integer fixed-effect level codes; got {ids.dtype}. "
+            "Encode each fixed-effect column before calling it."
+        )
 
     # Convert to uint32 F-contiguous array for optimal performance
     # (matches numba implementation behavior)

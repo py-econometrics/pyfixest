@@ -95,9 +95,9 @@ def refit(
     formula = fit.model.parsed_formula if formula is None else formula
     config = EstimationConfig(
         method=estimation_method_of(type(fit)),
-        data=data.copy(deep=False),
+        data=data,
         formulas=(formula,),
-        # the shallow copy above keeps `data` unchanged without a deep copy
+        # the runner does not modify `data`, so it need not copy it
         options=replace(options, copy_data=False),
         vcov=vcov,
     )

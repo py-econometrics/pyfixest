@@ -41,6 +41,8 @@ class GlmFamily:
     Bundles the link function, inverse link, derivative of the link, variance function,
     deviance, initial mu, and dependent-variable validation into a single object.
     `method` names the estimation function in `fit.model.method`.
+    `outcome_bounds` lists the outcome values the inverse link attains only as
+    the linear predictor diverges; outcomes stuck at such a bound are separated.
     """
 
     name: str
@@ -52,15 +54,32 @@ class GlmFamily:
     deviance: Callable[[np.ndarray, np.ndarray, np.ndarray | None], float]
     mu_start: Callable[[np.ndarray, np.ndarray | None], np.ndarray]
     check_y: Callable[[np.ndarray], None]
+    outcome_bounds: tuple[float, ...]
     inference_dist: InferenceDist = NORMAL_DIST
 
 
 def _check_y_binary(Y: np.ndarray) -> None:
     Y_unique = np.unique(Y)
-    if len(Y_unique) != 2:
-        raise ValueError("The dependent variable must have two unique values.")
+    if len(Y_unique) < 2:
+        raise ValueError(
+            "The dependent variable must have two unique values. "
+            "Logit and probit need both 0 and 1 in the estimation sample; "
+            f"found only {Y_unique.tolist()!r}. Rows with missing values, rows "
+            "removed by `subset`, and observations dropped for separation are "
+            "excluded before this check; confirm that both outcomes remain after "
+            "that."
+        )
+    if len(Y_unique) > 2:
+        raise ValueError(
+            "The dependent variable must have two unique values. "
+            f"Found {len(Y_unique)} distinct values ({Y_unique[:5].tolist()!r}). "
+            "Logit and probit need a dependent variable coded 0/1."
+        )
     if np.any(~np.isin(Y_unique, [0, 1])):
-        raise ValueError("The dependent variable must be binary (0 or 1).")
+        raise ValueError(
+            "The dependent variable must be binary (0 or 1). "
+            f"Found {Y_unique.tolist()!r}; use a correctly coded 0/1 indicator."
+        )
 
 
 def _check_y_noop(Y: np.ndarray) -> None:
@@ -131,8 +150,13 @@ def _pois_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) ->
 
 
 def _check_y_nonneg(Y: np.ndarray) -> None:
-    if np.any(Y < 0):
-        raise ValueError("The dependent variable must be weakly positive.")
+    negative = int(np.count_nonzero(Y < 0))
+    if negative:
+        raise ValueError(
+            "The dependent variable must be weakly positive. Poisson permits zero "
+            f"but found {negative} negative values on the estimation sample. "
+            "Check the dependent variable before refitting."
+        )
 
 
 def _mu_start_pois(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:
@@ -150,6 +174,7 @@ LOGIT = GlmFamily(
     deviance=_logit_deviance,
     mu_start=_mu_start_binary,
     check_y=_check_y_binary,
+    outcome_bounds=(0.0, 1.0),
 )
 
 PROBIT = GlmFamily(
@@ -162,6 +187,7 @@ PROBIT = GlmFamily(
     deviance=_probit_deviance,
     mu_start=_mu_start_binary,
     check_y=_check_y_binary,
+    outcome_bounds=(0.0, 1.0),
 )
 
 GAUSSIAN = GlmFamily(
@@ -174,6 +200,7 @@ GAUSSIAN = GlmFamily(
     deviance=_gaussian_deviance,
     mu_start=_mu_start_mean,
     check_y=_check_y_noop,
+    outcome_bounds=(),
     inference_dist=T_DIST,
 )
 
@@ -187,4 +214,5 @@ POISSON = GlmFamily(
     deviance=_pois_deviance,
     mu_start=_mu_start_pois,
     check_y=_check_y_nonneg,
+    outcome_bounds=(0.0,),
 )

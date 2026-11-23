@@ -105,11 +105,13 @@ class TestMainScript:
         result = self._run("refs/tags/v0.0.0")
         assert result.returncode == 1
         assert "MISMATCH" in result.stdout
+        assert "[package].version" in result.stdout
 
     def test_not_a_tag(self):
         result = self._run("refs/heads/main")
         assert result.returncode == 1
         assert "Not a tag ref" in result.stdout
+        assert "refs/tags/v<version>" in result.stdout
 
 
 class TestDocsRelease:

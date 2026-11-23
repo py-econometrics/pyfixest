@@ -1,47 +1,26 @@
 ---
 name: pr-handoff
-description: Prepare pyfixest commits and draft PRs after verification, before pushing or submitting, or when curating agent-owned history.
+description: Prepare requested pyfixest commits, pushes, and draft PRs, or an explicitly requested history cleanup. Does not authorize publication or require history rewriting.
 ---
 
-# Hand off work for review
+# Hand off work
 
-Read "Branch names", "Stacks", "Commits", "Pull-request opening", and
-[Approval and handoff](../../../docs/developer/git-and-pr-style.md#approval-and-handoff)
-in `docs/developer/git-and-pr-style.md`. This skill applies those policies.
+Read the applicable sections of
+[Git and PR style](../../../docs/developer/git-and-pr-style.md): base, branch
+names, PR sizing, commits, PR opening, and approval. Reuse verification already selected
+by `change-verification`; handoff is not a fresh test cycle.
 
-Input: a verified branch and its immediate parent, with the verification
-report from the `change-verification` skill. Output: a draft PR or stack whose
-body follows the documented style. Required long checks may still be running
-in exact-head CI when the body says so.
+Inspect the final diff and agent-owned history against the intended parent.
+Keep coherent commits. If curation is useful, prepare the concrete rewrite
+described in "Approval and handoff" and use existing authorization or obtain
+approval for that specific rewrite. A new follow-up commit is often sufficient.
 
-## 1. Decide whether history needs curation
+After an approved rewrite, verify the final tree against the recorded tip and
+inspect each layer's diff. For a stack, work bottom-up and verify descendant
+parents before updating them; use the installed stack tool's help rather than
+assuming a command sequence.
 
-Inspect `git log <parent>..HEAD` against "Commits". Keep coherent commits that
-pair behavior with tests. Curate WIP, fixup, accidental, and unrelated
-formatting commits when present; no fixed commit sequence is required.
-If the log already meets the policy, skip to step 4. Otherwise prepare the
-specific rewrite for approval.
-
-## 2. Authorize the rewrite
-
-Prepare the branch inventory and commands required by "Approval and handoff".
-If that specific rewrite is not already approved in the current conversation,
-ask for approval and stop before rewriting. Proceed only when all policy
-preconditions are met.
-
-## 3. Rewrite one layer
-
-Use interactive rebase when practical. Otherwise, after recording the tip and
-verifying the layer base, run `git reset --soft <verified-layer-base>` and
-reconstruct one approved slice at a time. Confirm the final tree matches the
-recorded tip with `git diff --exit-code <tip> HEAD`, then inspect the log and
-diff. For a stack, curate bottom-up and rebase descendants with
-`gh stack rebase --upstack`; after submission use `gh stack push` rather than
-a raw force push.
-
-## 4. Submit and stop
-
-Choose one PR or a stack by "Stacks", inspect every layer's diff and the
-cumulative diff, and write the body per "Pull-request opening" with the
-verification summary. Submit as a draft and stop at handoff. Apply the
-readiness and human-review requirements in "Approval and handoff"; do not merge.
+Write the PR around its final outcome and material evidence, using the
+repository template. Carry out the requested commit/push/PR actions, submit
+agent-authored PRs as drafts, and stop at handoff. If only a local diff was
+requested, leave it local and uncommitted.

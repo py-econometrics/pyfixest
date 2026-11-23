@@ -311,9 +311,8 @@ def test_lpdid_invalid_xfml_type(data):
         )
 
 
-# Test case for unsupported estimator (triggering NotImplementedError)
 def test_event_study_unsupported_estimator(data):
-    with pytest.raises(NotImplementedError, match="Estimator not supported"):
+    with pytest.raises(ValueError, match="got 'unsupported'"):
         event_study(
             data=data,
             yname="dep_var",
