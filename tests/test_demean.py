@@ -1059,7 +1059,9 @@ def test_demean_model_maxiter_convergence_failure(demeaner):
     weights = np.ones(N)
 
     # Should fail with very small maxiter
-    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+    with pytest.raises(
+        ValueError, match=r"Demeaning with .*failed to converge.*fixef_maxiter=1"
+    ):
         DemeanCache().demean_yx(
             Y=Y.to_numpy(),
             X=X.to_numpy(),
@@ -1093,7 +1095,9 @@ def test_estimator_integration_maxiter(estimator, demeaner):
     )
 
     # Should fail with tiny maxiter
-    with pytest.raises(ValueError, match="Demeaning failed after 1 iterations"):
+    with pytest.raises(
+        ValueError, match=r"Demeaning with .*failed to converge.*fixef_maxiter=1"
+    ):
         estimator(
             "y ~ x | fe + fe2",
             data=data,

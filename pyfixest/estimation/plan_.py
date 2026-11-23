@@ -189,7 +189,8 @@ def build_all_splits(
     """
     if not run_split:
         return [None]
-    assert splitvar is not None
+    if splitvar is None:
+        raise RuntimeError("Sample splitting was requested without a split column.")
     all_splits: list[SampleSplit | None] = []
     if run_full:
         all_splits.append(SampleSplit(var=splitvar, value=None))

@@ -60,10 +60,26 @@ class GlmFamily:
 
 def _check_y_binary(Y: np.ndarray) -> None:
     Y_unique = np.unique(Y)
-    if len(Y_unique) != 2:
-        raise ValueError("The dependent variable must have two unique values.")
+    if len(Y_unique) < 2:
+        raise ValueError(
+            "The dependent variable must have two unique values. "
+            "Logit and probit need both 0 and 1 in the estimation sample; "
+            f"found only {Y_unique.tolist()!r}. Rows with missing values, rows "
+            "removed by `subset`, and observations dropped for separation are "
+            "excluded before this check; confirm that both outcomes remain after "
+            "that."
+        )
+    if len(Y_unique) > 2:
+        raise ValueError(
+            "The dependent variable must have two unique values. "
+            f"Found {len(Y_unique)} distinct values ({Y_unique[:5].tolist()!r}). "
+            "Logit and probit need a dependent variable coded 0/1."
+        )
     if np.any(~np.isin(Y_unique, [0, 1])):
-        raise ValueError("The dependent variable must be binary (0 or 1).")
+        raise ValueError(
+            "The dependent variable must be binary (0 or 1). "
+            f"Found {Y_unique.tolist()!r}; use a correctly coded 0/1 indicator."
+        )
 
 
 def _check_y_noop(Y: np.ndarray) -> None:
@@ -134,8 +150,13 @@ def _pois_deviance(y: np.ndarray, mu: np.ndarray, weights: np.ndarray | None) ->
 
 
 def _check_y_nonneg(Y: np.ndarray) -> None:
-    if np.any(Y < 0):
-        raise ValueError("The dependent variable must be weakly positive.")
+    negative = int(np.count_nonzero(Y < 0))
+    if negative:
+        raise ValueError(
+            "The dependent variable must be weakly positive. Poisson permits zero "
+            f"but found {negative} negative values on the estimation sample. "
+            "Check the dependent variable before refitting."
+        )
 
 
 def _mu_start_pois(Y: np.ndarray, weights: np.ndarray | None) -> np.ndarray:

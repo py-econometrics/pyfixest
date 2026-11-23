@@ -255,21 +255,39 @@ class ModelMatrix:
 
     def _process(self, drop_singletons: bool = False) -> None:
         if self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts:
-            raise TypeError("The dependent variable must be numeric.")
+            terms = list(self.model_spec[_ModelMatrixKey.main].lhs.factor_contrasts)
+            raise TypeError(
+                f"The dependent variable must be numeric; got categorical terms {terms!r}. "
+                "Use one numeric column or a transform that produces one."
+            )
         elif (
             self._dependent_column_names is None
             or len(self._dependent_column_names) != 1
         ):
-            raise TypeError("The model must contain exactly one dependent variable.")
+            raise TypeError(
+                "The model must contain exactly one dependent variable. "
+                f"The formula produced columns {self._dependent_column_names!r}. "
+                "Use one numeric dependent expression per model."
+            )
 
         if self._endogenous_column_names is not None:
             if self.model_spec[
                 _ModelMatrixKey.instrumental_variable
             ].lhs.factor_contrasts:
-                raise TypeError("The endogenous variable must be numeric.")
+                terms = list(
+                    self.model_spec[
+                        _ModelMatrixKey.instrumental_variable
+                    ].lhs.factor_contrasts
+                )
+                raise TypeError(
+                    f"The endogenous variable must be numeric; got categorical terms {terms!r}. "
+                    "Use one numeric regressor in the instrument block."
+                )
             elif len(self._endogenous_column_names) != 1:
                 raise TypeError(
-                    "The model must contain exactly one endogenous variable."
+                    "The model must contain exactly one endogenous variable. "
+                    f"The instrument block produced columns {self._endogenous_column_names!r}. "
+                    "Use one numeric endogenous expression."
                 )
 
         # integer and boolean columns are finite by construction
@@ -300,9 +318,17 @@ class ModelMatrix:
 
         if self._offset_column_names is not None:
             if self.model_spec[_ModelMatrixKey.offset].factor_contrasts:
-                raise TypeError("The offset must be numeric.")
+                terms = list(self.model_spec[_ModelMatrixKey.offset].factor_contrasts)
+                raise TypeError(
+                    f"The offset must be numeric; got categorical terms {terms!r}. "
+                    "Pass a numeric column or expression such as offset='log(exposure)'."
+                )
             elif len(self._offset_column_names) != 1:
-                raise ValueError("The offset must evaluate to exactly one column.")
+                raise ValueError(
+                    "The offset must evaluate to exactly one column. "
+                    f"It produced {self._offset_column_names!r}. "
+                    "Pass a column name or a single numeric expression to offset."
+                )
 
         absorbs_intercept = any(
             specification.intercept

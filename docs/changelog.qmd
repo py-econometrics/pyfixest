@@ -37,6 +37,46 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 
 ### Bug Fixes
 
+- Time-series Newey–West inference with a missing `time_id` value raises a
+  `ValueError` naming the column and the number of affected rows. Before, it
+  aborted the Python process. HAC errors name the `time_id` and `panel_id`
+  columns and show the expected `vcov_kwargs`
+  ([#2084](https://github.com/py-econometrics/pyfixest/pull/2084)).
+- A fit with no observations left raises `EmptyEstimationSampleError` with the
+  number of rows each filtering stage removed. Before, it failed with "All
+  variables are collinear"
+  ([#2085](https://github.com/py-econometrics/pyfixest/pull/2085)).
+- Cluster-robust and HAC inference raise a `ValueError` when the
+  small-sample correction meets fewer than two clusters or time periods,
+  instead of `ZeroDivisionError`. Errors for empty, repeated, missing or
+  absent clustering columns name the columns and the fix
+  ([#2086](https://github.com/py-econometrics/pyfixest/pull/2086)).
+- `feglm()` and `fepois()` raise `ValueError` instead of `AssertionError` for
+  `iwls_tol` outside (0, 1) or `iwls_maxiter` below 1, and `quantreg()` raises
+  `ValueError` instead of `IndexError` for an empty `quantile` list ([#2087](https://github.com/py-econometrics/pyfixest/pull/2087)).
+- Error messages for formulas name the rejected input or failed setting and say
+  how to fix it
+  ([#2088](https://github.com/py-econometrics/pyfixest/pull/2088)).
+- Error messages for solver and convergence failures name the failed setting and
+  say how to fix it: demeaner non-convergence reports the backend and
+  tolerances and suggests another backend, IWLS failures name `iwls_maxiter` and
+  `iwls_tol`, an unknown `solver` lists the valid choices, and a singular
+  normal-equation matrix names the solver and the matrix size
+  ([#2089](https://github.com/py-econometrics/pyfixest/pull/2089)).
+- Error messages for post-estimation methods name the rejected input or failed
+  setting and say how to fix it
+  ([#2090](https://github.com/py-econometrics/pyfixest/pull/2090)).
+- Error messages for difference-in-differences inputs name the rejected input
+  and say how to fix it
+  ([#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
+- Error messages for prediction from new data name the fixed-effect or offset
+  columns that `newdata` must contain, `predict()` on a fit without prediction
+  inference points to point predictions, bootstrap and covariance errors link to
+  their API references, and IWLS step-halving failures report the iteration
+  ([#2095](https://github.com/py-econometrics/pyfixest/pull/2095)).
+- `etable()` raises `ValueError` or `TypeError` instead of `AssertionError` for
+  invalid `signif_code`, `type`, `head_order`, `model_heads` or
+  `custom_model_stats` ([#2092](https://github.com/py-econometrics/pyfixest/pull/2092)).
 - A multiple estimation call whose expansions mix IV and non-IV models, such as
   `Y ~ X1 + sw([X2 ~ Z1], Z2)`, raises `FormulaSyntaxError` naming both groups.
   Before, every model was fitted as IV and the call failed with an unrelated

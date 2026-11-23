@@ -338,6 +338,12 @@ def get_ssc(
 
     # G_adj applied with G = N for hetero but not for iid
     if vcov_type in ["CRV", "HAC"] and ssc_options.G_adj:
+        if G < 2:
+            unit = "clusters" if vcov_type == "CRV" else "time periods"
+            raise ValueError(
+                f"The {vcov_type} small-sample correction requires at least two "
+                f"{unit}; got {G}. Check the identifiers on the estimation sample."
+            )
         G_adj_value = G / (G - 1)
 
     df_t = N - df_k if vcov_type in ["iid", "hetero", "HAC-TS"] else G - 1
