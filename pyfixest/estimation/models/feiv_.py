@@ -283,9 +283,9 @@ class Feiv(Feols):
             if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
                 raise IVIdentificationError(
                     "The instruments add no explanatory power for the endogenous "
-                    f"variable '{name}' in the first stage. Check whether the excluded "
-                    "instruments vary after accounting for exogenous regressors and any "
-                    "fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
+                    f"regressor '{name}' in the first stage. Check that the instruments "
+                    "predict this regressor after accounting for exogenous regressors and "
+                    "any fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
                 )
 
     def get_fit(self) -> None:

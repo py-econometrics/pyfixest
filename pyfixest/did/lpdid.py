@@ -94,7 +94,7 @@ class LPDID(DID):
         rel_years = rel_years[np.isfinite(rel_years)]
         if not rel_years.size:
             raise ValueError(
-                f"lpdid() has no usable relative periods for gname={gname!r} "
+                f"lpdid() found no finite event times for gname={gname!r} "
                 f"and never_treated={never_treated!r}. Check that the data contain "
                 f"treated cohorts and that {tname!r} uses the same period scale. "
                 "See https://pyfixest.org/tutorials/difference-in-differences.html"
@@ -106,12 +106,12 @@ class LPDID(DID):
         # check that pre_window is in rel_years
         if pre_window_int not in rel_years:
             raise ValueError(
-                f"pre_window={pre_window_int!r} is absent from the observed relative periods."
+                f"pre_window={pre_window_int!r} must match an observed event time."
             )
         # check that post_window is in rel_years
         if post_window_int not in rel_years:
             raise ValueError(
-                f"post_window={post_window_int!r} is absent from the observed relative periods."
+                f"post_window={post_window_int!r} must match an observed event time."
             )
 
         pre_window_int = np.abs(pre_window_int)
