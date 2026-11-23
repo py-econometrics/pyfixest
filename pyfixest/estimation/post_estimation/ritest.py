@@ -385,7 +385,9 @@ def _plot_ritest_pvalue(
 
         return None
 
-    raise ValueError(f"Unsupported plot backend: {plot_backend}")
+    raise ValueError(
+        f"plot_backend must be 'lets_plot' or 'matplotlib'; got {plot_backend!r}."
+    )
 
 
 def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
@@ -406,15 +408,15 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
         and test_type (two-sided, greater, lower).
     """
     if "=" in resampvar:
-        resampvar_, h0_value_str = resampvar.split("=")
+        resampvar_, h0_value_str = resampvar.split("=", 1)
         test_type = "two-sided"
         hypothesis = f"{resampvar_}={h0_value_str}"
     elif ">" in resampvar:
-        resampvar_, h0_value_str = resampvar.split(">")
+        resampvar_, h0_value_str = resampvar.split(">", 1)
         test_type = "greater"
         hypothesis = f"{resampvar_}>{h0_value_str}"
     elif "<" in resampvar:
-        resampvar_, h0_value_str = resampvar.split("<")
+        resampvar_, h0_value_str = resampvar.split("<", 1)
         test_type = "lower"
         hypothesis = f"{resampvar_}<{h0_value_str}"
     else:
@@ -423,6 +425,17 @@ def _decode_resampvar(resampvar: str) -> tuple[str, float, str, str]:
         hypothesis = f"{resampvar_}=0"
         h0_value_str = "0"
 
-    h0_value_float = float(h0_value_str)
+    try:
+        h0_value_float = float(h0_value_str)
+    except ValueError as exc:
+        raise ValueError(
+            f"ritest() could not read the null value in resampvar={resampvar!r}. "
+            "Pass a coefficient name or a hypothesis such as 'x=0', 'x>0', or 'x<0'."
+        ) from exc
+    if not resampvar_:
+        raise ValueError(
+            f"ritest() needs a coefficient name; got resampvar={resampvar!r}. "
+            "Use a hypothesis such as 'x=0'."
+        )
 
     return resampvar_, h0_value_float, hypothesis, test_type

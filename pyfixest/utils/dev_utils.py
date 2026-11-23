@@ -47,8 +47,15 @@ def _find_stack_level() -> int:
     return outermost_level + 1
 
 
-def _narwhals_to_pandas(data: IntoDataFrame) -> pd.DataFrame:
-    return nw.from_native(data, eager_or_interchange_only=True).to_pandas()
+def _narwhals_to_pandas(data: IntoDataFrame, *, argument: str = "data") -> pd.DataFrame:
+    try:
+        frame = nw.from_native(data, eager_or_interchange_only=True)
+    except TypeError as exc:
+        raise TypeError(
+            f"{argument} must be a supported DataFrame, such as a pandas or Polars "
+            f"DataFrame; got {type(data).__name__}. Convert {argument} before passing it."
+        ) from exc
+    return frame.to_pandas()
 
 
 def _create_rng(seed: int | None = None) -> np.random.Generator:
@@ -165,5 +172,8 @@ def _select_coefnames_and_indices(
 
     indices = [coefnames_all.index(name) for name in selected]
     if not indices:
-        raise ValueError("No coefficients match the keep/drop patterns.")
+        raise ValueError(
+            f"No coefficients match the keep/drop patterns (keep={keep!r}, drop={drop!r}). "
+            "Compare the patterns with fit.coef().index."
+        )
     return selected, indices

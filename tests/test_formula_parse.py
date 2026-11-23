@@ -1115,7 +1115,7 @@ class TestEdgeCases:
         """Algebra must preserve the declared endogenous term in the regression."""
         with pytest.raises(
             FormulaSyntaxError,
-            match=r"removed or transformed the endogenous terms.*X2.*IV specification remains",
+            match=r"removed or transformed the endogenous terms.*X2.*instrument block remains",
         ):
             Formula.parse(f"Y ~ {rhs}")
 

@@ -67,7 +67,9 @@ def _estimation_input_checks(
     separation_check: list[str] | None = None,
 ):
     if not isinstance(fml, str):
-        raise TypeError("fml must be a string")
+        raise TypeError(
+            f"fml must be a formula string such as 'y ~ x'; got {type(fml).__name__}."
+        )
     if not isinstance(data, pd.DataFrame):
         data = _narwhals_to_pandas(data)
     if not isinstance(fixef_rm, str):
@@ -77,10 +79,10 @@ def _estimation_input_checks(
 
     if fixef_rm not in ["none", "singleton"]:
         raise ValueError("fixef_rm must be either 'none' or 'singleton'.")
-    if collin_tol <= 0:
-        raise ValueError("collin_tol must be greater than zero")
-    if collin_tol >= 1:
-        raise ValueError("collin_tol must be less than one")
+    if collin_tol <= 0 or collin_tol >= 1:
+        raise ValueError(
+            f"collin_tol must be greater than 0 and less than 1; got {collin_tol!r}."
+        )
 
     if not (isinstance(weights, str) or weights is None):
         raise ValueError(
@@ -92,10 +94,13 @@ def _estimation_input_checks(
             + _bare_column_hint(weights)
         )
 
-    bool_args = [copy_data, store_data, lean]
-    for arg in bool_args:
-        if not isinstance(arg, bool):
-            raise TypeError(f"The function argument {arg} must be of type bool.")
+    for name, value in (
+        ("copy_data", copy_data),
+        ("store_data", store_data),
+        ("lean", lean),
+    ):
+        if not isinstance(value, bool):
+            raise TypeError(f"{name} must be True or False; got {value!r}.")
 
     if weights_type not in ["aweights", "fweights"]:
         raise ValueError(
@@ -124,20 +129,21 @@ def _estimation_input_checks(
 
     if split is not None and fsplit is not None and split != fsplit:
         raise ValueError(
-            f"""
-                        Arguments split and fsplit are both specified, but not identical.
-                        split is specified as {split}, while fsplit is specified as {fsplit}.
-                        """
+            f"Arguments split and fsplit are both specified, but not identical. "
+            f"Got split={split!r} and fsplit={fsplit!r}. Supply one option or "
+            "use the same column for both."
         )
 
     if isinstance(split, str) and split not in data.columns:
         raise KeyError(
-            f"Column '{split}' not found in data." + _bare_column_hint(split)
+            f"Column '{split}' not found in data. Pass an existing column to split."
+            + _bare_column_hint(split)
         )
 
     if isinstance(fsplit, str) and fsplit not in data.columns:
         raise KeyError(
-            f"Column '{fsplit}' not found in data." + _bare_column_hint(fsplit)
+            f"Column '{fsplit}' not found in data. Pass an existing column to fsplit."
+            + _bare_column_hint(fsplit)
         )
 
     if separation_check is not None:
@@ -151,9 +157,18 @@ def _estimation_input_checks(
                 "The function argument `separation_check` must be a list of strings containing 'fe' and/or 'ir'."
             )
 
-    for column in (*vcov.clustervar, vcov.time_id, vcov.panel_id):
+    for column in vcov.clustervar:
+        if column not in data.columns:
+            raise ValueError(
+                f"The variable {column!r} is not in the data. "
+                "Pass an existing clustering column, for example "
+                f"vcov={{{vcov.vcov_type_detail!r}: '<column>'}}."
+                + _bare_column_hint(column)
+            )
+    for option, column in (("time_id", vcov.time_id), ("panel_id", vcov.panel_id)):
         if column is not None and column not in data.columns:
             raise ValueError(
-                f"The variable '{column}' is not in the data."
+                f"The variable {column!r} is not in the data. "
+                f"Pass an existing column to {option} in vcov_kwargs."
                 + _bare_column_hint(column)
             )

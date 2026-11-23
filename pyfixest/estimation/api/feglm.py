@@ -301,10 +301,11 @@ def feglm(
     for a compact post-estimation workflow.
 
     """
-    _validate_literal_argument(family, FamilyOptions)
+    _validate_literal_argument(family, FamilyOptions, name="family")
     if offset is not None and family != "poisson":
         raise ValueError(
-            "The `offset` argument is only supported with `family='poisson'`."
+            f"The `offset` argument is only supported with `family='poisson'`. "
+            f"Got family={family!r}. Omit offset for this family."
         )
 
     if separation_check is None:
@@ -374,6 +375,10 @@ def feglm(
 
     plan = plan_formulas(config)
     if plan.is_iv:
-        raise NotImplementedError("IV estimation is not supported for GLMs.")
+        raise NotImplementedError(
+            f"feglm(family={family!r}) does not support an instrument block. "
+            "Use feols() if the intended model is linear IV. "
+            "See https://pyfixest.org/tutorials/instrumental-variables.html"
+        )
 
     return run_estimation(config, plan, apply_retention=True)

@@ -4,11 +4,13 @@ from rpy2.robjects.packages import importr
 def _catch_import_issue(name: str, strict: bool) -> bool | None:
     if strict:
         raise ImportError(
-            f"{name} package not found. Make sure the extended R environment is installed."
+            f"R package {name!r} is missing. Install the extended dependencies "
+            "with pixi run -e py312-r Rscript r_test_requirements.R."
         )
     else:
         print(
-            f"Warning: {name} is not installed. Extended R tests will be unable to run."
+            f"Warning: R package {name!r} is missing. To run the extended tests, "
+            "install the dependencies with pixi run -e py312-r Rscript r_test_requirements.R."
         )
         return False
 
