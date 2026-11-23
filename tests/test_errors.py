@@ -13,6 +13,7 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
+    EmptyEstimationSampleError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
     IVIdentificationError,
@@ -1471,6 +1472,28 @@ def test_errors_panelview():
 def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_message):
     with pytest.raises(expected_exception, match=error_message):
         pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
+
+
+@pytest.mark.parametrize(
+    "split_arg, dropped, sample_label",
+    [("split", 2, "'east'"), ("fsplit", 3, "all nonmissing rows")],
+)
+def test_split_fit_error_note(split_arg, dropped, sample_label):
+    data = pd.DataFrame(
+        {
+            "y": [np.nan, np.nan, np.nan, 1.0],
+            "x": [1.0, 2.0, 3.0, 4.0],
+            "group": ["east", "east", "west", None],
+        }
+    )
+
+    with pytest.raises(
+        EmptyEstimationSampleError, match=rf"No observations.*missing values={dropped}"
+    ) as error:
+        pf.feols("y ~ x", data=data, **{split_arg: "group"})
+
+    note = f"While fitting 'y ~ 1 + x' for 'group' = {sample_label}."
+    assert note in getattr(error.value, "__notes__", ())
 
 
 def test_separation_check_validations():
