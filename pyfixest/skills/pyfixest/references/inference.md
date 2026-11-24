@@ -124,7 +124,7 @@ multi.vcov({"CRV1": "group_id"})  # every model at once
 ```python
 fit.confint(alpha=0.10)  # 90% intervals, DataFrame
 fit.tidy(alpha=0.10)  # estimates with 90% intervals
-fit.confint(inference_type="simult", seed=1)  # simultaneous bands; seed makes them reproducible
+fit.confint(inference_type="simult", seed=1)  # seed makes the intervals reproducible
 fit.wald_test()  # joint test that all coefficients are zero (F)
 fit.wald_test(R=np.array([[1.0, -1.0]]), q=np.array([0.0]), distribution="chi2")  # X1 = X2
 ```

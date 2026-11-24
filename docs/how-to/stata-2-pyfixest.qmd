@@ -190,7 +190,7 @@ reg Y X1 X2, vce(hc3)
 * ------------------------------------------------------------------------------
 ```
 
-this is because by default, `pyfixest` uses two small sample size corrections for HC3
+this is because by default, `pyfixest` uses two small-sample corrections for HC3
 robust standard errors, while Stata only uses one of them. You can turn off the
 correction that Stata doesn't use with the `ssc` argument.
 
@@ -199,7 +199,7 @@ fit5 = pf.feols("Y ~ X1 + X2", data=df, vcov="HC3", ssc=pf.ssc(k_adj = False))
 fit5.summary()
 ```
 
-which matches Stata exactly.  You can read all about the small sample size corrections
+which matches Stata exactly.  You can read all about the small-sample corrections
 implememnted by `pyfixest` at
 [Small-sample corrections](../explanation/ssc.qmd).
 
@@ -273,7 +273,7 @@ reg Y X1 X2, vce(cluster f1 f2)
 * Cluster combinations formed by f1 and f2.
 ```
 
-this is because by default, `pyfixest` uses a small sample size correction that adjusts
+this is because by default, `pyfixest` uses a small-sample correction that adjusts
 each clustering dimentsion by whichever dimension has the smallest number of clusters,
 while in Stata the default is to adjust each dimension based on the number of clusters
 in that dimension. You can use the same correction as Stata through the `ssc` argument.

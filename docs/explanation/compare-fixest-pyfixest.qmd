@@ -10,14 +10,14 @@ This vignette compares estimation results from `fixest` with `pyfixest` via the 
 
 ## Intentional formula differences
 
-### Powers in regressor terms {#covariate-powers}
+### Powers on the right-hand side {#covariate-powers}
 
-For regressor terms, PyFixest prioritizes
+On the right-hand side of the main equation, PyFixest prioritizes
 [Formulaic's formula conventions](https://matthew.wardrop.casa/formulaic/latest/guides/grammar/)
 over `fixest`'s arithmetic-power convention. Outside a Python expression such
 as `I(...)`, both `^` and `**` expand interactions up to the specified order:
 
-| Regressor term | PyFixest interpretation |
+| Formula | PyFixest interpretation |
 |---|---|
 | `Y ~ X1 + X1^2` | `Y ~ X1`; no squared term is added |
 | `Y ~ X1 + X1**2` | `Y ~ X1`; no squared term is added |

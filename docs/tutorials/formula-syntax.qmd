@@ -84,7 +84,7 @@ or punctuation before estimation. Fixed-effect transforms such as `I(f1 + f2)` a
 are unsupported; create the transformed column in `data` first.
 
 Dependent-variable, regressor, and instrument names can still be quoted with backticks,
-for example ``"Y ~ `my covariate` | firm"``.
+for example ``"Y ~ `my regressor` | firm"``.
 
 ### Varying slopes
 
@@ -121,7 +121,7 @@ in a square-bracket block on the right-hand side. Fixed effects stay behind the
 `|`, exactly as in a model without instruments:
 
 ```python
-"Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects"
+"Y ~ exogenous_regressors + [endogenous ~ instruments] | fixed_effects"
 ```
 
 Here is a minimal example with fixed effects:

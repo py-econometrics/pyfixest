@@ -2,8 +2,9 @@
 
 Every formula has the shape
 `"dependent ~ regressors + [endogenous ~ instruments] | fixed effects"`. The
-regressor terms follow [formulaic](https://matthew.wardrop.casa/formulaic/)
-grammar plus the pyfixest operators below. Every example runs as written;
+right-hand side of the main equation follows
+[formulaic](https://matthew.wardrop.casa/formulaic/) grammar plus the pyfixest
+operators below. Every example runs as written;
 later blocks reuse `pf` and `data`. Full tutorial:
 https://pyfixest.org/tutorials/formula-syntax.html
 

@@ -224,7 +224,7 @@ Both Poisson and GLM estimators in `pyfixest` support fixed effects using the sa
 - Poisson: `pf.fepois("y ~ x | fe1 + fe2", ...)`
 - GLM families (`logit`, `probit`, `gaussian`): `pf.feglm("y ~ x | fe1 + fe2", family="logit", ...)`
 
-That shared syntax makes it easy to move between linear, Poisson, and binary-response workflows while keeping your FE structure aligned.
+That shared syntax makes it easy to move between linear, Poisson, and binary-response workflows while keeping your fixed effects aligned.
 
 ## Where to Go Next
 

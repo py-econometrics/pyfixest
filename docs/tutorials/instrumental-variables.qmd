@@ -102,7 +102,7 @@ bracketed multistage syntax:
 Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects
 ```
 
-For example, an IV regression with exogenous controls and fixed effects is
+For example, an IV regression with exogenous regressors and fixed effects is
 specified as follows:
 
 ```python
@@ -356,7 +356,7 @@ OLS attenuates the negative wage effect (or may even show a positive coefficient
 
 ## IV Diagnostics in PyFixest
 
-Instruments that are only loosely correlated with the endogenous regressor can lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.
+Weak instruments, which are only loosely correlated with the endogenous regressor, can lead to biased and unreliable IV estimates. PyFixest provides two key diagnostic tools to detect this problem.
 
 ### The First-Stage F-Statistic
 

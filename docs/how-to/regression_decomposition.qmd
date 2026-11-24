@@ -1,5 +1,5 @@
 ---
-title: How much do additional regressors explain?
+title: How much do Covariates Matter?
 aliases:
   - /regression_decomposition.html
 jupyter: python3
@@ -94,7 +94,7 @@ To help us with this problem, Gelbach (2016, JoLE) develops a decomposition proc
 ## Notation and Gelbach's Algorithm
 
 Before we dive into a code example, let us first introduce the notation and Gelbach's algorithm. We are interested in "decomposing" the effect of
-a variable $X_{1} \in \mathbb{R}$ on a dependent variable $Y \in \mathbb{R}$ into a part explained by regressors $X_{2} \in \mathbb{R}^{k_{2}}$ and an unexplained part.
+a focal regressor $X_{1} \in \mathbb{R}$ on a dependent variable $Y \in \mathbb{R}$ into a part explained by additional regressors $X_{2} \in \mathbb{R}^{k_{2}}$ and an unexplained part.
 
 Thus we can specify two regression models:
 
@@ -160,7 +160,7 @@ gb = fit_full.decompose(decomp_var="gender[T.male]", digits=5)
 
 As before, this produces a pretty big output table that reports
 - the **direct effect** of the regression of `log(wage) ~ gender`
-- the **full effect** of gender on log wage using the **full regression** with all control variables
+- the **full effect** of gender on log wage using the **full regression** with all additional regressors
 - the **explained effect** as the difference between the full and direct effect
 - a **single scalar value** for the individual contributions of a regressor to overall **explained effect**
 
