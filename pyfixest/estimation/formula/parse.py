@@ -416,7 +416,7 @@ class Formula:
             )
         if len(self.endogenous) > 1:
             raise FormulaSyntaxError(
-                "Multiple endogenous variables are currently not supported. "
+                "Multiple endogenous regressors are currently not supported. "
                 f"The instrument block contains {[str(term) for term in self.endogenous]}. "
                 "Use a single endogenous regressor in [endogenous ~ instruments]. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"

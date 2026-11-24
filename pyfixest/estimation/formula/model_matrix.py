@@ -280,12 +280,12 @@ class ModelMatrix:
                     ].lhs.factor_contrasts
                 )
                 raise TypeError(
-                    f"The endogenous variable must be numeric; got categorical terms {terms!r}. "
+                    f"The endogenous regressor must be numeric; got categorical terms {terms!r}. "
                     "Use one numeric regressor in the instrument block."
                 )
             elif len(self._endogenous_column_names) != 1:
                 raise TypeError(
-                    "The model must contain exactly one endogenous variable. "
+                    "The model must contain exactly one endogenous regressor. "
                     f"The instrument block produced columns {self._endogenous_column_names!r}. "
                     "Use one numeric endogenous expression."
                 )
