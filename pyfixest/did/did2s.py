@@ -15,6 +15,7 @@ from pyfixest.estimation.formula.parse import Formula
 from pyfixest.estimation.internals.model_state import VarianceCovariance, VcovSpec
 from pyfixest.estimation.models.feols_ import Feols
 from pyfixest.estimation.post_estimation.fixed_effects import build_fixed_effect_dummies
+from pyfixest.utils.dev_utils import _require_columns
 
 
 class DID2S(DID):
@@ -181,15 +182,21 @@ def _did2s_estimate(
     # Gardner's cluster score sum must include every estimation observation.
     # Validate before either stage, rather than silently omitting NA clusters
     # from the covariance while retaining their outcomes in the fit.
-    if yname not in data.columns:
-        raise ValueError(
-            f"did2s() yname={yname!r} must name an existing outcome column."
-        )
-    if cluster not in data.columns:
-        raise ValueError(
-            f"The cluster variable {cluster} is not in the data. "
+    _require_columns(
+        data,
+        [("yname", yname)],
+        message=lambda option, column: (
+            f"did2s() {option}={column!r} must name an existing outcome column."
+        ),
+    )
+    _require_columns(
+        data,
+        [("cluster", cluster)],
+        message=lambda _option, column: (
+            f"The cluster variable {column} is not in the data. "
             "Pass the name of an existing cluster column to did2s()."
-        )
+        ),
+    )
     if data[cluster].isna().any():
         raise NanInClusterVarError(
             f"The cluster variable {cluster} contains missing values. "
@@ -256,11 +263,14 @@ def _did2s_estimate(
         )
 
     if treatment is not None:
-        if treatment not in data.columns:
-            raise ValueError(
-                f"Treatment column {treatment!r} is not in the data. Pass the name "
+        _require_columns(
+            data,
+            [("treatment", treatment)],
+            message=lambda _option, column: (
+                f"Treatment column {column!r} is not in the data. Pass the name "
                 "of an existing Boolean or numeric treatment indicator."
-            )
+            ),
+        )
         treat_u = data[treatment].unique()
         if len(treat_u) != 2:
             raise ValueError(

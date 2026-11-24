@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 
+from pyfixest.utils.dev_utils import _require_columns
+
 
 class DID(ABC):
     """
@@ -50,17 +52,15 @@ class DID(ABC):
             raise TypeError(
                 f"Difference-in-differences requires a pandas DataFrame; got {type(data).__name__}."
             )
-        for option, column in (
-            ("idname", idname),
-            ("tname", tname),
-            ("gname", gname),
-        ):
-            if column not in data.columns:
-                raise ValueError(
-                    f"{option}={column!r} must name an existing column in the panel data. "
-                    "Check the column names before fitting. "
-                    "See https://pyfixest.org/tutorials/difference-in-differences.html"
-                )
+        _require_columns(
+            data,
+            (("idname", idname), ("tname", tname), ("gname", gname)),
+            message=lambda option, column: (
+                f"{option}={column!r} must name an existing column in the panel data. "
+                "Check the column names before fitting. "
+                "See https://pyfixest.org/tutorials/difference-in-differences.html"
+            ),
+        )
 
         self._data = data.copy()
         self._yname = yname

@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
+from pyfixest.utils.dev_utils import _require_columns
+
 if TYPE_CHECKING:
     import matplotlib.pyplot as plt
 
@@ -109,17 +111,17 @@ def panelview(
     ```
     """
     # check if unit, time, treat and outcome are in the data
-    for option, col in (("unit", unit), ("time", time), ("treat", treat)):
-        if col not in data.columns:
-            raise ValueError(
-                f"panelview() {option}={col!r} is absent from data. "
-                f"Pass an existing column name to {option}."
-            )
-    if outcome and outcome not in data.columns:
-        raise ValueError(
-            f"panelview() outcome={outcome!r} is absent from data. "
-            "Pass an existing column name to outcome."
-        )
+    columns = [("unit", unit), ("time", time), ("treat", treat)]
+    if outcome:
+        columns.append(("outcome", outcome))
+    _require_columns(
+        data,
+        columns,
+        message=lambda option, col: (
+            f"panelview() {option}={col!r} is absent from data. "
+            f"Pass an existing column name to {option}."
+        ),
+    )
 
     if collapse_to_cohort and (subsamp or units_to_plot):
         raise ValueError(
