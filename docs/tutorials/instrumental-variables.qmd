@@ -99,7 +99,7 @@ Starting with PyFixest 0.70, write an IV specification with Formulaic's
 bracketed multistage syntax:
 
 ```
-Y ~ exogenous_controls + [endogenous ~ instruments] | fixed_effects
+Y ~ exogenous_regressors + [endogenous ~ instruments] | fixed_effects
 ```
 
 For example, an IV regression with exogenous regressors and fixed effects is

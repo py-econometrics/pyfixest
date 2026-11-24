@@ -155,7 +155,7 @@ Note that no aggregation step is needed and that we get identical point estimate
 Sometimes, throwing away data can be a winning strategy ("garbage in garbage out"), but not in this example: we have high-quality pre-experimental measures of the behavior
 of our users at hand, and we should use it in our favor!
 
-More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as a regressor!
+More specifically, instead of throwing away all of the pre-experimental measures, we could instead have used them as pre-treatment regressors!
 
 This should help reduce the variance of our estimators because pre-experimental behavior is likely to be highly predicitive of what users do after the launch of the experiment. Consequently, including these baselines in our regression models should help us "explain residual errors" and thereby reduce the variance of our
 estimators.
