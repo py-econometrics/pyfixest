@@ -76,7 +76,8 @@ def test_separation_ir_datasets(dataset_path):
     if dataset_path.name == "15.csv":
         assert expected
         with pytest.warns(
-            RuntimeWarning, match=r"iteration limit \(1\) before convergence"
+            RuntimeWarning,
+            match=r"iteration limit \(1\) before convergence.*zeros in the dependent variable",
         ):
             assert _check_for_separation_ir(**arguments, maxiter=1) == set()
     assert _check_for_separation_ir(**arguments) == expected

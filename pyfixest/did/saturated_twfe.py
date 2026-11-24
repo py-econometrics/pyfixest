@@ -89,7 +89,7 @@ class SaturatedEventStudy(DID):
     cluster : str
         The name of the cluster variable.
     xfml : str
-        Additional covariates to include in the model.
+        Additional regressors to include in the model.
     att : bool
         Whether to use the average treatment effect.
     display_warning: bool
@@ -171,7 +171,7 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object. It carries the event-study design
+            The fitted Feols model. It carries the event-study design
             as `event_study_design`.
         """
         self.mod, cohort_event_times = _saturated_event_study(
@@ -195,12 +195,12 @@ class SaturatedEventStudy(DID):
 
     def vcov(self):
         """
-        Get the covariance matrix.
+        Get the variance-covariance matrix.
 
         Returns
         -------
         pd.DataFrame
-            A DataFrame containing the covariance matrix.
+            A DataFrame containing the variance-covariance matrix.
         """
         pass
 
@@ -394,7 +394,7 @@ def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -
     coefs: np.ndarray
         1D numpy array of coefficient estimates,
     vcov: np.ndarray
-        The covariance matrix of coefs (same dimension as len(coefs)),
+        The variance-covariance matrix, with one row and column per coefficient,
 
     Returns
     -------

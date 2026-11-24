@@ -49,12 +49,12 @@ def fepois(
     Parameters
     ----------
     fml : str
-        A two-sided formula string using fixest formula syntax.
+        A two-sided formula using fixest formula syntax.
         Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed
         effects.
         Special syntax includes:
-        - Stepwise regressions (sw, sw0)
-        - Cumulative stepwise regression (csw, csw0)
+        - Stepwise operators (sw, sw0)
+        - Cumulative stepwise operators (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
         - Interacted fixed effects (fe1:fe2)
@@ -65,7 +65,7 @@ def fepois(
         A pandas or polars dataframe containing the variables in the formula.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
+        Variance estimator. Options include "iid",
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
@@ -97,13 +97,11 @@ def fepois(
         differs across observations, e.g. `offset="log(population)"`.
 
     ssc : str
-        A ssc object specifying the small sample correction for inference.
+        The small-sample correction for inference, created with `ssc()`.
 
     fixef_rm : FixedRmOptions
-        Specifies whether to drop singleton fixed effects.
-        Can be equal to "singletons" (default) or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
-        estimates but it will impact standard errors.
+        Use "singleton" (default) to drop rows in singleton levels or "none"
+        to retain them. This can affect standard errors.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -146,12 +144,10 @@ def fepois(
         a column with interacted fixed effects in the data set.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Whether the fitted model retains the data, by default True. Set to
+        False to save memory. Accessing `fit.data` or calling a post-estimation
+        operation that needs the data, such as `predict()` or `vcov()`, then
+        raises `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the

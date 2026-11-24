@@ -48,7 +48,7 @@ def event_study(
         With ``estimator="did2s"``, inference is fixed at estimation time, and
         post-estimation ``vcov()`` updates are rejected.
     xfml : str
-        The formula for the covariates.
+        The formula for the regressors.
     estimator : str
         The estimator to use. Options are "did2s", "twfe", and "saturated".
     att : bool, optional
@@ -59,7 +59,7 @@ def event_study(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        A fitted model of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
         With `estimator = "saturated"`, the fit additionally carries its
         [EventStudyDesign](/reference/did.saturated_twfe.EventStudyDesign.qmd) as
         `event_study_design` and provides the `aggregate()`, `iplot_aggregate()`,
@@ -234,7 +234,7 @@ def did2s(
     Returns
     -------
     object
-        A fitted model object of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
+        A fitted model of class [Feols](/reference/estimation.models.feols_.Feols.qmd).
 
     Examples
     --------
@@ -366,7 +366,7 @@ def lpdid(
         If True, estimates the pooled average treatment effect on the treated (ATT).
         Default is True.
     xfml : str, optional
-        Formula for the covariates. Not yet supported.
+        Formula for the regressors. Not yet supported.
 
     Returns
     -------

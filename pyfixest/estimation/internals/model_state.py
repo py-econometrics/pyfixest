@@ -3,7 +3,7 @@
 Frozen dataclasses prevent field rebinding, not mutation of contained NumPy
 arrays. Mark shared arrays read-only where ownership requires it, and copy only
 at ownership boundaries. A published field keeps its type and domain for the
-fit's lifetime: solver scratch never replaces within data, and observation
+fit's lifetime: solver scratch never replaces demeaned data, and observation
 weights stay unchanged after preparation, with working weights held separately.
 """
 
@@ -121,7 +121,7 @@ class EstimationOptions:
 
     @property
     def fixef_tol(self) -> float:
-        """Stopping tolerance of the demeaning algorithm.
+        """Stopping tolerance of the demeaner.
 
         LSMR takes two tolerances; the backends that expose only one collapse
         them to their maximum, as `LsmrDemeaner` documents.
@@ -139,7 +139,7 @@ class EstimationOptions:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmEstimationOptions(EstimationOptions):
-    """Estimation options of a GLM fit, including the IRLS options.
+    """Estimation options of a GLM fit, including the IWLS options.
 
     Published as ``fit.options`` by `feglm()` and `fepois()` fits. The family
     itself is not an option and is not carried here.
@@ -147,9 +147,9 @@ class GlmEstimationOptions(EstimationOptions):
     Parameters
     ----------
     maxiter : int
-        Maximum number of IRLS iterations.
+        Maximum number of IWLS iterations.
     tol : float
-        Convergence tolerance of the IRLS iteration.
+        Convergence tolerance of the IWLS iteration.
     separation_check : list[str] or None
         Separation-detection methods run before estimation, or ``None`` when
         the check was skipped.
@@ -233,7 +233,7 @@ class ModelDescription:
     """What a fitted model estimates: its formula, estimator, and design names.
 
     Every fitted model publishes one value as ``fit.model``. The formula-time
-    fields are known when the model object is built. The matrix-time fields
+    fields are known when estimation starts. The matrix-time fields
     (`depvar`, `fixed_effects`, `interacted_covariates`, and `model_spec`) are
     only known once the model matrix exists, and are empty (``""``, ``()``,
     and ``None``) until the description is republished with them. The value
@@ -474,7 +474,7 @@ class FixedEffectCounts:
         Whether each fixed effect has level-specific intercepts. Slope-only
         effects such as `f1[[z]]` have none.
     n_slopes_by_fe : tuple[int, ...]
-        Number of varying-slope covariates of each fixed effect; `f1[z1, z2]`
+        Number of varying-slope variables of each fixed effect; `f1[z1, z2]`
         has two.
 
     Examples
@@ -539,7 +539,7 @@ class FixedEffectCounts:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CollinearityCheck:
-    """Outcome of one rank check that removes collinear design columns.
+    """Result of one rank check that removes collinear design columns.
 
     Parameters
     ----------
@@ -617,9 +617,9 @@ class WithinLinearData:
 class WithinIvData(WithinLinearData):
     """Response, regressors, and instruments after demeaning by the fixed effects.
 
-    ``design`` is the full structural regressor matrix, including the
-    endogenous regressors. ``instruments`` is the full instrument matrix,
-    including exogenous regressors that instrument themselves.
+    ``design`` is the design matrix, including the endogenous regressors.
+    ``instruments`` is the instrument matrix, which includes the exogenous
+    regressors.
     Every array is demeaned using the observation weights when supplied, but
     is not multiplied by their square roots. Without fixed effects, the
     arrays retain their original values.
@@ -653,9 +653,9 @@ class WithinIvData(WithinLinearData):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class GlmWorkingState:
-    """Final GLM IRLS state in within scale.
+    """Final GLM IWLS state in within scale.
 
-    ``working_weights`` are the IRLS weights of the last iteration,
+    ``working_weights`` are the IWLS weights of the last iteration,
     ``W_i = w_i / (g'(mu_i)^2 V(mu_i))``, where ``w_i`` is the user-supplied
     observation weight (one when unweighted). They therefore already contain
     the observation weights, which live separately and unchanged in
@@ -671,7 +671,7 @@ class GlmWorkingState:
         Demeaned working regressors after removing collinear columns,
         shape (n_rows, n_coefficients).
     working_weights : NDArray[np.float64]
-        Final IRLS weights including observation weights, shape (n_rows,).
+        Final IWLS weights including observation weights, shape (n_rows,).
     eta : NDArray[np.float64]
         Linear predictor including any offset, shape (n_rows,).
     mu : NDArray[np.float64]
@@ -729,7 +729,7 @@ class FittedValues:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SandwichComponents:
-    """Scores, Hessian, and bread of a fitted model's sandwich covariance.
+    """Components used to compute a sandwich variance-covariance matrix.
 
 
     Parameters
@@ -759,7 +759,7 @@ class SandwichComponents:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VcovSpec:
-    """The requested covariance estimator, parsed from the ``vcov`` argument.
+    """The requested variance estimator, parsed from the ``vcov`` argument.
 
     Parameters
     ----------
@@ -930,7 +930,7 @@ class VarianceCovariance:
     Parameters
     ----------
     vcov : NDArray[np.float64]
-        Small-sample-adjusted covariance matrix, shape (n_coefficients,
+        Small-sample-adjusted variance-covariance matrix, shape (n_coefficients,
         n_coefficients).
     meat : NDArray[np.float64] or None
         Adjusted meat of the sandwich, shape (n_coefficients,
@@ -939,7 +939,7 @@ class VarianceCovariance:
         meats enter with their signs and adjustment factors. ``None`` where
         no sandwich exists: ``"iid"``, ``"CRV3"``, and quantile regression.
     ssc : NDArray[np.float64]
-        Small-sample adjustment factors. Length one, or one entry per cluster
+        Adjustment factors. Length one, or one entry per cluster
         combination for CRV inference: ``2**n_clusters - 1`` entries.
     df_k : int
         Number of parameters counted by the ``k_adj`` adjustment.
@@ -985,9 +985,9 @@ class FirstStageDiagnostics:
     Parameters
     ----------
     f_stat : float
-        Wald F statistic of the joint null that every excluded instrument has
+        Wald F statistic of the joint null that every instrument has
         a zero first-stage coefficient. It inherits the first stage's
-        covariance estimator, so it is heteroskedasticity- or cluster-robust
+        variance estimator, so it is heteroskedasticity- or cluster-robust
         whenever the second stage is.
     p_value : float
         P-value of `f_stat`.
@@ -1017,8 +1017,8 @@ class FirstStage:
     """First-stage regression retained by a fitted 2SLS model.
 
     The first stage regresses the endogenous regressor on the exogenous
-    regressors and the excluded instruments, on the second stage's retained
-    rows and with its fixed effects, weights, covariance estimator, and
+    regressors and the instruments, on the second stage's retained
+    rows and with its fixed effects, weights, variance estimator, and
     small-sample correction.
 
     Parameters
@@ -1033,7 +1033,7 @@ class FirstStage:
         The fitted first-stage model. It follows the second stage's
         `store_data` and `lean` policy, so it drops the same state.
     instruments : tuple[str, ...]
-        Names of the excluded instruments, in first-stage design order.
+        Names of the instruments, in first-stage design order.
     diagnostics : FirstStageDiagnostics
         Instrument-strength statistics of that first stage.
 
@@ -1065,7 +1065,7 @@ class WaldTest:
 
     Mirrors the return value of R `fixest`'s `wald()`: `stat` is the statistic
     of the reference distribution actually used, `df1` and `df2` are its
-    degrees of freedom, and `vcov_type` names the covariance estimator the
+    degrees of freedom, and `vcov_type` names the variance estimator the
     quadratic form was built with.
 
     Parameters
@@ -1086,7 +1086,7 @@ class WaldTest:
         every coefficient is zero; any other restriction falls back to
         ``"chi2"``.
     vcov_type : str
-        Covariance estimator the test was computed with, as
+        Variance estimator the test was computed with, as
         `VarianceCovariance.vcov_type_detail`.
     wald_statistic : float
         Wald quadratic form W = (R @ beta - q)' (R V R')^-1 (R @ beta - q).
@@ -1175,8 +1175,8 @@ class Capabilities:
         ``confint(inference_type="savi")``, safe anytime-valid inference, are
         available. Only ``feols()`` fits without instruments support it;
         ``did2s()`` and ``event_study()`` fits do not. SAVI additionally
-        requires no weights, no fixed effects, and an iid or
-        heteroskedasticity-robust covariance.
+        requires unweighted estimation, a model without fixed effects, and an
+        iid or heteroskedasticity-robust variance estimator.
 
     Examples
     --------
@@ -1253,7 +1253,7 @@ class CoefficientTable:
     estimate : NDArray[np.float64]
         Coefficient estimates, shape (n_coefficients,).
     se : NDArray[np.float64]
-        Standard errors, the square root of the covariance diagonal.
+        Square roots of the diagonal entries in the variance-covariance matrix.
     tstat : NDArray[np.float64]
         ``estimate / se``.
     pvalue : NDArray[np.float64]

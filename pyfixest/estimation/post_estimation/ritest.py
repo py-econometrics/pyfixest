@@ -61,7 +61,7 @@ def _get_ritest_stats_slow(
         The number of repetitions.
     fit_fn : Callable[..., Any]
         Refits the model on each resampled data set with the fitted model's
-        estimation options and the covariance estimator of the test statistic,
+        estimation options and the variance estimator of the test statistic,
         such as `refit` with the model and `vcov` bound. It is called with
         the keyword argument `data` only, reusing the fitted parsed formula.
     rng : np.random.Generator

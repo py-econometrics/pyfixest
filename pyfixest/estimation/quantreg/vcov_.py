@@ -16,7 +16,7 @@ def _invert_covariance_component(matrix: np.ndarray, *, component: str) -> np.nd
         return np.linalg.inv(matrix)
     except np.linalg.LinAlgError as exc:
         raise np.linalg.LinAlgError(
-            f"Quantile regression could not compute {component} covariance. "
+            f"Quantile regression could not compute the {component} variance-covariance matrix. "
             f"A {matrix.shape[0]} by {matrix.shape[1]} matrix could not be inverted. "
             "Check for redundant regressors or insufficient variation at the fitted quantile."
         ) from exc

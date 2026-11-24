@@ -404,7 +404,7 @@ class Formula:
             )
         if len(self.endogenous) > 1:
             raise FormulaSyntaxError(
-                "Multiple endogenous variables are currently not supported. "
+                "Multiple endogenous regressors are currently not supported. "
                 f"The instrument block contains {[str(term) for term in self.endogenous]}. "
                 "Use a single endogenous regressor in [endogenous ~ instruments]. "
                 "See https://github.com/py-econometrics/pyfixest/issues/791"
@@ -425,7 +425,7 @@ class Formula:
                 "The IV system is underdetermined. "
                 f"Found {len(self.endogenous)} endogenous regressors and "
                 f"{len(self.instruments)} instruments. Supply at least one "
-                "excluded instrument per endogenous regressor."
+                "instrument per endogenous regressor."
             )
         # Redundant instruments are allowed if an excluded instrument remains.
         excluded_instruments = set(self.instruments).difference(
@@ -433,10 +433,9 @@ class Formula:
         )
         if not excluded_instruments:
             raise IVIdentificationError(
-                "The instruments add no explanatory power for the endogenous variable: "
-                f"all instrument terms {[str(term) for term in self.instruments]} "
-                "are also specified as exogenous regressors. Supply an excluded "
-                "instrument with independent first-stage variation. "
+                "The right-hand side of the instrument block contains only exogenous regressors "
+                f"{[str(term) for term in self.instruments]}. "
+                "Supply an instrument with independent first-stage variation. "
                 "See https://pyfixest.org/tutorials/instrumental-variables.html"
             )
 
@@ -530,7 +529,7 @@ class Formula:
 
     @property
     def exogenous(self) -> formulaic.formula.SimpleFormula:
-        """Exogenous aka covariates aka independent variables."""
+        """Terms for the exogenous regressors."""
         exogenous = self._right_hand_side
         if self.is_instrumental_variable:
             # IV blocks add their endogenous terms to the root. Exclude those
@@ -552,7 +551,7 @@ class Formula:
 
     @property
     def endogenous(self) -> formulaic.formula.SimpleFormula:
-        """Endogenous variables of an instrumental variable specification."""
+        """Terms for the endogenous regressor in an IV formula."""
         if not self.is_instrumental_variable:
             raise AttributeError(
                 "Endogenous variables are available only in instrumental variables specifications."
@@ -561,10 +560,10 @@ class Formula:
 
     @property
     def instruments(self) -> formulaic.formula.SimpleFormula:
-        """Instruments of an instrumental variable specification.
+        """Terms for the instruments in an IV formula.
 
         The main formula sets the intercept of both stages, so this excludes
-        the intercept Formulaic adds to every IV block.
+        the intercept Formulaic adds to every instrument block.
         """
         if not self.is_instrumental_variable:
             raise AttributeError(

@@ -78,7 +78,7 @@ def etable(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
         The models to be summarized in the table.
     type : str, optional
         Type of output. Either "df" for pandas DataFrame, "md" for markdown,
@@ -338,7 +338,7 @@ def summary(
     inference_type: InferenceType = "regular",
 ) -> None:
     """
-    Print a summary of estimation results for each estimated model.
+    Print a summary for each fitted model.
 
     For each model, this method prints a header indicating the fixed-effects and the
     dependent variable, followed by a table of coefficient estimates with standard
@@ -347,7 +347,7 @@ def summary(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     digits : int, optional
         The number of decimal places to round the summary statistics to. Default is 3.
     inference_type : {"regular"}, optional

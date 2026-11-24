@@ -189,7 +189,7 @@ class DemeanCache:
             Encoded fixed-effect identifiers, complete effects, or ``None`` for
             no fixed effects. A cache block shares the same effect design.
         weights : NDArray[np.float64] or None
-            Observation weights passed to the within transformation.
+            Observation weights passed to the demeaning.
         na_index : frozenset[int]
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner

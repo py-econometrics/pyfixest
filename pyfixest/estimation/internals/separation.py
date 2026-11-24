@@ -29,8 +29,8 @@ def check_for_separation(
     """
     Check for separation.
 
-    An observation is separated when its outcome sits at a bound that the
-    inverse link attains only as the linear predictor diverges, e.g. zero for
+    An observation is separated when the dependent variable sits at a bound
+    that the inverse link reaches only as the linear predictor diverges, e.g. zero for
     Poisson and zero or one for binary models. For details, see Correia,
     Guimarães and Zylkin (2021), http://arxiv.org/abs/1903.01633.
 
@@ -39,15 +39,15 @@ def check_for_separation(
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
-        Independent variables.
+        Regressors.
     fe : pd.DataFrame
         Codes of the fixed effects that have level intercepts. Slope-only
         effects are excluded, because they cannot diverge to fit a level of
-        outcomes at the bound.
+        dependent-variable values at the bound.
     effects : np.ndarray or list[within.Effect]
         All fixed effects in the form the demeaner consumes.
     outcome_bounds : tuple[float, ...]
-        Outcome values the family's inverse link attains only in the limit.
+        Dependent-variable bounds the family's inverse link reaches only in the limit.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
     collin_tol : float
@@ -115,20 +115,20 @@ def _check_for_separation_fe(
     """
     Check for separation using the "fe" check.
 
-    Drops fixed-effect levels whose retained outcomes all sit at one outcome
-    bound. Dropping a level can leave a level of another fixed effect at a
-    bound, so the check repeats until no level is dropped.
+    Drops fixed-effect levels where the retained dependent-variable values
+    all equal the same bound. Dropping a level can leave a level of another
+    fixed effect at a bound, so the check repeats until no level is dropped.
 
     Parameters
     ----------
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
-        Independent variables.
+        Regressors.
     fe : pd.DataFrame
         Fixed effects.
     outcome_bounds : tuple[float, ...]
-        Outcome values the family's inverse link attains only in the limit.
+        Dependent-variable bounds the family's inverse link reaches only in the limit.
 
     Returns
     -------
@@ -168,25 +168,25 @@ def _check_for_separation_ir(
     Check for separation using the "iterative rectifier" algorithm
     proposed by Correia et al. (2021). For details see http://arxiv.org/abs/1903.01633.
 
-    The rectifier is one-sided: it detects separation at a single outcome
-    bound, so `feglm()` skips it for logit and probit.
+    The rectifier detects separation at only one bound of the dependent
+    variable, so `feglm()` skips it for logit and probit.
 
     The inputs contain the outer model's evaluated columns and retained rows.
-    Auxiliary weighted projections preserve that sample and the absorbed FE
-    span, which includes a constant even without an explicit intercept column.
-    Collinear covariates are selected once after weighted FE absorption.
+    Auxiliary weighted projections preserve the estimation sample and the
+    span of the absorbed fixed effects, including the intercept.
+    Collinear regressors are selected once after weighted demeaning.
 
     Parameters
     ----------
     Y : pd.DataFrame
         Dependent variable.
     X : pd.DataFrame
-        Independent variables.
+        Regressors.
     effects : np.ndarray or list[within.Effect]
         Fixed effects in the form the demeaner consumes.
     outcome_bounds : tuple[float, ...]
-        The single outcome value the family's inverse link attains only in the
-        limit.
+        The dependent-variable bound the family's inverse link reaches only in
+        the limit.
     demeaner : AnyDemeaner
         Demeaner configuration used by the estimated model.
     collin_tol : float
@@ -268,7 +268,7 @@ def _check_for_separation_ir(
         warnings.warn(
             f"The Poisson iterative rectifier (separation_check=['ir']) reached its "
             f"iteration limit ({maxiter}) before convergence. This check removed no rows. "
-            "Inspect regressors that predict zero outcomes and check their scales.",
+            "Inspect regressors that predict zeros in the dependent variable and check their scales.",
             RuntimeWarning,
             stacklevel=_find_stack_level(),
         )

@@ -154,8 +154,8 @@ _Avoid_: exposure (for the offset)
 
 **Collinear regressor**:
 A regressor that is, within a tolerance, a linear combination of other
-regressors in the within data. It is dropped from the design matrix and gets
-no coefficient.
+regressors in the demeaned data. It is dropped from the design matrix and
+gets no coefficient.
 _Avoid_: multicollinear variable
 
 ### Instrumental variables
@@ -203,9 +203,10 @@ What a fixed effect does to its levels, and to the intercept when it has level
 intercepts: they are accounted for by demeaning and not reported as
 coefficients.
 
-**Within data**:
-The dependent variable and regressors after demeaning.
-_Avoid_: demeaned data, transformed data
+**Demeaned data**:
+The dependent variable, the regressors, and in an IV model the instrument
+matrix, after demeaning. A fitted model keeps it in `fit.within_data`.
+_Avoid_: within data (in prose), transformed data
 
 **Demeaner**:
 The solver that performs demeaning, such as the method of alternating

@@ -36,7 +36,10 @@ def within_preconditioner_name(
     for name, config_class in _WITHIN_PRECONDITIONER_CONFIGS.items():
         if isinstance(config, config_class):
             return name
-    raise TypeError(f"Unknown `within` preconditioner configuration: {config!r}.")
+    raise TypeError(
+        f"internal error: unknown `within` preconditioner configuration {config!r}; "
+        "please report this pyfixest bug."
+    )
 
 
 def demean(
@@ -142,7 +145,7 @@ def demean_within(
     flist : numpy.ndarray or list[within.Effect]
         Array of shape (n_samples, n_factors) specifying the fixed effects
         (integer-encoded), or complete effects containing their group codes,
-        intercept flags, and slope covariates.
+        intercept flags, and varying-slope variables.
     weights : numpy.ndarray or None, optional
         Array of shape (n_samples,) specifying observation weights.
     tol : float, optional

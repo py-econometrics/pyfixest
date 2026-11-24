@@ -6,10 +6,10 @@ from pyfixest.core._core_impl import _detect_singletons_rs
 
 def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     """
-    Detect singleton fixed effects in a dataset.
+    Detect singletons in a dataset.
 
     This function iterates over the columns of a 2D numpy array representing
-    fixed effects to identify singleton fixed effects.
+    fixed effects to identify singletons.
     An observation is considered a singleton if it is the only one in its group
     (fixed effect identifier).
 
@@ -24,7 +24,7 @@ def detect_singletons(ids: NDArray[np.integer]) -> NDArray[np.bool_]:
     -------
     numpy.ndarray
         A boolean array of shape (n_samples,), indicating which observations have
-        a singleton fixed effect.
+        a singleton.
 
     Notes
     -----

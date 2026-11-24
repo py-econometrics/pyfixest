@@ -74,35 +74,34 @@ _ROLE_PATHS: Final[Mapping[_ModelMatrixRole, tuple[str, ...]]] = MappingProxyTyp
 
 class ModelMatrix:
     """
-    A wrapper around formulaic.ModelMatrix for the specification of PyFixest models.
+    Filter and organize the model matrix produced by Formulaic by input role.
 
-    This class organizes and processes model matrices for econometric estimation,
-    extracting dependent and independent variables, fixed effects, instrumental
-    variables, and weights. It handles missing data, singleton observations,
-    and ensures proper formatting for estimation procedures.
+    The model matrix contains the dependent variable, regressors, fixed-effect
+    levels and varying-slope variables, instruments, observation weights, and
+    offsets as specified by the formula and estimation options.
 
     Construction filters rows; later filtering goes through `without_rows()`,
     so row identity, dropped-row tracking, and cache keys stay aligned with
-    the sample actually fitted. The retained tables are read-only: within and
+    the estimation sample. The retained tables are read-only: within and
     solver transforms produce separate arrays, and prediction and refits reuse
     the fitted encoding when they need the original design.
 
     Obtain this component from ``fit.model_matrix``. Its properties expose
-    the model frames as pandas DataFrames for inspection and internal
+    each role as a pandas DataFrame for inspection and internal
     calculations. See the
     [formula syntax tutorial](/tutorials/formula-syntax.qmd).
 
     Parameters
     ----------
     model_matrix : formulaic.model_matrix.ModelMatrices
-        Model frames produced by formulaic, containing the response, regressors,
+        Formulaic matrices containing the dependent variable, regressors,
         and any fixed effects, instruments, weights, or offsets.
     drop_rows : frozenset[int]
-        Row positions already removed when constructing the model frames.
+        Row positions already removed when constructing the model matrix.
     drop_singletons : bool, default True
-        Whether to remove singleton fixed-effect groups.
+        Whether to drop rows in singleton levels.
     drop_intercept : bool, default False
-        Whether to remove the structural intercept.
+        Whether to remove the intercept.
     fixed_effect_specifications : tuple[FixedEffectSpecification, ...], default ()
         Parsed fixed effects, which say whether each effect has an intercept
         and which varying slopes it has.
@@ -116,7 +115,7 @@ class ModelMatrix:
     fit.model_matrix.dependent.head()
     ```
 
-    This instance retains the model frames after construction.
+    This instance retains the model matrix after construction.
     Estimator-level row filters such as GLM
     separation call `without_rows`, which returns a filtered copy instead of
     mutating the instance.
@@ -124,18 +123,18 @@ class ModelMatrix:
     Attributes
     ----------
     dependent : pd.DataFrame
-        The dependent variable(s) (left-hand side of the main equation).
+        The dependent variable (left-hand side of the main equation).
     independent : pd.DataFrame
-        The independent variable(s) (right-hand side of the main equation).
+        The regressors of the main equation.
     fixed_effects : pd.DataFrame or None
-        Fixed effects variables, encoded as integers.
+        Fixed-effect levels, encoded as integers.
     effects : list[within.Effect] or None
-        Complete fixed effects with group codes, intercept flags, and slope
-        covariates, or None when no fixed effects are specified.
+        Complete fixed effects with level codes, intercept flags, and varying-slope
+        variables, or None when no fixed effects are specified.
     endogenous : pd.DataFrame or None
-        Endogenous variables in instrumental variable specifications.
+        The endogenous regressor in an IV model.
     instruments : pd.DataFrame or None
-        Instrumental variables for IV estimation.
+        Instruments for the IV model.
     weights : pd.DataFrame or None
         Observation weights for weighted estimation.
     model_spec : Mapping[str, formulaic.ModelSpec]
@@ -280,12 +279,12 @@ class ModelMatrix:
                     ].lhs.factor_contrasts
                 )
                 raise TypeError(
-                    f"The endogenous variable must be numeric; got categorical terms {terms!r}. "
+                    f"The endogenous regressor must be numeric; got categorical terms {terms!r}. "
                     "Use one numeric regressor in the instrument block."
                 )
             elif len(self._endogenous_column_names) != 1:
                 raise TypeError(
-                    "The model must contain exactly one endogenous variable. "
+                    "The model must contain exactly one endogenous regressor. "
                     f"The instrument block produced columns {self._endogenous_column_names!r}. "
                     "Use one numeric endogenous expression."
                 )
@@ -399,12 +398,12 @@ class ModelMatrix:
     @property
     def dependent(self) -> pd.DataFrame:
         """
-        Get the dependent variable(s) from the model.
+        Get the dependent variable from the model.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the dependent variable(s) (left-hand side
+            DataFrame containing the dependent variable (left-hand side
             of the main equation).
         """
         return self._data.loc[:, self._dependent_column_names or []]
@@ -412,26 +411,26 @@ class ModelMatrix:
     @property
     def independent(self) -> pd.DataFrame:
         """
-        Get the independent variable(s) from the model.
+        Get the regressors of the main equation.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame containing the independent variable(s) (right-hand side
-            of the main equation). Intercept columns are excluded when a fixed
-            effect includes group-specific intercepts or `drop_intercept=True`.
+            DataFrame containing the regressors of the main equation.
+            Intercept columns are excluded when a fixed effect has level
+            intercepts or `drop_intercept=True`.
         """
         return self._data.loc[:, self._independent_column_names or []]
 
     @property
     def fixed_effects(self) -> pd.DataFrame | None:
         """
-        Get the fixed effects variables from the model.
+        Get the fixed-effect levels.
 
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the fixed effects variables encoded as integers,
+            DataFrame containing the fixed-effect levels encoded as integers,
             or None if no fixed effects are specified in the model.
         """
         if self._fixed_effects_column_names is None:
@@ -468,10 +467,10 @@ class ModelMatrix:
         Returns
         -------
         list[within.Effect] or None
-            Each effect contains its own integer group codes, intercept flag,
-            and numeric slope covariates for the retained rows. Effects follow
-            the column order of `fixed_effects`. Returns None without fixed
-            effects.
+            Each effect contains its own integer level codes, intercept flag,
+            and numeric varying-slope variables for the retained rows. Effects
+            follow the column order of `fixed_effects`. Returns None without
+            fixed effects.
         """
         if self._fixed_effects_column_names is None:
             return None
@@ -496,14 +495,12 @@ class ModelMatrix:
     @property
     def endogenous(self) -> pd.DataFrame | None:
         """
-        Get the endogenous variable(s) for instrumental variable estimation.
+        Get the endogenous regressor in an IV model.
 
         Returns
         -------
         pd.DataFrame or None
-            DataFrame containing the endogenous variable(s) (left-hand side
-            of the first-stage equation in IV estimation), or None if not
-            using instrumental variables.
+            The endogenous regressor in an IV model, or None for other models.
         """
         if self._endogenous_column_names is None:
             return None
@@ -512,7 +509,7 @@ class ModelMatrix:
     @property
     def instruments(self) -> pd.DataFrame | None:
         """
-        Get the instrumental variable(s) for IV estimation.
+        Get the instruments in an IV model.
 
         Returns
         -------
@@ -627,14 +624,14 @@ def create_model_matrix(
     Create a ModelMatrix from a formula and data.
 
     This function constructs model matrices for econometric estimation by parsing
-    formulas and extracting the necessary components (dependent/independent variables,
-    fixed effects, instruments, weights) from the provided data.
+    the formula and extracting the dependent variable, regressors, fixed effects,
+    instruments, and observation weights from the provided data.
 
     Parameters
     ----------
     formula : Formula
-        A Formula object specifying the model structure, including dependent and
-        independent variables, fixed effects, and instrumental variables.
+        The model formula, including the dependent variable, regressors, any
+        fixed effects, and any instruments.
     data : pd.DataFrame
         The input data containing all variables referenced in the formula.
         The index will be reset during processing.
@@ -647,12 +644,11 @@ def create_model_matrix(
         Rows with missing offset values are dropped together with missing rows
         in the rest of the formula.
     drop_singletons : bool, default=False
-        If True, observations that are singletons in any fixed effect category
-        are dropped from the model.
+        If True, drop rows in singleton levels of any fixed effect.
     drop_intercept : bool, default=False
-        If True, the intercept column is removed from the independent variables
-        and instruments matrices. The intercept is always removed when a fixed
-        effect has level-specific intercepts, regardless of this parameter;
+        If True, remove the intercept column from the design and instrument
+        matrices. The intercept is always removed when a fixed effect has
+        level intercepts, regardless of this option;
         slope-only effects such as `f1[[z]]` keep it.
     ensure_full_rank : bool, default=True
         If True, formulaic will ensure the design matrix is full rank by
