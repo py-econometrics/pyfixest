@@ -13,7 +13,7 @@ The public pyfixest model methods expose these formulas as SAVI e-values,
 sequential p-values, and confidence sequences. They use an asymptotic
 time-uniform approximation. Users must prespecify the tested restriction and
 mixture precision, and ensure that the sequential sampling units satisfy the
-assumptions of the chosen covariance estimator.
+assumptions of the chosen variance estimator.
 """
 
 from __future__ import annotations

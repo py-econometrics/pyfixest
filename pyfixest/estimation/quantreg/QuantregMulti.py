@@ -193,12 +193,12 @@ class QuantregMulti:
             quantreg._publish_fit_statistics()
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
-        "Reject a covariance estimator the quantile regressions cannot compute."
+        "Reject a variance estimator the quantile regressions cannot compute."
         for quantreg in self.all_quantregs.values():
             quantreg._check_vcov_support(spec)
 
     def _vcov_from_spec(self, spec: VcovSpec) -> dict[float, Quantreg]:
-        "Compute the covariance of a parsed `spec` for every quantile."
+        "Compute the variance-covariance matrix for `spec` at every quantile."
         for quantreg in self.all_quantregs.values():
             quantreg._vcov_from_spec(spec)
 

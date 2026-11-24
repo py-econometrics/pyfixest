@@ -43,8 +43,8 @@ class Quantreg(Feols):
 
     Returned by
     [quantreg()](/reference/estimation.api.quantreg.quantreg.qmd). Fits the
-    conditional quantile of the outcome instead of the conditional mean, which
-    allows the effect of a covariate to differ across the outcome distribution.
+    conditional quantile of the dependent variable instead of its conditional
+    mean. The coefficient of a regressor can differ across quantiles.
     Estimated via the interior point algorithm of Portnoy and Koenker (1997),
     [Statistical Science](https://doi.org/10.1214/ss/1030037960).
 

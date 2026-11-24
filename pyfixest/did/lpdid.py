@@ -252,7 +252,7 @@ def _lpdid_estimate(
         or a canonical event study design with all leads and lags.
         Default is True.
     xfml: str
-        Optional formula for the covariates. Not yet supported.
+        Optional formula for the regressors. Not yet supported.
         E.g. "X1 + X2 + X3".
 
     Returns

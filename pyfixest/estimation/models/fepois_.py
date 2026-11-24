@@ -20,7 +20,7 @@ class Fepois(Feglm):
 
     Inherits from the Feglm class. Users should not directly instantiate this class,
     but rather use the [fepois()](/reference/estimation.api.fepois.fepois.qmd) function.
-    IRLS residualization is orchestrated by ``Feglm`` through ``DemeanCache``,
+    IWLS demeaning is orchestrated by ``Feglm`` through ``DemeanCache``,
     reusing preconditioners while projecting with each solve's current weights.
 
     The method implements the algorithm from Stata's `ppmlhdfe` module.
@@ -28,19 +28,20 @@ class Fepois(Feglm):
     Attributes
     ----------
     model_matrix : ModelMatrix
-        Model frames containing the response, regressors, and other model inputs.
+        Model matrix with the dependent variable, regressors, and other model inputs.
     observation_weights : ObservationWeights
         User-scale observation weights.
     working_state : GlmWorkingState
-        Final within-scale IRLS design, response, weights, predictors and residuals.
+        Final IWLS design and working dependent variable after demeaning, plus
+        working weights, predictors, and residuals.
     fitted_values : FittedValues
-        The linear predictor and the response mean of the final IRLS iteration.
+        The linear predictor and the response mean of the final IWLS iteration.
     sandwich : SandwichComponents
-        IRLS scores, the Hessian X' W X with the final working weights, and its inverse.
+        IWLS scores, the Hessian X' W X with the final working weights, and its inverse.
     coefnames : list[str]
         Names of the coefficients in the design matrix X.
     options : GlmEstimationOptions
-        The estimation options the model was built with, including the IRLS
+        The estimation options the model was built with, including the IWLS
         `maxiter` and `tol`, the separation check, and the offset.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or

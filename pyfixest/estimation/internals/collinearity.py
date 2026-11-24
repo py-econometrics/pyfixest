@@ -15,7 +15,7 @@ def drop_multicollinear_variables(
     collin_tol: float,
 ) -> tuple[np.ndarray, CollinearityCheck]:
     """
-    Check for multicollinearity in the design matrices X and Z.
+    Check for collinear regressors and instruments in the design and instrument matrices.
 
     Parameters
     ----------

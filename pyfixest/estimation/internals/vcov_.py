@@ -22,7 +22,7 @@ def vcov_iid_ols(
     N: int | float,
     weights: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Compute IID OLS covariance from response-scale residuals.
+    """Compute the iid OLS variance-covariance matrix from residuals.
 
     ``weights=None`` applies no weights. Otherwise, the residual sum of
     squares is weighted by the observation weights.
@@ -35,7 +35,7 @@ def vcov_iid_ols(
 
 
 def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
-    "IID Variance-Covariance Matrix for GLMs."
+    "Compute the iid variance-covariance matrix for GLMs."
     return bread
 
 

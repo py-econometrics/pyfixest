@@ -42,7 +42,7 @@ class DID2S(DID):
         Datetime variables are currently not accepted. Never treated units
         must have a value of 0.
     xfml : str
-        The formula for the covariates.
+        The formula for the regressors.
     att : str
         Whether to estimate the pooled average treatment effect on the treated
         (ATT) or the canonical event study design with all leads and lags / the
@@ -176,7 +176,7 @@ def _did2s_estimate(
     Returns
     -------
     object
-        A fitted model object of class feols with the two-stage covariance.
+        A fitted Feols model with the DID2S variance-covariance matrix.
     """
     # Gardner's cluster score sum must include every estimation observation.
     # Validate before either stage, rather than silently omitting NA clusters
@@ -341,9 +341,9 @@ def _did2s_vcov(
     cluster: str,
 ):
     """
-    Variance-Covariance matrix for DID2S.
+    Variance-covariance matrix for DID2S.
 
-    Compute a variance covariance matrix for Gardner's 2-stage Difference-in-Differences
+    Compute a variance-covariance matrix for Gardner's 2-stage Difference-in-Differences
     Estimator.
 
     Parameters
@@ -351,9 +351,9 @@ def _did2s_vcov(
     first_stage: Feols
         The fitted first-stage model on not-yet-treated observations.
     second_stage: Feols
-        The fitted second-stage model on the full sample. Its dependent
-        variable contains the first-stage residualized outcome; residuals
-        and observation weights are read from this fit.
+        The fitted model from the second DID2S stage, using first-stage
+        residuals as the dependent variable. The variance estimator uses
+        this fit's residuals and observation weights.
     data: pandas.DataFrame
         The DataFrame containing all variables, aligned with the second-stage fit.
     treatment: str
@@ -363,7 +363,7 @@ def _did2s_vcov(
 
     Returns
     -------
-        A variance covariance matrix.
+        A variance-covariance matrix.
     """
     cluster_col = data[cluster]
     _, clustid = pd.factorize(cluster_col)
@@ -446,7 +446,7 @@ def _did2s_vcov(
 def _did2s_covariance(
     *, fit: Feols, vcov: np.ndarray, G: int, cluster: str
 ) -> VarianceCovariance:
-    """Wrap the GMM cluster covariance of did2s in the fitted-model contract.
+    """Package the cluster-robust GMM variance-covariance matrix for DID2S.
 
     The second-stage fit was estimated with ``vcov="iid"``; its degrees of
     freedom and adjustment factor are kept. The spec records the cluster

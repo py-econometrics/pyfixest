@@ -24,22 +24,22 @@ DemeanFn = Callable[
 
 @dataclass(frozen=True, slots=True)
 class GlmFit:
-    """Result of a GLM IRLS fit on prepared arrays.
+    """Result of a GLM IWLS fit on prepared arrays.
 
     Attributes
     ----------
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     working_state : GlmWorkingState
-        Final within-scale IRLS inputs, weights, fitted values, and residuals.
+        Final within-scale IWLS inputs, weights, fitted values, and residuals.
         Square-root-weighted solver arrays are deliberately not retained.
     sandwich : SandwichComponents
-        IRLS scores W X * e, the Hessian X' W X, and its inverse, with W the
+        IWLS scores W X * e, the Hessian X' W X, and its inverse, with W the
         final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
     converged : bool
-        Whether the IRLS loop converged within ``maxiter`` iterations.
+        Whether the IWLS loop converged within ``maxiter`` iterations.
     n_iter : int
         Number of completed iterations.
     collinearity : CollinearityCheck
@@ -160,7 +160,7 @@ def fit_glm_irls(
         Additive offset on the link scale, shape (N,) or (N, 1). `None`
         (default) is equivalent to a zero offset.
     weights : np.ndarray, optional
-        User-supplied regression weights, shape (N,) or (N, 1). `None`
+        User-supplied observation weights, shape (N,) or (N, 1). `None`
         (default) is equivalent to unit weights.
     solver, maxiter, tol, fixef_tol : see Feglm docs.
     """

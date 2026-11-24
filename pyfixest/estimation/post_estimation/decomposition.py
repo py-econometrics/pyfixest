@@ -105,8 +105,8 @@ class GelbachDecomposition:
 
     Implements the Gelbach (2016) decomposition method to decompose the effect of a
     focal variable into explained and unexplained components. The method
-    compares coefficients from a "short" regression (outcome on treatment) with a
-    "long" regression (outcome on focal variable plus covariates).
+    compares the treatment coefficient across two models. The short model
+    uses treatment alone, and the long model adds the other regressors.
 
     Initial implementation by Apoorva Lal at
     https://gist.github.com/apoorvalal/e7dc9f3e52dcd9d51854b28b3e8a7ba4.
