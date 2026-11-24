@@ -24,22 +24,22 @@ DemeanFn = Callable[
 
 @dataclass(frozen=True, slots=True)
 class GlmFit:
-    """Result of a GLM IRLS fit on prepared arrays.
+    """Result of a GLM IWLS fit on prepared arrays.
 
     Attributes
     ----------
     beta : np.ndarray
         Coefficient estimates, shape (k,).
     working_state : GlmWorkingState
-        Final within-scale IRLS inputs, weights, fitted values, and residuals.
+        Final within-scale IWLS inputs, weights, fitted values, and residuals.
         Square-root-weighted solver arrays are deliberately not retained.
     sandwich : SandwichComponents
-        IRLS scores W X * e, the Hessian X' W X, and its inverse, with W the
+        IWLS scores W X * e, the Hessian X' W X, and its inverse, with W the
         final working weights.
     X : np.ndarray
         The (un-demeaned) design matrix with collinear columns dropped, shape (N, k).
     converged : bool
-        Whether the IRLS loop converged within ``maxiter`` iterations.
+        Whether the IWLS loop converged within ``maxiter`` iterations.
     n_iter : int
         Number of completed iterations.
     collinearity : CollinearityCheck
@@ -89,6 +89,8 @@ def _step_halving(
     tol: float,
     weights: np.ndarray | None,
     step_halving_tol: float = 1e-12,
+    *,
+    iteration: int,
 ) -> tuple[np.ndarray, np.ndarray, float, bool]:
     if deviance_new < deviance:
         return eta_new, mu_new, deviance_new, False
@@ -106,7 +108,7 @@ def _step_halving(
         return eta_new, mu_new, deviance_new, False
 
     raise RuntimeError(
-        "Step-halving failed for IWLS. The new deviance "
+        f"Step-halving failed for IWLS at iteration {iteration}. The new deviance "
         f"({deviance_new:.6g}) did not improve on {deviance:.6g}. "
         "Check for separation, extreme regressor scales, or extreme weights."
     )
@@ -158,7 +160,7 @@ def fit_glm_irls(
         Additive offset on the link scale, shape (N,) or (N, 1). `None`
         (default) is equivalent to a zero offset.
     weights : np.ndarray, optional
-        User-supplied regression weights, shape (N,) or (N, 1). `None`
+        User-supplied observation weights, shape (N,) or (N, 1). `None`
         (default) is equivalent to unit weights.
     solver, maxiter, tol, fixef_tol : see Feglm docs.
     """
@@ -265,6 +267,7 @@ def fit_glm_irls(
                 deviance=deviance,
                 deviance_new=deviance_new,
                 tol=tol,
+                iteration=r + 1,
                 weights=weights,
             )
 

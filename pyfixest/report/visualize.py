@@ -86,7 +86,7 @@ def iplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -274,7 +274,7 @@ def coefplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is used.
     alpha : float
@@ -426,7 +426,7 @@ def qplot(
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     figsize : tuple or None, optional
         The size of the figure. If None, the default size is (10, 6).
     rename_models : dict, optional
@@ -852,7 +852,7 @@ def _get_model_df(
     rename_models: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """
-    Get a tidy model frame as input to the _coefplot function.
+    Prepare a coefficient table for `_coefplot`.
 
     Parameters
     ----------
@@ -873,7 +873,7 @@ def _get_model_df(
     Returns
     -------
     pd.DataFrame
-        A tidy model frame.
+        The coefficient table prepared for plotting.
     """
     if rename_models is None:
         rename_models = {}

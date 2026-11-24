@@ -23,6 +23,17 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
   `pyfixest/skills/pyfixest/SKILL.md`, rewritten for the current API. The
   [Agent Skill](/skills.md) page shows where to find it and its content
   ([#2045](https://github.com/py-econometrics/pyfixest/pull/2045)).
+- [llms.txt](https://pyfixest.org/llms.txt) now groups pages into described
+  sections, links them by absolute URL and tells coding agents to read the agent
+  skill first, followed by the skill's list of common slips
+  ([#2048](https://github.com/py-econometrics/pyfixest/pull/2048)).
+- The agent skill comes with reference files on formula syntax, inference,
+  porting from R `fixest` and migrating to 0.70, which agents open when
+  `SKILL.md` is not enough. The website and `llms.txt` publish the same files
+  ([#2049](https://github.com/py-econometrics/pyfixest/pull/2049)).
+- `help(pyfixest)` and the README now say where to find the documentation,
+  `llms.txt`, the packaged agent skill and the 0.60 migration guide
+  ([#2047](https://github.com/py-econometrics/pyfixest/pull/2047)).
 
 ### Bug Fixes
 
@@ -58,6 +69,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - Error messages for difference-in-differences inputs name the rejected input
   and say how to fix it
   ([#2091](https://github.com/py-econometrics/pyfixest/pull/2091)).
+- Error messages for prediction from new data name the fixed-effect or offset
+  columns that `newdata` must contain, `predict()` on a fit without prediction
+  inference points to point predictions, bootstrap and covariance errors link to
+  their API references, and IWLS step-halving failures report the iteration
+  ([#2095](https://github.com/py-econometrics/pyfixest/pull/2095)).
 - `etable()` raises `ValueError` or `TypeError` instead of `AssertionError` for
   invalid `signif_code`, `type`, `head_order`, `model_heads` or
   `custom_model_stats` ([#2092](https://github.com/py-econometrics/pyfixest/pull/2092)).

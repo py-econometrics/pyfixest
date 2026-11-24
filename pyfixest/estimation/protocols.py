@@ -30,15 +30,15 @@ class FittedModel(Protocol):
         ...
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
-        """Reject a covariance estimator the model cannot compute."""
+        """Reject a variance estimator the model cannot compute."""
         ...
 
     def _vcov_from_spec(self, spec: VcovSpec) -> object:
-        """Compute the covariance matrix of a parsed, supported estimator."""
+        """Compute the variance-covariance matrix of a parsed, supported estimator."""
         ...
 
     def get_inference(self) -> object:
-        """Compute coefficient-level inference from the covariance matrix."""
+        """Compute coefficient-level inference from the variance-covariance matrix."""
         ...
 
     def _finalize_fit(self) -> None:
@@ -46,7 +46,7 @@ class FittedModel(Protocol):
         ...
 
     def _iter_fitted_models(self) -> Iterable[Feols]:
-        """Yield concrete fitted results produced by this pipeline object."""
+        """Yield concrete fitted models produced by this pipeline object."""
         ...
 
 

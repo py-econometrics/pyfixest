@@ -1,0 +1,8 @@
+---
+pagetitle: "Formula syntax reference"
+description: "Every formula operator, including i(), varying slopes, IV and multiple estimation, with runnable examples."
+---
+
+<!-- The agent skill ships this file inside the package; edit it there. -->
+
+{{< include ../../pyfixest/skills/pyfixest/references/formula-syntax.md >}}

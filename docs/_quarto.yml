@@ -21,6 +21,8 @@ project:
     - "!how-to/surrogate-indices-experimental-selection.qmd"
     # Held back for now; delete this line to publish it again.
     - "!tutorials/poisson-glm.qmd"
+  # Replaces the flat page list in llms.txt with a curated, described index.
+  post-render: _llms_txt.py
 
 execute:
   freeze: auto
@@ -50,6 +52,7 @@ metadata-files:
 website:
   title: "PyFixest"
   description: "Fast high-dimensional fixed effects regression in Python, closely mirroring the syntax of the R package fixest."
+  # Writes a .llms.md copy of each page; _llms_txt.py curates llms.txt.
   llms-txt: true
   favicon: "figures/pyfixest-logo.png"
   page-navigation: true
