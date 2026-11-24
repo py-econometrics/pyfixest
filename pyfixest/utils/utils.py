@@ -248,7 +248,6 @@ def ssc(
                 DeprecationWarning,
                 stacklevel=2,
             )
-            # Update parameter values if new name not already provided
             if new_name == "k_adj" and "k_adj" not in kwargs:
                 k_adj = kwargs[old_name]
             elif new_name == "k_fixef" and "k_fixef" not in kwargs:
@@ -322,14 +321,10 @@ def get_ssc(
         if n_fe == 0:
             df_k = k
         elif k_fe_nested == 0:
-            # no nested fe, so just add all fixed effects
             df_k = k + k_fe_adj
         else:
-            # subtract nested fixed effects and add one for each fully nested
-            # subtracted fixed effect back
             df_k = k + k_fe_adj - k_fe_nested + n_fe_fully_nested
     else:
-        # "full": add all fixed effects
         df_k = k + k_fe_adj if n_fe > 0 else k
     df_k += counts.k_slopes
 
@@ -401,17 +396,14 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
         "int64"
     )
 
-    # create the covariates
     X = rng.normal(0, 3, N * 5).reshape((N, 5))
     X[:, 0] = rng.choice(range(3), N, True)
-    # X = pd.DataFrame(X)
     X[:, 2] = rng.choice(list(range(fe_dims[0])), N, True)
     X[:, 3] = rng.choice(list(range(fe_dims[1])), N, True)
     X[:, 4] = rng.choice(list(range(fe_dims[2])), N, True)
 
     X = pd.DataFrame(X)
     X.columns = ["X1", "X2", "f1", "f2", "f3"]
-    # X1, X2, X3 as pd.Categorical
     X["f1"] = X["f1"].astype("category")
     X["f2"] = X["f2"].astype("category")
     X["f3"] = X["f3"].astype("category")
@@ -421,7 +413,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     k = mm.shape[1]
 
-    # create the coefficients
     if beta_type == "1":
         beta = rng.normal(0, 1, k).reshape(k, 1)
     elif beta_type == "2":
@@ -431,7 +422,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("beta_type needs to be '1', '2' or '3'.")
 
-    # create the error term
     if error_type == "1":
         u = rng.normal(0, 1, N).reshape(N, 1)
     elif error_type == "2":
@@ -441,7 +431,6 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
     else:
         raise ValueError("error_type needs to be '1', '2' or '3'.")
 
-    # create the depvar and cluster variable
     if model == "Feols":
         Y = (1 + mm.to_numpy() @ beta + u).flatten()
         Y2 = Y + rng.normal(0, 5, N)
@@ -462,26 +451,21 @@ def get_data(N=1000, seed=1234, beta_type="1", error_type="1", model="Feols"):
 
     df = pd.concat([Y, Y2, X, cluster], axis=1)
 
-    # add some NaN values
     df.loc[0, "Y"] = np.nan
     df.loc[1, "X1"] = np.nan
     df.loc[2, "f1"] = np.nan
 
-    # compute some instruments
     df["Z1"] = df["X1"] + rng.normal(0, 1, N)
     df["Z2"] = df["X2"] + rng.normal(0, 1, N)
 
-    # change all variables in the data frame to float
     for col in df.columns:
         df[col] = df[col].astype("float64")
 
     df[df == "nan"] = np.nan
 
     df["weights"] = rng.uniform(0, 1, N)
-    # df["weights"].iloc[]
 
     if model == "Fepois":
-        # add separation
         idx = np.array([10, 11, 12])
         df.loc[idx[0], "f1"] = np.max(df["f1"]) + 1
         df.loc[idx[1], "f2"] = np.max(df["f2"]) + 1

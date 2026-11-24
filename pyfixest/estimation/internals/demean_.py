@@ -248,7 +248,6 @@ class DemeanCache:
                     column_keys=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
-            # Every requested column is demeaned and cached at this point.
             YX_demeaned = self._select_columns(cached, yx_keys)
 
         # ``yx_keys`` lists the responses first, so they lead the columns.

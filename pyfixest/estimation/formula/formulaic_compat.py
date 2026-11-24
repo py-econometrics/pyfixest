@@ -161,11 +161,8 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
         """Identify the `~` operator used inside `[endogenous ~ instruments]`."""
         return (
             operator.symbol == "~"
-            # A multistage `~` takes two arguments (endogenous ~ exogenous)
             and operator.arity == 2
-            # A multistage `~` only accepts brackets as context
             and operator.accepts_context([Token("[", kind=Token.Kind.CONTEXT)])
-            # A top-level `~` only accepts an empty context `[]`
             and not operator.accepts_context([])
         )
 
@@ -240,7 +237,7 @@ def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[
         for term in formula
         for factor in term.factors
         for variable in factor.required_variables
-        if Variable.Role.CALLABLE not in variable.roles  # ignore transforms
+        if Variable.Role.CALLABLE not in variable.roles
     }
 
 

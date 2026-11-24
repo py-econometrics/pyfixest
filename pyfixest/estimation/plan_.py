@@ -278,7 +278,6 @@ def fit_one(
     if entry.accepts_preconditioner:
         model_kwargs["lookup_preconditioner"] = lookup_preconditioner
     if spec.quantile_process is not None:
-        # the fan-out itself is not an option of any single fit
         model_kwargs["quantile"] = spec.quantile_process.quantiles
         model_kwargs["multi_method"] = spec.quantile_process.multi_method
 

@@ -100,7 +100,6 @@ class Quantreg(Feols):
         anytime_valid_inference=False,
     )
 
-    # Set in get_fit().
     solution: QuantregSolution
 
     def __init__(
@@ -233,7 +232,6 @@ class Quantreg(Feols):
         if maxiter is None:
             maxiter = N
 
-        # compute cholesky once outside of FN loop
         _chol, _ = cho_factor(X.T @ X, lower=True, check_finite=False)
         _chol = np.atleast_2d(_chol)
         _P = solve_triangular(_chol, X.T, lower=True, check_finite=False)
@@ -299,14 +297,12 @@ class Quantreg(Feols):
         has_converged = False
         compute_beta_init = beta_init is None
 
-        # m constant should be set by user
         m = 0.8
         n_init = int(np.ceil((k * N) ** (eta)))
         M = int(np.maximum(N, np.ceil(m * n_init)))
 
         while not has_converged:
             if compute_beta_init:
-                # get initial sample
                 idx_init = rng.choice(N, size=n_init, replace=False)
                 beta_hat_init = self.fit_qreg_fn(
                     X[idx_init, :], Y[idx_init], q=q, tol=tol, maxiter=maxiter
@@ -342,13 +338,11 @@ class Quantreg(Feols):
                     X_sub = np.concatenate([X_sub, X_pos.reshape(1, self._k)], axis=0)
                     Y_sub = np.concatenate([Y_sub, Y_pos.reshape((1, 1))], axis=0)
 
-                # solve the modified problem
                 solution = self.fit_qreg_fn(X=X_sub, Y=Y_sub, q=q)
                 beta_hat = solution.beta
 
                 r = Y.flatten() - X @ beta_hat
 
-                # count wrong predictions and get their indices
                 mis_L = JL & (r > 0)
                 mis_H = JH & (r < 0)
                 n_bad = np.sum(mis_L) + np.sum(mis_H)

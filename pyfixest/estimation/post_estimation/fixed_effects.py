@@ -215,10 +215,8 @@ def build_fixed_effect_dummies(
 
         Preserve original codes while assigning compact positions to observed levels.
         """
-        # Get number of occurrences of each fixed-effect level code in ascending order
         fixed_effect_level_counts = np.bincount(codes)
         observed_codes = np.flatnonzero(fixed_effect_level_counts)
-        # Map each code to its position in the sorted observed-code array.
         code_to_position = np.full(
             fixed_effect_level_counts.shape[0], -1, dtype=np.intp
         )
@@ -249,7 +247,6 @@ def build_fixed_effect_dummies(
     ):
         row_codes = codes[code_column].to_numpy(dtype=np.int64)
         observed_codes, observed_positions = index_observed_codes(row_codes)
-        # Apply normalization for fixed-effect levels
         coefficient_codes, dummy_rows, first_coefficient_position = (
             select_coefficient_levels(
                 observed_codes,

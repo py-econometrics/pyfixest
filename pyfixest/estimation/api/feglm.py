@@ -34,8 +34,6 @@ from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType, _find_stack_level
 from pyfixest.utils.utils import Ssc, capture_context
 
-# Poisson goes through the Fepois model class (a Feglm subclass); the other
-# families dispatch to their dedicated model classes.
 _GLM_METHODS: dict[FamilyOptions, EstimationMethod] = {
     "poisson": "fepois",
     "logit": "feglm-logit",

@@ -84,7 +84,6 @@ def refit(
             fit.options,
             # do not drop singletons again (they are already dropped)
             drop_singletons=False,
-            # reuse the preconditioner
             demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
         )
     else:

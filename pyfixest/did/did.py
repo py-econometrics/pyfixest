@@ -86,7 +86,6 @@ class DID(ABC):
                     "periods such as 2012 or 201201."
                 )
 
-        # create a treatment variable
         self._data["is_treated"] = (
             self._data[self._tname] >= self._data[self._gname]
         ) * (self._data[self._gname] > 0)
