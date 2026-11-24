@@ -532,7 +532,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
     def _drop_multicollinear_within_data(
         self, within_data: WithinLinearData
     ) -> WithinLinearData:
-        """Return within data after the established unweighted rank check."""
+        """Return demeaned data after the established unweighted rank check."""
         design = within_data.design
         if design.shape[1] == 0:
             # Fixed-effects-only model: nothing to check, but the attribute is
@@ -555,7 +555,7 @@ class Feols(ResultAccessorMixin, DeprecatedAttributes):
         return replace(within_data, design=design)
 
     def _set_within_data(self, within_data: WithinLinearData) -> None:
-        """Publish canonical within data after column selection."""
+        """Publish canonical demeaned data after column selection."""
         self.within_data = within_data
         self._X_is_empty = within_data.design.shape[1] == 0
         self._k = within_data.design.shape[1]

@@ -32,7 +32,7 @@ class DemeanedData:
     not change after publication. The frozen dataclass prevents field
     rebinding, and ``values`` is flagged read-only before it is stored, so a
     model writing into a returned slice fails loudly instead of silently
-    corrupting the within data of the models it shares the cache with.
+    corrupting the demeaned data of the models it shares the cache with.
     """
 
     values: NDArray[np.float64]
