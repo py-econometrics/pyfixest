@@ -447,6 +447,47 @@ and full inference for the `0 +` models. Observed with R 4.5.3 and `fixest`
 
 **Status:** Intentional; pending maintainer review
 
+### Fixed-effect row removal (`fixef_rm`)
+
+**pyfixest:** `fixef_rm` accepts `"singleton"` (default) and `"none"` and only
+controls singleton removal; other values, including `"singletons"` and
+`"perfect_fit"`, raise `ValueError`. `feglm()` and `fepois()` handle separation
+through `separation_check`, which defaults to `["fe"]`: it drops fixed-effect
+levels whose outcomes are all 0 (Poisson) or all 0 or all 1 (logit and probit).
+Gaussian fits drop none. `fixef_rm="none"` does not turn this check off.
+
+**`fixest`:** `fixest` 0.14.0 covers both with `fixef.rm`: `"perfect_fit"`
+(default), `"singletons"`, `"infinite_coef"`, or `"none"`. It also accepts
+`"singleton"` as an abbreviation. For `fepois()`, these correspond to the
+pyfixest defaults, `separation_check=[]`, `fixef_rm="none"`, and
+`fixef_rm="none", separation_check=[]`.
+
+The defaults remove the same rows in OLS, Gaussian, logit, and probit fits, but
+not in every Poisson fit. pyfixest removes singletons before checking for
+separation and does not look for them again, so it keeps a singleton with a
+positive outcome that appears only once separated rows are gone. `fixest`
+removes it. Coefficients agree; observation counts and standard errors can
+differ. For example, add the rows `(f, g, y)` = `(100, 100, 0)`, `(100, 0, 0)`,
+and `(0, 100, 5)` to a balanced panel of 8 levels of `f` and 6 levels of `g`
+with positive counts, and fit `y ~ x | f + g`: pyfixest keeps `(0, 100, 5)`.
+
+**Rationale:** Singleton removal applies to OLS and GLMs alike, while separation
+checks apply only to GLMs with bounded outcomes and have their own methods,
+`"fe"` and `"ir"`.
+
+**Tests:**
+`tests/test_vs_fixest.py::test_fe_separation_at_outcome_bounds` compares removed
+rows, coefficients, and covariance with live `fixest` for logit, probit, and
+Poisson defaults;
+`tests/test_varying_slopes_vs_fixest.py::test_varying_slopes_singletons_against_fixest`
+compares default OLS singleton removal with `fixef.rm = "singletons"`. No test
+covers the option correspondence or the Poisson difference; both were observed
+with R 4.5.3 and `fixest` 0.14.0 on 2026-11-25.
+
+**Status:** Option names and the `separation_check` split: intentional, pending
+maintainer review. The Poisson difference has not been investigated or accepted
+as intentional.
+
 ## Adding an entry
 
 Add an entry in the same PR that introduces or formalizes the difference: a
