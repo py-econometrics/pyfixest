@@ -45,6 +45,16 @@ fit4 = pf.feols("Y ~ X1*X2", data=data)
 pf.etable([fit3, fit4])
 ```
 
+Interaction coefficient names preserve the written order of the variables
+(following `formulaic`): `Y ~ X1 + X2:X1` names the interaction `X2:X1`,
+whereas `Y ~ X1 + X1:X2` names it `X1:X2`. Both formulas produce identical
+estimates and standard errors, but because `pf.etable()` and `pf.coefplot()`
+align rows by coefficient name, write interacted variables in a consistent
+order across models when you want them on the same row. Unlike R's `fixest`,
+which orders interaction variables by first appearance in the formula,
+`PyFixest` does not canonicalize interaction names; see
+[Interaction coefficient names](../explanation/compare-fixest-pyfixest.qmd#interaction-coefficient-names).
+
 To create logarithms of a function, just use
 
 ```{python}
