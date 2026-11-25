@@ -80,7 +80,6 @@ def _get_weights(data: pd.DataFrame, weights: str) -> pd.Series:
 
 
 class _MultipleEstimationType(Enum):
-    # See https://lrberge.github.io/fixest/reference/stepwise.html
     sw = "sequential stepwise"
     csw = "cumulative stepwise"
     sw0 = "sequential stepwise with zero step"
@@ -89,7 +88,7 @@ class _MultipleEstimationType(Enum):
 
 
 # Matches an operator call such as `csw(X1, X2)`, also when a space precedes the
-# parenthesis (`csw (X1, X2)`) or the arguments span lines, as fixest allows.
+# parenthesis (`csw (X1, X2)`) or the arguments span lines.
 _MULTIPLE_ESTIMATION_PATTERN = re.compile(
     rf"\b({'|'.join(me.name for me in _MultipleEstimationType)})\b\s*\(.+\)",
     flags=re.DOTALL,
@@ -141,15 +140,13 @@ def _count_formula_tildes(part: str) -> int:
 
 
 def _preprocess_fixest_instrumental_variable(formula: str) -> str:
-    """Convert legacy IV syntax after rejecting misplaced IV blocks.
+    """Convert legacy IV syntax after rejecting misplaced instrument blocks.
 
     ``Y ~ X1 | f1 | X2 ~ Z2`` becomes ``Y ~ X1 + [X2 ~ Z2] | f1``.
-    Bracketed IV blocks belong only in the first formula part.
+    Bracketed instrument blocks belong only in the first formula part.
     """
     main_part, *fixef_iv_parts = _str_split_by_sep(formula, separator="|")
     supported = "Use `Y ~ X1 + [X2 ~ Z1] | f1` or `Y ~ X1 | f1 | X2 ~ Z1`."
-    # Bracketed IV in the first part is already in Formulaic syntax.
-    # Only later parts need legacy-IV conversion or misplaced-IV validation.
     iv_tilde_counts = [_count_formula_tildes(part) for part in fixef_iv_parts]
     if not any(iv_tilde_counts):
         return formula
@@ -177,7 +174,7 @@ def _preprocess_fixest_instrumental_variable(formula: str) -> str:
             "Bracketed IV syntax belongs before `|`, alongside the covariates."
         )
     elif iv_has_empty_side:
-        reason = "Specify endogenous variables before `~` and instruments after it."
+        reason = "Specify endogenous regressors before `~` and instruments after it."
     else:
         reason = None
 

@@ -57,7 +57,7 @@ def refit(
     formula : Formula, optional
         The formula to fit; defaults to the fit's retained parsed formula.
     vcov : VcovSpec
-        The covariance estimator of the refit.
+        The variance estimator of the refit.
     same_sample : bool, optional
         Whether `data` has the rows of the fit's sample, so the refit must
         keep every row. Defaults to False.
@@ -84,7 +84,6 @@ def refit(
             fit.options,
             # do not drop singletons again (they are already dropped)
             drop_singletons=False,
-            # reuse the preconditioner
             demeaner=_with_preconditioner(fit.options.demeaner, fit.preconditioner),
         )
     else:

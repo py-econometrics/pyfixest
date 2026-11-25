@@ -13,6 +13,7 @@ from formulaic.errors import FactorEvaluationError
 
 import pyfixest as pf
 from pyfixest.errors import (
+    EmptyEstimationSampleError,
     FixedEffectEvaluationError,
     FormulaSyntaxError,
     IVIdentificationError,
@@ -231,10 +232,16 @@ def test_error_hc23_fe():
     """
     data = get_data().dropna()
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC2")
 
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y ~ X1 | f2", data=data, vcov="HC3")
 
 
@@ -259,17 +266,17 @@ def test_depvar_numeric():
         (
             "Y ~ X1 + [X2 ~ Z1]",
             True,
-            "endogenous variable must be numeric",
+            "endogenous regressor must be numeric",
         ),
         (
             "Y ~ X1 + [two_columns(X2) ~ Z1]",
             False,
-            "exactly one endogenous variable",
+            "exactly one endogenous regressor",
         ),
         (
             "Y ~ X1 + [poly(X1, 2) ~ Z1]",
             False,
-            "exactly one endogenous variable",
+            "exactly one endogenous regressor",
         ),
     ],
 )
@@ -295,7 +302,10 @@ def test_dependent_and_endogenous_model_matrix_errors(
         ("Y ~ X1.fillna(0) + [X1 ~ Z1]", "fully explained"),
         ("Y ~ X1 + [center(X1) ~ Z1]", "fully explained"),
         ("Y ~ X1 + [center(X1) ~ Z1] | f1", "fully explained"),
-        ("Y ~ center(X1) + [X2 ~ X1]", "no explanatory power"),
+        (
+            "Y ~ center(X1) + [X2 ~ X1]",
+            "no explanatory power for the endogenous regressor",
+        ),
     ],
 )
 def test_iv_rejects_invalid_transformed_specifications(fml, message):
@@ -314,9 +324,11 @@ def test_iv_rejects_invalid_transformed_specifications(fml, message):
         "Y ~ center(X1) + [X2 ~ center(X1)] | f1",
     ],
 )
-def test_iv_rejects_no_excluded_instrument_before_materialization(fml):
+def test_iv_requires_instrument_before_materialization(fml):
     """Missing formula columns must not mask the instrument specification error."""
-    with pytest.raises(IVIdentificationError, match="all instrument terms"):
+    with pytest.raises(
+        IVIdentificationError, match="contains only exogenous regressors"
+    ):
         feols(fml=fml, data=pd.DataFrame({"unused": [1.0, 2.0]}))
 
 
@@ -345,13 +357,16 @@ def test_iv_rejects_implicit_endogenous_interactions(rhs):
 @pytest.mark.parametrize("block", ["0", "1", "-1", "0 + 1", "1 - 1"])
 @pytest.mark.parametrize("main", ["X2", "0 + X2", "X2 - 1"])
 def test_iv_block_of_intercepts_has_no_instrument(main, block):
-    with pytest.raises(UnderDeterminedIVError):
+    with pytest.raises(
+        UnderDeterminedIVError,
+        match="Supply at least one instrument per endogenous regressor",
+    ):
         feols(f"Y ~ {main} + [X1 ~ {block}]", data=get_data())
 
 
 @pytest.mark.parametrize("endogenous", ["1 + X1", "X1 + 1"])
 def test_iv_endogenous_side_rejects_intercept(endogenous):
-    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous variables"):
+    with pytest.raises(FormulaSyntaxError, match="Multiple endogenous regressors"):
         feols(f"Y ~ X2 + [{endogenous} ~ Z1]", data=get_data())
 
 
@@ -379,9 +394,15 @@ def test_iv_errors():
     with pytest.raises(NotImplementedError):
         feols(fml="Y ~ 1 | Z1 ~ X1 ", data=data).wildboottest(param="Z1", reps=999)
     # unsupported HC vcov
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC2", data=data)
-    with pytest.raises(VcovTypeNotSupportedError):
+    with pytest.raises(
+        VcovTypeNotSupportedError,
+        match=r"HC2 and HC3 variance estimators.*variance estimator such as HC1",
+    ):
         feols(fml="Y  ~ 1 | Z1 ~ X1", vcov="HC3", data=data)
 
 
@@ -434,9 +455,9 @@ def test_iv_identification_errors(
             data["C_small"] = 1e-9 * data.D
 
     if case in ("perfect-control", "perfect-instrument"):
-        message = "variable 'D' is fully explained"
+        message = "regressor 'D' is fully explained"
     else:
-        message = "no explanatory power for the endogenous variable 'D'"
+        message = "no explanatory power for the endogenous regressor 'D'"
 
     with pytest.raises(IVIdentificationError, match=message):
         pf.feols(f"Y ~ {covariates} + [D ~ Z]{fe_suffix}", data=data, weights=weights)
@@ -507,8 +528,8 @@ def test_iv_constant_instrument_without_intercept(iv_identification_data):
         ("Y ~ X1 | f1 | X2 ~ Z1 + [X3 ~ Z2]", "exactly one formula-level"),
         ("Y ~ X1 | f1 | X2 ~ Z1 ~ Z2", "exactly one formula-level"),
         ("Y ~ X1 | f1 | f2 | X2 ~ Z1", "Legacy IV syntax allows only"),
-        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous variables"),
-        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous variables"),
+        ("Y ~ X1 | f1 | ~ Z1", "Specify endogenous regressors"),
+        ("Y ~ X1 | f1 | X2 ~", "Specify endogenous regressors"),
     ],
 )
 def test_misplaced_iv_syntax_errors(estimator, fml, reason):
@@ -755,6 +776,11 @@ def test_wildboottest_errors():
     fit = feols("Y ~ X1", data=data)
     with pytest.raises(ValueError):
         fit.wildboottest(param="X2", reps=999, seed=213)
+    with pytest.raises(
+        ValueError,
+        match="cluster='absent' is absent from the model's estimation sample",
+    ):
+        fit.wildboottest(param="X1", cluster="absent", reps=2)
 
 
 def test_summary_errors():
@@ -853,7 +879,9 @@ def test_errors_ccv():
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929)
 
     # error when cluster variable not in data.frame
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="cluster='e8' is absent from the model's estimation sample"
+    ):
         fit.ccv(treatment="D", pk=0.05, qk=0.5, n_splits=10, seed=929, cluster="e8")
 
     # error when two-way clustering
@@ -1102,7 +1130,7 @@ def test_ritest_error(data):
         fit.ritest(resampvar="X2", reps=1000)
 
     with pytest.raises(
-        ValueError, match="cluster='CLUST' is absent from the estimation data"
+        ValueError, match="cluster='CLUST' is absent from the model's estimation sample"
     ):
         fit.ritest(resampvar="X1", reps=1000, cluster="CLUST")
 
@@ -1458,6 +1486,28 @@ def test_split_fsplit_errors(data, split, fsplit, expected_exception, error_mess
         pf.feols("Y~X1", data=data, split=split, fsplit=fsplit)
 
 
+@pytest.mark.parametrize(
+    "split_arg, dropped, sample_label",
+    [("split", 2, "'east'"), ("fsplit", 3, "all nonmissing rows")],
+)
+def test_split_fit_error_note(split_arg, dropped, sample_label):
+    data = pd.DataFrame(
+        {
+            "y": [np.nan, np.nan, np.nan, 1.0],
+            "x": [1.0, 2.0, 3.0, 4.0],
+            "group": ["east", "east", "west", None],
+        }
+    )
+
+    with pytest.raises(
+        EmptyEstimationSampleError, match=rf"No observations.*missing values={dropped}"
+    ) as error:
+        pf.feols("y ~ x", data=data, **{split_arg: "group"})
+
+    note = f"While fitting 'y ~ 1 + x' for 'group' = {sample_label}."
+    assert note in getattr(error.value, "__notes__", ())
+
+
 def test_separation_check_validations():
     data = pd.DataFrame(
         {
@@ -1639,7 +1689,13 @@ def test_glm_errors():
         pf.feglm("Y ~ X1", data=data, family="logit")
 
     data_one_outcome = pf.get_data().assign(Y=1.0)
-    with pytest.raises(ValueError, match=r"found only \[1\.0\].*`subset`"):
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"found only \[1\.0\].*`subset`.*"
+            r"the dependent variable contains both 0 and 1 after filtering"
+        ),
+    ):
         pf.feglm("Y ~ X1", data=data_one_outcome, family="logit")
 
     data["Y"] = np.where(data["Y"] > 0, 2, 0)
@@ -1861,7 +1917,10 @@ def test_one_cluster_is_reported_on_estimation_sample():
 def test_vcov_names_missing_and_unretained_clusters():
     data = pf.get_data(N=50)
     fit = pf.feols("Y ~ X1", data)
-    with pytest.raises(ValueError, match=r"\['absent'\].*refit"):
+    with pytest.raises(
+        ValueError,
+        match=r"\['absent'\] are absent from the model's estimation sample.*refit",
+    ):
         fit.vcov({"CRV1": "absent"})
     data.loc[0, "f1"] = np.nan
     with pytest.raises(NanInClusterVarError, match=r"missing values.*'f1' \(1\)"):
@@ -1991,7 +2050,10 @@ def test_time_series_nw_rejects_missing_time():
 
 def test_hac_names_missing_post_estimation_column():
     fit = pf.feols("Y ~ X1", data=pf.get_data())
-    with pytest.raises(ValueError, match=r"vcov='NW' uses time_id='year'.*refit"):
+    with pytest.raises(
+        ValueError,
+        match=r"vcov='NW' uses time_id='year'.*model's estimation sample.*refit",
+    ):
         fit.vcov("NW", vcov_kwargs={"time_id": "year", "lag": 1})
 
 
@@ -2389,6 +2451,21 @@ def test_quantreg_nid_reports_bandwidth_outside_unit_interval():
         pf.quantreg("Y ~ X1", data=data, quantile=0.99)
 
 
+def test_quantreg_nid_reports_singular_covariance():
+    # Both quantiles used to estimate the covariance have the same fitted value.
+    data = pd.DataFrame({"y": np.zeros(40)})
+    with pytest.raises(
+        np.linalg.LinAlgError,
+        match=(
+            r"could not compute the nid variance-covariance matrix\. "
+            r"A 1 by 1 matrix could not be inverted"
+        ),
+    ) as exc_info:
+        pf.quantreg("y ~ 1", data=data, method="fn", vcov="nid")
+
+    assert isinstance(exc_info.value.__cause__, np.linalg.LinAlgError)
+
+
 def test_wald_rejects_nonfinite_restrictions():
     fit = pf.feols("Y ~ X1", pf.get_data(N=50))
     with pytest.raises(ValueError, match=r"R must contain finite restriction weights"):
@@ -2415,8 +2492,26 @@ def test_event_study_names_missing_time_column():
 
 def test_lpdid_explains_absence_of_treated_cohorts():
     data = pd.DataFrame({"y": [1, 2], "unit": [1, 1], "year": [1, 2], "cohort": [0, 0]})
-    with pytest.raises(ValueError, match=r"lpdid\(\) has no usable relative periods"):
+    with pytest.raises(ValueError, match=r"lpdid\(\) found no finite event times"):
         pf.lpdid(data, yname="y", idname="unit", tname="year", gname="cohort")
+
+
+@pytest.mark.parametrize(("window", "value"), [("pre_window", -2), ("post_window", 2)])
+def test_lpdid_rejects_unobserved_event_time_windows(window, value):
+    data = pd.DataFrame(
+        {"y": [1, 2, 4], "unit": [1, 1, 1], "year": [1, 2, 3], "cohort": [2, 2, 2]}
+    )
+    with pytest.raises(
+        ValueError, match=f"{window}={value} must match an observed event time"
+    ):
+        pf.lpdid(
+            data,
+            yname="y",
+            idname="unit",
+            tname="year",
+            gname="cohort",
+            **{window: value},
+        )
 
 
 def test_did2s_requires_formula_for_each_stage():

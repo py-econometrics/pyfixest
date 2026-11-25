@@ -54,13 +54,10 @@ def _compute_CCV(
     G = len(unique_clusters)
 
     Z = rng.choice([False, True], size=N)
-    # compute alpha, tau using Z == 0
     fit_split1 = fit_fn(data=data[Z])
     coefs_split = fit_split1.coef().to_numpy()
     tau = fit_split1.coef().xs(treatment)
 
-    # estimate treatment effect for each cluster
-    # for both the full sample and the subsample
     pk_term = 0.0
     tau_ms = np.zeros(G)
     N = 0
@@ -81,7 +78,6 @@ def _compute_CCV(
             fit_m_full = fit_fn(data=data[ind_m])
             aux_tau_full = float(fit_m_full.coef().xs(treatment))  # type: ignore[arg-type]
 
-        # treatment effect in cluster for subsample
         if treatment_nested_in_cluster_split:
             aux_tau = tau
         else:
@@ -89,7 +85,6 @@ def _compute_CCV(
             aux_tau = fit_m.coef().xs(treatment)
         tau_ms[i] = aux_tau
 
-        # compute the pk term in Z0
         aux_pk = Nm * ((aux_tau_full - tau) ** 2)
         pk_term += aux_pk
 

@@ -51,7 +51,6 @@ class QuantregMulti:
 
     def prepare_model_matrix(self) -> None:
         """Prepare the model inputs for every requested quantile."""
-        # TODO: prepare once and share immutable state across quantiles.
         for quantreg in self.all_quantregs.values():
             quantreg.prepare_model_matrix()
             quantreg.to_array()
@@ -61,7 +60,6 @@ class QuantregMulti:
 
     def get_fit(self) -> dict[float, Quantreg]:
         "Fit multiple quantile regressions via either algo 2 or 3 of CFM."
-        # sort q increasing
         q = np.sort(self.quantiles)
         n_quantiles = len(q)
 
@@ -72,18 +70,15 @@ class QuantregMulti:
 
         q_median = q[q_median_idx]
 
-        # data fixed across qregs, just need take from first one
         X = self.all_quantregs[q[q_median_idx]].within_data.design
         Y = self.all_quantregs[q[q_median_idx]].within_data.response
         N = self.all_quantregs[q[q_median_idx]].sample_info.n_obs
         rng = np.random.default_rng(self.all_quantregs[q[q_median_idx]].options.seed)
 
-        # fit first quantile regression using "pfn"
-
         fit_kwargs = {
             "X": X,
             "Y": Y,
-            "q": q_median,  # first eval at the "central" quantile
+            "q": q_median,
         }
 
         if self.options.method == "pfn":
@@ -170,7 +165,6 @@ class QuantregMulti:
             )
             quantreg.fitted_values = FittedValues(link=fitted, response=fitted)
 
-        # sort self.all_quantregs by q
         self.all_quantregs = dict(
             sorted(self.all_quantregs.items(), key=lambda item: item[0])
         )
@@ -193,12 +187,12 @@ class QuantregMulti:
             quantreg._publish_fit_statistics()
 
     def _check_vcov_support(self, spec: VcovSpec) -> None:
-        "Reject a covariance estimator the quantile regressions cannot compute."
+        "Reject a variance estimator the quantile regressions cannot compute."
         for quantreg in self.all_quantregs.values():
             quantreg._check_vcov_support(spec)
 
     def _vcov_from_spec(self, spec: VcovSpec) -> dict[float, Quantreg]:
-        "Compute the covariance of a parsed `spec` for every quantile."
+        "Compute the variance-covariance matrix for `spec` at every quantile."
         for quantreg in self.all_quantregs.values():
             quantreg._vcov_from_spec(spec)
 

@@ -89,7 +89,7 @@ class SaturatedEventStudy(DID):
     cluster : str
         The name of the cluster variable.
     xfml : str
-        Additional covariates to include in the model.
+        Additional regressors to include in the model.
     att : bool
         Whether to use the average treatment effect.
     display_warning: bool
@@ -171,7 +171,7 @@ class SaturatedEventStudy(DID):
         Returns
         -------
         Feols
-            The fitted Feols model object. It carries the event-study design
+            The fitted Feols model. It carries the event-study design
             as `event_study_design`.
         """
         self.mod, cohort_event_times = _saturated_event_study(
@@ -193,15 +193,14 @@ class SaturatedEventStudy(DID):
 
         return self.mod
 
-    # !TODO - implement the rest of the methods
     def vcov(self):
         """
-        Get the covariance matrix.
+        Get the variance-covariance matrix.
 
         Returns
         -------
         pd.DataFrame
-            A DataFrame containing the covariance matrix.
+            A DataFrame containing the variance-covariance matrix.
         """
         pass
 
@@ -395,7 +394,7 @@ def _compute_lincomb_stats(R: np.ndarray, coefs: np.ndarray, vcov: np.ndarray) -
     coefs: np.ndarray
         1D numpy array of coefficient estimates,
     vcov: np.ndarray
-        The covariance matrix of coefs (same dimension as len(coefs)),
+        The variance-covariance matrix, with one row and column per coefficient,
 
     Returns
     -------
@@ -441,7 +440,6 @@ def _saturated_event_study(
         )
     )
     res["time"] = res["time"].astype(float)
-    # create a dict with cohort specific effect curves
     res_cohort_eventtime_dict: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
     for cohort, res_cohort in res.groupby("cohort"):
         event_time = res_cohort["time"].to_numpy()
@@ -476,9 +474,7 @@ def _test_treatment_heterogeneity(
         r".+::(?P<time>.+):.+::(?P<cohort>.+)", expand=True
     )
     mmres["time"] = mmres["time"].astype(float)
-    # indices of coefficients that are deviations from common event study coefs
     event_study_coefs = mmres.loc[~(mmres.cohort.isna()) & (mmres.time > 0)].index
-    # Method 2 (K x P) - more efficient
     K = len(event_study_coefs)
     R2 = np.zeros((K, P))
     for i, idx in enumerate(event_study_coefs):
@@ -525,7 +521,6 @@ def compute_period_weights(
     df = data[[cohort, period, treatment]].copy()
     ever_treated = df.loc[df[treatment] == 1, cohort].unique()
 
-    # post-treatment cells (l > 0)
     post = (
         df[df[treatment] == 1]
         .groupby([cohort, period])
@@ -537,7 +532,6 @@ def compute_period_weights(
     post = post.merge(denom_post, on=period)
     post["weight"] = post["n_grel"] / post["n_rel"]
 
-    # pre-treatment cells (l < 0)
     pre = (
         df[(df[treatment] == 0) & (df[cohort].isin(ever_treated))]
         .groupby([cohort, period])
@@ -549,7 +543,6 @@ def compute_period_weights(
     pre = pre.merge(denom_pre, on=period)
     pre["weight"] = pre["n_grel"] / pre["n_rel"]
 
-    # combine and (optionally) fill out the full grid
     out = pd.concat(
         [pre[[cohort, period, "weight"]], post[[cohort, period, "weight"]]],
         ignore_index=True,

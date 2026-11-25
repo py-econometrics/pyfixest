@@ -328,16 +328,13 @@ def get_sharkfin(
     )  # Stronger effects on weekends
     day_pattern = np.tile(day_effects, num_periods // 7 + 1)[:num_periods]
 
-    # Generate autoregressive structure
     ar_coef_time = 0.2
     ar_noise_time = rng.normal(0, sigma_time, num_periods)
     time_intercepts = np.zeros(num_periods)
     time_intercepts[0] = ar_noise_time[0]
     for t in range(1, num_periods):
         time_intercepts[t] = ar_coef_time * time_intercepts[t - 1] + ar_noise_time[t]
-    # Combine day-of-the-week pattern and autoregressive structure
     time_intercepts = day_pattern + time_intercepts - np.mean(time_intercepts)
-    # Generate autoregressive noise for each unit
     ar_noise = rng.normal(0, sigma_epsilon, (num_units, num_periods))
     if het_AR:
         ar_coef = rng.normal(ar_coef, 0.1, num_units)
@@ -345,26 +342,20 @@ def get_sharkfin(
     noise[:, 0] = ar_noise[:, 0]
     for t in range(1, num_periods):
         noise[:, t] = ar_coef * noise[:, t - 1] + ar_noise[:, t]
-    # N X T matrix of potential outcomes under control
     Y0 = unit_intercepts[:, np.newaxis] + time_intercepts[np.newaxis, :] + noise
-    # Generate the base treatment effect (concave structure)
-    # Generate heterogeneous multipliers for each unit
     if hetfx:
         heterogeneous_multipliers = rng.uniform(0.5, 1.5, num_units)
     else:
         heterogeneous_multipliers = np.ones(num_units)
 
-    # Create a 2D array to store the heterogeneous treatment effects
     treatment_effect = np.zeros((num_units, num_periods - treatment_start))
     for i in range(num_units):
         treatment_effect[i, :] = heterogeneous_multipliers[i] * base_treatment_effect
 
-    # random assignment
     treated_units = rng.choice(num_units, num_treated, replace=False)
     treatment_status = np.zeros((num_units, num_periods), dtype=bool)
     treatment_status[treated_units, treatment_start:] = True
 
-    # Apply the heterogeneous treatment effect to the treated units
     Y1 = Y0.copy()
     for t in range(treatment_start, num_periods):
         Y1[:, t][treatment_status[:, t]] += treatment_effect[:, t - treatment_start][
@@ -380,7 +371,6 @@ def get_sharkfin(
     }
 
     if return_dataframe:
-        # Create a DataFrame
         unit_ids = np.repeat(np.arange(num_units), num_periods)
         time_ids = np.tile(np.arange(num_periods), num_units)
         W_it = treatment_status.flatten()
@@ -393,7 +383,6 @@ def get_sharkfin(
                 "Y": Y_it,
             }
         )
-        # assign units to ever treated if the max of W_it is 1
         df["ever_treated"] = df.groupby("unit")["treat"].transform("max")
         result["dataframe"] = df
         return df
@@ -440,11 +429,8 @@ def get_panel_dgp_stagg(
                 np.repeat(0, 10),
             ],
             treat_effect_vector_1,
-            np.sin(
-                np.arange(1, num_periods - treatment_start_cohorts[2] + 1)
-            ),  # Treatment effect function for cohort 2
+            np.sin(np.arange(1, num_periods - treatment_start_cohorts[2] + 1)),
         ]
-    # unit FEs
     unit_intercepts = rng.normal(0, sigma_unit, num_units)
     ####################################################################
     # time FEs: Generate day-of-the-week pattern
@@ -452,37 +438,26 @@ def get_panel_dgp_stagg(
         [-0.1, 0.1, 0, 0, 0.1, 0.5, 0.5]
     )  # Stronger effects on weekends
     day_pattern = np.tile(day_effects, num_periods // 7 + 1)[:num_periods]
-    # autoregressive structure in time FEs
     ar_coef_time = 0.2
     ar_noise_time = rng.normal(0, sigma_time, num_periods)
     time_intercepts = np.zeros(num_periods)
     time_intercepts[0] = ar_noise_time[0]
     for t in range(1, num_periods):
         time_intercepts[t] = ar_coef_time * time_intercepts[t - 1] + ar_noise_time[t]
-    # Combine day-of-the-week pattern and autoregressive structure
     time_intercepts = day_pattern + time_intercepts - np.mean(time_intercepts)
-    ####################################################################
-    # Generate autoregressive noise for each unit
     ar_noise = rng.normal(0, sigma_epsilon, (num_units, num_periods))
     noise = np.zeros((num_units, num_periods))
     noise[:, 0] = ar_noise[:, 0]
     for t in range(1, num_periods):
         noise[:, t] = ar_coef * noise[:, t - 1] + ar_noise[:, t]
-    # N X T matrix of potential outcomes under control
     Y0 = unit_intercepts[:, np.newaxis] + time_intercepts[np.newaxis, :] + noise
-    ####################################################################
-    # Generate heterogeneous multipliers for each unit
     if hetfx:
         heterogeneous_multipliers = rng.uniform(0.5, 1.5, num_units)
     else:
         heterogeneous_multipliers = np.ones(num_units)
-    # random assignment
     treated_units = np.array([], dtype=int)
     treatment_status = np.zeros((num_units, num_periods), dtype=bool)
-    ####################################################################
-    # Create a 2D array to store the heterogeneous treatment effects
     treatment_effect = np.zeros((num_units, num_periods))
-    # iterate over treatment cohorts
     for cohort_idx, (treatment_start, num_treated_cohort) in enumerate(
         zip(treatment_start_cohorts, num_treated, strict=True)
     ):
@@ -504,10 +479,8 @@ def get_panel_dgp_stagg(
             cohort_treatment_effect[cohort_treated_units, :]
         )
 
-    # Apply the heterogeneous treatment effect to the treated units
     Y1 = Y0.copy()
     Y1[treatment_status] += treatment_effect[treatment_status]
-    ####################################################################
     result = {
         "Y1": Y1,
         "Y0": Y0,
@@ -517,7 +490,6 @@ def get_panel_dgp_stagg(
     }
 
     if return_dataframe:
-        # Create a DataFrame
         unit_ids = np.repeat(np.arange(num_units), num_periods)
         time_ids = np.tile(np.arange(num_periods), num_units)
         W_it = treatment_status.flatten().astype(int)
@@ -586,9 +558,8 @@ def get_twin_data(N_pairs=500, seed=42):
 
     # Education: correlated with ability (source of OV bias)
     educ = 12 + 0.5 * ability + rng.normal(0, 2, size=2 * N_pairs)
-    educ = np.clip(educ, 8, 20)  # realistic bounds
+    educ = np.clip(educ, 8, 20)
 
-    # Age and experience
     age = rng.integers(25, 55, size=2 * N_pairs).astype(float)
     experience = np.maximum(0, age - educ - 6)
 
@@ -655,14 +626,11 @@ def get_worker_panel(N_workers=500, N_firms=50, N_years=11, seed=42):
     """
     rng = np.random.default_rng(seed)
 
-    # Worker and firm fixed effects
     worker_fe = rng.normal(0, 0.5, size=N_workers)
     firm_fe = rng.normal(0, 0.3, size=N_firms)
 
-    # Time-invariant worker characteristics
     female = rng.binomial(1, 0.5, size=N_workers)
 
-    # Initial firm assignment
     firm_assignment = rng.integers(0, N_firms, size=N_workers)
 
     records = []

@@ -189,7 +189,7 @@ class DemeanCache:
             Encoded fixed-effect identifiers, complete effects, or ``None`` for
             no fixed effects. A cache block shares the same effect design.
         weights : NDArray[np.float64] or None
-            Observation weights passed to the within transformation.
+            Observation weights passed to the demeaning.
         na_index : frozenset[int]
             Row-removal identity used to share cached data between model fits.
         demeaner : AnyDemeaner
@@ -248,7 +248,6 @@ class DemeanCache:
                     column_keys=cached_keys + uncached_keys,
                 )
                 self.lookup_demeaned_data[na_index] = cached
-            # Every requested column is demeaned and cached at this point.
             YX_demeaned = self._select_columns(cached, yx_keys)
 
         # ``yx_keys`` lists the responses first, so they lead the columns.

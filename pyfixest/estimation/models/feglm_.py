@@ -121,14 +121,13 @@ class Feglm(Feols):
         "Prepare model inputs for estimation."
         model_matrix = super().prepare_model_matrix()
 
-        # check for separation
         na_separation: list[int] = []
         if (
             # Families without outcome bounds, such as Gaussian, cannot separate.
             self._family.outcome_bounds
             and model_matrix.fixed_effects is not None
             and self.options.separation_check is not None
-            and self.options.separation_check  # not an empty list
+            and self.options.separation_check
         ):
             na_separation = check_for_separation(
                 Y=model_matrix.dependent,
@@ -152,7 +151,6 @@ class Feglm(Feols):
             model_matrix = model_matrix.without_rows(na_separation, stage="separation")
             self._publish_model_matrix(model_matrix)
 
-            # possible to have dropped fixed effects level due to separation
             counts = self.fixef_counts
             self._n_fe_after_separation = sum(
                 n_levels > 1 and has_intercept
@@ -171,7 +169,7 @@ class Feglm(Feols):
         return replace(counts, n_fe=self._n_fe_after_separation)
 
     def get_fit(self) -> None:
-        "Fit the GLM via IRLS and write results onto self.* attributes."
+        "Fit the GLM via IWLS and write results onto self.* attributes."
         model_matrix = self.model_matrix
         response = model_matrix.dependent.to_numpy()
         design = model_matrix.independent.to_numpy()
@@ -215,8 +213,6 @@ class Feglm(Feols):
         self._coefnames = list(fit.collinearity.coefnames)
         working_state = fit.working_state
         self.working_state = working_state
-        # The prediction view of the same arrays: eta is the linear predictor
-        # (fixed effects and offset included), mu its inverse-link mean.
         self.fitted_values = FittedValues(
             link=working_state.eta, response=working_state.mu
         )
@@ -229,7 +225,7 @@ class Feglm(Feols):
         self.convergence = fit.converged
 
     def _fit_statistics(self) -> FitStatistics:
-        """Compute the deviance of the final IRLS iteration.
+        """Compute the deviance of the final IWLS iteration.
 
         Families with further measures extend this in their subclass.
         """
@@ -241,7 +237,7 @@ class Feglm(Feols):
         return FitStatistics(deviance=deviance)
 
     def _prediction_design(self) -> np.ndarray:
-        """Supply the final IRLS design to the inherited predict() method.
+        """Supply the final IWLS design to the inherited predict() method.
 
         Unlike linear models, GLMs store this coefficient-ordered design in
         working_state. It is not multiplied by square-root working weights.
@@ -318,7 +314,7 @@ class Feglm(Feols):
         weights: np.ndarray,
         tol: float,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Residualize v and X with current working weights and a reused preconditioner."""
+        """Demean v and X with current working weights and a reused preconditioner."""
         if flist is None:
             return v, X
 
@@ -368,7 +364,7 @@ class Feglm(Feols):
             Can be either "response" (default) or "link".
             If type="response", the output is at the level of the response variable,
             i.e., it is the expected predictor E(Y|X).
-            If "link", the output is at the level of the explanatory variables,
+            If "link", the output is on the scale of the linear predictor,
             i.e., the linear predictor X @ beta.
         atol : Float, default 1e-6
             Stopping tolerance for scipy.sparse.linalg.lsqr().

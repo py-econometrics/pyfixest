@@ -57,8 +57,6 @@ class LPDID(DID):
         post_window: int | None = None,
         never_treated: int | None = 0,
     ):
-        # if att:
-        #    raise NotImplementedError("ATT is not yet supported.")
 
         super().__init__(
             data=data,
@@ -79,7 +77,6 @@ class LPDID(DID):
         data["treat"] = np.where(data[gname] <= data[tname], 1, 0)
         data["rel_year"] = data[tname] - data[gname]
 
-        # handle never treated units
         data["treat"] = np.where(data[gname] == never_treated, 0, data["treat"])
         data["rel_year"] = np.where(
             data[gname] == never_treated, np.inf, data["rel_year"]
@@ -94,7 +91,7 @@ class LPDID(DID):
         rel_years = rel_years[np.isfinite(rel_years)]
         if not rel_years.size:
             raise ValueError(
-                f"lpdid() has no usable relative periods for gname={gname!r} "
+                f"lpdid() found no finite event times for gname={gname!r} "
                 f"and never_treated={never_treated!r}. Check that the data contain "
                 f"treated cohorts and that {tname!r} uses the same period scale. "
                 "See https://pyfixest.org/tutorials/difference-in-differences.html"
@@ -103,15 +100,13 @@ class LPDID(DID):
         pre_window_int = int(np.min(rel_years)) if pre_window is None else pre_window
         post_window_int = int(np.max(rel_years)) if post_window is None else post_window
 
-        # check that pre_window is in rel_years
         if pre_window_int not in rel_years:
             raise ValueError(
-                f"pre_window={pre_window_int!r} is absent from the observed relative periods."
+                f"pre_window={pre_window_int!r} must match an observed event time."
             )
-        # check that post_window is in rel_years
         if post_window_int not in rel_years:
             raise ValueError(
-                f"post_window={post_window_int!r} is absent from the observed relative periods."
+                f"post_window={post_window_int!r} must match an observed event time."
             )
 
         pre_window_int = np.abs(pre_window_int)
@@ -252,7 +247,7 @@ def _lpdid_estimate(
         or a canonical event study design with all leads and lags.
         Default is True.
     xfml: str
-        Optional formula for the covariates. Not yet supported.
+        Optional formula for the regressors. Not yet supported.
         E.g. "X1 + X2 + X3".
 
     Returns
@@ -272,8 +267,6 @@ def _lpdid_estimate(
         fml = f"Dy ~ treat_diff + {xfml} | {tname}"
 
     if att:
-        # post window
-
         data[f"{yname}_post"] = _pooled_adjustment(data, yname, post_window, idname)
         data["Dy"] = data[f"{yname}_post"] - data[f"{yname}_lag"]
         sample_idx_post = (data["treat_diff"] == 1) | (
@@ -302,7 +295,6 @@ def _lpdid_estimate(
 
         for h in range(pre_window + 1):
             if h <= 1:
-                # skip the reference period
                 continue
 
             data["Dy"] = data.groupby(idname)[yname].shift(h) - data[f"{yname}_lag"]
@@ -345,14 +337,11 @@ def _pooled_adjustment(
     np.ndarray
         The average of all future values in the analysis.
     """
-    # Initialize lead variable
     x = np.zeros(df.shape[0])
 
-    # Calculate lead sum
     for k in range(0, pool_lead + 1, 1):
         x += df.groupby(idname)[y].shift(-k).to_numpy().astype(float)
 
-    # Average the lead sum
     x /= pool_lead + 1
 
     return x

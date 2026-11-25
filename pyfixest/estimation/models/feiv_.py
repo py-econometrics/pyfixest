@@ -89,7 +89,7 @@ class Feiv(Feols):
     first_stage : FirstStage
         First-stage regression fitted after second-stage inference: the
         coefficients pi_hat, the fitted values X_hat, the residuals v_hat, the
-        fitted first-stage model, the excluded instruments, and the
+        fitted first-stage model, the instruments, and the
         instrument-strength `diagnostics`.
     _data: pd.DataFrame
         The data frame used in the estimation. None if arguments `lean = True` or
@@ -99,8 +99,8 @@ class Feiv(Feols):
     Raises
     ------
     IVIdentificationError
-        If the exogenous variables and instruments fully explain an
-        endogenous variable, or the instruments add no explanatory power for
+        If the exogenous regressors and instruments fully explain an
+        endogenous regressor, or the instruments add no explanatory power for
         it.
 
     Examples
@@ -127,9 +127,7 @@ class Feiv(Feols):
     details.
     """
 
-    # Set in _fit_first_stage().
     first_stage: FirstStage
-    # Set in get_fit().
     collinearity_instruments: CollinearityCheck
     # Two-stage fit: no single least-squares solve to shortcut.
     _closed_form_ols = False
@@ -150,7 +148,6 @@ class Feiv(Feols):
         anytime_valid_inference=False,
     )
 
-    # Constructor and methods implementation...
     def __init__(
         self,
         FixestFormula: FixestFormula,
@@ -214,7 +211,7 @@ class Feiv(Feols):
         projected_design: NDArray[np.float64],
         sqrt_weights: NDArray[np.float64] | None,
     ) -> None:
-        """Check each endogenous variable's first-stage SSRs.
+        """Check each endogenous regressor's first-stage SSRs.
 
         Runs before structural column selection, which could otherwise drop an
         endogenous regressor.
@@ -275,7 +272,7 @@ class Feiv(Feols):
         ):
             if ssr_i < 1e-10:
                 raise IVIdentificationError(
-                    f"The endogenous variable '{name}' is fully explained by the "
+                    f"The endogenous regressor '{name}' is fully explained by the "
                     "exogenous regressors and instruments in the first stage. "
                     "Check for a duplicate or transformation of the endogenous regressor "
                     "among those terms. See https://pyfixest.org/tutorials/instrumental-variables.html"
@@ -283,15 +280,14 @@ class Feiv(Feols):
             if abs(ssr_without_instruments_i - ssr_i) < 1e-10:
                 raise IVIdentificationError(
                     "The instruments add no explanatory power for the endogenous "
-                    f"variable '{name}' in the first stage. Check whether the excluded "
-                    "instruments vary after accounting for exogenous regressors and any "
-                    "fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
+                    f"regressor '{name}' in the first stage. Check that the instruments "
+                    "predict this regressor after accounting for exogenous regressors and "
+                    "any fixed effects. See https://pyfixest.org/tutorials/instrumental-variables.html"
                 )
 
     def get_fit(self) -> None:
         """Fit a IV model using a 2SLS estimator."""
         within_data = self._demean()
-        # Drop collinear columns from instruments
         instruments, instrument_collinearity = drop_multicollinear_variables(
             X=within_data.instruments,
             names=self._coefnames_z,
@@ -300,7 +296,6 @@ class Feiv(Feols):
         self.collinearity_instruments = instrument_collinearity
         self._coefnames_z = list(instrument_collinearity.coefnames)
 
-        # Project second-stage regressors onto the retained instruments.
         weights = self.observation_weights.values
         sqrt_weights = (
             None if weights is None else np.sqrt(weights.reshape(-1))[:, None]
@@ -320,13 +315,11 @@ class Feiv(Feols):
             sqrt_weights=sqrt_weights,
         )
 
-        # Drop collinear variables in the second stage and update within data
         structural_data = self._drop_multicollinear_within_data(within_data)
         assert isinstance(structural_data, WithinIvData)
         within_data = replace(structural_data, instruments=instruments)
         self._set_within_data(within_data)
 
-        # Fit the second stage
         fit = fit_iv(
             X=within_data.design,
             X_hat=self.collinearity.select(projected_design),
@@ -358,7 +351,7 @@ class Feiv(Feols):
             str(name) for name in self._coefnames_z if name not in exogenous
         )
 
-        # As in fixest, the first stage uses the second stage's rows and options.
+        # The first stage uses the second stage's rows and options.
         model1 = refit(
             self,
             formula=self.model.parsed_formula.as_first_stage(),
@@ -473,13 +466,10 @@ class Feiv(Feols):
 
             ```
         """
-        # Set default statistics
         iv_diag_stat = ["f_stat", "effective_f"]
 
-        # Set statistics allowed in the current version
         iv_diag_stat_allowed = ["f_stat", "effective_f"]
 
-        # Check whether there is unsupported statistics.
         if statistics:
             invalid_stats = [
                 stat for stat in statistics if stat not in iv_diag_stat_allowed
@@ -579,7 +569,7 @@ class Feiv(Feols):
 
 
 def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list[int]:
-    """Locate the excluded instruments among the first-stage coefficients."""
+    """Locate the instruments among the first-stage coefficients."""
     coefnames = list(model._coefnames)
     return [coefnames.index(instrument) for instrument in instruments]
 
@@ -587,15 +577,15 @@ def _instrument_positions(*, model: Feols, instruments: tuple[str, ...]) -> list
 def first_stage_f_test(
     *, model: Feols, instrument_positions: list[int]
 ) -> FirstStageDiagnostics:
-    r"""Test that the excluded instruments are jointly irrelevant.
+    r"""Test that the instruments are jointly irrelevant.
 
     Wald test of
 
     H0 : \beta_{z_1} = 0 & ... & \beta_{z_{p_iv}} = 0
-         where z_1, ..., z_{p_iv} are the excluded instruments
+         where z_1, ..., z_{p_iv} are the instruments
     H1 : H0 does not hold
 
-    under the first stage's own covariance estimator, so the statistic is
+    under the first stage's own variance estimator, so the statistic is
     heteroskedasticity- or cluster-robust whenever that estimator is.
 
     Parameters
@@ -603,7 +593,7 @@ def first_stage_f_test(
     model : Feols
         The fitted first-stage model.
     instrument_positions : list[int]
-        Positions of the excluded instruments among `model`'s coefficients.
+        Positions of the instruments among `model`'s coefficients.
 
     Returns
     -------
@@ -633,8 +623,8 @@ def effective_f_statistic(
 ) -> float:
     """Compute the effective F statistic of Olea and Pflueger (2013).
 
-    With the excluded instruments Z on within scale, the first-stage
-    coefficients pi on those instruments, and their covariance Sigma,
+    Given demeaned instruments Z, their first-stage coefficients pi,
+    and the variance-covariance matrix Sigma of those coefficients,
 
         F_eff = pi' Q_zz pi / trace(Sigma Q_zz),   Q_zz = Z' W Z.
 
@@ -644,11 +634,11 @@ def effective_f_statistic(
     Parameters
     ----------
     pi_hat : NDArray[np.float64]
-        First-stage coefficients on the excluded instruments, shape (p_iv,).
+        First-stage coefficients on the instruments, shape (p_iv,).
     instruments_within : NDArray[np.float64]
-        Within-scale excluded instruments, shape (n_rows, p_iv).
+        Within-scale instruments, shape (n_rows, p_iv).
     instrument_vcov : NDArray[np.float64]
-        Heteroskedasticity-robust covariance of `pi_hat`, shape (p_iv, p_iv).
+        Heteroskedasticity-robust variance-covariance matrix of `pi_hat`, shape (p_iv, p_iv).
     weights : NDArray[np.float64] or None
         Observation weights, or `None` for an unweighted fit.
 

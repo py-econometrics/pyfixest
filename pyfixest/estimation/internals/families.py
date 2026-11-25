@@ -41,8 +41,9 @@ class GlmFamily:
     Bundles the link function, inverse link, derivative of the link, variance function,
     deviance, initial mu, and dependent-variable validation into a single object.
     `method` names the estimation function in `fit.model.method`.
-    `outcome_bounds` lists the outcome values the inverse link attains only as
-    the linear predictor diverges; outcomes stuck at such a bound are separated.
+    `outcome_bounds` lists the dependent-variable bounds that the inverse link
+    reaches only as the linear predictor diverges. Observations at such a
+    bound can be separated.
     """
 
     name: str
@@ -66,8 +67,8 @@ def _check_y_binary(Y: np.ndarray) -> None:
             "Logit and probit need both 0 and 1 in the estimation sample; "
             f"found only {Y_unique.tolist()!r}. Rows with missing values, rows "
             "removed by `subset`, and observations dropped for separation are "
-            "excluded before this check; confirm that both outcomes remain after "
-            "that."
+            "excluded before this check. Confirm that the dependent variable contains "
+            "both 0 and 1 after filtering."
         )
     if len(Y_unique) > 2:
         raise ValueError(

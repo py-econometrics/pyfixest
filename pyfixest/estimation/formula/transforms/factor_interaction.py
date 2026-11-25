@@ -84,7 +84,6 @@ def factor_interaction(
         i(cyl, wt, ref=4) -> cyl::6:wt, cyl::8:wt
         i(cyl, C(gear))   -> cyl::4:gear::3, ..., cyl::8:gear::5
     """
-    # Try to get variable names from Series.name attribute
     factor_name = _get_series_name(data, default="factor")
     var2_name = _get_series_name(var2, default="var") if var2 is not None else None
 
@@ -187,9 +186,7 @@ def _encode_i(
         encoder_state=encoder_state,
         model_spec=model_spec,
     )
-    # Three options: (i) no interaction, (ii) interaction with continuous variable, (ii) factor-factor interaction
     if var2 is None:
-        # (i) No interaction: return categorical encoding of single variable
         dummies = dummies.rename(
             columns={level: f"{factor_name}::{level}" for level in dummies.columns}
         )
@@ -200,10 +197,9 @@ def _encode_i(
             # (i.e., ref is None and reduced_rank is False)
             spans_intercept=(ref is None and not reduced_rank),
             column_names=tuple(dummies.columns),
-            format="{field}",  # Use column names directly
+            format="{field}",
         )
     elif var2_is_numeric:
-        # (ii) interaction with continuous variable
         result = dummies.multiply(var2.to_numpy(dtype=np.float64), axis=0)
         result = result.rename(
             columns={
@@ -219,7 +215,6 @@ def _encode_i(
             format="{field}",
         )
     else:
-        # (iii) factor-factor interaction
         assert var2_name is not None
         dummies2 = _encode_factor(
             data=var2,
@@ -257,7 +252,7 @@ def _encode_i(
             kind="categorical",
             spans_intercept=spans_intercept and not reduced_rank,
             column_names=tuple(interacted.columns),
-            format="{field}",  # Use column names directly
+            format="{field}",
         )
 
 
@@ -284,8 +279,6 @@ def _encode_factor(
     model_spec: ModelSpec,
 ) -> pd.DataFrame:
     contrasts_state = get_or_create_contrast_state(encoder_state, str(data.name))
-    # Drop a level if: (1) model has intercept (reduced_rank=True), OR (2) ref is explicitly specified
-    # This replicates the old monkey-patched behavior: drop=reduced_rank or ref is not None
     dummies = encode_contrasts_with_state(
         data,
         ref=ref,
@@ -305,11 +298,7 @@ def _encode_factor(
 
 
 def _interact_dummies(left: np.ndarray, right: np.ndarray) -> np.ndarray:
-    # Compute all pairwise products using broadcasting
-    # arr1[:, :, None] has shape (n_rows, n_levels1, 1)
-    # arr2[:, None, :] has shape (n_rows, 1, n_levels2)
     return np.reshape(
-        # Product has shape (n_rows, n_levels1, n_levels2)
         left[:, :, None] * right[:, None, :],
         (len(left), -1),
     )

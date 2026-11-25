@@ -26,7 +26,7 @@ class DID(ABC):
         Datetime variables are currently not accepted. Never treated units must
         have a value of 0.
     xfml : str
-        The formula for the covariates.
+        The formula for the regressors.
     att : str
         Whether to estimate the average treatment effect on the treated (ATT) or
         the canonical event study design with all leads and lags. Default is True.
@@ -86,7 +86,6 @@ class DID(ABC):
                     "periods such as 2012 or 201201."
                 )
 
-        # create a treatment variable
         self._data["is_treated"] = (
             self._data[self._tname] >= self._data[self._gname]
         ) * (self._data[self._gname] > 0)

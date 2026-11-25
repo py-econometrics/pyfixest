@@ -123,7 +123,7 @@ def _interaction_without_iv(
     operator: Operator,
     context: Mapping[str, Any],
 ) -> OrderedSet[Term] | Structured[OrderedSet[Term]]:
-    """Reject implicit exogenous interactions with an endogenous IV block."""
+    """Reject implicit exogenous interactions with an instrument block."""
     has_iv = any(
         isinstance(terms, Structured) and count_multistage_blocks(terms)
         for terms in (lhs, rhs)
@@ -150,7 +150,7 @@ def _interaction_without_iv(
 
 
 class PyfixestOperatorResolver(DefaultOperatorResolver):
-    """Keep IV terms in dependencies without generating placeholder covariates.
+    """Keep IV terms in dependencies without generating placeholder regressors.
 
     The root contains the original endogenous terms, allowing ordinary formula
     deduplication and validation of the resulting second-stage specification.
@@ -161,17 +161,14 @@ class PyfixestOperatorResolver(DefaultOperatorResolver):
         """Identify the `~` operator used inside `[endogenous ~ instruments]`."""
         return (
             operator.symbol == "~"
-            # A multistage `~` takes two arguments (endogenous ~ exogenous)
             and operator.arity == 2
-            # A multistage `~` only accepts brackets as context
             and operator.accepts_context([Token("[", kind=Token.Kind.CONTEXT)])
-            # A top-level `~` only accepts an empty context `[]`
             and not operator.accepts_context([])
         )
 
     @property
     def operators(self) -> list[Operator]:
-        """Preserve IV terms and reject implicit interactions around IV blocks."""
+        """Preserve IV terms and reject implicit interactions around instrument blocks."""
         operators = super().operators
         multistage_operator_positions = [
             position
@@ -240,7 +237,7 @@ def formula_required_variables(formula: formulaic.formula.SimpleFormula) -> set[
         for term in formula
         for factor in term.factors
         for variable in factor.required_variables
-        if Variable.Role.CALLABLE not in variable.roles  # ignore transforms
+        if Variable.Role.CALLABLE not in variable.roles
     }
 
 

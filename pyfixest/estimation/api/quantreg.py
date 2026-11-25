@@ -89,7 +89,7 @@ def quantreg(
     Parameters
     ----------
     fml : str
-        A two-sided formula string using fixest formula syntax.
+        A two-sided formula using fixest formula syntax.
         In contrast to `feols()` and `feglm()`, no fixed effects formula syntax is supported.
 
     data : DataFrameType
@@ -126,7 +126,7 @@ def quantreg(
         (as in R's quantreg package via nit(3) = n).
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Currently supported are
+        Variance estimator. Currently supported are
         "iid", "nid", and cluster robust errors, "iid" by default.
         The "hetero" option follows the Gaussian-kernel sandwich implemented by
         R's `quantreg::summary.rq(se="ker")`; "iid" retains its existing
@@ -139,9 +139,9 @@ def quantreg(
         Only one-way clustering is supported.
 
     ssc : dict[str, Union[str, bool]], optional
-        A dictionary specifying the small sample correction for inference.
+        A dictionary specifying the small-sample correction for inference.
         If None, uses default settings from `pf.ssc()`. Note that by default, R's quantreg and Stata's qreg2 do not use
-        small sample corrections. To match their behavior, set
+        small-sample corrections. To match their behavior, set
         `ssc = pf.ssc(k_adj=False, G_adj=False)`.
 
     collin_tol : float, optional
@@ -159,12 +159,10 @@ def quantreg(
         may lead to unintended changes in the input data outside of `quantreg`.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Whether the fitted model retains the data, by default True. Set to
+        False to save memory. Accessing `fit.data` or calling a post-estimation
+        operation that needs the data, such as `predict()` or `vcov()`, then
+        raises `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the
@@ -236,7 +234,6 @@ def quantreg(
     of the full quantile regression process, see the
     [quantile regression tutorial](/tutorials/quantile-regression.html).
     """
-    # WLS currently not supported for quantile regression
     weights = None
     weights_type: WeightsTypeOptions = "aweights"
     solver: SolverOptions = "np.linalg.solve"

@@ -26,7 +26,7 @@ class FitStatistics:
         Adjusted R-squared. Defined for ``feols()`` and Gaussian ``feglm()``
         fits.
     r2_within : float
-        R-squared on the dependent variable residualized on the fixed effects.
+        R-squared on the dependent variable after demeaning.
         Defined for ``feols()`` and Gaussian ``feglm()`` fits with fixed
         effects.
     adj_r2_within : float
@@ -88,7 +88,7 @@ def linear_fit_statistics(
     Y : np.ndarray
         Dependent variable, shape (N, 1).
     Y_within : np.ndarray
-        Dependent variable residualized on the fixed effects, shape (N, 1),
+        Dependent variable after demeaning, shape (N, 1),
         in the units of ``Y``. Ignored when ``has_fixef`` is False.
     residuals : np.ndarray
         Residuals in the units of ``Y``, shape (N,).
@@ -120,8 +120,8 @@ def linear_fit_statistics(
         w = weights.reshape((-1, 1))
         ssu = np.sum(w.flatten() * residuals**2)
         ssy = np.sum(w * (Y - np.average(Y, weights=w)) ** 2)
-        # As fixest, the weighted mean of the squared residuals, so the RMSE
-        # does not depend on the scale of the weights.
+        # The weighted mean of the squared residuals, so the RMSE does not
+        # depend on the scale of the weights.
         sum_weights = np.sum(w)
 
     if has_fixef:
@@ -163,7 +163,7 @@ def poisson_fit_statistics(
     y : NDArray[np.float64]
         Dependent variable, shape (N,).
     mu : NDArray[np.float64]
-        Fitted means of the final IRLS iteration, shape (N,).
+        Fitted means of the final IWLS iteration, shape (N,).
     weights : NDArray[np.float64] or None
         User-scale observation weights, shape (N,). ``None`` applies no
         weights.

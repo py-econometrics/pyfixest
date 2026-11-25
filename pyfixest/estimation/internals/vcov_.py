@@ -22,7 +22,7 @@ def vcov_iid_ols(
     N: int | float,
     weights: np.ndarray | None = None,
 ) -> np.ndarray:
-    """Compute IID OLS covariance from response-scale residuals.
+    """Compute the iid OLS variance-covariance matrix from residuals.
 
     ``weights=None`` applies no weights. Otherwise, the residual sum of
     squares is weighted by the observation weights.
@@ -35,7 +35,7 @@ def vcov_iid_ols(
 
 
 def vcov_iid_glm(bread: np.ndarray) -> np.ndarray:
-    "IID Variance-Covariance Matrix for GLMs."
+    "Compute the iid variance-covariance matrix for GLMs."
     return bread
 
 
@@ -144,10 +144,6 @@ def meat_hac(
             )
 
         order, _, starts, _, time_arr_sorted, _ = _get_panel_idx(
-            # hack: sort first by time, than panel
-            # we need the data sorted by time, but sort by
-            # panel too to check for duplicate time periods
-            # per panel
             panel_arr=time_arr,
             time_arr=panel_arr,
             identifier_columns=(panel_id, time_id),

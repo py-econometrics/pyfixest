@@ -24,7 +24,7 @@ def bonferroni(models: ModelInputType, param: str) -> pd.DataFrame:
     Parameters
     ----------
     models : Feols, Fepois, Feiv, FixestMulti, or list
-        A fitted model object, or a list of Feols, Fepois, and Feiv models.
+        A fitted model, or a list of Feols, Fepois, and Feiv models.
     param : str
         The parameter for which the p-values should be adjusted.
 
@@ -175,7 +175,6 @@ def _get_rwolf_pval(t_stats, boot_t_stats):
         else:
             corr_padj[j] = max(pinit[j], corr_padj[j - 1])
 
-    # Collect the results
     pval = corr_padj[ro]
 
     return pval

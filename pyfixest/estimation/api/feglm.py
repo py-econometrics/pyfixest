@@ -34,8 +34,6 @@ from pyfixest.estimation.runner import run_estimation
 from pyfixest.utils.dev_utils import DataFrameType, _find_stack_level
 from pyfixest.utils.utils import Ssc, capture_context
 
-# Poisson goes through the Fepois model class (a Feglm subclass); the other
-# families dispatch to their dedicated model classes.
 _GLM_METHODS: dict[FamilyOptions, EstimationMethod] = {
     "poisson": "fepois",
     "logit": "feglm-logit",
@@ -92,12 +90,12 @@ def feglm(
     Parameters
     ----------
     fml : str
-        A two-sided formula string using fixest formula syntax.
+        A two-sided formula using fixest formula syntax.
         Syntax: "Y ~ X1 + X2 | FE1 + FE2". "|" separates left-hand side and fixed
         effects.
         Special syntax includes:
-        - Stepwise regressions (sw, sw0)
-        - Cumulative stepwise regression (csw, csw0)
+        - Stepwise operators (sw, sw0)
+        - Cumulative stepwise operators (csw, csw0)
         - Multiple dependent variables (Y1 + Y2 ~ X)
         - Interaction of variables (i(X1,X2))
         - Interacted fixed effects (fe1:fe2)
@@ -113,7 +111,7 @@ def feglm(
         `pyfixest.fepois()`.
 
     vcov : Union[VcovTypeOptions, dict[str, str]]
-        Type of variance-covariance matrix for inference. Options include "iid",
+        Variance estimator. Options include "iid",
           "hetero", "HC1", "HC2", "HC3", "NW" for Newey-West HAC standard errors,
         "DK" for Driscoll-Kraay HAC standard errors, or a dictionary for CRV1/CRV3 inference.
         Note that NW and DK require to pass additional keyword arguments via the `vcov_kwargs` argument.
@@ -129,7 +127,7 @@ def feglm(
 
     weights : Union[None, str], optional
         Default is None. Name of the column in `data` to be used as observation
-        weights. When supplied, IRLS minimizes the weighted deviance.
+        weights. When supplied, IWLS minimizes the weighted deviance.
 
     weights_type : WeightsTypeOptions, optional
         Type of weights variable. Either "aweights" (analytic / precision
@@ -142,14 +140,11 @@ def feglm(
         `offset="log(population)"`.
 
     ssc : str
-        A ssc object specifying the small sample correction for inference.
+        The small-sample correction for inference, created with `ssc()`.
 
     fixef_rm : FixedRmOptions
-        Specifies whether to drop singleton fixed effects.
-        Can be equal to "singleton" (default),
-        or "none".
-        "singletons" will drop singleton fixed effects. This will not impact point
-        estimates but it will impact standard errors.
+        Use "singleton" (default) to drop rows in singleton levels or "none"
+        to retain them. This can affect standard errors.
 
     iwls_tol : Optional[float], optional
         Tolerance for IWLS convergence, by default 1e-08.
@@ -163,9 +158,9 @@ def feglm(
     separation_check: list[str], optional
         Methods to identify and drop separated observations.
         Either "fe" or "ir". Executes "fe" by default (when None).
-        "fe" drops fixed-effect groups whose outcomes are all 0, and for logit
-        and probit also groups whose outcomes are all 1. "ir" detects
-        separation by the regressors at outcome 0 and applies only to Poisson;
+        "fe" drops fixed-effect levels where the dependent variable is always 0,
+        and for logit and probit also levels where it is always 1. "ir" detects
+        separation by the regressors at zero and applies only to Poisson;
         logit and probit fits warn and skip it. Gaussian fits skip both checks.
 
     solver : SolverOptions, optional.
@@ -196,12 +191,10 @@ def feglm(
         a column with interacted fixed effects in the data set.
 
     store_data : bool, optional
-        Whether to store the data in the model object, by default True.
-        If set to False, the data is not stored in the model object, which can
-        improve performance and save memory. However, it will no longer be possible
-        to access the data via the `data` attribute of the model object. This has
-        impact on post-estimation capabilities that rely on the data, e.g. `predict()`
-        or `vcov()`. Such methods raise a `MissingModelDataError`.
+        Whether the fitted model retains the data, by default True. Set to
+        False to save memory. Accessing `fit.data` or calling a post-estimation
+        operation that needs the data, such as `predict()` or `vcov()`, then
+        raises `MissingModelDataError`.
 
     lean: bool, optional
         False by default. If True, then all large objects are removed from the

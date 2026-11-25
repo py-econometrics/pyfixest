@@ -378,7 +378,7 @@ class LsmrDemeaner(BaseDemeaner):
         ----------
         flist : np.ndarray or list[within.Effect]
             Encoded group identifiers, or complete effects containing group
-            codes, intercept flags, and slope covariates. Only the ``within``
+            codes, intercept flags, and varying-slope variables. Only the ``within``
             backend accepts explicit effects; ``torch`` raises ``TypeError``.
         cached_preconditioner : Preconditioner or None, optional
             A preconditioner saved by the caller from an earlier within solve

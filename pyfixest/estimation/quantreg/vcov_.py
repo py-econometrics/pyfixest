@@ -16,7 +16,7 @@ def _invert_covariance_component(matrix: np.ndarray, *, component: str) -> np.nd
         return np.linalg.inv(matrix)
     except np.linalg.LinAlgError as exc:
         raise np.linalg.LinAlgError(
-            f"Quantile regression could not compute {component} covariance. "
+            f"Quantile regression could not compute the {component} variance-covariance matrix. "
             f"A {matrix.shape[0]} by {matrix.shape[1]} matrix could not be inverted. "
             "Check for redundant regressors or insufficient variation at the fitted quantile."
         ) from exc
@@ -33,7 +33,6 @@ def vcov_iid_qreg(
     sigma = np.std(Y)
     hk = np.minimum(sigma, rq / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
-    # uniform kernel
     f = 1 / (2 * N * hk) * np.sum(np.abs(u_hat) < hk)
 
     D = X.T @ X
@@ -131,7 +130,6 @@ def vcov_crv1_qreg(
     """
     N, _ = X.shape
 
-    # kappa: median absolute deviation of the a-th quantile regression residuals
     kappa = np.median(np.abs(u_hat - np.median(u_hat)))
     h_G = get_hall_sheather_bandwidth(q=q, N=N)
     delta = kappa * (norm.ppf(q + h_G) - norm.ppf(q - h_G))
