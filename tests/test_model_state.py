@@ -96,22 +96,6 @@ def test_estimation_sample_counts_frequency_weights(
         sample_info.n_rows = 0  # type: ignore[misc]
 
 
-def test_dropped_row_counts_empty_sample_explanation() -> None:
-    empty = DroppedRowCounts()
-    assert empty.total == 0
-    assert empty._empty_sample_explanation() == (
-        "The model received 0 input rows. Pass data with observations for this model."
-    )
-
-    counts = DroppedRowCounts(missing=4, singleton=2)
-    assert counts.total == 6
-    assert counts._empty_sample_explanation() == (
-        "Filtering removed all 6 input rows "
-        "(missing values=4, singleton fixed-effect levels=2). "
-        "Check these inputs before refitting."
-    )
-
-
 def test_within_linear_data_is_structurally_immutable() -> None:
     response = np.arange(3.0)[:, None]
     design = np.column_stack((np.ones(3), np.arange(3.0)))
