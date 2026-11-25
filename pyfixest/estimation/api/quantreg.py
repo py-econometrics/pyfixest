@@ -9,6 +9,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _warn_argument_without_effect,
 )
 from pyfixest.estimation.config import EstimationConfig, QuantileProcess
 from pyfixest.estimation.formula.parse import Formula
@@ -142,7 +143,10 @@ def quantreg(
         Tolerance for collinearity check, by default 1e-09.
 
     separation_check : list[str], optional
-        Methods to identify and drop separated observations. Not used in quantile regression.
+        .. deprecated::
+            ``separation_check`` is deprecated and has no effect in quantile
+            regression. Passing a value other than None emits a
+            ``PyfixestDeprecationWarning``.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.
@@ -266,6 +270,8 @@ def quantreg(
         fsplit=fsplit,
         separation_check=separation_check,
     )
+    if separation_check is not None:
+        _warn_argument_without_effect(function="quantreg", argument="separation_check")
 
     options = QuantregEstimationOptions(
         ssc=ssc,

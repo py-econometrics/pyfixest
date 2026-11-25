@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import re
 import sys
 import warnings
@@ -19,6 +20,7 @@ from pyfixest.errors import (
     IVIdentificationError,
     MissingModelDataError,
     NanInClusterVarError,
+    PyfixestDeprecationWarning,
     UnderDeterminedIVError,
     VcovTypeNotSupportedError,
 )
@@ -1396,6 +1398,40 @@ def test_errors_compressed():
 
     with pytest.raises(TypeError):
         pf.feols("Y ~ X1", data=data, use_compression=True, vcov="iid", seed=1.2)
+
+
+@pytest.mark.parametrize(
+    ("function", "argument", "value"),
+    [
+        ("feols", "reps", 200),
+        ("feols", "seed", 1),
+        ("quantreg", "separation_check", ["fe"]),
+    ],
+)
+def test_argument_without_effect_is_deprecated(function, argument, value):
+    estimate = getattr(pf, function)
+    default = inspect.signature(estimate).parameters[argument].default
+    data = pf.get_data(N=100)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PyfixestDeprecationWarning)
+        reference = estimate("Y ~ X1", data, **{argument: default})
+
+    message = rf"`{argument}` argument of `{function}\(\)` is deprecated"
+    with pytest.warns(PyfixestDeprecationWarning, match=message) as record:
+        fit = estimate("Y ~ X1", data, **{argument: value})
+
+    # the warning points at the user's call
+    (deprecation,) = [w for w in record if w.category is PyfixestDeprecationWarning]
+    assert deprecation.filename == __file__
+    pd.testing.assert_frame_equal(fit.tidy(), reference.tidy())
+
+
+def test_quantreg_seed_is_not_deprecated():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", PyfixestDeprecationWarning)
+        fit = pf.quantreg("Y ~ X1", pf.get_data(N=100), method="pfn", seed=1)
+    assert fit.options.seed == 1
 
 
 def test_errors_panelview():

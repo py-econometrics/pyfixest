@@ -8,6 +8,7 @@ from pyfixest.estimation.api.utils import (
     _estimation_input_checks,
     _resolve_ssc,
     _resolve_vcov,
+    _warn_argument_without_effect,
 )
 from pyfixest.estimation.config import EstimationConfig
 from pyfixest.estimation.FixestMulti_ import FixestMulti
@@ -154,8 +155,10 @@ def feols(
             out-of-memory regression on large datasets, consider using the
             `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
-    reps: int
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    reps : int, optional
+        .. deprecated::
+            ``reps`` is deprecated and has no effect. Passing a value other than
+            the default, 100, emits a ``PyfixestDeprecationWarning``.
 
     context : int or Mapping[str, Any], optional
         A dictionary containing additional context variables to be used by
@@ -163,8 +166,10 @@ def feols(
         custom factorization functions, transformations, or any other
         variables that need to be available in the formula environment.
 
-    seed: Optional[int]
-        Deprecated legacy argument for compressed regression bootstrap inference.
+    seed : int, optional
+        .. deprecated::
+            ``seed`` is deprecated and has no effect. Passing a value other than
+            None emits a ``PyfixestDeprecationWarning``.
 
     split : str, optional
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
@@ -559,6 +564,10 @@ def feols(
             "For out-of-memory regression on large datasets, consider using the "
             "`duckreg` package (https://github.com/py-econometrics/duckreg) instead."
         )
+    if reps != 100:
+        _warn_argument_without_effect(function="feols", argument="reps")
+    if seed is not None:
+        _warn_argument_without_effect(function="feols", argument="seed")
 
     options = EstimationOptions(
         ssc=ssc,
