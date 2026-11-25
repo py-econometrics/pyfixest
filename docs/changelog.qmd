@@ -34,6 +34,11 @@ fit3 = pf.feols("Y ~ X1 + X2 | f1", data = df)
 - `help(pyfixest)` and the README now say where to find the documentation,
   `llms.txt`, the packaged agent skill and the 0.60 migration guide
   ([#2047](https://github.com/py-econometrics/pyfixest/pull/2047)).
+- The `ssc()` reference now gives the actual defaults, `k_fixef="nonnested"`
+  and `G_df="min"`, and describes the accepted options and deprecated argument
+  names. The `Ssc` and `feols()` references no longer give `"none"` as the
+  `k_fixef` default
+  ([#2133](https://github.com/py-econometrics/pyfixest/pull/2133)).
 
 ### Bug Fixes
 
