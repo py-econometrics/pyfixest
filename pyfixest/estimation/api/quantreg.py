@@ -143,10 +143,8 @@ def quantreg(
         Tolerance for collinearity check, by default 1e-09.
 
     separation_check : list[str], optional
-        .. deprecated::
-            ``separation_check`` is deprecated and has no effect in quantile
-            regression. Passing a value other than None emits a
-            ``PyfixestDeprecationWarning``.
+        Deprecated; has no effect. Passing a value other than None emits a
+        `PyfixestDeprecationWarning`.
 
     drop_intercept : bool, optional
         Whether to drop the intercept from the model, by default False.

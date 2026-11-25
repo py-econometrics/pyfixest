@@ -156,9 +156,8 @@ def feols(
             `duckreg <https://github.com/py-econometrics/duckreg>`_ package instead.
 
     reps : int, optional
-        .. deprecated::
-            ``reps`` is deprecated and has no effect. Passing a value other than
-            the default, 100, emits a ``PyfixestDeprecationWarning``.
+        Deprecated; has no effect. Passing a value other than 100 emits a
+        `PyfixestDeprecationWarning`.
 
     context : int or Mapping[str, Any], optional
         A dictionary containing additional context variables to be used by
@@ -167,9 +166,8 @@ def feols(
         variables that need to be available in the formula environment.
 
     seed : int, optional
-        .. deprecated::
-            ``seed`` is deprecated and has no effect. Passing a value other than
-            None emits a ``PyfixestDeprecationWarning``.
+        Deprecated; has no effect. Passing a value other than None emits a
+        `PyfixestDeprecationWarning`.
 
     split : str, optional
         A character string, i.e. 'split = var'. If provided, the sample is split according to the
