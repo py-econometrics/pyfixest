@@ -259,7 +259,7 @@ fit8 = pf.feols("Y ~ X1 + X2 + job*X2", data = data)
 pf.etable([fit7, fit8], labels=labels, cat_template="{value}")
 ```
 ## Change the reference level {#change-reference-category}
-Use the `ref` argument of `i()` to choose the reference level of a categorical regressor. This example refits the model with "Managerial" as the reference level:
+Use the `ref` argument of `i()` to choose the reference level of a categorical regressor. This example fits the model with "Managerial" as the reference level instead of "Admin":
 
 ```{python}
 

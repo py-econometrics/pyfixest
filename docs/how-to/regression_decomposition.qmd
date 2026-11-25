@@ -71,7 +71,7 @@ We see that the coefficient on gender is roughly the same in all models. Tentati
 But how much do differences in education matter? We have computed 6 additional models that contain education as a regressor. The obtained point estimates
 vary between $0.059$ and $0.075$. Which of these numbers should we report?
 
-Additionally, note that while we have only computed 6 additional models with regressors, the number of possible models is much larger.
+Additionally, note that while we have only computed 6 models with additional regressors, the number of possible models is much larger.
 If I did the math correctly, simply by additively and incrementally adding regressors, we could have computed $57$ different models (not all of which would have included `education` as a regressor).
 
 As it turns out, different models **will lead to different point estimates**. The order of incrementally adding regressors **might** impact our conclusion. To illustrate this, we keep the same ordering as before, but start with `ethnicity` as our first variable:
@@ -120,7 +120,7 @@ We can then compute the contribution of an individual regressor $\hat{\delta}_{k
 
     In words, we regress the focal regressor $X_{1}$ on each regressor in $X_{2}$. In practice, we can easily do this in one line of code via `scipy.linalg.lstsq()`.
 
-- Step 2: We can compute the total effect **explained** by the regressors, which we denote by $\delta$, as
+- Step 2: We can compute the total effect **explained** by the additional regressors, which we denote by $\delta$, as
 
     $$
         \hat{\delta} = \sum_{k=1}^{k_2} \hat{\Gamma}_{k} \hat{\beta}_{2,k}
@@ -162,7 +162,7 @@ As before, this produces a pretty big output table that reports
 - the **direct effect** of the regression of `log(wage) ~ gender`
 - the **full effect** of gender on log wage using the **full regression** with all additional regressors
 - the **explained effect** as the difference between the full and direct effect
-- a **single scalar value** for the individual contributions of a regressor to overall **explained effect**
+- a **single scalar value** for the individual contributions of an additional regressor to overall **explained effect**
 
 For our example at hand, the additional regressors only explain a tiny fraction of the differences in log wages between men and women - 0.064 points.
 Of these, around one third can be attributed to ethnicity, 0.00064 to years of eduaction, etc.

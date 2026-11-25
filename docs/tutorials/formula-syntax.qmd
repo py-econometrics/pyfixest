@@ -193,7 +193,7 @@ fit_bin.summary()
 
 ## Multiple Estimation Syntax
 
-Last, `PyFixest` provides syntactic sugar to fit several models in one call. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same estimation sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping regressors or dependent variables, and performance is poor, we highly recommend you to try multiple estimation.
+Last, `PyFixest` provides syntactic sugar to fit several models in one call. This not only economizes on lines-of-code, but also allows for performance optimizations via caching. When several models are fit on the same estimation sample and share the same fixed-effect structure, `PyFixest` can reuse already-demeaned columns across models. For the LSMR demeaner with the `within` backend, it can also reuse the fixed-effect preconditioner across models with the same structure. If you fit many regression models on a fixed set of fixed effects and many overlapping regressors or dependent variables, and performance is poor, we highly recommend you to try multiple estimation.
 
 For multiple estimations, we provide 5 custom operators: `sw`, `csw`, `sw0`, `csw0` and `mvsw`. Use `sw()` on the left-hand side for multiple dependent variables.
 

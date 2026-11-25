@@ -436,7 +436,7 @@ All of a sudden, the difference-in-means estimator has lower variance!
 display(se_sim_18)
 ```
 
-The reason we do not achieve variance reduction this time is that adding pre-treatment regressors and unit fixed effects simply explains less unobserved variance than before.
+The reason we do not achieve variance reduction this time is that adding pre-treatment regressors or unit fixed effects simply explains less unobserved variance than before.
 
 ## Other useful links
 

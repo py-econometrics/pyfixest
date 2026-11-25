@@ -15,7 +15,7 @@ import pyfixest as pf
 data = pf.get_data()  # Y, Y2, X1, X2, Z1, Z2 numeric; f1, f2, f3, group_id float codes
 ```
 
-## Regressors, intercept and transforms {#covariates-intercept-and-transforms}
+## Regressors, intercept and transforms
 
 ```python
 formulas = [
